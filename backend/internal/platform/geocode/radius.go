@@ -6,12 +6,16 @@ package geocode
 import (
 	"fmt"
 	"math"
+	"slices"
+	"strings"
 )
 
-// Columns is the coordinate pair a radius predicate measures from, plus the
-// status column that says whether the pair means anything.
+// Columns is where a record type's point lives. It names a side table keyed by
+// the record's id, the coordinate pair, and the status saying whether the pair
+// means anything. The point is kept off the record so a lookup never moves the
+// record's version.
 type Columns struct {
-	Lat, Lon, Status string
+	Table, Key, Lat, Lon, Status string
 }
 
 // ResolvedStatus is the one status a radius query may read, and the value
@@ -24,7 +28,7 @@ const ResolvedStatus = "ok"
 // contact's address is where somebody lives, which this product does not
 // geocode.
 var locatable = map[string]Columns{
-	"company": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
+	"company": {Table: "company_geocode_state", Key: "company_id", Lat: "lat", Lon: "lon", Status: "status"},
 }
 
 // ColumnsFor returns the coordinate columns of a record type, and false for a
@@ -103,18 +107,32 @@ func distanceSQL(alias string, columns Columns, centerLat, centerLon string) str
 		alias, columns.Lon, centerLon)
 }
 
-// LocatedSQL is the term that says a row has a usable point. The coordinates
-// match the address the row holds now, and neither is NULL.
+// ResolvedPointSQL is the terms that say the point row aliased point is usable.
+// Its coordinates match the address the record holds now, and neither is NULL.
 //
-// The status is required. A row's coordinates belong to the address it held
-// when the worker last ran, and an address can change at any time. Reading
-// lat/lon without the status answers a distance from the previous address and
-// reports success.
-func LocatedSQL(alias string, cols Columns, arg func(any) int) []string {
+// The status is required. A point belongs to the address the record held when
+// the worker last ran, and an address can change at any time. Reading lat/lon
+// without the status answers a distance from the previous address and reports
+// success.
+func ResolvedPointSQL(point string, cols Columns, arg func(any) int) []string {
 	return []string{
-		fmt.Sprintf("%s.%s = $%d", alias, cols.Status, arg(ResolvedStatus)),
-		fmt.Sprintf("%s.%s IS NOT NULL AND %s.%s IS NOT NULL", alias, cols.Lat, alias, cols.Lon),
+		fmt.Sprintf("%s.%s = $%d", point, cols.Status, arg(ResolvedStatus)),
+		fmt.Sprintf("%s.%s IS NOT NULL AND %s.%s IS NOT NULL", point, cols.Lat, point, cols.Lon),
 	}
+}
+
+// pointAlias names the point row inside the subqueries below.
+const pointAlias = "located_point"
+
+// pointOf renders a subquery over the record's point row with these terms.
+func pointOf(alias string, cols Columns, selected string, terms []string) string {
+	return fmt.Sprintf("(SELECT %s FROM %s %s WHERE %s.%s = %s.id AND %s)",
+		selected, cols.Table, pointAlias, pointAlias, cols.Key, alias, strings.Join(terms, " AND "))
+}
+
+// LocatedSQL is the term that says the record aliased alias has a usable point.
+func LocatedSQL(alias string, cols Columns, arg func(any) int) []string {
+	return []string{"EXISTS " + pointOf(alias, cols, "1", ResolvedPointSQL(pointAlias, cols, arg))}
 }
 
 // Within renders the distance expression for the projection and the `WHERE`
@@ -127,14 +145,18 @@ func Within(
 	lat := arg(center.Lat)
 	lon := arg(center.Lon)
 
-	distance = distanceSQL(alias, cols, fmt.Sprintf("$%d", lat), fmt.Sprintf("$%d", lon))
+	between := distanceSQL(pointAlias, cols, fmt.Sprintf("$%d", lat), fmt.Sprintf("$%d", lon))
+	// One set of point terms serves both subqueries, so every bound value is
+	// referenced whether or not the caller projects the distance.
+	located := ResolvedPointSQL(pointAlias, cols, arg)
+	distance = pointOf(alias, cols, between, located)
 
-	where = LocatedSQL(alias, cols, arg)
-	return distance, append(where,
-		fmt.Sprintf("%s.%s BETWEEN $%d AND $%d", alias, cols.Lat, arg(minLat), arg(maxLat)),
-		fmt.Sprintf("%s.%s BETWEEN $%d AND $%d", alias, cols.Lon, arg(minLon), arg(maxLon)),
-		fmt.Sprintf("%s <= $%d", distance, arg(radiusKM)),
+	terms := append(slices.Clone(located),
+		fmt.Sprintf("%s.%s BETWEEN $%d AND $%d", pointAlias, cols.Lat, arg(minLat), arg(maxLat)),
+		fmt.Sprintf("%s.%s BETWEEN $%d AND $%d", pointAlias, cols.Lon, arg(minLon), arg(maxLon)),
+		fmt.Sprintf("%s <= $%d", between, arg(radiusKM)),
 	)
+	return distance, []string{"EXISTS " + pointOf(alias, cols, "1", terms)}
 }
 
 // PlausiblePoint rejects a point that is not on the earth. It catches a

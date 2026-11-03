@@ -71,7 +71,7 @@ func TestSettingTheDealMoveAsideHidesItForThatReaderUntilTheUndo(t *testing.T) {
 	// The Worklist's deal rows ask the same question of the cached move.
 	queued := func(ctx context.Context) bool {
 		t.Helper()
-		moves, err := svc.CachedMoves(ctx, []ids.UUID{deal})
+		moves, err := svc.CurrentMoves(ctx, []ids.UUID{deal})
 		if err != nil {
 			t.Fatalf("reading the cached moves: %v", err)
 		}

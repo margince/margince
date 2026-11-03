@@ -7,17 +7,32 @@ package integration
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func seedHistoricalWorkedLead(ctx context.Context, t *testing.T, e *Env, contact ids.ContactID, in contacts.CreateLeadInput) crmcontracts.Lead {
+	t.Helper()
+	lead, _, err := e.Contacts.CreateLead(ctx, in)
+	if err != nil {
+		t.Fatalf("creating the historical lead: %v", err)
+	}
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE lead SET from_contact_id = $2 WHERE id = $1`, lead.Id, contact)
+		return err
+	}); err != nil {
+		t.Fatalf("restoring the historical contact link: %v", err)
+	}
+	return lead
+}
 
 // A lead worked from a contact copied that contact's name, title and employer.
 // With no address to match it by, only the link finds it, so erasing the
@@ -32,10 +47,9 @@ func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
 		t.Fatalf("creating the contact: %v", err)
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactID})
-	if err != nil {
-		t.Fatalf("working the contact as a lead: %v", err)
-	}
+	lead := seedHistoricalWorkedLead(e.Admin(), t, e, contactID, contacts.CreateLeadInput{
+		Source: "manual", FullName: new("Dana Example"), Title: &title,
+	})
 
 	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(contact.Id), "test"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
@@ -68,19 +82,14 @@ func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
 	}
 	sourceID := ids.From[ids.ContactKind](ids.UUID(source.Id))
 	targetID := ids.From[ids.ContactKind](ids.UUID(target.Id))
-	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &sourceID})
-	if err != nil {
-		t.Fatalf("working the merged-away contact as a lead: %v", err)
-	}
+	seedHistoricalWorkedLead(e.Admin(), t, e, sourceID, contacts.CreateLeadInput{Source: "manual"})
 
 	if _, err := e.Contacts.MergeContact(e.Admin(), sourceID, targetID, nil); err != nil {
 		t.Fatalf("merging the contacts: %v", err)
 	}
 
-	_, _, err = e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &targetID})
-	var refused *contacts.DuplicateContactLeadError
-	if !errors.As(err, &refused) || refused.ExistingID.UUID != ids.UUID(lead.Id) {
-		t.Fatalf("a lead from the survivor = %v, want the refusal naming the lead worked from the merged-away contact", err)
+	if got := e.WsCount(t, `SELECT count(*) FROM lead WHERE from_contact_id = $1 AND archived_at IS NULL`, targetID); got != 1 {
+		t.Fatalf("the merged contact has %d historical leads, want one", got)
 	}
 }
 
@@ -93,10 +102,7 @@ func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
 		t.Fatalf("creating the contact: %v", err)
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	worked, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactID})
-	if err != nil {
-		t.Fatalf("working the contact as a lead: %v", err)
-	}
+	worked := seedHistoricalWorkedLead(e.Admin(), t, e, contactID, contacts.CreateLeadInput{Source: "manual"})
 	name, email := "Dana Example", "dana@contoso.example"
 	survivor, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
 	if err != nil {
@@ -125,10 +131,7 @@ func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
 			t.Fatalf("creating contact %d: %v", i, err)
 		}
 		contactIDs[i] = ids.From[ids.ContactKind](ids.UUID(created.Id))
-		lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "manual", FromContactID: &contactIDs[i]})
-		if err != nil {
-			t.Fatalf("working contact %d as a lead: %v", i, err)
-		}
+		lead := seedHistoricalWorkedLead(e.Admin(), t, e, contactIDs[i], contacts.CreateLeadInput{Source: "manual", FullName: new("Dana Example")})
 		leadIDs[i] = ids.UUID(lead.Id)
 	}
 	if _, err := e.Contacts.MergeContact(e.Admin(), contactIDs[0], contactIDs[1], nil); err != nil {
@@ -168,12 +171,7 @@ func TestALeadWithholdsAContactItsReaderCannotOpen(t *testing.T) {
 	}
 	contactID := ids.From[ids.ContactKind](private)
 	owner := ids.From[ids.UserKind](e.Rep1)
-	lead, _, err := e.Contacts.CreateLead(e.As(e.Rep3, nil, AdminPerms), contacts.CreateLeadInput{
-		Source: "manual", FromContactID: &contactID, OwnerID: &owner,
-	})
-	if err != nil {
-		t.Fatalf("the contact's owner working it as the rep's lead: %v", err)
-	}
+	lead := seedHistoricalWorkedLead(e.As(e.Rep3, nil, AdminPerms), t, e, contactID, contacts.CreateLeadInput{Source: "manual", OwnerID: &owner})
 	rep := e.As(e.Rep1, nil, AdminPerms)
 
 	read, err := e.Contacts.GetLead(rep, ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly)

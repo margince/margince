@@ -4,7 +4,7 @@ import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
 import { directionSentence } from "./contactrail";
-import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
+import { contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
   contactGap,
@@ -121,7 +121,11 @@ describe("contactVerdict", () => {
   it("says no interactions yet for the none band, never a zero", () => {
     expect(
       contactVerdict({ ...VIEW, strength: strength("none", 0) }, t),
-    ).toEqual({ word: "No interactions yet", tone: "neutral" });
+    ).toEqual({
+      word: "No interactions yet",
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    });
   });
 
   it("falls back to the quiet rung's word when the strength is withheld", () => {
@@ -136,8 +140,121 @@ describe("contactVerdict", () => {
       ),
     ).toEqual({
       word: t("contact.moment.rule.nothing_needed"),
+      sentence: t("contact.verdict.nothingOwed"),
       tone: "neutral",
     });
+  });
+
+  // The sentence under a moment's heading never points the other way from it.
+  it.each<[ContactMomentRule, Contact360["relationship_changes"], string]>([
+    [
+      "gone_quiet",
+      [
+        {
+          kind: "warmed",
+          at: AS_OF,
+          from_bucket: "weak",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship moved from weak to moderate.",
+    ],
+    [
+      "overdue_promise",
+      [{ kind: "replied_after_gap", at: AS_OF, days: 30 }],
+      "They replied after 30 quiet days.",
+    ],
+    [
+      "re_engaged",
+      [
+        {
+          kind: "cooled",
+          at: AS_OF,
+          from_bucket: "strong",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship cooled from strong to moderate.",
+    ],
+    [
+      "re_engaged",
+      [{ kind: "went_quiet", at: AS_OF, days: 45 }],
+      "No activity for 45 days.",
+    ],
+  ])(
+    "puts no contrary change under the %s heading",
+    (rule, changes, contrary) => {
+      const verdict = contactVerdict(
+        {
+          ...VIEW,
+          moment: moment(rule),
+          strength: strength("moderate", 54),
+          relationship_changes: changes,
+        },
+        t,
+      );
+      expect(verdict?.word).toBe(t(`contact.moment.rule.${rule}`));
+      expect(verdict?.sentence).toBeDefined();
+      expect(verdict?.sentence).not.toBe(contrary);
+    },
+  );
+
+  // The wire orders changes by consequence, not by time, so the newest one
+  // sits last here and the oldest agreeing one first.
+  it("takes the newest change that agrees with the heading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("gone_quiet"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "cooled",
+            at: "2026-07-01T09:00:00Z",
+            from_bucket: "strong",
+            to_bucket: "moderate",
+          },
+          {
+            kind: "warmed",
+            at: "2026-08-12T09:00:00Z",
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+          {
+            kind: "cooled",
+            at: "2026-08-10T09:00:00Z",
+            from_bucket: "moderate",
+            to_bucket: "weak",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship cooled from moderate to weak.",
+    );
+  });
+
+  it("keeps a band move under the band's own reading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("nothing_needed"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "warmed",
+            at: AS_OF,
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship moved from weak to moderate.",
+    );
   });
 
   it("has no verdict when the moment and the strength are both withheld", () => {
@@ -168,33 +285,6 @@ describe("directionSentence", () => {
   });
 });
 
-describe("awaitsOurReply", () => {
-  it.each<[string | null, string | null, boolean]>([
-    ["2026-08-01T09:00:00Z", null, true],
-    ["2026-08-01T09:00:00Z", "2026-07-20T09:00:00Z", true],
-    ["2026-07-20T09:00:00Z", "2026-08-01T09:00:00Z", false],
-    [null, "2026-08-01T09:00:00Z", false],
-  ])("inbound %s, outbound %s: %s", (inbound, outbound, expected) => {
-    expect(
-      awaitsOurReply({
-        ...VIEW,
-        last_inbound_at: inbound,
-        last_outbound_at: outbound,
-      }),
-    ).toBe(expected);
-  });
-
-  it("never claims a move over withheld touch dates", () => {
-    expect(
-      awaitsOurReply({
-        ...VIEW,
-        sections_omitted: ["last_touch"],
-        last_inbound_at: "2026-08-01T09:00:00Z",
-      }),
-    ).toBe(false);
-  });
-});
-
 describe("contactDims", () => {
   it("counts our overdue promises against every open one", () => {
     const dims = contactDims(
@@ -213,6 +303,9 @@ describe("contactDims", () => {
               display_name: "Lena Fischer",
               strength_bucket: "strong",
               interactions_90d: 3,
+              inbound_90d: 1,
+              outbound_90d: 2,
+              two_way: true,
             },
             {
               user_id: "u-2",
@@ -232,6 +325,96 @@ describe("contactDims", () => {
       // One colleague in touch is a single thread, not coverage.
       ["reach", "1 colleague in touch", "Lena Fischer", "warning"],
     ]);
+  });
+
+  it("does not count recipients of an inbound message as colleagues in touch", () => {
+    const dims = contactDims(
+      {
+        ...VIEW,
+        network: {
+          colleagues: [
+            {
+              user_id: "u-1",
+              display_name: "Lena Fischer",
+              strength_bucket: "weak",
+              interactions_90d: 1,
+              inbound_90d: 1,
+              outbound_90d: 0,
+              two_way: false,
+            },
+            {
+              user_id: "u-2",
+              display_name: "Tom Berger",
+              strength_bucket: "weak",
+              interactions_90d: 1,
+              inbound_90d: 1,
+              outbound_90d: 0,
+              two_way: false,
+            },
+          ],
+        },
+      },
+      t,
+      "en",
+    );
+    expect(dims.find((dim) => dim.key === "reach")).toMatchObject({
+      value: "No colleague in touch",
+      tone: "neutral",
+    });
+  });
+
+  describe("a colleague who wrote without a reply", () => {
+    type Colleague = NonNullable<
+      NonNullable<Contact360["network"]>["colleagues"]
+    >[number];
+    const colleague = (name: string, over: Partial<Colleague>): Colleague => ({
+      user_id: `u-${name}`,
+      display_name: name,
+      strength_bucket: "weak",
+      interactions_90d: 1,
+      inbound_90d: 0,
+      outbound_90d: 1,
+      sent_90d: 1,
+      two_way: false,
+      ...over,
+    });
+    const reach = (colleagues: Colleague[]) =>
+      contactDims({ ...VIEW, network: { colleagues } }, t, "en").find(
+        (dim) => dim.key === "reach",
+      );
+    const inTouch = colleague("Bea Owner", {
+      interactions_90d: 2,
+      inbound_90d: 1,
+      two_way: true,
+    });
+
+    it("names a colleague who wrote without a reply after those in touch", () => {
+      expect(reach([inTouch, colleague("Carl Writer", {})])).toMatchObject({
+        value: "1 colleague in touch",
+        sub: "Bea Owner · also wrote: Carl Writer",
+        tone: "warning",
+      });
+    });
+
+    it("does not name a colleague who was only copied", () => {
+      expect(
+        reach([inTouch, colleague("Cleo Copied", { sent_90d: 0 })]),
+      ).toMatchObject({ value: "1 colleague in touch", sub: "Bea Owner" });
+    });
+
+    it("reads no two-way contact when colleagues only wrote", () => {
+      expect(reach([colleague("Carl Writer", {})])).toMatchObject({
+        value: "No two-way contact",
+        sub: "Carl Writer wrote, no reply yet",
+        tone: "neutral",
+      });
+    });
+
+    it("treats a missing sent_90d as not written", () => {
+      expect(
+        reach([colleague("Old Payload", { sent_90d: undefined })]),
+      ).toMatchObject({ value: "No colleague in touch", sub: undefined });
+    });
   });
 
   it("says none open and no colleague in touch rather than zero", () => {
@@ -297,7 +480,7 @@ describe("contactFigures", () => {
       words,
     );
     expect(figures.map((cell) => [cell.key, cell.value, cell.tone])).toEqual([
-      ["lastReply", "1 Aug", "warning"],
+      ["lastReply", "1 Aug", "neutral"],
       ["unanswered", "1 email", "warning"],
       ["openDeal", "None", "neutral"],
       ["nextMeeting", "None scheduled", "neutral"],
@@ -347,7 +530,7 @@ describe("the timeline", () => {
     ]);
   });
 
-  it("names the silence after their message as no reply", () => {
+  it("names the contact clock as the last recorded exchange", () => {
     expect(
       contactGap(
         {
@@ -361,7 +544,7 @@ describe("the timeline", () => {
     ).toEqual({
       from: "2026-08-01T09:00:00Z",
       title: "12 days",
-      sub: "no reply",
+      sub: "since last recorded contact exchange",
     });
   });
 
@@ -405,4 +588,27 @@ describe("bucketLabel", () => {
       expect(verdict?.word).toBe(bucketLabel(bucket, t));
     }
   });
+});
+
+it("does not turn an older server's missing exchange proof into zero coverage", () => {
+  const dims = contactDims(
+    {
+      ...VIEW,
+      network: {
+        colleagues: [
+          {
+            user_id: "u-1",
+            display_name: "Demo Colleague",
+            strength_bucket: "weak",
+            interactions_90d: 2,
+          },
+        ],
+      },
+    },
+    t,
+    "en",
+  );
+  expect(dims.find((dim) => dim.key === "reach")?.value).toBe(
+    t("record.notShown"),
+  );
 });

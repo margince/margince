@@ -100,6 +100,10 @@ describe("foldForSearch reads through what a keyboard leaves out", () => {
     expect(foldForSearch("ĐỒNG BỘ")).toBe("dong bo");
   });
 
+  it("reads a full-width letter as the letter a reader types", () => {
+    expect(foldForSearch("ＡＮＮＡ Müller")).toBe("anna muller");
+  });
+
   it("matches when every word lands in some field", () => {
     const words = searchWords("dong  bo  khoang");
     expect(words).toEqual(["dong", "bo", "khoang"]);

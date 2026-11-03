@@ -59,7 +59,7 @@ const (
 )
 
 // acquisitionSourceColumns is the catalog's wire projection.
-const acquisitionSourceColumns = `id, key, label, sort_order, active, system, version, created_at, updated_at`
+const acquisitionSourceColumns = `id, key, label, label_key, sort_order, active, system, version, created_at, updated_at`
 
 // UnknownAcquisitionSourceError refuses a key the catalog does not hold.
 type UnknownAcquisitionSourceError struct{}
@@ -121,30 +121,42 @@ func deriveAcquisitionKey(label string) string {
 // a deal carrying a retired key still has to render its label, and a filter
 // still has to find those deals.
 func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.AcquisitionSource, error) {
+	return listCatalog(ctx, s, "deal_acquisition_source", acquisitionSourceColumns,
+		"d.acquisition_source = deal_acquisition_source.key", scanAcquisitionSource,
+		func(source *crmcontracts.AcquisitionSource, count *int) { source.DealCount = count })
+}
+
+// listCatalog reads one administered deal list in display order. Each row
+// carries the live deals the caller may see that hold its key. table and
+// columns are literals from this package, never a caller's text.
+func listCatalog[Row any](
+	ctx context.Context, s *Store, table, columns, match string,
+	scan func(pgx.Row, ...any) (Row, error), counted func(*Row, *int),
+) ([]Row, error) {
 	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
-	dealCount, err := visibleDealCount(ctx, &args, "d.acquisition_source = deal_acquisition_source.key")
+	dealCount, err := visibleDealCount(ctx, &args, match)
 	if err != nil {
 		return nil, err
 	}
-	var out []crmcontracts.AcquisitionSource
+	var out []Row
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT `+acquisitionSourceColumns+`, `+dealCount+`
-			FROM deal_acquisition_source ORDER BY sort_order, label`, args...)
+		rows, err := tx.Query(ctx, `SELECT `+columns+`, `+dealCount+`
+			FROM `+table+` ORDER BY sort_order, label`, args...)
 		if err != nil {
-			return fmt.Errorf("list acquisition sources: %w", err)
+			return fmt.Errorf("list %s: %w", table, err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var count *int
-			source, err := scanAcquisitionSource(rows, &count)
+			row, err := scan(rows, &count)
 			if err != nil {
 				return err
 			}
-			source.DealCount = count
-			out = append(out, source)
+			counted(&row, count)
+			out = append(out, row)
 		}
 		return rows.Err()
 	})
@@ -351,7 +363,7 @@ func scanAcquisitionSource(row pgx.Row, extra ...any) (crmcontracts.AcquisitionS
 	var out crmcontracts.AcquisitionSource
 	var id ids.UUID
 	var version int64
-	dest := []any{&id, &out.Key, &out.Label, &out.SortOrder, &out.Active, &out.System, &version, &out.CreatedAt, &out.UpdatedAt}
+	dest := []any{&id, &out.Key, &out.Label, &out.LabelKey, &out.SortOrder, &out.Active, &out.System, &version, &out.CreatedAt, &out.UpdatedAt}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return out, apperrors.ErrNotFound

@@ -80,6 +80,9 @@
 }
 .choicelist-cards .choicelist-choice {
   align-items: start;
+  /* A plate stretches to its row's tallest; its words stay at the top rather
+     than drifting down beside a neighbour with a longer description. */
+  align-content: start;
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
@@ -114,4 +117,192 @@
 .choicelist-mark svg {
   width: 22px;
   height: 22px;
+}
+
+/*
+ * Groups: a label over each run of answers of one kind. In `cards` every group
+ * is its own grid, so a group of two shares the width rather than leaving a
+ * third column empty under a group of three.
+ */
+.choicelist-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.choicelist-legend + .choicelist-group {
+  margin-top: var(--space-1);
+}
+.choicelist-group + .choicelist-group {
+  margin-top: var(--space-3);
+}
+/* Padding rather than a margin: a legend sits outside its fieldset's flow, so
+   no gap reaches it, and a margin here would read as space the caller owes. */
+.choicelist-group-label {
+  padding: 0 0 var(--space-2);
+  color: var(--textSecondary);
+}
+.choicelist-cards > .choicelist-group {
+  grid-column: 1 / -1;
+}
+.choicelist-group-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.choicelist-cards .choicelist-group-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: var(--space-3);
+}
+
+/*
+ * `tiles`: `cards` made compact, picked by sight. The radio stays in the page
+ * for the keyboard and a screen reader but is drawn as the tile itself: the
+ * border and the tick in the corner say which one is chosen.
+ */
+.choicelist-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.choicelist-tiles > .choicelist-legend {
+  flex-basis: 100%;
+}
+.choicelist-tiles > .choicelist-group {
+  flex-basis: 0;
+  min-width: min(100%, 17rem);
+}
+/* Side by side, groups share one top line rather than stepping down. */
+.choicelist-tiles > .choicelist-group {
+  margin-top: 0;
+}
+.choicelist-tiles .choicelist-group-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+  gap: var(--space-3);
+}
+.choicelist-tiles .choicelist-choice {
+  position: relative;
+  display: flex;
+  height: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
+  transition:
+    border-color var(--dur-move) var(--ease-out),
+    box-shadow var(--dur-move) var(--ease-out),
+    transform var(--dur-move) var(--ease-out);
+}
+/* Off screen rather than gone, so arrow keys and a screen reader still reach
+   it; the tile draws its state instead. */
+.choicelist-tiles .choicelist-choice > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.choicelist-tiles .choicelist-choice:hover:not(:has(input:disabled)) {
+  border-color: var(--borderControl);
+  transform: translateY(-1px);
+}
+.choicelist-tiles .choicelist-choice:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.choicelist-tiles .choicelist-choice:has(input:focus-visible) {
+  box-shadow: var(--focus-glow);
+}
+.choicelist-tiles .choicelist-text {
+  gap: var(--space-1);
+  min-width: 0;
+}
+.choicelist-tiles .choicelist-mark {
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgInset);
+}
+.choicelist-tiles .choicelist-mark svg {
+  width: 22px;
+  height: 22px;
+}
+.choicelist-tiles .choicelist-label {
+  font-weight: var(--fontWeightMedium);
+}
+.choicelist-tiles .choicelist-text > :last-child:not(.choicelist-label) {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.choicelist-tiles .choicelist-choice:has(input:checked) .choicelist-mark {
+  color: var(--accent);
+}
+.choicelist-tick {
+  position: absolute;
+  top: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--dur-move) var(--ease-out),
+    transform var(--dur-move) var(--ease-out);
+}
+.choicelist-tick svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+.choicelist-choice:has(input:checked) .choicelist-tick {
+  opacity: 1;
+  transform: none;
+}
+.choicelist-tiles .choicelist-choice:has(input:disabled) {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+/* On a phone two tiles a row leave an odd one out, so each tile becomes a
+   row of its own: the mark beside the name and its line. */
+@media (max-width: 640px) {
+  .choicelist-tiles .choicelist-group-choices {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  .choicelist-tiles .choicelist-text {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: var(--space-3);
+    row-gap: 0;
+    align-items: center;
+    padding-inline-end: var(--space-5);
+  }
+  .choicelist-tiles .choicelist-mark {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+  .choicelist-tick {
+    top: 50%;
+    margin-top: -10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choicelist-tiles .choicelist-choice,
+  .choicelist-tick {
+    transition: none;
+  }
+  .choicelist-tiles .choicelist-choice:hover {
+    transform: none;
+  }
 }

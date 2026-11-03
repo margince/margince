@@ -38,6 +38,7 @@ const (
 // Service owns identity: the singleton company, users, opaque
 // server-side sessions.
 type Service struct {
+	memberWork MemberWork
 	// db binds the installation's workspace, resolved through this service's
 	// own InstallationWorkspace — which reads no tenant table, so a service
 	// holding a handle that resolves through it is not circular at runtime
@@ -141,9 +142,12 @@ type Identity struct {
 	// one is set up, the same confinement MustChangePassword uses. Derived per
 	// request from the policy and the enrolment, not a stored column.
 	MustEnrolMFA bool
-	Roles        []string
-	Teams        []ids.TeamID
-	Permissions  principal.Permissions
+	// IndividualPerformance is the installation's switch, read once with the
+	// session so every check in the request answers alike.
+	IndividualPerformance bool
+	Roles                 []string
+	Teams                 []ids.TeamID
+	Permissions           principal.Permissions
 }
 
 // systemRoles is the seeded default role set (ADR-0110).
@@ -381,6 +385,9 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
 		if loadErr != nil {
 			return loadErr
+		}
+		if id.IndividualPerformance, err = IndividualPerformanceTx(ctx, tx); err != nil {
+			return err
 		}
 		// Confine a member with no confirmed factor while the installation
 		// requires one — the enrolment check runs only when the policy is on, so

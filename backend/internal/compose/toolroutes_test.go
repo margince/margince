@@ -71,7 +71,7 @@ func newSlippingDoors(t *testing.T) *slippingDoors {
 	}, nil, deals.StalledThresholdDays)
 	d.router = crmcontracts.HandlerWithOptions(Server{toolRegistry: d.registry}, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
-		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(d.registry, nil, nil, nil, nil, nil, nil, gate)},
+		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(d.registry, nil, nil, nil, nil, nil, gate)},
 	})
 	return d
 }
@@ -139,7 +139,7 @@ func TestARegistryServedRouteIsAdmittedOnceAndAnswersAsTheTool(t *testing.T) {
 func TestTheGateAdmitsAReadItDoesNotLeaveToTheRegistry(t *testing.T) {
 	d := newSlippingDoors(t)
 	router := chi.NewRouter()
-	router.With(agentGate(d.registry, nil, nil, nil, nil, nil, nil,
+	router.With(agentGate(d.registry, nil, nil, nil, nil, nil,
 		auth.NewGate(fullSeat{}, auth.WithVolumeMeter(d.lookups)))).
 		Get("/v1/deals", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	recorder := httptest.NewRecorder()
@@ -156,7 +156,7 @@ func TestTheGateAdmitsAReadItDoesNotLeaveToTheRegistry(t *testing.T) {
 func TestTheGateRefusesAReadWithNoPolicy(t *testing.T) {
 	d := newSlippingDoors(t)
 	router := chi.NewRouter()
-	router.With(agentGate(d.registry, nil, nil, nil, nil, nil, nil,
+	router.With(agentGate(d.registry, nil, nil, nil, nil, nil,
 		auth.NewGate(fullSeat{}, auth.WithVolumeMeter(d.lookups)))).
 		Get("/v1/no-policy-here", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	recorder := httptest.NewRecorder()

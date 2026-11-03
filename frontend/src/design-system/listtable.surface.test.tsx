@@ -370,7 +370,7 @@ describe("a row as a link", () => {
       />,
     );
     const [first] = screen.getAllByRole("link");
-    expect(first.getAttribute("href")).toBe(`#/rows/${testRows(2)[0].id}`);
+    expect(first.getAttribute("href")).toBe(`/#/rows/${testRows(2)[0].id}`);
   });
 
   it("leaves the cell as plain text when the caller names no address", () => {
@@ -465,7 +465,7 @@ describe("empty state", () => {
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
-        search={{ value: "acme", onChange: () => {} }}
+        search={{ value: "acme", answered: "acme", onChange: () => {} }}
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
@@ -498,7 +498,7 @@ describe("empty state", () => {
         rowKey={(row) => row.id}
         unit="rows"
         sort={{ value: "name", onChange: () => {} }}
-        search={{ value: "acme", onChange: () => {} }}
+        search={{ value: "acme", answered: "acme", onChange: () => {} }}
       />,
     );
     expect(screen.queryByText(/No rows yet/)).toBeNull();

@@ -143,17 +143,17 @@ const (
 
 // Tasks is the open-task read, through the activities module.
 //
-// The scope belongs in the QUERY and not in a filter afterwards: the store
-// bounds what it returns, so narrowing later would cut a colleague's twelve
-// rows out of a page of twelve and leave the reader's own overdue task
-// unreachable behind them.
+// The scope belongs in the QUERY and not in a filter afterwards, because the
+// store bounds what it returns. Narrowing later would fill a page of twelve
+// with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
+// team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
 	// UpcomingForViewer answers the work due AFTER the day's end, up to a
 	// horizon, under the same narrowing.
 	//
@@ -161,7 +161,7 @@ type Tasks interface {
 	// not compete: a full day's backlog would fill a shared limit before a
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
-	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// RemindersForViewer answers every one of the reader's tasks whose reminder
 	// is due, latest reminder first. Not under the day's cap, which orders by
 	// due date, and not under any cap, because the lane's count counts them all.
@@ -221,6 +221,7 @@ type Receipt struct {
 	ID              ids.UUID
 	Kind            string
 	Summary         string
+	SummaryParts    *crmcontracts.ApprovalSummaryParts
 	OccurredAt      time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
@@ -239,6 +240,12 @@ type Receipt struct {
 	// already a decision somebody can revisit through the record, and a
 	// correction somebody has already reversed has no second undo in it.
 	Undo *ReceiptUndo
+	// Actor is who did it, as the audit trail spells them. A zero Type means
+	// the source could not say.
+	Actor ReceiptActor
+	// SourceActivityID is the message the act was read from; zero when it
+	// cites none.
+	SourceActivityID ids.UUID
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

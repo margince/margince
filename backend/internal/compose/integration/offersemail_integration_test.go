@@ -211,6 +211,18 @@ func TestAUnicodeAddressAtOurPunycodeDomainIsAColleagueOnEveryRow(t *testing.T) 
 	})
 }
 
+// A contact carrying a seat's login in punycode is that seat, whose login is
+// stored in Unicode at a domain that is not ours. No row offers to write to it.
+func TestASeatsLoginInEitherSpellingIsNeverOffered(t *testing.T) {
+	s := setupStanding(t)
+	s.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, s.Rep2)
+
+	row := s.writtenAbout(t, "call", s.contactAt(t, "Anna Brandt", "anna@xn--bcher-kva.example"))
+	if offers, to := s.offeredOnEveryRead(t, row); offers || to != "" {
+		t.Errorf("offers_email = %v, To = %q; want false and empty", offers, to)
+	}
+}
+
 // An archived row is read through include_archived, while reply-recipient reads
 // live rows only. Both say no email.
 func TestAnArchivedRowOffersNoEmail(t *testing.T) {

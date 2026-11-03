@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,6 +44,17 @@ const (
 // 'derived' for a human's own POST /signals (migration 0208 records the same
 // trap); a contact's own filing is theirs, not this corrector's.
 func NarrowDerivedForActivity(ctx context.Context, tx pgx.Tx, activityID ids.UUID, owner *ids.UUID) (int, error) {
+	if owner != nil {
+		resolved, found, err := auth.ConsolidatedMemberTx(ctx, tx, *owner)
+		if err != nil {
+			return 0, err
+		}
+		if found {
+			owner = &resolved
+		} else {
+			owner = nil
+		}
+	}
 	cites := `evidence @> jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', $1::text))`
 	moved := 0
 	apply := func(action, sql string, before, after map[string]any, args ...any) error {

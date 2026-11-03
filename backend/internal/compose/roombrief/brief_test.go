@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -209,5 +210,51 @@ func TestALinkRequestCountsOnlyUntilTheBuyerIsBackIn(t *testing.T) {
 		if got := in.Buyers[0].AskedForNewLinkOn; got != tc.want {
 			t.Errorf("%s: asked_for_new_link_on = %q, want %q", name, got, tc.want)
 		}
+	}
+}
+
+// A waiting change request on a document comes ahead of newer waiting asks.
+// The thread cap never drops it, and the floor quotes it first.
+func TestAWaitingChangeRequestOutranksNewerWaitingAsks(t *testing.T) {
+	at := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	doc := openapi_types.UUID(ids.NewV7())
+	buyerSays := func(name, body string, when time.Time) []crmcontracts.DealRoomComment {
+		return []crmcontracts.DealRoomComment{{Author: crmcontracts.DealRoomAuthor{Name: name, Side: "buyer"}, Body: body, CreatedAt: when}}
+	}
+	threads := []crmcontracts.DealRoomThread{{
+		Id: openapi_types.UUID(ids.NewV7()), DocumentId: &doc, RequiredChange: true, CreatedAt: at.AddDate(0, 0, -30),
+		Comments: buyerSays("Tomas Petrauskas", "We need clause 11.2 changed.", at.AddDate(0, 0, -30)),
+	}}
+	for i := range maxThreads {
+		threads = append(threads, crmcontracts.DealRoomThread{
+			Id: openapi_types.UUID(ids.NewV7()), CreatedAt: at.Add(time.Duration(i) * time.Minute),
+			Comments: buyerSays("Lena Vogt", "Who joins the call?", at.Add(time.Duration(i)*time.Minute)),
+		})
+	}
+	in := FromRoom(crmcontracts.DealRoom{Title: "Room", State: "live"}, nil,
+		[]crmcontracts.DealRoomDocument{{Id: doc, Title: "MSA redline", GroupKey: "legal"}}, threads)
+	if len(in.Threads) != maxThreads || !in.Threads[0].RequiredChange {
+		t.Fatalf("the change request is not first among %d kept threads: %+v", len(in.Threads), in.Threads[0])
+	}
+	if got := Deterministic(in, "en"); len(got) == 0 || got[0].Evidence[0].EntityID != in.Threads[0].ID {
+		t.Errorf("the floor does not quote the change request first: %+v", got)
+	}
+}
+
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}`
+	}
+	moves := []string{move("Send the revised cap to x@evil.example.")}
+	for range maxRecommendations {
+		moves = append(moves, move("I'll send Tomas the revised liability cap once legal completes its review."))
+	}
+	moves = append(moves, move("Send Tomas the revised liability cap once legal finishes its review."))
+	got, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
+	if err != nil {
+		t.Fatalf("ParseBrief: %v", err)
+	}
+	if len(got) != 1 || got[0].Text != "Send Tomas the revised liability cap once legal finishes its review." {
+		t.Fatalf("kept %+v, want only the move addressed to the reader, with neither refusal spending its slot", got)
 	}
 }

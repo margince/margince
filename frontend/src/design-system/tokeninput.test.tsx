@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -222,7 +228,16 @@ describe("TokenList", () => {
 // rule below is one that decides whether the list is HELP or a constraint.
 
 const CONTACTS = [
-  { value: "dana@nordwand.example", label: "Dana Ellwanger", hint: "Nordwand" },
+  {
+    value: "dana@nordwand.example",
+    label: "Dana Ellwanger",
+    hint: "Nordwand",
+    card: {
+      identity: "c-dana",
+      href: "#/contacts/c-dana",
+      about: "Buyer · Nordwand GmbH",
+    },
+  },
   { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
 ] as const;
 
@@ -257,7 +272,9 @@ describe("offering a vocabulary", () => {
     render(<Offering />);
     await user.click(toBox());
     await user.click(screen.getByRole("option", { name: /Dana Ellwanger/ }));
-    expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove dana@nordwand.example" }),
+    ).toBeTruthy();
     // The box empties on a pick exactly as it does on a typed commit: what was
     // being typed became the token, so leaving it behind would offer the reader
     // a second copy of what they just chose.
@@ -295,7 +312,9 @@ describe("offering a vocabulary", () => {
     render(<Offering />);
     await user.type(toBox(), "dan");
     await user.keyboard("{ArrowDown}{Enter}");
-    expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove dana@nordwand.example" }),
+    ).toBeTruthy();
     expect(screen.queryByText("dan")).toBeNull();
   });
 
@@ -309,5 +328,37 @@ describe("offering a vocabulary", () => {
 
     expect(screen.queryByText("dana@nordwand.example")).toBeNull();
     expect(toBox().value).toBe("dan");
+  });
+});
+
+// A recipient row stays one line beside the field's own controls. A named
+// token shows the name alone and keeps the rest on the card it opens.
+describe("a named token", () => {
+  it("shows the name and not the address", () => {
+    render(<Offering start={["dana@nordwand.example"]} />);
+    expect(screen.getByText("Dana Ellwanger")).toBeTruthy();
+    expect(screen.queryByText("dana@nordwand.example")).toBeNull();
+  });
+
+  it("opens a contact card when keyboard focus lands", async () => {
+    const user = userEvent.setup();
+    render(<Offering start={["dana@nordwand.example"]} />);
+    await user.tab();
+    const card = await screen.findByRole("region", { name: "Dana Ellwanger" });
+    expect(within(card).getByText("dana@nordwand.example")).toBeTruthy();
+    expect(within(card).getByText("Buyer · Nordwand GmbH")).toBeTruthy();
+    expect(
+      within(card)
+        .getByRole("link", { name: "Dana Ellwanger" })
+        .getAttribute("href"),
+    ).toBe("/#/contacts/c-dana");
+  });
+
+  it("draws an address no offer names as itself, with no card", async () => {
+    const user = userEvent.setup();
+    render(<Offering start={["stranger@example.com"]} />);
+    expect(screen.getByText("stranger@example.com")).toBeTruthy();
+    await user.tab();
+    expect(screen.queryByRole("region")).toBeNull();
   });
 });

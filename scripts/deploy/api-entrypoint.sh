@@ -1,7 +1,7 @@
 #!/bin/sh
 # Container entrypoint for cmd/api: apply migrations as the OWNER role, then serve
 # as the APP role. Deployment-target-agnostic — every setting is read from the
-# environment (the MARGINCE_* vars in docs/reference/configuration.md); the api
+# environment (the MARGINCE_* vars in docs/reference/configuration.md and programs.md); the api
 # resolves --config/--dsn/--redis/--public-base-url from their env
 # fallbacks, so no flags are needed here.
 #

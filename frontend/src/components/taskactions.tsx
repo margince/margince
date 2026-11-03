@@ -36,6 +36,7 @@ import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
 import { CallStartProvider } from "../lib/callstart";
+import type { SourceOpenerFor } from "../lib/opensource";
 import { useTaskContact } from "../lib/taskcontact";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
@@ -303,7 +304,7 @@ export function TaskDetailDialog({
   readOnly,
   onClose,
   update,
-  onOpenSource,
+  openerFor,
   why,
 }: Readonly<{
   activityId: string;
@@ -313,7 +314,8 @@ export function TaskDetailDialog({
   readOnly: boolean;
   onClose: () => void;
   update: ReturnType<typeof useTaskUpdate>;
-  onOpenSource: (id: string) => void;
+  /** Opens the task's source whole; see `SourceEvidence`. */
+  openerFor: SourceOpenerFor;
   // Why the task is on the list it was opened from, which only that list knows.
   why?: ReactNode;
 }>) {
@@ -435,7 +437,7 @@ export function TaskDetailDialog({
               {task.source_activity_id && (
                 <SourceEvidence
                   activityId={task.source_activity_id}
-                  onOpenTranscript={onOpenSource}
+                  openerFor={openerFor}
                 />
               )}
             </div>

@@ -271,3 +271,22 @@ export const WithMarks: Story = {
     ).toBeGreaterThan(2);
   },
 };
+
+/** The same account with its close years out: the close sits past a break
+ *  that names its month and year, so the recent months keep their room. */
+export const FarClose: Story = {
+  args: {
+    label: "Brandt Automotive over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: company.map((event) =>
+      event.key === "c"
+        ? { ...event, at: "2029-08-29", sub: "29 Aug · €48,000" }
+        : event,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("August 2029"),
+    ).toBeInTheDocument();
+  },
+};

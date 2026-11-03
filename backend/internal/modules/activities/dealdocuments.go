@@ -42,12 +42,6 @@ type DealDocumentFilters struct {
 	Limit         *int
 }
 
-// inlineImageCeiling is the size under which an image part of a captured
-// message is taken for a signature logo or an icon and left out of the Files
-// area. Capture does not mark inline parts, so the rule is the honest proxy:
-// a contract scan is never this small, and a logo is never larger.
-const inlineImageCeiling = 65536
-
 // fieldDealID names the deal in a hide's audit image.
 const fieldDealID = "deal_id"
 
@@ -263,9 +257,10 @@ func ensureInDealDocuments(ctx context.Context, tx pgx.Tx, dealID, attachmentID 
 		return err
 	}
 	var found bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM attachment at WHERE at.id = $%d AND %s AND %s)`,
-		arg(attachmentID), dealDocumentMembership(deal), visible), args...).Scan(&found)
+		arg(attachmentID), dealDocumentMembership(deal), visible)
+	err = tx.QueryRow(ctx, query, args...).Scan(&found)
 	if err != nil {
 		return fmt.Errorf("activities: checking a deal document: %w", err)
 	}

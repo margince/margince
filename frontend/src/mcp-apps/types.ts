@@ -12,6 +12,34 @@
 /** One condition the answer came with, keyed by the envelope's own code. */
 export type Warning = { code: string; message?: string };
 
+/**
+ * The call a result answers: the tool's refusal when it refused. A refusal's
+ * words are written for the assistant. Some refusals also carry an answer for
+ * the view, such as an update held for a human's choice.
+ */
+export type ToolCall = { refusal: string | null };
+
+/** What a view knows of a call before the host has said anything about it. */
+export const NO_CALL: ToolCall = { refusal: null };
+
+/** The handler a view registers, called once per tool result the host pushes. */
+export type ResultHandler = (
+  data: unknown,
+  warnings: Warning[],
+  call: ToolCall,
+) => void;
+
+/** asToolCall reads a CallToolResult as the call it answers. A refusal's
+ *  words travel as text content. */
+export function asToolCall(result: Record<string, unknown>): ToolCall {
+  if (result.isError !== true) return NO_CALL;
+  const words = asList(result.content)
+    .map(asRecord)
+    .filter((part) => part.type === "text")
+    .map((part) => asText(part.text));
+  return { refusal: words.join(" ").trim() };
+}
+
 /** The envelope every tool on this surface seals its answer into. */
 export type Envelope = { data?: unknown; warnings?: Warning[] };
 

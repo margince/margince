@@ -57,6 +57,21 @@ func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.
 	id := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
 	store := storeKnowing(e)
 	asOf := requestInstant.AddDate(0, 0, 200)
+	assertCurrent := func(want bool) {
+		t.Helper()
+		rows, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestCurrentAsOf: &asOf, Limit: new(1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, row := range rows {
+			found = found || ids.UUID(row.Id) == id
+		}
+		if found != want {
+			t.Fatalf("current request admission = %v, want %v", found, want)
+		}
+	}
+	assertCurrent(false)
 	if err := store.CaptureEmailRequests(asClassifier(e), asOf); err != nil {
 		t.Fatal(err)
 	}
@@ -101,6 +116,7 @@ func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.
 	if !created || task.SourceActivityId == nil || ids.UUID(*task.SourceActivityId) != id {
 		t.Fatal("acceptance lost source evidence")
 	}
+	assertCurrent(true)
 	replay, created, err := store.LogActivity(reader, request)
 	if err != nil {
 		t.Fatal(err)
@@ -122,6 +138,7 @@ func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.
 	if _, err := store.UpdateActivity(reader, ids.From[ids.ActivityKind](ids.UUID(task.Id)), UpdateActivityInput{IsDone: &done}); err != nil {
 		t.Fatal(err)
 	}
+	assertCurrent(false)
 	review, _, err = store.ListActivities(e.as(), ListActivitiesInput{RequestReviewAsOf: &asOf})
 	if err != nil {
 		t.Fatal(err)

@@ -1,0 +1,23 @@
+{
+  "scenario": "case64_catch_me_up_and_the_brief",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 16,
+    "output_tokens": 2144,
+    "cache_creation_input_tokens": 33115,
+    "cache_read_input_tokens": 442118,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1981
+  }
+}

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { isLocale } from "../../i18n";
+import { catalogs, isLocale, type Locale } from "../../i18n";
 import {
   callMessengersRoute,
   installFetchStub,
@@ -11,18 +11,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactDetails } from "./contactdetails";
 
+function storyLocale(parameters: Record<string, unknown>): Locale | undefined {
+  const asked = parameters.locale;
+  return typeof asked === "string" && isLocale(asked) ? asked : undefined;
+}
+
 const meta: Meta<typeof ContactDetails> = {
   title: "Records/Contact 360/Details",
   component: ContactDetails,
   decorators: [
     (Story, { parameters }) => {
-      const asked: unknown = parameters.locale;
       return (
-        <StoryProviders
-          locale={
-            typeof asked === "string" && isLocale(asked) ? asked : undefined
-          }
-        >
+        <StoryProviders locale={storyLocale(parameters)}>
           <Story />
         </StoryProviders>
       );
@@ -396,9 +396,14 @@ const twoNumbers: components["schemas"]["Contact"] = {
 };
 
 // Each number keeps one line, its kind beside it or (with no room) under it,
-// and its app links under both.
-async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
-  await within(canvasElement).findAllByRole("link", { name: /WhatsApp/ });
+// and its chat glyph after both.
+async function expectNumbersOnOneLine(
+  canvasElement: HTMLElement,
+  locale: Locale = "en",
+) {
+  await within(canvasElement).findAllByRole("button", {
+    name: catalogs[locale]["callAction.chats"],
+  });
   const handles = [
     ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
   ].filter((handle) => handle.querySelector(".callaction-chats"));
@@ -408,15 +413,13 @@ async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
     const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
     const chats = handle.querySelector<HTMLElement>(".callaction-chats");
     if (!number || !kind || !chats) {
-      throw new Error("a phone handle lost its number, kind or app links");
+      throw new Error("a phone handle lost its number, kind or chat glyph");
     }
     const line = document.createRange();
     line.selectNodeContents(number);
     await expect(line.getClientRects()).toHaveLength(1);
-    const box = number.getBoundingClientRect();
-    const kindBox = kind.getBoundingClientRect();
-    await expect(chats.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      Math.max(box.bottom, kindBox.bottom) - 0.5,
+    await expect(chats.getBoundingClientRect().right).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
     );
   }
   await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
@@ -426,7 +429,8 @@ async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
 
 export const TwoNumbers: Story = {
   args: { contact: twoNumbers },
-  play: ({ canvasElement }) => expectNumbersOnOneLine(canvasElement),
+  play: ({ canvasElement, parameters }) =>
+    expectNumbersOnOneLine(canvasElement, storyLocale(parameters)),
 };
 export const TwoNumbersPhone: Story = {
   ...TwoNumbers,

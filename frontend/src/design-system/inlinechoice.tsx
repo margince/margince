@@ -41,6 +41,7 @@ export function InlineChoice({
   options,
   canEdit,
   readOnlyReason,
+  hint,
   render,
   onSave,
   onEditingChange,
@@ -63,6 +64,8 @@ export function InlineChoice({
   options: readonly SelectOption[];
   canEdit: boolean;
   readOnlyReason?: string;
+  // What the open chooser says about its options, such as a roster that failed.
+  hint?: string;
   render: (value: string) => ReactNode;
   // Refused saves keep the draft and render a translated problem.
   onSave: (next: string) => Promise<void>;
@@ -180,7 +183,12 @@ export function InlineChoice({
         }
       }}
     >
-      <Field label={label} labelHidden={hideLabel} error={failure ?? undefined}>
+      <Field
+        label={label}
+        labelHidden={hideLabel}
+        hint={hint}
+        error={failure ?? undefined}
+      >
         {(control) => (
           <>
             <Select

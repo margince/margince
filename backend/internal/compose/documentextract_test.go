@@ -252,3 +252,31 @@ func TestConfidenceLandsInTheBandTheContractDeclares(t *testing.T) {
 		}
 	}
 }
+
+// An attached file cannot be fenced, so the bytes lane tells the model that
+// text printed in the file has no authority. The text lane fences its words
+// and needs no such rule.
+func TestAnAttachedDocumentIsNamedAsDataOnTheBytesLaneOnly(t *testing.T) {
+	rule := ai.AttachmentTextRule("document")
+	bytesLane := documentExtractRequest(documentSource{Part: model.Attachment{MIME: "application/pdf", Bytes: []byte{1}}})
+	if !strings.Contains(bytesLane.System, rule) {
+		t.Errorf("the bytes lane never says the attached document has no authority:\n%s", bytesLane.System)
+	}
+	textLane := documentExtractRequest(documentSource{Text: "Order form"})
+	if strings.Contains(textLane.System, rule) {
+		t.Errorf("the text lane carries a rule about an attachment it does not send:\n%s", textLane.System)
+	}
+}
+
+// A model told to copy the figure as printed sometimes keeps the thousands
+// comma, and the amount is then refused. The instruction names the separators
+// to drop, with a worked figure.
+func TestTheAmountInstructionNamesTheSeparatorsToDrop(t *testing.T) {
+	turn := documentExtractRequest(documentSource{Text: "Order form"}).Messages[0].Content
+	if !strings.Contains(turn, `"1,250.50" is written 1250.50`) {
+		t.Errorf("the amount instruction does not show the separators dropped:\n%s", turn)
+	}
+	if strings.Contains(turn, "exactly as printed") {
+		t.Errorf("the amount instruction still asks for the figure exactly as printed:\n%s", turn)
+	}
+}

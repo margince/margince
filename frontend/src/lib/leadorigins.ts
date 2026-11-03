@@ -3,9 +3,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { importLabel } from "../design-system/provenance";
 import { importProvenance } from "../design-system/provenanceof";
-import type { useT } from "../i18n";
+import { sourceSystemName } from "../format/sourcesystem";
+import { useT } from "../i18n";
 import { LEAD_LIST_KEY } from "./leadkeys";
 import { throwProblem, unwrap } from "./problem";
+import { withShippedLabels } from "./shippedlabels";
 
 // A lead answers two questions, and each has one reader here.
 //
@@ -23,6 +25,7 @@ export type LeadOriginIntent = components["schemas"]["LeadSourceIntent"];
 export const LEAD_ORIGINS_KEY = ["lead-origins"] as const;
 
 export function useLeadOrigins() {
+  const t = useT();
   return useQuery({
     queryKey: LEAD_ORIGINS_KEY,
     queryFn: async () => {
@@ -32,6 +35,7 @@ export function useLeadOrigins() {
       }
       return data.data;
     },
+    select: (origins) => withShippedLabels(origins, t),
   });
 }
 
@@ -44,15 +48,19 @@ function listed(origins: readonly LeadOrigin[] | undefined): LeadOrigin[] {
   );
 }
 
-/** The words a lead's origin reads as: the server's label, else the list's. */
+/**
+ * The words a lead's origin reads as. The list's label comes first, because
+ * it is in the reader's language; the server's `origin_label` is the stored
+ * English one.
+ */
 export function originLabelFor(
   lead: Readonly<{ origin?: string | null; origin_label?: string | null }>,
   origins: readonly LeadOrigin[] | undefined,
 ): string | undefined {
   if (!lead.origin) return undefined;
   return (
-    lead.origin_label ??
     listed(origins).find((o) => o.key === lead.origin)?.label ??
+    lead.origin_label ??
     lead.origin
   );
 }
@@ -102,6 +110,7 @@ const WRITTEN_BY: Readonly<
   referral: "lead.source.referral",
   import: "lead.source.import",
   crawl: "lead.source.crawl",
+  siteread: "lead.source.siteread",
 };
 
 /**
@@ -140,6 +149,8 @@ export function writtenByLabel(
   if (shipped) return t(shipped);
   const parts = source.split(":").filter(Boolean);
   const meaningful = parts[0] === "connector" ? parts[1] : parts[0];
+  const named = meaningful && sourceSystemName(meaningful);
+  if (named && named !== meaningful) return named;
   const spoken = meaningful?.replace(/[_-]+/g, " ");
   return spoken
     ? spoken.charAt(0).toUpperCase() + spoken.slice(1)

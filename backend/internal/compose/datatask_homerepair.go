@@ -119,16 +119,22 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 		return false, err
 	}
 	decision, err := homeRepairTaskDecisionTx(ctx, tx, task, activation.AsOf, true)
+	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrConflict) {
+		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
+	}
 	if err != nil {
 		return false, err
 	}
 	if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
 		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
 	}
-	if decision.Action != repairArchiveReminder {
+	if decision.Action != repairArchiveReminder && decision.Action != repairNormalizeTask {
 		return false, recordHomeRepairSkip(ctx, tx, expected, decision.Reason, activation.RuleVersion, runID)
 	}
 	err = pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error {
+		if decision.Action == repairNormalizeTask {
+			return store.RepairAutomaticTaskTx(ctx, savepoint, task, activation.AsOf, activation.RuleVersion)
+		}
 		return store.ArchiveActivityTx(ctx, savepoint, task.ID, &expected.Version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason(decision.Reason, activation.RuleVersion))
 	})
 	if errors.Is(err, apperrors.ErrConflict) || errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrRetentionHold) || errors.Is(err, apperrors.ErrNotFound) {

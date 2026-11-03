@@ -32,7 +32,7 @@ func TestASecondResetIsRefusedWithoutTouchingTheFleet(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	held, err := takeResetLock(ctx, e.Pool)
+	held, err := takeResetLock(ctx, e.Pool, slog.Default())
 	if err != nil {
 		t.Fatalf("taking the reset lock: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestARefusedResetDoesNotResumeTheFleet(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	held, err := takeResetLock(ctx, e.Pool)
+	held, err := takeResetLock(ctx, e.Pool, slog.Default())
 	if err != nil {
 		t.Fatalf("taking the reset lock: %v", err)
 	}

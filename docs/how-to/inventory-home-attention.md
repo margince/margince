@@ -73,3 +73,22 @@ measure it, so count 2 is close but not exact. It matches the Worklist only when
 
 Run the script again after a repair. Each count should drop to what the repair
 promised, and no other count should go up.
+
+## Preview exact task repairs
+
+Use `POST /admin/home-repair/preview` with `source: task` to get the bounded
+review page. Its counts use the same source and date rules as current task reads.
+The SQL counts describe history, not current work.
+
+The page lists a source link fix, a generated date to clear, or old work to archive.
+Each row names its change. Human
+edits, pins and reminders stay. Missing source access grants no right to repair.
+Unknown sources stay as they are. No repair marks a task as complete.
+
+Review the page before `POST /admin/home-repair/activate`. The worker checks
+source access, task version and the rule again. A change after review is skipped;
+failed batches roll back with their audit and event. Resume uses the same reviewed
+page. A traced source or date fix stays a machine change for later task reads.
+
+Send `reviewed_actions` in the page's row order when `requires_action_review` is
+true. A client sends names of actions it can show.

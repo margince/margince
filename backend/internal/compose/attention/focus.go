@@ -17,7 +17,14 @@ const focusLimit = 6
 // Focus selects from the assembled day before a queue page can hide a candidate.
 // It is a projection of the same ranking, not a second scoring system.
 func focusOf(rows, considered []ranked, asOf time.Time, reader ids.UUID) crmcontracts.WorklistFocus {
-	ordered := markCrowding(slices.Clone(rows))
+	ordered := slices.Clone(rows)
+	for i := range ordered {
+		if ordered[i].item.Source == sourceDecay && ordered[i].pinned {
+			ordered[i].item.Level = semanticLevelOf(ordered[i])
+			ordered[i].pinned = false
+		}
+	}
+	ordered = markCrowding(ordered)
 	sortByRank(ordered)
 	eligible := make([]ranked, 0, len(ordered))
 	for _, row := range ordered {
@@ -52,6 +59,8 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	// An agreed future date is not a request to act today. Legal preparation and
 	// deal close windows already have their own semantic classifier horizons.
 	switch row.item.Source {
+	case sourceDecay:
+		return hasReason(row.item, "pinned")
 	case "notice":
 		return urgentWork(row)
 	case "task":
@@ -68,8 +77,38 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	return semanticLevelOf(row) < levelRoutine
 }
 
+// nameWorklistRows names the queue, Focus and the optional list as one batch,
+// so each naming read runs once per page rather than once per list. A failed
+// advice read keeps the rows and is named on the page.
+func (s *Service) nameWorklistRows(
+	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string,
+) error {
+	lists := []*[]crmcontracts.WorklistItem{&page.Queue}
+	if page.Focus != nil {
+		lists = append(lists, &page.Focus.Items)
+	}
+	if page.OptionalRelationships != nil {
+		lists = append(lists, page.OptionalRelationships)
+	}
+	var rows []crmcontracts.WorklistItem
+	for _, list := range lists {
+		rows = append(rows, *list...)
+	}
+	advised, adviceErr := s.readingDealMoves(ctx, rows)
+	if adviceErr != nil {
+		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*adviceErr})...)
+	}
+	if err := advised.nameRows(ctx, rows, findings); err != nil {
+		return err
+	}
+	for _, list := range lists {
+		rows = rows[copy(*list, rows):]
+	}
+	return nil
+}
+
 // Both projections expose the same actions, standing, and ownership labels.
-func (s *Service) nameWorklistRows(ctx context.Context, rows []crmcontracts.WorklistItem, findings map[ids.UUID]string) error {
+func (s *Service) nameRows(ctx context.Context, rows []crmcontracts.WorklistItem, findings map[ids.UUID]string) error {
 	if err := s.nameTheStep(ctx, rows); err != nil {
 		return err
 	}
@@ -83,6 +122,9 @@ func (s *Service) nameWorklistRows(ctx context.Context, rows []crmcontracts.Work
 		return err
 	}
 	if err := s.nameTheEmployers(ctx, rows); err != nil {
+		return err
+	}
+	if err := s.nameTheOrganizers(ctx, rows); err != nil {
 		return err
 	}
 	return s.nameTheOwners(ctx, rows)

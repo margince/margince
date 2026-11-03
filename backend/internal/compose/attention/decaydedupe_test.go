@@ -152,33 +152,12 @@ func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 	}
 }
 
-// The money survives the row that carried it.
-//
-// The two lanes answer different questions about a deal: a wait asks whether one
-// rides on THIS THREAD, the decay lane asks whether the contact sits on any open
-// deal the reader can see. So the decay row can be the only row on the page that
-// knows money rests on this contact — and dropping it silently took that with
-// it, which for a wait past the staleness window is the difference between
-// agreed work and routine tidying.
-func TestTheMoneyOnASilencedContactSurvivesOntoTheWaitingRow(t *testing.T) {
+func TestAnUnrelatedOpenDealDoesNotPromoteAWaitingThread(t *testing.T) {
 	dana := ids.NewV7()
-	quiet := classifyDecay(lapsedItem(QuietRelationship{
-		ContactID: dana, Name: "Dana Weiss", QuietDays: 63,
-		LastAt: dedupeInstant, HasOpenDeal: true,
-	}), dedupeInstant)
-	if !hasReason(quiet.item, reasonExpectedRevenue) {
-		t.Fatalf("the decay row states %v and not that money rests on it — the fixture "+
-			"proves nothing about what the drop would lose", quiet.item.Because)
-	}
-
+	quiet := classifyDecay(lapsedItem(QuietRelationship{ContactID: dana, Name: "Dana", QuietDays: 63, LastAt: dedupeInstant, HasOpenDeal: true}), dedupeInstant)
 	kept := dropDecayAlreadyWaiting([]ranked{quiet, waitingRowFor(dana)})
-
-	if len(kept) != 1 {
-		t.Fatalf("the page carries %v, want the waiting row alone", sourcesOf(kept))
-	}
-	if !hasReason(kept[0].item, reasonExpectedRevenue) {
-		t.Fatalf("the surviving row states %v — the money the dropped row knew about "+
-			"left the page with it", kept[0].item.Because)
+	if len(kept) != 1 || hasReason(kept[0].item, "expected_revenue") {
+		t.Fatalf("contact relationship leaked a deal dependency onto a thread: %+v", kept)
 	}
 }
 
@@ -193,7 +172,7 @@ func TestASilencedContactWithNoDealAddsNoRevenueClaim(t *testing.T) {
 	if len(kept) != 1 {
 		t.Fatalf("the page carries %v, want the waiting row alone", sourcesOf(kept))
 	}
-	if hasReason(kept[0].item, reasonExpectedRevenue) {
+	if hasReason(kept[0].item, "expected_revenue") {
 		t.Fatalf("the surviving row claims money rests on it: %v", kept[0].item.Because)
 	}
 }

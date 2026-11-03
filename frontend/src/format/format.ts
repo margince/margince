@@ -444,9 +444,7 @@ export function daysAgoText(
   return t("contact.strip.days", { count: formatNumber(days, locale) });
 }
 
-// Idle/SLA spans display as ABSOLUTE durations (no naive calendar diff —
-// architecture/10 §2): the input is a millisecond span already computed
-// upstream from two UTC instants.
+// Response times and timers measure elapsed duration; record ages use formatAge.
 export function formatDuration(ms: number, locale: Locale): string {
   const days = Math.floor(ms / 86_400_000);
   const hours = Math.floor((ms % 86_400_000) / 3_600_000);
@@ -463,4 +461,23 @@ export function formatDuration(ms: number, locale: Locale): string {
     unit: "hour",
     unitDisplay: "narrow",
   }).format(hours);
+}
+
+/** Age on the record calendar, retaining hours for events earlier today. */
+export function formatAge(
+  at: string,
+  now: number,
+  locale: Locale,
+  zone: string,
+): string {
+  const days = Math.max(
+    0,
+    calendarDaysBetween(new Date(at), new Date(now), zone),
+  );
+  const hours = Math.max(0, Math.floor((now - Date.parse(at)) / 3_600_000));
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "unit",
+    unit: days > 0 ? "day" : "hour",
+    unitDisplay: "narrow",
+  }).format(days > 0 ? days : hours);
 }

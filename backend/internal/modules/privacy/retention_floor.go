@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -105,7 +106,7 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 // as it keeps its row.
 func rawCaptureUnshielded(currentArg, carriedArg int) string {
 	return `NOT EXISTS (SELECT 1 FROM activity a
-		  WHERE a.source_system = r.source_system AND a.source_id = r.source_id
+		  WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
 		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
 }
 

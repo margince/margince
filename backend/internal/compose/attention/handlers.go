@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,6 +22,9 @@ import (
 // to live.
 type Handlers struct {
 	svc *Service
+	// home serves the first page of a reader's worklist while it holds; nil
+	// reads every page fresh.
+	home *homecache.Cache
 }
 
 // NewHandlers binds the route to the assembler.
@@ -60,8 +64,8 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request, params cr
 // The optional team parameter selects a named live roster and no tier: a receipt is the reader's own, and every act it
 // reports was taken for them. The service refuses a principal with no human
 // behind it, because there is nobody for the acts to have been done for.
-func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.HandledForYou(r.Context())
+func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request, params crmcontracts.GetHandledForYouParams) {
+	out, err := h.svc.HandledForYou(r.Context(), params.Cursor)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -202,7 +206,18 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Cursor != nil {
 		token = *params.Cursor
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
+	view := ""
+	if params.View != nil {
+		view = string(*params.View)
+	}
+	svc := h.svc
+	if params.Relationships != nil && *params.Relationships == crmcontracts.GetWorklistParamsRelationshipsOmit {
+		svc = svc.OmittingRelationships()
+	}
+	out, err := h.worklistAnswer(r.Context(), svc, worklistQuestion{
+		view: view, scope: scope, filter: filter, owner: owner, limit: limit, token: token,
+		omitRelationships: svc.omitDecay,
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

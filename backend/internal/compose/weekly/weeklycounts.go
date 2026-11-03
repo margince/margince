@@ -68,11 +68,11 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
-          SELECT a.due_at, %[6]s AS completed_at FROM activity a
+          SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
            WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
-             AND ((a.due_at >= $%[1]d AND a.due_at < $%[2]d)
-               OR a.done_at >= $%[1]d OR (a.due_at < $%[2]d AND NOT a.is_done)
+             AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
+               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
                OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
@@ -212,17 +212,18 @@ func countWeekLeads(
 // Only tasks created from the meeting before the week closed count.
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
-// the one meeting-responsibility rule the Worklist reads, over alias `m`.
-// Filing a meeting, or importing a copy, credits nobody; a meeting two reps
-// attended is in both their weeks, because both spent the time.
+// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// meeting, importing a copy, or an invitation nobody accepted credits nobody.
+// A meeting two reps attended is in both their weeks: both spent the time.
 //
 // Three readers ask it: the headline count here, the funnel in
 // weeklyscorecard.go and the coverage in weeklycoverage.go. Plan capacity asks
-// the same owner directly, so no panel credits a meeting another denies.
+// the wider responsibility rule instead, because an unanswered invitation
+// still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(seat string) string {
-	return storekit.MeetingResponsibilitySQL("m", seat)
+	return storekit.MeetingCreditSQL("m", seat)
 }
 
 // NextStepTaskSQL is "task is a next step recorded from meeting": a live task

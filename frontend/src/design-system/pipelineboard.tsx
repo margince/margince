@@ -1,15 +1,23 @@
 import type { ReactNode } from "react";
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useContext, useRef } from "react";
 import {
   formatDate,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
-import { OptionCount } from "./atoms";
+import { AnsweredSearch } from "./answeredsearch";
+import { Button, OptionCount } from "./atoms";
+import { Callout } from "./callout";
 import "./composed.css";
 
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
+import {
+  matchesTitle,
+  matchingColumns,
+  scrollColumnIn,
+  useOffScreenMatches,
+} from "./pipelinereveal";
 
 export type BoardRecord = {
   id: string;
@@ -74,7 +82,8 @@ export type BoardDeal = BoardRecord & {
    */
   valueMinor: number | null;
   currency: string | null;
-  ageMs: number;
+  idleSince: string;
+  measuredAt: number;
   /**
    * When the deal is expected to close, as the calendar day the record holds.
    * Null on a deal nobody has dated, and the card then states no date rather
@@ -93,8 +102,7 @@ export type BoardDeal = BoardRecord & {
   owner?: Readonly<{ id: string; name: string }> | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
-   * ago it was and which way it went. A span rather than an instant, for the
-   * reason `ageMs` is one: the caller owns the clock. A card that read
+   * ago it was and which way it went. The caller owns the clock. A card that read
    * `Date.now()` would be a card no test could pin. Absent or null on a deal
    * nobody has mailed about, and the card then draws no mail line at all.
    * "No mail yet" is a fact the timeline states, not one worth a row on every
@@ -166,12 +174,6 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
-   * When this changes to a non-empty value, the first column holding a card
-   * scrolls into view. A search whose only match sits in an off-screen stage
-   * otherwise reads as a board with nothing on it.
-   */
-  revealKey?: string;
-  /**
    * Fold or unfold one column. Given only by a board that has a collapsed
    * column. Without it the head is inert text, so a board with no such column
    * grows no button a reader can press to no effect.
@@ -221,14 +223,6 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   zone?: string;
 };
 
-// firstFilledColumn is the stage of the first column holding a card, or
-// undefined when none does.
-export function firstFilledColumn<Record extends BoardRecord>(
-  columns: readonly BoardColumn<Record>[],
-): string | undefined {
-  return columns.find((column) => column.deals.length > 0)?.stage;
-}
-
 function MoneyNotes({
   money,
   hidden,
@@ -266,7 +260,6 @@ function MoneyNotes({
 function BoardLayout<Record extends BoardRecord>({
   columns,
   renderCard,
-  revealKey,
   countLabel,
   columnExtras,
   columnDropHandlers,
@@ -277,22 +270,17 @@ function BoardLayout<Record extends BoardRecord>({
   const t = useT();
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
-  // Once per search: a later page or a refresh must not pull the board away
-  // from a column the reader has since scrolled to.
-  const revealedFor = useRef<string | undefined>(undefined);
-  const reveal = revealKey ? firstFilledColumn(columns) : undefined;
-  useEffect(() => {
-    if (!revealKey) {
-      revealedFor.current = undefined;
-      return;
-    }
-    if (!reveal || revealedFor.current === revealKey) return;
-    revealedFor.current = revealKey;
-    // "nearest" leaves a column already on screen where it is.
-    sections.current
-      .get(reveal)
-      ?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
-  }, [revealKey, reveal]);
+  const board = useRef<HTMLDivElement>(null);
+  // The search the cards answer, from the list the board is drawn in. With no
+  // match in view, the board scrolls to the first and says where they are.
+  const revealKey = useContext(AnsweredSearch);
+  const matches = revealKey ? matchingColumns(columns) : [];
+  const offScreen = useOffScreenMatches(
+    board,
+    sections,
+    revealKey,
+    matches.map((column) => column.stage),
+  );
   // The head's interactive half, or nothing at all. Written as a function so
   // the column's JSX stays one line of props rather than a spread conditional
   // the reader has to unpick.
@@ -312,54 +300,74 @@ function BoardLayout<Record extends BoardRecord>({
     };
   }
   return (
-    <div className="board">
-      {columns.map((column) => {
-        const money = moneyFor(column);
-        const dealCount = column.count ?? column.deals.length;
-        return (
-          <section
-            key={column.stage}
-            className={
-              column.collapsed ? "board-col board-col-collapsed" : "board-col"
+    <>
+      {offScreen && matches.length > 0 && (
+        // The host's gutter comes from this wrapper, as a Callout takes no class.
+        <div className="board-reveal">
+          <Callout
+            kind="outcome"
+            title={matchesTitle(matches, locale)}
+            actions={
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  scrollColumnIn(sections.current.get(matches[0]?.stage ?? ""))
+                }
+              >
+                {t("board.showMatches")}
+              </Button>
             }
-            data-stage={column.stage}
-            ref={(node) => {
-              if (node) sections.current.set(column.stage, node);
-              else sections.current.delete(column.stage);
-            }}
-            aria-label={column.label}
-            // listtable.css gives every column `overflow-y: auto` so a stage
-            // with many deals scrolls its own cards instead of stretching the
-            // rest to match it. A column with too few cards to overflow, or
-            // none at all, is still declared scrollable. A card's own link
-            // makes a full column keyboard-reachable but says nothing about an
-            // empty one, which axe's scrollable-region-focusable rule catches.
-            // The section is the scroller, so it takes the fallback stop
-            // itself rather than depending on what is inside it. That is the
-            // WCAG-sanctioned fix for a non-interactive scrollable region. It
-            // is also why the a11y linter's default posture forbids tabIndex
-            // on a section at all.
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
-            tabIndex={0}
-            {...columnDropHandlers?.(column)}
-          >
-            {/* The stage and how much is in it, on one line and stuck to the
+          />
+        </div>
+      )}
+      <div className="board" ref={board}>
+        {columns.map((column) => {
+          const money = moneyFor(column);
+          const dealCount = column.count ?? column.deals.length;
+          return (
+            <section
+              key={column.stage}
+              className={
+                column.collapsed ? "board-col board-col-collapsed" : "board-col"
+              }
+              data-stage={column.stage}
+              ref={(node) => {
+                if (node) sections.current.set(column.stage, node);
+                else sections.current.delete(column.stage);
+              }}
+              aria-label={column.label}
+              // listtable.css gives every column `overflow-y: auto` so a stage
+              // with many deals scrolls its own cards instead of stretching the
+              // rest to match it. A column with too few cards to overflow, or
+              // none at all, is still declared scrollable. A card's own link
+              // makes a full column keyboard-reachable but says nothing about an
+              // empty one, which axe's scrollable-region-focusable rule catches.
+              // The section is the scroller, so it takes the fallback stop
+              // itself rather than depending on what is inside it. That is the
+              // WCAG-sanctioned fix for a non-interactive scrollable region. It
+              // is also why the a11y linter's default posture forbids tabIndex
+              // on a section at all.
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: the scrollable region itself needs the keyboard stop; see the comment above.
+              tabIndex={0}
+              {...columnDropHandlers?.(column)}
+            >
+              {/* The stage and how much is in it, on one line and stuck to the
                 top of the column. A board is scrolled, and a reader halfway
                 down a long stage had nothing on screen saying which stage they
                 were in. The head is the only thing that says it, so it holds
                 its place. The count moved up here with it: it is the figure a
                 reader compares across the board, and under the money totals it
                 was the third figure on a two-line sub. */}
-            {/* A button only where there is something to press, and that is
+              {/* A button only where there is something to press, and that is
                 per column rather than per board. A column says it can fold by
                 carrying `collapsed` at all; one that never folds keeps the
                 plain div it has always been, even on a board that has a
                 foldable column beside it. A control that does nothing is worse
                 than no control, and a lead board would otherwise have made its
                 three open stages focusable to no effect. */}
-            <div className="board-col-head" {...foldProps(column)}>
-              <span className="stage">{column.label}</span>
-              {/* Its own node, not one composed string. The name is data of
+              <div className="board-col-head" {...foldProps(column)}>
+                <span className="stage">{column.label}</span>
+                {/* Its own node, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
                   and must not. Written as "{label}: {count}" into the
                   truncating span, a long stage name ellipsised the figure away.
@@ -371,71 +379,76 @@ function BoardLayout<Record extends BoardRecord>({
                   deals" below, with the unit a bare figure leaves out. So the
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
-              <span className="board-col-count" aria-hidden="true">
-                <OptionCount count={dealCount} />
-              </span>
-              {money && (
-                <span className="prob">
-                  {formatNumber(money.probabilityPct, locale)}%
+                <span className="board-col-count" aria-hidden="true">
+                  <OptionCount count={dealCount} />
                 </span>
-              )}
-            </div>
-            {/* The stage's total is the figure being scanned down the board,
+                {money && (
+                  <span className="prob">
+                    {formatNumber(money.probabilityPct, locale)}%
+                  </span>
+                )}
+              </div>
+              {/* The stage's total is the figure being scanned down the board,
               so it leads with the deal count beside it. The weighted figure is
               its own server-sourced total (not derived from the raw total). It
               reads underneath rather than competing on the line. */}
-            <div className="board-col-sub">
-              <span className="board-col-total">
-                {money && !column.sumHidden && (
-                  <span className="board-col-money">
-                    {money.rawMinor != null && money.currency ? "≈ " : ""}
-                    {formatMoneyOrAbsent(
-                      money.rawMinor,
-                      money.currency,
-                      locale,
-                    )}
-                  </span>
-                )}
-                {/* The count is in the head; what a screen reader needs here
+              <div className="board-col-sub">
+                <span className="board-col-total">
+                  {money && !column.sumHidden && (
+                    <span className="board-col-money">
+                      {money.rawMinor != null && money.currency ? "≈ " : ""}
+                      {formatMoneyOrAbsent(
+                        money.rawMinor,
+                        money.currency,
+                        locale,
+                      )}
+                    </span>
+                  )}
+                  {/* The count is in the head; what a screen reader needs here
                     is the unit the head's bare figure leaves out, so the column
                     announces "12 deals" rather than "Qualified: 12". */}
-                <span className="sr-only">
-                  {countLabel
-                    ? countLabel(dealCount)
-                    : translatePlural(locale, "board.count", dealCount, {
-                        count: formatNumber(dealCount, locale),
-                      })}
+                  <span className="sr-only">
+                    {countLabel
+                      ? countLabel(dealCount)
+                      : translatePlural(locale, "board.count", dealCount, {
+                          count: formatNumber(dealCount, locale),
+                        })}
+                  </span>
                 </span>
-              </span>
-              {money && !column.sumHidden && (
-                <span className="board-col-weighted">
-                  {t("board.weighted", {
-                    value: formatMoneyOrAbsent(
-                      money.weightedMinor,
-                      money.currency,
-                      locale,
-                    ),
-                  })}
-                </span>
-              )}
-              <MoneyNotes money={money} hidden={column.sumHidden} zone={zone} />
-              {money && column.sumHidden && dealCount > 0 && (
-                <span className="board-col-refusal">
-                  {column.sumHiddenReason}
-                </span>
-              )}
-            </div>
-            {!column.collapsed &&
-              column.deals.map((record) => (
-                <Fragment key={record.id}>
-                  {renderCard(record, column)}
-                </Fragment>
-              ))}
-            {!column.collapsed && columnExtras?.(column)}
-          </section>
-        );
-      })}
-    </div>
+                {money && !column.sumHidden && (
+                  <span className="board-col-weighted">
+                    {t("board.weighted", {
+                      value: formatMoneyOrAbsent(
+                        money.weightedMinor,
+                        money.currency,
+                        locale,
+                      ),
+                    })}
+                  </span>
+                )}
+                <MoneyNotes
+                  money={money}
+                  hidden={column.sumHidden}
+                  zone={zone}
+                />
+                {money && column.sumHidden && dealCount > 0 && (
+                  <span className="board-col-refusal">
+                    {column.sumHiddenReason}
+                  </span>
+                )}
+              </div>
+              {!column.collapsed &&
+                column.deals.map((record) => (
+                  <Fragment key={record.id}>
+                    {renderCard(record, column)}
+                  </Fragment>
+                ))}
+              {!column.collapsed && columnExtras?.(column)}
+            </section>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -24,9 +25,12 @@ import (
 )
 
 //nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
-func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any) error {
+func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any, converting []ids.LeadID) error {
 	rows, err := contactSocialInputs(social)
 	if social == nil || err != nil {
+		return err
+	}
+	if err := refuseLeadHeldLinkedIn(ctx, tx, contactID, social, converting); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx,
@@ -38,6 +42,11 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
 			contactID, row.Platform, row.Handle); err != nil {
 			return fmt.Errorf("insert contact social row: %w", err)
+		}
+		if row.Platform == SocialLinkedIn {
+			if err := fileLinkedInTwinsAtWrite(ctx, tx, contactID, row.Handle); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -59,7 +68,7 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 // schema answers with a bare conflict.
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
-func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
+func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, converting []ids.LeadID) error {
 	if emails == nil {
 		return nil
 	}
@@ -137,7 +146,7 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Only the addresses this contact does not already hold are inserted: a held
 	// address would collide with its own live row on the unique index.
-	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased)
+	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased, converting)
 }
 
 // liveContactEmails answers the addresses a contact currently holds, lowercased
@@ -205,7 +214,7 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 }
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
-func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission) error {
+func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission, converting []ids.LeadID) error {
 	// Every address a contact gains is written here, so every create and
 	// update door meets the erasure list without asking for it.
 	addresses := make([]string, 0, len(emails))
@@ -221,6 +230,11 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 	} else if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
 		return err
 	}
+	// Under the subject locks just taken, so a lead create of the same address
+	// waits for this write or is seen by it.
+	if err := refuseLeadHeldEmails(ctx, tx, addresses, converting); err != nil {
+		return err
+	}
 	for _, e := range emails {
 		// Capture, channel, promotion and booking reach this writer without
 		// parseContactContacts, so the refusal is asked here too.
@@ -228,10 +242,10 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
-			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,
+			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence, email_domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8, $9)`,
 			contactID, e.Email, e.EmailType, e.IsPrimary, e.Position, source, by,
-			!e.VouchedNotCorresponded); err != nil {
+			!e.VouchedNotCorresponded, owndomain.StoredOfAddress(e.Email)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_contact_email_dedupe" {
 					return &DuplicateEmailError{Email: e.Email}
@@ -240,37 +254,6 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			}
 			return fmt.Errorf("insert contact email: %w", err)
 		}
-	}
-	return nil
-}
-
-// ensureContactEmailsUnclaimed is the dedupe pre-check, so the 409 can
-// carry the existing id; the unique index remains the structural
-// guarantee under races. The existing id is disclosed only when the
-// caller could read that row; a caller who cannot gets the held refusal
-// (heldcontact.go).
-func ensureContactEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []ContactEmailInput) error {
-	return ensureContactEmailsUnclaimedExcept(ctx, tx, ids.ContactID{}, emails)
-}
-
-// ensureContactEmailsUnclaimedExcept is the same probe, ignoring one contact's
-// own rows. An update that re-states an address the contact already holds must
-// not be refused by that contact's own row, which is the only difference between
-// the create case (nothing to exclude) and the replace case.
-func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids.ContactID, emails []ContactEmailInput) error {
-	for _, e := range emails {
-		var existing ids.ContactID
-		err := tx.QueryRow(ctx,
-			`SELECT contact_id FROM contact_email
-			  WHERE email = lower($1) AND archived_at IS NULL AND contact_id <> $2`,
-			e.Email, self.UUID).Scan(&existing)
-		if errors.Is(err, pgx.ErrNoRows) {
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("probe email dedupe: %w", err)
-		}
-		return claimedEmailRefusal(ctx, tx, e.Email, existing)
 	}
 	return nil
 }
@@ -285,10 +268,9 @@ var contactColumns = `id, full_name, first_name, last_name, title, owner_id, vis
 	` + sourceAuthorSeatNameSQL("contact") + `,
 	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark`
 
-// readContact resolves one contact row; active names the custom-field
-// columns to carry alongside the core ones — nil for internal decision
-// reads whose result never reaches the wire.
-func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+// readContactRow resolves one contact row. active names the custom-field
+// columns to carry. It is nil for an internal read that never reaches the wire.
+func readContactRow(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
 	q := `SELECT ` + contactColumns + storekit.SelectSuffix(active) + ` FROM contact WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND archived_at IS NULL`

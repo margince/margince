@@ -21,6 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -132,3 +135,138 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 	}
 	return id, true, nil
 }
+
+// IdentityKeys are the exact keys that name one human on either side: live
+// addresses, and LinkedIn profile URLs in the one normalised spelling
+// (contacts.NormalizeContactLinkedInURL). A value in any other spelling matches
+// nothing, so a handle stored as typed never counts as identity.
+type IdentityKeys struct {
+	Emails       []string
+	LinkedInURLs []string
+}
+
+// IdentityHolders are the live leads and live contacts holding some of the
+// keys asked about, each list oldest first and without repeats.
+type IdentityHolders struct {
+	Leads    []ids.LeadID
+	Contacts []ids.ContactID
+	held     map[heldKey]bool
+}
+
+// heldKey is one key a holder of one kind was found under.
+type heldKey struct {
+	holder, lane, key string
+}
+
+const (
+	holderLead    = "lead"
+	holderContact = "contact"
+	laneEmail     = "email"
+	laneLinkedIn  = "linkedin"
+)
+
+// LeadHoldsEmail reports whether a live lead holds this address.
+func (h IdentityHolders) LeadHoldsEmail(email string) bool {
+	return h.held[heldKey{holderLead, laneEmail, foldEmail(email)}]
+}
+
+// ContactHoldsEmail reports whether a live contact holds this address.
+func (h IdentityHolders) ContactHoldsEmail(email string) bool {
+	return h.held[heldKey{holderContact, laneEmail, foldEmail(email)}]
+}
+
+// LeadHoldsLinkedIn reports whether a live lead holds this normalised profile URL.
+func (h IdentityHolders) LeadHoldsLinkedIn(url string) bool {
+	return h.held[heldKey{holderLead, laneLinkedIn, url}]
+}
+
+// ContactHoldsLinkedIn reports whether a live contact holds this normalised profile URL.
+func (h IdentityHolders) ContactHoldsLinkedIn(url string) bool {
+	return h.held[heldKey{holderContact, laneLinkedIn, url}]
+}
+
+// LockIdentityHolders is the one question every door asks before it writes a
+// lead or a contact: who already holds these keys. It takes the identity locks first, in
+// the order a lead create takes them: the LinkedIn write identity, then the
+// subject locks of the addresses. A caller that locks an existing contact row
+// does so before this call, never after.
+func LockIdentityHolders(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (IdentityHolders, error) {
+	urls := slices.Clone(keys.LinkedInURLs)
+	slices.Sort(urls)
+	for _, url := range slices.Compact(urls) {
+		if url == "" {
+			continue
+		}
+		if err := LockWriteIdentity(ctx, tx, "lead_linkedin", url); err != nil {
+			return IdentityHolders{}, err
+		}
+	}
+	if err := LockSubjectKeys(ctx, tx, nil, keys.Emails); err != nil {
+		return IdentityHolders{}, err
+	}
+	return IdentityHoldersOf(ctx, tx, keys)
+}
+
+// identityHoldersSQL matches each key against both sides. A lead holds an
+// address or a profile URL on its own row. A contact holds them on its live
+// contact_email rows and its LinkedIn contact_social row.
+const identityHoldersSQL = `
+	WITH emails AS (SELECT DISTINCT lower(btrim(e)) AS key FROM unnest($1::text[]) e WHERE btrim(e) <> ''),
+	     urls AS (SELECT DISTINCT u AS key FROM unnest($2::text[]) u WHERE u <> '')
+	SELECT 'lead', 'email', l.id, l.email, l.created_at FROM lead l
+	 WHERE l.email IN (SELECT key FROM emails) AND l.archived_at IS NULL
+	UNION ALL
+	SELECT 'lead', 'linkedin', l.id, l.linkedin_url, l.created_at FROM lead l
+	 WHERE l.linkedin_url IN (SELECT key FROM urls) AND l.archived_at IS NULL
+	UNION ALL
+	SELECT 'contact', 'email', c.id, ce.email, c.created_at FROM contact c
+	  JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
+	 WHERE ce.email IN (SELECT key FROM emails) AND c.archived_at IS NULL
+	UNION ALL
+	SELECT 'contact', 'linkedin', c.id, cs.handle, c.created_at FROM contact c
+	  JOIN contact_social cs ON cs.contact_id = c.id AND cs.platform = 'linkedin'
+	 WHERE cs.handle IN (SELECT key FROM urls) AND c.archived_at IS NULL
+	ORDER BY 5, 3`
+
+// IdentityHoldersOf is the same question without the locks, for a writer that
+// already holds them and for a read that writes nothing.
+func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (IdentityHolders, error) {
+	out := IdentityHolders{Leads: []ids.LeadID{}, Contacts: []ids.ContactID{}, held: map[heldKey]bool{}}
+	if len(keys.Emails) == 0 && len(keys.LinkedInURLs) == 0 {
+		return out, nil
+	}
+	rows, err := tx.Query(ctx, identityHoldersSQL, keys.Emails, keys.LinkedInURLs)
+	if err != nil {
+		return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var found heldKey
+		var id ids.UUID
+		var createdAt time.Time
+		if err := rows.Scan(&found.holder, &found.lane, &id, &found.key, &createdAt); err != nil {
+			return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
+		}
+		out.add(found, id)
+	}
+	if err := rows.Err(); err != nil {
+		return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
+	}
+	return out, nil
+}
+
+func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
+	h.held[found] = true
+	if found.holder == holderLead {
+		if lead := ids.From[ids.LeadKind](id); !slices.Contains(h.Leads, lead) {
+			h.Leads = append(h.Leads, lead)
+		}
+		return
+	}
+	if contact := ids.From[ids.ContactKind](id); !slices.Contains(h.Contacts, contact) {
+		h.Contacts = append(h.Contacts, contact)
+	}
+}
+
+// foldEmail is the spelling contact_email and lead_email_norm store.
+func foldEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }

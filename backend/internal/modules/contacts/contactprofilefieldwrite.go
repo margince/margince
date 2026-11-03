@@ -195,7 +195,20 @@ func profileFieldValueKey(field, value string) string {
 	return strings.TrimSpace(value)
 }
 
-// writeContactProfileField writes one evidence row and reports whether it landed.
+// writeContactProfileField writes one evidence row through writeProfileFieldRow,
+// and fills the contact's empty LinkedIn slot from a landed linkedin row.
+func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, row contactProfileFieldRow, precedence contactProfileFieldPrecedence) (bool, error) {
+	landed, err := writeProfileFieldRow(ctx, tx, contactID, row, precedence)
+	if err != nil || !landed || row.Field != fieldLinkedin {
+		return landed, err
+	}
+	if err := fillEmptyLinkedinSlot(ctx, tx, contactID, row.Value); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// writeProfileFieldRow writes one evidence row and reports whether it landed.
 //
 // false carries two meanings and the callers separate them: the field was
 // already answered and this writer defers to it, OR the subject went while this
@@ -218,7 +231,7 @@ func profileFieldValueKey(field, value string) string {
 // what has to be serialized is the subject's liveness. Every caller that goes
 // on to write a contact COLUMN takes the same row next, so the order is
 // contact-then-contact and no new deadlock edge is introduced.
-func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, row contactProfileFieldRow, precedence contactProfileFieldPrecedence) (bool, error) {
+func writeProfileFieldRow(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, row contactProfileFieldRow, precedence contactProfileFieldPrecedence) (bool, error) {
 	if err := auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			// Not an error to THIS writer, whose whole contract is to report
@@ -256,13 +269,7 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	if err != nil {
 		return false, fmt.Errorf("contacts: profile field evidence row (%s): %w", row.Field, err)
 	}
-	landed := tag.RowsAffected() > 0
-	if landed && row.Field == fieldLinkedin {
-		if err := fillEmptyLinkedinSlot(ctx, tx, contactID, row.Value); err != nil {
-			return false, err
-		}
-	}
-	return landed, nil
+	return tag.RowsAffected() > 0, nil
 }
 
 // fillEmptyLinkedinSlot carries a landed linkedin evidence row into the social

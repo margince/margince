@@ -315,12 +315,18 @@ func TestTheLocaleMatcherReadsListsAndNotProse(t *testing.T) {
 		shape, statement string
 		want             []string
 	}{
-		{"a bare parenthesised list", "every locale the installation ships (en, de, vi) or generation refuses",
-			[]string{"de", "en", "vi"}},
-		{"a backticked parenthesised list", "three catalogs (`en`, `de`, `vi`), `en` the default",
-			[]string{"de", "en", "vi"}},
-		{"catalog filenames across one row", "| copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts` |",
-			[]string{"de", "en", "vi"}},
+		{
+			"a bare parenthesised list", "every locale the installation ships (en, de, vi) or generation refuses",
+			[]string{"de", "en", "vi"},
+		},
+		{
+			"a backticked parenthesised list", "three catalogs (`en`, `de`, `vi`), `en` the default",
+			[]string{"de", "en", "vi"},
+		},
+		{
+			"catalog filenames across one row", "| copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts` |",
+			[]string{"de", "en", "vi"},
+		},
 		{"a file whose basename is not a code", "`App.tsx`, `i18n.test.ts` and `format/plural.ts`", nil},
 		{"a region-tagged language", "unconfigured English is `en-GB`, not `en-US`", nil},
 		{"a parenthesised pair of filenames", "advisories (`economybanner.tsx`, `embedreindexbanner.tsx`)", nil},

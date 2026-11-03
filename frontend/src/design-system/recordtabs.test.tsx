@@ -2,13 +2,23 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 type Body = "overview" | "contacts";
 const LABELS: Record<Body, string> = {
@@ -118,5 +128,43 @@ describe("RecordTabs keeps pressable tabs when there is a choice", () => {
         .getByRole("button", { name: "Contacts" })
         .getAttribute("aria-pressed"),
     ).toBe("false");
+  });
+});
+
+// The strip hides its scrollbar, so the fade is the only sign that tabs run
+// past an edge. It marks the end that hides tabs, and a strip that fits
+// carries none.
+describe("RecordTabs fades only an end that hides tabs", () => {
+  function sized(scrollWidth: number, clientWidth: number) {
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+      scrollWidth,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(
+      clientWidth,
+    );
+    return strip().container.querySelector(".recordtabs-strip");
+  }
+
+  it("fades the far end of a strip wider than its row", () => {
+    const tabs = sized(600, 300);
+    expect(tabs).toHaveClass("is-clipped-end");
+    expect(tabs).not.toHaveClass("is-clipped-start");
+  });
+
+  it("fades the start once the strip is scrolled to its end", () => {
+    const tabs = sized(600, 300);
+    if (!(tabs instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    act(() => {
+      tabs.scrollLeft = 300;
+      fireEvent.scroll(tabs);
+    });
+    expect(tabs).toHaveClass("is-clipped-start");
+    expect(tabs).not.toHaveClass("is-clipped-end");
+  });
+
+  it("fades nothing on a strip that fits", () => {
+    const tabs = sized(300, 300);
+    expect(tabs).not.toHaveClass("is-clipped-start");
+    expect(tabs).not.toHaveClass("is-clipped-end");
   });
 });

@@ -225,7 +225,8 @@ type authorCandidate struct {
 // The candidate is the From row's own contact when it names one, else every
 // live contact holding the address. It is decided over all contacts, so a
 // contact out of the reader's sight is never replaced by a visible namesake.
-// The one candidate is named only when the reader may see it.
+// The one candidate is named only when the reader may see it. Candidate ids
+// come from the From row or the address index, so no contact is scanned.
 func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []unresolvedAuthor) error {
 	if len(authors) == 0 || !auth.ReadGranted(ctx, "contact") {
 		return nil
@@ -258,9 +259,10 @@ func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []unresolvedA
 		  SELECT p.id, p.full_name, coalesce(`+scope+`, false) AS visible
 		    FROM contact p
 		   WHERE p.archived_at IS NULL
-		     AND CASE WHEN s.contact_id IS NOT NULL THEN p.id = s.contact_id
-		              ELSE EXISTS (SELECT 1 FROM contact_email e
-		                            WHERE e.contact_id = p.id AND e.archived_at IS NULL AND e.email = w.address) END
+		     AND p.id IN (SELECT s.contact_id WHERE s.contact_id IS NOT NULL
+		                  UNION ALL
+		                  SELECT e.contact_id FROM contact_email e
+		                   WHERE s.contact_id IS NULL AND e.archived_at IS NULL AND e.email = w.address)
 		   LIMIT 2) cand`, args...)
 	if err != nil {
 		return fmt.Errorf("activities: naming the senders of a page: %w", err)

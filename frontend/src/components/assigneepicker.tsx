@@ -5,11 +5,25 @@ import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useRoster, useRosterPartial, useRosterPartialHint } from "./entityref";
+import {
+  RosterFailedLine,
+  useRoster,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "./entityref";
 import { useEveryMember } from "./roster";
 
 /** A workspace user as a picker option. */
 export type UserOption = { value: string; label: string };
+
+/**
+ * Picker options with the roster read behind them, so a picker can say when
+ * that read failed instead of offering an empty list (`RosterFailedLine`).
+ */
+export type UserOptions = {
+  options: UserOption[];
+  roster: ReturnType<typeof useRoster>;
+};
 
 type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
 type MemberStatus = components["schemas"]["User"]["status"];
@@ -34,12 +48,13 @@ export function mayOwnRecords(entry: RosterEntry): boolean {
  * that can write, inside the reader's own write scope. Every owner picker reads
  * this, so a picker never offers somebody the owner change then refuses.
  */
-export function useRecordOwnerOptions(enabled = true): UserOption[] {
+export function useRecordOwnerOptions(enabled = true): UserOptions {
   const roster = useRoster("user", enabled);
-  return (roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
+  const options = (roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
     value: entry.id,
     label: "display_name" in entry ? entry.display_name : entry.id,
   }));
+  return { options, roster };
 }
 
 const STATUS_SUFFIX: Partial<
@@ -99,14 +114,15 @@ export function useMemberFilterOptions(enabled: boolean) {
  * list — a composer whose assignee picker only applies to a task has no reason
  * to walk `/users` while a note is being written.
  */
-export function useAssignableUserOptions(enabled = true): UserOption[] {
+export function useAssignableUserOptions(enabled = true): UserOptions {
   const roster = useRoster("user", enabled);
-  return (roster.data ?? [])
+  const options = (roster.data ?? [])
     .filter((entry) => !("is_agent" in entry && entry.is_agent))
     .map((entry) => ({
       value: entry.id,
       label: ("display_name" in entry ? entry.display_name : null) ?? entry.id,
     }));
+  return { options, roster };
 }
 
 /**
@@ -130,21 +146,24 @@ export function TaskAssigneeField({
   onChange: (next: string) => void;
 }>) {
   const t = useT();
-  const options = useAssignableUserOptions(active);
+  const { options, roster } = useAssignableUserOptions(active);
   const partialHint = useRosterPartialHint(useRosterPartial("user", active));
   if (!active) {
     return null;
   }
   return (
-    <Field label={t("log.assignee")} hint={partialHint}>
-      {(control) => (
-        <Select
-          {...control}
-          options={[{ value: "", label: t("log.unassigned") }, ...options]}
-          value={value}
-          onChange={onChange}
-        />
-      )}
-    </Field>
+    <>
+      <Field label={t("log.assignee")} hint={partialHint}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[{ value: "", label: t("log.unassigned") }, ...options]}
+            value={value}
+            onChange={onChange}
+          />
+        )}
+      </Field>
+      <RosterFailedLine kind="user" roster={roster} />
+    </>
   );
 }

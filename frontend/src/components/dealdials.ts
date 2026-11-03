@@ -4,6 +4,14 @@
 import type { operations } from "../api/schema";
 import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
 import { useT } from "../i18n";
+import {
+  admitCloseDay,
+  admitCountry,
+  admitCurrency,
+  admitValueRange,
+  CLOSE_DAY_DIAL,
+  VALUE_DIAL,
+} from "../lib/dealranges";
 
 export {
   DEAL_STATUS_LABEL,
@@ -27,7 +35,15 @@ export type DealStatus = NonNullable<DealQuery["status"]>;
 
 const ENUM_DIALS: Readonly<
   Record<string, (value: string | undefined) => string | undefined>
-> = { status: dealStatusFilter, forecast_category: forecastCategoryFilter };
+> = {
+  status: dealStatusFilter,
+  forecast_category: forecastCategoryFilter,
+  // The range dials hold a shape rather than a word; a broken one goes the same way.
+  [CLOSE_DAY_DIAL]: admitCloseDay,
+  [VALUE_DIAL]: admitValueRange,
+  currency: admitCurrency,
+  country: admitCountry,
+};
 
 // The filters minus any enum dial holding a value the wire does not admit. The
 // row a reader sees and the request the list sends then cannot disagree. The

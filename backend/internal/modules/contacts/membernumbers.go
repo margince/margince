@@ -9,11 +9,14 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"html"
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -30,7 +33,7 @@ var signedNumber = regexp.MustCompile(`(?:\+|00)\d[\d \t().\-/]{6,}\d`)
 // does not make it the contact's.
 func MemberNumbersTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (map[string]bool, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT s.phone, s.body FROM email_signature s
+		SELECT s.phone, s.body, s.html FROM email_signature s
 		  JOIN app_user u ON u.id = s.owner_id
 		 WHERE NOT EXISTS (
 		   SELECT 1 FROM contact_email ce
@@ -42,11 +45,11 @@ func MemberNumbersTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (m
 	defer rows.Close()
 	numbers := map[string]bool{}
 	for rows.Next() {
-		var phone, body string
-		if err := rows.Scan(&phone, &body); err != nil {
+		var phone, body, markup string
+		if err := rows.Scan(&phone, &body, &markup); err != nil {
 			return nil, fmt.Errorf("contacts: reading the numbers members sign with: %w", err)
 		}
-		for _, printed := range append(signedNumber.FindAllString(body, -1), phone) {
+		for _, printed := range append(signedNumber.FindAllString(strings.Join([]string{body, webread.StripTags(markup), html.UnescapeString(markup)}, "\n"), -1), phone) {
 			if parsed, err := values.ParsePhone(printed); err == nil {
 				numbers[parsed.String()] = true
 			}

@@ -37,3 +37,47 @@ func TestADraftIsHeldToTheContractsSubjectAndAddressCaps(t *testing.T) {
 		}
 	}
 }
+
+// A draft serves the records it was written from.
+//
+// Without them on the wire the composer rebuilds links from whichever page
+// opened it. A draft grounded in a deal then sends under the contact alone.
+func TestADraftServesTheRecordsItWasWrittenFrom(t *testing.T) {
+	t.Parallel()
+	deal, project := ids.NewV7(), ids.NewV7()
+	out := mailDraftResponse(MailDraft{
+		Grounding: []MailDraftAnchor{
+			{Type: crmcontracts.MailDraftAnchorTypeDeal, ID: deal},
+			{Type: crmcontracts.MailDraftAnchorTypeProject, ID: project},
+		},
+	})
+	if out.Grounding == nil {
+		t.Fatal("a grounded draft served nil, which serializes as null")
+	}
+	served := *out.Grounding
+	if len(served) != 2 {
+		t.Fatalf("served %d grounds, want the two the draft carried", len(served))
+	}
+	if served[0].AnchorType != crmcontracts.MailDraftAnchorTypeDeal ||
+		ids.UUID(served[0].AnchorId) != deal {
+		t.Errorf("the first ground is %v %v, want the deal", served[0].AnchorType, served[0].AnchorId)
+	}
+	if served[1].AnchorType != crmcontracts.MailDraftAnchorTypeProject {
+		t.Errorf("the second ground is %v, want the project", served[1].AnchorType)
+	}
+}
+
+// A human draft serves an empty list, never a null.
+//
+// The contract declares an array, so a nil would reach a strict client as
+// `null` and a reader that cannot iterate it.
+func TestAnUngroundedDraftServesAnEmptyList(t *testing.T) {
+	t.Parallel()
+	out := mailDraftResponse(MailDraft{})
+	if out.Grounding == nil {
+		t.Fatal("an ungrounded draft served nil, which serializes as null")
+	}
+	if len(*out.Grounding) != 0 {
+		t.Errorf("an ungrounded draft served %d grounds", len(*out.Grounding))
+	}
+}

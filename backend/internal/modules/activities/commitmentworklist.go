@@ -19,7 +19,7 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 }
 
 func currentTaskMailIdentities(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (map[string][]string, error) {
-	if in.WorklistAsOf == nil && in.AssigneeID == nil {
+	if in.WorklistAsOf == nil && in.AssigneeID == nil && in.RequestCurrentAsOf == nil {
 		return map[string][]string{}, nil
 	}
 	return storekit.UnambiguousMailSeatIdentities(ctx, tx)

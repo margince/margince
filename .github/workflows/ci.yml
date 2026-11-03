@@ -334,6 +334,8 @@ jobs:
               # first, so an edit to either one alone still reaches the lane.
               - 'scripts/sbom-census.sh'
               - 'scripts/test-sbom-census.sh'
+              - 'scripts/install-sbom-python.sh'
+              - 'scripts/test-install-sbom-python.sh'
               # The licence comparison `sbom-parity` runs, for the same reason:
               # it decides whether the three documents agree, so an edit to it
               # alone has to re-run the lane that trusts its verdict.

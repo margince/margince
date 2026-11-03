@@ -4,8 +4,16 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clippedEdges } from "./scrollregion";
 import { StageLadder, type StageStep } from "./stageladder";
 
 // A pipeline is the workspace's to lengthen, so the ladder has to stay one
@@ -77,11 +85,24 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function show(current: string | null, refused = false) {
-  render(<StageLadder label="Stage" steps={pipeline(current, refused)} />);
-  const [run, exits] = within(
-    screen.getByRole("group", { name: "Stage" }),
-  ).getAllByRole("list");
+// Both shapes draw the one run, so each claim about it holds for both.
+const SHAPES = ["chevrons", "bars"] as const;
+type Shape = (typeof SHAPES)[number];
+
+function show(current: string | null, refused = false, variant?: Shape) {
+  render(
+    <StageLadder
+      label="Stage"
+      variant={variant}
+      steps={pipeline(current, refused)}
+    />,
+  );
+  const group = screen.getByRole("group", { name: "Stage" });
+  const run = group.querySelector("ol");
+  const exits = group.querySelector("ul");
+  if (!run || !exits) {
+    throw new Error("The ladder drew no run or no ways out.");
+  }
   // The box that scrolls holds the run rather than being it.
   return { run, exits, scroller: run.parentElement };
 }
@@ -107,11 +128,10 @@ function centredOn(rung: number) {
   return rung * PITCH + RUNG_WIDTH / 2 - RUN_WIDTH / 2;
 }
 
-describe("a long pipeline", () => {
+describe.each(SHAPES)("a long pipeline in the %s shape", (variant) => {
   it("keeps the ways out apart from the run a scroll can hide", () => {
-    const { run, exits } = show("Negotiation");
+    const { run, exits } = show("Negotiation", false, variant);
 
-    expect(run.tagName).toBe("OL");
     expect(within(run).getAllByRole("listitem").map(stageName)).toEqual(OPEN);
     expect(
       within(exits)
@@ -121,32 +141,38 @@ describe("a long pipeline", () => {
   });
 
   it("comes to rest with the current stage in the middle of the run", () => {
-    const { scroller } = show("Negotiation");
+    const { scroller } = show("Negotiation", false, variant);
 
     expect(scroller?.scrollLeft).toBe(centredOn(OPEN.indexOf("Negotiation")));
   });
 
   it("rests a record that took a way out on the last stage it climbed", () => {
-    const { scroller } = show("Won");
+    const { scroller } = show("Won", false, variant);
 
     expect(scroller?.scrollLeft).toBe(centredOn(OPEN.length - 1));
   });
 
   it("returns to the start once the pipeline cannot place the record", () => {
     const { rerender } = render(
-      <StageLadder label="Stage" steps={pipeline("Negotiation")} />,
+      <StageLadder
+        label="Stage"
+        variant={variant}
+        steps={pipeline("Negotiation")}
+      />,
     );
-    rerender(<StageLadder label="Stage" steps={pipeline(null)} />);
+    rerender(
+      <StageLadder label="Stage" variant={variant} steps={pipeline(null)} />,
+    );
 
-    const [run] = screen.getAllByRole("list");
-    expect(run.parentElement?.scrollLeft).toBe(0);
+    const run = screen.getByRole("group").querySelector("ol");
+    expect(run?.parentElement?.scrollLeft).toBe(0);
   });
 
   // Every rung of a refused ladder is a disabled button, which no keyboard
   // reaches — so the stages past the edge are reachable only by the run itself.
   it("makes a run past its edge a keyboard stop named for the ladder", () => {
     overflowing();
-    const { run } = show("Negotiation", true);
+    const { run } = show("Negotiation", true, variant);
 
     const region = screen.getByRole("region", { name: "Stage" });
     expect(region.tabIndex).toBe(0);
@@ -154,11 +180,168 @@ describe("a long pipeline", () => {
   });
 
   it("adds no keyboard stop while the run fits", () => {
-    show("Negotiation", true);
+    show("Negotiation", true, variant);
 
     expect(screen.queryByRole("region")).toBeNull();
   });
 });
+
+describe("which ends of a sideways run are clipped", () => {
+  const box = (scrollLeft: number, scrollWidth = 1200, clientWidth = 300) => ({
+    scrollLeft,
+    scrollWidth,
+    clientWidth,
+  });
+
+  it("finds none while the content fits, a rounding pixel included", () => {
+    expect(clippedEdges(box(0, 300))).toEqual({ start: false, end: false });
+    expect(clippedEdges(box(0, 301))).toEqual({ start: false, end: false });
+  });
+
+  it("finds the end at the start, both in the middle, the start at the end", () => {
+    expect(clippedEdges(box(0))).toEqual({ start: false, end: true });
+    expect(clippedEdges(box(450))).toEqual({ start: true, end: true });
+    expect(clippedEdges(box(900))).toEqual({ start: true, end: false });
+  });
+
+  it("reads a right-to-left scroll by its size", () => {
+    expect(clippedEdges(box(-900))).toEqual({ start: true, end: false });
+  });
+});
+
+describe.each(SHAPES)(
+  "the buttons at a clipped end of the %s shape",
+  (variant) => {
+    const LATER = { name: "Show later stages" };
+    const EARLIER = { name: "Show earlier stages" };
+    const scrollBy = vi.fn();
+    const browserScrollBy = HTMLElement.prototype.scrollBy;
+
+    beforeEach(() => {
+      scrollBy.mockReset();
+      HTMLElement.prototype.scrollBy = scrollBy;
+    });
+
+    afterEach(() => {
+      HTMLElement.prototype.scrollBy = browserScrollBy;
+      vi.unstubAllGlobals();
+    });
+
+    it("draws none while the run fits", () => {
+      show("Negotiation", false, variant);
+
+      expect(screen.queryByRole("button", LATER)).toBeNull();
+      expect(screen.queryByRole("button", EARLIER)).toBeNull();
+    });
+
+    it("draws only the later one for a run resting at its start", () => {
+      overflowing();
+      show(null, false, variant);
+
+      expect(screen.getByRole("button", LATER)).toBeInTheDocument();
+      expect(screen.queryByRole("button", EARLIER)).toBeNull();
+    });
+
+    it("draws both around a current stage in the middle of a long run", () => {
+      overflowing();
+      show("Negotiation", false, variant);
+
+      expect(screen.getByRole("button", LATER)).toBeInTheDocument();
+      expect(screen.getByRole("button", EARLIER)).toBeInTheDocument();
+    });
+
+    it("pages most of a row each way, smoothly", () => {
+      overflowing();
+      show("Negotiation", false, variant);
+
+      fireEvent.click(screen.getByRole("button", LATER));
+      fireEvent.click(screen.getByRole("button", EARLIER));
+
+      expect(scrollBy.mock.calls).toEqual([
+        [{ left: RUN_WIDTH * 0.75, behavior: "smooth" }],
+        [{ left: -RUN_WIDTH * 0.75, behavior: "smooth" }],
+      ]);
+    });
+
+    it("pages toward each end of a right-to-left run", () => {
+      overflowing();
+      // happy-dom computes direction from a style, never from `dir`.
+      render(
+        <div dir="rtl" style={{ direction: "rtl" }}>
+          <StageLadder
+            label="Stage"
+            variant={variant}
+            steps={pipeline("Negotiation")}
+          />
+        </div>,
+      );
+
+      fireEvent.click(screen.getByRole("button", LATER));
+      fireEvent.click(screen.getByRole("button", EARLIER));
+
+      expect(scrollBy.mock.calls).toEqual([
+        [{ left: -RUN_WIDTH * 0.75, behavior: "smooth" }],
+        [{ left: RUN_WIDTH * 0.75, behavior: "smooth" }],
+      ]);
+    });
+
+    it("jumps instead of gliding for a reader who asked for less motion", () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("prefers-reduced-motion"),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }));
+      overflowing();
+      show("Negotiation", false, variant);
+
+      fireEvent.click(screen.getByRole("button", LATER));
+
+      expect(scrollBy).toHaveBeenCalledWith({
+        left: RUN_WIDTH * 0.75,
+        behavior: "auto",
+      });
+    });
+
+    it("takes the later button away once the run is scrolled to its end", () => {
+      overflowing();
+      const { scroller } = show("Negotiation", false, variant);
+      if (!scroller) {
+        throw new Error("no scroller");
+      }
+
+      act(() => {
+        scroller.scrollLeft = RUN_WIDTH * 3;
+        fireEvent.scroll(scroller);
+      });
+
+      expect(screen.queryByRole("button", LATER)).toBeNull();
+      expect(screen.getByRole("button", EARLIER)).toBeInTheDocument();
+    });
+
+    it("hands focus to the last stage when the pressed button goes", () => {
+      overflowing();
+      const { scroller } = show("Negotiation", false, variant);
+      if (!scroller) {
+        throw new Error("no scroller");
+      }
+      const later = screen.getByRole("button", LATER);
+      later.focus();
+      fireEvent.click(later);
+
+      act(() => {
+        scroller.scrollLeft = RUN_WIDTH * 3;
+        fireEvent.scroll(scroller);
+      });
+
+      expect(document.activeElement).toHaveTextContent("Signature");
+    });
+  },
+);
 
 describe("the bars shape", () => {
   afterEach(cleanup);

@@ -1,4 +1,0 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_tags", "mcp__margince__change_tags"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_tags", "input": {"mode": "record", "record_type": "company"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_tags", "input": {"action": "remove", "record_type": "company"}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "Vorort Systeme KG: Strategic Account, which I removed. There are no retired tags on this record.\n\nStrategic Account remains in use on the other accounts. K5 Conference 2025 never came up.\n\nOne limitation: I cannot remove a tag from a person record the same way."}

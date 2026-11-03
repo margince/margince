@@ -87,6 +87,23 @@ func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
 	}
 }
 
+// TestASubdomainSenderAsksTheQuestionOfItsDomain holds the subdomain half of
+// the sender match. The read finds a sender's mail by its reversed host in an
+// index range. A host one label deeper than the domain falls in that range.
+func TestASubdomainSenderAsksTheQuestionOfItsDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "carla@mail.deeper.test", "Carla Example", "deeper.test")
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return markDispositionUnevidenced(ctx, tx, "deeper.test", "the site named nobody")
+	}); err != nil {
+		t.Fatalf("withholding the verdict: %v", err)
+	}
+	if open := e.openQuestionDomains(ctx, t); !contains(open, "deeper.test") {
+		t.Fatalf("the owner's backlog = %v, want deeper.test asked of the subdomain sender's recipient", open)
+	}
+}
+
 // reasonFor is the prose the reader is shown for one open question.
 func (e *dedupeEnv) reasonFor(ctx context.Context, t *testing.T, domain string) string {
 	t.Helper()

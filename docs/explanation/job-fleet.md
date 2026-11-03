@@ -13,7 +13,7 @@ declaration says which.
 
 To *add* a job, see [how-to/add-a-job.md](../how-to/add-a-job.md). How an operator reads the same fleet
 is in
-[reference/configuration.md#reading-the-job-surfaces](../reference/configuration.md#reading-the-job-surfaces).
+[reference/configuration.md#reading-the-job-surfaces](../reference/job-surfaces.md#reading-the-job-surfaces).
 The write shape every workspace pass commits through is in [write-backbone.md](write-backbone.md).
 
 ## The whole shape
@@ -23,7 +23,7 @@ DECLARATION                                    RUNTIME
 backend/api/jobs.yaml
    │  make gen  (backend/tools/gen-jobs)
    ├──► platform/jobs/specs_gen.go   the Spec table every reader walks
-   └──► compose/jobkinds_gen.go      the closed union + the role assertions
+   └──► compose/jobkinds_gen.go      registration markers + the role assertions
                                                 │
    river periodic tick ◄── periodicFor(cfg, Args{}) ── cadence: from the declaration
         │  leader-elected, so replicas never tick twice
@@ -155,7 +155,7 @@ edited by hand:
 
 - **`internal/platform/jobs/specs_gen.go`**: the `Spec` table. Every reader in the tree walks it: the
   fan-out helpers, the `/metrics` list, the `job-health` endpoint, the census.
-- **`internal/compose/jobkinds_gen.go`**: the closed union `declaredJobArgs`, the two functions that
+- **`internal/compose/jobkinds_gen.go`**: the exact-type registration constraint `declaredJobArgs`, the two functions that
   register workers and accept only types in it, and one compile-time check per kind. That check
   matches the kind's args type with its declared role.
 
@@ -163,10 +163,10 @@ Both carry the same `sha256` of `api/jobs.yaml`. So when only one of the two was
 visible without checking the two tables (the census checks it:
 `bothGeneratedHalvesCameFromOneContract`).
 
-The set is a closed union instead of a marker interface for one reason. A new type can declare a marker
-for itself, and the set of kinds must be the file's to state. A kind that is not declared cannot be named at the
-place that calls `addDeclaredWorker` at all. The failure is `does not satisfy declaredJobArgs`, on the
-line the writer is typing to register it.
+The generated marker names its own args type, so an embedding wrapper cannot use it to register.
+A type absent from the catalog fails at the call to `addDeclaredWorker`. The registration census refuses a marker
+written outside the generated file and checks every declaration against the catalog.
+
 
 ---
 
@@ -205,7 +205,7 @@ So `timeout` has no default, and a missing value is not one of its forms. It tak
 `declaredTimeoutSeconds` never reports zero on `/metrics`, because zero would look like the 60-second
 default in River, and the declaration exists to tell the two apart. A kind declared as none reports `-1`.
 
-Two more gates hold the same line at boot. Neither the closed union nor `Govern` can see a generated
+Two more gates hold the same line at boot. Neither the registration constraint nor `Govern` can see a generated
 file edited by hand, or a test that registers into a test-only `*river.Workers`:
 
 - **`jobs.MustBeTotal`** names every kind this role means to work that the contract does not declare,
@@ -480,7 +480,7 @@ it carries a **scope written by hand**. Two readers that wrote that scope in two
 the operator surface and the admin surface give different answers about one table.
 
 Some things are written once, for operators, in
-[reference/configuration.md#reading-the-job-surfaces](../reference/configuration.md#reading-the-job-surfaces).
+[reference/configuration.md#reading-the-job-surfaces](../reference/job-surfaces.md#reading-the-job-surfaces).
 They cover what `/metrics` reports and its labels, and the counts that show how much of a sweep has run.
 They also cover the list derived from the declaration, and the points to watch for when you read a
 kind's rows. They are not copied here.
@@ -521,7 +521,7 @@ census carries its own floor, `declaredJobKindFloor`, beside the runner it reads
 | `jobcensus_test.go` | everything the others cannot see. It builds the real runner as compose does (with no client) and puts it beside the contract. It catches a kind declared and never wired, a `{derived: …}` time limit whose Go constant moved, an args field nobody declared, and a fan-out child that does not write its unit key. Also a kind whose args own the options and that adds rows on the wrong queue, one args type that answers to a second kind, and a declared queue whose size compose does not build |
 
 The census is the only gate that holds **both** ends of the contract at once. Every other gate holds a
-single end. The closed union stops a kind that is not declared from compiling. `MustBeTotal` refuses a boot
+single end. The registration constraint stops a kind that is not declared from compiling. `MustBeTotal` refuses a boot
 that has one even so, and `Govern` makes the declared time limit the one River applies. None of them
 can see a kind that was declared and never wired.
 
@@ -583,7 +583,7 @@ for rows the schedule half will never queue.
 
 - Adding a kind: [how-to/add-a-job.md](../how-to/add-a-job.md).
 - Running the fleet (what `/metrics` reports, `job-health`, and the settings that set a cadence):
-  [reference/configuration.md](../reference/configuration.md#reading-the-job-surfaces).
+  [reference/configuration.md](../reference/job-surfaces.md#reading-the-job-surfaces).
 - The write shape a workspace pass commits through: [write-backbone.md](write-backbone.md).
 - The workflows on a clock that the `time_scan` pass runs: [automation.md](automation.md).
 - How compose wires seams and edges between modules:

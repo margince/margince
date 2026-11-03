@@ -1,9 +1,4 @@
 import {
-  useIsMutating,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
   type ReactNode,
   useCallback,
   useEffect,
@@ -17,7 +12,6 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
-import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
 import {
@@ -25,7 +19,6 @@ import {
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
-import { invalidateRecord } from "../lib/recordwritekeys";
 import type { Route } from "../lib/router";
 import {
   type CreateField,
@@ -36,31 +29,14 @@ import {
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
+import type {
+  FieldGroup,
+  FieldRecord,
+  RecordFieldSave,
+} from "./recordfieldtypes";
 import { dateDisplay, groupValue, selectOptions } from "./recordfieldvalues";
+import { checkFieldValue, useRecordFieldWrite } from "./recordfieldwrite";
 import { useUnsavedGuard } from "./unsaved";
-
-export type FieldRecord = Record<string, unknown> & {
-  id: string;
-  version?: number;
-};
-// Conflict comparisons use the original API values before form projection.
-export function rawRecord(opened: FieldRecord): FieldRecord {
-  const original = opened.original;
-  if (
-    original &&
-    typeof original === "object" &&
-    "id" in original &&
-    typeof original.id === "string"
-  )
-    return { ...original, id: original.id };
-  return opened;
-}
-export type RecordFieldSave = (
-  values: Record<string, string>,
-  rows: FormRows,
-  opened: FieldRecord,
-) => Promise<unknown>;
-export type FieldGroup = { label: string; keys: string[] };
 
 type Props = {
   onValuesChange?: (values: Record<string, string>) => void;
@@ -85,6 +61,12 @@ type Props = {
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
   resolveExisting?: (code: string, id: string) => Route;
+  // See CreateAction: a refusal this screen answers with its own verbs.
+  refusalNotice?: (
+    error: unknown,
+    resend: (extra: Record<string, unknown>) => void,
+    pending: boolean,
+  ) => ReactNode | null;
   // Rows the caller adds under the record's own fields, in the same grid:
   // facts that live on the record but are not fields of it, such as tags.
   extraRows?: ReactNode;
@@ -140,14 +122,12 @@ function RecordField({
   }
 >) {
   const t = useT();
-  const qc = useQueryClient();
   const opened = useRef(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
-  const pending =
-    useIsMutating({ mutationKey: [`${props.kind}-edit`, props.record.id] }) > 0;
+  const { mutation, pending } = useRecordFieldWrite(props.kind, props.record);
   const onEditingChange = useCallback(
     (next: boolean) => {
       if (next && !editing) opened.current = props.record;
@@ -156,33 +136,6 @@ function RecordField({
     },
     [editing, props.record],
   );
-  const mutation = useMutation({
-    mutationKey: [`${props.kind}-edit`, props.record.id],
-    mutationFn: async ({
-      values,
-      rows,
-      baseline,
-      save,
-    }: {
-      values: Record<string, string>;
-      rows: FormRows;
-      baseline: FieldRecord;
-      save: RecordFieldSave;
-    }) => save(values, rows, baseline),
-    onSuccess: async () => {
-      await Promise.all([
-        invalidateRecord(qc, props.kind, props.record.id, {
-          anchor: rawRecord(props.record).is_anchor === true,
-        }),
-        qc.invalidateQueries({
-          queryKey: [props.kind === "company" ? "companies" : `${props.kind}s`],
-        }),
-        ...derivedRecordKeys(props.kind, props.record.id).map((queryKey) =>
-          qc.invalidateQueries({ queryKey }),
-        ),
-      ]);
-    },
-  });
   const values = prefillFromRecord(
     props.fields,
     editing ? opened.current : props.record,
@@ -200,10 +153,7 @@ function RecordField({
     field.type === "repeatable" ||
     field.type === "multiselect";
   const saveValue = async (next: string) => {
-    if (field.required && !next.trim())
-      throw new ProblemError({ detail: t("record.fieldRequired") });
-    const refusal = field.validate?.(next);
-    if (refusal) throw new ProblemError({ detail: refusal });
+    checkFieldValue(field, next, t);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},
@@ -224,6 +174,14 @@ function RecordField({
             opened={opened.current}
             pending={mutation.isPending}
             error={mutation.error}
+            onResend={(extra) => {
+              const last = mutation.variables;
+              if (last)
+                mutation.mutate(
+                  { ...last, extra },
+                  { onSuccess: () => onEditingChange(false) },
+                );
+            }}
             onDirtyChange={setDirty}
             onClose={() => onEditingChange(false)}
             onSubmit={(submitted, rows) =>
@@ -427,6 +385,7 @@ function RecordFieldForm({
   opened,
   pending,
   error,
+  onResend,
   onClose,
   onDirtyChange,
   onSubmit,
@@ -436,6 +395,7 @@ function RecordFieldForm({
     opened: FieldRecord;
     pending: boolean;
     error: unknown;
+    onResend: (extra: Record<string, unknown>) => void;
     onClose: () => void;
     onDirtyChange: (dirty: boolean) => void;
     onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
@@ -474,6 +434,7 @@ function RecordFieldForm({
             : null
         }
         resolveExisting={props.resolveExisting}
+        notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
         onSubmit={(submitted, submittedRows) => {
           const original = prefillFromRecord(props.fields, opened);
           const originalRows = prefillRowsFromRecord(props.fields, opened);

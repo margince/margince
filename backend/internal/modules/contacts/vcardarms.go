@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -140,15 +139,12 @@ func (s *Store) createFromCard(
 }
 
 // completeCardCreate writes what the contact create does not carry: the
-// employer the card names, and a URL the social slot did not take.
+// URL the social slot did not take.
 //
 // That URL is usually the company site, and it lands as evidence as it does on
 // a matched contact. It returns that URL's outcome, or nil when none was filed.
 func (s *Store) completeCardCreate(ctx context.Context, tx pgx.Tx, contact crmcontracts.Contact, entry VCardEntry) (*statedField, error) {
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
-		return nil, err
-	}
 	url, ok := cardURLField(entry)
 	if !ok || (contact.Social != nil && (*contact.Social)[profileURLField] != nil) {
 		return nil, nil //nolint:nilnil // a card whose URL the social slot took files nothing more
@@ -199,8 +195,9 @@ func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
 
 // skipHeldCard answers a card whose address a colleague's contact holds. The
 // colleague is asked to share it, and the card is skipped with the refusal's
-// own words. Any other error passes through.
-func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string) (VCardResult, error) {
+// own words. Any other error passes through. A mailed card is the machine's
+// work: a live lead's card is skipped with the reason and offers no convert.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string, mailed bool) (VCardResult, error) {
 	err = s.AskHolderToShare(ctx, err)
 	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
@@ -208,8 +205,26 @@ func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name str
 	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
 	}
+	if held, ok := errors.AsType[*LeadHoldsIdentityError](err); ok {
+		if mailed {
+			return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHoldsMailed}, nil
+		}
+		skipped := VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardLeadHolds}
+		if len(held.LeadIDs) > 0 {
+			skipped.LeadID = &held.LeadIDs[0]
+		}
+		return skipped, nil
+	}
 	return VCardResult{}, err
 }
+
+// vcardLeadHolds is the reason a card for somebody who is already a lead creates
+// nothing. Somebody is a lead or a contact, never both.
+const vcardLeadHolds = "this card names somebody who is already a lead; convert the lead instead"
+
+// vcardLeadHoldsMailed is the same skip for a card that came with mail, which
+// nobody is there to answer. The lead is left as it is.
+const vcardLeadHoldsMailed = "this card names somebody who is already a lead, so it was not imported"
 
 // vcardExistsReason is what a model-read card gets when its address already
 // belongs to a contact. A reading of a photo is a guess about the print, and a
@@ -247,82 +262,4 @@ func proposeModelReadCard(ctx context.Context, tx pgx.Tx, source ids.UUID, resul
 	}
 	result.Outcome = VCardProposed
 	return nil
-}
-
-// attachVCardEmployer creates the company the card names and the employment
-// edge to it. A card with no COMPANY leaves the contact unemployed, which is a
-// contact.
-func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
-	name := strings.TrimSpace(entry.Company)
-	if name == "" {
-		return nil
-	}
-	companyID, err := s.employerByName(ctx, tx, name)
-	if err != nil {
-		return err
-	}
-	return s.ensureEmployment(ctx, tx, contactID, *companyID, entry.Title, vcardSource)
-}
-
-// ensureEmployment gives a contact a live employment at a company, unless it
-// already holds one there. The vCard import and a lead's promotion write the
-// edge through here.
-func (s *Store) ensureEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID, role, source string) error {
-	held, err := holdsLiveEmployment(ctx, tx, contactID, companyID)
-	if err != nil || held {
-		return err
-	}
-	edge := CreateRelationshipInput{
-		Kind:      employmentKind,
-		ContactID: &contactID,
-		CompanyID: &companyID,
-		Source:    source,
-	}
-	if role = strings.TrimSpace(role); role != "" {
-		edge.Role = &role
-	}
-	_, err = s.CreateRelationshipTx(ctx, tx, edge)
-	return err
-}
-
-// holdsLiveEmployment reports whether a contact holds a live employment at a company.
-func holdsLiveEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID) (bool, error) {
-	var held bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM relationship r
-		                WHERE r.contact_id = $1 AND r.company_id = $2 AND `+employment.LiveSlotSQL("r")+`)`,
-		contactID, companyID).Scan(&held); err != nil {
-		return false, fmt.Errorf("looking for the contact's employment at the company: %w", err)
-	}
-	return held, nil
-}
-
-// employerByName finds the company the card names, or creates it.
-//
-// Without the lookup, two cards from one company create two companies.
-// Every employee of Acme arrives with `ORG:Acme`. A create-only path turns a
-// ten-card export into ten Acmes that a human then has to merge.
-func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
-	var existing ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT id FROM company
-		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
-		 ORDER BY created_at
-		 LIMIT 1`, name).Scan(&existing)
-	switch {
-	case err == nil:
-		return &existing, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
-			DisplayName: name,
-			Source:      vcardSource,
-		}, CustomColumns{})
-		if createErr != nil {
-			return nil, createErr
-		}
-		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-		return &made, nil
-	default:
-		return nil, fmt.Errorf("looking for the card's employer: %w", err)
-	}
 }

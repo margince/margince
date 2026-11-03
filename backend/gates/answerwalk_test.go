@@ -7,9 +7,8 @@ package gates
 
 // Only the answer predicate walks a thread for our reply.
 //
-// Every other SQL statement that joins an outbound row to a thread either calls
-// activities/answered.go's answeredSQL or is named below with the different
-// question it asks.
+// Other outbound thread walks call the shared answer predicate.
+// Exceptions below name the different question they ask.
 
 import (
 	"fmt"
@@ -29,7 +28,7 @@ import (
 )
 
 // answerWalkOwner is where the one answer lives.
-const answerWalkOwner = "internal/modules/activities/answered.go:threadAnswerArm"
+const answerWalkOwner = "internal/platform/database/storekit/answered.go:threadAnswerArm"
 
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
@@ -37,8 +36,11 @@ var answerWalksAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL":                "the waiting-replies lane query; it lists rows through awaitingTheirAnswerSQL and asks the same mirror question about our outbound",
-	"internal/modules/activities/emailmove.go:EmailStatesFor":                        "the email row's waiting-for-them badge composes awaitingTheirAnswerSQL for a mail the reader sent; whether an inbound is owed is owedSQL, which reads answeredSQL",
-	"internal/modules/activities/waitingsql.go:waitingRepliesSQL":                    "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
+	"internal/modules/activities/emailmove.go:EmailStatesFor":                        "the email row's page read; its move is moveSQL, and it asks no answer question of its own",
+	"internal/modules/activities/emailmove.go:moveSQL":                               "the email row's waiting-for-them badge composes awaitingTheirAnswerSQL for a mail the reader sent; whether an inbound is owed is owedSQL, which reads answeredSQL",
+	"internal/modules/activities/emailrowfacts.go:withMessageMoves":                  "reads moveSQL, the email row's badge, for a page's readable chat messages; it asks no answer question of its own",
+	"internal/modules/activities/emailmove.go:MailMoveColumnSQL":                     "moveSQL as a column, for a reader that already selects the row; it asks no answer question of its own",
+	"internal/modules/activities/waitingsql.go:waitingSelectSQL":                     "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
 	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread":          "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; the settlement's answers off the thread come from answered.go's own arms",
 	"internal/compose/requestsettle.go:conversationRows":                             "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence, or the one such message a verdict is recorded through; it answers nothing itself",
 	"internal/modules/activities/promisefollowup.go:promiseFollowUpSQL":              "our follow-up on a promise we made: our later mail on the promise's thread to the contact it was made to. The Done? cue offers it and the company scan holds a commitment finding to it; it asks about a promise, never whether an inbound was answered",
@@ -230,7 +232,7 @@ func kernelFragments(t *testing.T) map[string]fragment {
 }
 
 // answerWalkOwnerFile is the file whose helpers are the one answer.
-const answerWalkOwnerFile = "internal/modules/activities/answered.go"
+const answerWalkOwnerFile = "internal/platform/database/storekit/answered.go"
 
 // walksForOutbound reports a statement that pins rows to a thread and asks
 // for our own sent message. It does not require the two to name the same
@@ -287,7 +289,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 		}
 		if !answerWalksAdmitted.Waived(t, site) {
 			t.Errorf("%s walks a thread for an outbound row. Whether an inbound was answered is "+
-				"answeredSQL in activities/answered.go; call it, or name this walk in "+
+				"answeredSQL in platform/database/storekit/answered.go; call it, or name this walk in "+
 				"answerWalksAdmitted with the question it asks instead", site)
 		}
 	}

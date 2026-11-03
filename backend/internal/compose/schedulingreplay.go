@@ -16,7 +16,7 @@ const proposalRoute = "POST /v1/scheduling/proposals"
 
 type replayRestore func(context.Context, string, string) (string, error)
 
-func settleHTTPClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold, route string, rec *replayRecorder, wrote bool) error {
+func settleHTTPClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold, route string, rec *replayRecorder) error {
 	body := rec.buf.String()
 	if route == proposalRoute && rec.status >= 200 && rec.status < 300 {
 		var response map[string]json.RawMessage
@@ -30,7 +30,7 @@ func settleHTTPClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold, ro
 		}
 		body = string(encoded)
 	}
-	return settleClaim(ctx, pool, hold, rec.status, body, rec.Header().Get("Content-Type"), 0, wrote)
+	return settleClaim(ctx, pool, hold, rec.status, body, rec.Header().Get("Content-Type"))
 }
 
 func schedulingReplayRestore(store *activities.Store) replayRestore {

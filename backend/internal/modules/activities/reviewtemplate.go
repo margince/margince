@@ -37,6 +37,7 @@ import (
 type ReviewQuestion struct {
 	Key      string   `json:"key"`
 	Label    string   `json:"label"`
+	LabelKey string   `json:"label_key,omitempty"`
 	Type     string   `json:"type"`
 	Required bool     `json:"required"`
 	Options  []string `json:"options,omitempty"`
@@ -101,7 +102,7 @@ func (s *Store) ListReviewTemplates(ctx context.Context) ([]crmcontracts.Activit
 	var out []crmcontracts.ActivityReviewTemplate
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, label, outcome, questions, version, active, system, created_at, updated_at
+			`SELECT `+reviewTemplateColumns+`
 			   FROM activity_review_template
 			  WHERE archived_at IS NULL
 			  ORDER BY outcome, created_at`)
@@ -122,6 +123,9 @@ func (s *Store) ListReviewTemplates(ctx context.Context) ([]crmcontracts.Activit
 	return out, err
 }
 
+// reviewTemplateColumns is the projection scanReviewTemplate reads, in its order.
+const reviewTemplateColumns = `id, key, label, label_key, outcome, questions, version, active, system, created_at, updated_at`
+
 // scanReviewTemplate reads one row into the wire shape, decoding the questions
 // so a client never has to parse a JSON string out of a JSON field.
 func scanReviewTemplate(row pgx.Row) (crmcontracts.ActivityReviewTemplate, error) {
@@ -129,7 +133,7 @@ func scanReviewTemplate(row pgx.Row) (crmcontracts.ActivityReviewTemplate, error
 	var id ids.UUID
 	var questions []byte
 	var outcome string
-	if err := row.Scan(&id, &wire.Key, &wire.Label, &outcome, &questions,
+	if err := row.Scan(&id, &wire.Key, &wire.Label, &wire.LabelKey, &outcome, &questions,
 		&wire.Version, &wire.Active, &wire.System, &wire.CreatedAt, &wire.UpdatedAt); err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, err
 	}
@@ -151,6 +155,9 @@ func wireQuestions(questions []ReviewQuestion) []crmcontracts.ReviewQuestion {
 			Key: q.Key, Label: q.Label,
 			Type:     crmcontracts.ReviewQuestionType(q.Type),
 			Required: q.Required,
+		}
+		if q.LabelKey != "" {
+			wire.LabelKey = &q.LabelKey
 		}
 		// A text question has no choices, so the field is left off. A nil slice
 		// would be written as null where the contract declares an array.

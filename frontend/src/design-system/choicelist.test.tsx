@@ -230,6 +230,68 @@ function Services({
   );
 }
 
+describe("ChoiceList groups", () => {
+  const GROUPED = [
+    { value: "site" as const, label: "Your website", group: "No developer" },
+    { value: "server" as const, label: "Website server", group: "Developers" },
+    { value: "hook" as const, label: "Webhook", group: "Developers" },
+  ];
+
+  it("names each run of one group and keeps every radio in the one question", () => {
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="cards"
+        value="site"
+        choices={GROUPED}
+        onChange={() => {}}
+      />,
+    );
+
+    const question = screen.getByRole("group", { name: "Where is your form?" });
+    const developers = screen.getByRole("group", { name: "Developers" });
+    expect(
+      screen.getAllByRole("radio").every((r) => question.contains(r)),
+    ).toBe(true);
+    expect(developers.querySelectorAll("input[type=radio]")).toHaveLength(2);
+    const names = new Set(
+      screen.getAllByRole("radio").map((r) => r.getAttribute("name")),
+    );
+    expect(names.size).toBe(1);
+  });
+});
+
+describe("ChoiceList tiles", () => {
+  it("keeps a real radio under each tile, so a press on the tile answers", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="tiles"
+        value="site"
+        choices={[
+          {
+            value: "site" as const,
+            label: "Your website",
+            description: "Posts",
+          },
+          { value: "hook" as const, label: "Webhook", description: "Signed" },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByText("Webhook"));
+    expect(onChange).toHaveBeenLastCalledWith("hook");
+    // The tick is drawn, never read: the radio's own checked state says it.
+    expect(
+      screen.getByRole("radio", { name: /Your website/ }).matches(":checked"),
+    ).toBe(true);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+});
+
 describe("ChoiceList multiple", () => {
   it("draws checkboxes in one group named by the legend", () => {
     render(<Services initial={["mail"]} onChange={() => {}} />);

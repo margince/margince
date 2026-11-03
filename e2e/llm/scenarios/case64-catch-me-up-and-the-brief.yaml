@@ -1,0 +1,31 @@
+# CASE 64 — Catch me up, and show me the brief.
+#
+# A routing case. read_context fronts three reads about one record, one
+# meeting and this morning's brief, and the prompt asks for two of them in one
+# breath. "What has been happening with Vietnam Partner" is catch_up on a
+# record, and "what is in my morning brief" is the brief. A model that answers
+# both from search_records has read the records and never asked either tool
+# built for the question.
+#
+# The prompt names no tool and no view.
+name: case64_catch_me_up_and_the_brief
+criteria: [1]
+writes: false
+
+prompt: |
+  Coffee first, then calls. What did I miss with Vietnam Partner lately? And
+  what is on my morning brief today?
+
+must_call:
+  - catch_me_up_on
+  - read_brief
+
+may_call:
+  - search_records
+  - list_records
+  - read_record
+  - search_context
+  - whoami
+
+runs: 3
+pass_at: 2

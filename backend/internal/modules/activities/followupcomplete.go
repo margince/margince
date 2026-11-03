@@ -32,6 +32,18 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 	return s.completeOpenSystemTasksLinkedBy(ctx, leadLinkColumn, leadID.UUID)
 }
 
+// CompleteFollowUpsTouchingLead completes tasks that a new lead activity
+// answers. A qualify task stays open until qualification or disqualification.
+func (s *Store) CompleteFollowUpsTouchingLead(ctx context.Context, leadID ids.LeadID) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l
+			WHERE l.activity_id = a.id AND l.%s = $%d)
+			AND a.source_system IS DISTINCT FROM $%d`,
+		leadLinkColumn, arg(leadID.UUID), arg(provenance.LeadRepliedSource))
+	return s.completeOpenSystemTasks(ctx, where, arg, &args)
+}
+
 // CompleteOpenSystemTasksForContact is CompleteOpenSystemTasksForLead's
 // sibling for a lead that PROMOTED: carryLeadActivities (contacts/promote.go)
 // re-points a follow-up task's link from the lead onto the contact it became,

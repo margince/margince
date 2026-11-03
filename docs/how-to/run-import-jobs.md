@@ -177,4 +177,4 @@ way.
 
 - [add-a-job.md](add-a-job.md): how a job kind and its queue are declared.
 - [deploy-margince.md](deploy-margince.md): running the API and the worker.
-- [Stopping the worker](../reference/configuration.md#stopping-the-worker): the drain window and the grace time.
+- [Stopping the worker](../reference/worker-diagnostics.md#stopping-the-worker): the drain window and the grace time.

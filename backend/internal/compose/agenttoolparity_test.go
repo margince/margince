@@ -264,6 +264,7 @@ var notTheRecordsOwnID = map[string]string{
 	"to_stage_id":  "the destination of a stage move",
 	"into_tag_id":  "the tag being merged into",
 	"source_id":    "one half of a merge pair",
+	"to_user_id":   "the receiving member of a retirement or identity merge",
 	"target_id":    "the other half of a merge pair",
 	"entity_id":    "what activities are relinked onto",
 	"from":         "the period a movement starts in",

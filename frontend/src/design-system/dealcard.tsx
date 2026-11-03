@@ -6,13 +6,14 @@ import { type ReactNode, type RefObject, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
+  formatAge,
   formatDayMonthNearYear,
-  formatDuration,
   formatMoneyCompact,
   MONEY_ABSENT,
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
@@ -108,7 +109,7 @@ function DealCardCompany({
         // stopPropagation keeps the click off the card's stretched anchor.
         // preventDefault would be wrong: it would leave the card's own
         // navigation to fire while this link did nothing.
-        <a
+        <AppLink
           className="deal-company-name deal-company-link"
           href={deal.companyHref}
           onClick={(event) => {
@@ -117,7 +118,7 @@ function DealCardCompany({
           }}
         >
           {deal.company}
-        </a>
+        </AppLink>
       ) : (
         <span className="deal-company-name">{deal.company}</span>
       )}
@@ -229,7 +230,8 @@ function DealCloses({
 export function DealMailChip({
   mail,
   aside,
-}: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
+  zone,
+}: Readonly<{ mail: BoardDealMail; aside?: ReactNode; zone: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const shortDay = (at: string, dayLocale: Locale, zone: string) =>
@@ -240,7 +242,7 @@ export function DealMailChip({
     <>
       <span className="sr-only">{t("deal.lastMail")}: </span>
       <Chip icon={mail.direction === "outbound" ? Send : Mail} dense>
-        {activityAgo(mail, mail.measuredAt, t, locale, shortDay)}
+        {activityAgo(mail, mail.measuredAt, t, locale, zone, shortDay)}
       </Chip>
     </>
   );
@@ -254,21 +256,15 @@ export function DealMailChip({
   );
 }
 
-/**
- * The card's last line: how the deal is moving, and the verbs a rep reaches
- * for without opening it.
- *
- * What is wrong with a deal lands HERE rather than in a line above the name,
- * so a card that needs the reader keeps its name and its figure level with the
- * cards beside it — a column is read down, and a flag line that came and went
- * moved every slot under it.
- */
+// Flags stay below the name and figure so adjacent cards keep those slots level.
 function DealCardFoot({
+  zone,
   deal,
   mailAside,
   actions,
 }: Readonly<{
   deal: BoardDeal;
+  zone: string;
   mailAside?: (deal: BoardDeal) => ReactNode;
   actions?: DealCardActions;
 }>) {
@@ -291,12 +287,16 @@ function DealCardFoot({
             {/* How long it has sat is the size of the stall, and only then: on
                 a healthy card the number is a fact nobody acts on. */}
             <span className="deal-age">
-              {formatDuration(deal.ageMs, locale)}
+              {formatAge(deal.idleSince, deal.measuredAt, locale, zone)}
             </span>
           </span>
         )}
         {deal.lastEmail && (
-          <DealMailChip mail={deal.lastEmail} aside={mailAside?.(deal)} />
+          <DealMailChip
+            zone={zone}
+            mail={deal.lastEmail}
+            aside={mailAside?.(deal)}
+          />
         )}
         {deal.singleThreaded && (
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
@@ -379,26 +379,9 @@ export function DealCard({
   dragHandlers,
 }: Readonly<{
   deal: BoardDeal;
-  /**
-   * The IANA zone the close date is read in. A close date is a calendar day,
-   * and a day formatted as if it were an instant lands on the previous date
-   * for every reader west of Greenwich — so the card takes the zone the record
-   * lives in, the same way the timeline does, rather than the browser's.
-   */
+  /** The record calendar for close dates and ages, shared with the timeline. */
   zone: string;
-  /**
-   * The deal's own address.
-   *
-   * An anchor and not a button, which is what this was: a card that opens a
-   * record is a link, and drawn as a button it could not be opened in a new
-   * tab, middle-clicked, or copied — while every other record row in the
-   * product could. The board is the one surface where a rep wants three deals
-   * open side by side, so it was the worst place to lose that.
-   *
-   * The address arrives as a prop because this tier holds no routes: it is the
-   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
-   * adapter.
-   */
+  /** A link preserves new-tab and copy actions; this tier receives its route. */
   href: string;
   /**
    * What a press does BESIDE following the link, and the reason the event
@@ -461,7 +444,7 @@ export function DealCard({
           NAME rather than sitting empty, so the accessible name of the link is
           the deal a reader is opening — an empty stretched anchor reads to a
           screen reader as a link with no text. */}
-      <a
+      <AppLink
         ref={dealLink}
         className="deal-name deal-open"
         href={href}
@@ -471,7 +454,7 @@ export function DealCard({
         onClick={(event) => onOpen?.(deal, event)}
       >
         {deal.name}
-      </a>
+      </AppLink>
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}
@@ -494,7 +477,12 @@ export function DealCard({
           <span className="deal-closes">{t("deal.undated")}</span>
         )}
       </span>
-      <DealCardFoot deal={deal} mailAside={mailAside} actions={actions} />
+      <DealCardFoot
+        zone={zone}
+        deal={deal}
+        mailAside={mailAside}
+        actions={actions}
+      />
     </div>
   );
 }

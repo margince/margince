@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -12,13 +12,13 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
 | **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
-**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Source** and **Partner** on Deals show only when there is something to pick.
+**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. **Source** and **Partner** on Deals show only when there is something to pick.
 
 ## Searching and filtering a list
 
@@ -58,6 +58,10 @@ To see only the records you own in Margince, open **Contacts**, **Companies** or
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
+### How do I see the contacts shared with me?
+Open **Contacts** in the sidebar and press the **Shared with me** tab. It lists the contacts a colleague owns and shared with you or with a team you are in. A contact you own is never on it. A contact you keep access to after a merge is on it too. When there are none, the list says "No contacts shared with you."
+Also called: contacts others shared, shared contacts, contacts I can see but do not own.
+
 ### How do I filter by a colleague's name?
 To filter a list by one colleague in Margince, press **Filter** → **Owner** and pick the colleague. Every list with an owner has this filter: **Contacts**, **Companies**, **Leads**, **Deals** and **Projects**.
 1. Type part of a name in the box at the top of the **Owner** values to make the list shorter.
@@ -77,6 +81,8 @@ To filter deals by company or stage in Margince, open **Deals**, press **Filter*
 1. For **Company**, type part of the company's name and pick it.
 2. For **Stage**, pick a stage of the pipeline shown. The **Pipeline** picker next to **Table** / **Board** decides which stages you can pick. Changing the pipeline clears the stage filter.
 3. **Stalled only** shows open deals with no activity for more than 60 days.
+4. **Value** takes a lowest and a highest amount, or one of them, in your company's main currency. An open deal in another currency counts at today's rate. A won or lost deal counts at the rate of the day it closed. A deal with no value, or with no rate for its currency, is left out.
+5. **Currency** shows deals priced in one currency. **Country** shows deals whose company has its address there; a deal with no company is left out.
 A company's own **Deals and projects** tab also lists its deals.
 Also called: deals for a customer, deals for an account, deals in a stage.
 
@@ -95,7 +101,7 @@ Margince tags a contact `machine-address` when its email belongs to a sending sy
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
-The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+**Deals** has a **Close date** filter; see the next question. The other list screens have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
 
 Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, whoever made the task.
 
@@ -104,10 +110,11 @@ On **Filters and views**, there are the date choices **is after**, **is on or af
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
-Margince has no filter on a deal's expected close date. To see the deals that close soonest, open **Deals**, switch to **Table**, and sort by **Expected close**. The earliest date comes first, and an open deal cannot have a date in the past.
-1. Make it shorter with **Filter** → **Forecast** or **Stage**.
-2. To see what this month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
-Choose **Month**, **Quarter** or **Week**. It counts open deals whose expected close is in that time, but does not list them.
+To find deals closing in a time in Margince, open **Deals** and press **Filter** → **Close date**.
+1. Pick **This fiscal quarter**, or type a **From** and a **Through** date and press **Apply**. One of the two dates is enough.
+2. An open deal counts by its expected close, and a won or lost deal by the day it closed.
+3. A view saved on **This fiscal quarter** moves on to the next quarter by itself.
+To see the deals that close soonest, switch to **Table** and sort by **Expected close**. To see what a month or quarter will bring in, open **Analytics** → **Forecast** and pick the **Period**.
 Also called: closing this quarter, filter by close date, deals due to close, expected close date.
 
 ## Sorting a list and choosing columns
@@ -134,7 +141,7 @@ Also called: sort options, order by column.
 To switch between table and board in Margince, open **Deals** or **Leads** and press **Table** or **Board** in the toolbar.
 - **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
-Filters and search still work on the board. Ticking many rows, **Display** and **Save view** are on the table only.
+Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Display** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
@@ -227,7 +234,7 @@ Also called: natural-language filter, AI filter, describe a segment.
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are:
 - **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields.
-- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**).
+- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). The **Customers** view shows only the customer stage, so filter on **Lifecycle** to find **Onboarding** or **Live** companies.
 - **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**.
 Custom fields have a **Custom field** mark. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.

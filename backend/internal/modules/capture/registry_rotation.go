@@ -56,7 +56,7 @@ type rotationSink struct {
 // naming a secret that was never written, which costs the mailbox. Retiring the
 // superseded blob only after the record commits means a crash between them
 // leaves the OLD secret readable, which is the direction that still works.
-func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
+func (s *rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 	if s.registry.vault == nil {
 		// A role that seals nothing has nowhere to put this. Not an error: the
 		// old credential is still valid, and refusing here would turn a
@@ -92,6 +92,7 @@ func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 		keyvault.DeleteDetached(ctx, s.registry.vault, s.log, ws, ref, "rotation-superseded")
 		return nil
 	}
+	s.readRef = new(string(ref))
 	if previous != "" && previous != string(ref) {
 		keyvault.DeleteDetached(ctx, s.registry.vault, s.log, ws, keyvault.Ref(previous), "rotation")
 	}
@@ -112,7 +113,7 @@ func (s rotationSink) Rotated(ctx context.Context, auth connector.Auth) error {
 // vault carries its credential in that column, and making the ref authoritative
 // while leaving the column populated would retire nothing — the superseded
 // secret would sit in the clear for the life of the installation.
-func (s rotationSink) record(ctx context.Context, ref keyvault.Ref) (superseded bool, previous string, err error) {
+func (s *rotationSink) record(ctx context.Context, ref keyvault.Ref) (superseded bool, previous string, err error) {
 	err = s.registry.db.Tx(ctx, func(tx pgx.Tx) error {
 		var prior *string
 		// The self-join is what makes RETURNING report the ref being REPLACED

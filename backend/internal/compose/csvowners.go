@@ -19,6 +19,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,10 +30,14 @@ const csvTargetOwner = "owner_email"
 // address, in one query. An address no seat holds is absent.
 func seatsByEmail(ctx context.Context, tx pgx.Tx, emails []string) (map[string]ids.UUID, error) {
 	folded := make([]string, 0, len(emails))
+	domains := make([]string, 0, len(emails))
 	for _, email := range emails {
 		folded = append(folded, foldedEmail(email))
+		domains = append(domains, owndomain.OfAddress(email))
 	}
-	rows, err := tx.Query(ctx, `SELECT id, lower(email) FROM app_user WHERE lower(email) = ANY($1)`, folded)
+	rows, err := tx.Query(ctx, `SELECT u.id, inp.address
+		  FROM unnest($1::text[], $2::text[]) AS inp(address, domain_folded)
+		  JOIN app_user u ON `+storekit.SeatLoginIsSQL("u", "inp.address", "inp.domain_folded"), folded, domains)
 	if err != nil {
 		return nil, fmt.Errorf("import: finding the seats these emails belong to: %w", err)
 	}

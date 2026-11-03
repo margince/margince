@@ -70,6 +70,7 @@ export function toBoardDeal(
   owners?: OwnerNaming,
 ): BoardDeal {
   const since = idleSince(deal);
+  const measuredAt = Date.now();
   const ownerName = owners?.(deal.owner_id);
   return {
     id: deal.id,
@@ -80,7 +81,8 @@ export function toBoardDeal(
     // have — a zero amount, or a euro sign over an unknown currency.
     valueMinor: deal.amount_minor ?? null,
     currency: deal.currency ?? null,
-    ageMs: Math.max(0, Date.now() - new Date(since).getTime()),
+    idleSince: since,
+    measuredAt,
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
     closeDate: deal.expected_close_date ?? null,
@@ -89,7 +91,7 @@ export function toBoardDeal(
       ownerName && deal.owner_id
         ? { id: deal.owner_id, name: ownerName }
         : null,
-    lastEmail: boardMail(deal.last_email),
+    lastEmail: boardMail(deal.last_email, measuredAt),
   };
 }
 
@@ -99,14 +101,17 @@ export function toBoardDeal(
  * that read the clock itself would be one no test could pin. Exported for the
  * table's column, which states the same chip off the same row.
  */
-export function boardMail(last: Deal["last_email"]): BoardDealMail | null {
+export function boardMail(
+  last: Deal["last_email"],
+  measuredAt = Date.now(),
+): BoardDealMail | null {
   if (!last) {
     return null;
   }
   return {
     at: last.occurred_at,
     precision: last.occurred_precision,
-    measuredAt: Date.now(),
+    measuredAt,
     direction: last.direction ?? null,
   };
 }

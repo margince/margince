@@ -78,6 +78,13 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 				}
 				continue
 			}
+			if held, err := e.closeLeadHeldReview(wsCtx, row); err != nil || held {
+				if err != nil {
+					e.log.WarnContext(wsCtx, "counterparty verdict: closing a lead's review failed",
+						"disposition", row.ID.String(), "err", err)
+				}
+				continue
+			}
 			proposalID, err := stageCounterpartyReview(wsCtx, e.approvals, said, row)
 			if err != nil {
 				e.log.WarnContext(wsCtx, "counterparty verdict: staging a review offer failed",
@@ -113,6 +120,22 @@ const reservedDomainReason = "reserved domain (RFC 2606): no contact proposed"
 func (e *CounterpartyVerdictEngine) closeReservedDomainReview(ctx context.Context, row capture.PendingCounterparty) error {
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return e.pending.ResolveReviewed(ctx, tx, row.ID, capture.PendingStatusRejected, reservedDomainReason)
+	})
+}
+
+// leadHeldReason is the ledger's record of a sender who is already a lead.
+const leadHeldReason = "the sender is a lead: the mail is filed on the lead, and no contact is proposed"
+
+// closeLeadHeldReview closes the question for a sender a live lead holds,
+// instead of asking a human to make them a contact as well. The sender is a
+// real counterparty, and the lead is their record.
+func (e *CounterpartyVerdictEngine) closeLeadHeldReview(ctx context.Context, row capture.PendingCounterparty) (bool, error) {
+	lead, err := e.contacts.CounterpartyLead(ctx, row.Email)
+	if err != nil || lead.IsZero() {
+		return false, err
+	}
+	return true, database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return e.pending.ResolveReviewedAs(ctx, tx, row.ID, capture.PendingStatusReal, capture.KindContact, leadHeldReason)
 	})
 }
 

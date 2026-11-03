@@ -36,6 +36,11 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		HistoryBaseline:        historyBaselineOnWire(v.HistoryBaseline),
 		CanBackfill:            v.CanBackfill,
 	}
+	if v.Concern != "" {
+		kind := crmcontracts.CaptureConcernKind(v.Concern)
+		c.Concern = &kind
+		c.ConcernSince = v.ConcernSince
+	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}
 	}
@@ -44,6 +49,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		c.SyncCursor = &s
 	}
 	c.LastSyncedAt = v.LastSyncedAt
+	c.LastSuccessAt = v.LastSuccessAt
 	c.LastSyncErrorClass = v.LastErrorClass
 	c.SyncFailingSince = v.FailingSince
 	c.NextSyncDueAt = v.NextSyncDueAt

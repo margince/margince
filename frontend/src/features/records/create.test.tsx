@@ -28,6 +28,7 @@ import {
 import { pickOption, toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { CompaniesScreen } from "../companies/companies";
 import { ContactsScreen } from "../contacts/contacts";
 import { DealsScreen } from "../deals/deals";
@@ -66,9 +67,9 @@ function render(ui: ReactNode, retries = 0) {
 /**
  * The create form, scoped to the dialog it is in.
  *
- * The list behind it carries a column picker, and a column's tick is now a real
- * labelled control — so "Value" and "via partner" name a field in the form AND
- * a column in that menu. The dialog is the boundary between the record being
+ * The list behind it carries a column picker, and a column's tick is a labelled
+ * control. So "Value" and "Referring partner" name a field in the form and a
+ * column in that menu. The dialog is the boundary between the record being
  * made and the list it will join.
  */
 function inForm() {
@@ -672,6 +673,9 @@ describe("a field that depends on another", () => {
 // asked a partner question.
 describe("the deal form's partner fields", () => {
   const partnerRoutes = {
+    // A partner is a company, so only a reader of companies is offered one.
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read"], company: ["read"] } })),
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
     "GET /companies": () =>
@@ -695,7 +699,7 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    expect(inForm().queryByLabelText("via partner")).toBeNull();
+    expect(inForm().queryByLabelText("Referring partner")).toBeNull();
     expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
   });
 
@@ -705,7 +709,7 @@ describe("the deal form's partner fields", () => {
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
     const user = userEvent.setup();
-    const partner = await inForm().findByLabelText("via partner");
+    const partner = await inForm().findByLabelText("Referring partner");
     // The claim is a question about a partner, so it is not asked before one
     // is named.
     expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
@@ -732,7 +736,7 @@ describe("the deal form's partner fields", () => {
     const user = userEvent.setup();
     render(<DealsScreen startCreating />);
     const form = within(await screen.findByRole("dialog"));
-    const partner = await form.findByLabelText("via partner");
+    const partner = await form.findByLabelText("Referring partner");
     await user.click(partner);
 
     const offered = within(screen.getByRole("listbox"))

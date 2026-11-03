@@ -24,11 +24,10 @@ import (
 // ErrNoRoutingBlock reports a config that declares no seeds.ai_routing at all,
 // as distinct from one that declares a broken binding.
 //
-// A sentinel rather than prose because the two are opposite findings and a
-// caller that cannot separate them has to treat both as "skip". config/
-// margince.example.yaml is the honest first case — a commented-out template —
-// and a gate that skipped an unparseable file just as quietly would read a
-// smaller corpus and still report PASS.
+// A sentinel rather than prose, because a caller that cannot separate the two
+// findings has to treat both as "skip". config/margince.example.yaml is a
+// template with no seeds. A gate that skipped an unparseable file the same way
+// would read a smaller corpus and still pass.
 var ErrNoRoutingBlock = errors.New("ai: preset: carries no seeds.ai_routing — a preset with no binding binds nothing")
 
 func ParsePreset(raw []byte) (RoutingConfig, error) {

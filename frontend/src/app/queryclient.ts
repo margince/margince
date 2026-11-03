@@ -6,14 +6,19 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import { ENTITY_NAME_KEY } from "../components/entityref";
-import { isRecordRead } from "../lib/activitykeys";
+import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
 import { logUnexpectedError, ProblemError } from "../lib/problem";
-import { isLiveWorkRead } from "../lib/workkeys";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
+import {
+  HOME_DAY_FRESH_MS,
+  isHomeDayRead,
+  isLiveWorkRead,
+} from "../lib/workkeys";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -27,53 +32,18 @@ import { isLiveWorkRead } from "../lib/workkeys";
 // grant change must not sit behind a stale snapshot).
 const STALE_TIME_MS = 30_000;
 
-// FE-PARAM-5. How often the record a reader has OPEN re-reads itself.
-//
-// Work reaches a record from places the tab cannot see: an agent files a task,
-// a colleague answers a mail, a promise falls due while the page is on screen.
-// Read once on arrival, the page keeps answering from that instant — and the
-// failure is silent, because a stale "what needs you" looks exactly like a
-// current one.
-//
-// A MINUTE, and the number is a cost decision rather than a feel one. The
-// cadence buys exactly one case: a reader sitting on a record while it changes
-// under them. Every other way a record goes stale — coming back to the tab, a
-// write this app made — is already answered, the first by the focus refetch
-// below and the second by the mutation cache's invalidations, and neither
-// costs a request while nothing is happening.
-//
-// What a tick costs is a whole composite assembly: the 360 endpoints carry no
-// ETag, so a poll that finds nothing new is priced the same as one that finds
-// work, and the assembly runs to a query budget the composite is designed
-// around. Against that, the difference between hearing about a colleague's
-// task in twenty seconds and in sixty is not worth three times the reads.
-//
-// It is a cadence and not a stream: the contract serves no push, so the reader
-// sees new work within one cadence rather than the moment it lands. A shorter
-// one is worth revisiting when a 304 makes an unchanged read cheap, or against
-// a measured p95 for the assembly — neither of which exists today.
 const LIVE_RECORD_MS = 60_000;
 
-// FE-PARAM-5, applied: a read is live because of WHAT IT IS, not because the
-// screen that mounts it remembered to ask.
-//
-// The alternative was per-hook options, and it fails the way lists fail: the
-// fifth record page is written without them, nothing says so, and the page
-// serves a stale answer that looks exactly like a fresh one. Keyed on the read
-// instead, `isRecordRead` derives its corpus from the table that already knows
-// which key carries a record — so a record kind joins by existing rather than
-// by being remembered here.
-//
-// It reaches every surface showing that record and not only its page: the
-// composer anchored on a contact and the worklist's record pane read under the
-// same key, so they see what the page sees, share its one interval, and stop
-// it when the last of them unmounts. What it deliberately does NOT reach is a
-// read whose answer a model writes — the deal briefing is rewritten
-// server-side whenever the deal has moved, and a cadence on that would spend
-// the workspace's AI budget on an open tab. Its key is the status card's, not
-// the deal record's, which is what keeps it out.
+// Live-read keys give every consumer the same refresh policy.
+// Deal status refreshes facts without asking a model.
 export function liveInterval(query: { queryKey: QueryKey }): number | false {
+  if (isHomeDayRead(query.queryKey)) return HOME_DAY_FRESH_MS;
   return isLiveRead(query.queryKey) && LIVE_RECORD_MS;
+}
+
+/** How long a read serves its cached answer before a mount or return reads again. */
+export function staleFor(query: { queryKey: QueryKey }): number {
+  return isHomeDayRead(query.queryKey) ? HOME_DAY_FRESH_MS : STALE_TIME_MS;
 }
 
 // "always" and not `true`, which is the same word meaning something weaker:
@@ -82,8 +52,58 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // cache and waits out the interval. That is the case the minute-long cadence
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
-export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
-  return isLiveRead(query.queryKey) && "always";
+export function liveOnReturn(query: {
+  queryKey: QueryKey;
+}): "always" | boolean {
+  if (isHomeDayRead(query.queryKey)) return true;
+  return (
+    (isLiveRead(query.queryKey) ||
+      isInstallationRead(query.queryKey) ||
+      isTimelineRead(query.queryKey)) &&
+    "always"
+  );
+}
+
+// A timeline comes back with the reader too, and does not poll. Every row says
+// whether the reader may change it, and a grant expires while the page sits
+// there. It pages, so a cadence would refetch every page already scrolled.
+//
+// The installation read comes back with the reader, and it is one small object.
+// A policy on it decides whether figures already on screen may stay there. So a
+// session left on a tab must not go on showing them.
+function isInstallationRead(key: QueryKey): boolean {
+  return key[0] === INSTALLATION_SETTINGS_KEY[0];
+}
+
+// A live work read is read again on every mount, so a screen never opens on an
+// answer fetched before it. The answer the shell prefetched for the screen being
+// opened (app/homeprefetch.ts) serves that mount while under a second old.
+// Home's day is the exception: it is read again only once HOME_DAY_FRESH_MS old.
+export const LIVE_ANSWER_CURRENT_MS = 1_000;
+
+const prefetchedAnswers = new Map<string, number>();
+
+/** Records the answer a prefetch fetched, by query hash and its stamp. */
+export function notePrefetched(queryHash: string, answeredAt: number): void {
+  prefetchedAnswers.set(queryHash, answeredAt);
+}
+
+export function liveOnMount(
+  query: {
+    queryKey: QueryKey;
+    queryHash: string;
+    state: { dataUpdatedAt: number };
+  },
+  now = Date.now(),
+): "always" | true {
+  if (!isLiveWorkRead(query.queryKey) || isHomeDayRead(query.queryKey)) {
+    return true;
+  }
+  const answeredAt = query.state.dataUpdatedAt;
+  const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
+  return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
+    ? true
+    : "always";
 }
 
 // Decisions and receipt controls can change in another tab or a worker.
@@ -94,7 +114,7 @@ function isLiveRead(key: QueryKey): boolean {
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
-const MAX_RETRIES = 2;
+export const MAX_RETRIES = 2;
 
 // The 5xx statuses that are SETTLED rather than failed, and so are not retried.
 //
@@ -244,7 +264,7 @@ export function createQueryClient(): QueryClient {
   const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: STALE_TIME_MS,
+        staleTime: staleFor,
         retry: retryQuery,
         // FE-PARAM-5. A record on screen re-reads itself; everything else is
         // answered from cache exactly as before.
@@ -258,8 +278,7 @@ export function createQueryClient(): QueryClient {
         // coming back to one is exactly when the cached answer is wrong, and
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
-        refetchOnMount: (query) =>
-          isLiveWorkRead(query.queryKey) ? "always" : true,
+        refetchOnMount: liveOnMount,
       },
       // Reads wait out an outage and rerun when it clears. A write never
       // waits: a paused one would run on reconnect, after the reader moved on.

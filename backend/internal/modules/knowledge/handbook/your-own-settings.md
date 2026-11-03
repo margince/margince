@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings:
@@ -130,13 +130,11 @@ Also called: my name, profile name, rename myself.
 
 ### How do I add an email signature?
 <!-- opens: settings/account -->
-To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
-1. Type your sign-off in **Sign-off**, in plain text.
-2. Choose **Save**.
+Open **Settings → Account → Edit signature**, choose **Plain text** or **HTML**,
+check the preview and choose **Save**. Your own HTML comes before the company
+template. See [Your email signature](email-signatures.md) for clearing it, the
+sign-off order and what HTML a send keeps.
 
-Margince adds the signature under every email you send yourself, above the unsubscribe footer. Leave it empty and your emails end with a short greeting and your name instead, in the message's language. When the message is too short to tell, that is the installation's language, then English. The row then says **No sign-off set**.
-
-An email an agent sends carries no sign-off. AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
@@ -231,7 +229,8 @@ The **Calendar** card appears once a calendar is connected. It shows the
 connected calendar as a row: it reads busy times, sends invitations, and shows
 its last sync. Then comes **Add booked meetings to**, the calendar each booking
 lands in. Last is **Also count as busy**, other calendars that hide time from
-guests. Event names stay private.
+guests. Event names stay private. A calendar Margince cannot read is named under
+its row and in the preview, while guests see only that no times are offered.
 
 With both Google and Microsoft calendars
 connected, a **Calendar provider** choice comes first. **Save calendar** appears
@@ -246,8 +245,8 @@ send invitations; reconnect it and allow invitation access.
 **What guests see** puts a small preview of the public booking page beside
 three rows:
 
-- **Company name and logo** comes from the company profile, with **Change** or
-  **Add logo**. With no company name set, guests see your name only.
+- **Company name and logo** names the company an Admin assigns you to, with
+  **Change** or **Add logo**. With no company name set, guests see your name only.
 - **Your name** comes from your account, with **Change**.
 - **Reminder email** goes out one hour before each meeting, from your connected
   mailbox. So it needs a mailbox under Connections.
@@ -276,12 +275,12 @@ learns only from samples you add.
 ### How do I set up my writing voice?
 <!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
-1. Under **Writing samples**, choose **Add writing samples** and drop or pick files, several at once.
-2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`.
+1. Under **Add your writing**, drop or pick files, several at once. After that, add more under **Make it sharper**. **Add writing** at the top takes you there.
+2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
-4. Choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
+4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-After the first build, the button reads **Rebuild Voice DNA**. Notes on how you want to sound go in **Preferences**, then **Save preferences**.
+When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
 Also called: tone, writing style, Voice DNA, sound like me.
 
 The best samples are emails you sent, then proposals and posts, then the written
@@ -290,8 +289,8 @@ learns a different voice from them. A read-only seat sees the page and cannot ch
 
 Margince reads a PDF or Word document to its text in the browser before it
 sends anything. It skips a file with no text in it. It names a file it cannot
-open (one with a password, or one that is broken), so you can copy its text in
-instead.
+open (one with a password, or one that is broken), so you can paste its text
+in instead.
 
 When at least half of a file comes from named speakers, Margince reads it as a
 conversation. The page asks which speaker is you, and keeps only your parts.

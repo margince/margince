@@ -170,7 +170,9 @@ export function stub(
       // editor renders as text, so "withheld" would look the same as "never built".
       if (pathname.endsWith("/v1/me")) {
         return jsonResponse(
-          meFixture({ allow: { company: ["read", "update"] } }),
+          meFixture({
+            allow: { company: ["read", "update"], partner: ["read"] },
+          }),
         );
       }
       if (pathname.endsWith("/companies/o-1")) {

@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import type { ContactTab } from "../../lib/contacttab";
 import { useUrlParams } from "../../lib/urlstate";
 import {
@@ -9,6 +10,7 @@ import {
 import { contactFirstName } from "./contactfirstname";
 import { ContactHowItStands } from "./contacthowitstands";
 import { ContactMemory } from "./contactmemory";
+import { ContactSourceReview } from "./contactsourcereview";
 import { ContactToday } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -43,7 +45,9 @@ export function ContactOverview({
         onOpenEmail={onOpenEmail}
         onOpenTasks={openQueue}
       />
+      <ContactSourceReview view={view} onAction={onAction} />
       <ContactHowItStands view={view} />
+      <MailCoverageNotice coverage={view.mail_coverage} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
           <ContactCommitmentsCard

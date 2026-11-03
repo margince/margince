@@ -332,6 +332,63 @@ describe("the bridge refuses what it must", () => {
   });
 });
 
+describe("the bridge says which call a result answers", () => {
+  async function handshaken() {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: {},
+    });
+    let got: unknown = null;
+    bridge.onResult((_data, _warnings, call) => {
+      got = call;
+    });
+    return { parent, got: () => got };
+  }
+
+  it("hands the view a refusal's words", async () => {
+    const { parent, got } = await handshaken();
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        isError: true,
+        content: [
+          { type: "text", text: "A new lead cannot start as promoted." },
+        ],
+      },
+    });
+    expect(got()).toEqual({ refusal: "A new lead cannot start as promoted." });
+  });
+
+  it("hands the view the answer a refusal carries beside its words", async () => {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: {},
+    });
+    const got: unknown[] = [];
+    bridge.onResult((data, _warnings, call) => got.push(data, call));
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      method: "ui/notifications/tool-result",
+      params: {
+        isError: true,
+        content: [{ type: "text", text: "Staged for a human." }],
+        structuredContent: { data: { staged_approval: {} }, warnings: [] },
+      },
+    });
+    expect(got).toEqual([
+      { staged_approval: {} },
+      { refusal: "Staged for a human." },
+    ]);
+  });
+});
+
 describe("the bridge follows the host it is drawn inside", () => {
   // The notification's `params` IS the context — unlike the initialize RESULT,
   // which nests one under `hostContext`. Captured off the Inspector's wire:
@@ -563,16 +620,6 @@ describe("the bridge tells the host how tall its content is", () => {
 });
 
 describe("the render helpers refuse to render nonsense", () => {
-  it("renders a non-finite proportion as an em dash rather than NaN", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    expect(bridge.percent(0.42)).toBe("42%");
-    expect(bridge.percent(undefined)).toBe("—");
-    expect(bridge.percent(Number.POSITIVE_INFINITY)).toBe("—");
-    expect(bridge.count(Number.NaN)).toBe("—");
-    expect(bridge.count(7)).toBe("7");
-  });
-
   it("puts text on the page as text, never as markup", async () => {
     const parent = stubParent();
     const bridge = await loadBridge(parent.win);
@@ -635,84 +682,5 @@ describe("the render helpers refuse to render nonsense", () => {
     ).toBe(true);
     expect(bridge.warned([{ code: "other" }], "sweep_truncated")).toBe(false);
     expect(bridge.warned([], "sweep_truncated")).toBe(false);
-  });
-});
-
-/** inCurrency is the expectation, rendered by the same formatter money uses —
- *  so these assertions are about the SCALE rather than about how the machine
- *  running them happens to group digits. */
-function inCurrency(major: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-  }).format(major);
-}
-
-const euros = (major: number) => inCurrency(major, "EUR");
-
-describe("money is scaled by the currency's own minor units", () => {
-  it("scales a two-decimal currency by a hundred", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    // 24_000_000 minor EUR is 240,000 — not 24,000,000, which is the mistake
-    // that made an account brief report every deal a hundred times too large.
-    //
-    // The EXPECTATION is derived from Intl with the same options, not written
-    // as English digits: money formats in the host's own locale, and a fixed
-    // "240,000" would pin this suite to a machine that groups that way. What
-    // is under test is the SCALE, which is locale-independent.
-    expect(bridge.money(24_000_000, "EUR")).toBe(euros(240_000));
-    expect(bridge.money(24_000_000, "EUR")).not.toBe(euros(24_000_000));
-  });
-
-  it("does not scale a zero-decimal currency at all", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    // JPY stores 1234 minor units and means ¥1,234. A hard-coded /100 renders
-    // ¥12.34 here and would pass every euro test in the suite.
-    expect(bridge.money(1234, "JPY")).toBe(inCurrency(1234, "JPY"));
-    expect(bridge.money(1234, "JPY")).not.toBe(inCurrency(12.34, "JPY"));
-  });
-
-  it("renders an absent amount or currency as an em dash, never as zero", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    expect(bridge.money(undefined, "EUR")).toBe("—");
-    expect(bridge.money(1000, undefined)).toBe("—");
-    expect(bridge.money(Number.NaN, "EUR")).toBe("—");
-  });
-
-  it("renders a currency Intl does not know as an em dash rather than throwing", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    // Intl throws a RangeError on an unknown code, and a view that threw
-    // mid-render would leave the reader a blank panel with nothing saying why.
-    expect(() => bridge.money(1000, "not-a-currency")).not.toThrow();
-    expect(bridge.money(1000, "not-a-currency")).toBe("—");
-  });
-});
-
-describe("day renders the calendar day the server judged in", () => {
-  it("renders an instant as its UTC day", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    expect(bridge.day("2026-06-10T12:00:00Z")).toBe("2026-06-10");
-  });
-
-  it("does not shift the day into the reader's own zone", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    // 23:30 UTC is already the next day in much of the world. Rendering it
-    // there would put "due 2026-06-11" beside the word "overdue", which the
-    // server judged against 2026-06-10.
-    expect(bridge.day("2026-06-10T23:30:00Z")).toBe("2026-06-10");
-  });
-
-  it("renders an absent or unparseable instant as an em dash", async () => {
-    const parent = stubParent();
-    const bridge = await loadBridge(parent.win);
-    expect(bridge.day(undefined)).toBe("—");
-    expect(bridge.day("")).toBe("—");
-    expect(bridge.day("not a date")).toBe("—");
   });
 });

@@ -41,6 +41,23 @@ import (
 
 func TestTheRetentionSweepDestroysAChannelMessagesOriginal(t *testing.T) {
 	e := integration.Setup(t)
+	activity := captureOneTelegramMessage(t, e)
+
+	ageOutAndSweep(t, e, activity)
+
+	if body := activityBodyOf(t, e, activity); body != nil {
+		t.Fatalf("the sweep left the message body %q", *body)
+	}
+	if n := rawCaptureRowsLeft(t, e); n != 0 {
+		t.Fatalf("%d provider original(s) survived the sweep — the verbatim update is still "+
+			"there for an Art. 15 package to return", n)
+	}
+}
+
+// captureOneTelegramMessage polls one update and ingests it through the real
+// Sink, and answers the activity it wrote, linked to the poll's original.
+func captureOneTelegramMessage(t *testing.T, e *integration.Env) ids.UUID {
+	t.Helper()
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
 	api := &telegramPollFakeAPI{
@@ -72,15 +89,38 @@ func TestTheRetentionSweepDestroysAChannelMessagesOriginal(t *testing.T) {
 	if n := rawCaptureRowsLeft(t, e); n != 1 {
 		t.Fatalf("%d originals before the sweep, want the one the poll stored", n)
 	}
+	return activity
+}
 
-	ageOutAndSweep(t, e, activity)
-
-	if body := activityBodyOf(t, e, activity); body != nil {
-		t.Fatalf("the sweep left the message body %q", *body)
+// The raw_capture policy ages an original on its own clock and leaves its
+// activity standing. A Telegram original is keyed apart from its activity, so
+// only the link reaches it.
+func TestTheRawCaptureStageAgesOutAChannelMessagesOriginal(t *testing.T) {
+	e := integration.Setup(t)
+	activity := captureOneTelegramMessage(t, e)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		ctx := context.Background()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO retention_policy (object_type, category, retain_days, action)
+			VALUES ('raw_capture', NULL, 100, 'erase')`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE raw_capture SET received_at = now() - interval '400 days'`)
+		return err
+	}); err != nil {
+		t.Fatalf("ageing the original out: %v", err)
 	}
+	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	integration.SettleIntoInstall(t, e)
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+		t.Fatalf("running the retention sweep: %v", err)
+	}
+
 	if n := rawCaptureRowsLeft(t, e); n != 0 {
-		t.Fatalf("%d provider original(s) survived the sweep — the verbatim update is still "+
-			"there for an Art. 15 package to return", n)
+		t.Errorf("%d Telegram original(s) survived a raw_capture policy past its window", n)
+	}
+	if activityBodyOf(t, e, activity) == nil {
+		t.Error("the raw_capture stage erased the message itself; it ages only the original")
 	}
 }
 

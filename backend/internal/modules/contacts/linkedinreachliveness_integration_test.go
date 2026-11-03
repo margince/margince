@@ -38,7 +38,7 @@ func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 	e.seedReach(ctx, t, e.otherRep, company, "Bea Hoffmann")
 
 	both := e.reachInto(ctx, t, company)
-	if both[e.rep] != 1 || both[e.otherRep] != 1 {
+	if both[e.rep].Connections != 1 || both[e.otherRep].Connections != 1 {
 		t.Fatalf("with both seats live the reach is %v, want one connection each for %s and %s — "+
 			"the rest of this test cannot mean anything if the baseline is already wrong",
 			both, e.rep, e.otherRep)
@@ -50,13 +50,13 @@ func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 	if _, offered := after[e.otherRep]; offered {
 		t.Errorf("a deactivated colleague is still offered as a route into the account: %v", after)
 	}
-	if after[e.rep] != 1 {
+	if after[e.rep].Connections != 1 {
 		t.Errorf("the live colleague's reach is %v, want 1 — deactivating one seat took another seat's "+
 			"count with it", after)
 	}
 }
 
-// seedReach gives a colleague one LinkedIn connection already matched to an
+// seedTitledReach gives a colleague one LinkedIn connection already matched to an
 // account. The import path is exercised by linkedin_integration_test.go; what
 // this suite is about is which colleagues the count admits, so the connection
 // arrives ready-matched.
@@ -65,19 +65,28 @@ func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
 // an ACCOUNT by employer name even when the contact never matches, and a
 // 'confirmed' row needs a matched_contact_id it would not have. The company-matched,
 // contact-unmatched row IS the reach case.
-func (e *dedupeEnv) seedReach(ctx context.Context, t *testing.T, owner ids.UUID, company ids.CompanyID, name string) {
+//
+// The title is the one LinkedIn's export carries, empty for none.
+func (e *dedupeEnv) seedTitledReach(
+	ctx context.Context, t *testing.T, owner ids.UUID, company ids.CompanyID, name, title string,
+) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
-			  (owner_user_id, full_name, normalized_name, company_name,
+			  (owner_user_id, full_name, normalized_name, position, company_name,
 			   normalized_company, matched_company_id, match_status, source)
-			VALUES ($1, $2, lower($2), 'Acme GmbH', 'acme gmbh', $3, 'suggested', 'csv_export')`,
-			owner, name, company)
+			VALUES ($1, $2, lower($2), NULLIF($3, ''), 'Acme GmbH', 'acme gmbh', $4, 'suggested', 'csv_export')`,
+			owner, name, title, company)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a connection for %s: %v", owner, err)
 	}
+}
+
+func (e *dedupeEnv) seedReach(ctx context.Context, t *testing.T, owner ids.UUID, company ids.CompanyID, name string) {
+	t.Helper()
+	e.seedTitledReach(ctx, t, owner, company, name, "")
 }
 
 // deactivate is what an admin does to a seat somebody has left: status moves
@@ -112,9 +121,9 @@ func (e *dedupeEnv) deactivate(ctx context.Context, t *testing.T, user ids.UUID)
 	}
 }
 
-func (e *dedupeEnv) reachInto(ctx context.Context, t *testing.T, company ids.CompanyID) map[ids.UUID]int {
+func (e *dedupeEnv) reachInto(ctx context.Context, t *testing.T, company ids.CompanyID) map[ids.UUID]ColleagueReach {
 	t.Helper()
-	var out map[ids.UUID]int
+	var out map[ids.UUID]ColleagueReach
 	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = CompanyLinkedInReach(ctx, tx, company)
 		return err

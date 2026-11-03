@@ -1,5 +1,6 @@
 import type { PeekContent } from "../../design-system/peek";
 import type { StandingPeek } from "../../design-system/standingdims";
+import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { routeHash } from "../../lib/router";
@@ -8,9 +9,9 @@ import type { Project360 } from "./projectsections";
 import { commitmentsReading, dealsReading, timeUsed } from "./projectstanding";
 
 /**
- * The open tasks the Commitments reading and the Open commitments figure count,
- * soonest due first as the server sends them. `open` is where a row leads (the
- * Commitments card); the rollup counts every open task, so a page cut short
+ * The open tasks the Open tasks reading and figure count, soonest due first as
+ * the server sends them. `open` is where a row leads (the Open tasks card); the
+ * rollup counts every open task, so a page cut short
  * says how many it shows.
  */
 export function commitmentsPeek(
@@ -147,13 +148,10 @@ function dealStanding(
   deal: Deal,
   { t, locale, zone }: Pick<PeekWords, "t" | "locale" | "zone">,
 ): string {
-  if (deal.status === "open") {
-    return t("co.deals.status.open");
+  if (deal.status === "open" || !deal.closed_at) {
+    return t(DEAL_STATUS_LABEL[deal.status]);
   }
   const won = deal.status === "won";
-  if (!deal.closed_at) {
-    return t(won ? "co.deals.status.won" : "co.deals.status.lost");
-  }
   return t(won ? "project.deals.wonOn" : "project.deals.lostOn", {
     date: formatDayMonth(deal.closed_at, locale, zone),
   });

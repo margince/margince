@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -20,13 +21,15 @@ type listInput struct {
 	Status *string
 	Flag   *bool
 	Score  *int
+	Day    *time.Time
 }
 
 var probeFilters = FilterSet[listInput]{
-	"owner_id":  FilterID(func(in *listInput, id *ids.UserID) { in.Owner = id }),
-	"status":    FilterWord(func(in *listInput, v *string) { in.Status = v }),
-	"stalled":   FilterFlag(func(in *listInput, v *bool) { in.Flag = v }),
-	"min_score": FilterNumber(func(in *listInput, v *int) { in.Score = v }),
+	"owner_id":   FilterID(func(in *listInput, id *ids.UserID) { in.Owner = id }),
+	"status":     FilterWord(func(in *listInput, v *string) { in.Status = v }),
+	"stalled":    FilterFlag(func(in *listInput, v *bool) { in.Flag = v }),
+	"min_score":  FilterNumber(func(in *listInput, v *int) { in.Score = v }),
+	"close_from": FilterDate(func(in *listInput, v *time.Time) { in.Day = v }),
 }
 
 // Each binding writes the field it names. A binding that parsed its operand and
@@ -38,8 +41,9 @@ func TestEachBindingNarrowsTheFieldItNames(t *testing.T) {
 
 	if err := probeFilters.Apply(&in, map[string]string{
 		"owner_id": owner.String(), "status": "open", "stalled": "true", "min_score": "70",
+		"close_from": "2026-10-01",
 	}); err != nil {
-		t.Fatalf("applying four filters: %v", err)
+		t.Fatalf("applying five filters: %v", err)
 	}
 
 	if in.Owner == nil || in.Owner.UUID != owner {
@@ -53,6 +57,9 @@ func TestEachBindingNarrowsTheFieldItNames(t *testing.T) {
 	}
 	if in.Score == nil || *in.Score != 70 {
 		t.Errorf("min_score bound %v, want 70", in.Score)
+	}
+	if in.Day == nil || in.Day.Format(time.DateOnly) != "2026-10-01" {
+		t.Errorf("close_from bound %v, want 2026-10-01", in.Day)
 	}
 }
 
@@ -74,7 +81,7 @@ func TestAnUnknownFilterIsRefusedRatherThanIgnored(t *testing.T) {
 	if !strings.Contains(err.Error(), "tag") {
 		t.Errorf("the refusal does not name the filter it refused: %v", err)
 	}
-	if in.Status != nil || in.Owner != nil || in.Flag != nil || in.Score != nil {
+	if in.Status != nil || in.Owner != nil || in.Flag != nil || in.Score != nil || in.Day != nil {
 		t.Errorf("a refused filter set left a partially narrowed input: %+v", in)
 	}
 }
@@ -92,6 +99,8 @@ func TestAMalformedOperandIsRefusedWithoutEchoingIt(t *testing.T) {
 		// operands to.
 		{"a threshold with a leading plus", "min_score", "+70"},
 		{"a threshold with a leading zero", "min_score", "070"},
+		{"a day in another layout", "close_from", "01.10.2026"},
+		{"a day with a time", "close_from", "2026-10-01T00:00:00Z"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var in listInput
@@ -138,7 +147,7 @@ func TestAFilterRefusalDeclaresTheFilterAsTheFieldToFix(t *testing.T) {
 // a reshuffled list as a contract change, so map order must not reach it.
 func TestTheVocabularyIsOrderedRatherThanMapOrdered(t *testing.T) {
 	names := probeFilters.Names()
-	want := []string{"min_score", "owner_id", "stalled", "status"}
+	want := []string{"close_from", "min_score", "owner_id", "stalled", "status"}
 	if len(names) != len(want) {
 		t.Fatalf("Names() = %v, want %v", names, want)
 	}

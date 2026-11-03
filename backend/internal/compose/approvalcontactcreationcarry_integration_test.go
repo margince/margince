@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"errors"
 	"maps"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestContactCreationPreviewIncludesThePromotedLeadsHistoryAndConsent(t *testing.T) {
+func TestContactCreationOverALiveLeadIsRefusedAndItsConvertCarriesHistoryAndConsent(t *testing.T) {
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -47,32 +48,32 @@ func TestContactCreationPreviewIncludesThePromotedLeadsHistoryAndConsent(t *test
 		t.Fatal(err)
 	}
 	in := contacts.CreateContactInput{FullName: "Confirmed Buyer", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "carry@example.test", EmailType: "work"}}}
-	preview, err := store.PreviewContactCreationForActor(ctx, in, actor)
-	if err != nil {
-		t.Fatal(err)
+	// The agent's preview gives the writer's answer: the lead holds the address.
+	if _, err := store.PreviewContactCreationForActor(ctx, in, actor); !namesLead(err, leadID) {
+		t.Fatalf("preview of a create over a live lead: %v", err)
 	}
-	if len(preview.Promotions) != 1 {
-		t.Fatalf("promotions: %+v", preview.Promotions)
+	if _, err := store.CreateContact(ctx, in); !namesLead(err, leadID) {
+		t.Fatalf("create over a live lead: %v", err)
 	}
-	scope := preview.Promotions[0].SourceCarry
-	if len(scope.Activities) != 1 || scope.Activities[0].ID != ids.UUID(activity.Id) || scope.Activities[0].AlreadyOnContact {
-		t.Fatalf("activity scope: %+v", scope.Activities)
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE email = 'carry@example.test'`); n != 0 {
+		t.Fatalf("a refused create wrote %d contact addresses", n)
 	}
-	if len(scope.Consent) != 1 || scope.Consent[0].PurposeID != purpose.ID.UUID || scope.Consent[0].SourceState != "withdrawn" {
-		t.Fatalf("consent scope: %+v", scope.Consent)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND lead_id=$2`, activity.Id, leadID); n != 1 {
-		t.Fatal("preview moved activity")
-	}
+	in.ConvertLeadIDs = []ids.LeadID{leadID}
 	contact, err := store.CreateContact(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND contact_id=$2`, activity.Id, contact.Id); n != 1 {
-		t.Fatal("writer did not move activity")
+		t.Fatal("the convert did not move the lead's activity")
 	}
 	states, _, err := consents.ContactConsent(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)))
 	if err != nil || len(states) != 1 || states[0].State != "withdrawn" {
-		t.Fatalf("writer consent: %+v,%v", states, err)
+		t.Fatalf("the convert's consent: %+v,%v", states, err)
 	}
+}
+
+// namesLead reports whether err is the lead-held refusal naming lead alone.
+func namesLead(err error, lead ids.LeadID) bool {
+	held, ok := errors.AsType[*contacts.LeadHoldsIdentityError](err)
+	return ok && len(held.LeadIDs) == 1 && held.LeadIDs[0] == lead
 }

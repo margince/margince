@@ -1,11 +1,15 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go backend/internal/modules/contacts/companyroster.go backend/internal/modules/contacts/company_counts.go backend/internal/modules/contacts/contact_list.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what
 to do next. A written brief covers all of it. It is the largest composite surface in the product. Nearly
 all of it is put together in `internal/compose`. That is gated section reads inside one transaction
 (listed below), plus two groups that work across modules and own view state of their own.
+
+The contact count, company contact tab and company filter share the current roster.
+It includes a current second job and counts each contact once, within the reader's contact and link access.
+A primary employer stays a separate choice on the contact.
 
 ## The shape
 
@@ -438,9 +442,9 @@ slot.
 
 ### The installation's second mark
 
-The record above shows one picture. The installation's own company shows two, because the sidebar draws
-it at two sizes. The wide lockup fits an open panel. A **square icon** serves the `56px` rail, where a
-wordmark scaled into a `32px` box is a row of lines nobody can read.
+The record above shows one picture. The installation's own company stores two. The sidebar head draws
+only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
@@ -468,8 +472,9 @@ The badge chain runs first. The lane runs under one deadline, and a slow lockup 
 company its square mark.
 
 When no lockup resolves, the badge fills the wide slot, and the icon slot stays empty. When the lockup is
-itself square, or the best mark of the chain is not, no badge is stored either. The rail, when closed, falls
-back to the wide mark on its own, so a second copy would be bytes stored for nothing.
+itself square, or the best mark of the chain is not, no badge is stored either. When the icon slot is empty,
+the sidebar head measures the wide mark and draws it if it is square. A second copy would be bytes stored
+for nothing.
 
 Both marks wait on the dossier (`site_read.logo_object_key`, `site_read.logo_icon_object_key`). The
 confirm binds each to its slot on the record, slot by slot, under the rule that a human's choice wins.
@@ -477,8 +482,8 @@ Enrich reads of every other company keep resolving the one mark, with a square p
 into a record card's round avatar would be the row of lines nobody can read that the badge exists to
 avoid. `worker siteread` reports both slots, and every candidate each one tried.
 
-The two slots are chosen and cleared separately in settings. The rail, when closed, falls back to the
-wide mark when there is no icon.
+The two slots are chosen and cleared separately in settings. With no icon and no square wide mark, the
+sidebar head draws the company's monogram.
 
 ## The connections card
 

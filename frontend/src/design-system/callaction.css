@@ -1,21 +1,16 @@
-/* The chat links follow the number inline, and wrap under it as one group. */
+/* The chat glyph follows the number on its line; the square overhangs the
+   line box, so a row with a number stays as tall as a row without one. */
 .callaction-chats {
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-2);
-  margin-inline-start: var(--space-2);
-  font: var(--fontBodySmall);
+  margin-inline-start: var(--space-1);
+  vertical-align: top;
 }
-/* 24px is WCAG 2.5.8's target floor; the gap spaces the names, not padding. */
-.callaction-chats > .link-button {
-  min-block-size: var(--space-6);
-  padding-inline: 0;
-}
-/* A phone reads a number and three app names on one line as one value. */
-@media (max-width: 640px) {
-  .callaction-chats {
-    display: flex;
-    margin-inline-start: 0;
-  }
+/* Quiet at rest, so the line reads as the number; the pane comes back under
+   the pointer, on focus and while its menu is open. */
+.callaction-chats
+.btn-icon:not(:hover, :focus-visible, [aria-expanded="true"]) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--textSecondary);
 }

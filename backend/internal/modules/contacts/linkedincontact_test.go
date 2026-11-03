@@ -31,8 +31,26 @@ func TestContactLinkedInRefusesACompanyPage(t *testing.T) {
 func TestContactLinkedInAcceptsAProfileOnACountrySubdomain(t *testing.T) {
 	t.Parallel()
 	got, err := NormalizeContactLinkedInURL("https://de.linkedin.com/in/sam-example/")
-	if err != nil || got != "https://de.linkedin.com/in/sam-example" {
-		t.Fatalf("got %q, %v, want the profile in its stored spelling", got, err)
+	if err != nil || got != "https://www.linkedin.com/in/sam-example" {
+		t.Fatalf("got %q, %v, want the canonical profile", got, err)
+	}
+}
+
+func TestContactLinkedInFoldsEveryLinkedInHostSpelling(t *testing.T) {
+	t.Parallel()
+	for _, raw := range []string{
+		"linkedin.com/in/sam-example",
+		"https://www.linkedin.com/in/sam-example",
+		"https://de.linkedin.com/in/sam-example",
+		"http://m.linkedin.com/in/sam-example/",
+	} {
+		got, err := NormalizeContactLinkedInURL(raw)
+		if err != nil {
+			t.Fatalf("NormalizeContactLinkedInURL(%q): %v", raw, err)
+		}
+		if got != "https://www.linkedin.com/in/sam-example" {
+			t.Errorf("NormalizeContactLinkedInURL(%q) = %q", raw, got)
+		}
 	}
 }
 

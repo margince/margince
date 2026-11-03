@@ -107,22 +107,21 @@ The version form of the dist service does not accept a `v` prefix, so the two la
 
 ### Where the patch of changes starts
 
-The patch of `release.yml` starts at the last commit that **was published**. The lane records it as the
-moving `released` tag once `publish-release` succeeds. While that tag exists, the lane does not use the old tip of the branch.
+The patch of `release.yml` starts at the patch base. The patch base is the newest published release on
+the release's line, as the dist service records it. The line is `main` or one `lts/YYYY` branch. A withdrawn
+release was published, so it can be the base: an installation that runs it still gets the next patch.
 
-The two agree only while every lane publishes. A run can be cancelled, or it can fail. (The release group
-holds one place in the queue, so a merge pushes out the run behind it.) Either way, no one publishes that
-commit. Say the next patch started at the old tip. Then it would drop the files of that commit from every
-patch a user applies, with no sign that anything failed.
+The release CLI reads the base from the dist service with `resolve-patch-base --version`, given the version of
+the new release. It names the version and the git revision of one release. The lane cuts the patch from that
+revision, and `draft-release` names that version as `--patch-base`. So the patch and its base come from one
+record and cannot disagree.
 
-That has two results:
+A lane that was cancelled or failed published nothing. So the next patch starts at the newest published release
+on the line, and it also carries the files of the lane that was skipped.
 
-- the first patch after a skipped lane is wider than usual, and covers what that lane dropped;
-- a `released` tag that failed to move makes the next patch wider still, which a user applies with no
-  harm. The tag points at the dist service's own record, and is written only after a publish succeeds. So
-  when it fails, it fails on the safe side.
+If no release was ever published on `main`, the release is the first one. Its patch is the whole tree, and
+`draft-release` marks it with `--first-release`.
 
-`scripts/release-patch-base.sh` states the rule, and what it falls back to. With no `released` tag, the
-base is the old tip of the push. With no old tip either (a run started by hand, or a new branch), it is
-`HEAD~1`. Then the patch of that release covers one commit. Only a checkout where none of these exists
-makes no patch. `make test-release-patch-base` runs the steps publish, skip, publish.
+`scripts/release-patch-base.sh` reads the record of the release CLI. It accepts a base or the first-release mark,
+and it fails on any other record. `make test-release-patch-base` runs these cases.
+

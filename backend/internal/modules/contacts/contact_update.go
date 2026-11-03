@@ -59,6 +59,12 @@ type UpdateContactInput struct {
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// ConvertLeadIDs are the live leads that hold an address or profile this
+	// edit gives the contact, which the user chose to convert into it.
+	ConvertLeadIDs []ids.LeadID
+	// converting is ConvertLeadIDs once checked against the holders under the
+	// identity locks; only that check sets it.
+	converting []ids.LeadID
 }
 
 // UpdateContact applies a partial write under the caller's If-Match version,
@@ -91,7 +97,10 @@ func (s *Store) updateContactInTx(
 	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
 		return out, err
 	}
-	current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
+		return out, err
+	}
+	current, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return out, fmt.Errorf("read contact before update: %w", err)
 	}
@@ -120,6 +129,9 @@ func (s *Store) updateContactInTx(
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return out, err
 	}
+	if err := admitEditLeadHolders(ctx, tx, id, current, &in); err != nil {
+		return out, err
+	}
 	if err := lockEditedContactLanes(ctx, tx, id, current, in); err != nil {
 		return out, err
 	}
@@ -133,7 +145,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return current, nil
+		return withContactCreator(ctx, tx, current)
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
@@ -161,13 +173,16 @@ func (s *Store) updateContactInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 		return out, fmt.Errorf("emit contact.updated: %w", err)
 	}
-	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails); err != nil {
+	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
+		return out, err
+	}
+	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {
 		return out, err
 	}
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return out, fmt.Errorf("read updated contact: %w", err)
 	}
-	return out, s.followShareOwnerTx(ctx, tx, id, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // Child sets are separate rows, so their audit images supplement the column patch.

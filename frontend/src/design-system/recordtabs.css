@@ -118,6 +118,38 @@
   display: none;
 }
 
+/* With no scrollbar, a tab cut at the strip's edge read as the last one. So
+   an end that hides tabs fades out, and only that end: a fade on a strip that
+   fits would promise tabs that are not there. The classes come from the
+   script that measures the scroll, so the fade is still. Focus scrolls a tab
+   clear of the fade, so the tab a keyboard stands on is never the faded one. */
+.recordtabs-strip {
+  /* A gradient takes no logical direction, so its start follows the strip's. */
+  --recordtabs-fade-from: 90deg;
+  --recordtabs-fade-start: 0px;
+  --recordtabs-fade-end: 0px;
+  scroll-padding-inline: var(--space-8);
+  mask-image: linear-gradient(
+    var(--recordtabs-fade-from),
+    transparent,
+    black var(--recordtabs-fade-start),
+    black calc(100% - var(--recordtabs-fade-end)),
+    transparent
+  );
+}
+.recordtabs-strip:dir(rtl) {
+  --recordtabs-fade-from: 270deg;
+}
+.recordtabs-strip:not(.is-clipped-start, .is-clipped-end) {
+  mask-image: none;
+}
+.recordtabs-strip.is-clipped-start {
+  --recordtabs-fade-start: var(--space-8);
+}
+.recordtabs-strip.is-clipped-end {
+  --recordtabs-fade-end: var(--space-8);
+}
+
 /* The current tab is marked by a rule under it rather than by a fill: the
    strip is a place a reader navigates, and a filled pill among seven plain
    words reads as a control that does something rather than as where they

@@ -8,6 +8,11 @@ import {
   receipt,
   renderMagic,
 } from "../../testing/magic.testkit";
+import { meFixture } from "../../testing/mefixture";
+import {
+  automaticDateReceipt,
+  automaticStageReceipt,
+} from "../../testing/worklist.receiptreview.fixtures";
 
 afterEach(() => {
   cleanup();
@@ -54,14 +59,23 @@ const RECORDS = {
   page: { has_more: false, total: 2 },
 };
 
-function stubOpenedLine() {
+function stubOpenedLine(
+  records: unknown = RECORDS,
+  handled: () => Response = () => jsonResponse({ data: [] }),
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       const path = url.split("?")[0];
       if (path.endsWith(`/magic/lines/${LINE}/records`)) {
-        return jsonResponse(RECORDS);
+        return jsonResponse(records);
+      }
+      if (path.endsWith("/me")) {
+        return jsonResponse(meFixture({ allow: { deal: ["read", "update"] } }));
+      }
+      if (path.endsWith("/worklist/handled")) {
+        return handled();
       }
       if (path.endsWith("/magic")) {
         return jsonResponse(
@@ -169,5 +183,96 @@ describe("a done line standing for many records", () => {
         String(input instanceof Request ? input.url : input),
       );
     expect(asked.some((url) => url.includes("/magic/lines/"))).toBe(false);
+  });
+});
+
+// One record per receipt fixture, each joined to its receipt by `receipt_id`.
+function reviewedRecords() {
+  return {
+    data: [automaticDateReceipt, automaticStageReceipt].map((change, n) => ({
+      audit_id: `00000000-0000-7000-8000-0000000000b${n}`,
+      receipt_id: change.id,
+      occurred_at: change.occurred_at,
+      entity: {
+        type: "deal",
+        id: `00000000-0000-7000-8000-0000000000d${n}`,
+        label: `Deal ${n}`,
+      },
+      changes: [],
+      undo: { undoable: false, reason: "no_before_image" },
+    })),
+    page: { has_more: false, total: 2 },
+  };
+}
+
+async function openTheLine() {
+  renderMagic();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "GEM and 1 more" }),
+  );
+  return screen.findByRole("dialog");
+}
+
+describe("a grouped record with a reviewed change", () => {
+  it("keeps the review verbs its receipt offers on its own", async () => {
+    stubOpenedLine(reviewedRecords(), () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        truncated: false,
+        receipts: [automaticDateReceipt, automaticStageReceipt],
+      }),
+    );
+    const dialog = await openTheLine();
+
+    expect(
+      await within(dialog).findByRole("button", { name: "Keep date" }),
+    ).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Accept" })).toBeTruthy();
+    expect(
+      within(dialog).getAllByRole("button", { name: "Undo" }),
+    ).toHaveLength(2);
+  });
+
+  it("offers no review verb off a receipts read that failed", async () => {
+    stubOpenedLine(reviewedRecords(), () =>
+      jsonResponse({ title: "Unavailable" }, 503),
+    );
+    const dialog = await openTheLine();
+
+    expect(await within(dialog).findByText("Deal 1")).toBeTruthy();
+    expect(within(dialog).queryByRole("button", { name: "Accept" })).toBeNull();
+    expect(
+      within(dialog).queryByRole("button", { name: "Keep date" }),
+    ).toBeNull();
+  });
+});
+
+describe("a long recorded value", () => {
+  it("reads in full, so two values with one beginning stay apart", async () => {
+    const opening = "Hosting and managed services for retail chains, ".repeat(
+      4,
+    );
+    stubOpenedLine({
+      data: [
+        {
+          ...RECORDS.data[0],
+          changes: [
+            {
+              field: "offer_summary",
+              before: `${opening}in Germany.`,
+              after: `${opening}in Vietnam.`,
+            },
+          ],
+        },
+      ],
+      page: { has_more: false, total: 1 },
+    });
+    const dialog = await openTheLine();
+
+    expect(
+      await within(dialog).findByText(
+        `${opening}in Germany. → ${opening}in Vietnam.`,
+      ),
+    ).toBeTruthy();
   });
 });

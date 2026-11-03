@@ -41,7 +41,7 @@ func formatColumn(f crmcontracts.ImportFormat, file, name string) *crmcontracts.
 
 func TestTheFormatListsACustomFieldByItsKeyWithItsLabel(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	column := createCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
 	german := formatColumn(readImportFormat(t, e, "?lang=de"), "companies.csv", column)
 	english := formatColumn(readImportFormat(t, e, "?lang=en"), "companies.csv", column)
 	if german == nil || english == nil {
@@ -60,7 +60,7 @@ func TestTheFormatListsACustomFieldByItsKeyWithItsLabel(t *testing.T) {
 
 func TestTheTemplateHeadersAreTheFormatsColumns(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	createCustomField(t, e, AnyMap{"object": "contact", "label": "Segment, internal", "type": "text", "source": "manual"})
+	apptest.CreateCustomField(t, e, AnyMap{"object": "contact", "label": "Segment, internal", "type": "text", "source": "manual"})
 	status, header, archive := getRaw(t, e, "/v1/imports/template", nil)
 	if status != http.StatusOK || header.Get("Content-Type") != "application/zip" ||
 		!strings.Contains(header.Get("Content-Disposition"), "margince-import.zip") {
@@ -94,7 +94,7 @@ func TestTheTemplateHeadersAreTheFormatsColumns(t *testing.T) {
 
 func TestProblemsCSVListsTheReportsIssues(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	column := createCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold"}, "source": "manual"})
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold"}, "source": "manual"})
 	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
 	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	if status != http.StatusAccepted {

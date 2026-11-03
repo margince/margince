@@ -1,3 +1,4 @@
+import type { SummaryWords } from "../design-system/approvalsummary";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { MERGE_FIELD_LABELS } from "./approvalpreviewmergefields";
@@ -32,7 +33,6 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   stage_optional_criterion_unmet: "approval.preview.optionalCriterionUnmet",
   creation_acquisition: "approval.preview.acquisition",
   creation_acquired_at: "approval.preview.acquiredAt",
-  creation_promoted_lead: "approval.preview.promotedLead",
   creation_source_activity: "approval.preview.sourceActivity",
   creation_source_withheld_activities:
     "approval.preview.sourceWithheldActivities",
@@ -115,8 +115,11 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_contact_owner: "approval.preview.promotionContactOwner",
   promotion_contact_email: "approval.preview.promotionContactEmail",
   promotion_contact_phone: "approval.preview.promotionContactPhone",
+  promotion_existing_deal: "approval.preview.promotionExistingDeal",
   promotion_existing_contact: "approval.preview.promotionExistingContact",
   promotion_set_origin: "approval.preview.promotionSetOrigin",
+  promotion_company_industry: "approval.preview.promotionCompanyIndustry",
+  promotion_company_proposed: "approval.preview.promotionCompanyProposed",
   promotion_duplicate_candidate: "approval.preview.promotionDuplicateCandidate",
   promotion_move_activity: "approval.preview.promotionMoveActivity",
   promotion_remove_duplicate_activity_link:
@@ -144,6 +147,10 @@ export function previewFieldLabel(field: string, t: Translator): string {
   const promotion = PREVIEW_DETAIL_LABELS[field] ?? MERGE_FIELD_LABELS[field];
   if (promotion) return t(promotion);
   switch (field) {
+    case "member_source":
+      return t("users.mergeSource");
+    case "member_target":
+      return t("users.survivingMember");
     case "existing_task_id":
       return t("approval.preview.existingTask");
     case "recipients":
@@ -244,8 +251,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("rel.counterparty");
     case "archive_primary_employer":
       return t("approval.preview.newPrimaryEmployer");
-    case "partner_role":
-      return t("partner.role");
+    case "partner_kinds":
+      return t("partner.kinds");
     case "partner_stage":
       return t("partner.stage");
     case "partner_next_step":
@@ -311,4 +318,13 @@ export function previewFieldLabel(field: string, t: Translator): string {
     default:
       return historyFieldLabel(field, t);
   }
+}
+
+/** The words an approval summary's fields are shown in: the preview's own
+ *  field labels, so a field reads alike in the summary and the preview. */
+export function summaryWords(t: Translator): SummaryWords {
+  return {
+    field: (name) => previewFieldLabel(name, t),
+    more: (count) => t("state.partialCount", { count: String(count) }),
+  };
 }

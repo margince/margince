@@ -83,18 +83,24 @@ func claimedDomainOwner(
 	domain string,
 ) error {
 	var existing ids.CompanyID
+	// Every spelling, because Postgres cannot fold IDNA: a punycode claim on one
+	// company and its Unicode twin on another otherwise read as two free
+	// domains. Compared against `domain`, which uq_company_domain keys, rather
+	// than the folded column no index covers.
+	spellings := owndomain.Spellings(domain)
+
+	// `self` is excluded in SQL rather than compared afterwards. Both spellings
+	// can be live at once. So this has to answer with a rival, never with
+	// whichever of the two the planner reached first.
 	err := tx.QueryRow(ctx,
 		`SELECT company_id FROM company_domain
-		  WHERE domain = lower($1) AND archived_at IS NULL`,
-		domain).Scan(&existing)
-	// Non-absence errors return before the ids are compared: a failed Scan
-	// leaves `existing` at its zero value, which equals `self`'s zero value on
-	// the CREATE path, so the comparison cannot tell a database failure from a
-	// free domain.
+		  WHERE domain = ANY($1) AND company_id <> $2 AND archived_at IS NULL
+		  LIMIT 1`,
+		spellings, self).Scan(&existing)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("probe domain dedupe: %w", err)
 	}
-	if errors.Is(err, pgx.ErrNoRows) || existing == self {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	dup := &DuplicateDomainError{Domain: domain}

@@ -20,7 +20,9 @@
 .compose-address-field {
   display: grid;
   grid-template-columns: 3.5rem minmax(0, 1fr);
-  align-items: center;
+  /* The label, the first row of tokens and the Cc and Bcc link share one
+     line; further recipients wrap under the first. */
+  align-items: start;
   gap: 0 var(--space-2);
   padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
@@ -30,8 +32,27 @@
   min-inline-size: 0;
 }
 .compose-address-field > label {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--inputHeight);
   font: var(--fontBodySmall);
   color: var(--textSecondary);
+}
+/* Each row of tokens is centred on the label's line: the pill is 24px, so the
+   field's padding makes up the rest of the line's height. */
+.compose-address-field .token-input {
+  /* ds:ignore a bare address row centres each token row on the label's line */
+  padding-block: calc((var(--inputHeight) - var(--space-6)) / 2);
+}
+/* Baseline, so the Cc and Bcc link reads on the first row of tokens. */
+.compose-address-field .field-shell {
+  align-items: baseline;
+}
+/* The Cc and Bcc link keeps its own room at the end of the To line; the tokens
+   wrap before they reach it. */
+.compose-address-field .field-shell > .btn {
+  flex: none;
+  white-space: nowrap;
 }
 .compose-address-field .input,
 .compose-address-field .field-shell {

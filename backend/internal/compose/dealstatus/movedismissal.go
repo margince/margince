@@ -207,7 +207,7 @@ func moveFingerprint(move crmcontracts.DealStatusCardMove, extra ...owedwork.Mar
 	if move.Arguments != nil {
 		// %v prints map keys in sorted order, so the same operands always
 		// spell the same, whether built here or decoded from the cache.
-		operands = fmt.Sprintf("%v", *move.Arguments)
+		operands = fmt.Sprintf("%v", semanticArguments(*move.Arguments))
 	}
 	marks := []owedwork.Mark{{Kind: move.Action, ID: operands}}
 	for _, evidence := range move.Evidence {

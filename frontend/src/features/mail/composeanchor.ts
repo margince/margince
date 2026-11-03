@@ -16,6 +16,7 @@ import { useSettledValue } from "../../design-system/debouncedsearch";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { correspondenceSide } from "../../lib/messagevoice";
 import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { recordNamesIn, useCompany360 } from "../companies/company360";
@@ -82,6 +83,7 @@ export function useConversationNames(
   entityId: string,
 ) {
   const viewerId = useViewerId(open);
+  // roster-failure: names only; a miss reads as an unnamed colleague.
   const roster = useRoster("user", open);
   const namesCompany = useCompany360(entityType === "company" ? entityId : "");
   const colleagues = new Map(
@@ -147,7 +149,7 @@ function answeringLineOf(
     };
   }
   const key =
-    anchor.direction === "outbound"
+    correspondenceSide(anchor) === "ours"
       ? "compose.followingUp"
       : "compose.replyingTo";
   return { line: t(key, named) };

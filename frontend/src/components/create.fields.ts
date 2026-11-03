@@ -10,7 +10,7 @@ export type CreateFieldOption = { value: string; label: string };
 export type SubField = {
   key: string;
   label: MessageKey;
-  type?: "text" | "email" | "number" | "date" | "datetime-local" | "select";
+  type?: "text" | "email" | "number" | "date" | "select";
   required?: boolean;
   options?: CreateFieldOption[];
   multiselectEncoding?: "json";
@@ -38,7 +38,6 @@ export type CreateField = {
     | "email"
     | "number"
     | "date"
-    | "datetime-local"
     | "select"
     | "multiselect"
     | "repeatable"

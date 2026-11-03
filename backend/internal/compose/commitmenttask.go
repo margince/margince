@@ -225,6 +225,21 @@ func commitmentTaskEffect(
 	}
 }
 
+// commitmentTaskDeclineEffect withdraws the customer claims a turned-down
+// proposal filed, in the rejection's own transaction. The claims are the
+// extractor's, so the extractor withdraws them: a decider who may not write the
+// customer's record can still say no.
+func commitmentTaskDeclineEffect() approvals.DeclinedEffect {
+	return func(ctx context.Context, tx pgx.Tx, _ ids.ApprovalID, proposedChange json.RawMessage) error {
+		var proposal CommitmentTaskProposal
+		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
+			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
+		}
+		extractor := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
+		return contacts.WithdrawClaimsTx(extractor, tx, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs))
+	}
+}
+
 // privateWorkHeldNow is who the source mail is private to now, once it is
 // known that the holder may still hold work from it. A sent copy turned back to
 // received mail since staging refuses the acceptance. Read from the rows as

@@ -12,6 +12,7 @@ import { HomeRepairControls } from "./homerepair";
 import {
   classificationRepairReview,
   proposalRepairReview as proposalReview,
+  provenanceRepairReview,
   repairReview as review,
   settlementRepairReview,
   suggestionRepairReview,
@@ -181,7 +182,7 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   ).toBeInTheDocument();
   expect(
     screen.getByText(
-      "Results to change: 0. Reminders to archive: 0. Proposals to withdraw: 1. Deal suggestions to retire: 0. Keep for review: 0; keep as current work: 0.",
+      "Results to change: 0. Automatic tasks to archive: 0. Proposals to withdraw: 1. Deal suggestions to retire: 0. Keep for review: 0; keep as current work: 0.",
     ),
   ).toBeInTheDocument();
   expect(writes).toEqual([]);
@@ -263,4 +264,43 @@ it("reviews older answered requests and activates only their revalidation", asyn
     expect(writes).toEqual([{ version: 7, review: settlementRepairReview }]),
   );
   expect(previews).toEqual([{ limit: 25, source: "settlement" }]);
+});
+
+it("reviews source and date corrections with update authority and no archive authority", async () => {
+  const writes = serve(204, provenanceRepairReview, [], true, true, false);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText("Correct source or generated date"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Restore the source link and remove the generated notification date.",
+    ),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply 1 reviewed change" }),
+  );
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        version: 7,
+        review: provenanceRepairReview,
+        reviewed_actions: ["normalize_automatic_task"],
+      },
+    ]),
+  );
+});
+
+it("keeps source corrections read-only without update authority", async () => {
+  const writes = serve(204, provenanceRepairReview, [], true, false, true);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText("Correct source or generated date"),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Apply 1 reviewed change" }),
+  ).toBeNull();
+  expect(writes).toEqual([]);
 });

@@ -269,3 +269,49 @@ func TestOnlyAFlagOriginIsFromTheFlag(t *testing.T) {
 		t.Fatal("FromFlag must hold for a flag origin and only for it")
 	}
 }
+
+func TestYAMLSourcesUseTheConfiguredFileReader(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(base, []byte("workspace: {name: Demo}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name    string
+		args    []string
+		files   map[string]string
+		want    string
+		refused bool
+	}{
+		{"absent base stays unset", nil, nil, "info", false},
+		{"base comes from the reader", nil, map[string]string{base: "log: {level: debug}\n"}, "debug", false},
+		{"overlay comes from the reader", []string{"--config-file", "override.yaml"}, map[string]string{base: "log: {level: warn}\n", "override.yaml": "log: {level: debug}\n"}, "debug", false},
+		{"missing explicit overlay is refused", []string{"--config-file", "override.yaml"}, nil, "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reg, err := config.NewRegistry([]config.Any{level})
+			if err != nil {
+				t.Fatal(err)
+			}
+			args := append([]string{"--config", base}, tc.args...)
+			loaded, err := config.Load(reg, config.Sources{Args: args, ReadFile: func(path string) ([]byte, error) {
+				body, ok := tc.files[path]
+				if !ok {
+					return nil, os.ErrNotExist
+				}
+				return []byte(body), nil
+			}})
+			if tc.refused {
+				if err == nil || !strings.Contains(err.Error(), "override.yaml") {
+					t.Fatalf("missing overlay was not refused: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := config.Val(loaded, level); got != tc.want {
+				t.Fatalf("level %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

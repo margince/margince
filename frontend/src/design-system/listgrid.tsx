@@ -5,12 +5,16 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
+import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
+import { useListFocusHandoff } from "./listfocus";
 import { HeaderCell } from "./listheader";
 import type { SortControl } from "./listsurface";
+import { CELL_STRIP_CLASS } from "./listtable.floors";
 import {
   type ColumnLayout,
   type ColumnResize,
@@ -81,13 +85,13 @@ function IdentityCell<Row>({
         // default click is stopped from reaching the row's own handler.
         // Preventing the anchor instead would navigate the current page while
         // the new tab opens too.
-        <a
+        <AppLink
           className="lt-cellink"
           href={rowHref(row)}
           onClick={(event) => event.stopPropagation()}
         >
           {cell(row)}
-        </a>
+        </AppLink>
       ) : (
         cell(row)
       )}
@@ -110,7 +114,7 @@ function IdentityCell<Row>({
  * else, so a column that carries one value keeps whatever layout it returns.
  */
 export function CellStrip({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="lt-strip">{children}</span>;
+  return <span className={CELL_STRIP_CLASS}>{children}</span>;
 }
 
 /** Placeholder rows while the first page loads: enough to read as a list. */
@@ -266,7 +270,15 @@ function DataRow<Row>({
     <tr
       role="row"
       className={onRowClick ? "lt-rowlink" : undefined}
-      onClick={onRowClick ? () => onRowClick(row) : undefined}
+      // A control in a cell (an address, a company link) acts on its own,
+      // the same rule a DataTable row keeps.
+      onClick={
+        onRowClick
+          ? (event) => {
+              if (opensRow(event)) onRowClick(row);
+            }
+          : undefined
+      }
     >
       {shown.map((column) => (
         <td
@@ -320,9 +332,7 @@ export function EmptyRow({
       {filtered && (
         <>
           {" "}
-          <button type="button" className="lt-linkish" onClick={onClear}>
-            {t("table.clearFilters")}
-          </button>
+          <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
         </>
       )}
       {/* Under either line, because which emptiness a note explains is the
@@ -330,6 +340,19 @@ export function EmptyRow({
           narrowed list. */}
       {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
     </>
+  );
+}
+
+function ClearFilters({
+  onClear,
+  label,
+}: Readonly<{ onClear: () => void; label: string }>) {
+  const button = useRef<HTMLButtonElement>(null);
+  useListFocusHandoff(button);
+  return (
+    <button ref={button} type="button" className="lt-linkish" onClick={onClear}>
+      {label}
+    </button>
   );
 }
 

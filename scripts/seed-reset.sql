@@ -50,9 +50,11 @@ DECLARE
     'data_task_run',
     'data_task_run_history',
     'deal_acquisition_source',
+    'deal_loss_reason',
     'embed_store_binding',
     'consent_text_version',
     'event_outbox',
+    'home_read_fence',
     'lead_disqualify_reason',
     'lead_origin',
     'lead_source',
@@ -62,6 +64,7 @@ DECLARE
     'oauth_client',
     'oauth_grant',
     'oauth_refresh_token',
+    'partner_stage',
     'passport',
     'project_health_assessment',
     'record_role',
@@ -164,6 +167,10 @@ BEGIN
   -- only stop the worker/relay before running this if that residue matters,
   -- or expect a consumer to see a handful of not-found records after a reset.
   DELETE FROM event_outbox;
+
+  -- The fence triggers are off under replica, so the reset advances it itself:
+  -- every cached Home answer was read from the records just removed.
+  UPDATE home_read_fence SET generation = generation + 1;
 
   RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its contacts and its configuration are untouched — run make seed-dev to fill it', targets;
 END $$;

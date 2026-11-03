@@ -45,7 +45,7 @@ const USERS = [
   { id: "u4", display_name: "Margince", status: "active", is_agent: true },
 ];
 
-function stubFetch(seen: URL[]) {
+function stubFetch(seen: URL[], users: readonly unknown[] = USERS) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,7 +56,7 @@ function stubFetch(seen: URL[]) {
         ? { data: ROLES }
         : req.url.includes("/teams")
           ? { data: [] }
-          : { data: USERS };
+          : { data: users };
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -96,6 +96,7 @@ it("offers an invited colleague and withholds the ones the server refuses", asyn
   // of onboarding somebody, and refusing it would mean nobody could be given
   // work until their first login.
   expect(screen.getByText("Jonas Reed")).toBeTruthy();
+  expect(screen.getByText("Invited, not signed in yet")).toBeTruthy();
   // Both of these the server itself refuses.
   expect(screen.queryByText("Ines Kraft")).toBeNull();
   expect(screen.queryByText("Margince")).toBeNull();
@@ -119,4 +120,42 @@ it("asks the server to search the roster, and for a full page of it", async () =
   // boundary unassignable however precisely their name was typed.
   expect(users?.searchParams.get("q")).toBe("reed");
   expect(users?.searchParams.get("limit")).toBe("200");
+  // The roster leaves invited seats out unless asked, and the server admits them.
+  expect(users?.searchParams.get("include_invited")).toBe("true");
+});
+
+it("asks the server to search the teams too", async () => {
+  const seen: URL[] = [];
+  stubFetch(seen);
+  render(
+    <RecordTeamAssign
+      open
+      onClose={() => {}}
+      recordType="deal"
+      recordId={RECORD_ID}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Team" }));
+  await userEvent.type(screen.getByPlaceholderText("Find a team"), "Thắng");
+  await screen.findByText("No match");
+  const teams = seen.filter((u) => u.pathname.endsWith("/teams")).at(-1);
+  expect(teams?.searchParams.get("q")).toBe("Thắng");
+});
+
+it("says who can be assigned when no colleague matches", async () => {
+  stubFetch([], []);
+  render(
+    <RecordTeamAssign
+      open
+      onClose={() => {}}
+      recordType="deal"
+      recordId={RECORD_ID}
+    />,
+  );
+  await userEvent.type(screen.getByPlaceholderText("Find a colleague"), "zz");
+  expect(
+    await screen.findByText(
+      "No colleague found. Only colleagues with a Margince account can be assigned. Ask an admin to invite them.",
+    ),
+  ).toBeTruthy();
 });

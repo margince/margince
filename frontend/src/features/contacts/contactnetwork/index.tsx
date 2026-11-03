@@ -21,6 +21,7 @@ import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
+import { useViewerId } from "../../../lib/session";
 import { mapLabels } from "../../companies/companycontacts/summary";
 import { useContactGraph } from "../contactgraph";
 import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
@@ -32,7 +33,11 @@ import { CaptureGapsNotice } from "./capturegaps";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
-import { completenessText, mapModelFromContactGraph } from "./mapmodel";
+import {
+  completenessText,
+  mapModelFromContactGraph,
+  WRITE_EMAIL_ACTION,
+} from "./mapmodel";
 import { latestChange, MomentsPanel } from "./moments";
 import { RelayPanel } from "./relay";
 import "../contactnetwork.css";
@@ -55,9 +60,13 @@ export function ContactNetworkTab({
   contactId,
   view,
   onOpenEmail,
+  onWrite,
 }: Readonly<{
   contactId: string;
   view?: RelationshipMoments;
+  // Opens the page's composer to this contact. The reader's own node on the
+  // map offers it, because their way in is to write.
+  onWrite?: () => void;
   // Opens a cited message in the contact page's own email drawer. The graph
   // names the messages a count was read from, and the reader checks the count
   // by reading one.
@@ -67,6 +76,7 @@ export function ContactNetworkTab({
   const { locale } = useLocale();
   const graph = useContactGraph(contactId);
   const own = useOwnRoute();
+  const viewerId = useViewerId();
   const asks = useIntroRequests(contactId);
   const [focus, setFocus] = useState<string | null>(null);
   const [asking, setAsking] = useState<RouteCandidate | undefined>();
@@ -78,9 +88,12 @@ export function ContactNetworkTab({
       peers: t("contact.intro.lanePeers"),
       target: t("contact.intro.laneTarget"),
       useThisRoute: t("contact.intro.useThisRoute"),
+      you: t("contact.intro.heroYou"),
+      writeEmail: t("compose.writeEmail"),
       withheldDirect: t("contact.graph.withheldDirect"),
       withheldAccount: t("contact.graph.withheldAccount"),
       edgeDirect: (name: string) => t("contact.intro.edgeDirect", { name }),
+      edgeDirectYou: t("contact.intro.edgeDirectYou"),
       edgeAccount: (name: string) => t("contact.intro.edgeAccount", { name }),
     }),
     [t],
@@ -115,7 +128,10 @@ export function ContactNetworkTab({
   // relationship made out of a permission.
   const moved = latestChange(view);
 
-  const model = mapModelFromContactGraph(data, copy);
+  const model = mapModelFromContactGraph(data, copy, {
+    userId: viewerId,
+    mayWrite: onWrite !== undefined,
+  });
   const complete = completenessText(data, copy, (n) =>
     t("contact.graph.droppedNote", { count: formatNumber(n, locale) }),
   );
@@ -202,7 +218,11 @@ export function ContactNetworkTab({
         model={model}
         focusId={read.focused}
         onFocus={setFocus}
-        onAction={(nodeId) => {
+        onAction={(nodeId, actionId) => {
+          if (actionId === WRITE_EMAIL_ACTION) {
+            onWrite?.();
+            return;
+          }
           const picked = read.routeAt(nodeId);
           // A route the reader IS, or one already spoken for, opens no drawer:
           // neither the panel nor the rows offer it, and the server refuses an
@@ -224,6 +244,7 @@ export function ContactNetworkTab({
               graph={data}
               nodeId={read.focused}
               anchorId={read.anchor.id}
+              viewerId={viewerId}
               onOpenEmail={onOpenEmail}
             />
           ) : null

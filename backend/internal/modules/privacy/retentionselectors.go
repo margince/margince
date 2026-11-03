@@ -3,6 +3,8 @@
 
 package privacy
 
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
+
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
 // VOCABULARY — retentionscope.go derives what an admin may author from exactly
@@ -40,30 +42,14 @@ var retentionSelectors = map[string]string{
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT EXISTS (SELECT 1 FROM activity_link l
-		        LEFT JOIN contact p ON p.id = l.contact_id
-		        LEFT JOIN company o ON o.id = l.company_id
-		        LEFT JOIN deal d ON d.id = l.deal_id
-		        LEFT JOIN lead ld ON ld.id = l.lead_id
-		        LEFT JOIN project pj ON pj.id = l.project_id
-		        WHERE l.activity_id = a.id
-		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
-		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))
+		  AND NOT ` + activityHeld + `
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
 		WHERE a.source_system = 'transcript' AND a.body IS NOT NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT EXISTS (SELECT 1 FROM activity_link l
-		        LEFT JOIN contact p ON p.id = l.contact_id
-		        LEFT JOIN company o ON o.id = l.company_id
-		        LEFT JOIN deal d ON d.id = l.deal_id
-		        LEFT JOIN lead ld ON ld.id = l.lead_id
-		        LEFT JOIN project pj ON pj.id = l.project_id
-		        WHERE l.activity_id = a.id
-		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
-		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))
+		  AND NOT ` + activityHeld + `
 		LIMIT $2`,
 	"contact/no_consent_no_deal": `SELECT p.id FROM contact p
 		WHERE p.archived_at IS NULL AND NOT p.legal_hold
@@ -93,12 +79,11 @@ var retentionSelectors = map[string]string{
 	// activity's. Without this stage only the activity sweep and Art. 17 erasure
 	// reach raw_capture, so it grows for as long as the activity policy keeps.
 	//
-	// JOINED to the activity, and that join is the whole safety of the stage.
-	// It carries the statutory floor and the legal-hold test, so an original is
-	// never destroyed while the correspondence it is the original OF is
-	// shielded; and it leaves the activity row standing, which is what keeps
-	// the `(source_system, source_id)` tombstone against a replay — the same
-	// reasoning capture's own purge states.
+	// Gated on the activities read from it, and that gate is the whole safety
+	// of the stage. Every one of them must be live and outside the statutory
+	// floor and every legal hold, because the original carries all their
+	// content. The activity rows stay standing, which keeps the
+	// `(source_system, source_id)` tombstone against a replay.
 	//
 	// WHAT IT DOES NOT REACH: an original with no activity row at all, which an
 	// internal-only drop leaves behind. There the raw_capture row IS the
@@ -106,19 +91,13 @@ var retentionSelectors = map[string]string{
 	// pipeline already judged. Those need the trace to carry the tombstone
 	// before they can be aged, which is not this stage's to invent.
 	"raw_capture/": `SELECT r.id FROM raw_capture r
-		JOIN activity a ON a.source_system = r.source_system AND a.source_id = r.source_id
 		WHERE r.received_at < now() - make_interval(days => $1)
-		  AND a.archived_at IS NULL
-		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT EXISTS (SELECT 1 FROM activity_link l
-		        LEFT JOIN contact p ON p.id = l.contact_id
-		        LEFT JOIN company o ON o.id = l.company_id
-		        LEFT JOIN deal d ON d.id = l.deal_id
-		        LEFT JOIN lead ld ON ld.id = l.lead_id
-		        LEFT JOIN project pj ON pj.id = l.project_id
-		        WHERE l.activity_id = a.id
-		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
-		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))
+		  AND EXISTS (SELECT 1 FROM activity a WHERE ` + storekit.StoredOriginalSQL("a", "r") + `)
+		  AND NOT EXISTS (SELECT 1 FROM activity a
+		        WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
+		          AND (a.archived_at IS NULL
+		               ` + correspondenceFloorPredicate(3, 4) + `
+		               AND NOT ` + activityHeld + `) IS NOT TRUE)
 		LIMIT $2`,
 	// The queue's recorded risk days, aged on the day they describe. A day and
 	// its verdicts exist to answer the same-day next-step figure over its
@@ -128,3 +107,15 @@ var retentionSelectors = map[string]string{
 	"deal_risk_day/": `SELECT id FROM deal_risk_day
 		WHERE day_start < now() - make_interval(days => $1) LIMIT $2`,
 }
+
+// activityHeld is true when a record the activity aliased a is linked to sits
+// under a legal hold.
+const activityHeld = `EXISTS (SELECT 1 FROM activity_link l
+		        LEFT JOIN contact p ON p.id = l.contact_id
+		        LEFT JOIN company o ON o.id = l.company_id
+		        LEFT JOIN deal d ON d.id = l.deal_id
+		        LEFT JOIN lead ld ON ld.id = l.lead_id
+		        LEFT JOIN project pj ON pj.id = l.project_id
+		        WHERE l.activity_id = a.id
+		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
+		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`

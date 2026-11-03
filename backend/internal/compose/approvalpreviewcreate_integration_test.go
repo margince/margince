@@ -7,13 +7,13 @@ package compose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
@@ -148,7 +148,7 @@ func TestCompanyCreationApprovalMatchesTheWriter(t *testing.T) {
 	}
 }
 
-func TestContactCreationApprovalShowsItsAutomaticPromotion(t *testing.T) {
+func TestContactCreationApprovalOverALiveLeadReportsTheRefusal(t *testing.T) {
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -158,10 +158,6 @@ func TestContactCreationApprovalShowsItsAutomaticPromotion(t *testing.T) {
 			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 			ctx := e.As(e.AdminUser, nil, perms)
 			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Earlier Buyer"), Email: new("created-contact@example.test"), Title: new("Director"), Source: "manual"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			activity, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "note", Subject: new("Buyer discussion"), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(lead.Id)}}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -188,18 +184,9 @@ func TestContactCreationApprovalShowsItsAutomaticPromotion(t *testing.T) {
 				t.Fatal(err)
 			}
 			preview := proposal.Preview
-			if preview == nil || preview.State != "ready" || preview.Details == nil || preview.Effects == nil {
-				t.Fatalf("preview: %+v", preview)
-			}
-			values := map[string]string{}
-			for _, detail := range *preview.Details {
-				values[detail.Field] = detail.Value.Text
-			}
-			if values["full_name"] != "Confirmed Buyer" || values["email"] != "created-contact@example.test" || values["title"] != "Director" || values["creation_social_handle"] != "buyer-profile" || values["creation_acquisition"] != "unknown_legacy" {
-				t.Fatalf("fields: %+v", values)
-			}
-			if values["creation_promoted_lead"] != "Earlier Buyer" || values["creation_source_activity"] == "" || !slices.Contains(*preview.Effects, "create_promote_matching_leads") {
-				t.Fatalf("promotion context: %+v,%+v", values, preview.Effects)
+			if preview == nil || preview.State != "incomplete" || preview.Conflicts == nil || len(*preview.Conflicts) != 1 ||
+				(*preview.Conflicts)[0].Kind != contacts.CodeLeadHoldsEmail || !(*preview.Conflicts)[0].BlocksApproval {
+				t.Fatalf("preview of a create over a live lead: %+v", preview)
 			}
 			if n := e.WsCount(t, `SELECT count(*) FROM lead WHERE id=$1 AND status='new' AND archived_at IS NULL`, lead.Id); n != 1 {
 				t.Fatal("preview changed the lead")
@@ -208,15 +195,8 @@ func TestContactCreationApprovalShowsItsAutomaticPromotion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			created, err := e.Contacts.CreateContact(ctx, in)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if created.Title == nil || *created.Title != values["title"] || created.FullName != values["full_name"] {
-				t.Fatalf("writer: %+v", created)
-			}
-			if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND contact_id=$2`, activity.Id, created.Id); n != 1 {
-				t.Fatal("history was not carried")
+			if _, err := e.Contacts.CreateContact(ctx, in); !errors.As(err, new(*contacts.LeadHoldsIdentityError)) {
+				t.Fatalf("the writer the preview stands for: %v", err)
 			}
 		})
 	}

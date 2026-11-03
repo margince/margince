@@ -136,7 +136,7 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	// first still holds the pause, and it must be refused without having paused
 	// anything of its own — a refusal that had already quiesced the fleet would
 	// be an outage caused by the check that prevents one.
-	release, err := takeResetLock(ctx, h.pool)
+	release, err := takeResetLock(ctx, h.pool, logger)
 	if err != nil {
 		return resetCounts{}, err
 	}

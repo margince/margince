@@ -8,7 +8,7 @@
 // call arrives at the server as the connected assistant, through the same
 // passport, scope and approval checks as a call the model made.
 
-import { nextRequestID, onResponse, permitTools, sendToHost } from "./bridge";
+import { allowOutbound, nextRequestID, onResponse, sendToHost } from "./bridge";
 import { asRecord, asText, asWarnings, type Warning } from "./types";
 
 /** How long a click waits for the host before the card says it did not land. */
@@ -35,7 +35,15 @@ let hostProxiesTools = false;
  *  check and this guard read one source. */
 export function declareActions(names: readonly string[]): void {
   declared = new Set(names);
-  permitTools(names);
+  allowOutbound(mayRun);
+}
+
+/** mayRun admits a tool call naming a tool the view declared. */
+function mayRun(message: Record<string, unknown>): boolean {
+  return (
+    message.method === "tools/call" &&
+    declared.has(asText(asRecord(message.params).name))
+  );
 }
 
 /** canCallTools reports whether the host announced it will proxy tool calls. A

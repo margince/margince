@@ -25,7 +25,7 @@ func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing
 		{migration.ObjectContact, fieldPhone, "+49 30 1", nil, "not an E.164 number"},
 		{migration.ObjectContact, fieldLinkedIn, "http://www.linkedin.com/in/ada/?trk=x", "https://www.linkedin.com/in/ada", ""},
 		{migration.ObjectContact, fieldLinkedIn, "https://example.com/in/ada", nil, "linkedin.com"},
-		{migration.ObjectLead, fieldLinkedIn, "linkedin.com/in/ada", "https://linkedin.com/in/ada", ""},
+		{migration.ObjectLead, fieldLinkedIn, "linkedin.com/in/ada", "https://www.linkedin.com/in/ada", ""},
 		{migration.ObjectCompany, fieldLinkedIn, "https://www.linkedin.com/company/voltaq/about", "https://www.linkedin.com/company/voltaq", ""},
 		{migration.ObjectCompany, fieldLinkedIn, "https://www.linkedin.com/in/ada", nil, "linkedin.com/company/"},
 	} {

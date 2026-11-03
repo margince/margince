@@ -106,6 +106,8 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   product: ["read", "create", "update"],
   capture_settings: ["read", "update"],
   webhook_subscription: ["read", "create", "update"],
+  // Website forms, which ask the integrations write.
+  integrations: ["read", "create", "update"],
   knowledge_corpus: ["read", "create"],
   import_run: ["read", "create", "update"],
   ai_routing: ["read", "update"],
@@ -151,7 +153,15 @@ const SALES_READS: readonly {
 }[] = [
   {
     object: "custom_field",
-    opens: ["leads", "acquisition", "reviewtemplates", "recordroles", "fields"],
+    opens: [
+      "leads",
+      "acquisition",
+      "lossreasons",
+      "partners",
+      "reviewtemplates",
+      "recordroles",
+      "fields",
+    ],
   },
   { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
@@ -239,6 +249,8 @@ const SEEDED_READ_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "lossreasons",
+  "partners",
   "reviewtemplates",
   "recordroles",
   "fields",
@@ -266,6 +278,8 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "lossreasons",
+  "partners",
   "reviewtemplates",
   "recordroles",
   "fields",

@@ -21,6 +21,7 @@ const (
 	repairSupersedeSuggestion homeRepairAction = "supersede_suggestion"
 	repairWithdrawProposal    homeRepairAction = "withdraw_proposal"
 	repairArchiveReminder     homeRepairAction = "archive_automatic_reminder"
+	repairNormalizeTask       homeRepairAction = "normalize_automatic_task"
 	repairHumanReview         homeRepairAction = "human_review"
 	repairLeaveCurrent        homeRepairAction = "leave_current"
 )
@@ -69,12 +70,44 @@ func homeRepairTaskDecisionTx(ctx context.Context, tx pgx.Tx, task activities.Ho
 		return decision, nil
 	}
 	if task.SourceSystem != activities.CommitmentTaskSource || task.SourceID == nil {
-		decision.Reason = "source_rule_not_verified"
-		return decision, nil
+		return homeRepairAutomaticAdmissionTx(ctx, tx, decision, asOf, forDecision)
 	}
 	var err error
 	decision.Action, decision.Reason, err = homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{
 		SourceActivityID: *task.SourceID, Seat: task.AssigneeID, AsOf: asOf,
 	}, task.DueAt, repairArchiveReminder, forDecision)
 	return decision, err
+}
+
+func homeRepairAutomaticAdmissionTx(ctx context.Context, tx pgx.Tx, decision homeRepairTaskDecision, asOf time.Time, forDecision bool) (homeRepairTaskDecision, error) {
+	basis, err := activities.AutomaticTaskRepairTx(ctx, tx, decision.Task, asOf, forDecision)
+	if !forDecision && errors.Is(err, apperrors.ErrVersionSkew) {
+		decision.Reason = "task_changed_since_listed"
+		return decision, nil
+	}
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		decision.Reason = "source_or_task_unavailable"
+		return decision, nil
+	}
+	if err != nil {
+		return decision, err
+	}
+	if !basis.Supported {
+		decision.Reason = "source_rule_not_verified"
+		return decision, nil
+	}
+	decision.Action, decision.Reason = repairLeaveCurrent, repairCurrentWork
+	if !basis.Current {
+		decision.Action, decision.Reason = repairArchiveReminder, "source_no_longer_current"
+	} else if basis.NormalizeSource || basis.ClearDue {
+		decision.Action = repairNormalizeTask
+		decision.Reason = "legacy_source_reference"
+		if basis.ClearDue {
+			decision.Reason = "generated_notification_date"
+			if basis.NormalizeSource {
+				decision.Reason = "legacy_source_and_generated_date"
+			}
+		}
+	}
+	return decision, nil
 }

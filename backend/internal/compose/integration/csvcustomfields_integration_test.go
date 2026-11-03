@@ -30,21 +30,6 @@ func setupCustomFieldImportApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-// createCustomField defines a field and answers its cf_* key.
-func createCustomField(t *testing.T, e *apptest.AppEnv, body AnyMap) string {
-	t.Helper()
-	var field struct {
-		ColumnName string `json:"column_name"`
-	}
-	if status := e.Call(t, http.MethodPost, "/v1/custom-fields", body, nil, &field); status != http.StatusCreated {
-		t.Fatalf("POST /v1/custom-fields → %d, want 201", status)
-	}
-	if field.ColumnName == "" {
-		t.Fatal("the created field carries no column_name")
-	}
-	return field.ColumnName
-}
-
 // recordField reads one top-level field of the listed record whose nameKey is
 // name, as text.
 func recordField(t *testing.T, e *apptest.AppEnv, list, nameKey, name, column string) string {
@@ -74,7 +59,7 @@ func companyField(t *testing.T, e *apptest.AppEnv, displayName, column string) s
 
 func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	column := createCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
 	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,A\n")
 	if profile.SuggestedMapping["Tier"] != column {
 		t.Errorf("suggested mapping = %v, want Tier onto %s by its label", profile.SuggestedMapping, column)
@@ -97,7 +82,7 @@ func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
 
 func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	column := createCustomField(t, e, AnyMap{"object": "contact", "label": "Segment", "type": "text", "source": "manual"})
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "contact", "label": "Segment", "type": "text", "source": "manual"})
 	profile := uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
 		"contacts.csv": "ref,email,name,Segment\nC1,ada@segment.test,Ada Segment,Enterprise\n",
 	}))
@@ -115,7 +100,7 @@ func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
 
 func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	column := createCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold", "Silver"}, "source": "manual"})
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold", "Silver"}, "source": "manual"})
 	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
 	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	if status != http.StatusAccepted {
@@ -150,8 +135,8 @@ func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
 // A typed value lands in its type, and an unedited re-import changes nothing.
 func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
-	active := createCustomField(t, e, AnyMap{"object": "company", "label": "Active", "type": "boolean", "source": "manual"})
-	value := createCustomField(t, e, AnyMap{"object": "company", "label": "Value", "type": "currency", "currency": "EUR", "source": "manual"})
+	active := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Active", "type": "boolean", "source": "manual"})
+	value := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Value", "type": "currency", "currency": "EUR", "source": "manual"})
 	body := "Name,Active,Value\nTyped GmbH,Yes,12000.50\n"
 	mapping := map[string]string{"Name": "display_name", "Active": active, "Value": value}
 	profile, _ := uploadCSV(t, e, "company", body)

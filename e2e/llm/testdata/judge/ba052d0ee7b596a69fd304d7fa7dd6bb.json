@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names Emsland Ventilbau but does not state that its earlier value was 'target' or explicitly say it was replaced from that earlier value to prospect—it only states the current state without describing the prior value or the replacement.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced.",
+  "answer": "All four companies needed your sign-off, so Margince held each lifecycle change for approval. As agreed, I approved all four: Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau are now prospects."
+}

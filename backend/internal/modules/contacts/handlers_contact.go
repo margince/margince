@@ -82,6 +82,7 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	in.SharedWithMe = params.SharedWithMe
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {
@@ -229,6 +230,10 @@ func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportRes
 			reason := result.Reason
 			item.Reason = &reason
 		}
+		if result.LeadID != nil {
+			lead := openapi_types.UUID(result.LeadID.UUID)
+			item.LeadId = &lead
+		}
 		if len(result.Fields) > 0 {
 			fields := toContractVCardFields(result.Fields)
 			item.Fields = &fields
@@ -264,18 +269,16 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 	in := QuickCaptureInput{
-		FullName:    req.FullName,
-		Title:       req.Title,
-		CompanyID:   idArg[ids.CompanyKind](req.CompanyId),
-		CompanyName: req.CompanyName,
-		Role:        req.Role,
-		ProfileURL:  req.ProfileUrl,
-		Phone:       req.Phone,
+		FullName:       req.FullName,
+		Title:          req.Title,
+		CompanyID:      idArg[ids.CompanyKind](req.CompanyId),
+		CompanyName:    req.CompanyName,
+		Role:           req.Role,
+		ProfileURL:     req.ProfileUrl,
+		Phone:          req.Phone,
+		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
 	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {

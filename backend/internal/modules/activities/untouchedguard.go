@@ -71,6 +71,9 @@ func (e *HumanTouchedError) Is(target error) bool { return target == apperrors.E
 // row's write check has taken the lock.
 func refuseIfTouched(ctx context.Context, tx pgx.Tx, id ids.ActivityID, o archiveOptions) error {
 	if o.pristineTask {
+		if err := lockTaskAdoption(ctx, tx, id.String()); err != nil {
+			return err
+		}
 		var pristine bool
 		args := []any{id}
 		query := storekit.SQLf("SELECT %s FROM activity a WHERE a.id=$%d", pristineRepairTaskSQL("a"), len(args))
@@ -92,4 +95,9 @@ func refuseIfTouched(ctx context.Context, tx pgx.Tx, id ids.ActivityID, o archiv
 		return &HumanTouchedError{ActivityID: id.UUID}
 	}
 	return nil
+}
+
+// A pin does not update the task row, so its writer shares the pristine decision's lock.
+func lockTaskAdoption(ctx context.Context, tx pgx.Tx, rowID string) error {
+	return storekit.LockWriteIdentity(ctx, tx, "task_adoption", rowID)
 }

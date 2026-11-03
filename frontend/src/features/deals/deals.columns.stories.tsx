@@ -5,10 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { PipelineBoard } from "../../design-system/pipelineboard";
 import { UTC_ZONE } from "../../format/timezone";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { buildStageTotals } from "../../lib/deals.queries";
 import type { Deal, Stage } from "./deals";
-import { buildColumns } from "./deals.columns";
+import { buildColumns, dealColumns } from "./deals.columns";
 
 const meta: Meta = {
   title: "Records/Deals/Converted board",
@@ -88,5 +88,42 @@ export const PartialCoverage: Story = {
     ).toBeVisible();
     await expect(canvas.getByText(/01\/10\/2026/)).toBeVisible();
     await expect(canvas.getByText(/€900/)).toBeVisible();
+  },
+};
+
+const withStatus = (status: Deal["status"]): Deal => ({
+  id: `status-${status}`,
+  name: "Fleet retrofit",
+  pipeline_id: stage.pipeline_id,
+  stage_id: stage.id,
+  status,
+  source: "manual",
+  captured_by: "human:demo",
+  created_at: "2026-10-01T00:00:00Z",
+  updated_at: "2026-10-01T00:00:00Z",
+});
+
+// The table's status cell reads in the reader's language.
+export const StatusInVietnamese: Story = {
+  render: () => {
+    const status = dealColumns(
+      (key) => translate("vi", key),
+      "vi",
+      UTC_ZONE,
+      new Map(),
+    ).find((column) => column.key === "status");
+    return (
+      <LocaleProvider initial="vi">
+        <span style={{ display: "flex", gap: "var(--space-2)" }}>
+          {status?.cell(withStatus("open"))}
+          {status?.cell(withStatus("lost"))}
+        </span>
+      </LocaleProvider>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Đang mở")).toBeVisible();
+    await expect(canvas.getByText("Thua")).toBeVisible();
   },
 };

@@ -254,9 +254,10 @@ it("creates a month-end schedule pinned to the selected report revision", async 
     screen.getByRole("combobox", { name: "Run day" }),
     "31",
   );
-  fireEvent.change(screen.getByLabelText(/Local time/), {
-    target: { value: "17:30" },
-  });
+  const time = screen.getByLabelText(/Local time/);
+  await user.clear(time);
+  await user.type(time, "17:30");
+  await user.tab();
   await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith({
@@ -455,9 +456,8 @@ it("filters targets on the server and resets a paged result when status changes"
     expect(targetQueries().at(-1)?.get("retired")).toBe("true"),
   );
   expect(targetQueries().at(-1)?.has("cursor")).toBe(false);
-  fireEvent.change(screen.getByLabelText("Month starting"), {
-    target: { value: "2026-10" },
-  });
+  await user.type(screen.getByLabelText("Year"), "2026");
+  await pickOption(user, screen.getByLabelText("Month starting"), "October");
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("period_start")).toBe("2026-10-01"),
   );

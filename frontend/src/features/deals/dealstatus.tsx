@@ -3,13 +3,15 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { RecordNextBar } from "../../components/latestinbound";
+import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
-import { NextBar, type NextBarMore } from "../../design-system/nextbar";
+import type { NextBarMore } from "../../design-system/nextbar";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { formatDayMonth, formatNumber } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { formatDayMonth } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -24,7 +26,6 @@ import {
 } from "../records/record360";
 import type { DealStandingHead } from "./deal360/dealhowitstands";
 import { dealVerdictTone, verdictSourceCount } from "./deal360/dealstanding";
-import { daysWaiting, waitingSince } from "./deal360/dealwaiting";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
@@ -40,9 +41,7 @@ import "./dealstatus.css";
 // re-implements a write or skips its gates.
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
-type DealStatusCardMove = components["schemas"]["DealStatusCardMove"];
 type DealStatusCardSection = components["schemas"]["DealStatusCardSection"];
-type Activity = components["schemas"]["Activity"];
 type DealRef = Readonly<{ id: string; name: string; stalled?: boolean }>;
 
 // The verdict words the server may send. A word this build does not know
@@ -87,8 +86,6 @@ export function DealStatusCardPanel({
   deal,
   renderStanding,
   onOpenEmail,
-  timeline = [],
-  asOf,
   more,
 }: Readonly<{
   deal: DealRef;
@@ -97,11 +94,6 @@ export function DealStatusCardPanel({
   renderStanding?: (head: DealStandingHead) => ReactNode;
   // Opens a cited message in the deal page's own email drawer.
   onOpenEmail?: (activityId: string) => void;
-  // The page's timeline rows, to date the message a reply is owed to.
-  timeline?: readonly Activity[];
-  // The instant the page was read at, so the Next bar counts the wait to the
-  // same moment the figures under it do. Absent, the card's own instant.
-  asOf?: string;
   // The other open tasks, for the Next bar's tail.
   more?: NextBarMore;
 }>) {
@@ -130,12 +122,11 @@ export function DealStatusCardPanel({
         <DealNextBar
           dealId={deal.id}
           card={card}
-          timeline={timeline}
-          asOf={asOf ?? card.generated_at}
           onOpenEmail={onOpenEmail}
           more={more}
         />
         {standing(cardHead(card, deal, t, onOpenEmail))}
+        <MailCoverageNotice coverage={card.mail_coverage} />
         {/* The record page says what the brief says through How it stands and
             its cards; the board's drawer has neither, so only it reads the
             brief. */}
@@ -226,6 +217,7 @@ function cardHead(
         </>
       ) : undefined,
     },
+    standing: card.verdict.standing,
     // The indigo pill claims a model wrote the call; the structured fallback
     // wrote this one when it did not.
     sources:
@@ -379,50 +371,41 @@ function verdictLabel(
 function DealNextBar({
   dealId,
   card,
-  timeline,
-  asOf,
   onOpenEmail,
   more,
 }: Readonly<{
   dealId: string;
   card: DealStatusCard;
-  timeline: readonly Activity[];
-  asOf: string;
   onOpenEmail?: (activityId: string) => void;
   more?: NextBarMore;
 }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
   const notNow = useDealMoveSetAside(dealId);
   const move = card.next;
   if (!move) {
-    return <NextBar more={more} />;
+    return <RecordNextBar more={more} />;
   }
-  const late = replyLate(card, move, timeline, asOf, zone);
   // Only the message the buyer is owed an answer to opens in the email
   // drawer. A task or a meeting the move cites is not a message.
+  const reviewSource =
+    move.basis?.kind === "request_review" && move.basis.scope === "deal"
+      ? move.basis.source_activity_id
+      : undefined;
+  const source = reviewSource ?? card.reply_to;
   const message = move.evidence.some(
-    (row) => row.activity_id && row.activity_id === card.reply_to,
+    (row) => row.activity_id && row.activity_id === source,
   )
-    ? card.reply_to
+    ? source
     : undefined;
   const snooze = move.fingerprint ? notNow.deferOf(move.fingerprint) : null;
   return (
     <>
-      <NextBar
+      <RecordNextBar
+        // The deal's ladder already weighs its requests, so its move keeps
+        // the bar and what just came in sits above it.
+        urgent
+        about={[source, ...move.evidence.map((row) => row.activity_id)]}
         title={move.reason}
-        late={
-          late === undefined
-            ? undefined
-            : {
-                label: plural("standing.days", late, {
-                  count: formatNumber(late, locale),
-                }),
-                tone: "warning",
-              }
-        }
         sub={move.evidence[0]?.text}
         insight={
           message && onOpenEmail ? (
@@ -446,23 +429,6 @@ function DealNextBar({
       {notNow.failure && <ErrorLine error={notNow.failure} />}
     </>
   );
-}
-
-// Days the buyer has waited, when the move is the answer they are owed; any
-// other move is not late by that clock.
-function replyLate(
-  card: DealStatusCard,
-  move: DealStatusCardMove,
-  timeline: readonly Activity[],
-  asOf: string,
-  zone: string,
-): number | undefined {
-  const owed = move.evidence.some((row) => row.activity_id === card.reply_to);
-  const waiting = owed ? waitingSince(card, timeline) : null;
-  if (!waiting) {
-    return undefined;
-  }
-  return daysWaiting(waiting, asOf, zone);
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a

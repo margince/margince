@@ -161,7 +161,10 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 	for _, reach := range got.Reach {
 		marked[reach.Source] = reach.MoreAvailable
 	}
-	for _, source := range []crmcontracts.WorklistReachSource{"task", "deal_at_risk", "relationship_decay"} {
+	if got.OptionalRelationshipsMoreAvailable == nil || !*got.OptionalRelationshipsMoreAvailable {
+		t.Fatal("optional relationship bound was lost")
+	}
+	for _, source := range []crmcontracts.WorklistReachSource{"task", "deal_at_risk"} {
 		if !marked[source] {
 			t.Errorf("%s filled its lane and still reports itself complete", source)
 		}

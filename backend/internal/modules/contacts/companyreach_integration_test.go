@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -120,5 +121,30 @@ func TestReachListsAColleagueWhoNeverAnsweredTheSetting(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].UserID != e.rep {
 		t.Fatalf("the answer is %+v, want the colleague who never answered the setting", got)
+	}
+}
+
+// The answer says which functions a colleague's connections work in, and only
+// where two or more do: one would name the contact behind the title.
+func TestReachNamesTheFunctionsTwoOrMoreConnectionsWorkIn(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company := e.seedAcmeCompany(t)
+	e.seedTitledReach(ctx, t, e.rep, company, "Abbas Fawaz", "Head of IT")
+	e.seedTitledReach(ctx, t, e.rep, company, "Bea Hoffmann", "IT-Leiterin")
+	e.seedTitledReach(ctx, t, e.rep, company, "Cem Yilmaz", "Head of HR")
+	e.seedTitledReach(ctx, t, e.rep, company, "Dana Ilic", "Director")
+
+	got, err := e.store.CompanyReach(ctx, company)
+	if err != nil {
+		t.Fatalf("CompanyReach: %v", err)
+	}
+	if len(got) != 1 || got[0].Connections != 4 {
+		t.Fatalf("the answer is %+v, want one colleague with four connections", got)
+	}
+	want := []crmcontracts.LinkedInReachFunctionCount{{Function: crmcontracts.LinkedInReachFunctionIt, Connections: 2}}
+	if len(got[0].Functions) != 1 || got[0].Functions[0] != want[0] {
+		t.Errorf("functions are %+v, want %+v: HR has one connection and Director names no function",
+			got[0].Functions, want)
 	}
 }

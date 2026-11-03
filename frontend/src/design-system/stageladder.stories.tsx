@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { StageLadder } from "./stageladder";
 
@@ -175,6 +176,236 @@ export const LongPipeline: Story = {
       ]}
     />
   ),
+};
+
+// Nine open stages of two long words each, the deal standing on the fourth.
+const NINE_STAGES = [
+  "Potential Deal",
+  "Deal Qualification",
+  "Solution Discovery",
+  "Conversion Strategy",
+  "Proposal Sent",
+  "Contract Negotiation",
+  "Contract Review",
+  "Legal Approval",
+  "Final Signature",
+];
+
+function nineStages(labels: readonly string[]) {
+  const here = 3;
+  return [
+    ...labels.map((label, index) => ({
+      key: label,
+      label,
+      done: index < here,
+      current: index === here,
+      onPick: noop,
+    })),
+    { key: "won", label: "Closed Won", terminal: true, onPick: noop },
+    { key: "lost", label: "Closed Lost", terminal: true, onPick: noop },
+  ];
+}
+
+// A button stands at a clipped end and at no other. Measured, not assumed:
+// whether nine names fit depends on the font the frame renders.
+async function pagersMatchOverflow(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const run = canvasElement.querySelector<HTMLElement>(".stage-ladder-run");
+  if (!run) {
+    throw new Error("The ladder drew no run of open stages.");
+  }
+  const later = () =>
+    canvas.queryByRole("button", { name: "Show later stages" });
+  const earlier = () =>
+    canvas.queryByRole("button", { name: "Show earlier stages" });
+  await waitFor(() => {
+    const hidden = run.scrollWidth - run.clientWidth;
+    expect(Boolean(earlier())).toBe(hidden > 1 && run.scrollLeft > 1);
+    expect(Boolean(later())).toBe(hidden > 1 && run.scrollLeft < hidden - 1);
+  });
+  return { run, later, earlier };
+}
+
+// The run's offset at the next painted frame.
+function nextFrame(run: HTMLElement): Promise<number> {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => resolve(run.scrollLeft)),
+  );
+}
+
+// A press mid-glide restarts it short, so this waits for three frames in a row
+// to hold one offset. `scrollend` skips a glide the edge clamps to nothing.
+async function glideEnds(run: HTMLElement) {
+  let held = 0;
+  let last = await nextFrame(run);
+  for (let frame = 0; held < 3 && frame < 600; frame += 1) {
+    const now = await nextFrame(run);
+    held = now === last ? held + 1 : 0;
+    last = now;
+  }
+  expect(held).toBe(3);
+}
+
+async function pageToTheEnd(canvasElement: HTMLElement) {
+  const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
+  // A run that fits has no end to page to, and would pass with no press.
+  expect(run.scrollWidth - run.clientWidth).toBeGreaterThan(1);
+  const user = userEvent.setup();
+  for (let press = 0; press < 12 && later(); press += 1) {
+    const button = later();
+    if (button) {
+      await user.click(button);
+      await glideEnds(run);
+    }
+    await pagersMatchOverflow(canvasElement);
+  }
+  await waitFor(() => expect(later()).toBeNull());
+  expect(earlier()).not.toBeNull();
+}
+
+/**
+ * Nine long stage names in a 1280px frame. The run cannot hold them, so it
+ * rests on the current stage with a fade and a button at each clipped end.
+ * Paging to the end takes the later button away and keeps the earlier one.
+ */
+export const NineStagesAt1280: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1280 }}>
+      <StageLadder label="Stage" steps={nineStages(NINE_STAGES)} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => pageToTheEnd(canvasElement),
+};
+
+/** The same pipeline in a 1500px frame, the width the clipping was seen at. */
+export const NineStagesAt1500: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1500 }}>
+      <StageLadder label="Stage" steps={nineStages(NINE_STAGES)} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => pageToTheEnd(canvasElement),
+};
+
+/** Nine short names that fit a 1500px frame: no fade and no button. */
+export const NineStagesThatFit: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1500 }}>
+      <StageLadder
+        label="Stage"
+        steps={nineStages([
+          "One",
+          "Two",
+          "Three",
+          "Four",
+          "Five",
+          "Six",
+          "Seven",
+          "Eight",
+          "Nine",
+        ])}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
+    expect(run.scrollWidth - run.clientWidth).toBeLessThanOrEqual(1);
+    expect(later()).toBeNull();
+    expect(earlier()).toBeNull();
+  },
+};
+
+// Every bar holds its whole name, and the run rests with the current bar in
+// view, before any button is pressed.
+async function barsRestWhole(canvasElement: HTMLElement) {
+  const run = canvasElement.querySelector<HTMLElement>(".stage-ladder-run");
+  const here = run?.querySelector<HTMLElement>(
+    ".stage-ladder-bars [aria-current='step']",
+  );
+  if (!run || !here) {
+    throw new Error("The bars drew no run or no current stage.");
+  }
+  // The run must overflow, or the buttons below would be proved on nothing.
+  expect(run.scrollWidth - run.clientWidth).toBeGreaterThan(1);
+  for (const name of canvasElement.querySelectorAll<HTMLElement>(
+    ".stage-ladder-label",
+  )) {
+    expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+  }
+  await waitFor(() => {
+    const box = run.getBoundingClientRect();
+    const bar = here.getBoundingClientRect();
+    expect(bar.left).toBeGreaterThanOrEqual(box.left);
+    expect(bar.right).toBeLessThanOrEqual(box.right);
+  });
+}
+
+function nineBars() {
+  return nineStages(NINE_STAGES).map((step, index) =>
+    index < 4 ? { ...step, sub: `${12 - index * 2} d` } : step,
+  );
+}
+
+/**
+ * The bars shape with nine long stage names, at the width How it stands gives
+ * the ladder on a deal page in a 1280px window. A bar never cuts its name, so
+ * the run scrolls under a fade and a button at each clipped end.
+ */
+export const BarsNineStagesAt1280: Story = {
+  render: () => (
+    <div style={{ inlineSize: 533 }}>
+      <StageLadder label="Stage" variant="bars" steps={nineBars()} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
+  },
+};
+
+/** The same bars at the width How it stands has in a 1500px window. */
+export const BarsNineStagesAt1500: Story = {
+  render: () => (
+    <div style={{ inlineSize: 729 }}>
+      <StageLadder label="Stage" variant="bars" steps={nineBars()} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
+  },
+};
+
+const TWELVE_STAGES = [
+  "Lead in",
+  "Qualified",
+  "Discovery",
+  "Solution demo",
+  "Technical evaluation",
+  "Business case",
+  "Proposal",
+  "Negotiation",
+  "Legal review",
+  "Procurement",
+  "Security review",
+  "Awaiting signature",
+];
+
+/** Twelve open stages on a phone: the run rests on the fourth and scrolls. */
+export const BarsTwelveStagesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <StageLadder
+      label="Stage"
+      variant="bars"
+      steps={nineStages(TWELVE_STAGES)}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await barsRestWhole(canvasElement);
+    await pageToTheEnd(canvasElement);
+  },
 };
 
 /**

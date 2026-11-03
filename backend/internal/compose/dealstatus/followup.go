@@ -8,16 +8,12 @@ package dealstatus
 // row gives, read through the same activities query.
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -52,45 +48,7 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	if sent.DateOnly {
 		held.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
 	}
-	return move(ActionDraftEmail,
+	return ruleMove(ruleMeetingFollowUp,
 		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, sent, f.loc)),
 		map[string]any{argActivityID: meetingID, argLinks: links}, held)
-}
-
-// followUpMeeting is the meeting a stored follow-up move names: a draft that
-// names a meeting and the contacts it goes to.
-func followUpMeeting(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
-	if move.Action != ActionDraftEmail || len(NamedContacts(move)) == 0 {
-		return ids.UUID{}, false
-	}
-	return NamedActivity(move)
-}
-
-// dropSettledFollowUps removes each cached follow-up whose meeting is no
-// longer owed, asked of the same query that offered it. Without the read a
-// follow-up cannot be confirmed, so it is dropped rather than served.
-func (s *Service) dropSettledFollowUps(ctx context.Context, moves map[ids.UUID]crmcontracts.DealStatusCardMove) error {
-	var meetings []ids.UUID
-	for _, move := range moves {
-		if meeting, ok := followUpMeeting(move); ok {
-			meetings = append(meetings, meeting)
-		}
-	}
-	if len(meetings) == 0 {
-		return nil
-	}
-	owed := map[ids.UUID]bool{}
-	if s.activities != nil && s.now != nil {
-		read, err := s.activities.MeetingsStillAwaitingFollowUp(ctx, s.now(), meetings)
-		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-			return err
-		}
-		owed = read
-	}
-	for deal, move := range moves {
-		if meeting, ok := followUpMeeting(move); ok && !owed[meeting] {
-			delete(moves, deal)
-		}
-	}
-	return nil
 }

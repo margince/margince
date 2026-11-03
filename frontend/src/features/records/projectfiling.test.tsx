@@ -407,7 +407,7 @@ describe("TimelineActions", () => {
     updated_at: "2026-07-01T00:00:00Z",
   };
 
-  it("offers the undo on a project's timeline and nowhere else", () => {
+  it("offers the undo on a project's timeline and nowhere else", async () => {
     stubRoutes({});
     render(
       <TimelineActions
@@ -416,6 +416,9 @@ describe("TimelineActions", () => {
         entityId="p-1"
       />,
     );
+    await userEvent.click(
+      screen.getByRole("button", { name: "More actions for Milestone" }),
+    );
     // Named by the row it acts on, so a column of them is not a column of one label.
     expect(
       screen.getByRole("button", { name: "Undo filing: Milestone" }),
@@ -423,6 +426,9 @@ describe("TimelineActions", () => {
     cleanup();
     render(
       <TimelineActions activity={activity} entityType="deal" entityId="d-1" />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "More actions for Milestone" }),
     );
     expect(screen.queryByRole("button", { name: /Undo filing/ })).toBeNull();
   });

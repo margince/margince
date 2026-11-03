@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -18,23 +19,17 @@ import (
 // the duty ended without copying anything about them into it.
 const subjectWroteNote = "They wrote to us: a captured mail from their own address shows the data came from them (Art. 13, not Art. 14), so no separate notice is owed."
 
-// settleableOwedStates are the states a case may be closed FROM when it ends
-// without a notice. A queued case is left alone: a disclosure is already on its
-// way, and closing the case under it would leave a delivery nobody tracks.
-// Every terminal state is left alone as well.
-var settleableOwedStates = []string{
-	string(NoticeOpen), string(NoticeAssigned), string(NoticeBlocked), string(NoticeDeliveryFailed),
+// SettleableNoticeStates leaves deliveries in flight and completed outcomes intact.
+func SettleableNoticeStates() []string {
+	return []string{string(NoticeOpen), string(NoticeAssigned), string(NoticeBlocked), string(NoticeDeliveryFailed), string(NoticeSourceReview)}
 }
 
 // SettleWhenSubjectWroteTx ends the open duties recorded for these acquisitions,
 // because the contact they belong to has since written to us.
 //
-// A mailbox backfill does not read a mailbox oldest first. When it reads our
-// reply before their first mail, it creates the contact from our side of the
-// conversation, cannot say where the address came from, and an Art. 14 case is
-// opened (DutyFor, "unknown_legacy"). Their own mail, captured minutes later,
-// is the evidence that settles it: the data came from them, the case that
-// DutyFor opens for nobody (subject_initiated).
+// A backfill may capture our reply before the subject's own mail. The unknown
+// source needs review until their authenticated mail answers it. Confirmed
+// indirect sources and human assessments remain separate obligations.
 //
 // The caller names the acquisitions, so this reads nothing of the contact: it
 // is the acquisitions' OWN cases it closes, and only the ones still owed. The
@@ -54,8 +49,8 @@ func settleAcquisitionCasesTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM privacy_notice_case
-		 WHERE acquisition_id = ANY($1) AND state = ANY($2)
-		 ORDER BY id`, acquisitions, settleableOwedStates)
+		 WHERE acquisition_id = ANY($1) AND state = ANY($2) AND source_kind IS NULL
+		 ORDER BY id`, acquisitions, SettleableNoticeStates())
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for these acquisitions: %w", err)
 	}
@@ -80,12 +75,22 @@ func closeOwedCasesTx(ctx context.Context, tx pgx.Tx, caseIDs []ids.UUID, note s
 		if err != nil {
 			return closed, err
 		}
-		if terminalNoticeStates()[current.State] || current.State == NoticeQueued {
+		if terminalNoticeStates()[current.State] || current.State == NoticeQueued || current.SourceKind != nil {
+			continue
+		}
+		if err := attachOneAcquisition(ctx, tx, &current); err != nil {
+			return closed, err
+		}
+		if current.Acquisition == nil {
+			continue
+		}
+		duty, needsCase := DutyFor(current.Acquisition.Kind)
+		if needsCase && duty.State != NoticeSourceReview {
 			continue
 		}
 		out, err := scanNoticeCase(tx.QueryRow(ctx, `
 			UPDATE privacy_notice_case
-			   SET state = $2, resolution_note = $3, completed_at = $4,
+			   SET state = $2, rule = 'none', due_at = NULL, allowed_routes = '{}', resolution_note = $3, completed_at = $4,
 			       blocked_reason = NULL, updated_at = now()
 			 WHERE id = $1
 			RETURNING`+noticeCaseColumns,
@@ -99,4 +104,26 @@ func closeOwedCasesTx(ctx context.Context, tx pgx.Tx, caseIDs []ids.UUID, note s
 		closed++
 	}
 	return closed, nil
+}
+
+// A failed delivery cannot revive a capture duty answered by direct-source evidence.
+func settleFailedSenderDutiesTx(ctx context.Context, tx pgx.Tx, cases []ids.UUID, now time.Time) error {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT n.acquisition_id
+ FROM privacy_notice_case n JOIN contact_acquisition_evidence e ON e.id = n.acquisition_id
+ WHERE n.id = ANY(@cases) AND n.state = ANY(@states) AND e.kind = 'unknown_legacy'
+ AND `+correspondence.CapturedAcquisitionSQL("e")+`
+ AND EXISTS (SELECT 1 FROM contact_email ce
+ JOIN activity_participant p ON lower(p.address) = ce.email AND p.role = 'from'
+ JOIN activity a ON a.id = p.activity_id
+ WHERE ce.contact_id = n.contact_id AND ce.archived_at IS NULL AND `+correspondence.SubjectMailSQL("a")+`)`,
+		pgx.NamedArgs{"cases": cases, "states": SettleableNoticeStates()})
+	if err != nil {
+		return fmt.Errorf("read direct-source duties after delivery failed: %w", err)
+	}
+	acquisitions, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	_, err = SettleWhenSubjectWroteTx(ctx, tx, acquisitions, now)
+	return err
 }

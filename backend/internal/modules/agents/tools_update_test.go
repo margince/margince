@@ -19,14 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// noConflicts is the ownership answer a record with no human audit history
-// produces: nothing is human-owned, so nothing is withheld.
-type noConflicts struct{}
-
-func (noConflicts) HumanOwnedConflicts(context.Context, string, ids.UUID, json.RawMessage) ([]string, error) {
-	return nil, nil
-}
-
 func contactFixture(t *testing.T, id ids.UUID) *fakeSoR {
 	t.Helper()
 	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
@@ -50,13 +42,11 @@ func updateArgs(t *testing.T, id ids.UUID) json.RawMessage {
 	return in
 }
 
-// A patch no human has touched applies in the same call — the per-field
-// split's whole point is that a machine's own fields are not held hostage.
-func TestUpdateRecordAppliesAPatchWithNoHumanOwnedField(t *testing.T) {
+// An agent's patch applies in the one call, whoever last wrote the fields.
+func TestUpdateRecordAppliesTheWholePatch(t *testing.T) {
 	id := ids.NewV7()
 	p := contactFixture(t, id)
-	approvals := &recordingApprovals{}
-	tool := updateRecord{p: p, ownership: noConflicts{}, staging: approvals}
+	tool := updateRecord{p: p}
 
 	if _, err := tool.Handle(context.Background(), updateArgs(t, id)); err != nil {
 		t.Fatalf("Handle err = %v, want nil", err)
@@ -64,17 +54,13 @@ func TestUpdateRecordAppliesAPatchWithNoHumanOwnedField(t *testing.T) {
 	if len(p.updates) != 1 {
 		t.Errorf("provider.Update called %d time(s), want 1", len(p.updates))
 	}
-	if len(approvals.staged) != 0 {
-		t.Errorf("staged %d approval(s) for a conflict-free patch, want 0", len(approvals.staged))
-	}
 }
 
-// A released call performs exactly the effect the human approved, without
-// re-asking the precedence question.
+// A released call performs the effect the human approved.
 func TestUpdateRecordAppliesAReleasedCall(t *testing.T) {
 	id := ids.NewV7()
 	p := contactFixture(t, id)
-	tool := updateRecord{p: p, ownership: noConflicts{}, staging: &recordingApprovals{}}
+	tool := updateRecord{p: p}
 
 	ctx := withApprovalRedeemed(context.Background(), 0, false)
 	if _, err := tool.Handle(ctx, updateArgs(t, id)); err != nil {
@@ -82,23 +68,6 @@ func TestUpdateRecordAppliesAReleasedCall(t *testing.T) {
 	}
 	if len(p.updates) != 1 {
 		t.Errorf("provider.Update called %d time(s) after release, want 1", len(p.updates))
-	}
-}
-
-// A composition with no approvals engine cannot stage a human-owned
-// overwrite, so it refuses rather than applying one.
-func TestUpdateRecordRefusesAConflictItCannotStage(t *testing.T) {
-	id := ids.NewV7()
-	p := contactFixture(t, id)
-	tool := updateRecord{p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: nil}
-
-	_, err := tool.Handle(context.Background(), updateArgs(t, id))
-
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Fatalf("Handle err = %v, want ErrRequiresApproval", err)
-	}
-	if len(p.updates) != 0 {
-		t.Errorf("provider.Update called %d time(s), want 0", len(p.updates))
 	}
 }
 
@@ -121,11 +90,9 @@ func TestStagingIsRefusedForANonAuthoritativeTarget(t *testing.T) {
 	}
 }
 
-// update_record stages through stageConflicts, not StageInfo, so the derived
-// walk in stagingfitness_test.go cannot see it. This is that site's pin: a
-// patch WITH a human-owned conflict is what reaches stageConflicts, and for a
-// target held elsewhere it must refuse rather than mint an approval no human
-// can release.
+// update_record stages through StageInfo when the contract floor tightens it.
+// For a target held elsewhere it must refuse rather than mint an approval no
+// human can release.
 func TestUpdateRecordRefusesStagingForATargetHeldElsewhere(t *testing.T) {
 	id := ids.NewV7()
 	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
@@ -133,20 +100,12 @@ func TestUpdateRecordRefusesStagingForATargetHeldElsewhere(t *testing.T) {
 	p := &fakeSoR{records: map[datasource.EntityRef]datasource.Record{
 		ref: {Ref: ref, Fields: json.RawMessage(`{"title":"Analyst"}`), Version: 3},
 	}}
-	approvals := &recordingApprovals{}
-	tool := updateRecord{
-		p:         p,
-		ownership: fixedOwnership{conflicts: []string{"title"}},
-		staging:   approvals,
-	}
+	tool := updateRecord{p: p}
 
-	_, err := tool.Handle(context.Background(), updateArgs(t, id))
+	_, err := tool.StageInfo(context.Background(), updateArgs(t, id))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("Handle err = %v, want ErrUnsupportedBySoR", err)
-	}
-	if len(approvals.staged) != 0 {
-		t.Errorf("staged %d approval(s) against an externally-held record, want 0", len(approvals.staged))
+		t.Fatalf("StageInfo err = %v, want ErrUnsupportedBySoR", err)
 	}
 	if len(p.updates) != 0 {
 		t.Errorf("provider.Update called %d time(s), want 0", len(p.updates))

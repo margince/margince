@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { readGraph } from "../../../scripts/feature-boundaries";
 import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 
 // Every catalog page renders something, and nothing renders that is not a page.
@@ -90,25 +91,18 @@ const CARDS_THE_REGISTER_REACHED = [
 
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
-    // settings.tsx and every `settings.<page>.tsx` companion, because a page's
-    // cards can live in a companion (the privacy lanes do). A scan reading only
-    // settings.tsx would call those cards lost. Found by name rather than
-    // listed, so the next companion is read without anybody remembering to add
-    // it here.
-    const source = readdirSync(here)
-      .filter(
-        (file) =>
-          /^settings(\.[a-z]+)?\.tsx$/.test(file) &&
-          !/\.(stories|test|testkit)\.tsx$/.test(file),
-      )
-      .map((file) => readFileSync(join(here, file), "utf8"))
+    const graph = readGraph(here);
+    const pending = ["settings.tsx"];
+    const visited = new Set<string>();
+    while (pending.length) {
+      const path = pending.pop();
+      if (!path || path.startsWith("../") || visited.has(path)) continue;
+      visited.add(path);
+      pending.push(...(graph.get(path) ?? []));
+    }
+    const source = [...visited]
+      .map((path) => readFileSync(join(here, path), "utf8"))
       .join("\n");
-    // The WHOLE file, not just `tabContent`. Several pages dispatch to a tab
-    // function that renders their cards, such as `AiAccessTab`. Those functions
-    // sit below `tabContent`, so a window ending at its closing brace reports a
-    // card missing the moment it moves into one. That scan fails SHORT. It
-    // reads a smaller tree and reports a loss that did not happen, the same
-    // shape of wrong as missing a real one.
     return new Set(
       [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),
     );

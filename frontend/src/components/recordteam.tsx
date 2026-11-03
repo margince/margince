@@ -6,6 +6,7 @@ import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { shippedLabel } from "../lib/shippedlabels";
 import {
   type AssignmentRecordType,
   type RecordAssignment,
@@ -95,7 +96,7 @@ export function RecordTeam({
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}
             emptyLabel={t("assignments.empty")}
-            emptyDetail={t("assignments.emptyDetail")}
+            emptyDetail={t(emptyDetailKey(readOnly))}
             loadingLabel={t("assignments.title")}
           >
             {null}
@@ -165,7 +166,13 @@ function AssignmentRow({
           row's own column. */}
       <span className="assignrow-pair">
         <span className="t-eyebrow">
-          {row.role_label ?? row.role_key}
+          {shippedLabel(
+            {
+              label: row.role_label ?? row.role_key,
+              label_key: row.role_label_key,
+            },
+            t,
+          )}
           {row.role_active === false && ` ${t("assignments.roleRetired")}`}
         </span>
         <span>
@@ -205,4 +212,9 @@ function AssignmentRow({
       )}
     </li>
   );
+}
+
+// An instruction to assign is only for a reader who has the button.
+function emptyDetailKey(readOnly: boolean) {
+  return readOnly ? "assignments.emptyReadOnly" : "assignments.emptyDetail";
 }

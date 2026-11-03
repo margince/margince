@@ -99,7 +99,7 @@ func TestACompanyAndALeadCarryTheirLinkedInURL(t *testing.T) {
 	leads, _ := uploadCSV(t, e, "lead", "Email,Name,LinkedIn\nlee@core.example,Lee,linkedin.com/in/lee/\n")
 	leadRun, _ := createRunWithMapping(t, e, "lead", leads.SourceRef, map[string]string{"Email": "email", "Name": "full_name", "LinkedIn": "linkedin_url"})
 	approveAndRead(t, e, leadRun.ID)
-	if got := recordField(t, e, "/v1/leads", "email", "lee@core.example", "linkedin_url"); got != "https://linkedin.com/in/lee" {
+	if got := recordField(t, e, "/v1/leads", "email", "lee@core.example", "linkedin_url"); got != "https://www.linkedin.com/in/lee" {
 		t.Fatalf("lead linkedin_url = %q, want the normalized profile", got)
 	}
 

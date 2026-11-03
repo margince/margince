@@ -66,7 +66,11 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 	if err != nil || !ready {
 		return err
 	}
-	origin := FromAccount([]ActivityLinkInput{{EntityType: linkEntityContact, EntityID: row.Appointment.ContactID}})
+	attendee := ActivityLinkInput{EntityType: linkEntityContact, EntityID: row.Appointment.ContactID}
+	if !row.Appointment.LeadID.IsZero() {
+		attendee = ActivityLinkInput{EntityType: linkEntityLead, EntityID: row.Appointment.LeadID}
+	}
+	origin := FromAccount([]ActivityLinkInput{attendee})
 	input, err := s.meetingReminderInput(ctx, row)
 	if err != nil {
 		return err

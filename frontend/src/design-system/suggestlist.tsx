@@ -18,6 +18,7 @@ import {
 } from "./anchoredpopup";
 import { stepEnabled, type Walkable } from "./selectlistbox";
 import "./suggestlist.css";
+import { foldForMatch, holdsEveryWord, searchWords } from "../format/collate";
 
 /**
  * The portalled listbox a TEXT BOX offers, and the keyboard grammar that walks
@@ -71,17 +72,16 @@ export function matchingSuggestions(
   const offerable = taken
     ? suggestions.filter((row) => !taken.has(row.value))
     : suggestions;
-  const needle = typed.trim().toLowerCase();
-  if (needle === "") {
+  const words = searchWords(typed);
+  if (words.length === 0) {
     return offerable;
   }
-  if (offerable.some((row) => row.value.toLowerCase() === needle)) {
+  const exact = foldForMatch(typed.trim());
+  if (offerable.some((row) => foldForMatch(row.value) === exact)) {
     return offerable;
   }
-  return offerable.filter(
-    (row) =>
-      row.value.toLowerCase().includes(needle) ||
-      (row.label ?? "").toLowerCase().includes(needle),
+  return offerable.filter((row) =>
+    holdsEveryWord(words, [row.value, row.label ?? ""]),
   );
 }
 

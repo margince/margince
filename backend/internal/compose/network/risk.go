@@ -140,8 +140,12 @@ type DealCoverage struct {
 	// and carried as ids so the fold stays pure.
 	DepartedContactIDs []ids.UUID
 	Stakeholders       []deals.DealStakeholder
+	// SeatsInbound dates each seat's last message to us. Only the coverage
+	// endpoint reads it, so it is nil from CoverageFor and for a caller without the grants.
+	SeatsInbound map[ids.UUID]SeatInbound
 	// OurSide is the colleagues with recorded interaction with the deal's
-	// stakeholders, warmest first.
+	// stakeholders, one edge per colleague and contact, warmest first.
+	// OurColleagues folds it to one entry per colleague.
 	OurSide []ColleagueEdge
 	Risks   []Risk
 	// SectionsOmitted names the sections withheld for lack of the edge grant.
@@ -301,7 +305,7 @@ func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 			engaged = append(engaged, s.ContactID)
 		}
 	}
-	if c.EverTouched && len(engaged) < reportThreadingFloor {
+	if c.EverTouched && len(engaged) < ReportThreadingFloor {
 		risks = append(risks, Risk{
 			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, ContactIDs: engaged,
 			Summary: say.Say(riskWords.SingleThreaded),
@@ -407,9 +411,9 @@ func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	}, true
 }
 
-// reportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
+// ReportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
 // the constant a support conversation quotes is the constant compared against.
-const reportThreadingFloor = 2
+const ReportThreadingFloor = 2
 
 // ourSideConcentration is GRAPH-RISK-1: one colleague holding at least
 // ourSideDominanceShare of at least ourSideMinInteractions interactions.
@@ -418,19 +422,18 @@ const reportThreadingFloor = 2
 // sent the only two messages that have ever been exchanged would flag as
 // concentrated, when it is simply new.
 func ourSideConcentration(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
+	colleagues := OurColleagues(c.OurSide)
 	total := 0
-	byUser := map[ids.UUID]int{}
-	for _, e := range c.OurSide {
-		total += e.Count90d
-		byUser[e.UserID] += e.Count90d
+	for _, colleague := range colleagues {
+		total += colleague.Count90d
 	}
 	if total < ourSideMinInteractions {
 		return Risk{}, false
 	}
-	for user, n := range byUser {
-		if float64(n) >= ourSideDominanceShare*float64(total) {
+	for _, colleague := range colleagues {
+		if float64(colleague.Count90d) >= ourSideDominanceShare*float64(total) {
 			return Risk{
-				Kind: RiskSingleThreadedOurs, DealID: c.DealID, UserIDs: []ids.UUID{user},
+				Kind: RiskSingleThreadedOurs, DealID: c.DealID, UserIDs: []ids.UUID{colleague.UserID},
 				Summary: say.Say(riskWords.OurSideDominance),
 			}, true
 		}

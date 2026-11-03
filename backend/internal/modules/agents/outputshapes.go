@@ -336,9 +336,9 @@ func tagBound(field reflect.StructField, tag string) (bound float64, set bool, e
 }
 
 // eachWireField visits the fields a struct puts on the wire, flattening
-// embedded ones exactly as encoding/json does: an anonymous struct field with no
-// json tag contributes its OWN fields at this level, which is what
-// UpdateWithStagedApprovalResult relies on to answer as a record plus a note.
+// embedded ones as encoding/json does. An anonymous struct field with no json
+// tag contributes its own fields at this level. UpdateResult relies on that to
+// answer as a record plus its changes.
 func eachWireField(t reflect.Type, visit func(name string, optional bool, field reflect.StructField) error) error {
 	for field := range t.Fields() {
 		tag := field.Tag.Get("json")

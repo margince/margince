@@ -68,3 +68,11 @@ export const FailedReadSaysSo: Story = {
 export const RosterStoppedShortSaysNameDidNotLoad: Story = {
   args: { kind: "user", id: "u-past-the-walk" },
 };
+
+export const RecordCardDestination: Story = {
+  args: {
+    kind: "deal",
+    id: "01a00000-0000-7000-8000-000000000001",
+    name: "Example renewal · 海",
+  },
+};

@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -158,26 +159,26 @@ func DedupeCompanyForCreate(ctx context.Context, tx pgx.Tx, c CompanyCandidate) 
 // exactCompanyByDomain is PO-F-2 tier 1: any candidate domain already mapped
 // to a live company. This is also the capture employer-inference path — a
 // domain hit lands the contact on the existing company.
-// AT MOST TWO are returned, and the statement's own LIMIT says so. The first is
-// the company this routes to — the same lowest id the `LIMIT 1` this replaced
-// returned, which is what makes the routing outcome unchanged — and the second
-// is the evidence that the candidate's own domains named more than one. The
-// report names ONE rival, so a third adds nothing a review row can carry.
+// The first hit is the company this routes to, the lowest id. The second is
+// evidence that the candidate's own domains named more than one, and one
+// rival is all a review row carries.
 func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude *ids.CompanyID) ([]ids.CompanyID, error) {
 	if len(domains) == 0 {
 		return nil, nil
 	}
-	lowered := make([]string, 0, len(domains))
+	// Both spellings of each candidate, because a contact's mail domain arrives
+	// folded by nothing. A Unicode address otherwise misses the company holding
+	// the punycode its own site was read under, and lands on no company.
+	spellings := make([]string, 0, len(domains))
 	for _, d := range domains {
-		lowered = append(lowered, normalizeDomain(d))
+		spellings = append(spellings, owndomain.Spellings(d)...)
 	}
 	return exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
 		SELECT DISTINCT company_id FROM company_domain
 		WHERE domain = ANY($1) AND archived_at IS NULL
-		  
 		  AND ($2::uuid IS NULL OR company_id <> $2)
 		ORDER BY company_id
-		LIMIT 2`, lowered, exclude)
+		LIMIT 2`, spellings, exclude)
 }
 
 // nameDomainClaimant answers the company that claims the domain the

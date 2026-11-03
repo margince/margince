@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import {
@@ -167,7 +168,7 @@ export function ProjectCommitmentsTable({
   }
   return (
     <DataTable
-      label={t("analytics.reportProjectCommitments")}
+      label={t("analytics.reportProjectTasks")}
       columns={[
         {
           key: "project",
@@ -177,9 +178,12 @@ export function ProjectCommitmentsTable({
               url={row.derivationUrl}
               figure={row.name || t("analytics.project")}
             >
-              <a className="link-button" href={projectHref(row.projectId)}>
+              <AppLink
+                className="link-button"
+                href={projectHref(row.projectId)}
+              >
                 {row.name}
-              </a>
+              </AppLink>
             </CellExplain>
           ),
         },
@@ -190,13 +194,13 @@ export function ProjectCommitmentsTable({
         },
         {
           key: "open",
-          header: t("analytics.openCommitments"),
+          header: t("analytics.openTasks"),
           align: "end",
           render: (row: ProjectListRow) => formatNumber(row.open, locale),
         },
         {
           key: "overdue",
-          header: t("analytics.overdueCommitments"),
+          header: t("analytics.overdueTasks"),
           align: "end",
           render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
         },
@@ -241,9 +245,12 @@ export function ProjectsGoneQuietTable({
               url={row.derivationUrl}
               figure={row.name || t("analytics.project")}
             >
-              <a className="link-button" href={projectHref(row.projectId)}>
+              <AppLink
+                className="link-button"
+                href={projectHref(row.projectId)}
+              >
                 {row.name}
-              </a>
+              </AppLink>
             </CellExplain>
           ),
         },

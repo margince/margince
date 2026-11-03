@@ -201,6 +201,9 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 
+	"backend/internal/modules/contacts/reachfunction.go":      "\"head of people\" is an HR job title the reach card sorts LinkedIn connections by, not the record type",
+	"backend/internal/modules/contacts/reachfunction_test.go": "the same HR job titles, as the test table that pins them",
+
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
@@ -243,8 +246,12 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/roles-detail.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/features/settings/roles-drawer.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/features/settings/roles-settings.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/features/settings/sharedmergereviews.stories.tsx":  "a page under the seats settings group",
 	"frontend/src/features/settings/team-dialogs.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/features/settings/users-access.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/components/roster.stories.tsx":                     "the member roster under the seats settings group",
+	"frontend/src/features/settings/users-edit.stories.tsx":          "a page under the seats settings group",
+	"frontend/src/features/settings/users-retire.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",

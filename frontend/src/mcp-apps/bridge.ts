@@ -32,24 +32,18 @@
 //   carries no code that sends a request. The host routes the call through the
 //   same passport and approval checks as any other.
 
-import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { followContentSize } from "./size";
 import { applyTheme, followHostChange } from "./theme";
 import {
-  asFiniteNumber,
   asRecord,
   asText,
+  asToolCall,
   asWarnings,
+  type ResultHandler,
   type Warning,
 } from "./types";
 
 const PROTOCOL_VERSION = "2026-01-26";
-
-/** What a view shows for a value it does not have. Never "NaN", never "0". */
-export const ABSENT = "—";
-
-/** The handler a view registers, called once per tool result the host pushes. */
-type ResultHandler = (data: unknown, warnings: Warning[]) => void;
 
 let nextID = 1;
 
@@ -98,18 +92,23 @@ export function onResponse(
   capabilityHandler = capabilities;
 }
 
-// The tools this view declared in actions.json. The transport itself refuses a
-// tool call naming anything else, so no code path of the view, whatever calls
-// sendToHost, can ask the host to run a tool the view did not declare.
-let permittedTools: ReadonlySet<string> = new Set();
+// What a view may send without declaring anything: its handshake, its size and
+// a chat message. The transport refuses any other method. So no code path of
+// the view can ask the host for more than the view declared. A view with no
+// actions registers nothing, and its document carries no tool call at all.
+const OPEN_METHODS: ReadonlySet<string> = new Set([
+  "ui/initialize",
+  "ui/notifications/initialized",
+  "ui/notifications/size-changed",
+  "ui/message",
+]);
+let mayAlsoSend: (message: Record<string, unknown>) => boolean = () => false;
 
-/** permitTools replaces the set of tools this view may ask its host to run. */
-export function permitTools(names: readonly string[]): void {
-  permittedTools = new Set(names);
-}
-
-function callIsPermitted(params: unknown): boolean {
-  return permittedTools.has(asText(asRecord(params).name));
+/** allowOutbound replaces the check for the other messages a view may send. */
+export function allowOutbound(
+  check: (message: Record<string, unknown>) => boolean,
+): void {
+  mayAlsoSend = check;
 }
 
 /**
@@ -139,7 +138,8 @@ function fromHost(event: MessageEvent): boolean {
  * ever leaves here, because a view holds none.
  */
 export function sendToHost(message: Record<string, unknown>): void {
-  if (message.method === "tools/call" && !callIsPermitted(message.params))
+  const method = asText(message.method);
+  if (method !== "" && !OPEN_METHODS.has(method) && !mayAlsoSend(message))
     return;
   const target =
     hostOrigin === null || hostOrigin === "null" ? "*" : hostOrigin;
@@ -216,8 +216,10 @@ function completeHandshake(
  */
 function deliverResult(message: Record<string, unknown>): void {
   if (resultHandler === null) return;
-  const envelope = asRecord(asRecord(message.params).structuredContent);
-  resultHandler(envelope.data ?? null, asWarnings(envelope.warnings));
+  const result = asRecord(message.params);
+  const envelope = asRecord(result.structuredContent);
+  const call = asToolCall(result);
+  resultHandler(envelope.data ?? null, asWarnings(envelope.warnings), call);
   // Sized from the first answer drawn: before it the document is only padding,
   // and a host told that height shrinks the frame just to grow it again.
   if (!sizing) {
@@ -279,7 +281,7 @@ function handle(event: MessageEvent): void {
 /**
  * onResult registers the view's renderer. `warnings` is always an array, so a
  * renderer never has to decide whether an absent one means "none" or "not
- * computed".
+ * computed". `call` is what the view knows of the call it answers.
  */
 export function onResult(fn: ResultHandler): void {
   resultHandler = fn;
@@ -382,103 +384,6 @@ export function heading(
   node.dataset.size = size;
   node.textContent = String(text);
   return node;
-}
-
-/**
- * percent renders a number a view displays as a proportion. Anything that is not
- * a finite number renders as an em dash rather than as "NaN" or "undefined": a
- * view is looking at data it did not produce, and a missing field is a thing
- * that happens.
- */
-export function percent(value: unknown): string {
-  const n = asFiniteNumber(value);
-  return n === null ? ABSENT : `${Math.round(n * 100)}%`;
-}
-
-/** count renders a whole number, or the em dash for a value it cannot read. */
-export function count(value: unknown): string {
-  const n = asFiniteNumber(value);
-  return n === null ? ABSENT : String(n);
-}
-
-/**
- * money renders an amount the way the product renders one: integer MINOR units
- * scaled by the currency's own minor-unit count, never by a hard-coded 100.
- *
- * THE SCALE IS format/minorunits', which mirrors the server's ISO 4217 table.
- * JPY stores 1234 minor units and means ¥1,234; a view that divided by 100
- * everywhere would render ¥12.34 for it, and the same class of mistake in the
- * other direction is what made an account brief report every deal a hundred
- * times too large.
- *
- * This used to ask Intl for the digit count, on the stated grounds that it was
- * the rule format.ts applied. Both halves of that stopped being true: format.ts
- * takes the scale from minorunits now, and Intl was never the same table —
- * Intl follows CLDR, which records how a currency is USED, and the server
- * follows ISO, which records what the standard ASSIGNS. They disagree on ten
- * codes, so this view rendered a stored IQD 1234 as "IQD 1,234" where the
- * record means 1.234 dinars, and MGA and IRR a hundredfold out.
- *
- * Importing is safe where importing formatMoney was not: minorUnitDigits takes
- * NO locale — a currency's minor-unit count is a property of the currency —
- * so nothing of the translation machinery follows it into a document that is
- * inlined whole and served to a third-party host. That is the reason the scale
- * lives in its own module rather than inside the formatters.
- *
- * THE LOCALE IS THE HOST'S, DELIBERATELY, and this is the one rendering in the
- * product that does not take the reader's chosen one. What is missing is not
- * the MAPPING — importing `INTL_LOCALE` would cost almost nothing — it is the
- * locale to look it up with: this document is inlined whole into a page the
- * product does not own, with no LocaleProvider above it and no signed-in
- * reader's choice reaching inside it, so there is nothing to index the table
- * by. `undefined` is the honest remaining answer, and it is at least the locale
- * the reader's own browser reports. `format/one-locale.test.ts` carries this
- * file as a named exemption with this reason.
- *
- * An amount that is not a finite number, or a currency Intl does not know,
- * renders as the em dash. Intl throws on an unknown currency code, and a view
- * that threw mid-render would leave the reader a blank panel.
- *
- * SO DOES AN AMOUNT OUTSIDE THE SAFE INTEGER RANGE. The field is an int64 on
- * the wire and a double by the time this sees it, so a value past 2^53 has
- * already been rounded to a number that is not the one that was stored. There
- * is nothing to recover — the digits are gone before this function is called —
- * and the choice is between an em dash and a money figure that is quietly
- * wrong. A reader can act on the first.
- */
-export function money(amountMinor: unknown, currency: unknown): string {
-  const minor = asFiniteNumber(amountMinor);
-  const code = asText(currency);
-  if (minor === null || code === "" || !Number.isSafeInteger(minor))
-    return ABSENT;
-  try {
-    const digits = minorUnitDigits(code);
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }).format(toMajorUnits(minor, code));
-  } catch {
-    return ABSENT;
-  }
-}
-
-/**
- * day renders an instant as the calendar day it falls on IN UTC, which is the
- * same day the server's own evidence snippets name.
- *
- * UTC and not the reader's zone, because the two would disagree: the answer
- * says a promise is overdue, and a date rendered in a zone the server did not
- * judge in can read as "due tomorrow" beside the word "overdue". One clock,
- * one day, and the state beside it is true of the date shown.
- */
-export function day(value: unknown): string {
-  const text = asText(value);
-  if (text === "") return ABSENT;
-  const at = new Date(text);
-  if (Number.isNaN(at.getTime())) return ABSENT;
-  return at.toISOString().slice(0, 10);
 }
 
 /**

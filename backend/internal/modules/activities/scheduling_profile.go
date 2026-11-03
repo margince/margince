@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -106,9 +105,10 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	})
 	profile.HostName = &name
 
-	if err == nil && profile.Slug != nil && s.publicOriginUsable() == nil {
-		link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + url.PathEscape(*profile.Slug)
-		profile.PublicUrl = &link
+	if err == nil && profile.Slug != nil {
+		if link, ok := s.publicBookingURL(*profile.Slug); ok {
+			profile.PublicUrl = &link
+		}
 	}
 	return profile, err
 }
@@ -120,7 +120,7 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 		return crmcontracts.SchedulingProfile{}, err
 	}
 	profile, err := s.hostSchedulingProfile(ctx, host)
-	return s.brandSchedulingProfile(ctx, profile), err
+	return s.brandSchedulingProfile(ctx, host, profile), err
 }
 
 func errCalendarNotConnected() error {
@@ -199,7 +199,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 		return profile, err
 	}
 	saved, err := s.hostSchedulingProfile(ctx, host)
-	return s.brandSchedulingProfile(ctx, saved), err
+	return s.brandSchedulingProfile(ctx, host, saved), err
 }
 
 // checkBookingCalendar asks the provider only when a live page gains a calendar

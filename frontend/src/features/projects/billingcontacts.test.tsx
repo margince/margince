@@ -5,10 +5,12 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { WriteToProvider } from "../../lib/writeto";
 import { ContactBillingRoles } from "../contacts/contactbillingroles";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
 
@@ -51,6 +53,21 @@ it("renders each billing contact with their capacity and address", () => {
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
   expect(screen.getByText("Invoice recipient")).toBeTruthy();
   expect(screen.getByRole("link", { name: "pat@acme.test" })).toBeTruthy();
+});
+
+it("writes to a billing contact on the account the invoice is about", async () => {
+  const writeTo = vi.fn();
+  render(
+    <WriteToProvider writeTo={writeTo}>
+      <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />
+    </WriteToProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "pat@acme.test" }));
+  expect(writeTo).toHaveBeenCalledWith({
+    entityType: "company",
+    entityId: COMPANY,
+    address: "pat@acme.test",
+  });
 });
 
 it("says so when a named recipient has nowhere to send the invoice", () => {
@@ -358,4 +375,28 @@ it("says so rather than writing unpinned when the edge cannot be read back", asy
   await userEvent.click(screen.getByRole("button", { name: "Save change" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(seen.some((s) => s.method === "PATCH")).toBe(false);
+});
+
+it("offers the three capacities in invoice order and sends the one picked", async () => {
+  const user = userEvent.setup();
+  const seen: Seen[] = [];
+  stubFetch(seen, { version: 7 });
+  render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Change Pat Okafor’s role" }),
+  );
+  await user.click(screen.getByRole("combobox", { name: "Role" }));
+  const listbox = await screen.findByRole("listbox");
+  expect(
+    within(listbox)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["Invoice recipient", "Approver", "Accounts payable"]);
+  await user.click(within(listbox).getByRole("option", { name: "Approver" }));
+  await user.click(screen.getByRole("button", { name: "Save change" }));
+  await waitFor(() =>
+    expect(seen.find((s) => s.method === "PATCH")?.body).toEqual({
+      role: "approver",
+    }),
+  );
 });

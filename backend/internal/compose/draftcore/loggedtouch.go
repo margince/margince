@@ -13,31 +13,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ClassifyWithLogged is convstate.Classify with a logged note or meeting
-// counted as prior contact: a rep who met somebody and wrote it down is not
-// writing to a stranger. The touch counts as our own side's, because nobody
-// on their side wrote anything.
-//
-// Here rather than in the 360 reads' last-touch stamps, which other readers
-// take to mean mail only. The contact, lead and account drafts all classify
-// through it, because the shared TIME rule tells each of them what
-// silence_days counts from.
+// ClassifyWithLogged counts notes and meetings as prior contact, even without mail.
+// It counts as our side: nothing claims the contact wrote.
 func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
 	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
 		lastOut = logged
 	}
-	return convstate.Classify(now, lastIn, lastOut)
+	return convstate.Classify(now, lastIn, lastOut, zone)
 }
 
-// lastLoggedTouch is the newest logged touch in newest-first activities, zero
-// when there is none.
+// Date-only anchors can sort differently once read in the record calendar.
 func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) time.Time {
+	var latest time.Time
 	for _, activity := range activities {
-		if IsLoggedTouch(activity, now, zone) {
-			return activity.OccurredAt.UTC()
+		if !IsLoggedTouch(activity, now, zone) {
+			continue
+		}
+		moment := activitywhen.MomentOf(activity)
+		at := moment.At
+		if moment.DateOnly {
+			at = occurredday.Begins(at, zone)
+		}
+		if at.After(latest) {
+			latest = at
 		}
 	}
-	return time.Time{}
+	return latest
 }
 
 // IsLoggedKind reports the kinds a rep writes down about contact outside the

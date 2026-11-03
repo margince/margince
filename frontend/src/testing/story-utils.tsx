@@ -271,15 +271,14 @@ export function WithInstallationBrand({
 export function StoryProviders({
   children,
   locale = "en",
-}: Readonly<{ children: ReactNode; locale?: Locale }>) {
+  client,
+}: Readonly<{ children: ReactNode; locale?: Locale; client?: QueryClient }>) {
   // Before the client, so a story that routed nothing cannot reach the network
   // on its first render.
   ensureFetchStubInstalled();
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const queryClient = client ?? storyQueryClient();
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       <LocaleProvider initial={locale}>
         {/* The record pages' context column belongs to the shell, and a story
             mounts no shell — so a record drawn here had its rail cards portal
@@ -290,6 +289,11 @@ export function StoryProviders({
       </LocaleProvider>
     </QueryClientProvider>
   );
+}
+
+// For a story that seeds the cache before the screen mounts.
+export function storyQueryClient(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
 // Real Chromium only: jsdom computes no cascade, so the timeline row rule

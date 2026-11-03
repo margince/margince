@@ -2,20 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../../api/schema";
+import { useRecordAssignments } from "../../../components/recordassignments.queries";
 import { OverviewCard } from "../../../design-system/overviewcard";
+import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
+import { useRecordZone } from "../../../lib/recordzone";
 import { AddRelationshipAction } from "../../records/relationships";
-import { CommitteeReading, committeeFoot } from "./dealcommittee";
-import { committeeOf } from "./dealstanding";
+import { type AddSeat, CommitteeReading, committeeFoot } from "./dealcommittee";
+import { committeeTeam } from "./dealcommitteeteam";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
 /**
- * DealCommitteeCard is the deal's committee on its Overview. It shows who of the
- * buyer is on it, who we are in touch with, and the seats the coverage rules
- * find missing. Each seat opens its contact.
+ * DealCommitteeCard is the deal's committee on its Overview. It names who of
+ * ours works the deal and in what job, and who of the buyer sits on it and how
+ * engaged. Each seat the coverage rules find missing carries the verb that
+ * fills it, and each buyer seat opens its contact.
  */
 export function DealCommitteeCard({
   dealId,
@@ -41,16 +45,30 @@ export function DealCommitteeCard({
   const t = useT();
   const canCreate = useCanWrite("relationship", "create");
   const { locale } = useLocale();
-  const owner = useMemberName(ownerId).data ?? undefined;
+  const zone = useRecordZone();
+  const assignments = useRecordAssignments("deal", dealId);
+  const ownerName =
+    useMemberName(ownerId).data ??
+    assignments.data?.find((held) => held.subject_id === ownerId)?.subject_name;
+  const team = committeeTeam({
+    owner: ownerId && ownerName ? { id: ownerId, name: ownerName } : undefined,
+    assignments: assignments.data ?? [],
+    coverage,
+    t,
+    locale,
+  });
   const foot = committeeFoot(coverage, withheld, t, locale);
-  // Nobody named and no seat missing is an answer, drawn as every card's
-  // empty row; a withheld or pending read keeps the picture's own states.
-  const committee = committeeOf(coverage, withheld);
-  const nobody =
-    !pending &&
-    committee.state === "read" &&
-    committee.named === 0 &&
-    committee.gaps === 0;
+  const addSeat: AddSeat | undefined = canCreate
+    ? (gap, describedBy) => (
+        <AddRelationshipAction
+          scope={{ deal_id: dealId }}
+          refusedReasonId={refusedReasonId}
+          variant="link"
+          seatRole={gap.role}
+          describedBy={describedBy}
+        />
+      )
+    : undefined;
   return (
     <OverviewCard
       title={t("deal.committee.card")}
@@ -63,19 +81,20 @@ export function DealCommitteeCard({
           />
         ) : undefined
       }
-      empty={t("deal.standing.committee.none")}
       foot={foot?.text}
       footTone={foot?.warn ? "warn" : undefined}
     >
-      {!nobody && (
-        <CommitteeReading
-          coverage={coverage}
-          withheld={withheld}
-          pending={pending}
-          owner={owner}
-          roleLabel={roleLabel}
-        />
-      )}
+      <CommitteeReading
+        coverage={coverage}
+        withheld={withheld}
+        pending={pending}
+        team={team}
+        teamPending={assignments.isPending}
+        teamUnread={assignments.isError}
+        roleLabel={roleLabel}
+        wroteOn={(at, precision) => activityDay(at, precision, locale, zone)}
+        addSeat={addSeat}
+      />
     </OverviewCard>
   );
 }

@@ -8,7 +8,7 @@ import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { Popover } from "../../design-system/popover";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
 import { primaryPhone } from "../../format/contacturi";
@@ -130,12 +130,15 @@ export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
     <Popover
       label={
         <ProvenanceTag
-          provenance={provenanceOf(
-            contact.captured_by,
-            viewerId,
-            contact.author,
-            contact.source,
-            contact.imported_from,
+          provenance={withCreator(
+            provenanceOf(
+              contact.captured_by,
+              viewerId,
+              contact.author,
+              contact.source,
+              contact.imported_from,
+            ),
+            contact.created_by,
           )}
         />
       }

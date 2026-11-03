@@ -267,3 +267,23 @@ func outcomeOf(results []VCardResult) string {
 	}
 	return string(results[0].Outcome)
 }
+
+// A mailed card for an existing lead is skipped with its reason. It creates
+// nothing and offers no conversion.
+func TestAMailedCardForALeadIsSkippedWithoutAQuestion(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	lead := e.seedHeldLead(ctx, t, "petra@briefkasten.example")
+
+	results := importMailedCard(ctx, t, e, seedSourceMessage(ctx, t, e, "workspace"))
+	if len(results) != 1 || results[0].Outcome != VCardSkipped || results[0].Reason != vcardLeadHoldsMailed {
+		t.Fatalf("a mailed card for a lead imported as %+v, want skipped as %q", results, vcardLeadHoldsMailed)
+	}
+	if results[0].LeadID != nil {
+		t.Errorf("a mailed card offers to convert lead %v; nobody is there to answer", *results[0].LeadID)
+	}
+	if n := e.liveContactsHolding(ctx, t, "petra@briefkasten.example"); n != 0 {
+		t.Errorf("%d contacts made from a lead's mailed card, want none", n)
+	}
+	e.requireLeadUntouched(ctx, t, lead, "after a mailed card")
+}

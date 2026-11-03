@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { FieldGrid } from "../../../design-system/fieldgrid";
 import {
   installFetchStub,
@@ -72,5 +73,35 @@ export const LostOnAnArchivedStage: Story = {
         </FieldGrid>
       </StoryProviders>
     );
+  },
+};
+
+/** Who recorded an imported deal has its own label, apart from its source. */
+export const RecordedElsewhereInVietnamese: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ deal: ["read"] }) });
+    return (
+      <StoryProviders locale="vi">
+        <FieldGrid>
+          <DealRecordRows
+            deal={{
+              stage_id: "st-2",
+              source: "hubspot",
+              captured_by: "human:u-importer",
+              author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+            }}
+            stages={STAGES}
+            locale="vi"
+          />
+        </FieldGrid>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Bên ghi nhận")).toBeVisible();
+    await expect(
+      canvas.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
+    ).toBeVisible();
   },
 };

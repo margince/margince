@@ -94,7 +94,7 @@ func admit(ctx context.Context, actor Identity, object string, action principal.
 func lockTargetGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (seatGrants, error) {
 	var exists bool
 	switch err := tx.QueryRow(ctx,
-		`SELECT true FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+		`SELECT true FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 		userID).Scan(&exists); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return seatGrants{}, apperrors.ErrNotFound

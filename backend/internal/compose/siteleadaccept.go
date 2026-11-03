@@ -131,6 +131,11 @@ func captureSiteLead(
 	if err != nil {
 		return ids.LeadID{}, false, err
 	}
+	// The sink keeps no lead for an existing contact. The identity locks decide
+	// this independently of what the requester could read when it was staged.
+	if ref.Type == datasource.EntityContact {
+		return ids.LeadID{}, false, errSiteLeadIsAContact
+	}
 	leadID := ids.From[ids.LeadKind](ref.ID)
 	// A collision with another source's lead returns that lead, and stages a
 	// merge for a human instead of writing this one.

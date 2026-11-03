@@ -1,4 +1,8 @@
 export {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+} from "../format/companylifecycle";
+export {
   RELATIONSHIP_TYPE_LABELS,
   type RelationshipType,
 } from "../format/companyrelationships";
@@ -28,38 +32,8 @@ import { useFinanceSummary } from "./financesummary";
 // import this without a cycle: it is exactly the shared home the two owe each
 // other rather than each keeping its own copy that can drift.
 
-type Company = components["schemas"]["Company"];
-type Lifecycle = NonNullable<Company["lifecycle"]>;
-
-// Where the account stands with us (PO-DDL-4, ADR-0079/A124), in the words a
-// reader sees rather than the wire enum.
-export const LIFECYCLE_LABELS: Record<Lifecycle, MessageKey> = {
-  unknown: "company.lifecycle.unknown",
-  target: "company.lifecycle.target",
-  prospect: "company.lifecycle.prospect",
-  opportunity: "company.lifecycle.opportunity",
-  customer: "company.lifecycle.customer",
-  former_customer: "company.lifecycle.former_customer",
-  disqualified: "company.lifecycle.disqualified",
-};
-
-// Kept in wire order so a picker built off it reads as a progression rather
-// than an alphabet. Shared for the same reason LIFECYCLE_LABELS is: the list
-// and the labels are the two halves of one enum, and companies.tsx and
-// the rail's own Details grid (companyraildetails.tsx) both build a
-// lifecycle picker off it — two copies means the two screens can offer
-// different choices for the same field.
-export const LIFECYCLE_OPTIONS = [
-  "unknown",
-  "target",
-  "prospect",
-  "opportunity",
-  "customer",
-  "former_customer",
-  "disqualified",
-] as const;
-
-// The seven wire size bands, same sharing reason as LIFECYCLE_OPTIONS above.
+// The seven wire size bands, in wire order for the same reason as
+// LIFECYCLE_OPTIONS.
 export const SIZE_BAND_OPTIONS = [
   "1-10",
   "11-50",
@@ -105,12 +79,23 @@ type HealthReasonCode = components["schemas"]["HealthDimensionReasonCode"];
 type ReasonParam = "days" | "count" | "total" | "at";
 type ReasonMessage = { needs: readonly ReasonParam[] } & (
   | { key: MessageKey }
-  | { plural: PluralBase; by: "days" | "count"; today?: MessageKey }
+  | {
+      plural: PluralBase;
+      by: "days" | "count";
+      today?: MessageKey;
+      // The same count with the day it starts from, when the server names it.
+      since?: PluralBase;
+    }
 );
 
 const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
   never_written: { needs: [], key: "co.health.reason.neverWritten" },
-  quiet: { needs: ["days"], plural: "co.health.reason.quiet", by: "days" },
+  quiet: {
+    needs: ["days"],
+    plural: "co.health.reason.quiet",
+    by: "days",
+    since: "co.health.reason.quietSince",
+  },
   meeting_booked: { needs: ["at"], key: "co.health.reason.meetingBooked" },
   last_met: {
     needs: ["days"],
@@ -158,6 +143,14 @@ function reasonParams(
   return params;
 }
 
+// A counted reason names the day its count starts from when the server sent it.
+function countedSentence(
+  message: Extract<ReasonMessage, { plural: PluralBase }>,
+  params: Record<string, string>,
+): PluralBase {
+  return params.at && message.since ? message.since : message.plural;
+}
+
 /** Says a health dimension's reason in the reader's language. */
 export function useHealthReason(): (
   dimension: Pick<HealthDimension, "reason" | "reason_code" | "reason_params">,
@@ -191,7 +184,7 @@ export function useHealthReason(): (
     if (counted === 0 && message.today) {
       return t(message.today, params);
     }
-    return plural(message.plural, counted, params);
+    return plural(countedSentence(message, params), counted, params);
   };
 }
 

@@ -110,11 +110,16 @@ function promotionApproval(): Approval {
           field: "promotion_deal_amount",
           value: { kind: "money", text: "250000", currency: "USD" },
         },
+        {
+          field: "promotion_company_industry",
+          value: { kind: "text", text: "logistics_transport" },
+        },
       ],
       effects: [
         "promote_lead_archive_source",
         "promote_create_contact",
         "promote_open_deal_seat_contact",
+        "promote_fill_company_industry",
       ],
     },
   });
@@ -600,10 +605,6 @@ function contactCreationApproval(): Approval {
         { field: "email", value: { kind: "text", text: "buyer@example.test" } },
         { field: "creation_email_type", value: { kind: "text", text: "work" } },
         { field: "creation_primary", value: { kind: "boolean", text: "true" } },
-        {
-          field: "creation_promoted_lead",
-          value: { kind: "text", text: "Earlier Buyer" },
-        },
         { field: "title", value: { kind: "text", text: "Director" } },
         {
           field: "creation_source_activity",
@@ -618,7 +619,6 @@ function contactCreationApproval(): Approval {
         "create_contact_record",
         "create_workspace_visible",
         "record_contact_acquisition",
-        "create_promote_matching_leads",
       ],
     },
   });

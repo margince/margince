@@ -106,7 +106,7 @@ func TestThePoolsWaitsAreCountersAndItsLevelsAreGauges(t *testing.T) {
 // Both are silent, which is why the parity is a test rather than a habit.
 func TestTheOperatorDocNamesEveryPoolSeries(t *testing.T) {
 	t.Parallel()
-	const doc = "../../../../docs/reference/configuration.md"
+	const doc = "../../../../docs/reference/operator-endpoints.md"
 	raw, err := os.ReadFile(doc)
 	if err != nil {
 		t.Fatalf("reading the operator reference: %v", err)

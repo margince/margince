@@ -7,6 +7,8 @@
 // the surface that opens it both need the chip, and a vocabulary living in
 // either one would have that file importing its own consumer.
 
+import type { ReactNode } from "react";
+
 /**
  * One filter chip. Single-select by design: the list endpoints take one value
  * per filter param, so a multi-select chip would compose a query the API
@@ -30,8 +32,23 @@ export type ListChip = {
    */
   excludes?: readonly string[];
 } & (
-  | { search?: undefined; appliedName?: undefined }
+  | { search?: undefined; editor?: undefined; appliedName?: undefined }
   | {
+      search?: undefined;
+      /**
+       * A value the reader types rather than picks: a range of days or of
+       * money. The value step draws this instead of `options`, and it calls
+       * `pick` with the value and the words the applied row shows for it.
+       */
+      editor: (
+        value: string,
+        pick: (value: string, label: string) => void,
+      ) => ReactNode;
+      /** What to call an applied value nobody typed in this session. */
+      appliedName: string | undefined;
+    }
+  | {
+      editor?: undefined;
       /**
        * A relation filter too large to list whole (a workspace's companies):
        * the value step searches this instead of walking `options`. The "all"

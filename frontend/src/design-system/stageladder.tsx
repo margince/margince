@@ -26,10 +26,11 @@
  * has to try before learning it does nothing.
  */
 
-import { type ReactNode, useLayoutEffect, useRef } from "react";
-import { Button, useScrollRegion } from "./atoms";
+import type { ReactNode } from "react";
+import { Button } from "./atoms";
 import type { ReadingTone } from "./readingtone";
 import { LadderBars } from "./stageladder.bars";
+import { LadderRun } from "./stageladder.run";
 import "./stageladder.css";
 
 export type StageStep = {
@@ -78,7 +79,8 @@ export type StageStep = {
  * A pipeline is the workspace's to lengthen, so the open stages never wrap —
  * a wrapped ladder reads as two sentences and, on a phone, buries the record
  * under rows of pills. They hold one row that scrolls and comes to rest on
- * the current stage. The ways out stand outside the scroll: closing a deal
+ * the current stage. A clipped end fades and carries a button that pages the
+ * row that way. The ways out stand outside the scroll. Closing a deal
  * from its own page is what the rungs are for, and a scroll may not hide it.
  */
 export function StageLadder({
@@ -127,36 +129,6 @@ function ChevronLadder({
 }>) {
   const run = steps.filter((step) => !step.terminal);
   const exits = steps.filter((step) => step.terminal);
-  const runRef = useRef<HTMLDivElement>(null);
-  // A refused ladder holds no rung that takes focus, so a run past its edge
-  // needs its own keyboard stop; the hook gives one only while it overflows.
-  const region = useScrollRegion(runRef, label);
-  // The rung the run centres on: where the record stands, or — for a record
-  // that has taken a way out — the last stage it climbed before it did. A
-  // record the pipeline cannot place leaves the run at its start.
-  const hereInRun = run.findIndex((step) => step.current);
-  const settleOn =
-    hereInRun >= 0 || !exits.some((step) => step.current)
-      ? hereInRun
-      : run.length - 1;
-  useLayoutEffect(() => {
-    const scroller = runRef.current;
-    if (!scroller) {
-      return;
-    }
-    const rung = scroller.firstElementChild?.children[settleOn];
-    if (!rung) {
-      scroller.scrollLeft = 0;
-      return;
-    }
-    // Measured against the scroller's own box, so no ancestor has to be
-    // positioned; the browser clamps past either end, so a ladder that fits
-    // stays where it is.
-    const rungBox = rung.getBoundingClientRect();
-    const runBox = scroller.getBoundingClientRect();
-    scroller.scrollLeft +=
-      (rungBox.left + rungBox.right - runBox.left - runBox.right) / 2;
-  }, [settleOn]);
   return (
     // A fieldset rather than a nav, and rather than a bare list: it IS a group
     // of controls acting on one record, and the native element says so without
@@ -168,15 +140,13 @@ function ChevronLadder({
       aria-label={label}
     >
       <div className="stage-ladder-track">
-        {/* The scroller is a box of its own because the region it may
-            become would otherwise replace the list's role. */}
-        <div className="stage-ladder-run" ref={runRef} {...region}>
+        <LadderRun label={label} steps={steps}>
           <ol className="stage-ladder-steps">
             {run.map((step, index) => (
               <LadderStep key={step.key} step={step} first={index === 0} />
             ))}
           </ol>
-        </div>
+        </LadderRun>
         {exits.length > 0 && (
           <ul className="stage-ladder-exits">
             {exits.map((step, index) => (

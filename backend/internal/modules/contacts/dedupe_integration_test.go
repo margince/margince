@@ -200,16 +200,10 @@ func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name,
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	// Stated, not left to the store's own rule: this seed is about the contact
-	// HAVING a current employer, so it says so rather than relying on a
-	// derivation another test could change.
-	primary := true
-	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-		IsCurrentPrimary: &primary, Source: "manual",
-	}); err != nil {
-		t.Fatalf("seed employment: %v", err)
+	if err := e.store.ResolveContactEmployer(ctx, contactID, EmployerChoice{CompanyID: &companyID, Source: "manual"}); err != nil {
+		t.Fatal(err)
 	}
+	assertEmployedAt(ctx, t, e, contactID, companyID)
 	return contactID, companyID
 }
 
@@ -355,6 +349,32 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	}
 	if ids.UUID(company.Id) != m.CompanyID.UUID {
 		t.Fatalf("matched %s, want %s", m.CompanyID, company.Id)
+	}
+}
+
+// Capture's employer inference arrives with whatever the mail header spelled,
+// and a company is filed under whatever its site was read as. The two spellings
+// of one internationalized domain are one domain, so the exact tier must route
+// to the company already holding the other one.
+func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Bücher GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
+		DisplayName: "Some Other Spelling", Domains: []string{"bücher.example"},
+	})
+	if m.Decision != DecisionExactCollision {
+		t.Fatalf("decision = %s, want exact_collision on the unicode spelling", m.Decision)
+	}
+	if ids.UUID(company.Id) != m.CompanyID.UUID {
+		t.Fatalf("matched %s, want the company holding the punycode spelling %s", m.CompanyID, company.Id)
 	}
 }
 

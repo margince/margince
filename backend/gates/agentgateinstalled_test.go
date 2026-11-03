@@ -42,11 +42,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// theAgentGate is the middleware constructor, and contractRouter is the call
-// whose middleware list must carry it.
+// theAgentGate is the middleware constructor, and contractRouterCall is the
+// call whose middleware list must carry it.
 const (
-	theAgentGate   = "agentGate"
-	contractRouter = "HandlerWithOptions"
+	theAgentGate       = "agentGate"
+	contractRouterCall = "contractRouter"
 )
 
 func TestTheAgentGateIsWrappedAroundEveryContractRoute(t *testing.T) {
@@ -63,16 +63,14 @@ func TestTheAgentGateIsWrappedAroundEveryContractRoute(t *testing.T) {
 		if !ok {
 			return true
 		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != contractRouter {
+		fn, ok := call.Fun.(*ast.Ident)
+		if !ok || fn.Name != contractRouterCall {
 			return true
 		}
 		routerFound = true
-		// The middlewares arrive inside the options literal, as a slice of
-		// calls. Any mention of agentGate under this call is the wiring: a
-		// name that reaches the router's options cannot be there for anything
-		// else, and asking more precisely would mean pinning the option
-		// struct's field name, which is generated and not ours.
+		// The middlewares arrive as the call's arguments. Any mention of
+		// agentGate under this call is the wiring: a name that reaches the
+		// router cannot be there for anything else.
 		ast.Inspect(call, func(inner ast.Node) bool {
 			if id, ok := inner.(*ast.Ident); ok && id.Name == theAgentGate {
 				gateFound = true
@@ -84,7 +82,7 @@ func TestTheAgentGateIsWrappedAroundEveryContractRoute(t *testing.T) {
 
 	if !routerFound {
 		t.Fatalf("%s registers no %s call — this gate is reading for a wiring that has moved, "+
-			"and a gate that cannot find its subject passes over anything", routingTable, contractRouter)
+			"and a gate that cannot find its subject passes over anything", routingTable, contractRouterCall)
 	}
 	if !gateFound {
 		t.Errorf("%s builds the contract router without %s in its middlewares.\n"+

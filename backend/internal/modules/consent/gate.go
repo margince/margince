@@ -164,6 +164,13 @@ func stampDerivedBasis(ctx context.Context, tx pgx.Tx, contactID string, verdict
 	if err != nil {
 		return err
 	}
+	// The basis row's twin, and locked for its reason: a derived ground
+	// stamped after a merge's carry had passed would sit on the retired
+	// record. Taken after the two returns above, so a send that stamps
+	// nothing takes no lock.
+	if err := lockSendSubject(ctx, tx, subjectRef{Kind: entityContact, ID: contactID}); err != nil {
+		return err
+	}
 	return RecordDerivedQualifyingEvent(ctx, tx, contactID, *verdict.Qualifying, by)
 }
 

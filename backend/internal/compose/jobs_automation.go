@@ -10,7 +10,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -58,11 +57,5 @@ func (w *timeScanWorker) scanWorkspace(ctx context.Context, workspace ids.UUID) 
 	if err := scanner.ScanWorkspace(wsCtx, workspace); err != nil {
 		return err
 	}
-	// The lead first-response SLA and the qualify reminder are clock-triggered
-	// too and ride this pass rather than jobs of their own. Neither waits on
-	// the other: a failing SLA scan must not hold back the reminders.
-	return errors.Join(
-		scanLeadSLA(wsCtx, db, time.Now, w.log),
-		remindUnqualifiedLeads(wsCtx, db, time.Now, w.log),
-	)
+	return scanLeadSLA(wsCtx, db, time.Now, w.log)
 }

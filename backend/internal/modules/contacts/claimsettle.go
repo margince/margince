@@ -153,3 +153,30 @@ func (h Handlers) SettleConversationClaim(w http.ResponseWriter, r *http.Request
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// WithdrawClaimsTx dismisses the named claims that are still open and became
+// no task, inside the caller's transaction. A promise its promiser turned down
+// as a proposal no longer stands, so the customer's record stops saying we owe
+// it. A claim already settled, or one a task now carries, is left alone.
+func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error {
+	if len(claimIDs) == 0 {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM conversation_claim
+		 WHERE id = ANY($1) AND status = $2 AND task_activity_id IS NULL AND archived_at IS NULL
+		 ORDER BY id`, claimIDs, claimStatusOpen)
+	if err != nil {
+		return fmt.Errorf("read the claims to withdraw: %w", err)
+	}
+	open, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("read the claims to withdraw: %w", err)
+	}
+	for _, claim := range open {
+		if err := moveClaimStatus(ctx, tx, claim, claimStatusOpen, string(crmcontracts.SettleClaimRequestOutcomeDismissed)); err != nil {
+			return err
+		}
+	}
+	return nil
+}

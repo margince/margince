@@ -163,3 +163,24 @@ export const PillAndVerbPhone: Story = {
     </OverviewCard>
   ),
 };
+
+/** A title that opens its record wraps inside the card like a plain one, so
+ *  a long email subject stays readable. */
+export const LongLinkTitle: Story = {
+  name: "long title that opens its record",
+  render: () => (
+    <OverviewCard title="What was said" action={link("Full history")}>
+      <OverviewList>
+        <OverviewRow
+          title={
+            <Button variant="link">
+              Kritische Sicherheitslücke auf Webseiten - "node2shell2" und
+              Brokkoli-Exploit betreffen viele Installationen
+            </Button>
+          }
+          sub="Email · 26 Oct"
+        />
+      </OverviewList>
+    </OverviewCard>
+  ),
+};

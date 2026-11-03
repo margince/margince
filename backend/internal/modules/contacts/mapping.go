@@ -11,7 +11,6 @@ package contacts
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -28,7 +27,13 @@ import (
 // two surfaces read one mapping rather than each keeping their own.
 // codeRequired is the contract's machine code for a missing required field —
 // one spelling across every refusal in this module that means "you left it out".
-const codeRequired = "required"
+const (
+	codeRequired = "required"
+	// codeInvalidValue and codeInvalidKey are the field codes for a value
+	// outside its vocabulary and a catalog key of the wrong shape.
+	codeInvalidValue = "invalid_value"
+	codeInvalidKey   = "invalid_key"
+)
 
 type RequiredFieldError struct{ Field string }
 
@@ -55,6 +60,18 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 	}
 	v := ids.From[K](ids.UUID(*u))
 	return &v
+}
+
+// leadIDsArg maps the leads a request names to convert.
+func leadIDsArg(leads *[]openapi_types.UUID) []ids.LeadID {
+	if leads == nil {
+		return nil
+	}
+	out := make([]ids.LeadID, 0, len(*leads))
+	for _, lead := range *leads {
+		out = append(out, ids.From[ids.LeadKind](ids.UUID(lead)))
+	}
+	return out
 }
 
 // ContactCreationInput keeps request conversion shared by creation and its approval preview.
@@ -102,7 +119,8 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
-		CustomFields: req.AdditionalProperties,
+		CustomFields:   req.AdditionalProperties,
+		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
 	if req.Social != nil {
 		in.Social = *req.Social
@@ -110,7 +128,8 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	in.Address = req.Address
 	in.Emails = contactEmailInputs(req.Emails)
 	in.Phones = contactPhoneInputs(req.Phones)
-	return in, nil
+	in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source)
+	return in, err
 }
 
 // contactEmailInputs maps the contract's addresses onto the store's, for both
@@ -207,14 +226,15 @@ func companyVisibilityArg(v *crmcontracts.UpdateCompanyRequestVisibility) *strin
 
 func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64) UpdateContactInput {
 	in := UpdateContactInput{
-		FullName:     req.FullName,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		Title:        req.Title,
-		OwnerID:      idArg[ids.UserKind](req.OwnerId),
-		Visibility:   contactVisibilityArg(req.Visibility),
-		IfVersion:    ifVersion,
-		CustomFields: req.AdditionalProperties,
+		FullName:       req.FullName,
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		Title:          req.Title,
+		OwnerID:        idArg[ids.UserKind](req.OwnerId),
+		Visibility:     contactVisibilityArg(req.Visibility),
+		IfVersion:      ifVersion,
+		CustomFields:   req.AdditionalProperties,
+		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
 	if req.RelationshipMark != nil {
 		mark := relationshipmark.Mark(*req.RelationshipMark)
@@ -266,6 +286,8 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		LegalName:       req.LegalName,
 		Description:     req.Description,
 		Industry:        req.Industry,
+		Phone:           req.Phone,
+		Email:           emailArg(req.Email),
 		Source:          req.Source,
 		SourceSystem:    req.SourceSystem,
 		SourceID:        req.SourceId,
@@ -302,6 +324,8 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		IfVersion:             ifVersion,
 		CustomFields:          req.AdditionalProperties,
 		LinkedInURL:           req.LinkedinUrl,
+		Phone:                 req.Phone,
+		Email:                 emailArg(req.Email),
 		Visibility:            companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
@@ -376,17 +400,6 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
-	// A lead filled from a contact is the CRM's own contact, not an import: the
-	// replay an importer's namespace promises could not survive the contact
-	// changing between the two runs.
-	if req.ContactId != nil && req.SourceSystem != nil {
-		return CreateLeadInput{}, httperr.Validation(contactIDField, "unsupported",
-			"a lead filled from a contact cannot also name a source system; send one or the other")
-	}
-	// A blank name beside a contact is the contact's to fill.
-	if req.ContactId != nil && req.FullName != nil && strings.TrimSpace(*req.FullName) == "" {
-		req.FullName = nil
-	}
 	// A lead's name is optional, but one that is sent is a name and not spaces.
 	if req.FullName != nil {
 		name, err := httperr.RequireNonBlank(contactNameColumn, *req.FullName)
@@ -400,6 +413,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
+		Industry:            req.Industry,
 		LinkedInURL:         req.LinkedinUrl,
 		SourceSystem:        req.SourceSystem,
 		SourceID:            req.SourceId,
@@ -409,13 +423,11 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		Author:              author,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		CustomFields:        req.AdditionalProperties,
-		FromContactID:       idArg[ids.ContactKind](req.ContactId),
+		RequestedContactID:  idArg[ids.ContactKind](req.ContactId),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		in.Status = string(*req.Status)
@@ -462,6 +474,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
+		Industry:            req.Industry,
 		Source:              req.Source,
 		Origin:              req.Origin,
 		OriginDetail:        req.OriginDetail,
@@ -470,13 +483,11 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		ClearScoreOverride:  req.scoreNull || req.reasonNull,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)

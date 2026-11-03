@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The buying committee, drawn. Our owner is on the left, with a curve to every
-// seat on the buyer's side. A dashed seat marks every gap the coverage rules
-// find. A missing seat has no row in a list of what exists; here it is a ring
-// a reader can count.
+// The buying committee as two named sides. Our team lists who works the deal
+// and their jobs. Their team lists each seat with its role, engagement and last
+// message, then each seat the coverage rules find missing. A mark leads
+// every row, and the legend names every mark the card draws.
 
+import { type ReactNode, useId } from "react";
 import type { components } from "../../../api/schema";
+import { Badge } from "../../../design-system/atoms";
+import { Eyebrow } from "../../../design-system/eyebrow";
 import {
   SurfaceState,
   sectionState,
@@ -15,20 +18,17 @@ import { formatNumber } from "../../../format/format";
 import { type Locale, type Translator, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { navigate } from "../../../lib/router";
-import { committeeRows } from "./dealoverviewrows";
+import type { CommitteeColleague } from "./dealcommitteeteam";
+import {
+  type CommitteeGapRow,
+  committeeRows,
+  type SeatWroteOn,
+} from "./dealoverviewrows";
 import { committeeOf } from "./dealstanding";
 import "./dealcommittee.css";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageRisk = components["schemas"]["DealCoverageRisk"];
-
-// One row's height, in the picture's own units. The CSS sets the seat rows to
-// the same pitch (`--dc-pitch`), so every curve lands on its row's dot.
-const PITCH = 52;
-const LINK_WIDTH = 72;
-// From the owner's dot (centred in its 72px column, 16px wide) to the
-// picture's left edge, so every curve leaves from the dot itself.
-const FROM_DOT = 28;
 
 /** isGapRisk says whether a coverage finding means a seat is missing. */
 export function isGapRisk(risk: DealCoverageRisk): boolean {
@@ -40,35 +40,51 @@ export function ghostCount(risks: readonly DealCoverageRisk[]): number {
   return risks.filter(isGapRisk).length;
 }
 
-// What each gap row says under its name: the rule's own finding, never a role
-// nobody measured.
-const GAP_SUB: Partial<Record<DealCoverageRisk["kind"], MessageKey>> = {
-  coverage_gap: "deal.committee.gap.coverageGap",
-  single_threaded_theirs: "deal.committee.gap.singleThreaded",
+type Mark = "ours" | "engaged" | "quiet" | "gap";
+
+// The legend's order, which is the order the marks first appear on the card.
+const MARKS: readonly Mark[] = ["ours", "engaged", "quiet", "gap"];
+
+const MARK_WORDS: Record<Mark, MessageKey> = {
+  ours: "deal.committee.ourTeam",
+  engaged: "deal.committee.legendEngaged",
+  quiet: "deal.committee.legendQuiet",
+  gap: "deal.committee.legendGap",
 };
 
-type Link = Readonly<{ key: string; row: number; gap: boolean }>;
+/** Seats a stakeholder for one gap; `describedBy` names the gap's words. */
+export type AddSeat = (gap: CommitteeGapRow, describedBy: string) => ReactNode;
 
 /**
- * CommitteeReading draws the deal's owner against the buying committee, with
- * the legend and the count under it.
+ * CommitteeReading draws both sides of the deal with the legend under them.
+ * `addSeat` is absent for a reader who may not add a stakeholder.
  */
 export function CommitteeReading({
   coverage,
   withheld,
   pending,
-  owner,
+  team,
+  teamPending,
+  teamUnread,
   roleLabel,
+  wroteOn,
+  addSeat,
 }: Readonly<{
   coverage?: DealCoverage;
   withheld: boolean;
   pending: boolean;
-  // The deal owner's name, for our side of the picture.
-  owner?: string;
+  team: readonly CommitteeColleague[];
+  // The read of who works the deal is out, or failed, so the list may be short.
+  teamPending?: boolean;
+  teamUnread?: boolean;
   roleLabel: (role: string) => string;
+  wroteOn?: SeatWroteOn;
+  addSeat?: AddSeat;
 }>) {
   const t = useT();
-  const { seats, gaps } = committeeRows(coverage, t, roleLabel);
+  const oursId = useId();
+  const theirsId = useId();
+  const { seats, gaps } = committeeRows(coverage, t, roleLabel, wroteOn);
   const state = sectionState(
     // Undefined while pending: it is the only input sectionState reads as
     // "loading" rather than "unavailable".
@@ -82,88 +98,117 @@ export function CommitteeReading({
     seats.length + gaps.length,
     pending,
   );
-  // Only an engaged seat and a gap carry a curve. A line to a seat nobody has
-  // exchanged with would draw a conversation that never happened.
-  const links: Link[] = [
-    ...seats.flatMap((seat, row) =>
-      seat.engaged ? [{ key: seat.key, row, gap: false }] : [],
-    ),
-    ...gaps.map((gap, offset) => ({
-      key: gap.key,
-      row: seats.length + offset,
-      gap: true,
-    })),
-  ];
+  const shown: Record<Mark, boolean> = {
+    ours: team.length > 0,
+    engaged: seats.some((seat) => seat.engaged),
+    quiet: seats.some((seat) => !seat.engaged),
+    gap: gaps.length > 0,
+  };
+  const drawn = MARKS.filter((mark) => shown[mark]);
   return (
-    <SurfaceState
-      loadingLabel={t("deal.committee.title")}
-      state={state}
-      emptyLabel={t("deal.standing.committee.none")}
-    >
-      <div className="dc-graph">
-        <div className="dc-us">
-          <span className="dc-us-dot" aria-hidden="true" />
-          <span className="dc-us-words">
-            {owner && <span className="dc-us-name">{owner}</span>}
-            <span className="dc-us-role">{t("deal.committee.owner")}</span>
-          </span>
-        </div>
-        <CommitteeLinks rows={seats.length + gaps.length} links={links} />
-        <ul className="dc-seats">
-          {seats.map((seat) => (
-            <li key={seat.key} className="dc-seat">
-              <button
-                type="button"
-                className="dc-seat-open"
-                onClick={() => navigate({ screen: "contacts", id: seat.key })}
-              >
-                <span
-                  className={`dc-dot ${seat.engaged ? "dc-dot-engaged" : "dc-dot-quiet"}`}
-                  aria-hidden="true"
-                />
-                <span className="dc-seat-text">
-                  <span className="dc-seat-name">
-                    {seat.name ?? t("coverage.seatWithheld")}
-                  </span>
-                  <span className="dc-seat-sub">{seat.sub}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-          {gaps.map((gap) => {
-            const sub = GAP_SUB[gap.kind];
-            return (
-              <li
-                key={gap.key}
-                className="dc-seat dc-seat-gap"
-                title={sub && t(sub)}
-              >
-                <span className="dc-dot dc-dot-gap" aria-hidden="true" />
-                <span className="dc-seat-text">
-                  <span className="dc-seat-name">{gap.title}</span>
-                  {sub && <span className="dc-seat-sub">{t(sub)}</span>}
+    <div className="dc-committee">
+      <div className="dc-sides">
+        <section className="dc-side" aria-labelledby={oursId}>
+          <Eyebrow as="h3" size="xxsmall" id={oursId}>
+            {t("deal.committee.ourTeam")}
+          </Eyebrow>
+          <ul className="dc-rows">
+            {team.map((colleague) => (
+              <li key={colleague.key} className="dc-row">
+                <MarkDot mark="ours" />
+                <span className="dc-row-text">
+                  <span className="dc-row-name">{colleague.name}</span>
+                  {colleague.jobs && (
+                    <span className="dc-row-sub">{colleague.jobs}</span>
+                  )}
+                  {colleague.carries && (
+                    <Badge tone="warning" wrap>
+                      {t("deal.committee.carriesContact")}
+                    </Badge>
+                  )}
                 </span>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+          {teamUnread && (
+            <p className="t-caption">{t("deal.committee.teamUnread")}</p>
+          )}
+          {!teamUnread && !teamPending && team.length === 0 && (
+            <p className="t-caption">{t("assignments.empty")}</p>
+          )}
+        </section>
+        <section className="dc-side" aria-labelledby={theirsId}>
+          <Eyebrow as="h3" size="xxsmall" id={theirsId}>
+            {t("deal.committee.theirTeam")}
+          </Eyebrow>
+          <SurfaceState
+            loadingLabel={t("deal.committee.title")}
+            state={state}
+            emptyLabel={t("deal.standing.committee.none")}
+          >
+            <ul className="dc-rows">
+              {seats.map((seat) => (
+                <li key={seat.key} className="dc-row">
+                  <button
+                    type="button"
+                    className="dc-seat-open"
+                    onClick={() =>
+                      navigate({ screen: "contacts", id: seat.key })
+                    }
+                  >
+                    <MarkDot mark={seat.engaged ? "engaged" : "quiet"} />
+                    <span className="dc-row-text">
+                      <span className="dc-row-name">
+                        {seat.name ?? t("coverage.seatWithheld")}
+                      </span>
+                      <span className="dc-row-sub">{seat.sub}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {gaps.map((gap) => (
+                <GapRow key={gap.key} gap={gap} addSeat={addSeat} />
+              ))}
+            </ul>
+          </SurfaceState>
+        </section>
       </div>
-      <ul className="dc-legend">
-        <li>
-          <span className="dc-swatch dc-swatch-engaged" />
-          {t("deal.committee.legendEngaged")}
-        </li>
-        <li>
-          <span className="dc-swatch dc-swatch-quiet" />
-          {t("deal.committee.legendQuiet")}
-        </li>
-        <li>
-          <span className="dc-swatch dc-swatch-gap" />
-          {t("deal.committee.legendGap")}
-        </li>
-      </ul>
-    </SurfaceState>
+      {drawn.length > 0 && (
+        <ul className="dc-legend" aria-label={t("deal.committee.legend")}>
+          {drawn.map((mark) => (
+            <li key={mark}>
+              <MarkDot mark={mark} />
+              {t(MARK_WORDS[mark])}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
+}
+
+function GapRow({
+  gap,
+  addSeat,
+}: Readonly<{ gap: CommitteeGapRow; addSeat?: AddSeat }>) {
+  const titleId = useId();
+  return (
+    <li className="dc-row dc-row-gap">
+      <MarkDot mark="gap" />
+      <span className="dc-row-text">
+        <span className="dc-row-name" id={titleId}>
+          {gap.title}
+        </span>
+        {addSeat?.(gap, titleId)}
+      </span>
+    </li>
+  );
+}
+
+// The mark is the picture. The words beside it and the legend say what it
+// means, so a reader of the text alone loses nothing.
+function MarkDot({ mark }: Readonly<{ mark: Mark }>) {
+  return <span className={`dc-dot dc-dot-${mark}`} aria-hidden="true" />;
 }
 
 /**
@@ -188,39 +233,4 @@ export function committeeFoot(
     }),
     warn: committee.gaps > 0 || committee.named <= 1,
   };
-}
-
-// The curves from our owner to the seats. Decorative: every seat is a row
-// beside it.
-function CommitteeLinks({
-  rows,
-  links,
-}: Readonly<{ rows: number; links: readonly Link[] }>) {
-  // Two rows at least, so our owner's name has room under the dot; the
-  // seats are centred in that height, and so are their curves.
-  const height = Math.max(rows, 2) * PITCH;
-  const fromY = height / 2;
-  const top = (height - rows * PITCH) / 2;
-  const mid = LINK_WIDTH / 2;
-  return (
-    <svg
-      className="dc-links"
-      viewBox={`0 0 ${LINK_WIDTH} ${height}`}
-      width={LINK_WIDTH}
-      height={height}
-      aria-hidden="true"
-      focusable="false"
-    >
-      {links.map((link) => {
-        const toY = top + link.row * PITCH + PITCH / 2;
-        return (
-          <path
-            key={link.key}
-            className={link.gap ? "dc-link dc-link-gap" : "dc-link"}
-            d={`M${-FROM_DOT} ${fromY} C${mid} ${fromY} ${mid} ${toY} ${LINK_WIDTH} ${toY}`}
-          />
-        );
-      })}
-    </svg>
-  );
 }

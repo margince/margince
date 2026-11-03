@@ -68,3 +68,37 @@ func TestCompanyMatchKeysRefuseWhatIsNotACompany(t *testing.T) {
 		}
 	}
 }
+
+// A name's legal form is the tail NormalizeCompanyName strips, in one spelling.
+func TestALegalFormIsReadInOneSpelling(t *testing.T) {
+	for _, tc := range []struct{ name, want string }{
+		{"Acme GmbH", "gmbh"},
+		{"Acme G.m.b.H.", "gmbh"},
+		{"SIMIO GmbH & Co. KG", "gmbh & co kg"},
+		{"Acme Inc", "inc"},
+		{"Acme", ""},
+		{"Co", ""},
+	} {
+		if got := companyLegalForm(tc.name); got != tc.want {
+			t.Errorf("companyLegalForm(%q) = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// Two legal forms name two companies. A form missing on one side does not.
+func TestOnlyADifferentLegalFormNamesAnotherEntity(t *testing.T) {
+	for _, tc := range []struct {
+		employer, account string
+		another           bool
+	}{
+		{"Acme GmbH", "Acme Inc", true},
+		{"Acme GmbH", "Acme", false},
+		{"Acme", "Acme Inc", false},
+		{"Acme GmbH", "ACME G.m.b.H.", false},
+	} {
+		account := companyCandidate{legalForm: companyLegalForm(tc.account)}
+		if got := account.namesAnotherEntity(companyLegalForm(tc.employer)); got != tc.another {
+			t.Errorf("%q at %q: names another entity = %v, want %v", tc.employer, tc.account, got, tc.another)
+		}
+	}
+}

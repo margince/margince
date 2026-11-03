@@ -24,9 +24,11 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -45,8 +47,11 @@ type StagedApproval struct {
 	Status string `json:"status"`
 	// Summary is the one line the inbox shows a human. Absent on a staging that
 	// never wrote one, rather than filled with a restatement of the kind.
-	Summary    string `json:"summary,omitempty"`
-	ProposedBy string `json:"proposed_by"`
+	Summary string `json:"summary,omitempty"`
+	// SummaryParts is Summary taken apart: the sentence and each field value.
+	// Absent where Summary is absent or withheld, or is a sentence alone.
+	SummaryParts *crmcontracts.ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	ProposedBy   string                             `json:"proposed_by"`
 	// TargetType and TargetID are the record the staged change acts on, absent
 	// together for a proposal that names none.
 	//
@@ -68,6 +73,24 @@ type StagedApproval struct {
 	DiffHash       string           `json:"diff_hash,omitempty"`
 	Evidence       []StagedEvidence `json:"evidence,omitempty"`
 	ProposedChange json.RawMessage  `json:"proposed_change,omitempty"`
+	// TargetLabel is what the target was called when the change was staged,
+	// the name the decision is taken against.
+	TargetLabel string `json:"target_label,omitempty"`
+	// OnBehalfOf is the seat the proposer acted for. read_approval names them.
+	OnBehalfOf *RecordOwner `json:"on_behalf_of,omitempty"`
+	// Changes, Details and Effects are what the inbox card shows approving
+	// does. read_approval carries them while the change is pending and its
+	// preview is ready.
+	Changes []FieldChange   `json:"changes,omitempty"`
+	Details []PreviewDetail `json:"details,omitempty"`
+	Effects []PreviewEffect `json:"effects,omitempty"`
+	// PreviewState is the card preview's state, and PreviewNote the card's
+	// sentence for one that is not ready, such as who must decide it instead.
+	PreviewState string `json:"preview_state,omitempty"`
+	PreviewNote  string `json:"preview_note,omitempty"`
+	// Preview is the card's preview as the engine answered it, which
+	// read_approval puts in words.
+	Preview *crmcontracts.ApprovalPreview `json:"-"`
 }
 
 // StagedEvidence is one thing a proposal was read out of. It travels with the
@@ -126,7 +149,7 @@ func RegisterApprovalTools(r *Registry, inbox ApprovalInbox) {
 		return
 	}
 	r.Register(listApprovalsTool{inbox: inbox})
-	r.Register(readApprovalTool{inbox: inbox})
+	r.Register(readApprovalTool{inbox: inbox, seats: r.seats, language: r.language})
 	r.Register(decideApprovalTool{inbox: inbox})
 	r.Register(decideBundleTool{inbox: inbox})
 	r.Register(decideApprovals{})
@@ -170,6 +193,9 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 			"cursor":{"type":"string","description":"next_cursor from a previous page."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ApprovalPage](),
+		// The queue's card answers each row through decide_approvals, as the
+		// one-proposal card does.
+		UI: &mcp.ToolUI{ResourceURI: apps.ApprovalQueueURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -202,7 +228,11 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 
 // --- read_approval (🟢 read) ---
 
-type readApprovalTool struct{ inbox ApprovalInbox }
+type readApprovalTool struct {
+	inbox    ApprovalInbox
+	seats    SeatNamer
+	language baselanguage.Resolver
+}
 
 type readApprovalArgs struct {
 	StagedActionID ids.UUID `json:"staged_action_id"`
@@ -235,7 +265,30 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
+	reading := ReadPreview(summaryIn(ctx, t.language).lang, staged.Preview)
+	staged.Changes, staged.Details, staged.Effects = reading.Changes, reading.Details, reading.Effects
+	staged.PreviewState, staged.PreviewNote = reading.State, reading.Note
+	if staged.OnBehalfOf != nil {
+		staged.OnBehalfOf = t.nameSeat(ctx, staged.OnBehalfOf.ID)
+	}
 	return json.Marshal(staged)
+}
+
+// nameSeat names the seat an approval was proposed for. A failed lookup
+// leaves the id and says so, as an unnamed record owner does.
+func (t readApprovalTool) nameSeat(ctx context.Context, seat ids.UUID) *RecordOwner {
+	me, haveSeat := callerSeat(ctx)
+	behalf := &RecordOwner{ID: seat, IsYou: haveSeat && seat == me}
+	if t.seats == nil {
+		return behalf
+	}
+	names, err := t.seats(ctx, []ids.UUID{seat})
+	if err != nil {
+		noteWarning(ctx, CodeOwnerNamesUnavailable, ownerNamesUnavailableDetail)
+		return behalf
+	}
+	behalf.Name = names[seat]
+	return behalf
 }
 
 // --- decide_approval (🟢 write) ---
@@ -258,6 +311,7 @@ type decideApprovalArgs struct {
 func (t decideApprovalTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval", Title: "Approve or reject one staged action", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   decideApprovalCopy.render(),
 		Instead:       decideApprovalCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
@@ -304,6 +358,7 @@ type decideBundleAnswer struct {
 func (t decideBundleTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval_bundle", Title: "Approve or reject one act's proposals together", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   decideBundleCopy.render(),
 		Instead:       decideBundleCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,

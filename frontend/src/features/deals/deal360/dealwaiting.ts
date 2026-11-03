@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Whose move it is is decided by the server, not here. `DealStatusCard.reply_to`
-// is the inbound message nobody has answered, picked by the rule that also
-// decides whether the email box offers a reply. And it decides one direction
-// only. Its absence says the buyer is not waiting on us, never that we are
-// waiting on them.
-
 import type { components } from "../../../api/schema";
 import {
   type ActivityMoment,
@@ -14,33 +8,28 @@ import {
 } from "../../../format/activitywhen";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
-type Activity = components["schemas"]["Activity"];
 
-/**
- * When the unanswered message arrived, or null when nobody is waiting or the
- * day cannot be named.
- *
- * `next.evidence` carries the timestamp and comes from the same rule as
- * `reply_to`, so it is tried first. Otherwise the loaded timeline is searched
- * by id, which can miss: the page holds one page of rows. A miss answers null
- * rather than a guessed date.
- */
-export function waitingSince(
-  card: DealStatusCard,
-  timeline: readonly Activity[],
-): ActivityMoment | null {
-  if (!card.reply_to) {
+/** Source time for a confirmed current request in this deal's scope. */
+export function currentReplyTarget(card: DealStatusCard): string | null {
+  const basis = card.request_basis;
+  if (
+    !card.reply_to ||
+    basis?.kind !== "current_request" ||
+    basis.scope !== "deal" ||
+    basis.source_activity_id !== card.reply_to ||
+    (basis.source_precision !== "day" &&
+      basis.source_precision !== "instant") ||
+    !Number.isFinite(Date.parse(basis.source_at))
+  ) {
     return null;
   }
-  const fromMove = card.next?.evidence?.find(
-    (row) => row.activity_id === card.reply_to && row.occurred_at,
-  );
-  if (fromMove?.occurred_at) {
-    return { at: fromMove.occurred_at, precision: fromMove.occurred_precision };
-  }
-  const row = timeline.find((activity) => activity.id === card.reply_to);
-  return row
-    ? { at: row.occurred_at, precision: row.occurred_precision }
+  return card.reply_to;
+}
+
+export function waitingSince(card: DealStatusCard): ActivityMoment | null {
+  const basis = card.request_basis;
+  return currentReplyTarget(card) && basis
+    ? { at: basis.source_at, precision: basis.source_precision }
     : null;
 }
 
@@ -50,5 +39,8 @@ export function daysWaiting(
   asOf: string,
   record: string,
 ): number {
-  return -activityDaysAway(at, precision, Date.parse(asOf), record, record);
+  return Math.max(
+    0,
+    -activityDaysAway(at, precision, Date.parse(asOf), record, record),
+  );
 }

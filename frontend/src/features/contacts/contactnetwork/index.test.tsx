@@ -841,24 +841,48 @@ describe("using a route from the picture", () => {
     ).toBeTruthy();
   });
 
-  it("opens nothing on the reader's own node", async () => {
-    const user = userEvent.setup();
-    const { seatAnswered } = renderTab(drawnGraph(READER, "Demo Admin"));
+  // The lead is the best-ranked route, not a strong one. Its badge says the
+  // route's own band, in the words the map and the edge card say it in.
+  it("labels a weak best route as weak, never as strong", async () => {
+    const weak = drawnGraph(COLLEAGUE, "Sofia Meier");
+    renderTab({
+      ...weak,
+      routes: weak.routes?.map((route) => ({
+        ...route,
+        strength_bucket: "weak" as const,
+      })),
+    });
 
-    await user.click(await nodeOnMap("Demo Admin"));
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["contact.intro.useThisRoute"],
-      }),
+    expect(
+      await screen.findByText(en["co.routeIn.bandBadge.faint"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["co.routeIn.bandBadge.strong"])).toBeNull();
+  });
+
+  // Nobody asks themselves for an introduction. The reader's node is "You",
+  // like every other line on the tab, and its verb is the email they write.
+  it("names the reader's own node You and offers to write, not to ask", async () => {
+    const user = userEvent.setup();
+    const onWrite = vi.fn();
+    const { seatAnswered } = renderTab(
+      drawnGraph(READER, "Demo Admin"),
+      "en",
+      {},
+      { onWrite },
     );
+
+    await user.click(await nodeOnMap(en["contact.intro.heroYou"]));
     await seatAnswered;
     await act(async () => {});
 
     expect(
-      screen.queryByText(
-        en["contact.intro.askTitle"].replace("{name}", anchor.label),
-      ),
+      screen.queryByRole("button", { name: en["contact.intro.useThisRoute"] }),
     ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Demo Admin, / })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: en["compose.writeEmail"] }),
+    );
+    expect(onWrite).toHaveBeenCalledTimes(1);
   });
 });
 

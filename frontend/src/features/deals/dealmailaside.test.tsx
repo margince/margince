@@ -1,14 +1,22 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, useT } from "../../i18n";
 import { DealMailAside, lastMailColumn } from "./dealmailaside";
+
+// A fixed noon, so a day count never meets a midnight or a clock change.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-13T12:00:00Z"));
+});
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const DAY_MS = 86_400_000;
@@ -98,7 +106,7 @@ describe("DealMailAside", () => {
       screen
         .getByRole("link", { name: "View all activity" })
         .getAttribute("href"),
-    ).toBe("#/deals/d1");
+    ).toBe("/#/deals/d1");
     // ONE read, narrowed to this deal's mail and capped: the flyout is an
     // aside, and an aside that paged the whole timeline would be the page.
     expect(seen).toHaveLength(1);
@@ -175,7 +183,7 @@ function tableDeal(overrides: Partial<Deal>): Deal {
 // The column needs a translator, which only a component can ask for.
 function Cell({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
-  return <>{lastMailColumn(t).cell(deal)}</>;
+  return <>{lastMailColumn(t, UTC_ZONE).cell(deal)}</>;
 }
 
 describe("lastMailColumn", () => {
@@ -219,7 +227,7 @@ describe("lastMailColumn", () => {
   it("offers no sort", () => {
     let column: ReturnType<typeof lastMailColumn> | undefined;
     function Probe() {
-      column = lastMailColumn(useT());
+      column = lastMailColumn(useT(), UTC_ZONE);
       return null;
     }
     rtlRender(

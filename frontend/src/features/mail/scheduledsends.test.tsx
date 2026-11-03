@@ -79,7 +79,11 @@ type Call = {
   ifMatch: string | null;
 };
 
-function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
+function mount(
+  rows: Send[],
+  preview: PreviewFor = allowedPreview,
+  mailboxes: readonly unknown[] = [],
+) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -115,6 +119,11 @@ function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
           JSON.stringify({ ...moved, version: (moved?.version ?? 0) + 1 }),
           { headers: { "Content-Type": "application/json" } },
         );
+      }
+      if (url.pathname.endsWith("/connectors")) {
+        return new Response(JSON.stringify({ data: mailboxes }), {
+          headers: { "Content-Type": "application/json" },
+        });
       }
       if (isPreviewDoor(url.pathname)) {
         return new Response(JSON.stringify(preview(previewedAddresses(body))), {
@@ -288,14 +297,20 @@ it("pins a move to the version the row was drawn from", async () => {
   const user = userEvent.setup();
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
-  const picker = screen.getByLabelText(/New time for/);
+  const day = screen.getByRole("textbox", { name: /^New day for/ });
+  const time = screen.getByRole("textbox", { name: /^New time for/ });
   // Seeded from the send's own moment, so a rep who opens the control and saves
   // without touching it does not move the message.
-  expect((picker as HTMLInputElement).value).toMatch(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+  expect(day).toHaveProperty(
+    "value",
+    expect.stringMatching(/^\d{2}\/\d{2}\/\d{4}$/),
   );
-  await user.clear(picker);
-  await user.type(picker, "2026-09-02T08:30");
+  expect(time).toHaveProperty("value", expect.stringMatching(/^\d{2}:\d{2}$/));
+  await user.clear(day);
+  await user.type(day, "02/09/2026");
+  await user.clear(time);
+  await user.type(time, "08:30");
+  await user.tab();
   await user.click(screen.getByRole("button", { name: "Move message" }));
   const patch = calls.find((call) => call.method === "PATCH");
   expect(patch?.ifMatch).toBe("3");
@@ -327,6 +342,7 @@ it("refuses to move a message to nowhere", async () => {
   const { calls } = mount([WAITING]);
   await user.click(await screen.findByRole("button", { name: /Reschedule: / }));
   await user.clear(screen.getByLabelText(/New time for/));
+  await user.tab();
   expect(
     screen
       .getByRole("button", { name: "Move message" })
@@ -396,10 +412,22 @@ it("narrows to the held messages and hides the timeline", async () => {
   expect(screen.queryByText("The renewal quote")).toBeNull();
 });
 
-it("says nothing is scheduled with one sentence, not three", async () => {
+it("says nothing is scheduled once, and offers the way to write one", async () => {
+  mount([], allowedPreview, [
+    { id: "m1", provider: "gmail", status: "connected", can_backfill: true },
+  ]);
+  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
+  const write = await screen.findByRole("link", { name: "Write a message" });
+  expect(write.getAttribute("href")).toMatch(/#\/contacts$/);
+  // One heading for the empty page, not one per group.
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  expect(screen.getByText("Open a contact and choose Email.")).toBeTruthy();
+});
+
+it("offers no way to write a message without a mailbox to send from", async () => {
   mount([]);
-  expect(await screen.findByText("No scheduled messages yet.")).toBeTruthy();
-  expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Write a message" })).toBeNull();
 });
 
 // The queue says WHOSE decision stopped a message, in the composer's words.

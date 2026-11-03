@@ -161,3 +161,30 @@ func (e *Engine) estimateStep(ctx context.Context, tx pgx.Tx, task Task, step St
 	}
 	return step.Estimate(ctx, tx, estimateCap)
 }
+
+// boundedEstimate is the estimate a batch reads before a step's first rows. The
+// count only shows an operator how far the step has to go. One that cannot
+// finish within estimateLimit leaves the step unestimated and answers
+// measured=false. It does not fail every batch of the step. It runs in a
+// savepoint because a stopped statement aborts the transaction around it.
+func (e *Engine) boundedEstimate(ctx context.Context, tx pgx.Tx, task Task, step Step, p Progress) (estimate int64, capped, measured bool, err error) {
+	if task.Manual {
+		estimate, capped, err = e.estimateStep(ctx, tx, task, step, p)
+		return estimate, capped, err == nil, err
+	}
+	_, err = storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		if err := database.BoundStatement(ctx, nested, estimateLimit); err != nil {
+			return false, err
+		}
+		estimate, capped, err = step.Estimate(ctx, nested, estimateCap)
+		return err == nil, err
+	})
+	// SET LOCAL outlives a released savepoint; the batch keeps its own ceiling.
+	if bound := database.BoundStatement(ctx, tx, statementLimit); bound != nil {
+		return 0, false, false, bound
+	}
+	if storekit.IsQueryCanceled(err) && ctx.Err() == nil {
+		return 0, false, false, nil
+	}
+	return estimate, capped, err == nil, err
+}

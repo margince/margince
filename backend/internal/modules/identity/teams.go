@@ -22,6 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -155,61 +156,63 @@ func (s *Service) SetTeamMember(ctx context.Context, actor Identity, teamID, use
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
-			return err
-		}
-		// The team is locked for the write: an archive committing between
-		// this check and the insert would otherwise leave a member on a
-		// team nobody can see, holding authority the moment it is restored.
-		var teamExists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM team WHERE id = $1 AND archived_at IS NULL FOR UPDATE)`, teamID).Scan(&teamExists); err != nil {
-			return err
-		}
-		if !teamExists {
-			return apperrors.ErrNotFound
-		}
-		// Only a live, active human seat joins a team: an agent holds no
-		// team, and a suspended or deactivated member would carry the
-		// authority home the day they are reactivated.
-		var isAgent bool
-		var status string
-		err := tx.QueryRow(ctx, `SELECT is_agent, status FROM app_user WHERE id = $1 AND archived_at IS NULL`, userID).Scan(&isAgent, &status)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
-			return err
-		}
-		if isAgent {
-			return errAgentSeatHoldsNoRole
-		}
-		// An invited member joins: InviteUser itself puts one on teams at invite
-		// time (joinTeamsTx), so refusing an admin the correction afterwards
-		// would let a mis-typed invitation stand until the member redeems it.
-		// A suspended or deactivated member is still refused — their access is
-		// withdrawn, and a team grants record scope.
-		if on && status != userStatusActive && status != userStatusInvited {
-			return fmt.Errorf("%w: a suspended or deactivated member does not join a team; reactivate them first", apperrors.ErrConflict)
-		}
-		var tag pgconn.CommandTag
-		change := "member_removed"
-		if on {
-			change = changeMemberAdded
-			tag, err = tx.Exec(ctx, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)
-				ON CONFLICT (team_id, user_id) DO NOTHING`, teamID, userID)
-		} else {
-			tag, err = tx.Exec(ctx, `DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, teamID, userID)
-		}
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return nil
-		}
-		return s.recordTeamChange(ctx, tx, actor, teamID, &userID, change,
-			map[string]any{teamAuditKeyMember: userID, "on": !on},
-			map[string]any{teamAuditKeyMember: userID, "on": on})
+		return s.setTeamMemberTx(ctx, tx, actor, teamID, userID, on)
 	})
+}
+
+func (s *Service) setTeamMemberTx(ctx context.Context, tx pgx.Tx, actor Identity, teamID, userID ids.UUID, on bool) error {
+	if err := auth.Require(ctx, objectTeamAdmin, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := refuseTeamMembershipUnlessAdmin(actor, true); err != nil {
+		return err
+	}
+	if err := lockAuthorization(ctx, tx); err != nil {
+		return err
+	}
+	// Lock the team so an archive cannot leave membership on a hidden team.
+	var teamExists bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM team WHERE id = $1 AND archived_at IS NULL FOR UPDATE)`, teamID).Scan(&teamExists); err != nil {
+		return err
+	}
+	if !teamExists {
+		return apperrors.ErrNotFound
+	}
+	// Suspended and deactivated members may lose teams but cannot join them.
+	var isAgent bool
+	var status string
+	err := tx.QueryRow(ctx, `SELECT is_agent, status FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL`, userID).Scan(&isAgent, &status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if isAgent {
+		return errAgentSeatHoldsNoRole
+	}
+	// Invited members can prepare their access before first sign-in.
+	if on && status != userStatusActive && status != userStatusInvited {
+		return fmt.Errorf("%w: a suspended or deactivated member does not join a team; reactivate them first", apperrors.ErrConflict)
+	}
+	var tag pgconn.CommandTag
+	change := "member_removed"
+	if on {
+		change = changeMemberAdded
+		tag, err = tx.Exec(ctx, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)
+			ON CONFLICT (team_id, user_id) DO NOTHING`, teamID, userID)
+	} else {
+		tag, err = tx.Exec(ctx, `DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, teamID, userID)
+	}
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	return s.recordTeamChange(ctx, tx, actor, teamID, &userID, change,
+		map[string]any{teamAuditKeyMember: userID, "on": !on},
+		map[string]any{teamAuditKeyMember: userID, "on": on})
 }
 
 // errTeamMembershipRequiresAdmin refuses a change to who is on a team by a
@@ -230,6 +233,11 @@ func refuseTeamMembershipUnlessAdmin(actor Identity, changesMembership bool) err
 // recordTeamChange is the write shape's second half for every team change:
 // the audit row on the team and team.changed on the identity stream.
 func (s *Service) recordTeamChange(ctx context.Context, tx pgx.Tx, actor Identity, teamID ids.UUID, userID *ids.UUID, change string, before, after map[string]any) error {
+	if userID != nil {
+		if _, err := tx.Exec(ctx, `UPDATE app_user SET updated_at = now() WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: *userID}); err != nil {
+			return err
+		}
+	}
 	action := "update"
 	switch change {
 	case "created":

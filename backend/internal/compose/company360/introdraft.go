@@ -43,8 +43,11 @@ import (
 
 // IntroRequest names the introduction being asked for.
 type IntroRequest struct {
-	// ContactID is the contact to be introduced TO.
-	ContactID ids.ContactID
+	// ContactID is the contact to be introduced TO, or nil for somebody at the
+	// account the colleague has LinkedIn reach into.
+	ContactID *ids.ContactID
+	// Function narrows an ask with no contact to one function there.
+	Function *crmcontracts.LinkedInReachFunction
 	// ViaUserID is the colleague being asked.
 	ViaUserID ids.UserID
 	// DealID is the deal it is for, or the zero value for the account as a
@@ -113,6 +116,14 @@ func (s *Service) IntroRequestDraft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
+	if req.ContactID == nil {
+		return s.accountIntroDraft(ctx, companyID, active, req)
+	}
+	if req.Function != nil {
+		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
+			"company360: a function narrows an ask with no contact named, and this one names a contact: %w",
+			apperrors.ErrInvalidArgument)
+	}
 	var facts introFacts
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
@@ -141,11 +152,11 @@ func (s *Service) introFactsFor(
 	if err != nil {
 		return introFacts{}, err
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{req.ContactID})
+	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{*req.ContactID})
 	if err != nil {
 		return introFacts{}, err
 	}
-	who, known := identity[req.ContactID]
+	who, known := identity[*req.ContactID]
 	if !known {
 		// Not on this account, or not one this caller may see. The two answer
 		// the same, because telling them apart would confirm the contact exists.
@@ -180,7 +191,7 @@ func (s *Service) introFactsFor(
 	// so a German account was being asked in English. What the contact actually
 	// wrote is the signal every other draft here uses, and this read already
 	// has it: the same authorship-bound messages the role reading quotes.
-	said, err := ownWords(ctx, tx, companyID, []ids.ContactID{req.ContactID}, s.now().UTC())
+	said, err := ownWords(ctx, tx, companyID, []ids.ContactID{*req.ContactID}, s.now().UTC())
 	if err != nil {
 		return introFacts{}, err
 	}

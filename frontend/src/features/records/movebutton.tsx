@@ -18,6 +18,7 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { refreshSuggestedMoves, useCurrentMove } from "../../lib/currentmove";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -29,6 +30,7 @@ import { TaskDetailModal } from "../worklist/taskdetailmodal";
 // What a move must carry to be performed. Both producers' shapes satisfy it.
 export type PerformableMove = {
   action: string;
+  recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
 };
 
@@ -94,13 +96,15 @@ export function MoveButton({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [briefOpen, setBriefOpen] = useState(false);
+  const [briefId, setBriefId] = useState<string | null>(null);
   // This button's own drawer. Every other host of the meeting brief already
   // mounts one for its timeline; this one is a lone control on the deal card,
   // so a message cited in the brief it opens has nowhere else to go.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useRecordZone();
-  const [taskOpen, setTaskOpen] = useState(false);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const openTask = useCurrentMove<string>(setTaskId);
+  const openBrief = useCurrentMove<string>(setBriefId);
   const canUpdateTask = useCan("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...taskRefreshKeys,
@@ -122,6 +126,7 @@ export function MoveButton({
         t,
       );
     },
+    onError: () => refreshSuggestedMoves(queryClient),
     onSuccess: () => {
       if (dealId) {
         queryClient.invalidateQueries({ queryKey: ["deal-status", dealId] });
@@ -154,14 +159,23 @@ export function MoveButton({
       if (!activityId) return null;
       return (
         <>
-          <Button onClick={() => setTaskOpen(true)}>
+          <Button
+            pending={openTask.isPending}
+            onClick={() =>
+              openTask.mutate({
+                receipt: move.recommendation,
+                operand: activityId,
+              })
+            }
+          >
             {t("deal360.openTask")}
           </Button>
-          {taskOpen && (
+          <ErrorLine error={openTask.error} />
+          {taskId && (
             <TaskDetailModal
-              activityId={activityId}
+              activityId={taskId}
               readOnly={!canUpdateTask}
-              onClose={() => setTaskOpen(false)}
+              onClose={() => setTaskId(null)}
               update={taskUpdate}
             />
           )}
@@ -199,6 +213,7 @@ export function MoveButton({
           dealId={dealId}
           meetingId={activityId}
           recipients={recipientsOf(move)}
+          recommendation={move.recommendation}
         />
       );
     case "open_meeting_brief":
@@ -207,14 +222,24 @@ export function MoveButton({
       }
       return (
         <>
-          <Button variant="ai" onClick={() => setBriefOpen(true)}>
+          <Button
+            variant="ai"
+            pending={openBrief.isPending}
+            onClick={() =>
+              openBrief.mutate({
+                receipt: move.recommendation,
+                operand: activityId,
+              })
+            }
+          >
             <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
+          <ErrorLine error={openBrief.error} />
           <ContactMeetingBrief
-            activityId={activityId}
-            open={briefOpen}
-            onClose={() => setBriefOpen(false)}
+            activityId={briefId ?? activityId}
+            open={briefId !== null}
+            onClose={() => setBriefId(null)}
             onOpenEmail={setOpenEmail}
           />
           <OpenEmailDrawer
@@ -235,37 +260,55 @@ function FollowUpDraft({
   dealId,
   meetingId,
   recipients,
+  recommendation,
 }: Readonly<{
+  recommendation?: components["schemas"]["RecommendationReceipt"];
   dealId?: string;
   meetingId: string;
   recipients: readonly string[];
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [contact, ...alsoTo] = recipients;
+  const [target, setTarget] = useState<{
+    dealId?: string;
+    meetingId: string;
+    recipients: readonly string[];
+  } | null>(null);
+  const check = useCurrentMove<NonNullable<typeof target>>(setTarget);
+  const selected = target ?? { dealId, meetingId, recipients };
+  const [contact, ...alsoTo] = selected.recipients;
   if (contact === undefined) return null;
   return (
     <>
-      <Button variant="ai" onClick={() => setOpen(true)}>
+      <Button
+        variant="ai"
+        pending={check.isPending}
+        onClick={() =>
+          check.mutate({
+            receipt: recommendation,
+            operand: { dealId, meetingId, recipients },
+          })
+        }
+      >
         <Sparkles aria-hidden />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
-      {open && (
+      <ErrorLine error={check.error} />
+      {target && (
         <ComposeModal
           entityType="contact"
           entityId={contact}
           contactId={contact}
-          followUp={{ alsoTo, aboutActivityId: meetingId }}
+          followUp={{ alsoTo, aboutActivityId: selected.meetingId }}
           kind="email"
           intent={t("contact.composer.intentFollowUp")}
           draftOnOpen
           open
-          onClose={() => setOpen(false)}
+          onClose={() => setTarget(null)}
           onSent={() => {
-            if (dealId) {
+            if (selected.dealId) {
               void queryClient.invalidateQueries({
-                queryKey: ["deal-status", dealId],
+                queryKey: ["deal-status", selected.dealId],
               });
             }
             void queryClient.invalidateQueries({ queryKey: ["worklist"] });

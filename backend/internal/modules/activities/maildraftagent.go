@@ -80,7 +80,7 @@ func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, ancho
 	content := draft.content
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
 		                        bcc_addresses, subject, body, html_body, agent_drafted, grounding)
 		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, true, $%d::jsonb)
@@ -94,7 +94,8 @@ func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, ancho
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(groundingColumn(draft.grounding))), args...)
+		arg(groundingColumn(draft.grounding)))
+	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The conflict target held and the WHERE refused: the draft there is

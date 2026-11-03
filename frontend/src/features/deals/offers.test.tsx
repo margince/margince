@@ -216,7 +216,9 @@ describe("OfferScreen", () => {
     stubOffer(baseOffer);
     render(<OfferScreen id="o-1" />);
     expect(await screen.findByText("ANG-2026-0007")).toBeTruthy();
-    expect(screen.getByText("draft")).toBeTruthy();
+    // The status in the reader's words, never the wire code.
+    expect(screen.getByText("Draft")).toBeTruthy();
+    expect(screen.queryByText("draft")).toBeNull();
     // 100000 minor EUR net, 19000 tax, 119000 gross (en-GB Intl formatting).
     expect(screen.getByText("€1,000.00")).toBeTruthy();
     expect(screen.getByText("€190.00")).toBeTruthy();
@@ -731,7 +733,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/send");
     expect(calls[0].ifMatch).toBe("3");
-    expect(await screen.findByText("sent")).toBeTruthy();
+    expect(await screen.findByText("Sent")).toBeTruthy();
     // Once sent, the send action and the draft-only affordances disappear.
     expect(screen.queryByTestId("send-offer")).toBeNull();
     expect(screen.queryByTestId("edit-offer-header")).toBeNull();
@@ -783,7 +785,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/accept");
     expect(calls[0].ifMatch).toBe("3");
-    expect(await screen.findByText("accepted")).toBeTruthy();
+    expect(await screen.findByText("Accepted")).toBeTruthy();
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["deal", "d-1"] }),
     );
@@ -811,7 +813,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0].url).toContain("/offers/o-1/reject");
     expect(calls[0].body).toMatchObject({ reason: "budget cut" });
-    expect(await screen.findByText("rejected")).toBeTruthy();
+    expect(await screen.findByText("Rejected")).toBeTruthy();
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ["deal", "d-1"] }),
     );

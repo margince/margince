@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-var homeRepairVersion = "2:" + activities.SettlementRepairVersion + ":" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
+var homeRepairVersion = "3:" + activities.SettlementRepairVersion + ":" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
 
 const (
 	repairSourceTask       = "task"
@@ -110,7 +110,13 @@ func homeRepairReview(scope homeRepairScope, asOf time.Time) (datatask.ReviewReq
 }
 
 func homeRepairDigest(review datatask.ReviewRequest) (string, error) {
-	var scope homeRepairScope
+	return reviewDigest[homeRepairScope](review)
+}
+
+// reviewDigest names a reviewed plan by its canonical form, so a scope that
+// decodes to the same plan always has the same digest. S is the task's scope.
+func reviewDigest[S any](review datatask.ReviewRequest) (string, error) {
+	var scope S
 	if err := json.Unmarshal(review.Scope, &scope); err != nil {
 		return "", err
 	}
@@ -169,7 +175,7 @@ func validateHomeRepairItemTx(ctx context.Context, tx pgx.Tx, expected homeRepai
 	if expected.Source != "" && expected.Source != repairSourceTask {
 		return apperrors.ErrInvalidArgument
 	}
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
 	task, err := activities.HomeRepairTaskTx(ctx, tx, expected.ID)
@@ -182,6 +188,12 @@ func validateHomeRepairItemTx(ctx context.Context, tx pgx.Tx, expected homeRepai
 	}
 	if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
 		return apperrors.ErrConflict
+	}
+	if decision.Action == repairArchiveReminder {
+		return auth.Require(ctx, "activity", principal.ActionDelete)
+	}
+	if decision.Action == repairNormalizeTask {
+		return auth.Require(ctx, "activity", principal.ActionUpdate)
 	}
 	return nil
 }

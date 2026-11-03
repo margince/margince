@@ -63,6 +63,8 @@ export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(PG_POR
 # clone is copied from that template — see bench_db in scripts/lib-testdb.sh.
 BENCH_DB_NAME                ?= margince_bench
 BENCH_DAILY_DB_NAME          ?= margince_bench_daily
+BENCH_DAILY_TEST             ?= TestDailyUseBudgets
+BENCH_BACKLOG_DB_NAME        ?= margince_bench_backlog
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
 export MARGINCE_TEST_REDIS_DB ?= 15
@@ -563,11 +565,21 @@ bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over 
 # cache_statement is pgx's default, which the API's pool keeps and the test pool
 # overrides: without it no generic plan can appear. `|| exit` stops a failed bench_db.
 bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
 	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
 	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
-	  $(GO) test -tags "integration bench" -run "^TestDailyUseBudgets$$" -count=1 -v -timeout 120m ./internal/compose/integration'
+	  $(GO) test -tags "integration bench" -run "^$(BENCH_DAILY_TEST)$$" -count=1 -v -timeout 120m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
+
+# The Worklist over a synthetic backlog past every lane bound, on a small daily
+# corpus: the stage 0 measurement of the Worklist redesign. It records nothing.
+# MARGINCE_BENCH_BACKLOG_SIZES picks the candidate counts (default 100,1000,10000).
+bench-worklist-backlog: composition ## Worklist first page, walk and whole-source enumeration over a growing synthetic backlog (needs db-up; leaves margince_bench_backlog)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_BACKLOG_DB_NAME) && cd backend || exit; \
+	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
+	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
+	  $(GO) test -tags "integration bench" -run "^TestDailyWorklistBacklog$$" -count=1 -v -timeout 180m ./internal/compose/integration'
+	@$(GO) test -run '^$$' -bench '^BenchmarkRankingAWholeBacklog$$' -benchmem ./internal/compose/attention
 
 bench-daily-clean: ## Drop margince_bench_daily, the database bench-daily leaves behind
 	@bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'
@@ -693,8 +705,8 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 
 # Every file the settings registry is the source of: the settings tables in
-# docs/reference/configuration.md, config/margince.example.yaml, .env.example,
-# config/margince.schema.json and the routing $defs the ai module serves.
+# docs/reference/configuration.md, config/margince.example.yaml,
+# config/margince.defaults.yaml, .env.example, config/margince.schema.json and the routing $defs the ai module serves.
 # gates/configgenerated_test.go fails a stale one, and drift diffs them below.
 config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
@@ -710,7 +722,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
+	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.

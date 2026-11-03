@@ -193,7 +193,7 @@ func TestTheCohortRepairReachesMailUnderAnAliasAddedLater(t *testing.T) {
 			return err
 		}
 		return insertContactEmails(ctx, tx, ws, res.ContactID, "manual", "human:test",
-			[]ContactEmailInput{{Email: alias, EmailType: "work", Position: 1}}, storekit.RefuseErased)
+			[]ContactEmailInput{{Email: alias, EmailType: "work", Position: 1}}, storekit.RefuseErased, nil)
 	}); err != nil {
 		t.Fatal(err)
 	}

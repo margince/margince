@@ -16,6 +16,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -29,7 +30,7 @@ type AtRisk interface {
 	// so ten rows can be the survivors of a bounded fifty. Counting rows against
 	// the bound would read a truncated scan as a complete one — under-reporting,
 	// the one direction a work figure must never fail in.
-	Quiet(ctx context.Context) ([]RiskyDeal, bool, error)
+	Quiet(ctx context.Context, owners *storekit.OwnerSet) ([]RiskyDeal, bool, error)
 }
 
 // RiskyDeal is one deal the pipeline should worry about, and the ground it is
@@ -93,14 +94,7 @@ type QuietRelationship struct {
 	QuietDays int
 	// When they last spoke, so the card can date the silence, not only measure it.
 	LastAt time.Time
-	// What the relationship was WORTH before it went quiet, scored through the
-	// same relstrength.Compute the contact's page reads. The band comes back off
-	// that call rather than being derived here, so there is no second way to turn
-	// a score into the word a rep reads. Without it every lapsed contact reads
-	// alike, and a strong relationship going quiet is the row that most deserves
-	// telling apart from a cc who has drifted.
-	Strength relstrength.Score
-	// Whether money this reader can see still rests on this contact: a silence
-	// with a deal behind it is not the same work as one without.
+	// Recorded context stays available to optional-information consumers, not ranking.
+	Strength    relstrength.Score
 	HasOpenDeal bool
 }

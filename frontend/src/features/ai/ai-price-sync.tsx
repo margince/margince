@@ -14,6 +14,7 @@ import { Switch } from "../../design-system/switch";
 import { formatElapsed, useNow } from "../../format/now";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
+import { providerName } from "../../lib/ai-provider-names";
 import { useCan, useCanUpsert, useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
 import {
@@ -24,7 +25,6 @@ import {
 } from "../settings/rate-catalogue-refresh";
 import { ModelPriceDialog } from "../settings/rate-manual";
 import { ModelPriceSheet } from "../settings/rates";
-import { providerName } from "./ai-provider-names";
 import "./ai-settings.css";
 
 type PriceSyncRun = components["schemas"]["AiPriceSyncRun"];

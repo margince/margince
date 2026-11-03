@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { translate } from "../../i18n";
 import {
   jsonResponse,
   StoryProviders,
@@ -77,5 +78,53 @@ export const RemoveRefused: Story = {
     await expect(await screen.findByRole("alert")).toHaveTextContent(
       "This edge is the contact's current primary employment.",
     );
+  },
+};
+
+// A deal role reads in the reader's words, in the row and in its edit form,
+// never as the key the coverage rules count.
+export const StakeholderRoleInVietnamese: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [
+              {
+                ...employmentRel,
+                kind: "deal_stakeholder",
+                deal_id: "d-1",
+                company_id: undefined,
+                role: "economic_buyer",
+                is_current_primary: false,
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      { relationship: ["read", "update"] },
+    );
+    return (
+      <StoryProviders locale="vi">
+        <RelationshipRows scope={{ deal_id: "d-1" }} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const label = translate("vi", "co.roleLabel.economic_buyer");
+    const table = await within(canvasElement).findByRole("table");
+    await expect(
+      await within(table).findByRole("cell", { name: label }),
+    ).toBeVisible();
+    await expect(within(table).queryByText("economic_buyer")).toBeNull();
+    await userEvent.click(
+      within(table).getByRole("button", {
+        name: translate("vi", "record.edit"),
+      }),
+    );
+    const form = within(await screen.findByRole("dialog"));
+    await expect(
+      form.getByRole("textbox", { name: translate("vi", "rel.role") }),
+    ).toHaveValue(label);
   },
 };

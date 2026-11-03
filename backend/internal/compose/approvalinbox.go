@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -103,7 +104,11 @@ func (i approvalInbox) ReadApproval(ctx context.Context, stagedActionID ids.UUID
 	if err != nil {
 		return agents.StagedApproval{}, err
 	}
-	return stagedActionFrom(a, true), nil
+	out := stagedActionFrom(a, true)
+	if a.OnBehalfOf != nil {
+		out.OnBehalfOf = &agents.RecordOwner{ID: ids.UUID(*a.OnBehalfOf)}
+	}
+	return out, nil
 }
 
 // DecideApproval carries one contact's verdict to the engine.
@@ -157,8 +162,11 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		ExpiresAt:      a.ExpiresAt,
 		DecidedAt:      a.DecidedAt,
 	}
-	if a.Summary != nil {
+	// A withheld plan stays behind here too, whatever the wire carried.
+	withheld := approvalplan.Withheld(a.Preview)
+	if a.Summary != nil && !withheld {
 		out.Summary = *a.Summary
+		out.SummaryParts = a.SummaryParts
 	}
 	if a.DiffHash != nil {
 		out.DiffHash = *a.DiffHash
@@ -170,6 +178,13 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 	out.BundleID = optionalID(a.BundleId)
 	out.DecidedBy = optionalID(a.DecidedBy)
 	if !withPayload {
+		return out
+	}
+	if a.TargetLabel != nil {
+		out.TargetLabel = *a.TargetLabel
+	}
+	out.Preview = a.Preview
+	if withheld {
 		return out
 	}
 	out.ProposedChange = stagedPayload(a.ProposedChange)

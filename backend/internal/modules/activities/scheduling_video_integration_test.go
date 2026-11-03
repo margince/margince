@@ -195,4 +195,8 @@ func (acceptingConsent) CaptureBookingConsent(context.Context, ids.UUID, Booking
 	return MarketingNotRequested, nil
 }
 
+func (acceptingConsent) CaptureLeadBookingConsent(context.Context, ids.LeadID, BookingConsent) (MarketingOutcome, error) {
+	return MarketingNotRequested, nil
+}
+
 func (acceptingConsent) RecordBookingInquiry(context.Context, ids.UUID, ids.UUID) error { return nil }

@@ -182,7 +182,7 @@ func boundProbes(bound declaredBound) []boundProbe {
 
 func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(registry, seamProbeProvider{}, nil, nil, nil, nil, nil, nil)
+	RegisterCoreTools(registry, seamProbeProvider{}, nil, nil, nil, nil, nil)
 	RegisterRecordSearchTool(registry, seamProbeProvider{}, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
 		t.Error("search_records reached the engine with a limit its schema forbids")
 		return RecordSearchPage{}, nil

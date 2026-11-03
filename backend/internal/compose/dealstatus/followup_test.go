@@ -37,7 +37,7 @@ func TestAFollowUpOwedAfterAMeetingOutranksAnOpenTask(t *testing.T) {
 	if mv.Action != ActionDraftEmail {
 		t.Fatalf("action = %q, want the follow-up drafted ahead of the open task", mv.Action)
 	}
-	if named, ok := operandActivity(mv); !ok || named != met.ActivityID {
+	if named, ok := NamedActivity(mv); !ok || named != met.ActivityID {
 		t.Errorf("the move names %s, want the meeting %s", named, met.ActivityID)
 	}
 	if got := NamedContacts(mv); !slices.Equal(got, []ids.UUID{first, second}) {

@@ -322,6 +322,25 @@ func signatureNumbers(numbers ...string) func([]string) string {
 	return literal(mustJSON(map[string]any{"fields": fields}))
 }
 
+// signatureName answers a name scenario with its title, its employer and the
+// name object the reading reports, each quoting what the page prints.
+func signatureName(title, company string, name map[string]any) func([]string) string {
+	fields := []map[string]any{
+		{"field": "title", "value": title, "evidence_snippet": title, "confidence": 0.9},
+		{"field": "company_name", "value": company, "evidence_snippet": company, "confidence": 0.9},
+	}
+	return literal(mustJSON(map[string]any{"fields": fields, "name": name}))
+}
+
+// printedName is the name object for a signature line, with the order the
+// reading says it saw.
+func printedName(family, given, order, line string) map[string]any {
+	return map[string]any{
+		"family_name": family, "given_names": given, "middle": "", "order": order,
+		"evidence_snippet": line, "confidence": 0.9,
+	}
+}
+
 // extractionProofs covers the sites whose answer is values read off a page.
 func extractionProofs() map[string]judgelessProof {
 	return map[string]judgelessProof{
@@ -344,6 +363,21 @@ func extractionProofs() map[string]judgelessProof {
 			alsoWrong: []func([]string) string{
 				signatureNumbers("+49 175 5550142, +84 35 555 0143, +65 9555 0144, +66 97 555 0145"),
 			},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// A reading that splits by position swaps the two name columns.
+		"signature_prints_the_family_name_first": {
+			correct: signatureName("Procurement Manager", "Saigon Packaging Co.",
+				printedName("Đặng", "Khoa", "family_first", "Họ và tên: Đặng Khoa")),
+			wrong: signatureName("Procurement Manager", "Saigon Packaging Co.",
+				printedName("Khoa", "Đặng", "given_first", "Họ và tên: Đặng Khoa")),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"signature_prints_the_given_name_first": {
+			correct: signatureName("Leiterin Einkauf", "Albrecht Maschinenbau GmbH",
+				printedName("Albrecht", "Katrin", "given_first", "Vorname Nachname: Katrin Albrecht")),
+			wrong: signatureName("Leiterin Einkauf", "Albrecht Maschinenbau GmbH",
+				printedName("Katrin", "Albrecht", "family_first", "Vorname Nachname: Katrin Albrecht")),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		// The quoted reply's mobile is somebody else's, outside the signature.

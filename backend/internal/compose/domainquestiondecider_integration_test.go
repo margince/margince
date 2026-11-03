@@ -41,8 +41,10 @@ func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
 				for _, seat := range to {
 					addressed = append(addressed, seatEmail(t, seat))
 				}
-				mail := staffMail{sourceID: domain, from: "contact@" + domain, mailbox: e.Rep1,
-					to: addressed, cc: []string{seatEmail(t, e.Rep2)}, occurred: now.Add(-age)}
+				mail := staffMail{
+					sourceID: domain, from: "contact@" + domain, mailbox: e.Rep1,
+					to: addressed, cc: []string{seatEmail(t, e.Rep2)}, occurred: now.Add(-age),
+				}
 				captureStaffMail(t, e, mail)
 				mail.mailbox = e.Rep2
 				captureStaffMail(t, e, mail)
@@ -98,8 +100,10 @@ func TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow(t *testing.T
 	const domain = "deferred.example"
 	mail := func(id string, at time.Time) {
 		t.Helper()
-		captureStaffMail(t, e, staffMail{sourceID: id, from: "contact@" + domain, mailbox: e.Rep2,
-			to: []string{seatEmail(t, e.Rep1)}, occurred: at})
+		captureStaffMail(t, e, staffMail{
+			sourceID: id, from: "contact@" + domain, mailbox: e.Rep2,
+			to: []string{seatEmail(t, e.Rep1)}, occurred: at,
+		})
 	}
 	mail("deferred-1", now.Add(-2*time.Hour))
 	runVendorTriage(t, e, domain)

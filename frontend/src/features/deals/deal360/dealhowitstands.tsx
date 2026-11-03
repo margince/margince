@@ -21,6 +21,11 @@ import {
   useLocale,
   useT,
 } from "../../../i18n";
+import {
+  type LossReason,
+  lostReasonWords,
+  useLossReasons,
+} from "../../../lib/lossreasons.queries";
 import { dealRoleLabel } from "../../../lib/recordlabels";
 import { useRecordZone } from "../../../lib/recordzone";
 import { routeHash } from "../../../lib/router";
@@ -38,11 +43,15 @@ import {
   momentumOf,
   momentumTone,
 } from "./dealstanding";
+import { openDealVerdict } from "./dealverdict";
+import { currentReplyTarget } from "./dealwaiting";
 
 type Deal = components["schemas"]["Deal"];
 
 export type DealStandingHead = Readonly<{
   verdict: StandingVerdict;
+  // The card's own call, when it made one; the verdict says it in words.
+  standing?: string;
   sources: StandingSources;
   // The instant the verdict describes; absent, the page's own read.
   readAt?: string;
@@ -64,18 +73,30 @@ export function DealHowItStands({
   const zone = useRecordZone();
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
+  const closed = deal.status !== "open";
+  const open = openDealVerdict(head.verdict, head.standing, inputs, {
+    t,
+    locale,
+    zone,
+  });
+  const reasons = useLossReasons(deal.status === "lost").data;
+  const verdict = closedVerdict(deal, { t, locale, zone }, reasons) ?? open;
+  // A closed deal, or a fact that replaced the card's call, is read off the
+  // record now, not off the card's last read.
+  const fromRecords = closed || open !== head.verdict;
+  const readAt = fromRecords ? inputs.asOf : (head.readAt ?? inputs.asOf);
   return (
     <HowItStands
-      date={formatDayMonth(head.readAt ?? inputs.asOf, locale, zone)}
-      sources={head.sources}
-      verdict={head.verdict}
+      date={formatDayMonth(readAt, locale, zone)}
+      sources={fromRecords ? { by: "records" } : head.sources}
+      verdict={verdict}
       heroLayout="below"
       hero={
         <DealStageLadder
           deal={deal}
           stages={stages}
           variant="bars"
-          tone={ladderTone(deal, head.verdict.tone)}
+          tone={ladderTone(deal, verdict.tone)}
           subs={subs}
           advancing={ladder.advancing}
           advanceRefused={ladder.advanceRefused}
@@ -93,6 +114,34 @@ export function DealHowItStands({
       figures={<DealFigures inputs={inputs} />}
     />
   );
+}
+
+/**
+ * Won and lost are final, so a closed deal heads the card with its outcome and
+ * the day it came. That holds whatever the last reading of the open deal said.
+ * A lost deal says why under it. An open deal has no outcome to head with.
+ */
+export function closedVerdict(
+  deal: Pick<Deal, "status" | "closed_at" | "lost_reason" | "lost_reason_code">,
+  { t, locale, zone }: Words,
+  reasons?: readonly LossReason[],
+): StandingVerdict | undefined {
+  if (deal.status === "open") {
+    return undefined;
+  }
+  const lines = [
+    deal.closed_at
+      ? t("deal.standing.closedOn", {
+          date: formatDayMonth(deal.closed_at, locale, zone),
+        })
+      : undefined,
+    deal.status === "lost" ? lostReasonWords(deal, reasons) : undefined,
+  ].filter(Boolean);
+  return {
+    word: t(deal.status === "won" ? "deals.statusWon" : "deals.statusLost"),
+    sentence: lines.length > 0 ? lines.join(" · ") : undefined,
+    tone: deal.status === "won" ? "success" : "neutral",
+  };
 }
 
 // A won deal stands on a green rung and a lost one on a grey one, whatever
@@ -126,16 +175,25 @@ function useStageSubs(
 
 type Words = Readonly<{ t: Translator; locale: Locale; zone: string }>;
 
-function dealDims(inputs: DealStandingInputs, words: Words): StandingDim[] {
+// Momentum and risk read a deal still to be decided. Once it is won or lost
+// neither has anything left to say, and who sat on the deal is what remains.
+export function dealDims(
+  inputs: DealStandingInputs,
+  words: Words,
+): StandingDim[] {
   const { deal, coverage } = inputs;
+  const committee = coverageDim(
+    committeeOf(coverage.coverage, coverage.withheld),
+    coverage,
+    words,
+  );
+  if (deal.status !== "open") {
+    return [committee];
+  }
   return [
-    momentumDim(deal, words),
+    momentumDim(deal, new Date(inputs.asOf), words),
     riskDim(inputs, words),
-    coverageDim(
-      committeeOf(coverage.coverage, coverage.withheld),
-      coverage,
-      words,
-    ),
+    committee,
   ];
 }
 
@@ -149,7 +207,7 @@ export function riskDim(
   const base = { key: "risk", label: t("deal.standing.risk") };
   const closeDays = closeWords(deal, locale, zone, t).daysLeft;
   const signals = [
-    ...(card?.reply_to
+    ...(card && currentReplyTarget(card)
       ? [{ key: "reply", title: t("deal.standing.risk.replyOwed") }]
       : []),
     ...(closeTone(deal, closeDays) === "danger"
@@ -201,8 +259,12 @@ export function riskDim(
   };
 }
 
-function momentumDim(deal: Deal, { t, locale, zone }: Words): StandingDim {
-  const momentum = momentumOf(deal);
+function momentumDim(
+  deal: Deal,
+  asOf: Date,
+  { t, locale, zone }: Words,
+): StandingDim {
+  const momentum = momentumOf(deal, zone, asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
   const base = {
     key: "momentum",

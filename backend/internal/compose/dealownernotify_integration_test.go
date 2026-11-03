@@ -34,7 +34,7 @@ func (e *reconcileEnv) reassignAsTheProduct(t *testing.T, deal ids.UUID, to *ids
 func (e *reconcileEnv) tellPreviousOwner(t *testing.T, seat ids.UUID, id ids.ApprovalID) {
 	t.Helper()
 	err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
-		_, err := notices.NewStore(nil).CreateTx(e.Admin(), tx, approvalNoticeFor(seat, id, "Follow up", notices.Target{}))
+		_, err := notices.NewStore(nil).CreateTx(e.Admin(), tx, approvalNoticeFor(seat, id, "Follow up", nil, notices.Target{}))
 		return err
 	})
 	if err != nil {

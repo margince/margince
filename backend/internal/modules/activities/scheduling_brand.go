@@ -10,12 +10,13 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
-// SchedulingBrand exposes only the installation's public company identity.
+// SchedulingBrand exposes only the public identity of the entity a host works for.
 type SchedulingBrand interface {
-	PublicBookingBrand(context.Context) (string, *string, error)
+	PublicBookingBrand(context.Context, ids.UserID) (string, *string, error)
 }
 
 // WithSchedulingBrand binds installation branding without importing its owner.
@@ -31,12 +32,12 @@ func (h Handlers) WithSchedulingBrand(brand SchedulingBrand) Handlers {
 	return h
 }
 
-func (s *Store) brandSchedulingProfile(ctx context.Context, profile crmcontracts.SchedulingProfile) crmcontracts.SchedulingProfile {
+func (s *Store) brandSchedulingProfile(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) crmcontracts.SchedulingProfile {
 	profile.CompanyName, profile.LogoUrl = nil, nil
 	if s.schedulingBrand == nil {
 		return profile
 	}
-	name, logo, err := s.schedulingBrand.PublicBookingBrand(ctx)
+	name, logo, err := s.schedulingBrand.PublicBookingBrand(ctx, host)
 	if err != nil {
 		slog.WarnContext(ctx, "booking company branding unavailable", "err", err)
 		return profile

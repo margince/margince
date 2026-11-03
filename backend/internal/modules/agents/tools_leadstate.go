@@ -20,7 +20,8 @@ func (changeState) Spec() mcp.ToolSpec {
 			"trigger":{"description":"promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes"},
 			"evidence_note":{"description":"promote only"},
 			"company_id":{"description":"set_up_partner: the company"},
-			"partner_role":{"description":"set_up_partner, required: hosting, consulting or strategic"},
+			"partner_kinds":{"description":"set_up_partner, required: one or more of hosting, consulting, strategic or referral"},
+			"partner_role":{"description":"set_up_partner, deprecated: send partner_kinds"},
 			"reason":{"description":"demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail"}}}`),
 	}
 }
@@ -29,12 +30,13 @@ func (changeState) routeField() string { return actionArg }
 
 func (changeState) routeTargets() map[string]string {
 	return map[string]string{
-		"qualify":        "qualify_lead",
-		"promote":        "promote_lead",
-		"disqualify":     "disqualify_lead",
-		"demote":         "demote_lead",
-		"move_deal":      "progress_deal",
-		"move_project":   "advance_project_phase",
-		"set_up_partner": setUpPartnerToolName,
+		"qualify":               "qualify_lead",
+		"promote":               "promote_lead",
+		"disqualify":            "disqualify_lead",
+		"demote":                "demote_lead",
+		"move_deal":             "progress_deal",
+		"move_project":          "advance_project_phase",
+		"set_up_partner":        setUpPartnerToolName,
+		"merge_member_accounts": toolMergeMembers,
 	}
 }

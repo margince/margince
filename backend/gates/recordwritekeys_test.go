@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -46,6 +47,12 @@ var customFieldRequestTypes = map[string]reflect.Type{
 	"CreateProjectRequest":  reflect.TypeFor[crmcontracts.CreateProjectRequest](),
 	"UpdateProjectRequest":  reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
 }
+
+// freeFormBodies are open bodies that write no record directly: the fields are
+// a stranger's, read by name and kept as text. Each says what bounds it.
+var freeFormBodies = gatekit.Waive(map[string]string{
+	"WebFormFields": "a website form's own fields, read into lead fields by name; the rest become note text, bounded in count and length by webforms",
+})
 
 // openBodies collects every schema a body takes that admits extra keys. It looks
 // through a $ref, an allOf, oneOf or anyOf member, and an inline schema. An inline
@@ -120,10 +127,14 @@ func TestEveryBodyThatTakesExtraKeysIsListedHereAndTakesCustomFields(t *testing.
 		t.Fatal("no operation takes a body that admits extra keys; the walk no longer sees the contract")
 	}
 	for name, operations := range found {
+		if freeFormBodies.Waived(t, name) {
+			continue
+		}
 		if _, listed := customFieldRequestTypes[name]; !listed {
 			t.Errorf("%s admits extra keys (%s) and is not in customFieldRequestTypes. Only a body that takes custom fields may; close any other with additionalProperties: false", name, strings.Join(operations, ", "))
 		}
 	}
+	freeFormBodies.AssertAllMatched(t)
 	for name := range customFieldRequestTypes {
 		if _, used := found[name]; !used {
 			t.Errorf("%s is listed and no operation takes it as a body that admits extra keys", name)

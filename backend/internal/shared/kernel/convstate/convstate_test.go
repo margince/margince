@@ -71,7 +71,7 @@ func TestClassifyPlacesACorrespondenceOnTheAxis(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := convstate.Classify(now, c.lastIn, c.lastOut)
+			got := convstate.Classify(now, c.lastIn, c.lastOut, time.UTC)
 			if got.Band != c.wantBand {
 				t.Errorf("Band = %q, want %q", got.Band, c.wantBand)
 			}
@@ -98,7 +98,7 @@ func TestTheBandBoundariesAreExactlyWhereTheyAreWritten(t *testing.T) {
 		{days: convstate.WeeksMaxDays + 1, want: convstate.BandMonths},
 	}
 	for _, c := range cases {
-		got := convstate.Classify(now, daysAgo(c.days), time.Time{})
+		got := convstate.Classify(now, daysAgo(c.days), time.Time{}, time.UTC)
 		if got.Band != c.want {
 			t.Errorf("at %d days of silence Band = %q, want %q", c.days, got.Band, c.want)
 		}
@@ -108,7 +108,7 @@ func TestTheBandBoundariesAreExactlyWhereTheyAreWritten(t *testing.T) {
 // Clock skew between a mail host and this one is ordinary. A message dated in
 // the future just arrived; it is not negative silence.
 func TestAMessageDatedInTheFutureIsTreatedAsJustArrived(t *testing.T) {
-	got := convstate.Classify(now, now.AddDate(0, 0, 2), time.Time{})
+	got := convstate.Classify(now, now.AddDate(0, 0, 2), time.Time{}, time.UTC)
 
 	if got.SilenceDays != 0 {
 		t.Errorf("SilenceDays = %d, want 0", got.SilenceDays)
@@ -141,5 +141,18 @@ func TestTheAxisAnswersWhatADraftMayAssume(t *testing.T) {
 		if got := state.AssumesSharedMemory(); got != c.wantSharedMemory {
 			t.Errorf("%q: AssumesSharedMemory() = %v, want %v", c.band, got, c.wantSharedMemory)
 		}
+	}
+}
+
+func TestSilenceUsesTheInstallationCalendar(t *testing.T) {
+	zone, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 3, 28, 11, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
+	got := convstate.Classify(now, at, time.Time{}, zone)
+	if got.SilenceDays != 1 {
+		t.Fatalf("silence = %d, want 1 across the short day", got.SilenceDays)
 	}
 }

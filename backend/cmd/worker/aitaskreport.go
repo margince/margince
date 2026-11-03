@@ -142,9 +142,16 @@ func isNumberedPassage(line string) bool {
 func responseLine(call probeCall) string {
 	parts := []string{
 		fmt.Sprintf("in %d tok", call.Reply.InputTokens),
+	}
+	// The provider's own count of input it served from its prompt cache. Absent
+	// when it served none, so a zero never reads as a measurement.
+	if call.Reply.CachedTokens > 0 {
+		parts = append(parts, fmt.Sprintf("cached %d tok", call.Reply.CachedTokens))
+	}
+	parts = append(parts,
 		fmt.Sprintf("out %d tok%s", call.Reply.OutputTokens, capFlag(call)),
 		fmt.Sprintf("%d B", len(call.Reply.Text)),
-	}
+	)
 	if served := servedIdentity(call); served != "" {
 		parts = append(parts, "served="+served)
 	}

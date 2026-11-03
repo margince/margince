@@ -260,7 +260,7 @@ func (f *authorshipFixture) unmetForAssurance() int {
 	f.t.Helper()
 	var unmet int
 	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
-		subjects, err := AssuranceSubjects(f.Admin(), tx)
+		subjects, err := AssuranceSubjects(f.Admin(), tx, clocktest.Now(f.t), nil)
 		for _, s := range subjects {
 			if s.DealID == f.dealID.String() {
 				unmet = s.UnmetExitCriteria

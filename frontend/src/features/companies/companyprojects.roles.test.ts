@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { COMPANY_ROLES, roleKey } from "./companyprojects";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
+import { vi } from "../../i18n/vi";
+import {
+  COMPANY_ROLE_LABEL,
+  COMPANY_ROLES,
+  companyRoleLabel,
+} from "./companyprojects";
 
 describe("the roles a company holds on a project", () => {
   it("leads with partner, because the first role is the picker's default", () => {
@@ -13,17 +20,18 @@ describe("the roles a company holds on a project", () => {
     expect(COMPANY_ROLES).toContain("customer");
   });
 
-  it("names every role it offers", () => {
-    // A role with no label renders as a blank option, which is a choice a
-    // reader cannot make.
-    for (const role of COMPANY_ROLES) {
-      expect(roleKey(role)).toMatch(/^projectRole\./);
+  it("names every role in every language, each with its own words", () => {
+    for (const catalog of [en, de, vi]) {
+      const words = COMPANY_ROLES.map(
+        (role) => catalog[COMPANY_ROLE_LABEL[role]],
+      );
+      expect(words.every(Boolean)).toBe(true);
+      expect(new Set(words).size).toBe(COMPANY_ROLES.length);
     }
   });
 
-  it("does not silently call an unknown role a partner", () => {
-    // roleKey falls back, and the fallback is only safe while every role it can
-    // be handed is in the list above.
-    expect(new Set(COMPANY_ROLES.map(roleKey)).size).toBe(COMPANY_ROLES.length);
+  it("gives an unknown role no words rather than another role's", () => {
+    expect(companyRoleLabel("customer")).toBe("projectRole.customer");
+    expect(companyRoleLabel("reseller")).toBeUndefined();
   });
 });

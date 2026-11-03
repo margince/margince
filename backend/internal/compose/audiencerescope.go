@@ -159,6 +159,12 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	// dropping the scan watermark makes the thread due, and the next pass
 	// re-derives under the audience as it now stands (a still-live narrowed
 	// signal keeps its fingerprint, so the re-derivation cannot double it).
+	// Outside the narrowing arm: a reminder follows its mail either way. An
+	// opened mail otherwise keeps a reminder only its assignee reads.
+	if err := activities.RecomputeRequestReminderReachTx(
+		ctx, tx, ids.From[ids.ActivityKind](activityID)); err != nil {
+		return fmt.Errorf("audience-rescope: %w", err)
+	}
 	if threadKey != nil {
 		if err := markConversationDueTx(ctx, tx, *threadKey); err != nil {
 			return fmt.Errorf("audience-rescope: %w", err)

@@ -11,9 +11,9 @@ session, before the next reconnect.
 ## Turn the connector on
 
 In the **code**, the default is off. An installation whose deployment file has no `mcp` block serves
-none of these routes, and each one answers `404`. The
-[`config/margince.example.yaml`](../../config/margince.example.yaml) we ship turns the gate on. `make dev`
-makes `config/margince.yaml` from it, so a local stack serves `/mcp` with no edit. A deployment that
+none of these routes, and each one answers `404`. The dev file
+[`config/margince.dev.yaml`](../../config/margince.dev.yaml) turns the gate on, and `make dev` reads it
+over `config/margince.yaml`, so a local stack serves `/mcp` with no edit. A deployment that
 writes its own file must turn it on by name:
 
 ```yaml
@@ -84,8 +84,9 @@ Two things do not follow that rule:
 - **`enrich`** still needs a confirm first. The model names the URL the server calls. So if someone gets
   the model to name an address, the server reaches an address that no one with the credential picked.
   The risk is data that leaves the system, and what a passport may do does not limit that.
-- **What an installation sets a floor for.** A workspace can require a confirm for a verb and
-  record type, when it declares that in the contract. The verb then waits for a human.
+- **Automatic work with no passport.** An agent that acts for nobody keeps the declared tier of every verb,
+  and the contract's confirm-first floor for a verb and record type. That verb then waits for a human. A
+  passport that works as you does not meet that floor.
 
 ## Look at the surface
 

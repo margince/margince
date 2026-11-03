@@ -83,7 +83,7 @@ func (a *assembly) readPhaseHistory() error {
 		// unset: the move reads as unknown, never as the system.
 		if t.AuditLogID != nil {
 			if attribution, found := who[*t.AuditLogID]; found {
-				row.ChangedBy = principalAttribution(attribution)
+				row.ChangedBy = attribution.Wire()
 			}
 		}
 		data = append(data, row)
@@ -181,24 +181,4 @@ func (a *assembly) readHealth() error {
 	}
 	a.out.Health = &crmcontracts.Project360Health{Current: current}
 	return nil
-}
-
-// principalAttribution carries one resolved audit attribution onto the wire.
-func principalAttribution(a privacy.AuditAttribution) *crmcontracts.PrincipalAttribution {
-	out := &crmcontracts.PrincipalAttribution{
-		ActorType:      crmcontracts.PrincipalAttributionActorType(a.ActorType),
-		ActorId:        a.ActorID,
-		ActorName:      a.ActorName,
-		OnBehalfOfName: a.OnBehalfOfName,
-		AgentClient:    a.AgentClient,
-	}
-	if a.OnBehalfOf != nil {
-		id := openapi_types.UUID(*a.OnBehalfOf)
-		out.OnBehalfOf = &id
-	}
-	if a.PassportID != nil {
-		id := openapi_types.UUID(*a.PassportID)
-		out.PassportId = &id
-	}
-	return out
 }

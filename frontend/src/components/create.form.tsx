@@ -1,4 +1,10 @@
-import { type FormEvent, useEffect, useId, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { Button, Field } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
@@ -16,7 +22,11 @@ import {
   submittedValues,
   visibleFields,
 } from "./create.fields";
-import { OfferedNameControl, offeredHint } from "./create.offered";
+import {
+  OfferedNameControl,
+  offeredHint,
+  usePrefilledPick,
+} from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
@@ -41,6 +51,7 @@ export function RecordFormBody({
   fieldRefusals,
   existing,
   resolveExisting,
+  notice,
   onSubmit,
   onClose,
   intent,
@@ -59,6 +70,9 @@ export function RecordFormBody({
   // present, the "view existing" link renders under the error.
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
+  // A refusal the screen answers with its own verbs, drawn in place of the
+  // error line and the "view existing" link.
+  notice?: ReactNode;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
   onClose: () => void;
   intent: SubmitIntent;
@@ -67,6 +81,10 @@ export function RecordFormBody({
   const t = useT();
   const formId = useId();
 
+  // Laid over the reader's values where the form shows and sends them. Other
+  // fields write from the reader's own, so the box stays untouched until used.
+  const prefilled = usePrefilledPick(fields, values, rows);
+  const answers = { ...values, ...prefilled };
   // A field its showWhen hides neither renders nor holds Save hostage.
   const shown = visibleFields(fields, values);
   // A write must not bring back an answer to a question withdrawn in between.
@@ -114,7 +132,7 @@ export function RecordFormBody({
       refusals.size === 0 &&
       !refuseUnreadableField(event.currentTarget)
     )
-      onSubmit(submittedValues(fields, values), rows);
+      onSubmit(submittedValues(fields, answers), rows);
   });
   const stack = (
     <>
@@ -159,7 +177,13 @@ export function RecordFormBody({
             required={field.required}
             hint={
               field.offers
-                ? offeredHint(field.offers, field.key, values, t)
+                ? offeredHint(
+                    field.offers,
+                    field.key,
+                    answers,
+                    t,
+                    Object.hasOwn(prefilled, field.key),
+                  )
                 : field.hint
             }
             error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
@@ -171,7 +195,7 @@ export function RecordFormBody({
                   type={field.type === "email" ? "email" : undefined}
                   offers={field.offers}
                   control={control}
-                  values={values}
+                  values={answers}
                   setValues={setVisibleValues}
                 />
               ) : (
@@ -190,8 +214,9 @@ export function RecordFormBody({
       })}
       {/* Announced: nothing moves when a submit is refused, and the server's
           reason is the only thing saying why the form is still open. */}
-      {error && <ErrorLine>{error}</ErrorLine>}
-      {existing && resolveExisting && (
+      {notice}
+      {!notice && error && <ErrorLine>{error}</ErrorLine>}
+      {!notice && existing && resolveExisting && (
         <Button
           type="button"
           className="create-view-existing"

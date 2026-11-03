@@ -26,8 +26,8 @@ type Handlers struct {
 // relationship-strength seam (implemented by the contacts module, injected
 // by the composition layer — never a sibling import).
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
-func NewHandlers(db *database.DB, strength StrengthSource) Handlers {
-	return Handlers{store: NewStore(db, strength)}
+func NewHandlers(db *database.DB, strength StrengthSource, words SummaryWords) Handlers {
+	return Handlers{store: NewStore(db, strength).WithSummaryWords(words)}
 }
 
 func (h Handlers) ListSignals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListSignalsParams) {

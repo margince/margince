@@ -33,6 +33,19 @@ export function dealStatusLabel(value: string): MessageKey | undefined {
   return status && DEAL_STATUS_LABEL[status];
 }
 
+// Won reads success, lost reads danger, an open deal carries no status tone.
+export function dealStatusTone(
+  status: string,
+): "success" | "danger" | undefined {
+  if (status === "won") {
+    return "success";
+  }
+  if (status === "lost") {
+    return "danger";
+  }
+  return undefined;
+}
+
 // Each record is keyed by the contract's own union, so a value the wire adds
 // fails the build here until it is listed. `slipped` is not in the forecast
 // union: the report derives it from a claimed category and a close date.

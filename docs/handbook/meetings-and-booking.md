@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -32,17 +32,24 @@ Also called: resend invite, invitation failed, calendar refused.
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
+
+A move to a new start clears **Held** or **No-show**, so the meeting asks how it went again once the new time has passed.
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row.
+A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
+has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+and on the timeline. To say more, or to record a no-show, press **Add notes**:
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
-moved to today at an hour still to come is filed at the moment you save. Press **Canceled** on the
-row for a meeting that did not happen. Also called: mark a meeting held, meeting outcome, no-show,
-meeting happened.
+moved to today at an hour still to come is filed a minute before you save. **Held** and **No-show**
+wait for the meeting to start. A meeting with a date but no time waits until that day is over.
+
+Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince
+invitation takes only **Held** or **No-show**, because its notes and date follow the invitation.
+Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".
@@ -51,7 +58,7 @@ Also called: call off a meeting, delete a meeting.
 
 ### How do I offer a contact a few times to choose from?
 To offer times in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, then choose **Propose times**.
-1. Pick two or three **Times to offer** in the calendar.
+1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.
@@ -82,7 +89,13 @@ Margince checks your hours, notice and live calendar again each time a guest boo
 
 ## What your guest sees
 
-The Margince booking page shows your name from **Settings → Account**, and your company name and logo from the company profile. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
+The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
+
+Your booking link has the form `https://<your Margince address>/book/<code>`. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+
+When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
+
+A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

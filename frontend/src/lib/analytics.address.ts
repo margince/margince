@@ -9,8 +9,8 @@
 // from, and reaching `analytics.tsx` for that one function would pull every
 // report card and its queries into the morning's bundle.
 
-import { navigate } from "./router";
-import { currentParams } from "./urlstate";
+import { navigate, routeHash } from "./router";
+import { currentParams, hashWithParams, type UrlParams } from "./urlstate";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -22,7 +22,12 @@ import { currentParams } from "./urlstate";
 // reports against this type, so a section cannot be addressable here and
 // missing there.
 export const SECTIONS = [
+  "overview",
   "performance",
+  "sdr",
+  "leads",
+  "partners",
+  "conversion",
   "forecast",
   "reports",
   "targets",
@@ -59,10 +64,26 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "projects-gone-quiet": "delivery",
 };
 
+// Performance once held its four views behind one switch, named by `?view=`.
+// Each is a tab of its own now, and an address that still names one through the
+// switch opens it. Sales stayed under the old name, so it needs no entry.
+// A Map, because the key is whatever the address carries: an object literal
+// would answer `?view=constructor` with an inherited function.
+const SECTION_OF_VIEW: ReadonlyMap<string, Section> = new Map([
+  ["sdr", "sdr"],
+  ["leads", "leads"],
+  ["partners", "partners"],
+]);
+
 export function sectionFromAddress(
   segment: string | undefined,
-  fallback: Section = "performance",
+  fallback: Section = "overview",
+  view: string | null = null,
 ): Section {
+  if ((segment === undefined || segment === "performance") && view) {
+    const named = SECTION_OF_VIEW.get(view);
+    if (named) return named;
+  }
   if (isSection(segment)) {
     return segment;
   }
@@ -82,7 +103,23 @@ export function sectionFromAddress(
  * holding the rows their figure was read from.
  */
 export function openAnalyticsSection(section: Section): void {
-  navigate({ screen: "analytics", id: section }, currentParams());
+  // The dials travel, so every tab reads the period the reader chose. The old
+  // view switch does not: the section is the view now.
+  const params = new Map(currentParams());
+  params.delete("view");
+  navigate({ screen: "analytics", id: section }, params);
+}
+
+/**
+ * The address of one section asked with `dials` alone, for a door that
+ * carries the question it was read under rather than whatever the bar holds.
+ * A link, so a modified click opens it in a new tab.
+ */
+export function analyticsSectionHref(
+  section: Section,
+  dials: UrlParams,
+): string {
+  return hashWithParams(routeHash({ screen: "analytics", id: section }), dials);
 }
 
 /**

@@ -3,8 +3,10 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
@@ -72,7 +74,15 @@ export default defineConfig({
   // falls through the SPA fallback below to a dev index.html carrying `src=`
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
-  plugins: [react(), tailwindcss(), serveMcpApps(), pwa({ release })],
+  plugins: [
+    react(),
+    tailwindcss(),
+    // The Material files say 48px; without dimensions the glyph's `size` prop decides.
+    svgr({ svgrOptions: { dimensions: false } }),
+    serveMcpApps(),
+    materialSymbolsLicense(),
+    pwa({ release }),
+  ],
   // The release this bundle was built from, compiled IN.
   //
   // It has to be in the bundle rather than read at run time, because the reader
@@ -196,6 +206,33 @@ export default defineConfig({
     // against the port a human already has open — the app's port IS the
     // product's port, and the api's own is an implementation detail.
     proxy: {
+      "/r/": {
+        target: proxyTarget,
+        changeOrigin: false,
+        secure: false,
+        bypass: (request) =>
+          request.headers["sec-fetch-dest"] === "document"
+            ? "/index.html"
+            : undefined,
+        rewrite: (path) =>
+          path.replace(/^\/r\//, "/v1/public/record-previews/"),
+      },
+      // A booking page's path, split the way nginx.conf splits it: a browser
+      // navigation gets the app, any other fetch the api's booking preview.
+      "/book/": {
+        target: proxyTarget,
+        changeOrigin: false,
+        secure: false,
+        bypass: (request) =>
+          request.headers["sec-fetch-dest"] === "document"
+            ? "/index.html"
+            : undefined,
+        rewrite: (path) =>
+          path.replace(
+            /^\/book\/([A-Za-z0-9_-]+)\/?(?:\?.*)?$/,
+            "/v1/public/booking/$1/preview",
+          ),
+      },
       "/v1": { target: proxyTarget, changeOrigin: false, secure: false },
       // The claim surface (ADR-0105). It sits beside the probes rather than
       // under /v1 because it must answer before a company exists, so it
@@ -256,6 +293,10 @@ export default defineConfig({
     // seconds without a single wait failing, and the longest chain here is six —
     // so a five-second ceiling failed tests whose every assertion passed.
     testTimeout: TEST_TIMEOUT_MS,
+    // A hook pays for a screen's chunk, which keeps that cost out of a waiter.
+    // The 10s default sits under it: one screen import on a loaded suite ran
+    // past it. A hook doing a test's work earns a test's ceiling.
+    hookTimeout: TEST_TIMEOUT_MS,
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs

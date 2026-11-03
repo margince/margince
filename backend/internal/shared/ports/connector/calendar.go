@@ -42,19 +42,22 @@ type CalendarInterval struct {
 //
 //nolint:tagliatelle // the keys are already in meeting_invitation.appointment, written before anything tagged this; house style here would orphan every stored row
 type CalendarAppointment struct {
-	Cancel        bool      `json:"Cancel"`
-	EmailReminder bool      `json:"EmailReminder"`
-	ContactID     ids.UUID  `json:"ContactID"`
-	PassportID    ids.UUID  `json:"PassportID"`
-	CalendarID    string    `json:"CalendarID"`
-	EventID       string    `json:"EventID"`
-	RequestID     string    `json:"RequestID"`
-	Subject       string    `json:"Subject"`
-	Description   string    `json:"Description"`
-	Location      string    `json:"Location"`
-	Start         time.Time `json:"Start"`
-	End           time.Time `json:"End"`
-	Attendees     []string  `json:"Attendees"`
+	Cancel        bool     `json:"Cancel"`
+	EmailReminder bool     `json:"EmailReminder"`
+	ContactID     ids.UUID `json:"ContactID"`
+	// LeadID names the live lead a public booking landed on when no contact
+	// holds the booker's address. ContactID is then zero.
+	LeadID      ids.UUID  `json:"LeadID"`
+	PassportID  ids.UUID  `json:"PassportID"`
+	CalendarID  string    `json:"CalendarID"`
+	EventID     string    `json:"EventID"`
+	RequestID   string    `json:"RequestID"`
+	Subject     string    `json:"Subject"`
+	Description string    `json:"Description"`
+	Location    string    `json:"Location"`
+	Start       time.Time `json:"Start"`
+	End         time.Time `json:"End"`
+	Attendees   []string  `json:"Attendees"`
 	// VideoCall asks the provider for a conference on create only; an update
 	// keeps whatever conference the event already has.
 	VideoCall bool `json:"VideoCall"`

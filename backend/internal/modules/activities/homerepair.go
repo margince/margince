@@ -77,13 +77,15 @@ func readHomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact
 }
 
 // Initial selected-audience setup increments the row before its creation audit.
-// Only that creation version proves non-adoption; later writes and pins preserve work.
+// Only creation and traced metadata corrections prove non-adoption; other writes preserve work.
 func pristineRepairTaskSQL(alias string) string {
-	return storekit.SQLf(`(%[1]s.kind='task' AND NOT %[1]s.is_done AND %[1]s.archived_at IS NULL AND EXISTS (
+	return storekit.SQLf(`(%[1]s.kind='task' AND NOT %[1]s.is_done AND %[1]s.archived_at IS NULL AND %[1]s.remind_at IS NULL AND EXISTS (
  SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=%[1]s.id
  AND creation.action='create' AND creation.actor_type IN ('system','agent')
- AND %[1]s.version=CASE WHEN creation.after->>'audience'='selected' THEN 2 ELSE 1 END)
- AND NOT %s)`, alias, storekit.HeldTaskClause(alias))
+ AND %[1]s.version=CASE WHEN creation.after->>'audience'='selected' THEN 2 ELSE 1 END
+ + (SELECT count(*) FROM audit_log correction WHERE correction.entity_type='activity'
+ AND correction.entity_id=%[1]s.id AND %s))
+ AND NOT %s)`, alias, storekit.AutomaticTaskRepairAuditClause("correction"), storekit.HeldTaskClause(alias))
 }
 
 // RequestReminderPastHorizonTx uses the same age boundary as routine retirement.

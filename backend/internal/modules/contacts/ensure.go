@@ -32,7 +32,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -68,6 +67,7 @@ var ErrCounterpartySuppressed = errors.New("contacts: counterparty address is on
 
 // EnsureCounterpartyInput is one captured message's counterparty.
 type EnsureCounterpartyInput struct {
+	Admission func(context.Context, pgx.Tx, bool) error
 	// Replied says this counterparty wrote to US, rather than merely having
 	// been written to. It decides which acquisition the created record
 	// carries, and the two are different facts about the contact.
@@ -106,11 +106,6 @@ type EnsureCounterpartyInput struct {
 	// creates, never over an incumbent's reason.
 	NarrowedBecause NarrowingReason
 
-	// SkipLeadPromotion leaves a lead holding the address where it is. A human
-	// accepting the record for this sender sets it when they may not promote
-	// a lead themselves.
-	SkipLeadPromotion bool
-
 	// RelationshipMark marks the contact this ensure CREATES, and is set by
 	// CapturedBy. A contact that already exists is never marked here: the
 	// decision that made it, or whoever edited it, stands.
@@ -122,6 +117,10 @@ type EnsureCounterpartyInput struct {
 type EnsureCounterpartyResult struct {
 	ContactID      ids.ContactID
 	ContactCreated bool
+	// LeadID is the live lead holding the address when no live contact does.
+	// Nothing was written: the mail files on the lead, and the lead stays a
+	// lead until somebody converts it.
+	LeadID ids.LeadID
 	// CompanyID is the company this counterparty was ATTACHED to, never
 	// one this ensure made: capture no longer creates companies at all, so
 	// there is no created-flag to report. A domain with no company yet reports
@@ -132,8 +131,7 @@ type EnsureCounterpartyResult struct {
 	// sender's own, and its base — are registered to two different companies.
 	// The contact was attached to the lower id, which is the answer this path
 	// has always given; the report is what says the choice was between two.
-	// Raising it is the caller's job, for the same reason the contact
-	// conflict's is: a failure to raise must never cost the message.
+	// Its review commits with the employment; a failed write is retried with capture.
 	DomainSplit *DomainSplit
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an
@@ -163,7 +161,7 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
 	}
 	var res EnsureCounterpartyResult
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		res, err = s.EnsureCounterpartyTx(ctx, tx, in)
 		return err
@@ -184,6 +182,19 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 // The caller is responsible for the workspace GUC; it is already set by the
 // WithWorkspaceTx that produced tx.
 func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
+	res, err := s.ensureCapturedCounterparty(ctx, tx, in)
+	if err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
+	if in.Admission != nil {
+		if err := in.Admission(ctx, tx, res.ContactCreated); err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+	}
+	return res, nil
+}
+
+func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
 	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
@@ -206,42 +217,72 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
-	if !in.SuppressCompany && in.Domain != "" {
-		if err := s.ensureCompanyAndEmployment(ctx, tx, in, &res); err != nil {
+	if !res.LeadID.IsZero() {
+		return res, s.linkCapturedLead(ctx, tx, in, res.LeadID)
+	}
+
+	if !res.ContactCreated {
+		if err := s.resolveDomainEmployer(ctx, tx, in, &res); err != nil {
 			return EnsureCounterpartyResult{}, err
 		}
 	}
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
-	if in.SkipLeadPromotion {
-		return res, nil
-	}
-	if err := s.promoteLeadsByMailTx(ctx, tx, in, res.ContactID); err != nil {
-		return EnsureCounterpartyResult{}, err
-	}
 	return res, nil
 }
 
-// promoteLeadsByMailTx folds a lead holding this counterparty's address into
-// the contact the mail resolved to — the one it just minted, or one that
-// already stood beside the lead — once they have written to us.
-//
-// Only their own mail counts. Promotion needs engagement — a reply, a meeting,
-// or a seat's own judgement — and mail we sent that nobody answered is the cold outbound the trigger vocabulary
-// refuses, so it leaves the lead where it is. Their first reply reaches this
-// same call for the same contact and promotes it then, as an inbound_reply
-// with that message as the evidence.
-func (s *Store) promoteLeadsByMailTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, contactID ids.ContactID) error {
-	acquired, err := acquiredFromCaptureTx(ctx, tx, in.Replied, in.Email)
+func (s *Store) linkCapturedLead(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, lead ids.LeadID) error {
+	allowed, err := mayReadLead(ctx)
+	if err != nil || !allowed {
+		return err
+	}
+	if err := linkActivityToLead(ctx, tx, in.ActivityID, lead); err != nil {
+		return err
+	}
+	inbound, err := activityIsInbound(ctx, tx, in.ActivityID)
 	if err != nil {
 		return err
 	}
-	if acquired != AcquiredSubjectInitiated {
-		return nil
+	if inbound {
+		if s.leadQualifyTasks != nil {
+			if err := s.leadQualifyTasks.FileLeadReplyTx(ctx, tx, lead, in.ActivityID.UUID); err != nil {
+				return err
+			}
+		}
 	}
-	evidence := in.ActivityID
-	return s.promoteHeldLeadsTx(ctx, tx, contactID, TriggerInboundReply, &evidence, in.CapturedBy)
+	return nil
+}
+
+// CounterpartyLeadTx is the live lead an address names when no live contact
+// holds it. A machine door that would mint a contact for that address files on
+// the lead instead: somebody is a lead or a contact, never both. It takes the
+// address's identity locks, so call it before any lane lock.
+func CounterpartyLeadTx(ctx context.Context, tx pgx.Tx, email string) (ids.LeadID, error) {
+	holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
+	return leadWithoutContact(holders), err
+}
+
+// CounterpartyLead asks the same question without the locks, for a door that
+// decides only whether to put the question to a human.
+func (s *Store) CounterpartyLead(ctx context.Context, email string) (ids.LeadID, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return ids.LeadID{}, err
+	}
+	var lead ids.LeadID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: []string{email}})
+		lead = leadWithoutContact(holders)
+		return err
+	})
+	return lead, err
+}
+
+func leadWithoutContact(holders storekit.IdentityHolders) ids.LeadID {
+	if len(holders.Leads) == 0 || len(holders.Contacts) > 0 {
+		return ids.LeadID{}
+	}
+	return holders.Leads[0]
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a
@@ -270,18 +311,13 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		FullName: name, Emails: []string{in.Email}, ConsumerMail: consumerMail,
 		QueueNameCollisions: true,
 	}
-	match, err := DedupeContact(ctx, tx, candidate)
+	match, lead, err := resolveCapturedContact(ctx, tx, candidate, in.Email)
 	if err != nil {
 		return err
 	}
-	if match.Decision != DecisionExactCollision {
-		// The lane locks come only now, on the path that creates. The exact path
-		// goes on to lock the incumbent's row, and a writer holding a lane lock
-		// never waits on an existing contact (lockorder.go). The review lanes are
-		// read again under the lock, so a concurrent create is seen.
-		if match, err = lockLanesAndReview(ctx, tx, candidate); err != nil {
-			return err
-		}
+	if !lead.IsZero() {
+		res.LeadID = lead
+		return nil
 	}
 	if match.Decision == DecisionExactCollision {
 		res.ContactID = match.ContactID
@@ -317,17 +353,19 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	if acqErr != nil {
 		return acqErr
 	}
-	id, err := createContact(ctx, tx, match, ContactSpec{
-		FullName:    name,
-		FirstName:   nameColumn(parsed.First),
-		LastName:    nameColumn(parsed.Last),
-		OwnerID:     ownerFromUUID(&in.OwnerID),
-		Visibility:  visibilityFor(in.OwnerScoped),
-		Narrowing:   narrowingFor(in.OwnerScoped, in.NarrowedBecause),
-		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
-		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
+		CaptureEmployer: &in,
+		EmployerResult:  res,
+		FullName:        name,
+		FirstName:       nameColumn(parsed.First),
+		LastName:        nameColumn(parsed.Last),
+		OwnerID:         ownerFromUUID(&in.OwnerID),
+		Visibility:      visibilityFor(in.OwnerScoped),
+		Narrowing:       narrowingFor(in.OwnerScoped, in.NarrowedBecause),
+		Quarantined:     quarantineSuspect(in.DisplayName, in.Domain),
+		Emails:          []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
+		Source:          in.Source,
+		CapturedBy:      in.CapturedBy,
 
 		RelationshipMark:      in.RelationshipMark,
 		RelationshipMarkSetBy: markSetBy(in.RelationshipMark, in.CapturedBy),
@@ -359,77 +397,6 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		created: id, name: name, email: in.Email,
 		source: in.Source, by: in.CapturedBy,
 	}, res)
-}
-
-// ensureCompanyAndEmployment decides what this mail domain may create, and creates
-// only that. It runs PO-F-2 on the domain, and where the domain is not yet
-// understood it creates NOTHING and opens the question instead — the contact
-// already exists, and a company invented from a domain label is the
-// defect this ladder exists to stop.
-//
-// The order is load-bearing at every step:
-//
-//	a suppressed domain                     → no company, no question, ever
-//	a company already on this domain  → attach; a human's row always wins
-//	consumer mail                           → no company, and no question to ask
-//	a settled verdict                       → obey it
-//	anything else                           → open the question, create nothing
-func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, res *EnsureCounterpartyResult) error {
-	if err := auth.Require(ctx, entityCompany, principal.ActionCreate); err != nil {
-		return err
-	}
-	match, base, ok, err := employerMatchTx(ctx, tx, in.Domain)
-	if err != nil || !ok {
-		return err
-	}
-	res.DomainSplit = match.DomainSplit
-	if match.Decision != DecisionExactCollision {
-		// No company yet. Whether one may be created is not this path's
-		// call any more.
-		return s.deferCompanyToTriage(ctx, tx, in, base, res)
-	}
-	companyID := match.CompanyID
-	res.CompanyID = &companyID
-	// A human put a company on this domain. That overrides whatever a crawl
-	// concluded, a refusal included. The ledger records it as theirs, so the
-	// next message stops re-asking and the trail says who overruled what.
-	if err := adoptDispositionForCompany(ctx, tx, base, companyID); err != nil {
-		return err
-	}
-
-	return plantEmploymentEdge(ctx, tx, in, base, res.ContactID, companyID)
-}
-
-// employerMatchTx is the company match a sender of this domain is filed under,
-// shared by the ensure and the probe that asks about it first. ok is false
-// when the domain is no hostname or is suppressed, and nothing is attached.
-func employerMatchTx(ctx context.Context, tx pgx.Tx, domain string) (CompanyMatch, string, bool, error) {
-	// A From: header is forgeable and net/mail parses far more loosely than DNS
-	// allows, so a counterparty "domain" may be any atext string — `jane@%`
-	// parses. Nothing that is not a hostname may become a company, a crawl seed,
-	// or a key in a query: the contact still lands, with no employer.
-	base, ok := freemail.Hostname(domain)
-	if !ok {
-		return CompanyMatch{}, "", false, nil
-	}
-	// The standing refusal runs FIRST, ahead of the dedupe attach.
-	//
-	// A vendor the business merely uses — an expense tool, a ticket shop — has a
-	// real corporate website, so every evidence test the triage can run says
-	// "company". The refusal is therefore a decision about the DOMAIN, and it
-	// has to be consulted before anything can attach a contact to a company on
-	// it: consulted later, a named employee writing from that domain would find
-	// the company a previous message created and quietly re-employ
-	// everyone onto it.
-	suppressed, err := domainSuppressedTx(ctx, tx, base)
-	if err != nil || suppressed {
-		return CompanyMatch{}, "", false, err
-	}
-	match, err := DedupeCompany(ctx, tx, CompanyCandidate{Domains: []string{domain, base}})
-	if err != nil {
-		return CompanyMatch{}, "", false, err
-	}
-	return match, base, true, nil
 }
 
 // linkActivityToContact attaches the captured activity to the contact —
@@ -468,4 +435,25 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 		return fmt.Errorf("contacts: linking activity to contact: %w", err)
 	}
 	return nameContactAmongParticipants(ctx, tx, activityID, contactID)
+}
+
+func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate, email string) (ContactResolution, ids.LeadID, error) {
+	// Identity locks precede the exact read so a concurrent ensure cannot create from a stale miss.
+	lead, err := CounterpartyLeadTx(ctx, tx, email)
+	if err != nil {
+		return ContactResolution{}, ids.LeadID{}, err
+	}
+	match, err := DedupeContact(ctx, tx, candidate)
+	if err != nil {
+		return ContactResolution{}, ids.LeadID{}, err
+	}
+	if match.Decision == DecisionExactCollision {
+		return match, ids.LeadID{}, nil
+	}
+	if !lead.IsZero() {
+		return match, lead, nil
+	}
+	// Review locks are taken only for creation; exact adoption holds the incumbent instead.
+	match, err = lockLanesAndReview(ctx, tx, candidate)
+	return match, ids.LeadID{}, err
 }

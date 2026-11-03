@@ -296,6 +296,23 @@ describe("date/time formatting (B-EP09.17/19)", () => {
     expect(written("ymd")).toBe("2026-11-03");
   });
 
+  it("writes a day and month in a fixed date format's order, without the year", () => {
+    const written = (dateFormat: DateFormat) => {
+      setDateTimePreferences({ dateFormat, timeFormat: "locale" });
+      try {
+        return formatDayMonth("2026-10-23", "vi", "Asia/Ho_Chi_Minh");
+      } finally {
+        setDateTimePreferences({ dateFormat: "locale", timeFormat: "locale" });
+      }
+    };
+    // Beside "23.10.2026" elsewhere on the page, "23 thg 10" read as another
+    // date style.
+    expect(written("dmy")).toBe("23.10");
+    expect(written("mdy")).toBe("10/23");
+    expect(written("ymd")).toBe("10-23");
+    expect(written("locale")).toBe("23 thg 10");
+  });
+
   it("carries the zone into a day-month rendering too", () => {
     // 21:30Z on 4 June is already 5 June in Auckland. A day-month rendering
     // that dropped the zone would name the wrong day for half the world while

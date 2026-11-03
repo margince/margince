@@ -166,9 +166,9 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 // section does when it runs out of room.
 type sectionOrder string
 
-const (
+var (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
-	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
+	byUrgency sectionOrder = sectionOrder(storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 )
 
 // byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
@@ -194,8 +194,7 @@ const (
 // expression: spelling the namespace inline to keep it constant is exactly the
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
-	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " + string(byUrgency),
 )
 
 // sectionPage is the section's edge in the activities list's own cursor
@@ -255,20 +254,25 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return nil, false, err
 	}
-	contentArm, err := auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, false, err
+	// A draft's rows passed the content gate, which holds the audience arm, so
+	// each is readable. Projecting the arm again would plan a second copy.
+	contentArm := "TRUE"
+	if !forDraft {
+		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, false, err
+		}
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+activities.ActivityProjection(contentArm)+`
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		fmt.Sprintf(contactReachesActivity, bind(contactPos)),
-		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		scope, projectScope(opts, arg), extra, order, sectionCap+1)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -288,11 +292,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if hasMore {
 		out = out[:sectionCap]
 	}
-	// AFTER the cap, so the statement counts the rows this page returns rather
-	// than the extra one read to detect hasMore. Same reason the summary above
-	// is composed from the shared helper: a contact page whose mail showed no
-	// paperclip while the same rows off /activities showed one is the drift
-	// this twin exists to avoid.
+	// After the cap, so the statement counts the rows this page returns rather
+	// than the extra one read to detect hasMore. Every step below is the one
+	// /activities runs, so a row means the same on either page.
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
@@ -301,9 +303,10 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
 		return nil, false, err
 	}
-	// Every link the caller may see, read the way /activities reads them, so
-	// a row means the same on either page.
 	if err := activities.AttachLinks(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
+	if err := activities.WithCreators(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
 	if err := activities.WithOffersEmail(ctx, tx, out); err != nil {
@@ -312,7 +315,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
-	if err := activities.StampActivitiesWritable(ctx, tx, out); err != nil {
+	if err := activities.StampActivityAffordances(ctx, tx, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil
@@ -430,11 +433,12 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 	if err != nil {
 		return err
 	}
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg)), args...).
+		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg))
+	if err := tx.QueryRow(ctx, query, args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

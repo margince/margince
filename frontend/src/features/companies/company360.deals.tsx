@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -10,7 +12,6 @@ import {
   formatNumber,
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -18,15 +19,6 @@ import type { Company360 } from "./company360";
 import "./company360.css";
 
 type Deal360 = components["schemas"]["Company360Deal"];
-
-const STATUS_LABEL: Record<Deal360["status"], MessageKey> = {
-  open: "co.deals.status.open",
-  won: "co.deals.status.won",
-  lost: "co.deals.status.lost",
-};
-
-const STATUS_TONE: Record<Deal360["status"], "success" | "danger" | undefined> =
-  { open: undefined, won: "success", lost: "danger" };
 
 /** DealsCard lists the open deals plus the two lifetime figures. */
 export function DealsCard({
@@ -76,7 +68,7 @@ export function DealsCard({
                 the way into them, and it opens that set. It narrows by `status`
                 and not by a lost stage: no single closed-lost stage id exists
                 across pipelines, while the deals endpoint reads `status`. */}
-            <a
+            <AppLink
               className="link-button"
               href={dealsFilteredBy("company_id", view.company.id, {
                 status: "lost",
@@ -85,7 +77,7 @@ export function DealsCard({
               {t("co.deals.lostCount", {
                 count: formatNumber(deals.lost_count, locale),
               })}
-            </a>
+            </AppLink>
           </p>
         )
       }
@@ -176,9 +168,7 @@ function dealColumns(
       fold: "end",
       render: (deal) => (
         <span className="co-row-meta">
-          <Badge tone={STATUS_TONE[deal.status]}>
-            {t(STATUS_LABEL[deal.status])}
-          </Badge>
+          <DealStatusBadge status={deal.status} />
           {deal.stalled && (
             <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
           )}

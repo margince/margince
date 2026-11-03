@@ -49,7 +49,7 @@ describe("an offer as a card row", () => {
         net: formatMoney(100_000, "EUR", "en"),
       }),
     );
-    expect(row.status).toBe(t("commercial.offer.superseded"));
+    expect(row.statusLabel).toBe(t("commercial.offer.superseded"));
   });
 });
 
@@ -67,7 +67,7 @@ describe("the other open tasks the Next bar counts", () => {
 });
 
 describe("the committee's rows", () => {
-  it("names a gap by its rule and leaves other findings out", () => {
+  it("names the seat a gap misses and leaves other findings out", () => {
     const { seats, gaps } = committeeRows(
       {
         deal_id: "d1",
@@ -84,7 +84,7 @@ describe("the committee's rows", () => {
     );
     expect(seats).toEqual([]);
     expect(gaps.map((gap) => gap.title)).toEqual([
-      t("coverage.risk.single_threaded_theirs"),
+      t("deal.committee.missing.firstContact"),
     ]);
   });
 });

@@ -304,13 +304,14 @@ The GitHub release belongs to `release-tag.yml`, which owns the
 `github-release` job.
 
 A release is a decision someone makes; there is no push trigger. So the role images have no other
-build ([#1965](https://github.com/margince/margince/issues/1965)), and the patch range is one commit
-(below).
+build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
-1. The release CLI cuts the patch and uploads it with `draft-release`. With it go the three SBOM
-   files for the source tree, generated again at the release commit (`make sbom`).
+1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
+   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
+   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source
+   tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the
    committed `sboms/` files, which may be behind, are never uploaded.
 2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
@@ -330,12 +331,7 @@ What a run does:
 4. The release is published with `publish-release`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 
-**The patch range is always `HEAD~1..HEAD`.** A dispatch carries no push range, so the base is
-the commit before it. The patch of a release from a dispatch covers one commit, no matter how many
-landed since the last release. A consumer that applies patches in order cannot use these patches to stay
-current. Nothing reads them today. To derive the base from the last published release fixes
-it, and must come before any automatic trigger
-([#1798](https://github.com/margince/margince/issues/1798)).
+Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
 Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,

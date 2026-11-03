@@ -42,6 +42,7 @@ import (
 // self-only where they are held, including the webhooks module's selfOnlyEvents,
 // which this is no longer a mirror of.
 var selfOnlyKinds = map[string]bool{
+	"merge_members":       true,
 	KindVolumeRelease:     true,
 	KindScheduledSendHeld: true,
 	// A vCard review is one member's own uploaded address book: the staged card

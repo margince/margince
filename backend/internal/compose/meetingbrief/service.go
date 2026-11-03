@@ -353,22 +353,22 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	in.Language = language
 	in.Zone = zone
-	if len(room.Attendees) == 0 {
-		// Nobody in the room this caller may see. The header still stands, and
-		// assembling a 360 for a contact nobody named would be a read of a
-		// record this brief has no reason to touch.
-		return in, nil, nil
+	var viewScope *crmcontracts.ProjectScope
+	// With nobody in the room this caller may see, there is no 360 to read.
+	// The header still stands.
+	if len(room.Attendees) > 0 {
+		// Scoped like the claims above. A meeting on one engagement must not
+		// take the account's other engagement as this room's recent history.
+		view, err := s.view.AssembleScoped(ctx, ids.From[ids.ContactKind](room.Attendees[0].ContactID),
+			contact360.AssembleOptions{ProjectID: scope})
+		if err != nil {
+			return Input{}, nil, err
+		}
+		WithCounterpart(&in, view)
+		viewScope = view.Scope
 	}
-	// Scoped like the claims above: the lead attendee's page read for a
-	// meeting on one engagement must not describe the account's other
-	// engagement as this room's recent history.
-	view, err := s.view.AssembleScoped(ctx, ids.From[ids.ContactKind](room.Attendees[0].ContactID),
-		contact360.AssembleOptions{ProjectID: scope})
-	if err != nil {
-		return Input{}, nil, err
-	}
-	WithCounterpart(&in, view)
-	return in, view.Scope, nil
+	fileUnderDeal(&in)
+	return in, viewScope, nil
 }
 
 // resolveScope resolves the project the brief's reads are narrowed by.

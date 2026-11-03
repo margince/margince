@@ -4,11 +4,13 @@
 package dealstatus
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,6 +30,11 @@ func NewHandlers(svc *Service) Handlers {
 func (h Handlers) GetDealStatus(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetDealStatusParams,
 ) {
+	checking := params.IfRecommendation != nil
+	if checking != (params.IfRule != nil) || (checking && (params.FactsOnly == nil || !*params.FactsOnly)) {
+		httperr.Write(w, r, apperrors.ErrInvalidArgument)
+		return
+	}
 	refresh := params.Refresh != nil && *params.Refresh
 	dealID := ids.From[ids.DealKind](ids.UUID(id))
 	var out crmcontracts.DealStatusCard
@@ -41,5 +48,18 @@ func (h Handlers) GetDealStatus(
 		modelfailure.Write(w, r, err)
 		return
 	}
+	if checking {
+		if err := checkExpectedRecommendation(out.Next, *params.IfRecommendation, *params.IfRule); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func checkExpectedRecommendation(move *crmcontracts.DealStatusCardMove, fingerprint, rule string) error {
+	if move == nil || move.Recommendation == nil || move.Recommendation.Rule != rule || move.Recommendation.BasisFingerprint != fingerprint {
+		return fmt.Errorf("the suggested step changed; refresh it before opening: %w", apperrors.ErrVersionSkew)
+	}
+	return nil
 }

@@ -316,17 +316,18 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{
-		Kind:         string(req.Kind),
-		Subject:      req.Subject,
-		Body:         req.Body,
-		OccurredAt:   req.OccurredAt,
-		DueAt:        req.DueAt,
-		RemindAt:     req.RemindAt,
-		SourceSystem: req.SourceSystem,
-		SourceID:     req.SourceId,
-		Source:       req.Source,
-		Author:       author,
-		AssigneeID:   idArg[ids.UserKind](req.AssigneeId),
+		Recommendation: req.Recommendation,
+		Kind:           string(req.Kind),
+		Subject:        req.Subject,
+		Body:           req.Body,
+		OccurredAt:     req.OccurredAt,
+		DueAt:          req.DueAt,
+		RemindAt:       req.RemindAt,
+		SourceSystem:   req.SourceSystem,
+		SourceID:       req.SourceId,
+		Source:         req.Source,
+		Author:         author,
+		AssigneeID:     idArg[ids.UserKind](req.AssigneeId),
 	}
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
@@ -405,6 +406,9 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		in.OccurredPrecision = string(*req.OccurredPrecision)
 	}
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
+		return err
+	}
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
 		return err
 	}
 	if req.MeetingStatus != nil {

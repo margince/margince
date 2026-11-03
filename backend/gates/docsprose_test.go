@@ -55,8 +55,10 @@ once either neither nothing everything also still yet again more less most least
 without with does do can cannot will may should hold holds itself what why how who where when per across
 above below into onto over under ever`)
 
-var barLeadWords = map[string]int{"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
-	"nine": 9, "ten": 10}
+var barLeadWords = map[string]int{
+	"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+	"nine": 9, "ten": 10,
+}
 
 // Adopted text that its own gate holds word for word is not ours to restyle.
 // docscodeofconduct_test.go holds the Contributor Covenant. cla_test.go holds
@@ -405,8 +407,10 @@ func TestDocsProseRulesFireOnPlantedDefects(t *testing.T) {
 	for _, f := range checkHouseBar("docs/planted.md", planted, false) {
 		fired[f.rule] = true
 	}
-	for _, rule := range []string{"preamble", "lexicon", "caps", "bold", "negation", "residue", "count", "leadin",
-		"sentence", "emdash"} {
+	for _, rule := range []string{
+		"preamble", "lexicon", "caps", "bold", "negation", "residue", "count", "leadin",
+		"sentence", "emdash",
+	} {
 		if !fired[rule] {
 			t.Errorf("rule %q did not fire on its planted defect", rule)
 		}

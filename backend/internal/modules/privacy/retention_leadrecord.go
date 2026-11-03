@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.
@@ -37,8 +37,13 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 		`SELECT email FROM lead WHERE id = $1 FOR UPDATE`, id).Scan(&address); err != nil {
 		return fmt.Errorf("read the lead's address before scrubbing it: %w", err)
 	}
+	if address != nil {
+		if err := s.eraser.purgePartyProjections(ctx, tx, []string{*address}); err != nil {
+			return err
+		}
+	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, phone = NULL, title = NULL,
+		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, email_domain_folded = NULL, phone = NULL, title = NULL,
 		  company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		  disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		  origin_detail = NULL, archived_at = coalesce(archived_at, now())

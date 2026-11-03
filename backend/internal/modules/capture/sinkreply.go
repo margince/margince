@@ -53,8 +53,8 @@ type replyOrigin struct {
 	contactID *ids.ContactID
 }
 
-// emitReply is CAP-FORMULA-1: an INBOUND message in a thread we previously
-// wrote OUTBOUND in is a reply — the engagement signal scoring feeds on.
+// emitReply is CAP-FORMULA-1: an inbound message in a thread we previously
+// wrote outbound in is a reply, the engagement signal scoring feeds on.
 // Emitted only when the activity row is new, so the at-least-once sync loop
 // cannot double-fire it; never a subject heuristic.
 func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
@@ -63,8 +63,8 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 	}
 	var matched ids.UUID
 	// archived_at IS NULL is the formula's own prior-outbound scan. An archived
-	// message is off the timeline, so naming one as the matched outbound would
-	// point the reply fact at a row its consumers cannot read back.
+	// message is off the timeline. Its consumers could not read back a reply
+	// fact that named one as the matched outbound.
 	//
 	// Archiving here is not only a human act: the retention evaluator
 	// (privacy/retention.go) and the noise sweep (activities/capturenoise.go)
@@ -72,29 +72,28 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 	// policy stops reply-detecting threads whose outbound legs have aged out,
 	// even for a customer replying today. That follows the formula rather than
 	// this file's choosing, and it is the behaviour the spec pins.
-	// Matched within ONE medium, and this is a security control rather than a
-	// convenience. thread_key is a single flat namespace holding both a mail
-	// thread root and a channel's `<provider>:<bot>:<chat>` key, and the mail
-	// half is attacker-supplied: it is the message's own References root, so a
-	// sender chooses it verbatim. Without the medium match, a forged References
-	// header naming a Telegram conversation — whose parts are both discoverable,
-	// a bot id being public and a private chat's id being the user's own —
-	// manufactures a reply fact against a conversation that sender was never in.
-	// A reply is answered on the medium it arrived on, so a cross-medium match
-	// could never have been actionable anyway.
 	//
-	// It matches on the PAIR because kind alone stopped discriminating at
-	// ADR-0107/A158: every channel row now carries kind='message' whatever
-	// carried it, so kind separates mail from channel but no longer one
-	// transport from another — and the same forgery would then reach across
-	// providers instead of across media. IS NOT DISTINCT FROM is what lets one
-	// statement serve both: mail compares NULL to NULL and matches, a channel
-	// compares provider to provider.
+	// Matched within one medium, as a security control. thread_key is one flat
+	// namespace holding both a mail thread root and a channel's
+	// `<provider>:<bot>:<chat>` key. The mail half is attacker-supplied: it is the
+	// message's own References root, which the sender chooses. A forged References
+	// header could name a Telegram conversation. Both parts of its key are
+	// discoverable: a bot id is public, and a private chat's id is the user's
+	// own. Without the medium match, that forgery manufactures a reply fact
+	// against a conversation the sender was never in. A reply is answered on the medium it arrived on, so
+	// a cross-medium match could never be actionable.
 	//
-	// The thread key is the whole bound, which is what makes the forged-root case
-	// worth stating: a References header naming a thread the sender was never on
-	// still has to match an outbound leg of THAT thread, on the same medium, that
-	// this installation itself sent. idx_activity_channel_thread is what serves it.
+	// It matches on the pair because kind alone no longer discriminates. Every
+	// channel row carries kind='message' whatever carried it. So kind separates
+	// mail from channel, but not one transport from another, and the same forgery
+	// would reach across providers. `IS NOT DISTINCT FROM` lets one statement serve
+	// both. Mail compares NULL to NULL and matches; a channel compares provider to
+	// provider.
+	//
+	// The thread key is the only bound. A forged References header may name a
+	// thread the sender was never on. It still has to match an outbound leg of
+	// that thread, on the same medium, that this installation sent. The index
+	// idx_activity_channel_thread serves it.
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM activity
 		 WHERE thread_key = $1 AND direction = 'outbound' AND kind = $2

@@ -1,21 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { AppLink } from "../../design-system/applink";
 import { Button, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate, useRoute } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
+import { InitiativeReports } from "./reporting.initiatives";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { PreparedReports } from "./reporting.preparedpanel";
+import { ProductReports } from "./reporting.productpanel";
 import { ReportingReportDetail } from "./reporting.report";
 
 export function ReportingLibrary({
@@ -23,6 +27,7 @@ export function ReportingLibrary({
   ownLens = false,
 }: Readonly<{ scope?: AnalyticsScope; ownLens?: boolean }>) {
   const t = useT();
+  const [params] = useUrlParams();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -57,6 +62,8 @@ export function ReportingLibrary({
     );
   return (
     <>
+      <ProductReports />
+      <InitiativeReports />
       {scope && (
         <PreparedReports
           scope={{
@@ -74,17 +81,19 @@ export function ReportingLibrary({
             {/* The two ways a report starts: a Performance view kept as it is,
               or a question of the reader's own. */}
             {canCreate ? (
-              <Button
-                onClick={() =>
-                  navigate({ screen: "analytics", id: "performance" })
-                }
+              <AppLink
+                className="btn btn-ghost"
+                href={analyticsSectionHref("performance", params)}
               >
                 {t("reporting.createReport")}
-              </Button>
+              </AppLink>
             ) : null}
-            <Button onClick={() => openAnalyticsSection("questions")}>
+            <AppLink
+              className="btn btn-ghost"
+              href={analyticsSectionHref("questions", params)}
+            >
               {t("reporting.newCustomReport")}
-            </Button>
+            </AppLink>
           </>
         }
       >

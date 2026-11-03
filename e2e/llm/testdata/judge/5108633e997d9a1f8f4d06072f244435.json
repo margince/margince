@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names Emsland Ventilbau as the company that somebody had already set, states its earlier value was target, and says it was replaced by prospect.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced.",
+  "answer": "All four are now prospects, and each change went straight through with nothing waiting on you.\n\n- Kieler Pumpenwerk GmbH, Rhön Hydraulik AG and Altmark Fördertechnik GmbH still held the default \"unknown\", so nobody had set them.\n- Emsland Ventilbau GmbH was the one somebody had already set: its lifecycle was \"target\" and it is now \"prospect\". If that earlier value was deliberate, you can undo the change on the web."
+}

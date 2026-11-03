@@ -51,7 +51,7 @@ func TestCapturePrivacyIsReadOnEveryTableThatCarriesIt(t *testing.T) {
 				t.Errorf("%s predicate at row_scope=%s does not read the visibility "+
 					"column, so an unpromoted captured row leaks: %s", table, scope, sql)
 			}
-			if !strings.Contains(sql, "t.owner_id = $") {
+			if !strings.Contains(sql, "t.owner_id IN (SELECT unnest(member_identity_family(") {
 				t.Errorf("%s predicate at row_scope=%s never lets the capturing user "+
 					"back in to their own private row: %s", table, scope, sql)
 			}

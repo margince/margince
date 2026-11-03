@@ -343,6 +343,12 @@
         "read": true,
         "update": true
       },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "sales_target": {
         "create": true,
         "delete": false,
@@ -767,6 +773,12 @@
         "delete": false,
         "read": false,
         "update": false
+      },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
       },
       "sales_target": {
         "create": true,
@@ -1193,6 +1205,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "sales_target": {
         "create": true,
         "delete": false,
@@ -1613,6 +1631,12 @@
         "update": true
       },
       "role_admin": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "sales_initiative": {
         "create": false,
         "delete": false,
         "read": true,
@@ -2043,6 +2067,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "sales_target": {
         "create": false,
         "delete": false,
@@ -2466,6 +2496,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "sales_initiative": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "sales_target": {

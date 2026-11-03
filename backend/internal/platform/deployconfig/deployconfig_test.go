@@ -245,75 +245,40 @@ func TestBootstrapAdminWithNoPasswordSourceRefuses(t *testing.T) {
 	}
 }
 
-// The documented `seeds.ai_routing` block must actually parse.
-//
-// It ships commented out, so TestShippedExampleConfigParses cannot see it — and
-// a block nothing decodes is a block free to be wrong. It was: the field was
-// declared `*yaml.Node`, and yaml.v3 special-cases a field only when its type
-// is exactly `yaml.Node`. A pointer is dereferenced and decoded as an ordinary
-// struct, so an operator who uncommented the shipped example got
-// "field profile not found in type yaml.Node" and an api, worker and migrate
-// that all refused to start.
-//
-// This uncomments what the example documents and decodes it, so the block a
-// deployment is invited to copy is held to the parser every boot runs.
-func TestTheDocumentedRoutingSeedBlockParses(t *testing.T) {
-	raw, err := os.ReadFile("../../../../config/margince.example.yaml")
+// Every shipped `seeds.ai_routing` block decodes through the parser every boot
+// runs, and survives the re-encoding that hands it to the ai parser. A field
+// declared `*yaml.Node` is decoded as an ordinary struct, and every program
+// then refuses to start with "field profile not found in type yaml.Node".
+func TestEveryShippedRoutingSeedDecodesThroughTheBootstrap(t *testing.T) {
+	paths, err := filepath.Glob("../../../../config/presets/*.yaml")
 	if err != nil {
-		t.Fatalf("reading the shipped example: %v", err)
+		t.Fatal(err)
 	}
-	block := commentedBlock(t, string(raw), "seeds:", "ai_routing:")
-
-	cfg, err := LoadBootstrap(writeTemp(t, "version: 1\n"+block))
-	if err != nil {
-		t.Fatalf("the documented seeds.ai_routing block does not parse: %v\n%s", err, block)
+	paths = append(paths, "../../../../config/margince.dev.yaml")
+	if len(paths) < 2 {
+		t.Fatal("no config/presets/*.yaml found; the presets moved and this test checks the dev file alone")
 	}
-	if cfg.Seeds.AIRouting.IsZero() {
-		t.Fatal("the block parsed but carried no binding; the seed would read as undeclared")
-	}
-	// The node has to survive being re-encoded, which is how compose hands it
-	// to the ai parser. A field that decoded into the wrong destination
-	// round-trips to something the router cannot read.
-	out, err := yaml.Marshal(&cfg.Seeds.AIRouting)
-	if err != nil {
-		t.Fatalf("re-encoding the declared binding: %v", err)
-	}
-	for _, want := range []string{"profile:", "tiers:", "embeddings:"} {
-		if !strings.Contains(string(out), want) {
-			t.Errorf("the re-encoded binding lost %q:\n%s", want, out)
-		}
-	}
-}
-
-// commentedBlock lifts a commented-out YAML block out of the example and
-// uncomments it, starting at the line whose comment body is start and running
-// while the lines stay commented. It fails loudly rather than returning
-// nothing: a block this cannot find is one the example no longer documents,
-// which is a finding rather than a reason to pass.
-func commentedBlock(t *testing.T, doc, start, contains string) string {
-	t.Helper()
-	lines := strings.Split(doc, "\n")
-	for i, line := range lines {
-		if strings.TrimSpace(line) != "# "+start {
+	for _, path := range paths {
+		cfg, err := LoadBootstrap(path)
+		if err != nil {
+			t.Errorf("%s: the seeds do not parse: %v", path, err)
 			continue
 		}
-		var out []string
-		for _, l := range lines[i:] {
-			trimmed := strings.TrimSpace(l)
-			if trimmed == "" || !strings.HasPrefix(trimmed, "#") {
-				break
-			}
-			// A bare "#" is a blank line inside the block; anything else loses
-			// its "# " lead. Both spellings appear in the example.
-			out = append(out, strings.TrimPrefix(strings.TrimSuffix(l, "#"), "# "))
+		if cfg.Seeds.AIRouting.IsZero() {
+			t.Errorf("%s: the seeds parsed but carried no binding", path)
+			continue
 		}
-		block := strings.Join(out, "\n") + "\n"
-		if strings.Contains(block, contains) {
-			return block
+		out, err := yaml.Marshal(&cfg.Seeds.AIRouting)
+		if err != nil {
+			t.Errorf("%s: re-encoding the binding: %v", path, err)
+			continue
+		}
+		for _, want := range []string{"profile:", "tiers:", "embeddings:"} {
+			if !strings.Contains(string(out), want) {
+				t.Errorf("%s: the re-encoded binding lost %q:\n%s", path, want, out)
+			}
 		}
 	}
-	t.Fatalf("the example no longer documents a commented %s block containing %q", start, contains)
-	return ""
 }
 
 // The reference form the field's own doc comment says to prefer is ACCEPTED.

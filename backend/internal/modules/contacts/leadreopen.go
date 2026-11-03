@@ -93,7 +93,8 @@ func (s *Store) ReopenLead(ctx context.Context, id ids.LeadID) (crmcontracts.Lea
 		if current.Status != crmcontracts.LeadStatusDisqualified {
 			return &NotDisqualifiedError{}
 		}
-		if err := reopenedLeadContactFree(ctx, tx, id); err != nil {
+		if err := refuseContactHolders(ctx, tx, leadKeys((*string)(current.Email), current.LinkedinUrl),
+			nil); err != nil {
 			return err
 		}
 		restored, err := statusBeforeDisqualification(ctx, tx, id)

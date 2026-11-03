@@ -91,22 +91,22 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 	query := fmt.Sprintf(`
 		SELECT a.audience = 'workspace'
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%%:' || u.id
-                    AND u.id <> ALL($%[2]d::uuid[]))
+                    AND u.id NOT IN (%[3]s))
 		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
-                    AND ci.user_id <> ALL($%[2]d::uuid[]))
+                    AND ci.user_id NOT IN (%[3]s))
 		    OR EXISTS (SELECT 1 FROM activity_participant ap
-		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL AND %[3]s
-                    AND ap.user_id <> ALL($%[2]d::uuid[]))
+		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL AND %[2]s
+                    AND ap.user_id NOT IN (%[3]s))
 		    OR (a.audience = 'selected' AND EXISTS (
 		          SELECT 1 FROM activity_audience_member am
 		           WHERE am.activity_id = a.id
-		             AND ((am.subject_type = 'user' AND am.subject_id <> ALL($%[2]d::uuid[]))
+		             AND ((am.subject_type = 'user' AND am.subject_id NOT IN (%[3]s))
 		               OR (am.subject_type = 'team' AND EXISTS (
 		                     SELECT 1 FROM team_membership tm
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		                      WHERE tm.team_id = am.subject_id
-                            AND tm.user_id <> ALL($%[2]d::uuid[]))))))
-		  FROM activity a WHERE a.id = $%[1]d`, row, excluded, ParticipantStandsSQL("ap", "a"))
+                            AND tm.user_id NOT IN (%[3]s))))))
+		  FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded))
 	var reachable bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)

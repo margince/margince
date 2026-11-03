@@ -2,14 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import { removeStored, STORAGE_KEYS } from "../lib/storage";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
 import { type Command, CommandPalette } from "./palette";
+import { writeRecents } from "./paletterecents.storage";
 
 // The palette had no story at all. It was mounted CLOSED behind the top bar in
 // the shell and top-bar stories — a live seam, so the button opens something —
@@ -55,7 +59,8 @@ const COMMANDS: Command[] = [
 ];
 
 function palette(hits: () => Response | Promise<Response>) {
-  installFetchStub({ "GET /search": hits });
+  removeStored(STORAGE_KEYS.paletteRecents);
+  installFetchStub({ "GET /search": hits, "GET /me": meRoute({}) });
   return (
     <StoryProviders>
       <CommandPalette open onClose={() => undefined} commands={COMMANDS} />
@@ -153,4 +158,80 @@ export const SearchFailed: Story = {
 export const NoMatches: Story = {
   render: () => palette(noHits),
   play: type("zzzzz"),
+};
+
+export const IdentifierBestMatch: Story = {
+  render: () =>
+    palette(() =>
+      jsonResponse({
+        data: [
+          { type: "company", id: "o1", title: "Example customer", score: 4.1 },
+          {
+            type: "lead",
+            id: "l1",
+            title: "Lena Becker",
+            identifier_match: "prefix",
+            score: 8,
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      }),
+    ),
+  play: async ({ canvasElement }) => {
+    await userEvent.type(
+      within(canvasElement).getByRole("searchbox"),
+      "lena@exam",
+    );
+    await within(canvasElement).findByText("Best match");
+  },
+};
+export const IdentifierBestMatchDark: Story = {
+  ...IdentifierBestMatch,
+  globals: { theme: "dark" },
+};
+
+const RECENT_ID = "00000000-0000-4000-8000-000000000002";
+function recentPalette(read: () => Response | Promise<Response>) {
+  const id = RECENT_ID;
+  writeRecents(meFixture().user.id, [
+    { kind: "record", entity_type: "contact", id, label: "Anna Weber" },
+    { kind: "query", text: "Acme renewal" },
+    { kind: "query", text: "Follow up next week" },
+  ]);
+  installFetchStub({
+    "GET /me": meRoute({ contact: ["read"] }),
+    [`GET /contacts/${id}`]: read,
+    "GET /search": noHits,
+  });
+  return (
+    <StoryProviders>
+      <CommandPalette open onClose={() => undefined} commands={COMMANDS} />
+    </StoryProviders>
+  );
+}
+export const Recent: Story = {
+  beforeEach: () => () => removeStored(STORAGE_KEYS.paletteRecents),
+  render: () =>
+    recentPalette(() =>
+      jsonResponse({ id: RECENT_ID, full_name: "Anna Weber" }),
+    ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("Anna Weber");
+  },
+};
+export const RecentDark: Story = { ...Recent, globals: { theme: "dark" } };
+
+export const RecentLoading: Story = {
+  ...Recent,
+  render: () => recentPalette(() => new Promise<Response>(() => {})),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Acme renewal");
+    await canvas.findByText("Loading…");
+    expect(canvas.queryByText("Anna Weber")).toBeNull();
+  },
+};
+export const RecentLoadingDark: Story = {
+  ...RecentLoading,
+  globals: { theme: "dark" },
 };

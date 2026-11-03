@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -86,6 +87,58 @@ function show(ui: ReactNode) {
 }
 
 describe("the account's document library", () => {
+  it("says beside a refused Add why it is refused", async () => {
+    stub(DOCS);
+    show(
+      <>
+        <p id="page-reason">You cannot edit this company.</p>
+        <CompanyDocumentsCard
+          companyId="o-1"
+          refusedReasonId="page-reason"
+          refusedReason="You cannot edit this company."
+        />
+      </>,
+    );
+    const add = await screen.findByRole("button", { name: "Add document" });
+    expect(add).toBeDisabled();
+    // Once on the page, where the header states it, and once in this panel.
+    expect(screen.getAllByText("You cannot edit this company.")).toHaveLength(
+      2,
+    );
+  });
+
+  // A Docs or Drive link a mail mentioned is a row with no bytes. Its name
+  // opens the address in a new tab. An address that is not web falls back to
+  // the download route, so no scheme such as javascript: becomes an href.
+  it("opens a document link in a new tab instead of downloading it", async () => {
+    const link = (id: string, filename: string, url: string) => ({
+      ...DOCS[1],
+      id,
+      filename,
+      category: "link",
+      url,
+      bytes_withheld: true,
+    });
+    stub([
+      link("l-1", "Q4 plan", "https://docs.google.com/presentation/d/abc/edit"),
+      link("l-2", "tricky", "javascript:alert(1)"),
+    ]);
+    show(<CompanyDocumentsCard companyId="o-1" />);
+
+    const plan = await screen.findByRole("link", { name: "Q4 plan" });
+    expect(plan).toHaveAttribute(
+      "href",
+      "https://docs.google.com/presentation/d/abc/edit",
+    );
+    expect(plan).toHaveAttribute("target", "_blank");
+    expect(plan).toHaveAttribute("rel", "noopener noreferrer");
+    expect(plan).not.toHaveAttribute("download");
+    expect(screen.getByRole("link", { name: "tricky" })).toHaveAttribute(
+      "href",
+      "/v1/attachments/l-2",
+    );
+  });
+
   it("prefers the display title a human gave over the filename that arrived", async () => {
     stub(DOCS);
     show(<CompanyDocumentsCard companyId="o-1" />);

@@ -5,6 +5,7 @@ import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { InvitationBadge } from "../../components/booking-meeting-parts";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -138,12 +139,12 @@ export function MeetingTitle({
     : "pe-meeting-title";
   if (!opens) return <span className={className}>{children}</span>;
   return (
-    <a
+    <AppLink
       className={`entity-link ${className}`}
       href={routeHash({ screen: "book", id: `meeting-${activityId}` })}
     >
       {children}
-    </a>
+    </AppLink>
   );
 }
 

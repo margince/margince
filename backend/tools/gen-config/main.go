@@ -3,8 +3,8 @@
 
 // gen-config writes every file the settings registry is the source of. Those
 // are the settings tables in docs/reference/configuration.md, the example
-// config, .env.example, the config schema and the routing $defs the ai module
-// serves. With -check it writes nothing, names each file that differs and
+// config, the defaults file, .env.example, the config schema and the routing
+// $defs the ai module serves. With -check it writes nothing, names each file that differs and
 // exits 1.
 package main
 
@@ -28,11 +28,12 @@ import (
 
 // The outputs, relative to the repository root.
 const (
-	docsPath    = "docs/reference/configuration.md"
-	examplePath = "config/margince.example.yaml"
-	envPath     = ".env.example"
-	schemaPath  = "config/margince.schema.json"
-	routingPath = "backend/internal/modules/ai/routingschema_gen.go"
+	docsPath     = "docs/reference/configuration.md"
+	examplePath  = "config/margince.example.yaml"
+	defaultsPath = "config/margince.defaults.yaml"
+	envPath      = ".env.example"
+	schemaPath   = "config/margince.schema.json"
+	routingPath  = "backend/internal/modules/ai/routingschema_gen.go"
 	// entrypointDir holds the image entrypoint scripts, an input.
 	entrypointDir = "scripts/deploy"
 	// bootstrapDir is the package of the bootstrap roots, whose field docs
@@ -124,16 +125,17 @@ func render(settings []setting, page string, env envInputs, fields fieldDocs) (m
 	if err != nil {
 		return nil, err
 	}
-	example, err := exampleYAML(settings, deployconfig.BootstrapTemplate)
+	defaults, err := defaultsYAML(settings)
 	if err != nil {
 		return nil, err
 	}
 	return map[string][]byte{
-		docsPath:    []byte(docs),
-		examplePath: []byte(example),
-		envPath:     []byte(envExample(settings, env)),
-		schemaPath:  schema,
-		routingPath: routingGo,
+		docsPath:     []byte(docs),
+		examplePath:  []byte(exampleYAML(deployconfig.BootstrapTemplate)),
+		defaultsPath: []byte(defaults),
+		envPath:      []byte(envExample(settings, env)),
+		schemaPath:   schema,
+		routingPath:  routingGo,
 	}, nil
 }
 

@@ -138,7 +138,7 @@ export function DealRoomConversation({
     meta: doc.filename && doc.filename !== doc.title ? doc.filename : "",
     byteSize: doc.byte_size,
     lapsed: !doc.reaches_buyer,
-    status: doc.reaches_buyer ? undefined : (
+    shareMark: doc.reaches_buyer ? undefined : (
       <>
         <Badge tone="warning">{t("room.docs.lapsed")}</Badge>
         <p className="t-caption">{t("room.docs.lapsedNote")}</p>

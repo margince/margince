@@ -9,28 +9,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AuditAttribution is who an audit row is attributed to. It holds the actor,
-// the human whose authority a machine acted under, and the tool it was typed
-// through.
-// The record History reads these fields from the same row through
-// attributionOf. A surface that carries a stored audit link therefore cannot
-// read them differently.
-type AuditAttribution struct {
-	ActorType      string
-	ActorID        string
-	ActorName      *string
-	OnBehalfOf     *ids.UUID
-	OnBehalfOfName *string
-	PassportID     *ids.UUID
-	AgentClient    *string
-}
-
 // attributionOf is the one decode of a projected audit row into attribution.
-func attributionOf(row recordAuditRow) AuditAttribution {
-	return AuditAttribution{
+func attributionOf(row recordAuditRow) auditattribution.Attribution {
+	return auditattribution.Attribution{
 		ActorType:      row.actorType,
 		ActorID:        row.actorID,
 		ActorName:      row.actorDisplayName,
@@ -47,14 +32,14 @@ func attributionOf(row recordAuditRow) AuditAttribution {
 // another record's audit row must read as unknown. An id with no matching
 // audit row is absent from the result. The caller reads that as unknown, not
 // as the system.
-func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) (map[ids.UUID]AuditAttribution, error) {
-	out := make(map[ids.UUID]AuditAttribution, len(auditIDs))
+func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) (map[ids.UUID]auditattribution.Attribution, error) {
+	out := make(map[ids.UUID]auditattribution.Attribution, len(auditIDs))
 	if len(auditIDs) == 0 {
 		return out, nil
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT `+recordAuditColumns+`
-		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
+		FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 		WHERE a.id = ANY($1) AND a.entity_type = $2 AND a.entity_id = $3`, auditIDs, entityType, entityID)
 	if err != nil {
 		return nil, fmt.Errorf("privacy: reading audit attributions: %w", err)

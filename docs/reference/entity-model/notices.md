@@ -6,7 +6,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 ## notice
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -21,6 +21,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 | `recipient_user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `subject` | `text` | yes | The headline the recipient reads, derived from the kind rather than supplied. |
+| `subject_parts` | `jsonb` |  |  |
 | `target_id` | `uuid` |  |  |
 | `target_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -58,6 +59,7 @@ const READER = {
 // not carry, not a broken stub.
 function stub(
   roster: ReadonlyArray<{ id: string; display_name: string; status?: string }>,
+  reader = READER,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -66,7 +68,7 @@ function stub(
       // The details card also reads the record's tags; a roster handed back
       // there would draw colleagues as tags.
       const body = pathname.endsWith("/me")
-        ? { user: { id: "u-reader", display_name: "The Reader" }, ...READER }
+        ? { user: { id: "u-reader", display_name: "The Reader" }, ...reader }
         : pathname.includes("/tags")
           ? { data: [], page: { has_more: false, next_cursor: null } }
           : { data: roster, page: { has_more: false, next_cursor: null } };
@@ -332,15 +334,27 @@ describe("claiming an unowned account", () => {
 // STATE-4a decides absent-vs-disabled by CAUSE, and an archive is state: the
 // menu used to drop every verb on an archived account, leaving a reader unable
 // to tell a record that is closed from a build without an edit button.
+// The menu reads the page's activity gate for its Add task row.
+function MenuHost({ company }: Readonly<{ company: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <CompanyActionBadges
+      company={company}
+      activity={activity}
+      onAddTask={() => undefined}
+      onOpenHistory={() => undefined}
+      onSetUpPartner={() => undefined}
+    />
+  );
+}
+
 describe("an archived account's verbs", () => {
   it("stay in the menu, refused, each reachable from the one sentence naming the archive", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
     renderInApp(
-      <CompanyActionBadges
+      <MenuHost
         company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
       />,
     );
 
@@ -373,22 +387,69 @@ describe("an archived account's verbs", () => {
   });
 });
 
-// The design draws no relationship badge beside the name. The lifecycle chip is
-// the one pill that says where the account stands, and the relationship types
-// are a Profile tab field.
+// Beside the lifecycle chip the head says what the company is to the business:
+// a customer, a partner, or both on one record. Other relationship types stay a
+// Profile tab field.
 describe("the marks under an account's name", () => {
-  it("draws the lifecycle and no relationship badge, whatever the types", async () => {
+  it("draws customer and partner on one record, and no other type", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyMarks
-        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
+        company={{
+          ...COMPANY,
+          lifecycle: "opportunity",
+          relationship_types: ["customer", "partner", "supplier"],
+        }}
       />,
     );
 
     expect(
-      await screen.findByText(en["company.lifecycle.customer"]),
+      await screen.findByText(en["company.relType.customer"]),
     ).toBeTruthy();
-    expect(screen.queryByText(en["company.relType.partner"])).toBeNull();
+    expect(screen.getByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.supplier"])).toBeNull();
+  });
+
+  it("names the partner's kinds and stage when the programme is readable", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          relationship_types: ["partner"],
+          partner: {
+            company_id: COMPANY.id,
+            cert_status: "applied",
+            partner_kinds: ["referral", "hosting"],
+            relationship_stage: "contract_signed",
+            stage_label: "Contract signed",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Partner · Hosting, Referral · Contract signed"),
+    ).toBeTruthy();
+  });
+
+  it("does not repeat the customer the lifecycle chip already names", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          lifecycle: "customer",
+          relationship_types: ["customer"],
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findAllByText(en["company.lifecycle.customer"]),
+    ).toHaveLength(1);
   });
 });
 
@@ -397,21 +458,46 @@ describe("the marks under an account's name", () => {
 // answer is legible only if each group keeps its own shape. A menu row that
 // grows a glyph puts its words on a second left edge; a header button that
 // loses its glyph becomes a link among three buttons. Both had happened here.
+// The program opens on the Partner tab, which reads the partner register. A
+// seat that may edit the company but not read partners is told so up front.
+describe("setting up a partner program", () => {
+  async function setUpItem(partner: Array<"read" | "update">) {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }], {
+      authorization: meFixture({
+        allow: { company: ["read", "update"], partner },
+      }).authorization,
+    });
+    const user = userEvent.setup();
+    renderInApp(<MenuHost company={COMPANY} />);
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    return screen.findByRole("button", { name: en["company.partnerSetUp"] });
+  }
+
+  it("is open to a company editor who reads partners, without the partner grant", async () => {
+    const item = await setUpItem(["read"]);
+    await waitFor(() => expect(item.hasAttribute("disabled")).toBe(false));
+  });
+
+  it("is refused, with the reason, to a seat that cannot read partners", async () => {
+    const item = await setUpItem([]);
+    await waitFor(() => expect(item.hasAttribute("disabled")).toBe(true));
+    const describedBy = item.getAttribute("aria-describedby");
+    expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
+      en["company.partnerSetUpUnreadable"],
+    );
+  });
+});
+
 describe("the shape of the header's verbs", () => {
-  // The order every record type carries: the four verbs common to all of them
-  // first, then what is particular to an account, then the one verb a reader
-  // cannot walk back. A menu whose rows move between record types is a menu
-  // read from the top every time instead of aimed at.
+  // Every record type carries one order. Add task comes first, then the shared
+  // verbs, then the account's own, and last the one verb a reader cannot walk
+  // back. Rows that move between record types get read, not aimed at.
   it("lists the menu's verbs in the order every record carries them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
@@ -427,6 +513,7 @@ describe("the shape of the header's verbs", () => {
     expect(
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
+      en["log.addTask"],
       en["merge.company"],
       en["record.share"],
       en["record.fullHistory"],
@@ -442,13 +529,7 @@ describe("the shape of the header's verbs", () => {
   it("draws no glyph on any row of the menu", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
@@ -537,6 +618,25 @@ describe("the lifecycle control beside the name", () => {
     );
     await user.click(screen.getByRole("option", { name: "Prospect" }));
     await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
+  });
+
+  it("says under Live that only a colleague sets it", async () => {
+    stubPatch(200);
+    renderInApp(
+      <CompanyLifecycleControl company={{ ...COMPANY, lifecycle: "live" }} />,
+    );
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    const hint = document.getElementById(
+      control.getAttribute("aria-describedby") ?? "",
+    );
+    expect(hint?.textContent).toBe(en["company.lifecycle.live.help"]);
+  });
+
+  it("draws no help line under any other stage", async () => {
+    stubPatch(200);
+    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
+    await screen.findByRole("combobox", { name: "Lifecycle" });
+    expect(screen.queryByText(en["company.lifecycle.live.help"])).toBeNull();
   });
 
   it("does not write the stage the account already has", async () => {

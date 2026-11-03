@@ -11,7 +11,11 @@ import { DealStatusCardPanel } from "./dealstatus";
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";
 
-function panel(writer: WrittenBy, situation: Situation = "task") {
+function panel(
+  writer: WrittenBy,
+  situation: Situation = "task",
+  coverage?: components["schemas"]["MailCaptureCoverage"]["state"],
+) {
   const request = situation !== "task";
   const next = request
     ? {
@@ -19,7 +23,7 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
         reason:
           situation === "covered"
             ? "This request already has a reminder. The reply still needs to be handled."
-            : "Review and take responsibility for the reply still owed: Meeting slots",
+            : "Review whether this conversation needs a follow-up: Meeting slots",
         arguments:
           situation === "covered"
             ? {}
@@ -28,6 +32,16 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
                 source: "manual",
                 request_activity_id: "demo-mail",
               },
+        basis: {
+          kind: situation === "covered" ? "current_request" : "request_review",
+          scope: "deal",
+          source_activity_id: "demo-mail",
+          source_at: "2026-02-01T09:00:00Z",
+          source_precision: "instant",
+          source_version: 1,
+          evaluated_at: "2026-09-05T09:00:00Z",
+          policy_version: "demo",
+        },
         evidence: [
           {
             activity_id: "demo-mail",
@@ -49,6 +63,16 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
       "GET /deals/demo-deal/status": () =>
         jsonResponse({
           deal_id: "demo-deal",
+          ...(coverage
+            ? {
+                mail_coverage: {
+                  channel: "email",
+                  state: coverage,
+                  interval_to: "2026-09-05T09:00:00Z",
+                  evaluated_at: "2026-09-05T09:00:00Z",
+                },
+              }
+            : {}),
           story: {
             sentences: [
               {
@@ -61,6 +85,9 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
           },
           verdict: { standing: "live", because: { sentences: [] } },
           next,
+          ...(situation === "covered"
+            ? { reply_to: "demo-mail", request_basis: next.basis }
+            : {}),
           generated_at: "2026-09-05T09:00:00Z",
           generated_by: writer,
         }),
@@ -103,4 +130,11 @@ export const RequestAlreadyCovered: Story = {
 export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
+};
+
+export const CurrentRequestWithUnavailableCapture: Story = {
+  render: panel("deterministic", "covered", "unavailable"),
+};
+export const HistoricalReviewWithPartialCapture: Story = {
+  render: panel("deterministic", "request", "partial"),
 };

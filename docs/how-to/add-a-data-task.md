@@ -76,8 +76,8 @@ It prints a verdict before the steps:
   version is unfinished, even when it finished at that version, and is named with both numbers.
 - `awaiting_review`, `blocked`, `failed` and `unfinished`: each step that did not finish.
 - `left_in_scope`: each finished step marked `EmptyWhenDone` whose own estimate still counts rows,
-  with the count. These are rows the step saw and left as they were, such as mail with no stored
-  original. Mark a step `EmptyWhenDone` only when its estimate counts rows still to correct; an
+  with the count. These are rows the step saw and left as they were, such as mail whose body was
+  erased. Mark a step `EmptyWhenDone` only when its estimate counts rows still to correct; an
   estimate that counts input the step keeps would name it on every run.
 - `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
   rows it never saw.

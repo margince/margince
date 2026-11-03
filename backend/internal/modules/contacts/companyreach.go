@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,6 +29,7 @@ type CompanyReachColleague struct {
 	UserID      ids.UUID
 	DisplayName string
 	Connections int
+	Functions   []crmcontracts.LinkedInReachFunctionCount
 }
 
 // CompanyReach answers the colleagues with reach into one account, highest
@@ -39,27 +41,29 @@ type CompanyReachColleague struct {
 func (s *Store) CompanyReach(ctx context.Context, companyID ids.CompanyID) ([]CompanyReachColleague, error) {
 	var out []CompanyReachColleague
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The gates live in here: company read, then the row probe that
-		// answers 404 for an account the caller cannot open.
-		counts, err := CompanyLinkedInReach(ctx, tx, companyID)
-		if err != nil {
-			return err
-		}
-		if len(counts) == 0 {
-			out = []CompanyReachColleague{}
-			return nil
-		}
-		named, err := reachColleagueNames(ctx, tx, counts)
-		if err != nil {
-			return err
-		}
-		out = named
-		return nil
+		var err error
+		out, err = s.CompanyReachTx(ctx, tx, companyID)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// CompanyReachTx is CompanyReach inside a transaction the caller holds, for a
+// read that needs the reach and other rows to agree.
+func (s *Store) CompanyReachTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]CompanyReachColleague, error) {
+	// The gates live in here: company read, then the row probe that answers
+	// 404 for an account the caller cannot open.
+	counts, err := CompanyLinkedInReach(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	if len(counts) == 0 {
+		return []CompanyReachColleague{}, nil
+	}
+	return reachColleagueNames(ctx, tx, counts)
 }
 
 // reachColleagueNames puts a name to each counted colleague.
@@ -68,7 +72,7 @@ func (s *Store) CompanyReach(ctx context.Context, companyID ids.CompanyID) ([]Co
 // nameless. The answer exists to say whom to ask, and "somebody here has
 // three connections" is not that.
 func reachColleagueNames(
-	ctx context.Context, tx pgx.Tx, counts map[ids.UUID]int,
+	ctx context.Context, tx pgx.Tx, counts map[ids.UUID]ColleagueReach,
 ) ([]CompanyReachColleague, error) {
 	users := make([]ids.UUID, 0, len(counts))
 	for user := range counts {
@@ -88,7 +92,8 @@ func reachColleagueNames(
 			return nil, fmt.Errorf("contacts: scanning a colleague with reach: %w", err)
 		}
 		out = append(out, CompanyReachColleague{
-			UserID: user, DisplayName: name, Connections: counts[user],
+			UserID: user, DisplayName: name,
+			Connections: counts[user].Connections, Functions: counts[user].Functions,
 		})
 	}
 	if err := rows.Err(); err != nil {

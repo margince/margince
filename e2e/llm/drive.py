@@ -115,12 +115,32 @@ _CODEX_OFF = (
 CODEX_TIMEOUT = 900
 
 
-def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT):
+def _server_config(mcp_url, token_env, rest):
+    """The `-c` settings that attach the lane's one server to codex."""
+    server = f"mcp_servers.{transcript.SERVER}"
+    if rest is None:
+        return ["-c", f'{server}.url="{mcp_url}"', "-c", f'{server}.bearer_token_env_var="{token_env}"']
+    skill_dir, base = rest
+    shim = os.path.join(os.path.dirname(os.path.abspath(__file__)), "restshim.py")
+    # The passport is forwarded by the name of a variable the lane sets, so it
+    # reaches the shim and never a command line.
+    return [
+        "-c", f'{server}.command="python3"', "-c", f'{server}.args=["{shim}"]',
+        "-c", f'{server}.env={{MARGINCE_REST_SKILL_DIR="{skill_dir}", MARGINCE_REST_BASE="{base}"}}',
+        "-c", f'{server}.env_vars=["MARGINCE_REST_TOKEN"]',
+    ]
+
+
+def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT, rest=None):
     """Drive one prompt through `codex exec` and write it as a transcript.
 
     Run from an empty directory under a read-only sandbox, so nothing of the
     repository is within reach of a tool that slips through. The passport
     reaches codex by the name of its variable, never on the command line.
+
+    `rest` is (skill directory, REST base) on the REST door: the server codex
+    attaches is then the stdio shim, which holds the skill to read and one HTTP
+    tool, and nothing of the product's own MCP tools.
     """
     driver = f"{route.candidate}:{route.via}"
     try:
@@ -135,8 +155,7 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
         argv = [
             "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
             "-C", empty, "--sandbox", "read-only", "-m", route.model,
-            "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
-            "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
+            *_server_config(mcp_url, token_env, rest),
             # In exec mode codex refuses every MCP write it would otherwise ask
             # about; the lane's own server is approved, and only it.
             "-c", f'mcp_servers.{transcript.SERVER}.default_tools_approval_mode="approve"',
@@ -176,6 +195,8 @@ def main():
     parser.add_argument("--token-env", required=True, help="the variable holding the MCP passport")
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--rest-skill-dir", default="", help="the REST door: the skill the candidate reads")
+    parser.add_argument("--rest-base", default="", help="the REST door: the stack's /v1")
     args = parser.parse_args()
     try:
         route = candidates.resolve(args.candidate, args.via, args.model, args.folder, args.effort)
@@ -189,7 +210,10 @@ def main():
         print(err, file=sys.stderr)
         return HARNESS
     if route.wire == "codex-cli":
-        return run_codex(route, args.mcp_url, args.token_env, prompt, args.out)
+        rest = (args.rest_skill_dir, args.rest_base) if args.rest_skill_dir else None
+        if rest:
+            os.environ["MARGINCE_REST_TOKEN"] = os.environ.get(args.token_env, "")
+        return run_codex(route, args.mcp_url, args.token_env, prompt, args.out, rest=rest)
     key = os.environ.get(route.key_env, "")
     token = os.environ.get(args.token_env, "")
     if not key or not token:

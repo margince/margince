@@ -18,6 +18,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -74,19 +75,24 @@ const defaultFormerRole = "rep"
 // row, and a former member exists precisely so their name still appears on the
 // work they did.
 func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in FormerMemberInput) (ids.UserID, error) {
+	id, _, err := s.provisionFormerMember(ctx, actor, in)
+	return id, err
+}
+
+func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in FormerMemberInput) (ids.UserID, bool, error) {
 	// HUMAN-ONLY, stated here because nothing else states it. The contract's
 	// `x-agent-access: human-only` is a declaration and the generated wrapper
 	// enforces nothing (#5852), and provisioning a human seat is not an act an
 	// agent passport may perform on its own authority.
 	if err := auth.RequireHuman(ctx); err != nil {
-		return ids.UserID{}, err
+		return ids.UserID{}, false, err
 	}
 	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionCreate)
 	if err != nil {
-		return ids.UserID{}, err
+		return ids.UserID{}, false, err
 	}
 	if err := s.refuseUntilDescribed(ctx); err != nil {
-		return ids.UserID{}, err
+		return ids.UserID{}, false, err
 	}
 	role := in.Role
 	if role == "" {
@@ -94,12 +100,24 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 	}
 	ctx = actorCtx(ctx, actor)
 	var newUserID ids.UserID
+	created := false
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Before the insert so no row exists if the ceiling refuses. The seat
 		// cannot sign in today, but it can be REACTIVATED — at which point it
 		// carries whatever role this call granted, so handing one out here is
 		// handing one out.
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		survivor, found, err := mergedFormerSurvivor(ctx, tx, in.Email)
+		if err != nil {
+			return err
+		}
+		if found {
+			newUserID = survivor
+			return nil
+		}
+		if err := refuseRemovedEmail(ctx, tx, in.Email); err != nil {
 			return err
 		}
 		roleID, err := roleForAssignment(ctx, tx, actor, role, nil)
@@ -121,22 +139,47 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 			roleID, newUserID); err != nil {
 			return err
 		}
-		after := map[string]any{
-			"email": in.Email, "role": role,
-			userAuditKeyStatus: userStatusDeactivated,
-			"former":           true,
-		}
-		if in.LeftAt != nil {
-			after["left_at"] = *in.LeftAt
-		}
-		if in.Source != "" {
-			after["source"] = in.Source
-		}
+		created = true
+		after := formerMemberAudit(in, role)
 		_, err = storekit.Audit(ctx, tx, "create", "user", newUserID.UUID, nil, after)
 		return err
 	})
 	if err != nil {
-		return ids.UserID{}, err
+		return ids.UserID{}, false, err
 	}
-	return newUserID, nil
+	return newUserID, created, nil
+}
+
+func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.UserID, bool, error) {
+	var survivor ids.UserID
+	var found bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user WHERE lower(email)=lower(@email) AND merged_into_user_id IS NOT NULL)`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&found); err != nil {
+		return survivor, false, err
+	}
+	if !found {
+		return survivor, false, nil
+	}
+	err := tx.QueryRow(ctx, `WITH RECURSIVE lineage AS (
+ SELECT id,merged_into_user_id,removed_at,archived_at FROM app_user WHERE lower(email)=lower(@email)
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&survivor)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return survivor, false, errRemovedEmail
+	}
+	return survivor, err == nil, err
+}
+
+func formerMemberAudit(in FormerMemberInput, role string) map[string]any {
+	after := map[string]any{
+		memberEmailField: in.Email, "role": role,
+		userAuditKeyStatus: userStatusDeactivated,
+		"former":           true,
+	}
+	if in.LeftAt != nil {
+		after["left_at"] = *in.LeftAt
+	}
+	if in.Source != "" {
+		after["source"] = in.Source
+	}
+	return after
 }

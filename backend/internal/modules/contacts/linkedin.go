@@ -15,6 +15,8 @@ import (
 // the failing branch happened to use.
 const linkedinURLField = "linkedin_url"
 
+const linkedInCanonicalHost = "www.linkedin.com"
+
 // NormalizeLinkedInURL reduces a LinkedIn profile URL to the one stored
 // spelling the E12.11 exact-match dedupe key compares on: https scheme,
 // lowercased host, no query, no fragment, no trailing slash. Parsed once
@@ -81,7 +83,11 @@ func NormalizeContactLinkedInURL(raw string) (string, error) {
 			Message: "a contact's LinkedIn is a profile URL like https://www.linkedin.com/in/<name>",
 		}
 	}
-	return normalized, nil
+	u, err := url.Parse(normalized)
+	if err != nil {
+		return "", err
+	}
+	return "https://" + linkedInCanonicalHost + u.EscapedPath(), nil
 }
 
 // linkedInProfilePrefix is the one path shape a profile takes.

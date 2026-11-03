@@ -22,6 +22,7 @@ const (
 	LockKey          int64 = 0x646174617461736b
 	transactionLimit       = 20 * time.Second
 	statementLimit         = 15 * time.Second
+	estimateLimit          = 5 * time.Second
 	estimateCap      int64 = 100000
 )
 
@@ -88,16 +89,19 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 		p.BatchLimit = picked.step.Limit
 		p.TaskVersion = picked.task.Version
 	}
-	if p.Estimate == nil {
-		estimate, capped, err := e.estimateStep(ctx, tx, picked.task, picked.step, p)
+	if p.EstimatedAt == nil {
+		estimate, capped, measured, err := e.boundedEstimate(ctx, tx, picked.task, picked.step, p)
 		if err != nil {
 			return err
 		}
-		if estimate < 0 || estimate > estimateCap {
-			return errors.New("data task estimate exceeded its declared bound")
-		}
 		now := e.now()
-		p.Estimate, p.EstimateCapped, p.EstimatedAt = &estimate, capped, &now
+		p.EstimatedAt = &now
+		if measured {
+			if estimate < 0 || estimate > estimateCap {
+				return errors.New("data task estimate exceeded its declared bound")
+			}
+			p.Estimate, p.EstimateCapped = &estimate, capped
+		}
 	}
 	ctx = storekit.WithBatch(Acting(ctx, picked.task.ID), p.RunID)
 	out, err := picked.step.Batch(ctx, tx, BatchIn{Cursor: p.Cursor, Limit: p.BatchLimit, RunID: p.RunID, Activation: p.Activation})

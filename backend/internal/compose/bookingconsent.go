@@ -150,6 +150,25 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	return outcome, err
 }
 
+// CaptureLeadBookingConsent records the operational grant on the live lead a
+// booking landed on. A marketing tick is not asked about: the confirmation
+// link is minted against a contact's own primary address.
+func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
+	record := bookingConsentRecord(ids.Nil, c)
+	record.ContactID, record.LeadID = ids.ContactID{}, leadID
+	_, err := a.store.Record(ctx, record)
+	if invalid, ok := errors.AsType[*consent.ValidationError](err); ok {
+		return activities.MarketingNotRequested, httperr.Validation(invalid.Field, "invalid", invalid.Reason)
+	}
+	if err != nil {
+		return activities.MarketingNotRequested, err
+	}
+	if c.Marketing == nil {
+		return activities.MarketingNotRequested, nil
+	}
+	return activities.MarketingNotAsked, nil
+}
+
 // RecordBookingInquiry stamps the qualifying event a public booking IS: the
 // subject asked for a meeting, which ADR-0098 D2 counts as them initiating
 // correspondence exactly as an inbound message does.

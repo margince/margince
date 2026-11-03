@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { BOOKING_HOST_IDS, BOOKING_ID_PREFIXES } from "../lib/bookingaddress";
 
 // What nginx.conf answers for a path, worked out from the file the image ships
 // by nginx's own location rules: an exact match first, then the longest
@@ -136,6 +137,20 @@ describe("the web tier answers a file it does not have with 404, never the app s
     );
   });
 
+  // The pdf.js worker that reads a Voice DNA PDF is a hashed .mjs asset. A
+  // browser runs a module worker only when it arrives typed as JavaScript.
+  it("serves a hashed .mjs asset as JavaScript", () => {
+    const assets = locate("/assets/pdf.worker.min-3f9a1c.mjs").body;
+    const mjs = /location\s+~\s+\\\.mjs\$\s*\{([^}]*\{\s*\}[^}]*)\}/.exec(
+      assets,
+    )?.[1];
+    expect(mjs, "a .mjs location inside /assets/").toBeDefined();
+    expect(mjs).toMatch(/types\s*\{\s*\}/);
+    expect(mjs).toMatch(/default_type\s+text\/javascript;/);
+    expect(mjs).toMatch(/try_files\s+\$uri\s+=404;/);
+    expect(mjs).not.toMatch(/add_header/);
+  });
+
   it("answers every 404 with a short plain-text body", () => {
     expect(conf).toMatch(/error_page\s+404\s+@not_found;/);
     const notFound = locations().find((l) => l.pattern === "@not_found");
@@ -192,5 +207,75 @@ describe("every response the web tier sends carries the whole security set", () 
         );
       }
     }
+  });
+});
+
+it("routes a record card to the public metadata endpoint rather than the static shell", () => {
+  for (const kind of ["deals", "companies", "contacts"]) {
+    expect(
+      locate(`/r/${kind}/01a00000-0000-7000-8000-000000000001`).body,
+    ).toContain("return 302 /v1/public/record-previews/$1/$2;");
+  }
+  expect(locate("/open-record.js").body).toContain("expires -1;");
+});
+
+describe("a booking page has a real path a preview fetcher can read", () => {
+  const SLUG = "Ab3_x-9QrStUvWxYz0123456789abcd";
+
+  it.each([`/book/${SLUG}`, `/book/${SLUG}/`, "/book/lowercase-and_UPPER"])(
+    "sends a non-browser fetch of %s to the booking preview and a navigation to the shell",
+    (path) => {
+      const where = locate(path);
+      expect(where.pattern).toBe("^/book/([A-Za-z0-9_-]+)/?$");
+      expect(where.body).toContain(
+        "if ($http_sec_fetch_dest != document) {\n            return 302 /v1/public/booking/$1/preview;",
+      );
+      // The shell is the one file tried, so a navigation always gets the app.
+      expect(where.body).toContain("try_files /index.html =404;");
+      expect(headers(where.body).get("Cache-Control")).toBe("no-store");
+      expect(headers(where.body).get("Vary")).toBe("Sec-Fetch-Dest");
+    },
+  );
+
+  it.each(["/book/x.png", "/book/slug.json/", "/book/.env"])(
+    "answers %s, which names a file, with 404 rather than a preview",
+    (path) => {
+      expect(answer(path)).toBe(404);
+    },
+  );
+
+  it.each(["/book/a/b", "/Book/abc", "/book/", "/book"])(
+    "leaves %s, which is no booking page, to the shell without a preview redirect",
+    (path) => {
+      expect(locate(path).body).not.toContain("/v1/public/booking/");
+      expect(answer(path)).toBe("shell");
+    },
+  );
+});
+
+describe("a booking path that names a host control or a guest token is refused unlogged", () => {
+  const reserved = [
+    ...BOOKING_HOST_IDS,
+    ...BOOKING_ID_PREFIXES.map((prefix) => `${prefix}private-token`),
+  ];
+
+  it.each(reserved.flatMap((id) => [`/book/${id}`, `/book/${id}/`]))(
+    "answers %s with 404 and never sends it to the preview",
+    (path) => {
+      const where = locate(path);
+      expect(where.body).not.toContain("/v1/public/booking/");
+      expect(where.body).toMatch(/return 404 "Not found\\n";/);
+      expect(where.body).toMatch(/access_log off;/);
+    },
+  );
+
+  it("leaves a slug that only starts like a reserved word to the booking page", () => {
+    for (const path of ["/book/managex", "/book/previews", "/book/contacts"]) {
+      expect(locate(path).pattern).toBe("^/book/([A-Za-z0-9_-]+)/?$");
+    }
+  });
+
+  it("does not log a booking page's slug", () => {
+    expect(locate("/book/Ab3_x-9Q").body).toMatch(/access_log off;/);
   });
 });

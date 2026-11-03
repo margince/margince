@@ -53,6 +53,7 @@ func TestThePortMapsRefusalsAndLeaksNoDetail(t *testing.T) {
 	}{
 		"permission denied": {apperrors.ErrPermissionDenied, extension.ErrForbidden},
 		"not found":         {apperrors.ErrNotFound, extension.ErrNotFound},
+		"invalid argument":  {apperrors.ErrInvalidArgument, extension.ErrInvalid},
 		"version skew":      {apperrors.ErrVersionSkew, extension.ErrConflict},
 		"conflict":          {apperrors.ErrConflict, extension.ErrConflict},
 		"a field the contract refuses": {

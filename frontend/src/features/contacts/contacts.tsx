@@ -15,12 +15,15 @@ import {
   lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
+  sharedEmptyNote,
+  sharedWithMeView,
   standardViews,
   tagsColumn,
   useOwnerTagChips,
 } from "../../components/recordlist";
 import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
+import { ContactLink } from "../../design-system/contactlink";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -102,7 +105,10 @@ function ContactsList() {
         title={pageName}
         state={state}
         unit="unit.contacts"
-        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
+        emptyNote={
+          mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
+          sharedEmptyNote({ t, state, unit: "unit.contacts" })
+        }
         action={
           <>
             <ContactCreateActions />
@@ -140,7 +146,15 @@ function ContactsList() {
             // An address is words a reader reads, so it takes the body face
             // like every other value in the row — somebody a reader could
             // write to, not an identifier.
-            cell: (contact: Contact) => contact.primary_email ?? "",
+            cell: (contact: Contact) =>
+              contact.primary_email ? (
+                <ContactLink
+                  kind="email"
+                  value={contact.primary_email}
+                  record={{ entityType: "contact", entityId: contact.id }}
+                  readOnly={Boolean(contact.archived_at)}
+                />
+              ) : null,
             sort: "primary_email",
           },
           {
@@ -193,7 +207,12 @@ function ContactsList() {
         selection={selection}
         dataChips={ownerChips}
         dataViews={savedViews}
-        views={[...standardViews(viewerId)]}
+        // Shared with me is the contacts list's alone: a merge that kept a
+        // former owner's access leaves the remaining contact there.
+        views={[
+          ...standardViews(viewerId),
+          ...(viewerId ? [sharedWithMeView()] : []),
+        ]}
       />
     </div>
   );

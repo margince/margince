@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
-import { ProjectPicker } from "../../design-system/projectpicker";
+import { ProjectPicker, projectLabel } from "../../design-system/projectpicker";
 import { Switch } from "../../design-system/switch";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
@@ -9,7 +9,7 @@ import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
 import { StaleThreadNotice } from "./compose.notices";
 import { colleagueMailboxesOf, useThreadProject } from "./composeanchor";
-import { AccountDraftContext } from "./composedraftcontext";
+import { RelatedFiling } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
 import { AddressBlock, SubjectRow, TransportRow } from "./composehead";
@@ -62,11 +62,9 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   return (
     <p>
       {t("compose.channelFiling", {
-        // The picker labels an option with this same shape. So the project a
-        // rep reads here and the one on a mail reply are one name.
-        project: project.key
-          ? `${project.key} · ${project.name}`
-          : project.name,
+        // The picker's own label, so a channel reply and a mail reply name
+        // the project alike.
+        project: projectLabel(project),
       })}
     </p>
   );
@@ -301,17 +299,6 @@ export function ComposeHead({
       {/* Mail chooses where it files in the head. A channel send carries no
           filing field, so it is told what the conversation inherits. */}
       {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
-      {/* The account path's recipient and deal sit with the rows that say
-          what the message is. */}
-      {accountCompanyId !== undefined && (
-        <AccountDraftContext
-          companyId={accountCompanyId}
-          recipientId={account.recipientId}
-          onRecipientChange={account.setRecipientId}
-          dealId={account.dealId}
-          onDealChange={account.setDealId}
-        />
-      )}
       {!dial.isChannelReply && (
         <MailOnlyFields
           flagged={flagged}
@@ -329,7 +316,20 @@ export function ComposeHead({
           onSubjectChange={fields.setSubject}
           rejectionInFlight={rejectionInFlight}
           deadRecipients={records.deadRecipients}
-          filing={<ProjectFiling records={records} />}
+          filing={
+            accountCompanyId === undefined ? (
+              <ProjectFiling records={records} />
+            ) : (
+              <RelatedFiling
+                companyId={accountCompanyId}
+                projects={records.reachableProjects}
+                projectId={records.projectFiling.projectId}
+                onProjectChange={records.projectFiling.setProjectId}
+                dealId={account.dealId}
+                onDealChange={account.setDealId}
+              />
+            )
+          }
           tagging={
             records.projectFiling.ownTag && (
               <SubjectTagSwitch

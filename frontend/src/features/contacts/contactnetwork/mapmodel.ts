@@ -29,9 +29,14 @@ export type MapCopy = Readonly<{
   peers: string;
   target: string;
   useThisRoute: string;
+  // The reader's own node: named "You", and offering the email they would
+  // write rather than an introduction nobody asks of themselves.
+  you: string;
+  writeEmail: string;
   withheldDirect: string;
   withheldAccount: string;
   edgeDirect: (name: string) => string;
+  edgeDirectYou: string;
   edgeAccount: (name: string) => string;
 }>;
 
@@ -71,6 +76,7 @@ export function bandOf(bucket: string | undefined): MapBand | undefined {
 export function mapModelFromContactGraph(
   graph: Graph,
   copy: MapCopy,
+  viewer: Readonly<{ userId: string | undefined; mayWrite: boolean }>,
 ): RelationshipMapModel {
   const nodes = graph.nodes ?? [];
   const anchor = nodes.find((n) => n.group === "anchor");
@@ -85,7 +91,7 @@ export function mapModelFromContactGraph(
   // offers the action. A contact at the target's company is context a reader
   // routes THROUGH, never somebody this product asks.
   const mapNodes: MapNode[] = [
-    ...colleagues.map((n) => colleagueNode(n, copy)),
+    ...colleagues.map((n) => colleagueNode(n, copy, viewer)),
     ...account.map((n) => contactNode(n, "contact")),
     ...peers.map((n) => contactNode(n, "contact")),
     ...(anchor ? [contactNode(anchor, "contact")] : []),
@@ -151,7 +157,7 @@ export function mapModelFromContactGraph(
       band,
       lastAt: edge.last_at ?? null,
       words: reachesTarget
-        ? copy.edgeDirect(labelOf(nodes, edge.from))
+        ? directWords(nodes, edge.from, copy, viewer.userId)
         : copy.edgeAccount(labelOf(nodes, edge.to)),
     });
   }
@@ -190,7 +196,25 @@ export function completenessText(
   return parts.join(" ");
 }
 
-function colleagueNode(n: GraphNode, copy: MapCopy): MapNode {
+/** The action id the reader's own node carries, for the caller to answer. */
+export const WRITE_EMAIL_ACTION = "write-email";
+
+function colleagueNode(
+  n: GraphNode,
+  copy: MapCopy,
+  viewer: Readonly<{ userId: string | undefined; mayWrite: boolean }>,
+): MapNode {
+  if (isViewer(n, viewer.userId)) {
+    return {
+      id: n.id,
+      kind: "user",
+      label: copy.you,
+      sublabel: n.sublabel,
+      actions: viewer.mayWrite
+        ? [{ id: WRITE_EMAIL_ACTION, label: copy.writeEmail }]
+        : [],
+    };
+  }
   return {
     id: n.id,
     kind: "user",
@@ -200,10 +224,29 @@ function colleagueNode(n: GraphNode, copy: MapCopy): MapNode {
   };
 }
 
-function contactNode(n: GraphNode, kind: "contact"): MapNode {
-  return { id: n.id, kind, label: n.label, sublabel: n.sublabel };
+function isViewer(n: GraphNode, userId: string | undefined): boolean {
+  return userId !== undefined && n.user_id === userId;
+}
+
+// An account edge ends at a contact, so only a direct edge can start at the
+// reader, and it addresses the reader as "you".
+function directWords(
+  nodes: readonly GraphNode[],
+  from: string,
+  copy: MapCopy,
+  userId: string | undefined,
+): string {
+  const node = nodes.find((n) => n.id === from);
+  if (node !== undefined && isViewer(node, userId)) {
+    return copy.edgeDirectYou;
+  }
+  return copy.edgeDirect(node?.label ?? "");
 }
 
 function labelOf(nodes: readonly GraphNode[], id: string): string {
   return nodes.find((n) => n.id === id)?.label ?? "";
+}
+
+function contactNode(n: GraphNode, kind: "contact"): MapNode {
+  return { id: n.id, kind, label: n.label, sublabel: n.sublabel };
 }

@@ -122,13 +122,15 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 	if err := validateReviewQuestions(questions); err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, err
 	}
+	// The table's trigger names a built-in question's catalog key while the
+	// question reads as shipped, so the save carries no key of its own.
 	raw, err := json.Marshal(questions)
 	if err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, fmt.Errorf("encode template: %w", err)
 	}
 	var result crmcontracts.ActivityReviewTemplate
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT id, key, label, outcome, questions, version, active, system, created_at, updated_at FROM activity_review_template WHERE id=$1 AND archived_at IS NULL FOR UPDATE`, id))
+		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT `+reviewTemplateColumns+` FROM activity_review_template WHERE id=$1 AND archived_at IS NULL FOR UPDATE`, id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -138,7 +140,7 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		if before.Version == nil || *before.Version != req.Version {
 			return apperrors.ErrConflict
 		}
-		result, err = scanReviewTemplate(tx.QueryRow(ctx, `UPDATE activity_review_template SET questions=$2 WHERE id=$1 RETURNING id, key, label, outcome, questions, version, active, system, created_at, updated_at`, id, raw))
+		result, err = scanReviewTemplate(tx.QueryRow(ctx, `UPDATE activity_review_template SET questions=$2 WHERE id=$1 RETURNING `+reviewTemplateColumns, id, raw))
 		if err != nil {
 			return fmt.Errorf("update template: %w", err)
 		}

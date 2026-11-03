@@ -41,7 +41,7 @@ func TestAcceptingARequestRecoversAnUntouchedWronglyAssignedReminder(t *testing.
 			if err != nil {
 				t.Fatal(err)
 			}
-			original, _, err := store.LogActivity(asClassifier(e), emailRequestTaskInput(sourceRow, nil, e.other, requestInstant))
+			original, _, err := store.LogActivity(asClassifier(e), emailRequestTaskInput(sourceRow, nil, e.other, requestInstant, false))
 			if err != nil {
 				t.Fatal(err)
 			}

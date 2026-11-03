@@ -20,16 +20,16 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
   test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
-  make-target-parity contract-breaking-check contract-frontend-drift \
+  make-target-parity test-make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density \
-  check-extension-modules \
+  check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze \
   test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
-  test-published-tag test-docs-describing \
+  test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
   test-release-notes
 
@@ -68,14 +68,19 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
-## help — list every available command (the default goal): the root targets
-## below, then the backend targets `make <name>` delegates into.
+## help — the everyday commands in groups (the default goal); the groups are
+## in scripts/make-help.sh.
 help:
-	@echo "Margince — make commands"
+	@bash scripts/make-help.sh
+
+## help-all — every command: the root targets below, then the backend targets
+## `make <name>` delegates into.
+help-all:
+	@echo "Margince — every make command"
 	@echo ""
 	@echo "Root:"
 	@grep -hE '^## [A-Za-z0-9_-]+ —' $(MAKEFILE_LIST) | sed -E 's/^## /  /'
@@ -217,14 +222,9 @@ gate-timings:
 	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
 		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
-## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
-## UAT guides call the infra lane by these names). infra-up
-## is `db-up`; infra-down STOPS the containers but keeps the data volumes — use
-## `make clean` to also drop them.
+## infra-up — `db-up` under the name some deploy tooling and UAT guides call
+## (infra-down is backend's own). The root's only alias.
 infra-up: db-up
-
-infra-down:
-	$(MAKE) -C backend infra-down
 
 ## dev — the full local COLD-START stack in a real browser: Postgres + Redis, the api, the
 ## background worker (cmd/worker — outbox relay + Surface-B runner, always on),
@@ -295,8 +295,20 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition check-static test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
+# Every name this file does not define runs in backend/, so a target added
+# there is reachable from here with no edit, and a typo fails with backend's own
+# "No rule to make target". FORCE makes the rule run even where a root folder
+# shares the name (tools/, composition/). A forwarded name must stay out of
+# .PHONY: make looks for no pattern rule for a phony target, so it would do
+# nothing and exit 0.
+%: FORCE
 	$(MAKE) -C backend $@
+
+.PHONY: FORCE
+FORCE:
+
+# The match-anything rule above would otherwise try to remake this file.
+Makefile: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
 ## if the frontend deps are missing rather than skipping — a set-up worktree has
@@ -313,12 +325,6 @@ check-fe: fe-typecheck-composed
 	$(MAKE) fe-test-ext
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
-## fitness-jurisdiction — no country strings in core (alias for no-jurisdiction).
-fitness-jurisdiction: no-jurisdiction
-## gen-types — regenerate the contract types (alias for gen).
-gen-types: gen
-## gen-types-check — fail if generated types drifted (alias for drift).
-gen-types-check: drift
 
 ## fe-lint — Biome lint the frontend.
 fe-lint:
@@ -472,6 +478,13 @@ ext-imports:
 seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
+
+## seed-analytics — invented records for every Analytics Overview state,
+## through the public API, on a stack that `make seed-dev` already seeded.
+## Variants by ANALYTICS_WORKFLOW, ANALYTICS_TARGET, ANALYTICS_INDIVIDUAL and
+## ANALYTICS_FISCAL_START_MONTH (see the script's header). Idempotent.
+seed-analytics:
+	./scripts/seed-analytics.sh
 
 ## check-config — run --check-config for the api and the worker on the dev
 ## files (or CONFIG=, CONFIG_FILE=, ENV_FILE=), and fail when either refuses
@@ -753,6 +766,18 @@ bench-mobile:
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
+## bench-home — R01 and R07: a full load of Home, a return to it and a
+## refresh of it, on a production build against a running stack's api, timed
+## by the app's own journey marks and judged by the answers the page received.
+## BENCH_API_PORT is the api port that stack's banner prints.
+## It records nothing and `pnpm e2e` does not collect its spec. BASE_URL and
+## the mobile switch are cleared, so it always measures the build it made.
+bench-home:
+	@test -n "$(BENCH_API_PORT)" || { echo "bench-home: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
+	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
+		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
+		pnpm exec playwright test
+
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside
 ## bench-perf.
@@ -780,7 +805,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.
-## e2e-llm — the six use cases driven by a REAL assistant, against a dedicated
+## e2e-llm — every scenario in e2e/llm/scenarios driven by a REAL assistant, against a dedicated
 ## stack. This is the half the Go suite cannot answer: those tests pin the
 ## payloads, the refusals and the legibility fields; this asks whether a model
 ## can actually drive the surface and say something true.
@@ -1206,13 +1231,17 @@ check-host-ports:
 ci-doc-parity:
 	@./scripts/check-ci-doc-parity.sh
 
-## make-target-parity — every backend target `make help` advertises resolves
-## from the repo root, which is what the help text tells a reader (and a CI
-## step) it does. The root delegation list is hand-maintained, so a new backend
-## target is one edit away from being advertised and unreachable at once — how
-## the scheduled govulncheck lane came to report red daily without ever running.
+## make-target-parity — every backend target `make help-all` advertises runs
+## from the repo root, a typo fails there, and `make help` prints. The root
+## forwards through one pattern rule, and a forwarded name added to the root
+## .PHONY list turns into a silent no-op that exits 0.
 make-target-parity:
 	@./scripts/check-make-target-parity.sh
+
+## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
+## each planted forwarding mistake fails.
+test-make-target-parity:
+	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — oasdiff severity gate on backend/api/crm.yaml vs
 ## origin/main: a breaking change (removed op, narrowed type…) fails; additive
@@ -1424,24 +1453,12 @@ docs-describing:
 test-docs-describing:
 	@./scripts/check-docs-describing.test.sh
 
-## test-release-patch-base — prove a release patch is cut from what was last
-## PUBLISHED, not from this push's previous tip. The two agree only while every
-## lane publishes, and a cancelled or failed one drops its commit's files from
-## every patch a consumer will ever apply — silently, and identically to a
-## correct run from the publishing side. The case that matters walks the
-## sequence that made it a defect: publish, skip, publish.
+## test-release-patch-base — prove the patch base reader the release workflow
+## calls accepts only a checked record from the release CLI: a base, or the
+## first-release mark. Every other record fails before a patch is cut. It feeds
+## the reader fixed records; it runs neither the workflow nor the CLI.
 test-release-patch-base:
 	@./scripts/release-patch-base.test.sh
-
-## test-published-tag — prove the tag that base is read from only ever moves
-## FORWARD. The move is a job outside the publish concurrency group, so two
-## releases in flight are serialized at the publish and not at the tag: an older
-## one's move landing last would point the tag backward, and every later patch
-## would then be cut from a base ahead of what consumers actually have. The case
-## that matters records an older release after a newer one already recorded
-## itself.
-test-published-tag:
-	@./scripts/publish-released-tag.test.sh
 
 ## test-release-tag-version — the release tag reader's own test: what the
 ## grammar accepts, and what shelf each accepted tag lands on. The reader has
@@ -1507,6 +1524,12 @@ check-ext-migrations:
 ## with nothing in the tree noticing (#2003).
 check-extension-modules:
 	@./scripts/check-extension-modules.sh
+
+## go-work-sum — go.work.sum is what `make install` leaves behind. A stale one is
+## rewritten on a fresh checkout's first install, which dirties every submodule
+## consumer that requires this tree to stay unmodified.
+go-work-sum:
+	@./scripts/check-go-work-sum.sh
 
 ## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
@@ -1704,7 +1727,7 @@ sbom-validate:
 	@$(CYCLONEDX) validate --input-file $(SBOM_DIR)/margince.cdx.json --fail-on-errors
 	@echo "validating $(SBOM_DIR)/margince.spdx221.json (SPDX 2.2.1, pyspdxtools)"
 	@$(PYSPDX) bash -c '\
-	  pip install --require-hashes --quiet --no-cache-dir --disable-pip-version-check -r $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
+	  bash scripts/install-sbom-python.sh $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"

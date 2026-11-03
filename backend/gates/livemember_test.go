@@ -57,6 +57,9 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
+	// liveHumanHelper is LiveMemberSQL narrowed to human seats, registered for
+	// the same reason.
+	liveHumanHelper = "LiveHumanSQL"
 	// liveMemberOwner holds the one literal spelling. identity's livemember.go
 	// delegates to it and passes its alias through. That is the single call the
 	// literal-alias test must not judge.
@@ -104,6 +107,10 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
+	"internal/modules/identity/former.go":           "import lineage follows removed and archived identities but returns only a live survivor; former members deliberately need not be active",
+	"internal/modules/approvals/redeem.go":          "pins the administrator editor revision for an invited or deactivated member; it is a named approval subject, not an assignment or sign-in destination",
+	"internal/modules/identity/memberedit.go":       "the editor addresses active, invited and deactivated accounts; removed and archived accounts are excluded",
+	"internal/platform/auth/consolidatedmember.go":  "follows the retained identity of an old writer through retired accounts to their survivor, including deactivated import accounts",
 	"internal/modules/capture/sentbycolleague.go":   "names the seat who wrote a mail another seat holds a copy of; most colleagues are invited and never sign in, and a departed one's reply was still the workspace's answer, while an archived row is gone",
 	"internal/modules/consent/noticeacquisition.go": "names the seat that recorded the acquisition a disclosure duty rests on; a deactivated colleague still labels what they recorded, and an archived row is gone, as identity's SeatNames answers",
 	"internal/modules/dealrooms/preview.go":         "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
@@ -158,7 +165,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 			qualifier: importAliasOf(file, identityPath),
 			other:     importAliasOf(file, workforcePath),
 			inside:    file.Name != nil && (file.Name.Name == "identity" || file.Name.Name == "workforce"),
-			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
+			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true, liveHumanHelper: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range appUserStatements(decl, scope) {

@@ -17,13 +17,14 @@ import (
 // a delivered-to sighting never binds a seat to an event. Any other record
 // keeps the account-address match.
 func calendarSeatMatch(ctx context.Context, tx pgx.Tx, kind string, attested bool, args *[]any) (string, error) {
+	login := storekit.SeatLoginIsSQL("u", "inp.address", "inp.domain_folded")
 	if kind != meetingKind || !attested {
-		return "lower(u.email) = inp.address", nil
+		return login, nil
 	}
 	bind := func(v any) int { *args = append(*args, v); return len(*args) }
 	identities, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, bind)
 	if err != nil {
 		return "", err
 	}
-	return "(lower(u.email) = inp.address OR (" + identities + " -> u.id::text) ? inp.address)", nil
+	return "(" + login + " OR (" + identities + " -> u.id::text) ? inp.address)", nil
 }

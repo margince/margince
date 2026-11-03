@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { RecordCard } from "../../design-system/recordcard";
@@ -178,7 +179,7 @@ function hitMarks(hit: SearchResult, t: Translator): ReactNode[] {
   if (hit.type === "company" && hit.is_partner === true) {
     marks.push(
       <Badge key="partner">{t("search.partner.badge")}</Badge>,
-      <a
+      <AppLink
         key="partner-open"
         className="entity-link"
         href={routeHash(companyTabRoute(hit.id, "partner"))}
@@ -187,7 +188,7 @@ function hitMarks(hit: SearchResult, t: Translator): ReactNode[] {
         })}
       >
         {t("search.partner.open")}
-      </a>,
+      </AppLink>,
     );
   }
   return marks;

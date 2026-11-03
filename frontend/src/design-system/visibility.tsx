@@ -73,14 +73,15 @@ const ICON: Record<Visibility, LucideIcon> = {
   withheld: EyeOff,
 };
 
-// Three looks for six states. Open is outlined and quiet; every limit is
-// filled, so a sealed thing is heavier on the page than an open one; withheld
-// is the caution, because it is why the reader sees no content.
-function look(state: Visibility): "open" | "limited" | "withheld" {
+// Three looks for six states. Open is outlined and quiet: the sheet's own
+// `.visibility`, with no class added. Every limit is filled, so a sealed thing
+// is heavier on the page than an open one. Withheld is the caution, because it
+// is why the reader sees no content.
+function look(state: Visibility): string {
   if (state === "team" || state === "workspace") {
-    return "open";
+    return "";
   }
-  return state === "withheld" ? "withheld" : "limited";
+  return state === "withheld" ? " visibility-withheld" : " visibility-limited";
 }
 
 /**
@@ -96,7 +97,7 @@ export function VisibilityBadge({
   const Icon = ICON[state];
   return (
     <span
-      className={`visibility visibility-${look(state)}${opens ? " visibility-opens" : ""}`}
+      className={`visibility${look(state)}${opens ? " visibility-opens" : ""}`}
     >
       <Icon aria-hidden="true" />
       {t(WORD[state])}

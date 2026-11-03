@@ -26,6 +26,9 @@ import (
 type memberAction string
 
 const (
+	actionEdit              memberAction = "edit"
+	actionMerge             memberAction = "merge"
+	actionRemove            memberAction = "remove"
 	actionChangeRole        memberAction = "change_role"
 	actionIssuePasswordLink memberAction = "issue_password_link"
 	actionRemoveMFA         memberAction = "remove_mfa"
@@ -42,7 +45,7 @@ const (
 // TestTheRosterOffersOnlyTheVerbsTheCallerHolds holds this to them.
 func (a memberAction) verb() principal.Action {
 	switch a {
-	case actionDeactivate, actionReactivate:
+	case actionDeactivate, actionReactivate, actionMerge, actionRemove:
 		return principal.ActionDelete
 	default:
 		return principal.ActionUpdate
@@ -99,6 +102,9 @@ func (s *Service) allowedMemberActions(
 func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, seatLeft bool) []memberAction {
 	status, userID := target.row.Status, ids.UserID{UUID: target.row.ID}
 	admitted := map[memberAction]bool{
+		actionEdit:   !target.row.IsAgent && callerOutranks(actor, target.grants, reachTakeover) == nil,
+		actionMerge:  target.row.Unused && actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
+		actionRemove: actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
 		actionChangeRole: refuseOwnRoleChange(actor, userID) == nil &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			refuseRoleForAgentSeat(target.row.IsAgent) == nil &&
@@ -120,7 +126,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 	}
 	out := []memberAction{}
 	for _, action := range []memberAction{
-		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver,
+		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver, actionEdit, actionMerge, actionRemove,
 	} {
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)

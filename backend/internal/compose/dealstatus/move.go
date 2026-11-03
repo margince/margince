@@ -3,8 +3,6 @@
 
 package dealstatus
 
-// Which move the card offers, decided from records.
-//
 // The VERB is never the model's to choose. A reader clicking "Draft the reply"
 // must reach the mail these rules picked; a model that named a different one
 // would send them somewhere the button cannot go. The lane writes why the move
@@ -64,6 +62,8 @@ const meetingHorizon = 14 * 24 * time.Hour
 // Closing a deal ends pipeline advice, not meetings, tasks or customer requests.
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	mv := nextMove(f)
+	mv.Basis = requestMoveBasis(f, mv)
+	mv.MailCoverage = f.mailCoverage
 	if f.lang != "" && f.lang != "en" {
 		// Existing dismissal digests include generated English task subjects.
 		// Keep that identity while the same rules render the requested language.
@@ -78,7 +78,6 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	return stamped(mv)
 }
 
-// nextMove is the rules' choice, in order.
 func nextMove(f facts) crmcontracts.DealStatusCardMove {
 	said := statusCopyFor(f.lang)
 	if meeting, ok := upcomingMeeting(f); ok {
@@ -87,7 +86,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 		if subject == "" {
 			subject = said.Say(statusWords.Meeting)
 		}
-		return move(ActionOpenMeetingBrief,
+		return ruleMove(rulePrepareMeeting,
 			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 			map[string]any{argActivityID: activityID},
 			untimed(&activityID, fmt.Sprintf(said.Say(statusWords.Booked), subject)))
@@ -102,22 +101,26 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 	if len(f.openTasks) > 0 {
 		task := f.openTasks[0]
 		activityID := openapi_types.UUID(task.ID)
-		return move(ActionOpenTask, fmt.Sprintf(said.Say(statusWords.Complete), task.Subject), map[string]any{argActivityID: activityID},
+		return ruleMove(ruleOpenTask, fmt.Sprintf(said.Say(statusWords.Complete), task.Subject), map[string]any{argActivityID: activityID},
 			untimed(&activityID, task.Subject))
 	}
-	if request, ok := unansweredInbound(f); ok {
+	if request, current, ok := requestForMove(f); ok {
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
-			return move(ActionDraftEmail, said.Say(statusWords.Reminder), map[string]any{argActivityID: request.Id},
+			reason := said.Say(statusWords.Reminder)
+			if !current {
+				reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
+			}
+			return ruleMove(ruleRequestReminder, reason, map[string]any{argActivityID: request.Id},
 				evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 		}
 		reason := fmt.Sprintf(said.Say(statusWords.OwnReply), said.subjectOf(request))
-		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		if !current {
 			reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
 		}
 		//nolint:goconst // "source" is the record's provenance KEY, and the Go census
 		// (backend/gates/recordsourcespelling_test.go) reads that key as a string literal
 		// at each site — a shared constant here would be a key the census cannot see.
-		return move(ActionCreateTask, reason,
+		return ruleMove(ruleAcceptRequest, reason,
 			map[string]any{"subject": said.subjectOf(request), "request_activity_id": request.Id, "source": provenance.RecordSourceManual},
 			evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 	}
@@ -151,7 +154,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 		subject = said.Say(statusWords.Meeting)
 	}
 	activityID := openapi_types.UUID(meeting.ID)
-	return move(ActionOpenMeetingBrief,
+	return ruleMove(ruleFarMeeting,
 		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 		map[string]any{argActivityID: activityID},
 		untimed(&activityID, fmt.Sprintf(said.Say(statusWords.Booked), subject)))
@@ -178,7 +181,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 		// Either something IS agreed, or nobody is recorded on the deal to
 		// meet. The generic step stays for both: it names nobody, which is
 		// exactly right when the records name nobody.
-		return move(ActionCreateTask, nextStepReason(f),
+		return ruleMove(ruleNextStep, nextStepReason(f),
 			map[string]any{
 				"subject": fmt.Sprintf(said.Say(statusWords.Agree), f.deal.Name),
 				argLinks:  []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
@@ -218,7 +221,7 @@ func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
 	if !seat.Attachable || seat.ContactID == (ids.UUID{}) {
 		seat.Name = ""
 	}
-	return move(ActionCreateTask,
+	return ruleMove(ruleMeetingRequest,
 		fmt.Sprintf(said.Say(statusWords.Book),
 			sinceLastContact(f), said.seatWords(seat)),
 		map[string]any{
@@ -298,7 +301,7 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 	}
 	// The stakeholder lives only in the reason, so the digest names them: "open
 	// with Alice" set aside must not hide "open with Bob".
-	opening := move(ActionDraftEmail, said.openingReason(seat, len(f.seats)), nil)
+	opening := ruleMove(ruleFirstOutreach, said.openingReason(seat, len(f.seats)), nil)
 	return stamped(opening, owedwork.Mark{Kind: "seat", ID: seat.Role + ":" + seat.ContactID.String()}), true
 }
 
@@ -356,22 +359,21 @@ func upcomingMeeting(f facts) (activities.BookedMeeting, bool) {
 	return *f.nextMeeting, true
 }
 
-// unansweredInbound selects from the activities module's obligation read, not
-// the recent timeline. An unrelated reply or a history page boundary cannot
-// settle a request. The same selection supplies the move and its reply target.
+// The activities owner admits current requests before limiting the result.
 func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
-	for _, a := range f.requests {
-		if a.Kind == crmcontracts.ActivityKindEmail && !withheld(a) {
-			return a, true
-		}
-	}
-	return crmcontracts.Activity{}, false
+	return readableRequest(f.currentRequests)
 }
 
 // lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings, which are plans and not contact. A
 // canceled or no-show meeting and automatic mail are no contact either.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
+	if f.contactChecked {
+		if f.lastExchange == nil {
+			return crmcontracts.Activity{}, false
+		}
+		return *f.lastExchange, true
+	}
 	for _, a := range f.timeline {
 		var status string
 		if a.MeetingStatus != nil {
@@ -408,14 +410,7 @@ func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
 	return []crmcontracts.DealNextBestActionEvidence{evidenceOf(last, fmt.Sprintf(said.Say(statusWords.LastEvidence), said.subjectOf(last)))}
 }
 
-// evidenceOf points the card at one record. A ZERO timestamp answers nil
-// rather than a date.
-//
-// occurred_at is nullable on the wire because some records genuinely have no
-// moment: an open task with no due date is the case, and taking the address of
-// its zero value renders `0001-01-01T00:00:00Z` — a date no reader can act on
-// and none of them chose. "There is no date" is what nil says, and it is the
-// truth about that row.
+// Missing source timestamps remain absent on the wire.
 func evidenceOf(a crmcontracts.Activity, text string) crmcontracts.DealNextBestActionEvidence {
 	id := a.Id
 	out := untimed(&id, text)

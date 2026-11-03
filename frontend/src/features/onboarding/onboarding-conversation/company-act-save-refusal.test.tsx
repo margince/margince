@@ -158,9 +158,11 @@ function refusalLine(): HTMLElement | null {
 }
 
 async function pressConfirm(): Promise<void> {
-  fireEvent.click(
-    await screen.findByRole("button", { name: en["ob.deck.confirm"] }),
-  );
+  const confirm = await screen.findByRole("button", {
+    name: en["ob.deck.confirm"],
+  });
+  await waitFor(() => expect(confirm).toBeEnabled());
+  fireEvent.click(confirm);
 }
 
 async function openWholeRecord(): Promise<void> {

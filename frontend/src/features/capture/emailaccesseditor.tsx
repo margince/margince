@@ -139,7 +139,7 @@ function NamedMembers({ access }: Readonly<{ access: EmailAccess }>) {
     return null;
   }
   const nameOf = new Map(
-    named.map((candidate) => [
+    named.list.map((candidate) => [
       `${candidate.kind}:${candidate.id}`,
       candidate.name,
     ]),

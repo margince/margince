@@ -440,9 +440,9 @@ it("refreshes cached preview times after saving working hours", async () => {
   );
   expect(await screen.findByRole("button", { name: slotName(0) })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Switch view" }));
-  fireEvent.change(await screen.findByLabelText("From"), {
-    target: { value: "10:00" },
-  });
+  const from = await screen.findByLabelText("From");
+  await user.clear(from);
+  await user.type(from, "10:00{Enter}");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(client.getQueryData(["working-hours"])).toMatchObject({

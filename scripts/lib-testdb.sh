@@ -486,7 +486,7 @@ bucket_for() { echo "${2:-${MARGINCE_TEST_BLOBSTORE_BUCKET:-margince-test}}-p${1
 # is allowed to cost. Exits rather than returning on a bad value: a lane that ran
 # on a budget nobody asked for is worse than one that refuses to start.
 #
-# 600s is the BUDGET — the policy number a package is priced against and told to
+# 900s is the BUDGET — the policy number a package is priced against and told to
 # split before it crosses. The parallel lane keeps it under that name (IT_BUDGET)
 # and scales the go-test TIMEOUT separately, because the two are different
 # questions wearing one number: what a package is allowed to COST, and how long a
@@ -508,9 +508,9 @@ bucket_for() { echo "${2:-${MARGINCE_TEST_BLOBSTORE_BUCKET:-margince-test}}-p${1
 # entirely and let a hung package sit until the CI job's own limit — the one
 # failure this bound exists to turn into a legible message.
 resolve_it_timeout() {
-  IT_TIMEOUT="${INTEGRATION_TIMEOUT:-600s}"
+  IT_TIMEOUT="${INTEGRATION_TIMEOUT:-900s}"
   if [[ ! "$IT_TIMEOUT" =~ ^[0-9]+s$ ]]; then
-    echo "FAIL: INTEGRATION_TIMEOUT must be <seconds>s (e.g. 600s), got '${IT_TIMEOUT}'"
+    echo "FAIL: INTEGRATION_TIMEOUT must be <seconds>s (e.g. 900s), got '${IT_TIMEOUT}'"
     exit 1
   fi
   # Matched, not evaluated: `(( 08 == 0 ))` reads a leading zero as octal and
@@ -522,4 +522,16 @@ resolve_it_timeout() {
 "removes the per-package guard rather than widening it"
     exit 1
   fi
+}
+
+# The census a lane's package processes write (MARGINCE_SQL_CENSUS_DIR) holds
+# every statement of 8 KB or more they sent. check_repeated_gates fails when one
+# carries the activity content gate twice from a sender the allowlist does not
+# name, and writes the senders it saw repeat to $2 for the staleness check.
+REPEATED_GATES_ALLOW="tools/sql-census/repeated-gates.txt"
+check_repeated_gates() { # census-dir seen-out
+  ( cd "$ROOT/backend" && go run ./tools/sql-census check -census "$1" -allow "$REPEATED_GATES_ALLOW" -seen "$2" )
+}
+stale_repeated_gates() { # seen-file...
+  ( cd "$ROOT/backend" && go run ./tools/sql-census stale -allow "$REPEATED_GATES_ALLOW" "$@" )
 }

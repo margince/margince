@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   Field,
@@ -370,7 +371,8 @@ function VideoChoice({
         t(copy.other)
       ) : (
         <>
-          {t(copy.needs)} <a href="#/settings/connections">{t(copy.connect)}</a>
+          {t(copy.needs)}{" "}
+          <AppLink href="#/settings/connections">{t(copy.connect)}</AppLink>
         </>
       );
     }

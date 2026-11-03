@@ -17,17 +17,23 @@ import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentRule = components["schemas"]["ContactMomentRule"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /** The call How it stands draws. */
 export type ContactVerdict = Readonly<{
   word: string;
   sentence?: string;
   tone: ReadingTone;
+  /** The change the sentence was read under: the newest one that agrees with
+   *  the tone the sentence was chosen for. The ring's caption draws this one,
+   *  so the caption can never point the other way from the sentence. */
+  change?: RelationshipChange;
 }>;
 
 // The wire carries no tone for a rule. An owed thing that slipped is danger,
 // an owed thing still on time is warning, a reply after silence is good news.
 const MOMENT_TONE: Readonly<Record<ContactMomentRule, ReadingTone>> = {
+  privacy_notice_due: "warning",
   overdue_promise: "danger",
   gone_quiet: "danger",
   open_promise: "warning",
@@ -55,48 +61,92 @@ export function contactVerdict(
   if (moment && moment.rule !== "nothing_needed") {
     // The Next bar above already says why now, so the sentence here is the
     // relationship's own reading and the two never print one line twice.
+    const tone = MOMENT_TONE[moment.rule];
+    const change = changeUnder(view, tone);
     return {
       word: t(`contact.moment.rule.${moment.rule}`),
-      sentence: bandSentence(view, t),
-      tone: MOMENT_TONE[moment.rule],
+      sentence: bandSentence(view, t, change),
+      tone,
+      change,
     };
   }
   const strength = view.strength;
   if (!strength) {
     return moment
-      ? { word: t("contact.moment.rule.nothing_needed"), tone: "neutral" }
+      ? {
+          word: t("contact.moment.rule.nothing_needed"),
+          sentence: t("contact.verdict.nothingOwed"),
+          tone: "neutral",
+        }
       : null;
   }
   if (strength.bucket === "none") {
-    return { word: bucketLabel(strength.bucket, t), tone: "neutral" };
+    return {
+      word: bucketLabel(strength.bucket, t),
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    };
   }
+  // A band-only reading is no judgement of direction, so its sentence takes
+  // the newest change either way, and the caption takes the same one.
+  const change = changeUnder(view, "neutral");
   return {
     word: bucketLabel(strength.bucket, t),
-    sentence: bandSentence(view, t),
+    sentence: bandSentence(view, t, change),
     tone: bandTone(strength.bucket),
+    change,
   };
 }
 
-function bandSentence(view: Contact360, t: Translator): string | undefined {
-  const change = view.relationship_changes?.[0];
+// Which way each change moved the relationship.
+const CHANGE_DIRECTION: Readonly<
+  Record<RelationshipChange["kind"], "better" | "worse">
+> = {
+  warmed: "better",
+  replied_after_gap: "better",
+  cooled: "worse",
+  went_quiet: "worse",
+};
+
+// A change may stand under a heading only when it points the same way. Under
+// "Gone quiet", a band that moved up is true and still reads as a
+// contradiction, so the newest change that agrees is used instead.
+function agreesWith(change: RelationshipChange, tone: ReadingTone): boolean {
+  const direction = CHANGE_DIRECTION[change.kind];
+  if (tone === "danger" || tone === "warning") return direction !== "better";
+  if (tone === "success") return direction !== "worse";
+  return true;
+}
+
+/** The newest change that may stand under a heading of this tone. The wire
+ *  orders changes by consequence, not by time, so the newest is picked by
+ *  `at`, not by position. */
+export function changeUnder(
+  view: Contact360,
+  tone: ReadingTone,
+): RelationshipChange | undefined {
+  let newest: RelationshipChange | undefined;
+  let newestAt = Number.NEGATIVE_INFINITY;
+  for (const candidate of view.relationship_changes ?? []) {
+    if (!agreesWith(candidate, tone)) continue;
+    const at = Date.parse(candidate.at);
+    if (newest === undefined || at > newestAt) {
+      newest = candidate;
+      newestAt = at;
+    }
+  }
+  return newest;
+}
+
+function bandSentence(
+  view: Contact360,
+  t: Translator,
+  change: RelationshipChange | undefined,
+): string | undefined {
   if (change) {
     return changeSentence(change, t);
   }
   return omitted(view, "last_touch") ? undefined : directionSentence(view, t);
-}
-
-/**
- * awaitsOurReply says whether their message is the newest one either way. The
- * "Your move" pill, the gap's "no reply" and the Last reply figure's tone
- * all read it, so they turn on the same day.
- */
-export function awaitsOurReply(view: Contact360): boolean {
-  if (omitted(view, "last_touch") || !view.last_inbound_at) {
-    return false;
-  }
-  const inbound = Date.parse(view.last_inbound_at);
-  const outbound = Date.parse(view.last_outbound_at ?? "");
-  return Number.isNaN(outbound) || inbound > outbound;
 }
 
 /** The three rows beside the ring. A withheld section draws no row, because
@@ -198,6 +248,26 @@ function exchangeTone(
   return inbound + outbound > 0 ? "warning" : "neutral";
 }
 
+export function colleaguesInTouch(view: Contact360) {
+  const colleagues = view.network?.colleagues ?? [];
+  if (
+    colleagues.some(
+      (colleague) =>
+        colleague.interactions_90d > 0 && colleague.two_way === undefined,
+    )
+  )
+    return undefined;
+  return colleagues.filter((colleague) => colleague.two_way === true);
+}
+
+// Colleagues who sent the contact a message and got no reply. Being copied on
+// someone else's mail is not writing, so `sent_90d`, not `outbound_90d`.
+function colleaguesWhoWrote(view: Contact360) {
+  return (view.network?.colleagues ?? []).filter(
+    (colleague) => colleague.two_way !== true && (colleague.sent_90d ?? 0) > 0,
+  );
+}
+
 function reachDim(
   view: Contact360,
   t: Translator,
@@ -206,18 +276,34 @@ function reachDim(
   if (omitted(view, "network")) {
     return null;
   }
-  const inTouch = (view.network?.colleagues ?? []).filter(
-    (colleague) => colleague.interactions_90d > 0,
-  );
+  const inTouch = colleaguesInTouch(view);
   const label = t("contact.standing.dim.reach");
+  if (!inTouch)
+    return {
+      key: "reach",
+      label,
+      value: t("record.notShown"),
+      tone: "neutral",
+    };
+  const wrote = colleaguesWhoWrote(view)
+    .map((colleague) => colleague.display_name)
+    .join(", ");
   if (inTouch.length === 0) {
     return {
       key: "reach",
       label,
-      value: t("contact.standing.dim.reachNone"),
+      value: t(
+        wrote
+          ? "contact.standing.dim.reachOneWay"
+          : "contact.standing.dim.reachNone",
+      ),
+      sub: wrote
+        ? t("contact.standing.dim.wroteNoReply", { names: wrote })
+        : undefined,
       tone: "neutral",
     };
   }
+  const names = inTouch.map((colleague) => colleague.display_name).join(", ");
   return {
     key: "reach",
     label,
@@ -229,7 +315,9 @@ function reachDim(
         count: formatNumber(inTouch.length, locale),
       },
     ),
-    sub: inTouch.map((colleague) => colleague.display_name).join(", "),
+    sub: wrote
+      ? `${names} · ${t("contact.standing.dim.alsoWrote", { names: wrote })}`
+      : names,
     // One colleague in touch is a single thread, not coverage.
     tone: inTouch.length > 1 ? "success" : "warning",
   };

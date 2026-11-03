@@ -73,16 +73,14 @@ function Facts({
 export const Live: Story = {
   render: () => <Facts contact={live} buyingRole="champion" />,
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("link", {
-      name: "Open chat in WhatsApp",
-    });
+    await within(canvasElement).findByRole("button", { name: "Open a chat" });
   },
 };
 
 const LONG_NUMBER = "+849123456789012";
 
-// The longest number a messenger takes, at 390px: its chats wrap under it and
-// nothing runs past the edge.
+// The longest number a messenger takes, at 390px: its chat glyph stays on
+// the page and nothing runs past the edge.
 export const LongNumberPhone: Story = {
   render: () => (
     <Facts
@@ -99,13 +97,13 @@ export const LongNumberPhone: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const zalo = await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    const chat = await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: LONG_NUMBER });
-    await expect(zalo.getBoundingClientRect().right).toBeLessThanOrEqual(
+    await expect(chat.getBoundingClientRect().right).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     );
-    await expect(zalo.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      number.getBoundingClientRect().bottom - 0.5,
+    await expect(chat.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+      number.getBoundingClientRect().left - 0.5,
     );
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,

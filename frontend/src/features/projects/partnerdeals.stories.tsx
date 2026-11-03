@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import type { Locale } from "../../i18n";
 import {
   installFetchStub,
   jsonResponse,
@@ -46,7 +48,10 @@ function deal(over: Partial<Deal>): Deal {
   };
 }
 
-function Panel({ deals }: Readonly<{ deals: Deal[] }>) {
+function Panel({
+  deals,
+  locale = "en",
+}: Readonly<{ deals: Deal[]; locale?: Locale }>) {
   installFetchStub({
     "GET /deals": () =>
       jsonResponse({
@@ -57,7 +62,7 @@ function Panel({ deals }: Readonly<{ deals: Deal[] }>) {
       jsonResponse({ id: "o-9", display_name: "Nordwerk GmbH" }),
   });
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <PartnerDeals companyId="p-1" />
     </StoryProviders>
   );
@@ -118,3 +123,21 @@ export const AmountWithheld: Story = {
 };
 
 export const NothingBrought: Story = { render: () => <Panel deals={[]} /> };
+
+/** Each deal's status in the reader's words, never the stored value. */
+export const Vietnamese: Story = {
+  render: () => (
+    <Panel
+      locale="vi"
+      deals={[
+        deal({}),
+        deal({ id: "d-5", name: "Spare parts", status: "won" }),
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Đang mở")).toBeVisible();
+    await expect(canvas.getByText("Thắng")).toBeVisible();
+  },
+};

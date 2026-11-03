@@ -21,7 +21,7 @@ import (
 // order the chapters concatenate in is the order the export runs them in.
 func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
-	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails))
+	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
@@ -190,22 +190,12 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 const sarContentDisclosed = `a.audience = 'workspace'`
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
-// it, and is spelled once because the clause below asks it four times — twice
-// to decide disclosure and twice to withhold the payload on the same answer.
-// Four copies of a disclosure predicate is four chances for one of them to
-// drift, on the surface where a drift is a disclosure.
+// it. The clause below asks it four times, twice to decide disclosure and twice
+// to withhold the payload on the same answer.
 //
-// The link column first, the natural key only where there is no link: the two
-// mean different things for every provider but mail, and reading the key on a
-// linked row would judge it by a redelivery id.
-//
-// Held by: TestTheSARRawCaptureCorrelationIsSpelledOnce
-// (backend/gates/sarrawcapturelink_test.go), which cuts this declaration out
-// of the file and fails on anything left that still correlates the two tables.
-const sarRawCaptureLink = `(a.raw_capture_id = rc.id
-		         OR (a.raw_capture_id IS NULL
-		             AND a.source_system = rc.source_system
-		             AND a.source_id = rc.source_id))`
+// Held by: TestTheStoredOriginalIsCorrelatedOnce
+// (backend/gates/storedoriginal_test.go).
+var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
@@ -325,8 +315,8 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// acquisition_id is withheld for the reason source_entity_id above is:
 		// it points at a row exported in its own section, and a bare id would
 		// invite a reader to join across sections rather than read either.
-		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes,
-		          attempts, completed_at, blocked_reason, created_at
+		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes, source_kind,
+		          attempts, completed_at, blocked_reason, created_at, source_obtained_at, source_review_note
 		   FROM privacy_notice_case
 		   WHERE contact_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's

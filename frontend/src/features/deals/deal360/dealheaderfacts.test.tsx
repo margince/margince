@@ -11,9 +11,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FieldGrid } from "../../../design-system/fieldgrid";
 import { UTC_ZONE } from "../../../format/timezone";
-import { LocaleProvider, translate } from "../../../i18n";
+import { type Locale, LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { closeWords, DealRecordRows, DealSubtitle } from "./dealheaderfacts";
+import {
+  closeWords,
+  type DealIdentity,
+  DealRecordRows,
+  DealSubtitle,
+} from "./dealheaderfacts";
 
 // The facts a rep checks first, on the record's head: value, stage, owner —
 // the same three questions DealIdentityLine's dot-joined sentence answered,
@@ -44,13 +49,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(node: React.ReactNode) {
+function show(node: React.ReactNode, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial={locale}>{node}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -208,6 +213,49 @@ describe("the details rows say where a deal stands and how it closed", () => {
     ).toBeInTheDocument();
   });
 
+  it("names a loss by its reason's label, a retired one too, with the note", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: [
+            {
+              id: "r-1",
+              key: "timing",
+              label: "Bad timing",
+              active: false,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        }),
+      ),
+    );
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "lost",
+            lost_reason_code: "timing",
+            lost_reason: "Back next year",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
+    );
+    expect(
+      await screen.findByText("Bad timing — Back next year"),
+    ).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   it("asks nothing about a loss on a deal that is not lost", () => {
     show(
       <FieldGrid>
@@ -274,7 +322,8 @@ describe("the details rows say where a deal stands and how it closed", () => {
     expect(screen.queryByText(foreign)).not.toBeInTheDocument();
   });
 
-  it("names how the record reached Margince, behind the provenance tag", async () => {
+  // The stored source is a key, so the popover says it in the reader's words.
+  it("names how the record reached Margince in words, behind the provenance tag", async () => {
     show(
       <FieldGrid>
         <DealRecordRows
@@ -282,15 +331,17 @@ describe("the details rows say where a deal stands and how it closed", () => {
             amount_minor: 1000,
             currency: "EUR",
             stage_id: "st-1",
-            source: "csv import",
+            source: "manual",
           }}
           stages={stages}
-          locale="en"
+          locale="de"
         />
       </FieldGrid>,
+      "de",
     );
     await userEvent.setup().click(screen.getByRole("button"));
-    expect(await screen.findByText("csv import")).toBeInTheDocument();
+    expect(await screen.findByText("Manuell erstellt")).toBeInTheDocument();
+    expect(screen.queryByText("manual")).not.toBeInTheDocument();
   });
 
   // A deal somebody wrote in the system it was imported from. An import runs as
@@ -318,6 +369,32 @@ describe("the details rows say where a deal stands and how it closed", () => {
       screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
+  });
+
+  // "Source" is the channel a deal came through, so who recorded it has its own
+  // label. The system it was logged in reads as its maker spells it.
+  it("labels who recorded the deal apart from its source, naming the system as its maker does", () => {
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            stage_id: "st-1",
+            source: "hubspot",
+            captured_by: "human:u-importer",
+            author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+          }}
+          stages={stages}
+          locale="vi"
+        />
+      </FieldGrid>,
+      "vi",
+    );
+    // "Nguồn" is Source's word, and "bởi" a passive no reader says.
+    expect(screen.getByText("Bên ghi nhận")).toBeInTheDocument();
+    expect(screen.queryByText(/Nguồn|bởi/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
+    ).toBeInTheDocument();
   });
 });
 
@@ -443,5 +520,47 @@ describe("a deal an import wrote", () => {
     imported(null);
 
     expect(screen.queryByText(/Imported/)).toBeNull();
+  });
+});
+
+// captured_by names only the agent's passport. The create audit row behind
+// `created_by` is what knows the colleague and the tool.
+describe("a deal an agent created", () => {
+  const AGENT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+  const created = (createdBy: DealIdentity["created_by"]) =>
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            captured_by: AGENT,
+            source: "manual",
+            created_by: createdBy,
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
+    );
+
+  it("names the colleague the agent worked for and the tool", () => {
+    created({
+      actor_type: "agent",
+      actor_id: AGENT,
+      on_behalf_of_name: "Anna Weber",
+      agent_client: "Claude",
+    });
+
+    expect(
+      screen.getByText("Made by Claude for Anna Weber"),
+    ).toBeInTheDocument();
+  });
+
+  it("says only that an agent made it when the create row is not known", () => {
+    created(undefined);
+
+    expect(screen.getByText("Automated by an agent")).toBeInTheDocument();
   });
 });

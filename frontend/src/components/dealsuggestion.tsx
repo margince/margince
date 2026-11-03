@@ -10,6 +10,7 @@
 // column, a total or a forecast.
 
 import { type ReactNode, useId, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
@@ -41,7 +42,7 @@ import {
   useAcceptDealSuggestion,
   useDealSuggestions,
 } from "./dealsuggestions.queries";
-import { EntityRef } from "./entityref";
+import { EntityRef, RosterFailedLine } from "./entityref";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../format/currencychoices";
 import { useLeadingCurrencies } from "../lib/leadingcurrencies";
@@ -92,7 +93,7 @@ export function DealSuggestionCard({
           {compact ? (
             // On the board this card is the suggestion's only trace. It leads to
             // the company it is about, as the Worklist row does.
-            <a
+            <AppLink
               className="staged-value"
               href={routeHash({
                 screen: "companies",
@@ -100,7 +101,7 @@ export function DealSuggestionCard({
               })}
             >
               {suggestedName(suggestion, t)}
-            </a>
+            </AppLink>
           ) : (
             <span className="staged-value">{suggestedName(suggestion, t)}</span>
           )}
@@ -375,13 +376,14 @@ export function AcceptSuggestionDialog({
               {...control}
               options={[
                 { value: "", label: t("dealSuggestion.ownerMe") },
-                ...owners,
+                ...owners.options,
               ]}
               value={draft.ownerId}
               onChange={(ownerId) => set({ ownerId })}
             />
           )}
         </Field>
+        <RosterFailedLine kind="user" roster={owners.roster} />
         <Field
           label={t("dealSuggestion.field.closeDate")}
           hint={t("dealSuggestion.closeDateHint")}

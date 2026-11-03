@@ -76,16 +76,23 @@ func meetingTenureEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 // invited to, at a given age, with no contact behind the participant row —
 // which is the state the bare-address arm exists to read.
 func seedMeetingWith(ctx context.Context, tx pgx.Tx, address string, ago time.Duration) error {
+	ownerID := ids.NewV7()
+	if _, err := tx.Exec(ctx, `INSERT INTO app_user (id,email,display_name,status)
+ VALUES (@owner,@email,'Meeting Owner','active')`, pgx.NamedArgs{"owner": ownerID, "email": "owner-" + ownerID.String() + "@example.test"}); err != nil {
+		return err
+	}
 	var activityID ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO activity (kind, occurred_at, direction, source, captured_by, counterparty_email)
-		VALUES ('meeting', now() - $2::interval, 'inbound', 'imap', 'connector:imap', $1)
-		RETURNING id`, address, ago.String()).Scan(&activityID); err != nil {
+		VALUES ('meeting', now() - @age::interval, 'inbound', 'imap', @stamp, @address)
+		RETURNING id`, pgx.NamedArgs{"address": address, "age": ago.String(), "stamp": "connector:imap:" + ownerID.String()}).Scan(&activityID); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, address, role)
-		VALUES ($1, $2, 'attendee')`, activityID, address)
+		INSERT INTO activity_participant (activity_id,address,role,user_id,roster_seat,response)
+ VALUES (@activity,@address,'attendee',NULL,@owner,'accepted'),
+ (@activity,@owner_address,'organizer',@owner,@owner,'accepted')`, pgx.NamedArgs{
+		"activity": activityID, "address": address, "owner": ownerID, "owner_address": "owner-" + ownerID.String() + "@example.test"})
 	return err
 }
 

@@ -59,6 +59,8 @@ type lastMessage struct {
 	// on the fact of the silence while the citation carries no words.
 	Subject string
 	Excerpt string
+	// Move is the History badge's move when the message is a mail.
+	Move *crmcontracts.EmailSummaryMove
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -104,19 +106,27 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	// A mail's own History badge says whose move it is, so the strip and the
+	// no-reply advice read the same rule as the message's row.
+	move, err := activities.MailMoveColumnSQL(ctx, arg)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
 	var found lastMessage
 	var direction, subject, excerpt *string
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
-		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
+		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
+		       %[6]s
 		FROM activity a
 		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
-		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...).
-		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt)
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move)
+	err = tx.QueryRow(ctx, query, args...).
+		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
 	}
@@ -169,12 +179,13 @@ func hasOpenTask(
 		return false, err
 	}
 	var scheduled bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&scheduled)
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
+	err = tx.QueryRow(ctx, query, args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}
@@ -335,9 +346,9 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	switch {
 	case age > engagementDormantDays*24*time.Hour:
 		return "dormant"
-	case in.newest.Direction == "outbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"
-	case in.newest.Direction == "inbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.owedByUs() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_us"
 	}
 	return "active"

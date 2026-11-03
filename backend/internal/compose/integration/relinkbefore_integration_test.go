@@ -80,3 +80,63 @@ func TestReplacingAProjectLinkNamesTheOldProjectInTheAuditBefore(t *testing.T) {
 		t.Errorf("audit rows naming the removed project = %d, want 1", n)
 	}
 }
+
+// Company, deal and lead are the other link kinds a replace removes, each
+// through its own column.
+func TestReplacingACompanyDealOrLeadLinkNamesTheOldRecordInTheAuditBefore(t *testing.T) {
+	e := Setup(t)
+	admin := e.As(e.Rep1, nil, AdminPerms)
+	pipeline, open, _ := DealFixture(t, e)
+	kinds := []struct {
+		entityType, column string
+		seed               func(name string) ids.UUID
+	}{
+		{"company", "company_id", func(name string) ids.UUID { return e.SeedCompany(t, name, &e.Rep1) }},
+		{"deal", "deal_id", func(name string) ids.UUID { return e.SeedDeal(t, name, pipeline, open, &e.Rep1) }},
+		{"lead", "lead_id", func(name string) ids.UUID {
+			return ids.UUID(seedLead(t, e, name, name+"@relink-audit.test", &e.Rep1).UUID)
+		}},
+	}
+	for _, kind := range kinds {
+		t.Run(kind.entityType, func(t *testing.T) {
+			old, replacement := kind.seed("old-"+kind.entityType), kind.seed("new-"+kind.entityType)
+			act := seedRelinkActivity(t, e, "Filed on a "+kind.entityType)
+			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, `+kind.column+`) VALUES ($1, $2, $3)`,
+				act, kind.entityType, old)
+			if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
+				EntityType: kind.entityType, EntityID: replacement, ReplaceExistingOfType: true,
+			}); err != nil {
+				t.Fatalf("%s relink: %v", kind.entityType, err)
+			}
+			if n := removedLinksNamed(t, e, act, kind.entityType, old); n != 1 {
+				t.Errorf("audit rows naming the removed %s = %d, want 1", kind.entityType, n)
+			}
+		})
+	}
+}
+
+// The thread door replaces each member's links and audits each one.
+func TestReplacingAThreadsLinksNamesTheRemovedLinksOnEveryMember(t *testing.T) {
+	e := Setup(t)
+	admin := e.As(e.Rep1, nil, AdminPerms)
+	from, to := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Petra Lang", nil)
+	owner, key := OwnerConn(t), "thread:"+ids.NewV7().String()
+	members := make([]ids.UUID, 2)
+	for i := range members {
+		members[i] = SeedIDRow(t, owner, ourMailInto, key)
+		LinkActivity(t, owner, members[i], "contact", from)
+	}
+	out, err := e.Activities.RelinkThread(admin, ids.From[ids.ActivityKind](members[0]),
+		activities.RelinkActivityInput{EntityType: "contact", EntityID: to, ReplaceExistingOfType: true})
+	if err != nil {
+		t.Fatalf("thread relink: %v", err)
+	}
+	if out.Relinked != len(members) {
+		t.Fatalf("relinked = %d, want every member of the thread", out.Relinked)
+	}
+	for _, act := range members {
+		if n := removedLinksNamed(t, e, act, "contact", from); n != 1 {
+			t.Errorf("member %s: audit rows naming the removed contact = %d, want 1", act, n)
+		}
+	}
+}

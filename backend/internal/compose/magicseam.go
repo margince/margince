@@ -133,14 +133,14 @@ type magicBriefCutoff struct {
 // not-found rather than as an error for the same reason — a rep who has never
 // had a brief is an ordinary state, not a broken read.
 func (m magicBriefCutoff) CutoffFor(ctx context.Context) (time.Time, bool, error) {
-	run, err := m.engine.LatestRun(ctx, m.now())
+	asOf, err := m.engine.LatestCutoff(ctx, m.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return time.Time{}, false, nil
 	}
 	if err != nil {
 		return time.Time{}, false, err
 	}
-	return run.AsOf, true, nil
+	return asOf, true, nil
 }
 
 // magicUndoJudge answers the receipt's "can this be taken back".

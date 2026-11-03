@@ -108,6 +108,10 @@ var exempt = gatekit.Waive(map[string]string{
 	"docs/explanation/plain-words.txt": "the same, for the explanation pages",
 	"docs/reference/plain-words.txt":   "the same, for the reference pages",
 	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
+	"backend/internal/modules/webforms/fields.go": "the field names website forms send, where organization " +
+		"is a common spelling of the company field the module reads",
+	"frontend/src/features/settings/webformsnippet.ts": "autocomplete=\"organization\" is the HTML autofill " +
+		"token for a company name, spelled as the HTML standard spells it",
 	".github/workflows/cla.yml": "a GitHub organisation — its members are the staff the CLA " +
 		"does not cover, not this record type",
 	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
@@ -127,8 +131,7 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `companies` authority alias",
 	"backend/internal/modules/capture/graph/client.go":      "Microsoft's `common` authority, which admits any tenant",
 	"backend/cmd/api/config.go":                             "flag help for the Microsoft authority aliases",
-	".env.example":                                          "the Microsoft authority aliases, in the operator's own file",
-	"docs/reference/configuration.md":                       "the Microsoft authority aliases",
+	"docs/reference/connectors-and-sign-in.md":              "the Microsoft authority aliases",
 
 	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
 		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +
@@ -159,12 +162,6 @@ var exempt = gatekit.Waive(map[string]string{
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
-	"e2e/llm/scenarios/case2-business-card.yaml": "one judged CRITERION quotes a sentence a " +
-		"model might write. The offline judge is keyed on sha256(criterion + answer), so " +
-		"rewording a criterion by one word orphans every verdict recorded against it — four " +
-		"of them here — and they can only be recomputed against a live model. The word is " +
-		"illustrative; the cache is not",
-
 	"backend/gates/rlsclaimsprose_test.go": "its waiver keys quote shipped migrations verbatim, " +
 		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
 

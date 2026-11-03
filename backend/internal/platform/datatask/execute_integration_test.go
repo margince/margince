@@ -287,3 +287,30 @@ func TestStaleFailureCannotOverwriteANewerOutcome(t *testing.T) {
 		t.Fatalf("stale failure overwrote success: %+v", got)
 	}
 }
+
+// Seeding records a step without counting its rows, and a count that cannot
+// finish in time leaves the step unestimated while its batches still run.
+func TestASlowEstimateLeavesTheStepUnestimatedAndRunsIt(t *testing.T) {
+	ctx, pool, e, _ := executorFixture(t)
+	if seeded := progressFor(ctx, t, e); seeded.EstimatedAt != nil || seeded.Estimate != nil {
+		t.Fatalf("seed counted rows: %+v", seeded)
+	}
+	e.tasks[0].Steps[0].Estimate = func(ctx context.Context, q Querier, _ int64) (int64, bool, error) {
+		var slept string
+		err := q.QueryRow(ctx, `SELECT pg_sleep(@seconds)::text`, pgx.NamedArgs{"seconds": (estimateLimit + time.Second).Seconds()}).Scan(&slept)
+		return 1, false, err
+	}
+	if _, err := e.Execute(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := progressFor(ctx, t, e)
+	if got.Status != Done || got.Batches != 1 || got.ConsecutiveFailures != 0 {
+		t.Fatalf("a slow estimate stopped the step: %+v", got)
+	}
+	if got.Estimate != nil || got.EstimatedAt == nil {
+		t.Fatalf("a stopped estimate recorded a count: %+v", got)
+	}
+	if systemActions(ctx, t, pool, "data_task.probe") != 1 {
+		t.Fatal("the batch behind the slow estimate did not commit")
+	}
+}

@@ -9,6 +9,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
 // Why a row is worth the reader's morning, drawn.
@@ -62,7 +63,14 @@ function day(queue: WorklistItem[]): Worklist {
 function draw(queue: WorklistItem[]) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(day(queue))),
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        echoView(
+          String(input instanceof Request ? input.url : input),
+          day(queue),
+        ),
+      ),
+    ),
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -319,7 +327,7 @@ describe("a row says its deadline once", () => {
 });
 
 describe("a follow-up row says why it is there", () => {
-  it("says how long the reader's message has gone unanswered", async () => {
+  it("dates the message without a recorded reply", async () => {
     const { container } = draw([
       {
         occurred_precision: "instant",
@@ -340,7 +348,7 @@ describe("a follow-up row says why it is there", () => {
     await screen.findByText(/Pricing for the pilot/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
     expect(line).toMatch(/you wrote last/);
-    expect(line).toMatch(/no reply for 6 days/);
+    expect(line).toMatch(/no reply recorded for 6 days/);
   });
 
   // The row a meeting with nobody on file leaves behind offers no "Draft
@@ -367,7 +375,7 @@ describe("a follow-up row says why it is there", () => {
     await screen.findByText(/Call with Acme and Dana/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
     expect(line).toMatch(/met 1 day ago/);
-    expect(line).toMatch(/nothing sent since/);
+    expect(line).toMatch(/no outgoing message recorded since/);
     expect(line).toMatch(/no attendee on file/);
   });
 });

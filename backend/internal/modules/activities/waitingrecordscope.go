@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -66,7 +67,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	if err != nil {
 		return "", err
 	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
 	}
@@ -101,6 +102,10 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	if err != nil {
 		return "", err
 	}
+	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
 		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
@@ -116,7 +121,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
 			noKeyset, bookedDiscover,
-			neverRelaxed, unjudgedResponses) +
+			neverRelaxed, unjudgedResponses, requestTaskDiscover) +
 		") waiting_thread)", nil
 }
 
@@ -135,10 +140,20 @@ func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg f
 }
 
 func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
-	if in.RequestReviewAsOf == nil {
+	asOf := in.RequestCurrentAsOf
+	if asOf == nil {
+		asOf = in.RequestReviewAsOf
+	}
+	if asOf == nil {
 		return where, nil
 	}
-	instant := fmt.Sprintf("$%d", arg(*in.RequestReviewAsOf))
+	instant := fmt.Sprintf("$%d::timestamptz", arg(*asOf))
+	request := reviewableRequestSQL(instant)
+	if in.RequestCurrentAsOf != nil {
+		identities := fmt.Sprintf("$%d::jsonb", arg(in.mailIdentities))
+		horizon := storekit.WaitingHorizonSQL(*asOf, arg)
+		request = currentRequestSQL(instant, horizon, identities, arg)
+	}
 	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 	if err != nil {
 		return nil, err
@@ -146,5 +161,5 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
 	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
-	return append(where, "("+reviewableRequestSQL(instant)+")", occurredday.BegunSQL("a", instant), disposition), nil
+	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition), nil
 }

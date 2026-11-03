@@ -83,13 +83,31 @@ func looksLikeARoleToken(value string) bool {
 	return known
 }
 
+// notRoleMailboxLists are vocabularies that share department words with the
+// role-mailbox list and answer another question.
+var notRoleMailboxLists = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/reachfunction.go": "reads a LinkedIn job title into the function the " +
+		"connection works in; no address reaches it",
+	"internal/compose/company360/introdraftaccount.go": "names those functions in an ask for an " +
+		"introduction; no address reaches it",
+})
+
 func TestOnlyOnePackageDeclaresRoleMailboxes(t *testing.T) {
 	t.Parallel()
 	found := roleMailboxListsIn(t, "internal", "../extensions", "cmd", "tools", "pkg")
-	if len(found) > 0 {
-		t.Fatalf("a second role-mailbox list — ask platform/mailrole instead:\n%s",
-			strings.Join(found, "\n"))
+	var lists []string
+	for _, finding := range found {
+		path, _, _ := strings.Cut(finding, ":")
+		if notRoleMailboxLists.Waived(t, filepath.ToSlash(path)) {
+			continue
+		}
+		lists = append(lists, finding)
 	}
+	if len(lists) > 0 {
+		t.Fatalf("a second role-mailbox list — ask platform/mailrole instead:\n%s",
+			strings.Join(lists, "\n"))
+	}
+	notRoleMailboxLists.AssertAllMatched(t)
 }
 
 // The gate's own defect test. A census of zero cannot tell a clean tree from a

@@ -13,7 +13,7 @@ import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
 import { endOfDayInZone, viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
-import { useRoster } from "./entityref";
+import { useRoster, useRosterHint, useRosterPartial } from "./entityref";
 
 type BulkTask = components["schemas"]["BulkTask"];
 
@@ -31,6 +31,7 @@ export function TaskVerb({
   const [due, setDue] = useState<ISODate | "">("");
   const [assigneeId, setAssigneeId] = useState("");
   const roster = useRoster("user", open);
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", open));
   const start = () => {
     setSubject("");
     setDue("");
@@ -77,7 +78,7 @@ export function TaskVerb({
             />
           )}
         </Field>
-        <Field label={t("bulk.taskAssignee")}>
+        <Field label={t("bulk.taskAssignee")} hint={rosterHint}>
           {(control) => (
             <Select
               {...control}

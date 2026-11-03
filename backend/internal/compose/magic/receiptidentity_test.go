@@ -12,19 +12,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestReceiptIdentityOnlyUsesTheNativeStageApprovalLink(t *testing.T) {
+func TestReceiptIdentityFollowsOnlyTheNativeApprovalLinks(t *testing.T) {
 	audit, approval := ids.NewV7(), ids.NewV7()
 	for _, test := range []struct {
-		name, action, evidence string
-		linked                 bool
+		name, entityType, action, evidence string
+		linked                             bool
 	}{
-		{"stage", "advance_stage", fmt.Sprintf(`{"stage_approval_id":%q}`, approval), true},
-		{"other action", "update", fmt.Sprintf(`{"stage_approval_id":%q}`, approval), false},
-		{"legacy", "advance_stage", `{}`, false},
-		{"malformed", "advance_stage", `{"stage_approval_id":"invalid"}`, false},
+		{"stage", typeDeal, "advance_stage", fmt.Sprintf(`{"stage_approval_id":%q}`, approval), true},
+		{"other action", typeDeal, "update", fmt.Sprintf(`{"stage_approval_id":%q}`, approval), false},
+		{"released effect", typeCompany, "update", fmt.Sprintf(`{"released_by_approval_id":%q}`, approval), true},
+		{"legacy", typeDeal, "advance_stage", `{}`, false},
+		{"malformed", typeDeal, "advance_stage", `{"stage_approval_id":"invalid"}`, false},
+		{"malformed release", typeCompany, "update", `{"released_by_approval_id":"invalid"}`, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			e := entry{ID: audit, EntityType: typeDeal, Action: test.action, Evidence: []byte(test.evidence)}
+			e := entry{ID: audit, EntityType: test.entityType, Action: test.action, Evidence: []byte(test.evidence)}
 			want := audit
 			if test.linked {
 				want = approval

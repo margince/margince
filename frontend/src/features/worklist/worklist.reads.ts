@@ -1,9 +1,10 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
-import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
+import { worklistKey } from "../../lib/workkeys";
+import { worklistDayOptions } from "../../lib/worklistday";
+import type { WorklistView } from "../../lib/worklistviews";
 import type {
-  HandledForYou,
   TeamBoard,
   TeamExceptions,
   Worklist,
@@ -13,7 +14,9 @@ import type {
 } from "./worklist.queries";
 import { represented } from "./worklistunits";
 
+export { useHandledForYou } from "../../lib/handled";
 export { worklistKey } from "../../lib/workkeys";
+export { readWorklistPage, worklistDayOptions } from "../../lib/worklistday";
 
 // The whole day in one read, at one scope or one named owner, and one filter.
 //
@@ -30,25 +33,11 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
   enabled = true,
+  view?: WorklistView,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
   return useInfiniteQuery({
+    ...worklistDayOptions(scope, filter, owner, view),
     enabled,
-    queryKey,
-    ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<Worklist> => {
-      const dials = owner ? { owner, filter } : { scope, filter };
-      return unwrap(
-        await api.GET("/worklist", {
-          params: {
-            query: pageParam ? { ...dials, cursor: pageParam } : dials,
-          },
-        }),
-      );
-    },
-    // A page can empty as rows leave the snapshot; only its cursor ends the walk.
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 }
 
@@ -78,23 +67,6 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
     }
   }
   return rows;
-}
-
-/**
- * What the product did on this reader's behalf.
- *
- * No `enabled` gate, unlike the manager reads beside it. A receipt is the
- * reader's own and every act it reports was taken for them, so there is no tier
- * to hold. The server refuses a caller with no human behind it, which is the
- * only refusal this read has.
- */
-export function useHandledForYou() {
-  return useQuery({
-    queryKey: [...worklistKey, "handled"],
-    queryFn: async (): Promise<HandledForYou> => {
-      return unwrap(await api.GET("/worklist/handled", {}));
-    },
-  });
 }
 
 /**

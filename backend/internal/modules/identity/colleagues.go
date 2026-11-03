@@ -74,7 +74,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 			  FROM app_user
 			 WHERE `+LiveMemberSQL("")+`
 			   AND locked_until IS NULL
-			   AND ($1 = '' OR display_name ILIKE $2 OR email ILIKE $2)
+			   AND ($1 = '' OR `+memberMatchesQ+`)
 			 ORDER BY display_name, id
 			 LIMIT $3`, trimmed, pattern, ColleagueCap+1)
 		if err != nil {

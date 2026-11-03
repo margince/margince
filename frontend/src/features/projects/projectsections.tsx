@@ -377,7 +377,7 @@ export function CommitmentsCard({
   );
   return (
     <OverviewSection
-      title={t("record.commitments")}
+      title={t("project.openTasks")}
       action={
         onOpenAll && (
           <Button variant="link" onClick={onOpenAll}>

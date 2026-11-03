@@ -1,0 +1,657 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Worklist copy names records, supported moves and concrete reasons.
+
+import { describe, expect, it } from "vitest";
+import { viewerZone } from "../format/timezone";
+import type { Translator } from "../i18n";
+import { translate } from "../i18n";
+import {
+  itemTitle,
+  KNOWN_SOURCES,
+  moveHref,
+  moveLabel,
+  moveOpensComposer,
+  reasonText,
+  sourceName,
+  sourceUnavailableText,
+} from "./worklistcopy";
+import type { WorklistItem, WorklistReason } from "./worklisttypes";
+
+const t: Translator = (key, params) => translate("en", key, params);
+// The "still renders a full date" case below only asserts the year, so the
+// viewer's own zone stands in rather than a pinned literal
+// (format/zone-by-purpose.test.ts).
+const zone = viewerZone();
+
+// The move that became performable.
+//
+// The row refused to promise a draft until a route existed to open one — its
+// own comment said so. These are about the two halves of that promise moving
+// together: where the composer opens, and what the label is allowed to claim.
+
+function replyRow(subject: WorklistItem["subject"]): WorklistItem {
+  return {
+    occurred_precision: "instant",
+    id: "r1",
+    source: "customer_waiting",
+    level: 1,
+    category: "customer_waiting",
+    title: "Aster Handel",
+    because: [],
+    consequence: "buyer_waits",
+    actions: ["open"],
+    dispositions: [],
+    overdue: false,
+    subject,
+    move: { action: "draft_reply", activity_id: "a-1" },
+  };
+}
+
+describe("moveHref — the draft_reply move", () => {
+  // The composer lives on the contact page and drafts to the contact. A link
+  // asking for it there is a link that does what its label says.
+  it("opens the composer on a contact's record", () => {
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
+    expect(href).toContain("#/contacts/p-1");
+    expect(href).toContain("compose=reply");
+    expect(moveOpensComposer(replyRow({ type: "contact", id: "p-1" }))).toBe(
+      true,
+    );
+  });
+
+  // A deal has no composer to open, so a link claiming to draft there would
+  // promise what the click cannot do. It reaches the record and says so.
+  it("reaches the record, and claims no draft, where there is no composer", () => {
+    for (const type of ["deal", "company"] as const) {
+      const item = replyRow({ type, id: "x-1" });
+      expect(moveHref(item)).not.toContain("compose=");
+      expect(moveHref(item)).toBeTruthy();
+      expect(moveOpensComposer(item)).toBe(false);
+    }
+  });
+
+  // WHICH message, not just which contact. A contact reachable two ways would
+  // otherwise have the reply drafted into whichever they lead with — the reason
+  // this link returned a bare record href until the composer could honour it.
+  it("names the message the row is about", () => {
+    const href = moveHref(replyRow({ type: "contact", id: "p-1" }));
+    expect(href).toContain("thread=a-1");
+  });
+
+  // A fresh message names no thread, and must not: draft_email OPENS a
+  // conversation rather than continuing one, so a thread id here would anchor
+  // it on something the reader is not answering.
+  it("names no thread for a move that opens a conversation", () => {
+    const fresh: WorklistItem = {
+      ...replyRow({ type: "contact", id: "p-1" }),
+      move: { action: "draft_email" },
+    };
+    expect(moveHref(fresh)).toContain("compose=reply");
+    expect(moveHref(fresh)).not.toContain("thread=");
+  });
+
+  it("offers no move at all where the row names no record", () => {
+    expect(moveHref(replyRow(undefined))).toBeUndefined();
+  });
+
+  // A row with no move suggests no step, and a control drawn for one would be
+  // pressable with nothing behind it.
+  it("offers no move where the row suggests no step", () => {
+    const noMove: WorklistItem = {
+      ...replyRow({ type: "contact", id: "p-1" }),
+      move: undefined,
+    };
+    expect(moveHref(noMove)).toBeUndefined();
+    expect(moveOpensComposer(noMove)).toBe(false);
+  });
+});
+
+// The wider vocabulary.
+//
+// The move slot carried one verb while one lane produced one; the deal card
+// decides five, and the row now reads them. These are about the row refusing to
+// draw a control it cannot honour, and about the label naming the verb the
+// SERVER chose rather than the one that used to be the only option.
+
+// The shapes the server really sends, not a bare action. `draft_reply` always
+// names the message it answers — that is what makes it a reply — and the other
+// verbs name whatever their own operand is, or nothing.
+function movingRow(
+  action: NonNullable<WorklistItem["move"]>["action"],
+  activityId?: string,
+): WorklistItem {
+  const move =
+    action === "draft_reply"
+      ? { action, activity_id: activityId ?? "a-1" }
+      : { action, ...(activityId ? { activity_id: activityId } : {}) };
+  return { ...replyRow({ type: "contact", id: "p-1" }), move };
+}
+
+describe("the verbs the row can and cannot take a reader to", () => {
+  // A first outreach reaches the same composer a reply does — the composer
+  // picks its own transport from the contact, so the address is the same.
+  it("opens the composer for a fresh message too", () => {
+    const item = movingRow("draft_email");
+    expect(moveHref(item)).toContain("compose=");
+    expect(moveOpensComposer(item)).toBe(true);
+  });
+
+  // THE distinction the wider vocabulary made necessary. One hardcoded label
+  // was right while draft_reply was the only verb; over an opening outreach it
+  // names a conversation nobody has had.
+  it("names existing work without promising an email", () => {
+    const item: WorklistItem = {
+      ...movingRow("open_task", "task-1"),
+      subject: { type: "deal", id: "d-1" },
+    };
+    expect(moveLabel(item, t)).toBe("Open task");
+    expect(moveHref(item)).toBeDefined();
+  });
+
+  it("names a first message as writing, not as replying", () => {
+    expect(moveLabel(movingRow("draft_email"), t)).toBe("Draft email");
+    expect(moveLabel(movingRow("draft_reply"), t)).toBe("Draft reply");
+  });
+
+  // And the label still follows the ROUTE. A deal has no composer, so the same
+  // verb reaching only the record must not claim to draft anything.
+  it("claims only to open where the composer cannot", () => {
+    const onADeal: WorklistItem = {
+      ...movingRow("draft_email"),
+      subject: { type: "deal", id: "d-1" },
+    };
+    expect(moveLabel(onADeal, t)).toBe("Write email");
+  });
+
+  // These are PERFORMED, not navigated: one posts a task body, one leaves for a
+  // provider's consent screen, and one names no step at all. A link drawn for
+  // any of them would be pressable with nothing behind it.
+  //
+  // `open_meeting_brief` was on this list and no longer is. It reads as a
+  // drawer, so it looked unaddressable — but the way IN is an address: the
+  // brief opens as `?prep=<activity>` on a contact's record. It is covered by
+  // its own describe block below, including the case where the row names
+  // nobody and correctly draws nothing.
+  it("draws no link for a verb no address can perform", () => {
+    for (const action of ["create_task", "reconnect", "none"] as const) {
+      const item = movingRow(action);
+      expect(moveHref(item)).toBeUndefined();
+      expect(moveOpensComposer(item)).toBe(false);
+    }
+  });
+
+  // A reply that names no message. Schema-VALID — `activity_id` is optional, for
+  // the verbs that take no record — and undrawable all the same: there is
+  // nothing to answer, and the contract says a client draws a control only where
+  // the operand its verb needs is present.
+  it("draws no reply where the move names no message", () => {
+    const noMessage: WorklistItem = {
+      ...movingRow("draft_email"),
+      move: { action: "draft_reply" },
+    };
+    expect(moveHref(noMessage)).toBeUndefined();
+    // And the LABEL agrees. A move refused a link must not still be described
+    // as one that drafts, or the row says two things about one control.
+    expect(moveOpensComposer(noMessage)).toBe(false);
+  });
+
+  // The sibling that must NOT be refused: an opening outreach legitimately names
+  // no record, because there is no earlier message for it to name. Without this
+  // case the completeness rule could be "require an id from every mail verb" and
+  // the test above would still pass, while a first outreach lost its control.
+  it("still draws a first message that names no record", () => {
+    expect(moveHref(movingRow("draft_email"))).toContain("compose=");
+    expect(moveOpensComposer(movingRow("draft_email"))).toBe(true);
+  });
+});
+
+// A row waiting one day said "waiting 1 days". quiet_days carries the exact
+// same day-count value shape through the exact same reasonText path, so it
+// gets the exact same fix rather than a patch on one string.
+describe("reasonText — day-count plural", () => {
+  it("uses the singular day form for a one-day wait", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 1 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 1 day");
+  });
+
+  it("uses the plural day form otherwise", () => {
+    const reason: WorklistReason = {
+      kind: "waiting_days",
+      value: { kind: "days", days: 5 },
+    };
+    expect(reasonText(reason, t, "en", zone)).toBe("waiting 5 days");
+  });
+
+  it("pluralizes the sibling quiet_days reason the same way", () => {
+    const one: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 1 },
+    };
+    const many: WorklistReason = {
+      kind: "quiet_days",
+      value: { kind: "days", days: 14 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe("quiet for 1 day");
+    expect(reasonText(many, t, "en", zone)).toBe("quiet for 14 days");
+  });
+});
+
+// The lead's deadline is a MOMENT, and the sentence has to put it somewhere.
+//
+// Both halves of this live on opposite sides of the wire: the backend attaches
+// the date (attention/lead.go leadStanding), and VALUED_REASONS here decides
+// whether it reaches a sentence at all. A value can travel for a reason whose
+// copy has nowhere to put it, and that combination renders the plain phrase
+// while the figure is silently dropped — so the two are one change, and this is
+// the half that fails if only the backend lands.
+describe("reasonText — the lead's own deadline", () => {
+  it("names when the reply is due", () => {
+    const reason: WorklistReason = {
+      kind: "response_due_soon",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    const got = reasonText(reason, t, "en", zone);
+    expect(got).not.toBeNull();
+    // The formatted moment, not the raw ISO string: valueText renders it in the
+    // reader's locale and zone, and asserting the literal would pin a format
+    // this file does not own.
+    expect(got).not.toBe("reply due soon");
+    expect(got).toContain("reply due by");
+  });
+
+  it("falls back to the plain phrase when no deadline travelled", () => {
+    const reason: WorklistReason = { kind: "response_due_soon" };
+    expect(reasonText(reason, t, "en", zone)).toBe("reply due soon");
+  });
+});
+
+// One card per conversation: the earlier requests ride the card as a reason,
+// dated from the first. A reason this census does not list is dropped.
+describe("reasonText — a thread's earlier requests", () => {
+  it("counts them in the reader's plural", () => {
+    const one: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 1 },
+    };
+    const two: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 2 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe(
+      "1 earlier request in this thread",
+    );
+    expect(reasonText(two, t, "en", zone)).toBe(
+      "2 earlier requests in this thread",
+    );
+  });
+
+  it("names when the first was asked", () => {
+    const reason: WorklistReason = {
+      kind: "first_asked",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    expect(reasonText(reason, t, "en", zone)).toMatch(/^first asked .*2026/);
+  });
+});
+
+describe("itemTitle — an incident names what broke, never an internal id", () => {
+  // `cause` and `label` are two halves of one contract and the fixture supplies
+  // both: `cause` is the identity the group was formed on, opaque and never
+  // rendered, and `label` is what it identifies in words. A fixture carrying
+  // only the field the code reads could not catch the code reading the other.
+  const incident = (batch: {
+    cause?: string;
+    label?: string;
+  }): WorklistItem => ({
+    occurred_precision: "instant",
+    id: "i-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    // Required on the wire, and `none` is a real value: an incident row costs
+    // nothing to leave, which is not the same as costing nothing to have.
+    consequence: "none",
+    actions: [],
+    batch: { key: "system_incident", count: 8, ...batch },
+  });
+
+  const REF = "automation_run:01a065e8-617c-74ec-a4da-b41010b2a5b0";
+
+  it("prints the label when the lane minted one", () => {
+    expect(
+      itemTitle(
+        incident({ cause: REF, label: "Post-meeting recap draft" }),
+        t,
+        "en",
+      ),
+    ).toBe("Post-meeting recap draft failed 8 times");
+  });
+
+  it("never renders the cause, which is an identity and reads like one", () => {
+    // What the Worklist's top row actually read against a seeded stack before
+    // the contract grew `label`: "automation_run:01a065e8-… failed 8 times".
+    // The contract now says `cause` is opaque, and that a client naming a group
+    // by it is worse than a vaguer sentence — the reader can neither act on an
+    // identity nor tell it from a bug. This is the client half of that promise,
+    // and it is the only thing holding it.
+    const title = itemTitle(incident({ cause: REF }), t, "en");
+    expect(title).not.toContain("automation_run");
+    expect(title).not.toContain("01a065e8");
+    expect(title).toBe(itemTitle(incident({}), t, "en"));
+  });
+
+  it("says the cause is unnamed rather than borrowing the row's own source", () => {
+    // The tempting fallback, and the wrong one: this item's `source` IS
+    // `automation_run`, so a client reaching for something to say could print
+    // the lane's key and look as though it had a name. A group whose lane
+    // minted no label is a group nobody named, and the sentence says that.
+    const title = itemTitle(incident({}), t, "en");
+    expect(title).not.toContain("automation_run");
+    expect(title).toContain("8 times");
+  });
+});
+
+describe("itemTitle — a capture connection says which kind it is", () => {
+  const health = (over: Partial<WorklistItem>): WorklistItem => ({
+    occurred_precision: "instant",
+    id: "c-1",
+    source: "capture_health",
+    level: 3,
+    category: "system",
+    because: [],
+    consequence: "mailbox_blind",
+    actions: [],
+    ...over,
+  });
+
+  it("calls a broken calendar a calendar", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gcal", medium: "calendar" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Calendar connection needs attention");
+  });
+
+  it("calls a broken mailbox a mailbox", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gmail", medium: "mailbox" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Mailbox connection needs attention");
+  });
+
+  it("names a folded connection with no account by its provider", () => {
+    const title = itemTitle(
+      health({
+        source: "batch",
+        connection: { provider: "graphcal", medium: "calendar" },
+        batch: { key: "system_incident", count: 3, cause: "capture_health:x" },
+      }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Outlook Calendar failed 3 times");
+  });
+});
+
+describe("itemTitle — a group counts in the reader's plural", () => {
+  const group = (
+    key: NonNullable<WorklistItem["batch"]>["key"],
+    count: number,
+  ): WorklistItem => ({
+    occurred_precision: "instant",
+    id: "g-1",
+    source: "automation_run",
+    level: 3,
+    category: "system",
+    title: "",
+    because: [],
+    consequence: "none",
+    actions: [],
+    batch: { key, count, label: "Recap draft" },
+  });
+
+  it.each([
+    ["duplicates", 1, "1 possible duplicate"],
+    ["duplicates", 3, "3 possible duplicates"],
+    ["system_incident", 1, "Recap draft failed 1 time"],
+    ["system_incident", 3, "Recap draft failed 3 times"],
+    ["company_match", 1, "1 address at a company you know"],
+    ["company_match", 3, "3 addresses at companies you know"],
+    ["held_draft", 1, "1 draft waiting to send"],
+    ["held_draft", 3, "3 drafts waiting to send"],
+    ["likely_automated", 1, "1 likely automated sender"],
+    ["likely_automated", 3, "3 likely automated senders"],
+    ["uncertain_contact", 1, "1 address to review"],
+    ["uncertain_contact", 3, "3 addresses to review"],
+  ] as const)("titles a %s group of %i", (key, count, title) => {
+    expect(itemTitle(group(key, count), t, "en")).toBe(title);
+  });
+
+  // A kind a newer server minted arrives through the wire untyped, which is
+  // exactly how the client meets it: named by its label, or generically.
+  it.each([
+    ["Four deals to advance", "Four deals to advance"],
+    [undefined, "Routine items to review"],
+  ])("titles a kind this build has no pair for by %s", (label, title) => {
+    const wire = JSON.stringify({
+      ...group("duplicates", 4),
+      batch: { key: "brief_pile", count: 4, label },
+    });
+    const skewed: WorklistItem = JSON.parse(wire);
+    expect(itemTitle(skewed, t, "en")).toBe(title);
+  });
+});
+
+describe("an unavailable source", () => {
+  // All three shipped locales, because the frame is a per-language decision and
+  // a check that reads only English proves the rule for the one translator who
+  // was in the room. The German and Vietnamese frames were rewritten in the
+  // same change; nothing but this would notice if one drifted back.
+  const LOCALES = ["en", "de", "vi"] as const;
+
+  // Derived from the owner rather than listed here: a hand-kept copy of this
+  // list goes short of the product the moment a source is added, and short is
+  // the direction that passes silently.
+  //
+  // `batch` is left out on purpose, and it is the one exclusion: it names a
+  // GROUP of decisions rather than a source the page reads, so it can never
+  // appear in `sources_unavailable`.
+  const SOURCES = Object.keys(KNOWN_SOURCES).filter(
+    (source) => source !== "batch",
+  );
+
+  it("covers every source the product can name", () => {
+    // The census, asserted. Without this the loop below could quietly narrow to
+    // one source and still report a green run.
+    expect(SOURCES.length).toBe(Object.keys(KNOWN_SOURCES).length - 1);
+    expect(SOURCES).toContain("capture_health");
+  });
+
+  it("never reads its own title as the sentence's subject", () => {
+    // What `sourceName` returns is a row TITLE, and most of them are whole
+    // clauses — "Mailbox connection needs attention". Framed as a subject,
+    // fourteen of these ran two sentences together, and each one read as a
+    // rendering fault rather than as a source the page could not reach.
+    //
+    // The check is positional rather than a list of the bad wordings: the fact
+    // comes first and the title follows it, so no title can be the subject
+    // whatever the copy says next.
+    for (const locale of LOCALES) {
+      const t: Translator = (key, vars) => translate(locale, key, vars);
+      for (const source of SOURCES) {
+        const name = sourceName(source, t);
+        for (const reason of ["withheld", "failed"] as const) {
+          const where = `${locale}/${source}/${reason}`;
+          const text = sourceUnavailableText({ source, reason }, t);
+          expect(text, where).toContain(name);
+          expect(text.startsWith(name), where).toBe(false);
+        }
+      }
+    }
+  });
+
+  // The meetings lane's side reads rank no rows, so `KNOWN_SOURCES` never
+  // lists them; they still fail on their own and must be named, not "other".
+  it.each(["calendar", "next_meeting"])(
+    "names the meetings lane's %s read",
+    (source) => {
+      for (const locale of LOCALES) {
+        const t: Translator = (key, vars) => translate(locale, key, vars);
+        const name = sourceName(source, t);
+        expect(name, locale).not.toBe(
+          translate(locale, "brief.coverage.source.generic"),
+        );
+        const text = sourceUnavailableText({ source, reason: "failed" }, t);
+        expect(text, locale).toContain(name);
+        expect(text.startsWith(name), locale).toBe(false);
+      }
+    },
+  );
+
+  it("says which of the two reasons it is, because only one is anybody's to fix", () => {
+    // A withheld source is the reader's own grants; a failed one is an outage.
+    // One sentence for both would tell a reader to go asking for access to
+    // something that is simply down.
+    for (const locale of LOCALES) {
+      const t: Translator = (key, vars) => translate(locale, key, vars);
+      const withheld = sourceUnavailableText(
+        { source: "dsr", reason: "withheld" },
+        t,
+      );
+      const failed = sourceUnavailableText(
+        { source: "dsr", reason: "failed" },
+        t,
+      );
+      expect(withheld, locale).not.toBe(failed);
+    }
+  });
+});
+
+// The brief is not a page of its own: it opens as `?prep=<activity>` on a
+// CONTACT's record, so the address needs both ids and the row's subject — the
+// meeting — carries only one.
+describe("the open_meeting_brief move", () => {
+  it("opens the brief on the contact the meeting names", () => {
+    const href = moveHref(briefRow("p-9"));
+    expect(href).toContain("#/contacts/p-9");
+    expect(href).toContain("prep=a-7");
+  });
+
+  // A meeting naming nobody has no page to read the brief on. An internal
+  // meeting and one whose attendees are all withheld arrive identically, and
+  // both must draw NO way in rather than one that opens nothing.
+  it("offers nothing where the meeting names nobody", () => {
+    expect(moveHref(briefRow(undefined))).toBeUndefined();
+  });
+
+  // It is not the composer, and must not be described as one: the label reads
+  // off the same predicate, so a brief announced as a draft would be a button
+  // whose words and destination disagree.
+  it("is not a draft", () => {
+    expect(moveOpensComposer(briefRow("p-9"))).toBe(false);
+  });
+
+  // A meeting row's move opens a brief, not a composer — the label must say
+  // so on its own rather than borrow the reply wording, which is only the
+  // fall-through for a verb with no words of its own.
+  it("names itself as the brief, not as a reply", () => {
+    expect(moveLabel(briefRow("p-9"), t)).toBe("Prepare for meeting");
+  });
+});
+
+function briefRow(withContact: string | undefined): WorklistItem {
+  return {
+    occurred_precision: "instant",
+    id: "m1",
+    source: "meeting",
+    level: 2,
+    category: "meetings",
+    title: "Fleet retrofit review",
+    because: [],
+    // A meeting with a brief behind it costs nothing to leave; the lane says
+    // `meeting_unprepared` only where it could actually tell there is nothing
+    // written down (compose/attention/meeting.go).
+    consequence: "none",
+    actions: [],
+    dispositions: [],
+    overdue: false,
+    subject: { type: "activity", id: "a-7" },
+    with_contact: withContact,
+    move: { action: "open_meeting_brief", activity_id: "a-7" },
+  };
+}
+
+describe("moveHref — the reconnect move", () => {
+  // A lapsed relationship offers a draft with no thread behind it: nobody is
+  // waiting on a reply, so the composer opens on the contact and starts one.
+  it("opens the composer on the contact with no thread anchored", () => {
+    // Category, level and consequence as `classifyDecay` actually sets them: a
+    // lapsed relationship is filed under `system` at the routine level and says
+    // the RECORD drifts, not the deal. The cast this fixture used to carry was
+    // hiding all three — `relationship_cools` is not a consequence the contract
+    // has ever held.
+    const row: WorklistItem = {
+      occurred_precision: "instant",
+      id: "p-9",
+      source: "relationship_decay",
+      category: "system",
+      level: 6,
+      consequence: "data_drifts",
+      title: "Marta Feld",
+      because: [],
+      actions: ["open", "dismiss"],
+      subject: { type: "contact", id: "p-9" },
+      move: { action: "draft_email" },
+    };
+
+    const href = moveHref(row);
+    expect(href).toContain("#/contacts/p-9");
+    expect(href).toContain("compose=reply");
+    // No thread parameter: anchoring one would open the composer on a
+    // conversation this row is not about.
+    expect(href).not.toContain("thread=");
+    expect(moveOpensComposer(row)).toBe(true);
+  });
+});
+
+describe("itemTitle — an approval row", () => {
+  const approval = (over: Partial<WorklistItem>): WorklistItem => ({
+    occurred_precision: "instant",
+    id: "a-1",
+    source: "approval",
+    level: 2,
+    category: "decisions",
+    title: "Update record deal: name=Acme, Inc.",
+    because: [],
+    consequence: "none",
+    actions: ["decide"],
+    ...over,
+  });
+
+  it("keeps the whole title on a surface with no supporting line", () => {
+    const parts = {
+      sentence: "Update record deal",
+      fields: [{ field: "name", value: "Acme, Inc." }],
+      more_fields: 0,
+    };
+    expect(itemTitle(approval({ summary_parts: parts }), t, "en")).toBe(
+      "Update record deal: name=Acme, Inc.",
+    );
+  });
+
+  it("keeps the whole title of a row staged without parts", () => {
+    expect(itemTitle(approval({}), t, "en")).toBe(
+      "Update record deal: name=Acme, Inc.",
+    );
+  });
+});

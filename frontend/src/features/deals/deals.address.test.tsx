@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "../../lib/dealsaddress";
+import { meFixture } from "../../testing/mefixture";
 import { DealsScreen, dealsQueryParams } from "./deals";
 
 // A list opened from an address shows the view the address names.
@@ -122,6 +123,10 @@ function stubBackend(seen: Seen) {
         },
         roles: ["rep"],
         teams: [],
+        // The company dial searches companies, which needs company.read.
+        authorization: meFixture({
+          allow: { deal: ["read"], company: ["read"] },
+        }).authorization,
       });
     }
     if (path.endsWith(`/companies/${COMPANY.id}`)) {

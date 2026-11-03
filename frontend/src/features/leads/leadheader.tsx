@@ -12,13 +12,13 @@ import type { components } from "../../api/schema";
 import { mayOwnRecords } from "../../components/assigneepicker";
 import {
   EntityRef,
+  RosterFailedLine,
   RosterPartialNote,
   useRoster,
   useRosterPartial,
 } from "../../components/entityref";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge, Button } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
 import { IdentityLine } from "../../design-system/identityline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
@@ -162,12 +162,7 @@ function AssigneePicker({
     return <span>{t("share.rosterLoading")}</span>;
   }
   if (roster.isError) {
-    return (
-      <div className="lead-line">
-        <ErrorLine inline>{t("share.rosterErrorUsers")}</ErrorLine>
-        <Button onClick={() => roster.refetch()}>{t("common.retry")}</Button>
-      </div>
-    );
+    return <RosterFailedLine kind="user" roster={roster} />;
   }
   // "Nobody else" is a claim about the WHOLE workspace, so only a roster read
   // to its end may make it. Over a walk that stopped early it would report a

@@ -267,7 +267,7 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
 	}
@@ -311,11 +311,15 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
 		return "", err
 	}
-	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg)
+	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
@@ -329,7 +333,7 @@ func (s *Store) waitingStatement(
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
-		setAside, neverRelaxed), nil
+		setAside, neverRelaxed, requestTaskDiscover), nil
 }
 
 // countWaiting is the statement above asked for how many.

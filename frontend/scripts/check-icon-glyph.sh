@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Icon-glyph gate: UI glyphs are
-# lucide-react only — no emoji/pictographic Unicode in rendered frontend
-# code. The sanctioned 🟢/🟡 autonomy semantics render through the CSS .dot
-# component (design-system/trust.tsx AutonomyDot), never as text glyphs.
+# Icon-glyph gate: UI glyphs are icon components (lucide-react, or
+# src/design-system/materialsymbols.tsx) — no emoji/pictographic Unicode in
+# rendered frontend code. The sanctioned 🟢/🟡 autonomy semantics render
+# through the CSS .dot component (design-system/trust.tsx AutonomyDot), never
+# as text glyphs.
 #
 # Scope: code, not commentary. Comment content is stripped before scanning —
 # source comments quote the spec's 🟢/🟡 tier notation (house style across the
@@ -59,7 +60,7 @@ EXIT=0
 # VS-16 (U+FE0F). U+2022 "•" (the FieldGuard mask) is outside all of them.
 while IFS= read -r hit; do
   [[ -z "$hit" ]] && continue
-  echo "FAIL (emoji glyph in rendered code — use a lucide-react icon): $hit"
+  echo "FAIL (emoji glyph in rendered code — use a lucide or Material icon): $hit"
   EXIT=1
 done < <(
   printf '%s\0' "${FILES[@]}" \
@@ -77,10 +78,10 @@ done < <(
 )
 
 if [[ "$EXIT" == "0" ]]; then
-  echo "PASS — no emoji glyphs in rendered code (lucide-react only)"
+  echo "PASS — no emoji glyphs in rendered code"
 else
   echo ""
-  echo "Replace the glyph with a lucide-react icon, or — for autonomy tiers —"
+  echo "Replace the glyph with a lucide or Material icon, or — for autonomy tiers —"
   echo "the AutonomyDot component (design-system/trust.tsx)."
 fi
 

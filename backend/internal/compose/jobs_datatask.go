@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,6 +41,14 @@ func (DataTaskReconcileArgs) Kind() string { return "data_task_reconcile" }
 // FleetWide seeds the installation ledger independently of individual seats.
 func (DataTaskReconcileArgs) FleetWide() {}
 
+// dataTaskRunLock is held by a run for as long as it executes. A run that
+// cannot take it stands behind the live one, and the reconciler that can take
+// it knows no run is alive.
+const dataTaskRunLock = "data_task_run"
+
+// dataTaskBusyWait is how long a run waits behind a live one.
+const dataTaskBusyWait = 30 * time.Second
+
 func dataTaskInsertOpts() *river.InsertOpts {
 	return jobs.QueuedAs[DataTaskRunArgs](&river.InsertOpts{
 		MaxAttempts: rowOwnedMaxAttempts,
@@ -47,22 +56,31 @@ func dataTaskInsertOpts() *river.InsertOpts {
 	})
 }
 
-func addDataTaskJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
+func addDataTaskJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	pace := cfg.DataTasksPace
 	if pace <= 0 {
 		pace = time.Second
 	}
-	addDeclaredWorker[DataTaskRunArgs](reg, &dataTaskRunWorker{pool: pool, pace: pace})
-	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool})
+	addDeclaredWorker[DataTaskRunArgs](reg, &dataTaskRunWorker{pool: pool, pace: pace, log: log})
+	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool, log: log})
 	return periodicFor(cfg, DataTaskReconcileArgs{})
 }
 
 type dataTaskRunWorker struct {
 	pool *pgxpool.Pool
 	pace time.Duration
+	log  *slog.Logger
 }
 
 func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunArgs]) error {
+	release, held, err := holdSessionLock(ctx, w.pool, dataTaskRunLock, w.logger())
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if !held {
+		return river.JobSnooze(dataTaskBusyWait)
+	}
+	defer release()
 	ctx, engine, err := dataTaskJobEngine(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -75,7 +93,7 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 		return river.JobSnooze(outcome.Wait)
 	}
 	if outcome.Busy {
-		return river.JobSnooze(30 * time.Second)
+		return river.JobSnooze(dataTaskBusyWait)
 	}
 	if outcome.More {
 		return river.JobSnooze(w.pace)
@@ -83,14 +101,52 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 	return nil
 }
 
-type dataTaskReconcileWorker struct{ pool *pgxpool.Pool }
+type dataTaskReconcileWorker struct {
+	pool *pgxpool.Pool
+	log  *slog.Logger
+}
 
 func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTaskReconcileArgs]) error {
 	ctx, engine, err := dataTaskJobEngine(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	if err := w.discardDeadRuns(ctx); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
 	return jobs.FaultContext(ctx, reconcileDataTasks(ctx, engine))
+}
+
+// discardDeadRuns closes a run row a killed worker left running.
+//
+// River counts a running row as unique, so that row would absorb every insert
+// below until the rescuer reached it an hour later. Holding the run lock proves
+// no run is alive, which makes any running row a dead worker's.
+func (w *dataTaskReconcileWorker) discardDeadRuns(ctx context.Context) error {
+	release, held, err := holdSessionLock(ctx, w.pool, dataTaskRunLock, w.logger())
+	if err != nil || !held {
+		return err
+	}
+	defer release()
+	closed, err := jobs.DiscardOrphanedRuns(ctx, w.pool, DataTaskRunArgs{}.Kind(), 0)
+	if closed > 0 {
+		w.logger().InfoContext(ctx, "closed data task runs left running by a dead worker", "closed", closed)
+	}
+	return err
+}
+
+func (w *dataTaskReconcileWorker) logger() *slog.Logger {
+	if w.log == nil {
+		return slog.Default()
+	}
+	return w.log
+}
+
+func (w *dataTaskRunWorker) logger() *slog.Logger {
+	if w.log == nil {
+		return slog.Default()
+	}
+	return w.log
 }
 
 func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {

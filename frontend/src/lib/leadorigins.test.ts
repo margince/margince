@@ -38,10 +38,15 @@ const LIST = [
 ];
 
 describe("the origin reader", () => {
-  it("names an origin by the server's label, else the list's, else the key", () => {
+  it("names an origin by the list's label, else the server's, else the key", () => {
     expect(
-      originLabelFor({ origin: "referral", origin_label: "Empfehlung" }, LIST),
-    ).toBe("Empfehlung");
+      originLabelFor({ origin: "referral", origin_label: "Referral" }, [
+        origin("referral", "Giới thiệu"),
+      ]),
+    ).toBe("Giới thiệu");
+    expect(
+      originLabelFor({ origin: "unlisted_key", origin_label: "Webinar" }, LIST),
+    ).toBe("Webinar");
     expect(originLabelFor({ origin: "referral" }, LIST)).toBe("Referral");
     expect(originLabelFor({ origin: "unlisted_key" }, LIST)).toBe(
       "unlisted_key",
@@ -85,6 +90,9 @@ describe("the added-via reader", () => {
     expect(addedViaFor({ source: "manual", imported_from: null }, t)).toBe(
       "lead.source.manual",
     );
+    expect(addedViaFor({ source: "siteread", imported_from: null }, t)).toBe(
+      "lead.source.siteread",
+    );
     expect(
       addedViaFor({ source: "connector:apollo:a-1", imported_from: null }, t),
     ).toBe("Apollo");
@@ -95,5 +103,10 @@ describe("the added-via reader", () => {
       "trust.importedFrom:crm",
     );
     expect(writtenByLabel(null, t)).toBe("lead.shortfall.noSource");
+  });
+
+  it("names a system a record came from as its maker spells it", () => {
+    expect(writtenByLabel("hubspot", t)).toBe("HubSpot");
+    expect(writtenByLabel("connector:salesforce:s-1", t)).toBe("Salesforce");
   });
 });

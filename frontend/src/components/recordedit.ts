@@ -4,11 +4,11 @@ import { saveIndependentEdit } from "../lib/independentedit";
 import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
 import { contactEditComparison } from "./contactformfields";
-import type { FieldRecord } from "./recordfields";
+import type { FieldRecord } from "./recordfieldtypes";
 
 // Core and custom fields use the same conditional write and recovery policy.
 export function saveRecordEdit(
-  kind: "company" | "contact" | "deal" | "lead",
+  kind: "company" | "contact" | "deal" | "lead" | "project",
   original: FieldRecord,
   patch: Record<string, unknown>,
 ) {
@@ -76,6 +76,26 @@ export function saveRecordEdit(
         write: async (body, version) => {
           return unwrap(
             await api.PATCH("/deals/{id}", {
+              params: { path: { id: original.id }, ...ifMatch(version) },
+              body,
+            }),
+          );
+        },
+      });
+    case "project":
+      return saveIndependentEdit({
+        opened,
+        patch,
+        read: async () => {
+          return unwrap(
+            await api.GET("/projects/{id}", {
+              params: { path: { id: original.id } },
+            }),
+          );
+        },
+        write: async (body, version) => {
+          return unwrap(
+            await api.PATCH("/projects/{id}", {
               params: { path: { id: original.id }, ...ifMatch(version) },
               body,
             }),

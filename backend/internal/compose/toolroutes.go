@@ -43,6 +43,16 @@ func (s Server) PrepForMeeting(w http.ResponseWriter, r *http.Request, params cr
 	serveTool(w, r, s.toolRegistry.Invoke, "prep_for_meeting", params)
 }
 
+// ConfirmMeetingReady serves confirm_meeting_ready.
+func (s Server) ConfirmMeetingReady(w http.ResponseWriter, r *http.Request, params crmcontracts.ConfirmMeetingReadyParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "confirm_meeting_ready", reservedArgs{params.IdempotencyKey, params.XApprovalToken})
+}
+
+// UndoMeetingReady serves undo_meeting_ready.
+func (s Server) UndoMeetingReady(w http.ResponseWriter, r *http.Request, params crmcontracts.UndoMeetingReadyParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "undo_meeting_ready", reservedArgs{params.IdempotencyKey, params.XApprovalToken})
+}
+
 // PrepareProjectHandoff serves prepare_handoff.
 func (s Server) PrepareProjectHandoff(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	serveTool(w, r, s.toolRegistry.Invoke, "prepare_handoff", struct {

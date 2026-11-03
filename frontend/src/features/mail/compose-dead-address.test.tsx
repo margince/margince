@@ -294,14 +294,22 @@ describe("ComposeModal dead recipients", () => {
   // choosing between an account's contacts rather than answering somebody who
   // already wrote, so the composer learns the contact from the picker and not
   // from the record it was opened on.
-  it("warns for the contact picked in an account draft", async () => {
+  it("warns for the account contact addressed in To", async () => {
     stubRoutes({
       "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-01-01T00:00:00Z",
           company: { id: "company-1", display_name: "Demo GmbH" },
-          contacts: { data: [{ contact_id: "p-1", full_name: "Anna Weiss" }] },
+          contacts: {
+            data: [
+              {
+                contact_id: "p-1",
+                full_name: "Anna Weiss",
+                primary_email: "anna@dead.example",
+              },
+            ],
+          },
           deals: { data: [] },
           sections_omitted: [],
         }),
@@ -318,10 +326,8 @@ describe("ComposeModal dead recipients", () => {
     );
 
     const user = userEvent.setup();
-    // Pick the contact, which is what tells this composer whose addresses to
-    // ask about — before that it knows a company and nobody.
-    await user.click(await screen.findByRole("combobox", { name: "Draft to" }));
-    await user.click(await screen.findByRole("option", { name: "Anna Weiss" }));
+    // Her address in To names the contact. That tells this composer whose
+    // addresses to ask about; before it, the composer knows only a company.
     await user.click(await screen.findByLabelText("To"));
     await user.paste("anna@dead.example");
     await user.keyboard("{Enter}");

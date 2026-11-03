@@ -40,8 +40,8 @@ func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semanti
 
 // PromoteLead graduates a lead into a contact and its company, in the
 // contacts module's transaction.
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error) {
-	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
+func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64, choice datasource.PromotionDealChoice) (datasource.EntityRef, bool, error) {
+	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion, choice)
 }
 
 // Freshness in SoR-mode is trivially authoritative: there is no mirror

@@ -41,6 +41,26 @@ func (e *ContactHasDealError) MessageFault() (code, message string) {
 	return "contact_has_deal", e.Error()
 }
 
+// ContactStaysError maps to 422 demote_keeps_contact. Undoing the promotion
+// would restore a lead beside its live contact. Merged means that contact
+// existed before the promotion.
+type ContactStaysError struct{ Merged bool }
+
+func (e *ContactStaysError) Error() string {
+	if e.Merged {
+		return "this lead was merged into a contact that existed before, and undoing it would make " +
+			"them a lead and a contact; keep the contact, and open a deal for a new opportunity"
+	}
+	return "the contact this lead became now carries other records, so it stays, and undoing the " +
+		"promotion would make them a lead and a contact"
+}
+
+// MessageFault names the condition and no field: no input of this request
+// changes it.
+func (e *ContactStaysError) MessageFault() (code, message string) {
+	return "demote_keeps_contact", e.Error()
+}
+
 // fieldKeyPromotedContact is the lead's outcome pointer as it appears in
 // audit images and problem details.
 const fieldKeyPromotedContact = "promoted_contact_id"
@@ -54,14 +74,9 @@ const (
 	outcomeMerged  promotionOutcome = "merged"
 )
 
-// DemoteLead reverses a promotion (formulas §26, the undo ADR-0008 §4
-// promises). It is deterministic and conservative — it blocks rather than
-// orphans: a contact who is a stakeholder on a live deal cannot revert. A
-// promotion that CREATED the contact archives that contact and restores the
-// lead; one that MERGED into a pre-existing contact leaves the contact alone
-// and only nulls the lineage. Activities stay where they are — captured
-// history is not rewritten backwards. One audit row, lead.demoted, all in one
-// transaction under the lead row lock.
+// DemoteLead reverses a promotion without orphaning dependent records. A
+// created contact is archived and its lead restored. An incumbent contact or
+// one now carrying other records stays, so that reversal is refused.
 func (s *Store) DemoteLead(
 	ctx context.Context, id ids.LeadID, reason string, opts ...WriteOption,
 ) (crmcontracts.DemoteLeadResponse, error) {
@@ -113,10 +128,6 @@ func (s *Store) DemoteLead(
 		if err := stillTheLeadTheCallerDescribed(lead, contactID, options); err != nil {
 			return err
 		}
-		if err := reopenedLeadContactFree(ctx, tx, id); err != nil {
-			return err
-		}
-
 		outcome, err := promotedOutcome(ctx, tx, id)
 		if err != nil {
 			return err
@@ -133,6 +144,12 @@ func (s *Store) DemoteLead(
 		}
 		archived := unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed
 		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, archived); err != nil {
+			return err
+		}
+		// The contact the promotion made is archived now. Another live contact
+		// holding the lead's keys would still make the restored lead a second record.
+		if err := refuseContactHolders(ctx, tx, leadKeys((*string)(lead.Email), lead.LinkedinUrl),
+			nil); err != nil {
 			return err
 		}
 		setBy, err := statusSetByFor(ctx)
@@ -280,28 +297,9 @@ func ensureNoLiveDeal(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) e
 	return nil
 }
 
-// unwindContact applies the contact side of §26.1 and names what it did.
-// Both unwinds write the contact (the lineage pointer at least), so the
-// contact's grant and row scope are checked and the row locked BEFORE anything
-// is read about it: the deal probe must not tell a caller who cannot see the
-// contact whether it sits on a live deal. Its one caller now owes the same
-// three one frame earlier — it locks the contact before the lead — so these
-// re-ask a question already answered. They are kept rather than deleted
-// because they are what makes THIS function safe to read and to call: a guard
-// that lives only in a caller is a guard the next caller does not get.
-// Archiving the created contact needs
-// no separate archive grant: the promotion that minted it ran under
-// lead.update + contact.create, and its reversal is that same authority
-// exercised backwards — a rep who may promote must be able to undo the
-// promotion (ADR-0008 §4), and the default rep role holds no contact.delete.
-//
-// The archive branch has two more guards than the audit outcome: the contact
-// must still be ONLY what the promotion minted, and nothing else may depend
-// on it. A contact merge repoints lead.promoted_contact_id to its survivor, and
-// a survivor holds other contacts's history; a later lead promoted INTO this
-// contact points its own contact surface at it. Archiving in either case would
-// destroy or strand records the promotion never created, so both unwind
-// lineage-only, whatever the promotion originally did.
+// unwindContact archives only a contact the promotion created and that no
+// later record depends on. It repeats the caller's authorization so another
+// caller cannot expose deal or dependency state.
 func unwindContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID, outcome promotionOutcome) (crmcontracts.DemoteLeadResponseUnwind, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return "", err
@@ -317,17 +315,8 @@ func unwindContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID 
 	if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, storekit.LiveOnly); err != nil {
 		return "", fmt.Errorf("lock promoted contact: %w", err)
 	}
-	unwind, err := demotionUnwind(ctx, tx, leadID, contactID, outcome)
-	if err != nil {
+	if _, err := demotionUnwind(ctx, tx, leadID, contactID, outcome); err != nil {
 		return "", err
-	}
-	if unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
-		if _, err := tx.Exec(ctx,
-			`UPDATE contact SET converted_from_lead_id = NULL WHERE id = $1 AND converted_from_lead_id = $2`,
-			contactID, leadID); err != nil {
-			return "", fmt.Errorf("null merge lineage: %w", err)
-		}
-		return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly, nil
 	}
 	if err := archiveContactRows(ctx, tx, contactID, time.Now().UTC(), nil); err != nil {
 		return "", fmt.Errorf("archive promoted contact: %w", err)

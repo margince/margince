@@ -24,6 +24,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -111,7 +112,7 @@ var activityProjection = []activityColumn{
 	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
-	{"a.due_at", func(s *activityScan) any { return &s.a.DueAt }},
+	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
@@ -128,16 +129,7 @@ var activityProjection = []activityColumn{
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
 	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
-	// The author's CURRENT display name: sourceAuthorSeatNameSQL, below the table.
-	// Three readers compose their own `FROM activity a WHERE …` around this
-	// projection, so a join would have to be added to each of them and to the
-	// next one somebody writes — which is precisely how the contact360 timeline
-	// came to be missing a column for a whole slice, twice. A column that
-	// carries its own source needs nothing of its callers.
-	//
-	// NO liveness filter, deliberately. Who wrote something in August is a fact
-	// about August: a colleague who has since left was still its author, and
-	// readEmailParties already refuses the same filter for the same reason.
+	// The author's current display name: see sourceAuthorSeatNameSQL below.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
 	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
 	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
@@ -159,27 +151,23 @@ var activityProjection = []activityColumn{
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
-// sourceAuthorSeatNameSQL resolves the author's current display name, and it is
-// a SUBSELECT rather than a join.
+// sourceAuthorSeatNameSQL resolves the author's current display name as a
+// subselect rather than a join.
 //
 // Three readers compose their own `FROM activity a WHERE …` around this
-// projection, so a join would have to be added to each of them and to the next
-// one somebody writes — which is precisely how the contact360 timeline came to
-// be missing a column for a whole slice, twice. A column that carries its own
-// source needs nothing of its callers.
+// projection. A join would have to be added to each of them and to the next one.
+// The contact360 timeline lost a column twice that way. A column that carries its
+// own source needs nothing of its callers.
 //
-// NO liveness filter, deliberately. Who wrote something in August is a fact
-// about August: a colleague who has since left was still its author, and
-// readEmailParties already refuses the same filter for the same reason.
+// No liveness filter. Who wrote something in August is a fact about August. A
+// colleague who has since left was still its author. readEmailParties refuses the
+// same filter for the same reason.
 //
-// ALIASED, and the alias is load-bearing even though no activity reader needs
-// it today. An unaliased subselect takes its output name from the column inside
-// it, so this arrives as `display_name`; a select list that also draws a column
-// of that name then has two of them, and `ORDER BY "display_name"` fails with
-// SQLSTATE 42702. The record stores' copies of this helper shipped unaliased
-// and took the accounts list down for exactly that reason. No activity
-// projection draws a `display_name` today — this is aliased so the next one
-// does not rediscover it.
+// The alias matters even though no activity reader needs it today. An unaliased
+// subselect takes its output name from the inner column, so it arrives as
+// `display_name`. A select list that also draws a column of that name then has
+// two, and `ORDER BY "display_name"` fails with SQLSTATE 42702. The record stores'
+// unaliased copies of this helper broke the accounts list that way.
 const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u ` +
 	`WHERE u.id = a.source_author_id) AS source_author_seat_name`
 
@@ -305,6 +293,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable && s.raw != nil {
 		raw := s.raw
 		a.Raw = &raw
+		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
 	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)

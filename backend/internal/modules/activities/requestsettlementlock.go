@@ -57,8 +57,12 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 	}
 	live, err := requestStillWritable(ctx, tx, request.RequestID)
 	if err == nil && live {
-		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity a, activity seen
-		  WHERE a.id = $2 AND seen.id IN (SELECT answered.id FROM (`+settlementAnswersSQL()+`) answered)
+		// The request row sits inside the IN, so the answers are found once and
+		// each is locked by its key. Beside seen, it made Postgres walk every
+		// activity and find the answers again for each one.
+		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity seen
+		  WHERE seen.id IN (SELECT answered.id FROM activity a
+		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+`) answered WHERE a.id = $2)
 		  FOR SHARE OF seen`, request.AsOf, request.RequestID)
 	}
 	if err == nil && live {

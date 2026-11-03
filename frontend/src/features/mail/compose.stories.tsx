@@ -730,3 +730,74 @@ export const EditingScheduledPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+const SELECTED_REQUEST = {
+  id: "act-1",
+  kind: "email",
+  subject: "Product materials",
+  body: "Could you send the brochure and approved product images?",
+  direction: "inbound",
+  thread_key: "<materials@example.test>",
+  occurred_at: "2026-09-01T09:00:00Z",
+};
+
+export const SelectedOlderMessage: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () => jsonResponse(SELECTED_REQUEST),
+    "GET /activities": () =>
+      jsonResponse({
+        data: [
+          {
+            ...SELECTED_REQUEST,
+            id: "act-new",
+            subject: "Invoice",
+            body: "Later invoice discussion",
+            occurred_at: "2026-09-12T09:00:00Z",
+          },
+          SELECTED_REQUEST,
+        ],
+        page: { has_more: false },
+      }),
+  }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Show selected message" }),
+    );
+    await screen.findByText(SELECTED_REQUEST.body);
+    expect(screen.queryByText("Later invoice discussion")).toBeNull();
+  },
+};
+
+export const SelectedOlderMessageDark: Story = {
+  ...SelectedOlderMessage,
+  globals: { theme: "dark" },
+};
+
+export const ColleagueFollowUp: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () =>
+      jsonResponse({
+        ...SELECTED_REQUEST,
+        voice: {
+          author: {
+            kind: "colleague",
+            display_name: "Mira Voss",
+            is_reader: false,
+          },
+        },
+      }),
+  }),
+  play: async () => {
+    const user = userEvent.setup();
+    await screen.findByText(/Following up on “Product materials”/);
+    await user.click(
+      screen.getByRole("button", { name: "Show selected message" }),
+    );
+    await screen.findByText(/Mira Voss wrote/);
+  },
+};
+export const ColleagueFollowUpDark: Story = {
+  ...ColleagueFollowUp,
+  globals: { theme: "dark" },
+};

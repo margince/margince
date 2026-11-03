@@ -178,6 +178,25 @@ func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	}
 }
 
+// A quiet account names the exchange its count starts from: the later of their
+// last message and our last meeting. A timeline beside it then reads as the
+// same count.
+func TestAQuietRelationshipNamesTheDayItCountsFrom(t *testing.T) {
+	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), instantAt(healthDaysAgo(40)), nil, healthNow, time.UTC))
+
+	params := health.Relationship.ReasonParams
+	if params == nil || params.Days == nil || *params.Days != 40 {
+		t.Fatalf("reason params = %+v, want 40 days", params)
+	}
+	if params.At == nil || !params.At.Equal(*healthDaysAgo(40)) {
+		t.Fatalf("at = %v, want the last meeting, the later exchange", params.At)
+	}
+	if params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("at_precision = %v, want instant", params.AtPrecision)
+	}
+}
+
 // A day meeting booked ahead is named by its date: the precision travels with
 // its stored noon.
 func TestABookedDayMeetingCarriesItsPrecision(t *testing.T) {

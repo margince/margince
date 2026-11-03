@@ -3,45 +3,11 @@
 
 package dealstatus
 
-// The cached standing, read for a page of deals at once.
-//
-// CachedMoves beside this one answers what to DO about a deal. This answers how
-// the deal is standing — the judgement the deal page prints above that move, and
-// the half a queue row was missing. A row naming a step without saying whether
-// the deal is alive sends the reader to the deal page to find out, which is the
-// hand-off the queue exists to remove.
-//
-// EVERY RULE CachedMoves STATES APPLIES HERE UNCHANGED, and for the same
-// reasons: it reads the cache and never assembles, it is keyed per reader, it
-// accepts staleness, and a deal with no card contributes nothing. The two are
-// separate functions rather than one because they are read at different moments
-// — figures and moves are gathered after the page is cut, and a caller wanting
-// only the standing should not pay for the audience re-gate a move needs.
-//
-// AND THE CITED ACTIVITIES ARE RE-GATED ON EVERY READ, exactly as CachedMoves
-// re-gates the record its move names. The first version of this file argued the
-// opposite — that a standing carries only prose and names no record, so there
-// was nothing to gate — and that argument is wrong in the way that matters. The
-// sentence is MODEL-WRITTEN FROM the timeline and grounding.go requires it to
-// cite the records it rests on, so its text restates content from those
-// records. Auth's rule is about content derived from an activity, not about ids:
-// everything so derived carries the audience predicate wherever it is served.
-//
-// The deal page does not have this problem, which is why it needed no such
-// gate. Service.Get re-gathers the timeline under the caller's CURRENT grants
-// and fingerprints the card against it, so a mail narrowed after the card was
-// written changes the input, misses the fingerprint, and the card is rewritten
-// without it. This read has no fingerprint to miss — that is the whole of what
-// makes it cheap — so it asks the audience question directly instead.
-//
-// A standing whose cited activity this reader may no longer read is dropped
-// WHOLE, the same rule and for the same reason as a move's: the row then falls
-// through to its typed deterministic reasons, which explain it without any
-// model in the path.
+// Cached standings are dated earlier assessments, never current action authority.
+// Each read checks the parent deal and the context used to write the assessment.
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -57,6 +23,7 @@ import (
 // CachedCard is one deal's already-written standing, as much of it as a queue
 // row draws.
 type CachedCard struct {
+	access *cardAccess
 	// Standing is the card's own verdict word: live, drifting, blocked, cold.
 	Standing string
 	// DecisiveLine is the first sentence of what that verdict rests on.
@@ -67,6 +34,7 @@ type CachedCard struct {
 	// caller re-gates before serving it. Empty where the sentence cites only
 	// records that are not activities — a deal's own fields carry no audience.
 	CitedActivities []ids.UUID
+	Citations       []crmcontracts.CompanyBriefEvidence
 }
 
 // CachedCards answers the already-written standing for each of these deals, for
@@ -97,15 +65,23 @@ func (s *Service) CachedCards(
 		if err != nil {
 			return err
 		}
-		// The audience, asked again NOW rather than trusted from write time.
-		// One query for the whole page, over every activity any of these
-		// sentences cites — the same shape and the same reader CachedMoves uses.
+		// Citations alone do not cover every input used to write the assessment.
 		readable, err := readableActivities(ctx, tx, citedActivities(found))
 		if err != nil {
 			return err
 		}
+		masks, err := s.assessmentMasks(ctx, tx, found)
+		if err != nil {
+			return err
+		}
+		seats, err := s.readableAssessmentSeats(ctx, tx, found)
+		if err != nil {
+			return err
+		}
 		for dealID, card := range found {
-			if !allReadable(card.CitedActivities, readable) {
+			if card.access == nil || (card.access.Room && !auth.ReadGranted(ctx, "deal_room")) ||
+				!allReadable(card.CitedActivities, readable) || !allReadable(card.access.Activities, readable) ||
+				!masks[dealID] || !allReadable(card.access.Contacts, seats[dealID].named) || !allReadable(card.access.Seats, seats[dealID].visible) {
 				// The reader has lost a message this sentence was written from.
 				// Dropping the standing WHOLE is the point: its text restates
 				// what that message said.
@@ -121,19 +97,10 @@ func (s *Service) CachedCards(
 	return out, nil
 }
 
-// cardFromPayload lifts one card's verdict out of its stored blob.
-//
-// An unreadable payload is a MISS rather than a failure, for the reason
-// moveFromPayload gives: failing a whole page of the queue over one stale blob
-// would take every other row's reading away with it.
-//
-// A verdict whose `because` has no sentences is dropped WHOLE. The standing word
-// alone would be a judgement with nothing behind it — "this deal is blocked" and
-// no way to ask why — and the queue's own deterministic reason, which the caller
-// falls back to, at least names the fact it rests on.
+// cardFromPayload omits unsupported assessments and verdicts without cited reasoning.
 func cardFromPayload(payload []byte) (CachedCard, bool) {
 	var stored stored
-	if err := json.Unmarshal(payload, &stored); err != nil {
+	if !decodeStored(payload, &stored) {
 		return CachedCard{}, false
 	}
 	verdict := stored.Card.Verdict
@@ -145,9 +112,11 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 		return CachedCard{}, false
 	}
 	return CachedCard{
+		access:          stored.Access,
 		Standing:        verdict.Standing,
 		DecisiveLine:    sentence.Text,
 		CitedActivities: activitiesCitedBy(sentence),
+		Citations:       sentence.Evidence,
 	}, true
 }
 
@@ -186,17 +155,21 @@ func firstSentence(
 
 // readCachedCards takes the stored cards for these deals, for this reader.
 //
-// Collected whole before anything else runs, for the reason readCachedMoves
-// states: the audience filter is a second query on the same transaction, and
-// pgx will not start one while these rows are still open.
+// Collect rows before checking citation audiences on the same transaction;
+// pgx cannot query while the first result remains open.
 func readCachedCards(
 	ctx context.Context, tx pgx.Tx, userID ids.UserID, dealIDs []ids.UUID,
 ) (map[ids.UUID]CachedCard, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
 	found := map[ids.UUID]CachedCard{}
-	rows, err := tx.Query(ctx, `
-		SELECT deal_id, payload, generated_at FROM deal_status_card
-		WHERE user_id = $1 AND deal_id = ANY($2)`,
-		userID, dealIDs)
+	where, args, err := cachedDealScope(ctx, userID, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT c.deal_id, c.payload, c.generated_at FROM deal_status_card c
+		JOIN deal d ON d.id = c.deal_id WHERE `+where, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +182,7 @@ func readCachedCards(
 			return nil, err
 		}
 		card, ok := cardFromPayload(payload)
-		if !ok {
+		if !ok || card.access == nil || !cardSafeForDeal(card, dealID) || generatedAt.IsZero() {
 			continue
 		}
 		card.GeneratedAt = generatedAt
@@ -225,7 +198,11 @@ func citedActivities(cards map[ids.UUID]CachedCard) []ids.UUID {
 	seen := map[ids.UUID]bool{}
 	wanted := make([]ids.UUID, 0, len(cards))
 	for _, card := range cards {
-		for _, id := range card.CitedActivities {
+		activities := append([]ids.UUID{}, card.CitedActivities...)
+		if card.access != nil {
+			activities = append(activities, card.access.Activities...)
+		}
+		for _, id := range activities {
 			if seen[id] {
 				continue
 			}
@@ -245,6 +222,21 @@ func citedActivities(cards map[ids.UUID]CachedCard) []ids.UUID {
 func allReadable(cited []ids.UUID, readable map[ids.UUID]bool) bool {
 	for _, id := range cited {
 		if !readable[id] {
+			return false
+		}
+	}
+	return true
+}
+
+func cardSafeForDeal(card CachedCard, dealID ids.UUID) bool {
+	for _, citation := range card.Citations {
+		switch citation.EntityType {
+		case crmcontracts.CompanyBriefEvidenceEntityTypeActivity:
+		case crmcontracts.CompanyBriefEvidenceEntityTypeDeal:
+			if ids.UUID(citation.EntityId) != dealID {
+				return false
+			}
+		default:
 			return false
 		}
 	}

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { ProvenanceTag } from "./provenance";
 import { PassportChip } from "./trust";
@@ -71,6 +72,26 @@ export const EveryArm: Story = {
         />
       </div>
       <div style={row}>
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "self", fromAddress: "privacy@kps.test" },
+          }}
+        />
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "colleague", fromAddress: null },
+          }}
+        />
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "unknown", fromAddress: null },
+          }}
+        />
+      </div>
+      <div style={row}>
         <ProvenanceTag provenance={{ kind: "buyer" }} />
         <ProvenanceTag provenance={{ kind: "unknown" }} />
       </div>
@@ -82,4 +103,27 @@ export const EveryArm: Story = {
       </div>
     </div>
   ),
+};
+
+// A row logged in another system names that system as its maker spells it, in
+// the reader's own language.
+export const LoggedElsewhereInVietnamese: Story = {
+  render: () => (
+    <LocaleProvider initial="vi">
+      <ProvenanceTag
+        provenance={{
+          kind: "human",
+          self: false,
+          author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+        }}
+      />
+    </LocaleProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(
+        "Mutaz Suleiman đã ghi nhận trong HubSpot",
+      ),
+    ).toBeVisible();
+  },
 };

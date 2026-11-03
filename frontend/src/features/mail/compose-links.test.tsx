@@ -22,8 +22,8 @@ import { ComposeModal } from "./compose";
 
 // What a sent message files under.
 //
-// The grounding controls and the attribution are one statement: a rep who picks
-// "Related to → Acme Renewal" has said what the message is about, and a send
+// The grounding controls and the attribution are one statement. A rep who picks
+// "Related to → Deal: Acme Renewal" has said what the message is about. A send
 // that files only under the page's own record throws that away. These tests
 // assert the request body, because the links array IS the contract.
 
@@ -48,15 +48,23 @@ const PURPOSES = {
   ],
 };
 
-// The account view the grounding selects are populated from: two contacts,
-// two open deals and two live projects, so every pick is a real choice rather
-// than the only option — and the sole-project default stays out of the way.
+// The account view the grounding is read from: two contacts, two open deals
+// and two live projects. Every pick is a real choice, not the only option,
+// and the sole-project default stays out of the way.
 const COMPANY_VIEW = {
   company: { id: "company-1", name: "Acme" },
   contacts: {
     data: [
-      { contact_id: "per-1", full_name: "Dieter Klein" },
-      { contact_id: "per-2", full_name: "Sara Vogel" },
+      {
+        contact_id: "per-1",
+        full_name: "Dieter Klein",
+        primary_email: "dieter@acme.test",
+      },
+      {
+        contact_id: "per-2",
+        full_name: "Sara Vogel",
+        primary_email: "sara@acme.test",
+      },
     ],
   },
   deals: {
@@ -80,6 +88,9 @@ const COMPANY_VIEW = {
     },
   ],
 };
+
+// The chosen project as its own record, which is where its subject key is read.
+const ERP_PROJECT = { id: "proj-1", name: "ERP rollout", key: "ERP-27" };
 
 const SENT_ACTIVITY = {
   id: "act-9",
@@ -150,9 +161,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The account-started composer carries three dropdowns (recipient, deal, why),
-// so each pick names the one it means rather than taking the only combobox on
-// screen.
+// The account-started composer carries two dropdowns: what it is about, and
+// why. Each pick names the one it means, not the only combobox on screen.
 async function pickBy(labelText: string, option: string) {
   const select = screen.getByLabelText(labelText);
   await pickOption(userEvent.setup(), select, option);
@@ -186,7 +196,7 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await pickBy("Related to", "Acme Renewal");
+    await pickBy("Related to", "Deal: Acme Renewal");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -202,9 +212,10 @@ describe("what a sent message files under", () => {
     ]);
   });
 
-  it("files under the project the rep chose, beside the deal and the recipient", async () => {
+  it("files under the project the rep chose, beside the recipient", async () => {
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+      "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
     });
     render(
       <ComposeModal
@@ -217,18 +228,19 @@ describe("what a sent message files under", () => {
     );
 
     // The picker holds its place from the start; it opens once the record's
-    // projects have arrived.
+    // projects and deals have arrived.
     await waitFor(() =>
-      expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
+      expect(screen.getByLabelText("Related to").hasAttribute("disabled")).toBe(
         false,
       ),
     );
-    await screen.findByLabelText("Related to");
-    await pickBy("Related to", "Acme Renewal");
-    await pickBy("Project", "ERP-27 · ERP rollout");
+    await pickBy("Related to", "ERP-27 · ERP rollout");
     // The choice is visible in the head, and so is its tag in the subject.
-    expect(screen.getByLabelText("Project").textContent).toContain("ERP-27");
+    expect(screen.getByLabelText("Related to").textContent).toContain("ERP-27");
     await fillBody();
+    expect(
+      (screen.getByLabelText("Subject") as HTMLInputElement).value,
+    ).toContain("ERP-27");
     await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
@@ -238,8 +250,47 @@ describe("what a sent message files under", () => {
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
       { entity_type: "contact", entity_id: "per-1" },
-      { entity_type: "deal", entity_id: "deal-1" },
       { entity_type: "project", entity_id: "proj-1" },
+    ]);
+  });
+
+  // A message is about one thing. A deal has no key, so choosing it after a
+  // project takes the project's key out of the subject and its link off the
+  // send. One mail is not filed under two answers.
+  it("replaces the project with a deal chosen after it", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+      "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Related to").hasAttribute("disabled")).toBe(
+        false,
+      ),
+    );
+    await pickBy("Related to", "ERP-27 · ERP rollout");
+    await fillBody();
+    const subject = screen.getByLabelText("Subject") as HTMLInputElement;
+    await waitFor(() => expect(subject.value).toContain("ERP-27"));
+    await pickBy("Related to", "Deal: Acme Renewal");
+    await waitFor(() => expect(subject.value).toBe("Hello"));
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "deal", entity_id: "deal-1" },
     ]);
   });
 
@@ -264,8 +315,8 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    await screen.findByLabelText("Project");
-    await pickBy("Project", "ERP-27 · ERP rollout");
+    await screen.findByLabelText("Related to");
+    await pickBy("Related to", "ERP-27 · ERP rollout");
     await userEvent.click(draftButton());
 
     await waitFor(() =>
@@ -319,7 +370,9 @@ describe("what a sent message files under", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Project").textContent).toContain("ERP-27"),
+      expect(screen.getByLabelText("Related to").textContent).toContain(
+        "ERP-27",
+      ),
     );
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
@@ -373,7 +426,13 @@ describe("what a sent message files under", () => {
         jsonResponse({
           company: { id: "shared-id", name: "Acme" },
           contacts: {
-            data: [{ contact_id: "per-1", full_name: "Dieter Klein" }],
+            data: [
+              {
+                contact_id: "per-1",
+                full_name: "Dieter Klein",
+                primary_email: "dieter@acme.test",
+              },
+            ],
           },
           deals: { data: [{ deal_id: "shared-id", name: "Acme Renewal" }] },
         }),
@@ -389,7 +448,7 @@ describe("what a sent message files under", () => {
     );
 
     await screen.findByLabelText("Related to");
-    await pickBy("Related to", "Acme Renewal");
+    await pickBy("Related to", "Deal: Acme Renewal");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
     await userEvent.click(screen.getByRole("button", { name: "Send" }));

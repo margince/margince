@@ -21,8 +21,10 @@ are stored. A shutdown cancellation does not count as a failure. Reconciliation 
 minutes and on worker start to restore interrupted execution.
 
 Settings → System health shows inspected and changed counts separately. The bounded estimate counts
-rows to inspect; it is not a prediction of how many will change. A capped estimate is a floor, and
-an absent estimate is unknown. A failed read remains an error. The last-progress time moves only
+rows to inspect; it is not a prediction of how many will change. Seeding records a step without
+counting it; the count is read when the step's first batch runs. A count that cannot finish within
+five seconds leaves the step unestimated and its batches run; any other failed read remains an error.
+A capped estimate is a floor, and an absent estimate is unknown. The last-progress time moves only
 when a batch commits. Admin and ops can pause, resume, retry and refresh an estimate. Controls carry
 the ledger version the operator read, so a stale request cannot overwrite newer progress.
 

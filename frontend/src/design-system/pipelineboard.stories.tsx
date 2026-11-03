@@ -3,7 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
+import { expect, within } from "storybook/test";
 import { lastEmailAgo } from "../testing/dealmail";
+import { AnsweredSearch } from "./answeredsearch";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
 import {
@@ -37,7 +39,10 @@ function boardDeal(
     companyId: "o-1",
     valueMinor,
     currency: "EUR",
-    ageMs: ageDays * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - ageDays * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     ...extra,
   };
 }
@@ -428,6 +433,66 @@ function StageMidScroll() {
 
 export const WithAScrolledStage: Story = {
   render: () => <StageMidScroll />,
+};
+
+// A search whose only match sits in the last stage, in a frame too narrow to
+// show it. The board says where the match is and scrolls that stage in.
+const offScreenMatchColumns: BoardMoneyColumn[] = boardColumns.map(
+  (column) => ({
+    ...column,
+    deals: column.stage === "won" ? column.deals : [],
+  }),
+);
+
+export const SearchMatchesOffScreen: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <AnsweredSearch.Provider value="umbrella">
+        <PipelineBoard
+          columns={offScreenMatchColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+        />
+      </AnsweredSearch.Provider>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    await expect(hint.textContent).toContain("1 result in Closed Won");
+  },
+};
+
+// The same search inside the list surface that hosts the board: the note keeps
+// the stages' gutter instead of meeting the surface's edge.
+export const SearchMatchesOffScreenInSurface: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <ListSurface count="1 deal">
+        <AnsweredSearch.Provider value="umbrella">
+          <PipelineBoard
+            columns={offScreenMatchColumns}
+            cardHref={(d) => `#/deals/${d.id}`}
+            zone="Europe/Berlin"
+          />
+        </AnsweredSearch.Provider>
+      </ListSurface>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    const surface = canvasElement.querySelector(".lt");
+    const stage = canvasElement.querySelector(".lt > .board");
+    if (!surface || !stage) {
+      throw new Error("the board drew outside a list surface");
+    }
+    const inset =
+      hint.getBoundingClientRect().left - surface.getBoundingClientRect().left;
+    const stageInset = Number.parseFloat(getComputedStyle(stage).paddingLeft);
+    await expect(stageInset).toBeGreaterThan(0);
+    await expect(Math.round(inset)).toBeGreaterThanOrEqual(
+      Math.round(stageInset),
+    );
+  },
 };
 
 // `uat-phone` drives the capture gate to 390px, which Storybook's own viewport

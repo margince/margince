@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The subject line is what a rep reads on their list, and one finding is the
@@ -25,13 +26,19 @@ import (
 func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 	t.Parallel()
 
-	for findings, want := range map[int]string{
-		1: "1 forecast input needs attention",
-		2: "2 forecast inputs need attention",
-		7: "7 forecast inputs need attention",
+	for _, c := range []struct {
+		lang     textlang.Lang
+		findings int
+		want     string
+	}{
+		{textlang.English, 1, "1 forecast input needs attention"},
+		{textlang.English, 7, "7 forecast inputs need attention"},
+		{textlang.German, 1, "1 Angabe zur Prognose muss geprüft werden"},
+		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
+		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
 	} {
-		if got := bundleTaskSubject(findings); got != want {
-			t.Errorf("bundleTaskSubject(%d) = %q, want %q", findings, got, want)
+		if got := bundleTaskSubject(c.lang, c.findings); got != c.want {
+			t.Errorf("bundleTaskSubject(%s, %d) = %q, want %q", c.lang, c.findings, got, c.want)
 		}
 	}
 }

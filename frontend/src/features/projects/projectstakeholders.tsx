@@ -32,31 +32,19 @@ import {
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { projectRoleLabel } from "../records/record360";
+import {
+  isProjectStakeholderRole,
+  PROJECT_STAKEHOLDER_ROLES,
+  projectRoleLabel,
+} from "../../lib/recordlabels";
 import { project360Key } from "./project360.key";
 
 type SetProjectStakeholderRequest =
   components["schemas"]["SetProjectStakeholderRequest"];
 type ProjectStakeholderRole = SetProjectStakeholderRequest["role"];
 
-// Every seat the contract admits, in the order it declares them: the five deal
-// roles a project inherits, then the four a body of work running past close
-// needs. Typed as the request's own role, so a role the contract drops stops
-// compiling here rather than earning a 422 in front of a reader.
-const PROJECT_STAKEHOLDER_ROLES: readonly [
-  ProjectStakeholderRole,
-  ...ProjectStakeholderRole[],
-] = [
-  "champion",
-  "economic_buyer",
-  "blocker",
-  "influencer",
-  "user",
-  "sponsor",
-  "project_lead",
-  "delivery_lead",
-  "subject_matter_expert",
-];
+// The seat the dialog opens on, first in the order the label map lists them.
+const FIRST_SEAT: ProjectStakeholderRole = "champion";
 
 // The one key the project page reads under (project360.tsx). A guess here
 // leaves the card showing the state before the write.
@@ -90,9 +78,7 @@ export function AddProjectStakeholder({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [contact, setContact] = useState<RecordPickerCandidate | null>(null);
-  const [role, setRole] = useState<ProjectStakeholderRole>(
-    PROJECT_STAKEHOLDER_ROLES[0],
-  );
+  const [role, setRole] = useState<ProjectStakeholderRole>(FIRST_SEAT);
 
   // The pick and the role arrive as the mutation's VARIABLES rather than
   // through this closure: react-query re-arms a mutation's options in a passive
@@ -120,7 +106,7 @@ export function AddProjectStakeholder({
   function close() {
     setOpen(false);
     setContact(null);
-    setRole(PROJECT_STAKEHOLDER_ROLES[0]);
+    setRole(FIRST_SEAT);
     seat.reset();
   }
 
@@ -165,7 +151,7 @@ export function AddProjectStakeholder({
               {...control}
               value={role}
               onChange={(value) => {
-                if (isStakeholderRole(value)) {
+                if (isProjectStakeholderRole(value)) {
                   setRole(value);
                 }
               }}
@@ -179,13 +165,6 @@ export function AddProjectStakeholder({
       </ConfirmModal>
     </>
   );
-}
-
-// The Select hands back a bare string, and the request's role is a closed
-// vocabulary — narrowing here is what keeps the body typed without an
-// assertion.
-function isStakeholderRole(value: string): value is ProjectStakeholderRole {
-  return PROJECT_STAKEHOLDER_ROLES.some((role) => role === value);
 }
 
 /**

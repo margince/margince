@@ -68,7 +68,7 @@ func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
 	evidence := o.capture(t, completion)
 	reply, err := json.Marshal(settlePayload{Results: []settleResult{
 		{ID: first.String(), Verdict: activities.RequestSettled, Confidence: 0.95},
-		{ID: second.String(), Verdict: activities.RequestStillOwed, Remaining: "Sign envelope BETA-205", Confidence: 0.95},
+		{ID: second.String(), Verdict: activities.RequestStillOwed, Remaining: "sign envelope BETA-205", Confidence: 0.95},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +106,7 @@ func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
 		newest := o.capture(t, later)
 		result, err := json.Marshal(settlePayload{Results: []settleResult{
 			{ID: first.String(), Verdict: verdict, Confidence: 0.95},
-			{ID: second.String(), Verdict: activities.RequestStillOwed, Remaining: "Sign envelope BETA-205", Confidence: 0.95},
+			{ID: second.String(), Verdict: activities.RequestStillOwed, Remaining: "sign envelope BETA-205", Confidence: 0.95},
 		}})
 		if err != nil {
 			t.Fatal(err)

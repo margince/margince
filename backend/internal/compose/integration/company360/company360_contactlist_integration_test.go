@@ -6,6 +6,7 @@
 package company360
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -109,6 +110,11 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 	reply := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: Re: proposal", "outbound",
 		company360Clock.AddDate(0, 0, -2))
 	integration.LinkActivity(t, owner, reply, "contact", answered)
+	// One thread, so the reply answers their mail as the History badge reads it.
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE activity SET thread_key = 'proposal-thread' WHERE id = ANY($1)`, []ids.UUID{in, reply}); err != nil {
+		t.Fatalf("threading the reply: %v", err)
+	}
 	out := integration.AccountMailDirectedAt(t, owner, e.WS, "Introduction", "outbound",
 		company360Clock.AddDate(0, 0, -10))
 	integration.LinkActivity(t, owner, out, "contact", silent)
@@ -341,7 +347,7 @@ func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
 	})
 	_, err := svc.IntroRequestDraft(noContacts, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -377,7 +383,7 @@ func TestTheIntroDraftAdmitsASeatHoldingTheContactGrant(t *testing.T) {
 	})
 	_, err := svc.IntroRequestDraft(granted, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if errors.Is(err, apperrors.ErrPermissionDenied) {

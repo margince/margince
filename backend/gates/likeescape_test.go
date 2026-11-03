@@ -56,8 +56,9 @@ import (
 // So the file is the smallest unit that can answer for that shape.
 var (
 	// anyRuntimeLike is the broad reader, used by the corpus floor: every LIKE
-	// whose pattern is assembled at runtime, escaped or not.
-	anyRuntimeLike = regexp.MustCompile(`(?i)\bI?LIKE\s+(\$[0-9]+|'[^']*'\s*\|\||[a-z_][a-z0-9_.]*\s*\|\|)`)
+	// whose pattern is assembled at runtime, escaped or not. An operand may sit
+	// inside one SQL function call, as `ILIKE f_unaccent($2)` does.
+	anyRuntimeLike = regexp.MustCompile(`(?i)\bI?LIKE\s+` + sqlCallOpening + `(\$[0-9]+|'[^']*'\s*\|\||[a-z_][a-z0-9_.]*\s*\|\|)`)
 
 	// Same-line only, and spaces rather than \s.
 	//
@@ -65,8 +66,12 @@ var (
 	// begins with. Crossing a newline read that keyword as the operand.
 	splicedColumnAfterLiteral = regexp.MustCompile(`(?i)\bI?LIKE[ \t]*\(?[ \t]*'[^']*'[ \t]*\|\|[ \t]*\(?[ \t]*([a-z_][a-z0-9_.]*)`)
 	splicedColumnBeforeSuffix = regexp.MustCompile(`(?i)\bI?LIKE[ \t]*\(?[ \t]*([a-z_][a-z0-9_.]*)[ \t]*\)?[ \t]*\|\|`)
-	boundOperand              = regexp.MustCompile(`(?i)\bI?LIKE\s+(?:'[^']*'\s*\|\|\s*)?\$[0-9]+`)
+	boundOperand              = regexp.MustCompile(`(?i)\bI?LIKE\s+` + sqlCallOpening + `(?:'[^']*'\s*\|\|\s*)?\$[0-9]+`)
 )
+
+// sqlCallOpening is an optional function call around a LIKE operand. Folding
+// the operand through `f_unaccent` or `lower` leaves its wildcards in place.
+const sqlCallOpening = `(?:[a-z_][a-z0-9_]*\(\s*)?`
 
 // sqlKeywordsAfterAGap are the words that follow a spliced call often enough
 // to be mistaken for its operand.
@@ -112,6 +117,8 @@ var likeEscapeWaived = gatekit.Waive(map[string]string{
 	"internal/modules/activities/followupownership.go": "a server-stamped captured_by prefix, as introadvance.",
 	"internal/modules/activities/emailpresentation.go": "the operand is a uuid argument cast to text " +
 		"inside a literal `%:` prefix.",
+	"internal/modules/contacts/dedupecompanyswitchboard.go": "the operands are parsed E.164 numbers " +
+		"with the plus stripped: digits carry no wildcard.",
 })
 
 func TestEveryRuntimeLikeOperandIsEscaped(t *testing.T) {
@@ -205,5 +212,17 @@ func TestTheLikeCensusStillReachesTheTree(t *testing.T) {
 		t.Errorf("the census reaches %d file(s) with a runtime LIKE operand and the floor is %d. "+
 			"Fewer means the reader stopped seeing sites rather than that the tree stopped "+
 			"having them: lower the floor only alongside the change that removed them", reached, fewestRuntimeLikeFiles)
+	}
+}
+
+func TestTheLikeReaderSeesAnOperandInsideAFunctionCall(t *testing.T) {
+	t.Parallel()
+	for _, stmt := range []string{
+		`WHERE f_unaccent(display_name) ILIKE f_unaccent($2)`,
+		`WHERE name ILIKE lower('%' || $1)`,
+	} {
+		if !anyRuntimeLike.MatchString(stmt) || !bindsALikeOperand(stmt) {
+			t.Errorf("the reader misses the bound operand in %q", stmt)
+		}
 	}
 }

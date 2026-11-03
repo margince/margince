@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -59,6 +60,9 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
 		// A legal entity's mark, through the same decode as the company's.
 		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
+		// A website form post. Its contract takes multipart because a browser's
+		// FormData sends it. File parts are skipped, so the bound is the form's.
+		"/v1/public/forms/{form_key}": webforms.MaxBody, // submitWebForm
 	}
 }
 

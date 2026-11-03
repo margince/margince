@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { RosterFailedLine } from "../../components/entityref";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -352,7 +353,7 @@ function AutomationOwner({
 }: Readonly<{ automation: Automation; canEdit: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const owners = useRecordOwnerOptions(canEdit);
+  const { options: owners, roster } = useRecordOwnerOptions(canEdit);
   const hand = useMutation({
     mutationFn: patchAutomation,
     onSettled: () =>
@@ -378,6 +379,7 @@ function AutomationOwner({
         }
       />
       <span className="t-caption">{t("auto.ownerHint")}</span>
+      <RosterFailedLine kind="user" roster={roster} />
       {hand.isError && <ErrorLine>{problemMessageOf(hand.error, t)}</ErrorLine>}
     </CellStack>
   );

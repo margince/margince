@@ -185,11 +185,20 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 			e := integration.Setup(t)
 			acct := seedQuietAccount(t, e)
 			subject, at := "Status check", acct.now.AddDate(0, 0, -tc.days)
-			if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-				Kind: "meeting", Subject: &subject, MeetingStatus: &tc.status, OccurredAt: &at, Source: "manual",
+			logged := at
+			if tc.status == "held" && tc.days < 0 {
+				logged = acct.now.AddDate(0, 0, -1)
+			}
+			meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+				Kind: "meeting", Subject: &subject, MeetingStatus: &tc.status, OccurredAt: &logged, Source: "manual",
 				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: acct.contact}},
-			}); err != nil {
+			})
+			if err != nil {
 				t.Fatalf("logging the meeting: %v", err)
+			}
+			if !logged.Equal(at) {
+				// Writers refuse held before the start; older rows can carry it.
+				e.WsExec(t, `UPDATE activity SET occurred_at = $1 WHERE id = $2`, at, ids.UUID(meeting.Id))
 			}
 
 			got := relationshipOf(t, e, acct)

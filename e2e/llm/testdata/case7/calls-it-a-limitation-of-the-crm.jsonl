@@ -1,3 +1,0 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__run_report"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__run_report", "input": {"report": "activities-by-kind"}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "There are 6 meetings in the CRM in total.\n\nI tried to split them into held and booked but this is a limitation of the CRM, so how many actually took place is not something I can give you. The total is the number I would use."}

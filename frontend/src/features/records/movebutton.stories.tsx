@@ -42,6 +42,48 @@ export const CreateTask: Story = {
   args: CREATE_TASK,
 };
 
+export const RecommendationChanged: Story = {
+  beforeEach: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "create"] }),
+      "GET /deals/d-1/status": () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Suggestion changed",
+            status: 409,
+            detail:
+              "The suggested step changed. Refresh the record before opening it.",
+          },
+          409,
+        ),
+    });
+  },
+  args: {
+    dealId: "d-1",
+    move: {
+      action: "open_task",
+      arguments: { activity_id: "task-1" },
+      recommendation: {
+        deal_id: "d-1",
+        rule: "open_task",
+        policy_version: "fixture",
+        basis_fingerprint: "a".repeat(64),
+        checked_at: "2026-10-12T09:00:00Z",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Open task" }),
+    );
+    await expect(await canvas.findByRole("alert")).toHaveTextContent(
+      "The suggested step changed.",
+    );
+  },
+};
+
 // The server refused the task the rule prepared; the refusal sits under the
 // verb that asked for it.
 export const CreateTaskRefused: Story = {
@@ -70,4 +112,9 @@ export const CreateTaskRefused: Story = {
       "The deal this task names is archived.",
     );
   },
+};
+
+export const RecommendationChangedDark: Story = {
+  ...RecommendationChanged,
+  globals: { theme: "dark" },
 };

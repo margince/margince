@@ -18,7 +18,7 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { today } from "../../format/calendarday";
+import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ModelLane } from "../../lib/ai-models";
@@ -40,7 +40,8 @@ export type BoundModel = Readonly<{ model: string; lane: ModelLane }>;
 
 // A scheduled price is edited on its own date; an in-force one, from today.
 function startDate(row: SheetRow | undefined): string {
-  return row && row.effective_date > today() ? row.effective_date : today();
+  const today = todayIn(AI_RATE_DAY_ZONE);
+  return row && row.effective_date > today ? row.effective_date : today;
 }
 
 /**
@@ -121,7 +122,7 @@ export function PriceForm({
     initial?.cache_write_per_mtok ?? "0",
   );
   const [effectiveDate, setEffectiveDate] = useState(startDate(initial));
-  const floor = isoOrBlank(today()) || undefined;
+  const floor = isoOrBlank(todayIn(AI_RATE_DAY_ZONE)) || undefined;
   // What the model is FOR. Always sent: a price filed without one is filed as
   // chat, and a new embedder then never reaches the embeddings picker.
   const [lane, setLane] = useState<ModelLane>(

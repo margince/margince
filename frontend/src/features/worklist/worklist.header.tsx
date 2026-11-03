@@ -13,10 +13,9 @@
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { SegmentedControl } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
-import { formatNumber } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { routeHash } from "../../lib/router";
-import { hashWithParams } from "../../lib/urlstate";
+import { useLocale, useT } from "../../i18n";
+import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
+import type { WorklistView } from "../../lib/worklistviews";
 import { completenessText, pillCount } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
@@ -25,26 +24,20 @@ import type {
   WorklistItem,
   WorklistScope,
 } from "./worklist.queries";
+import {
+  VIEW_PILLS,
+  type ViewPill,
+  viewHeadline,
+  WorklistViewPicker,
+} from "./worklist.views";
 import "./worklist.css";
 
-// The cuts through the queue. `all` first because it is the default view.
-//
-// `as const` rather than a widened annotation, and it is load-bearing: each pill
-// reads `worklist.filter.<value>`, so the literal type is what makes a pill
-// without a label a compile error. Annotated as the whole filter vocabulary it
-// would silently admit the link-only values below, which have no pill copy.
+// The cuts through the queue, as one view draws them (`VIEW_PILLS`). The two
+// old category values `decisions` and `system` stay addressable: a link naming
+// one opens that view.
 const FILTERS = [
-  "all",
-  "customer_waiting",
-  "leads",
-  "deals_at_risk",
-  "meetings",
-  "tasks",
+  ...VIEW_PILLS.today,
   "decisions",
-  // A relationship gone quiet is outreach to someone the reader worked with,
-  // not upkeep. It has its own category on the server. Without its own pill it
-  // was reachable only through All.
-  "relationships",
   "system",
 ] as const satisfies readonly WorklistFilter[];
 
@@ -70,8 +63,12 @@ type LinkedOnlyFilter = (typeof LINKED_ONLY)[number];
 /** Every filter this build can be addressed with — the pills and the links. */
 const ADDRESSABLE: readonly WorklistFilter[] = [...FILTERS, ...LINKED_ONLY];
 
-/** The dial's name in the address. One spelling, read and written. */
-export const WORKLIST_FILTER_PARAM = "filter";
+export {
+  WORKLIST_VIEW_PARAM,
+  worklistLaneHref,
+} from "../../lib/worklistrouting";
+
+export { WORKLIST_FILTER_PARAM };
 
 /**
  * The lane the address asks for, or the default.
@@ -103,32 +100,6 @@ export function isLinkedOnlyFilter(
   filter: WorklistFilter,
 ): filter is LinkedOnlyFilter {
   return (LINKED_ONLY as readonly WorklistFilter[]).includes(filter);
-}
-
-/**
- * The address that opens the queue on one narrowing.
- *
- * ONE spelling, because the surfaces that link here count a population first and
- * the count is only true if the door applies the same filter. Two hand-written
- * `#/worklist?filter=…` strings are two chances to typo a value that then falls
- * through to `all` — silently, since an unknown filter is deliberately not an
- * error — and the reader lands on the whole queue under a number describing part
- * of it. That is the defect this function exists to make unrepeatable.
- *
- * Built from the router's own two halves rather than by hand, so an address
- * written here and one the dial on the screen writes are byte-identical — which
- * is what lets the reader arrive by link, press a pill, and press Back.
- */
-export function worklistLaneHref(
-  filter: WorklistFilter,
-  scope: WorklistScope = "mine",
-): string {
-  const params = new Map<string, string>([
-    [WORKLIST_FILTER_PARAM, filter],
-    ["queue", "1"],
-  ]);
-  if (scope !== "mine") params.set("queue_scope", scope);
-  return hashWithParams(routeHash({ screen: "home" }), params);
 }
 
 /**
@@ -174,42 +145,6 @@ function useLanesColumn(): [RefObject<HTMLDivElement | null>, boolean] {
 }
 
 /**
- * What the day holds, as one sentence.
- *
- * With the partition it names the two panels by their headings, both figures
- * drawn even at zero so the line keeps its shape. It does not break Today down:
- * the bands and pills do, and an "urgent" here would disagree with the Brief's,
- * which also counts review rows. Without it (an older server) the five-figure
- * sentence stands, and an unsent `in_play` drops its clause rather than print 0.
- */
-function summarySentence(
-  summary: Worklist["summary"],
-  t: Translator,
-  locale: Locale,
-): string {
-  const figure = (value: number) => formatNumber(value, locale);
-  const { buckets } = summary;
-  if (buckets) {
-    return t("worklist.summary.split", {
-      today: figure(buckets.urgent + buckets.due_today + buckets.planned),
-      review: figure(buckets.review),
-    });
-  }
-  return t(
-    summary.in_play === undefined
-      ? "worklist.summary.noMiddle"
-      : "worklist.summary",
-    {
-      urgent: figure(summary.urgent),
-      due: figure(summary.due),
-      inPlay: figure(summary.in_play ?? 0),
-      lower: figure(summary.lower_priority),
-      total: figure(summary.total),
-    },
-  );
-}
-
-/**
  * The day's own head: the sentence, the dials over it, the cuts under it.
  *
  * Three tiers, and the order is what each one is ABOUT: what the whole day
@@ -219,8 +154,10 @@ export function WorklistHeader({
   day,
   loaded,
   scope,
+  view,
   filter,
   onScope,
+  onView,
   onFilter,
   owner,
   onOwner,
@@ -229,6 +166,8 @@ export function WorklistHeader({
   // The cards on screen, which grow as the reader pages.
   loaded: readonly WorklistItem[];
   scope: WorklistScope;
+  view: WorklistView;
+  onView: (next: WorklistView) => void;
   filter: WorklistFilter;
   owner: string;
   onScope: (next: WorklistScope) => void;
@@ -238,7 +177,8 @@ export function WorklistHeader({
   const t = useT();
   const { locale } = useLocale();
   const scopes = day.scope_options;
-  const completeness = completenessText(day, filter, t, locale, loaded);
+  const completeness = completenessText(day, filter, t, locale, loaded, view);
+  const pills: readonly ViewPill[] = VIEW_PILLS[view];
   const [head, inColumn] = useLanesColumn();
   return (
     // The stack the lanes column takes is keyed on this class rather than on a
@@ -255,19 +195,9 @@ export function WorklistHeader({
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
       <div className="worklist-header-line">
-        {/* ONE scope, the whole assembled day, counted by the server over every
-          candidate it weighed rather than over the page it cut — so the
-          sentence stays still as the reader pages. */}
-        <p className="t-h3 worklist-lead">
-          {/* The figures are always the whole day's. Under a filter the pills
-              carry the filtered counts, so the sentence says whose it is
-              rather than reading as the filtered population. */}
-          {filter === "all"
-            ? summarySentence(day.summary, t, locale)
-            : t("worklist.summary.wholeDay", {
-                sentence: summarySentence(day.summary, t, locale),
-              })}
-        </p>
+        {/* The view's own headline, counted by the server over the whole view
+            rather than the loaded rows, so it stays still while rows load. */}
+        <p className="t-h3 worklist-lead">{viewHeadline(day, view, locale)}</p>
         {/* BOTH scope controls at the trailing end of the header's own line, in
             one group so they share the sentence's line rather than each
             claiming a row of the page. The owner picker was full width under
@@ -301,22 +231,30 @@ export function WorklistHeader({
           )}
         </div>
       </div>
+      {scope === "unassigned" && owner === "" && (
+        <p className="worklist-completeness">
+          {t("worklist.scope.unassignedHint")}
+        </p>
+      )}
       {/* The cuts, and the sentence about what they left out, as one block: the
           caption qualifies the pills, so it sits a step under them rather than
           at the header's own interval, where it read as a third control in the
           strip. */}
       <div className="worklist-header-cuts">
-        <FilterPills
-          pills={FILTERS.map((value) => ({
-            value,
-            label: t(`worklist.filter.${value}` as const),
-            count: pillCount(day, value),
-          }))}
-          value={filter}
-          onChange={onFilter}
-          label={t("worklist.filter.label")}
-          layout={inColumn ? "list" : "row"}
-        />
+        <WorklistViewPicker day={day} view={view} onView={onView} />
+        {pills.length > 0 && (
+          <FilterPills
+            pills={pills.map((value) => ({
+              value,
+              label: t(`worklist.filter.${value}` as const),
+              count: pillCount(day, value, view),
+            }))}
+            value={filter}
+            onChange={onFilter}
+            label={t("worklist.filter.label")}
+            layout={inColumn ? "list" : "row"}
+          />
+        )}
         {/* A narrowing that came by LINK names itself, because no pill is
             pressed to name it. Without this the reader arrives from Brief at a
             short queue with the whole row unselected and nothing saying why —

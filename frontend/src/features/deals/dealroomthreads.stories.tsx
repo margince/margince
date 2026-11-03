@@ -43,7 +43,7 @@ const DOCUMENTS: readonly BoardDocument[] = [
     filename: "commercial-terms-v4.pdf",
     meta: "commercial-terms-v4.pdf · Commercial",
     byteSize: 412_000,
-    status: <Badge tone="success">Shared</Badge>,
+    shareMark: <Badge tone="success">Shared</Badge>,
   },
   {
     id: "doc-2",
@@ -52,7 +52,7 @@ const DOCUMENTS: readonly BoardDocument[] = [
     filename: "implementation-plan.pdf",
     meta: "implementation-plan.pdf · Technical",
     byteSize: 1_240_000,
-    status: <Badge>Draft</Badge>,
+    shareMark: <Badge>Draft</Badge>,
   },
 ];
 

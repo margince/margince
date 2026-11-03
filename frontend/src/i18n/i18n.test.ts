@@ -23,10 +23,15 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
+  "webForms.sender.typeform",
+  "webForms.sender.tally",
+  "webForms.field.originsPlaceholder",
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "captureConcern.title",
+  "companyReach.functionCount",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",
@@ -64,6 +69,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
   "explain.col.pipeline",
+  "reporting.recordType.lead",
+  "reporting.recordType.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
@@ -96,13 +103,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // The release channel's own name on the rail head's stage marker. "Beta" is
-  // the word all three catalogs use for it — Vietnamese borrows it as a term of
-  // art the way it borrows "deal" and "pipeline" — and a marker four letters
-  // long is also the only spelling that fits the 56px rail it must survive.
-  // Temporary, with the badge that renders it: app/betabadge.tsx names this
-  // entry among the things its deletion takes.
-  "shell.beta",
   // "Core" is the product's name for the shared codebase, which every catalog
   // already uses as a term of art (ob.core.*).
   "shell.coreVersion",
@@ -204,17 +204,21 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
   "magic.by.system",
+  // Only the name of whoever acted.
+  "magic.by.member",
   // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
+  "contactCase.field.linkedin",
   "ob.ai.speakerName",
   "auth.title",
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "lead.boardCount_one",
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
@@ -237,7 +241,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.library.records.lead_one",
   "leadSources.leads_one",
   "acqSources.deals_one",
+  "lossReasons.deals_one",
   "users.handover.leads_one",
+  "brief.agenda.leads_one",
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
@@ -262,6 +268,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.action.email",
   "contact.memory.channelEmail",
   "history.field.email",
+  "activity.webForm.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
   "compose.cc",
@@ -314,6 +321,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
+  // A product's own name, the built-in lead origin.
+  "leadOrigins.builtin.linkedin",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader
@@ -506,6 +515,44 @@ describe("the product's word for the tenant", () => {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
           `${locale}: ${key} — "${value}" says workspace where the product says company`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
+/**
+ * A record has one owner and, beside it, responsibility roles a team fills.
+ * Where the Responsibilities card says the owner's word, a reader is told
+ * "X is responsible" and "nobody is responsible" on one page.
+ *
+ * The word, not the whole label: Vietnamese says "Người chịu trách nhiệm" as a
+ * label and "ai chịu trách nhiệm" in a sentence. The label check below keeps
+ * this table in step with the catalogs.
+ */
+const OWNER_WORD: Record<string, string> = {
+  en: "owner",
+  de: "verantwortlich",
+  vi: "chịu trách nhiệm",
+};
+
+describe("the owner and the responsibility roles", () => {
+  it("names the owner's word for every locale, as its label says it", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      expect(
+        catalog["list.owner"].toLowerCase(),
+        `${locale}: the owner's word is missing`,
+      ).toContain(OWNER_WORD[locale]);
+    }
+  });
+
+  it("no catalog uses the owner's word in the Responsibilities card", () => {
+    for (const [locale, catalog] of Object.entries(catalogs)) {
+      for (const [key, value] of Object.entries(catalog)) {
+        if (!key.startsWith("assignments.")) continue;
+        expect(
+          value.toLowerCase().includes(OWNER_WORD[locale]),
+          `${locale}: ${key} — "${value}" says the owner's word`,
         ).toBe(false);
       }
     }

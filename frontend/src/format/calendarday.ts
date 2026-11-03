@@ -17,7 +17,7 @@ import {
   DAY_MS,
   endOfDayInZone,
   instantAtWallClock,
-  viewerZone,
+  UTC_ZONE,
 } from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
@@ -112,12 +112,16 @@ export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
   return calendarDay(a, zone) === calendarDay(b, zone);
 }
 
-// The reader's own today, for a form whose date box opens on it and refuses
-// anything earlier: the sheets it feeds read their effective dates against
-// the reader's calendar rather than UTC's, so the floor is read the same way.
-export function today(): string {
-  return calendarDay(new Date(), viewerZone());
+// The day it is now in `zone`, for a form whose date box opens on it and
+// refuses anything earlier. The zone is the one the form's server counts its
+// days in, so the floor the form offers is a day the server takes.
+export function todayIn(zone: string): string {
+  return calendarDay(new Date(), zone);
 }
+
+// The zone the AI model rate sheet counts its effective days in: the server
+// stores and compares each price's day as a UTC date (ai/ratewrite.go).
+export const AI_RATE_DAY_ZONE = UTC_ZONE;
 
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
 //

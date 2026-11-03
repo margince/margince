@@ -222,6 +222,22 @@ func NormalizeCompanyName(s string) string {
 	return strings.Join(fields, " ")
 }
 
+// companyLegalForm is the legal form NormalizeCompanyName strips from a name,
+// undotted and space-joined, or "" when it strips none: "Acme GmbH & Co. KG"
+// reads "gmbh & co kg", and "Acme" reads "".
+func companyLegalForm(s string) string {
+	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
+	core := strings.Fields(NormalizeCompanyName(s))
+	if len(core) >= len(fields) {
+		return ""
+	}
+	tail := fields[len(core):]
+	for i, word := range tail {
+		tail[i] = undottedForm(word)
+	}
+	return strings.Join(tail, " ")
+}
+
 // undottedForm is a trailing word with its internal dots removed, so "S.R.L."
 // and "SRL" are one Romanian form. Trimming only the final dot left "s.r.l." as
 // one token matching no entry.

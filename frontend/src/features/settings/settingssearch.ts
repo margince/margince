@@ -166,6 +166,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "limit",
   ],
   integrations: ["webhook", "api"],
+  "web-forms": ["website", "form", "contact form", "enquiry", "lead form"],
   knowledge: ["documents", "handbook", "corpus", "rag", "upload"],
   import: ["csv", "upload", "migration", "bulk"],
   models: [

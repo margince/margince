@@ -119,6 +119,7 @@ export function RecordPicker({
   disabled = false,
   initialTerm = "",
   unavailableReason,
+  noMatch,
   id,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
@@ -139,6 +140,9 @@ export function RecordPicker({
   // A sentence for a row that is listed but cannot be picked. A function read
   // at render, not part of the search, so a new translator never restarts it.
   unavailableReason?: (candidate: RecordPickerCandidate) => string | undefined;
+  // The sentence for a search that finds nothing, when the caller can say why
+  // and what to do next.
+  noMatch?: string;
 }> &
   RecordPickerName) {
   const t = useT();
@@ -195,7 +199,7 @@ export function RecordPicker({
         </p>
       )}
       {answered && candidates.length === 0 && (
-        <p aria-live="polite">{t("picker.noMatch")}</p>
+        <p aria-live="polite">{noMatch ?? t("picker.noMatch")}</p>
       )}
       {candidates.length > 0 && (
         <ul className="recordpicker-options">

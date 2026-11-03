@@ -17,13 +17,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -273,7 +273,7 @@ func recordDisposition(ctx context.Context, tx pgx.Tx, in dispositionRow) (strin
 		        CASE WHEN $8::boolean THEN now() END, $9)
 		ON CONFLICT `+conflict+`
 		DO NOTHING`,
-		email, strings.ToLower(strings.TrimSpace(in.Domain)), in.DisplayName,
+		email, owndomain.Fold(in.Domain), in.DisplayName,
 		in.ActivityID, in.OwnerID, in.Status, in.Reason, due, backfillRunOf(ctx))
 	if err != nil {
 		return "", fmt.Errorf("capture: recording the counterparty disposition: %w", err)

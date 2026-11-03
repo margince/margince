@@ -65,6 +65,7 @@ Some processes may not have a part your capability needs:
    Add a `/readyz` check for the part when it *is* wired.
 3. **Pass the option from the binary** (`cmd/api` or `cmd/worker`).
    The binary reads the part's settings from the environment ([configuration.md](../reference/configuration.md)).
+   To add a setting, follow [add-a-setting.md](add-a-setting.md).
 
 ## Open it to agents or background work (only if needed)
 
@@ -72,6 +73,7 @@ Some processes may not have a part your capability needs:
   (`backend/internal/compose/provider.go`).
 - An MCP tool: register it in `backend/internal/compose/registry.go`.
 - A job that runs on a schedule or in the background: follow [add-a-job.md](add-a-job.md).
+- A setting that an operator or an admin changes: follow [add-a-setting.md](add-a-setting.md).
 
 ## Check
 

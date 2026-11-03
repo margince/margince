@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/avatar";
 import { useT } from "../i18n";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  ENTITY_NAME_KEY,
-  fetchEntityName,
+  entityNameQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -35,13 +35,16 @@ import { type RosterKind, useRosterWalk } from "./roster";
 
 export {
   ENTITY_NAME_KEY,
+  entityNameQuery,
   fetchEntityName,
   useEntityName,
 } from "./entityref.queries";
-export type { RosterKind } from "./roster";
+export type { RosterKind, RosterRead } from "./roster";
 export {
+  RosterFailedLine,
   RosterPartialNote,
   useRoster,
+  useRosterHint,
   useRosterPartial,
   useRosterPartialHint,
 } from "./roster";
@@ -271,12 +274,8 @@ function RecordRef({
   // switches the read off is the same value that gets rendered.
   const supplied = usableName(name);
   const query = useQuery({
-    queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id),
+    ...entityNameQuery(kind, id),
     enabled: supplied == null,
-    // References change rarely relative to the pages that render them; a short
-    // cache keeps a 360 from re-fetching the same name on every hover/refetch.
-    staleTime: 60_000,
   });
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.
@@ -287,25 +286,9 @@ function RecordRef({
   if (asText) {
     return <span title={id}>{resolved}</span>;
   }
-  // A real anchor, so the record can be opened the ways a link can: a new tab,
-  // a new window, a bookmark, the keyboard. A button carried the same route and
-  // offered none of them — a reader who middle-clicked a company in a list got
-  // nothing, and one who wanted it beside the page they were on had to lose
-  // that page to get there.
-  //
-  // Only the default click is stopped from reaching an enclosing row's own
-  // handler. `navigate` is NOT called beside it: the anchor already performs
-  // the navigation, so doing both would dispatch the same route twice, and
-  // preventing the anchor instead would navigate the current page while the
-  // new tab opens too. This is the identity cell's own arrangement
-  // (design-system/listtable.tsx), which is where a row and a link inside it
-  // were first made to agree.
-  //
-  // `newTab` carries `rel` with it, never alone: `target="_blank"` without
-  // `noopener` hands the opened page a live `window.opener` handle back into
-  // this tab. `OffsiteLink` spells the same pair for the same reason.
+  // Native destinations support copying and new tabs; ordinary clicks use the router.
   return (
-    <a
+    <AppLink
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
@@ -313,7 +296,7 @@ function RecordRef({
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}
-    </a>
+    </AppLink>
   );
 }
 

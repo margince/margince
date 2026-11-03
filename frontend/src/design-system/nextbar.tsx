@@ -26,6 +26,7 @@ export type NextBarMore = Readonly<{
 export function NextBar({
   title,
   late,
+  detail,
   sub,
   insight,
   action,
@@ -35,6 +36,8 @@ export function NextBar({
   title?: ReactNode;
   // How late, or what makes it due ("19 days late", "Demo booked").
   late?: Readonly<{ label: string; tone: ReadingTone }>;
+  // What is asked, in the task's own words, on one line under the title.
+  detail?: string;
   // Why it is next: when it was due, who promised it.
   sub?: ReactNode;
   // A link after the sentence to what the move was read from. The caller
@@ -64,6 +67,11 @@ export function NextBar({
                   <Badge tone={badgeTone(late.tone)}>{late.label}</Badge>
                 )}
               </span>
+              {detail && (
+                <span className="next-bar-detail" title={detail}>
+                  {detail}
+                </span>
+              )}
               {(sub || insight) && (
                 <span className="next-bar-sub">
                   {sub}

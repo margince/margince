@@ -81,12 +81,11 @@ func TestTheExistenceProbeReadsARegisteredUnitTable(t *testing.T) {
 	} {
 		var got bool
 		if err := withProbeTx(opCtx, t, e, func(tx pgx.Tx) error {
-			// Through targetExists rather than ExtensionTargetExists, so what is
-			// proven is the path the INBOX takes: the classification says this
-			// type is existence-probed, and the probe it dispatches to is the
-			// registered one.
-			exists, err := targetExists(context.Background(), tx, extProbeTable, probe.id)
-			got = exists
+			// Through targetsExist rather than ExtensionTargetExists, which is the
+			// path the inbox takes. The type is existence-probed, and the probe it
+			// dispatches to is the registered one.
+			exists, err := targetsExist(context.Background(), tx, extProbeTable, []ids.UUID{probe.id})
+			got = exists[probe.id]
 			return err
 		}); err != nil {
 			t.Fatalf("%s: %v", name, err)

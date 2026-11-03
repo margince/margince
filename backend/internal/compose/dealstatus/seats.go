@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -98,4 +100,13 @@ func namedRole(seats []Seat, role string) (Seat, bool) {
 		}
 	}
 	return unnamed, found
+}
+
+// SeatBatchReader resolves roles and names under the caller's shared transaction.
+type SeatBatchReader func(context.Context, pgx.Tx, []ids.UUID, time.Time) (map[ids.UUID][]Seat, error)
+
+// WithSeatBatch binds the owning batch read used to validate cached operands.
+func (s *Service) WithSeatBatch(read SeatBatchReader) *Service {
+	s.seatBatch = read
+	return s
 }

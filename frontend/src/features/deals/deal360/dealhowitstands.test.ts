@@ -6,7 +6,7 @@ import type { components } from "../../../api/schema";
 import { UTC_ZONE } from "../../../format/timezone";
 import { translate, translatePlural } from "../../../i18n";
 import { deal, stages } from "../deals.testkit";
-import { riskDim } from "./dealhowitstands";
+import { closedVerdict, dealDims, riskDim } from "./dealhowitstands";
 import type { DealStandingInputs } from "./dealstanding";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
@@ -57,10 +57,109 @@ function read(over: Partial<DealStandingInputs>) {
   return riskDim(inputs, words);
 }
 
+// Won and lost are final: the card heads with the outcome, not a reading of a
+// deal still being decided.
+describe("a closed deal's verdict", () => {
+  it("heads a won deal with the win and the day it closed", () => {
+    expect(
+      closedVerdict(
+        deal({ status: "won", closed_at: "2026-05-13T12:00:00Z" }),
+        words,
+      ),
+    ).toEqual({
+      word: t("deals.statusWon"),
+      sentence: t("deal.standing.closedOn", { date: "13 May" }),
+      tone: "success",
+    });
+  });
+
+  it("says why a lost deal was lost, calmly", () => {
+    expect(
+      closedVerdict(
+        deal({
+          status: "lost",
+          closed_at: "2026-05-13T12:00:00Z",
+          lost_reason: "Budget frozen",
+        }),
+        words,
+      ),
+    ).toEqual({
+      word: t("deals.statusLost"),
+      sentence: `${t("deal.standing.closedOn", { date: "13 May" })} · Budget frozen`,
+      tone: "neutral",
+    });
+  });
+
+  it("says a code-only loss by its reason's label", () => {
+    const reasons = [
+      {
+        id: "r-1",
+        key: "price",
+        label: "Price",
+        active: false,
+        sort_order: 10,
+        system: true,
+        version: 1,
+        created_at: "2026-10-01T08:00:00Z",
+        updated_at: "2026-10-01T08:00:00Z",
+      },
+    ];
+    expect(
+      closedVerdict(
+        deal({
+          status: "lost",
+          closed_at: "2026-05-13T12:00:00Z",
+          lost_reason_code: "price",
+        }),
+        words,
+        reasons,
+      )?.sentence,
+    ).toBe(`${t("deal.standing.closedOn", { date: "13 May" })} · Price`);
+  });
+
+  it("claims no day an imported close does not carry", () => {
+    expect(closedVerdict(deal({ status: "won" }), words)?.sentence).toBe(
+      undefined,
+    );
+  });
+
+  it("leaves an open deal to its reading", () => {
+    expect(closedVerdict(deal({}), words)).toBe(undefined);
+  });
+});
+
+describe("a closed deal's readings", () => {
+  it("keeps who sat on the deal and drops momentum and risk", () => {
+    const inputs: DealStandingInputs = {
+      deal: deal({ status: "won", stalled: true }),
+      stages,
+      asOf: AS_OF,
+      activities: [],
+      offers: [],
+      coverage: { coverage: coverage([]), withheld: false, pending: false },
+      card: card({ reply_to: "m1" }),
+      ladder: { advancing: false, advanceRefused: false, onAdvance: () => {} },
+    };
+    expect(dealDims(inputs, words).map((dim) => dim.key)).toEqual(["coverage"]);
+  });
+});
+
 describe("the Risk reading", () => {
   it("counts a reply owed and each coverage finding, and names the first two", () => {
     const dim = read({
-      card: card({ reply_to: "m1" }),
+      card: card({
+        reply_to: "m1",
+        request_basis: {
+          kind: "current_request",
+          scope: "deal",
+          source_activity_id: "m1",
+          source_at: "2026-05-29T09:00:00Z",
+          source_precision: "instant",
+          source_version: 1,
+          evaluated_at: AS_OF,
+          policy_version: "test",
+        },
+      }),
       coverage: {
         coverage: coverage([
           { kind: "going_cold", summary: "quiet" },

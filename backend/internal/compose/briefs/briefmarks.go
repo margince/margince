@@ -256,17 +256,17 @@ func lockItemForMark(ctx context.Context, tx pgx.Tx, itemID ids.UUID, item *Brie
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	itemPos := arg(itemID)
-	evidenceSQL, returnedWithSQL, err := servedActivityRefsSQL(ctx, arg)
+	withSQL, evidenceSQL, returnedWithSQL, err := servedActivityRefsSQL(ctx, arg, fmt.Sprintf("ri.id = $%d", itemPos))
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	err = tx.QueryRow(ctx, fmt.Sprintf(`%s
 		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, %s,
 		       bi.reopen_on, bi.reopen_ref, bi.returned_after_dismissal_on, %s, br.user_id
 		FROM brief_item bi
 		JOIN brief_run br ON br.id = bi.brief_run_id
 		WHERE bi.id = $%d
-		FOR UPDATE OF bi`, evidenceSQL, servedFindingSQL(evidenceSQL), returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
+		FOR UPDATE OF bi`, withSQL, evidenceSQL, servedFindingSQL(evidenceSQL), returnedWithSQL, itemPos), args...).Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
 		&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &item.Finding,
 		&wasOn, &item.ReopenRef, &dismissedOn, &returnedWith, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {

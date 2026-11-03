@@ -43,7 +43,7 @@ fail() {
 }
 
 # The smallest tree that is still a design system: a token layer carrying the
-# four roles, one primitive that carries spacing, one that carries only type,
+# six roles, one primitive that carries spacing, one that carries only type,
 # and one class this tier spaces WITHOUT owning it.
 build_fixture() {
   local core="$1"
@@ -59,6 +59,8 @@ build_fixture() {
   --padCard: var(--space-4);
   --padPanel: var(--space-5);
   --gapActions: var(--space-2);
+  --gapPanes: var(--space-6);
+  --padPane: var(--space-5);
 }
 CSS
   cat >"$core/design-system/atoms.css" <<'CSS'
@@ -137,6 +139,18 @@ expect_finding card-stack-rung \
 }' \
   'var(--gapCards)'
 
+expect_finding pane-gap-rung \
+  '.x-panes {
+  gap: var(--space-5);
+}' \
+  'var(--gapPanes)'
+
+expect_finding pane-inset-rung \
+  '.x-pane {
+  padding: var(--space-5);
+}' \
+  'var(--padPane)'
+
 expect_finding primitive-respaced \
   '.x-memory .panel-head {
   padding-block: var(--space-2);
@@ -172,6 +186,14 @@ expect_finding no-trailing-semicolon \
 expect_clean role-spelled \
   '.x-actions {
   gap: var(--gapActions);
+}'
+
+expect_clean pane-roles-spelled \
+  '.x-panes {
+  gap: var(--gapPanes);
+}
+.x-pane {
+  padding: var(--padPane);
 }'
 
 # A variant spelled in the house's vocabulary is a decision that moves with the
@@ -253,7 +275,7 @@ expect_finding waiver-does-not-carry \
   'var(--gapCards)'
 
 # A rung in a context that has NO role is still the right answer — the gate
-# holds the three contexts it can name and nothing else.
+# holds the contexts it can name and nothing else.
 expect_clean unnamed-context \
   '.x-timeline-entry {
   gap: var(--space-3);

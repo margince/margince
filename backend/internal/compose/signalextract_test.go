@@ -489,3 +489,31 @@ func TestAReplyCitesMessagesByTheLabelsThePromptGave(t *testing.T) {
 		t.Error("a reply citing a label the prompt never gave was not refused")
 	}
 }
+
+// A model may skip a key the schema leaves optional. It then writes that key
+// as text inside a later string field, so every event key is required.
+func TestEveryEventKeyInTheExtractSchemaIsRequired(t *testing.T) {
+	var doc struct {
+		Properties struct {
+			Events struct {
+				Items struct {
+					Properties map[string]json.RawMessage `json:"properties"`
+					Required   []string                   `json:"required"`
+				} `json:"items"`
+			} `json:"events"`
+		} `json:"properties"`
+	}
+	thread := settledThread{Messages: []threadMessage{{ID: ids.NewV7(), Subject: "Renewal"}}}
+	if err := json.Unmarshal(extractSchema(thread), &doc); err != nil {
+		t.Fatalf("decoding the schema: %v", err)
+	}
+	item := doc.Properties.Events.Items
+	if len(item.Properties) == 0 {
+		t.Fatal("the schema names no event keys")
+	}
+	for key := range item.Properties {
+		if !slices.Contains(item.Required, key) {
+			t.Errorf("event key %q is optional, so a model may skip it", key)
+		}
+	}
+}

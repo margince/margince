@@ -50,7 +50,7 @@ func membersOnlyMailDataTask() datatask.Task {
 // membersOnlyMailFrom is the open captured mail the hold may reach, joined to
 // its stored original the way the recipient-restore task reads one. A row under
 // a statutory hold is never read; MembersOnlyHoldable repeats that under lock.
-const membersOnlyMailFrom = `FROM activity a
+var membersOnlyMailFrom = `FROM activity a
   LEFT JOIN LATERAL (
        SELECT rc.payload FROM raw_capture rc
         WHERE ` + storedMailOriginal + `

@@ -43,14 +43,20 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 - `report_definition_library`: `btree (owner_id, audience, name, id) WHERE (archived_at IS NULL)`
 - `report_definition_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `report_definition_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## report_definition_revision
 
-6 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
+8 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `framework_revision` | `bigint` | yes |  |
+| `metric_versions` | `jsonb` |  |  |
+| `question_bindings` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `report_id` | `uuid` | yes | Points at `report_definition.id`. |
 | `revision` | `bigint` | yes |  |
 | `selection` | `jsonb` | yes |  |
@@ -66,6 +72,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_definition_revision_framework_revision_js_safe`: `CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))`
+- `report_definition_revision_question_bindings_is_an_object`: `CHECK ((jsonb_typeof(question_bindings) = 'object'))`
 - `report_definition_revision_revision_js_safe`: `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -268,6 +275,10 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 - `report_schedule_due`: `btree (next_due_at, id) WHERE enabled`
 - `report_schedule_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `report_schedule_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## reporting_framework
 

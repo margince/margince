@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -411,5 +412,37 @@ func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 	}
 	if nameless != 0 {
 		t.Errorf("a contact with no name exists: %d", nameless)
+	}
+}
+
+func TestAcceptingAVCardReviewForSomebodyWhoBecameALeadCreatesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	candidate := seedNearMatch(ctx, t, e, reviewedCard())
+	if err := vcardCreateStager(e.Pool)(ctx, reviewedCard(), candidate); err != nil {
+		t.Fatalf("staging the review: %v", err)
+	}
+	// The lead arrives while the review waits on its decider.
+	lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Anna Weber"), Email: new(reviewedCardEmail), Source: "manual"})
+	if err != nil {
+		t.Fatalf("creating the lead: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	status, kind := "pending", vcardCreateKind
+	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("pending reviews: %d, %v", len(rows), err)
+	}
+	_, err = svc.Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id)), true, nil)
+	held, ok := errors.AsType[*contacts.LeadHoldsIdentityError](err)
+	if !ok || len(held.LeadIDs) != 1 || held.LeadIDs[0].UUID != ids.UUID(lead.Id) {
+		t.Fatalf("accepting a card for a live lead: %v", err)
+	}
+	var created int
+	if err := e.Pool.QueryRow(ctx, `SELECT count(*) FROM contact_email WHERE lower(email) = $1`, reviewedCardEmail).Scan(&created); err != nil {
+		t.Fatal(err)
+	}
+	if created != 0 {
+		t.Errorf("a refused accept left %d contacts holding the lead's address", created)
 	}
 }

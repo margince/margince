@@ -145,11 +145,12 @@ func tookPlace(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
 	return m != nil && occurredday.MeetingTookPlace(*m, now, loc)
 }
 
-// InTouch is one account's contact reading. Days counts from the latest of
-// their last message and our last meeting, and is zero when there was none.
+// InTouch is one account's contact reading. Days counts from Since, the latest
+// of their last message and our last meeting, and is zero when there was none.
 type InTouch struct {
 	Basis    string
 	Days     int
+	Since    *occurredday.Moment
 	BookedAt *occurredday.Moment
 }
 
@@ -171,7 +172,7 @@ func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now 
 	if tookPlace(lastMeeting, now, loc) && (latest == nil || lastMeeting.At.After(latest.At)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
-	var reading InTouch
+	reading := InTouch{Since: latest}
 	if latest != nil {
 		reading.Days = occurredday.DaysSince(*latest, now, loc)
 	}

@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { LocaleProvider } from "../i18n";
+import { expect, within } from "storybook/test";
+import { type Locale, LocaleProvider } from "../i18n";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import type { RecordAssignment } from "./recordassignments.queries";
 import { recordAssignmentsKey } from "./recordassignments.queries";
@@ -53,8 +54,13 @@ const row = (over: Partial<RecordAssignment>): RecordAssignment =>
 // render gate's browser reports as a console error the story fails on.
 function Served({
   rows,
+  locale = "en",
   children,
-}: Readonly<{ rows: RecordAssignment[]; children: ReactNode }>) {
+}: Readonly<{
+  rows: RecordAssignment[];
+  locale?: Locale;
+  children: ReactNode;
+}>) {
   const body = { data: rows };
   installFetchStub({
     [`GET /records/deal/${RECORD_ID}/assignments`]: () => jsonResponse(body),
@@ -65,7 +71,7 @@ function Served({
   client.setQueryData(recordAssignmentsKey("deal", RECORD_ID), rows);
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
+      <LocaleProvider initial={locale}>{children}</LocaleProvider>
     </QueryClientProvider>
   );
 }
@@ -147,4 +153,31 @@ export const ReadOnly: Story = {
       <RecordTeam recordType="deal" recordId={RECORD_ID} readOnly />
     </Served>
   ),
+};
+
+/** A built-in role reads in the reader's language; a renamed one as typed. */
+export const Vietnamese: Story = {
+  render: () => (
+    <Served
+      locale="vi"
+      rows={[
+        row({ role_label_key: "recordRoles.builtin.account_manager" }),
+        row({
+          id: "a2",
+          subject_id: "u2",
+          subject_name: "Linh Tran",
+          role_id: "r2",
+          role_key: "sales_engineer",
+          role_label: "Presales lead",
+        }),
+      ]}
+    >
+      <RecordTeam recordType="deal" recordId={RECORD_ID} />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Quản lý khách hàng")).toBeVisible();
+    await expect(canvas.getByText("Presales lead")).toBeVisible();
+  },
 };

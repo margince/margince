@@ -99,6 +99,7 @@ func wireUser(u userRow) crmcontracts.User {
 		IsAgent:     u.IsAgent,
 		Assignable:  u.Assignable,
 		CreatedAt:   &created,
+		UpdatedAt:   &u.UpdatedAt,
 	}
 }
 
@@ -125,6 +126,7 @@ func rosterUserMapping(isAdmin bool) func(userRow) crmcontracts.User {
 // hold several is worse than saying nothing.
 func wireUserWithRoles(u userRow) crmcontracts.User {
 	wire := wireUser(u)
+	wire.EmailEditable = &u.Unused
 	if u.Roles != nil {
 		roles := u.Roles
 		wire.Roles = &roles
@@ -138,6 +140,9 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 	}
 	wire.LastActiveAt = u.LastActiveAt
 	wire.ServiceExtension = u.ServiceExtension
+	if u.MergedFrom != nil {
+		wire.MergedFrom = &u.MergedFrom
+	}
 	return wire
 }
 

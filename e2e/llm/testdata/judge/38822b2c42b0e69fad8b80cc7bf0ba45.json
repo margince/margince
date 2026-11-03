@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names all four companies as now set to prospect, explicitly states each change went straight through with nothing waiting on the user, and does not describe any of them as held, pending, or needing approval.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports all four companies, Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau, as set to prospect, and says nothing about any of them waiting for approval, sign-off or confirmation. Saying they were updated directly is a yes. Answer no if the answer names any of the four as held, pending, or needing the user's approval, or does not report all four as changed.",
+  "answer": "All four are now prospects, and each change went straight through with nothing waiting on you.\n\n- Kieler Pumpenwerk GmbH, Rhön Hydraulik AG and Altmark Fördertechnik GmbH still held the default \"unknown\", so nobody had set them.\n- Emsland Ventilbau GmbH was the one somebody had already set: its lifecycle was \"target\" and it is now \"prospect\". If that earlier value was deliberate, you can undo the change on the web."
+}

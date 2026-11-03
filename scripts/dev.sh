@@ -564,14 +564,14 @@ stack_server_pids() { # dsn [redis_addr]
   done
 }
 
-# The Redis instance serves 80 logical databases in three blocks that must not
+# The Redis instance serves 81 logical databases in three blocks that must not
 # overlap (docker-compose.dev.yml says the same): 0 is the primary
-# worktree's stack, 1..63 belong to the parallel integration lane one per
-# package, and 64..79 are these per-worktree stacks. A stack landing in the test
+# worktree's stack, 1..64 belong to the parallel integration lane one per
+# package, and 65..80 are these per-worktree stacks. A stack landing in the test
 # range would have its streams FLUSHDB'd mid-run by a suite that believes it
 # owns the database.
-DEV_REDIS_DB_MIN=64
-DEV_REDIS_DB_MAX=79
+DEV_REDIS_DB_MIN=65
+DEV_REDIS_DB_MAX=80
 
 # read_registry SLUG — what every OTHER recorded stack holds, and what this slug
 # already holds itself. Sets TAKEN_DBS / TAKEN_PORTS (space-separated) and
@@ -590,7 +590,14 @@ read_registry() { # slug
     # shellcheck disable=SC1090
     . "$state_file"
     if [[ "$other" == "$want" ]]; then
-      MINE_DB="$REDIS_DB"; MINE_PORT="$FE_PORT"
+      # A database recorded before the block moved is not ours to reclaim. It
+      # may now belong to the integration lane, whose fixtures flush the
+      # database they are given between tests.
+      if [[ -n "$REDIS_DB" ]] \
+        && (( REDIS_DB >= DEV_REDIS_DB_MIN && REDIS_DB <= DEV_REDIS_DB_MAX )); then
+        MINE_DB="$REDIS_DB"
+      fi
+      MINE_PORT="$FE_PORT"
       continue
     fi
     [[ -n "$REDIS_DB" ]] && TAKEN_DBS="${TAKEN_DBS}${TAKEN_DBS:+ }${REDIS_DB}"
@@ -676,6 +683,16 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
   # it would replace live pids with a pid-less reservation, and dev-stop would
   # then have nothing to kill.
   if grep -q '^BACKEND_PID=[0-9]' "${root}/${want}/env" 2>/dev/null; then
+    # A started stack whose database left the block cannot be handed a new one
+    # here: this path returns without writing, so the number would be recorded
+    # nowhere and the next overlapping start would pick it again. The running
+    # stack is also on a database the lane now owns, which flushes it.
+    if [[ -z "$MINE_DB" ]]; then
+      echo "FAIL: this worktree's stack is on a Redis database outside ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX}," >&2
+      echo "  which the integration lane now owns and flushes between tests." >&2
+      echo "  Stop it and start it again: make dev-stop && make dev" >&2
+      return 1
+    fi
     printf '%s %s' "$db" "$port"
     return 0
   fi
@@ -1327,8 +1344,8 @@ up)
 
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
   # company itself at boot — no public provisioning endpoint exists. Seeded
-  # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
-  # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
+  # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml,
+  # which holds only the workspace and the first admin, and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
   # can edit company details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
@@ -1350,7 +1367,7 @@ up)
   fi
   if [[ ! -f "$deploy_cfg" ]]; then
     cp config/margince.example.yaml "$deploy_cfg"
-    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
+    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin; copy a setting from config/margince.defaults.yaml to change it"
   fi
   # The dev posture's own differences — the Reset data button among them — live
   # in the TRACKED config/margince.dev.yaml, which the api and the worker read

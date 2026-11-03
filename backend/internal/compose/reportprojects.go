@@ -11,6 +11,7 @@ package compose
 
 import (
 	"fmt"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -45,15 +46,15 @@ const (
 	openCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
 		" AND al.entity_type = 'project' AND al.project_id = t.id" +
 		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + reportActivityScopeToken + ")"
-	overdueCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
-		" AND al.entity_type = 'project' AND al.project_id = t.id" +
-		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.due_at < now() AND " +
-		reportActivityScopeToken + ")"
 )
 
 // Project totals and coverage compose the deal module's valuation under the
 // same field-mask and row-scope predicates as the project header.
 var (
+	overdueCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
+		" AND al.entity_type = 'project' AND al.project_id = t.id" +
+		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + storekit.TaskDueSQL("a") + " < now() AND " +
+		reportActivityScopeToken + ")"
 	openDealValueBaseExpr = projectDealMoneySQL("open", false)
 	wonDealValueBaseExpr  = projectDealMoneySQL("won", false)
 	openDealUnpricedExpr  = projectDealMoneySQL("open", true)

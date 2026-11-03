@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Phone } from "lucide-react";
+import { MessageCircle, Phone } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import {
   type MessengerUris,
@@ -12,9 +12,11 @@ import { useT } from "../i18n";
 import { MESSENGER_NAME, useCallMessengers } from "../lib/callmessengers";
 import { type CallRecord, useCallStart } from "../lib/callstart";
 import { opensElsewhere } from "../lib/linkclick";
+import { AppLink } from "./applink";
 import "./callaction.css";
 import { IconAction } from "./iconaction";
 import { OffsiteLink } from "./offsitelink";
+import { OverflowMenu } from "./overflowmenu";
 
 type CallActionProps = { record: CallRecord } & (
   | {
@@ -113,10 +115,10 @@ export function linkVerb(
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void,
 ) {
   return (
-    <a className="btn btn-ghost" href={href} onClick={onClick}>
+    <AppLink className="btn btn-ghost" href={href} onClick={onClick}>
       {glyph}
       {label}
-    </a>
+    </AppLink>
   );
 }
 
@@ -126,7 +128,9 @@ function withChats(number: string, dial: ReactNode) {
 }
 
 // Its own component so only a number with a country code reads the settings.
-// A fragment, so the number is the first child a host's layout measures.
+// A fragment, so the number is the first child a host's layout measures. The
+// messengers fold behind one chat glyph: three app names after every number
+// wrapped under it and read as three more values.
 function WithMessengers({
   dial,
   chats,
@@ -138,17 +142,24 @@ function WithMessengers({
       {dial}
       {messengers.length > 0 && (
         <span className="callaction-chats">
-          {messengers.map((messenger) => (
-            <OffsiteLink
-              key={messenger}
-              href={chats[messenger]}
-              label={t("callAction.openChat", {
-                app: MESSENGER_NAME[messenger],
-              })}
-            >
-              {MESSENGER_NAME[messenger]}
-            </OffsiteLink>
-          ))}
+          <OverflowMenu
+            label={t("callAction.chats")}
+            icon={<MessageCircle aria-hidden="true" />}
+            inline
+          >
+            {messengers.map((messenger) => (
+              <OffsiteLink
+                key={messenger}
+                href={chats[messenger]}
+                className="btn btn-ghost"
+                label={t("callAction.openChat", {
+                  app: MESSENGER_NAME[messenger],
+                })}
+              >
+                {MESSENGER_NAME[messenger]}
+              </OffsiteLink>
+            ))}
+          </OverflowMenu>
         </span>
       )}
     </>

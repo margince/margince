@@ -27,25 +27,79 @@ const APPROVAL = {
   proposed_change: { stage: "Negotiation" },
 };
 
-const HELD = {
+const UPDATED = {
   record_type: "contact",
   id: "0195c3a0-0000-7000-8000-000000000003",
-  fields: { job_title: "Head of Sales" },
-  staged_approval: {
-    approval_id: "0195c3a0-0000-7000-8000-0000000000c1",
-    fields: ["job_title"],
-    replay: {
-      record_type: "contact",
-      id: "0195c3a0-0000-7000-8000-000000000003",
-      fields: { job_title: "VP Sales" },
+  fields: { job_title: "VP Sales" },
+  changes: [
+    {
+      field: "job_title",
+      label: "Job title",
+      before: { kind: "text", text: "Head of Sales" },
+      after: { kind: "text", text: "VP Sales" },
     },
+  ],
+};
+
+const QUEUE = { approvals: [APPROVAL], next_cursor: "page-2" };
+
+const SLIPPING = {
+  deals: [
+    {
+      rank: 1,
+      deal_id: "0195c3a0-0000-7000-8000-0000000000d1",
+      name: "Acme renewal",
+      amount_minor: 7_200_000,
+      currency: "EUR",
+      evidence: [
+        {
+          source: "deal.last_activity_at",
+          snippet: "no recorded activity since 2026-06-16",
+        },
+      ],
+    },
+  ],
+};
+
+const READINGS = {
+  period_start: "2026-10-01",
+  period_end: "2026-12-31",
+  won_minor: 4_000_000,
+  evidence_minor: 6_500_000,
+  best_case_minor: 9_000_000,
+  open_minor: 12_000_000,
+  weighted_minor: 7_300_000,
+  eligible_count: 14,
+  priced_count: 12,
+  base_currency: "EUR",
+};
+
+const CATCH_UP = {
+  anchor: {
+    record_type: "deal",
+    record_id: "0195c3a0-0000-7000-8000-0000000000d1",
   },
+  sections: [
+    {
+      name: "recent_touches",
+      items: [
+        {
+          summary: "Call about the pilot",
+          occurred_at: "2026-10-27T09:30:00Z",
+        },
+      ],
+    },
+  ],
 };
 
 const VIEWS = [
   { file: "create-followups", populated: () => FILED },
   { file: "approval", populated: () => APPROVAL },
-  { file: "field-conflict", populated: () => HELD },
+  { file: "approval-queue", populated: () => QUEUE },
+  { file: "attention", populated: () => SLIPPING },
+  { file: "forecast", populated: () => READINGS },
+  { file: "context", populated: () => CATCH_UP },
+  { file: "update", populated: () => UPDATED },
 ] as const;
 
 const FILED = {
@@ -303,3 +357,114 @@ test("the duplicate card asks its host for exactly the tools it declares and rea
   expect(reached).toEqual([]);
   await context.close();
 });
+
+// A host frames a panel for every call of a tool with a view. A call with
+// nothing to decide still draws a card, taller than the bare padding.
+const LEAD = "0195c3a0-0000-7000-8000-0000000000a1";
+const REP = "0195c3a0-0000-7000-8000-0000000000a2";
+const PLAIN_CALLS = [
+  {
+    name: "a plain create",
+    file: "create-followups",
+    input: { record_type: "contact", fields: { full_name: "View Plain" } },
+    result: {
+      structuredContent: {
+        data: {
+          record_type: "contact",
+          id: LEAD,
+          fields: { full_name: "View Plain" },
+        },
+        warnings: [],
+      },
+    },
+    heading: "Created a contact",
+  },
+  {
+    name: "a plain owner change",
+    file: "update",
+    input: { record_type: "lead", id: LEAD, fields: { owner_id: REP } },
+    result: {
+      structuredContent: {
+        data: {
+          record_type: "lead",
+          id: LEAD,
+          fields: { full_name: "Jane Doe", owner_id: REP },
+          changes: [
+            {
+              field: "owner_id",
+              label: "Owner",
+              before: { kind: "owner", text: "Ana Rep" },
+              after: { kind: "owner", text: "Sam Rep" },
+            },
+          ],
+        },
+        warnings: [],
+      },
+    },
+    heading: "Updated a lead",
+  },
+  {
+    name: "a refused create",
+    file: "create-followups",
+    input: { record_type: "lead", fields: { status: "promoted" } },
+    result: {
+      isError: true,
+      content: [{ type: "text", text: "A new lead cannot start as promoted." }],
+    },
+    heading: "Nothing was created",
+  },
+] as const;
+
+for (const call of PLAIN_CALLS) {
+  test(`the ${call.file} card draws a card for ${call.name}`, async ({
+    page,
+  }) => {
+    const html = await readFile(`dist/mcp-apps/${call.file}.html`, "utf8");
+    await page.setContent(
+      `<iframe id="view" sandbox="allow-scripts" style="width:600px;height:600px;border:0"></iframe>`,
+    );
+    await page.evaluate(
+      ({ html, input, result }) => {
+        const frame = document.getElementById("view") as HTMLIFrameElement;
+        const child = () => frame.contentWindow;
+        const w = window as unknown as { heights: number[] };
+        w.heights = [];
+        window.addEventListener("message", (e: MessageEvent) => {
+          if (e.source !== child()) return;
+          const msg = e.data as {
+            id?: number;
+            method?: string;
+            params?: { height?: number };
+          };
+          const send = (message: object) =>
+            child()?.postMessage({ jsonrpc: "2.0", ...message }, "*");
+          if (msg?.method === "ui/initialize") {
+            send({ id: msg.id, result: { hostContext: { theme: "light" } } });
+          } else if (msg?.method === "ui/notifications/initialized") {
+            send({
+              method: "ui/notifications/tool-input",
+              params: { arguments: input },
+            });
+            send({ method: "ui/notifications/tool-result", params: result });
+          } else if (msg?.method === "ui/notifications/size-changed") {
+            w.heights.push(msg.params?.height ?? 0);
+          }
+        });
+        frame.srcdoc = html;
+      },
+      { html, input: call.input, result: call.result },
+    );
+
+    await expect(
+      page.frameLocator("#view").getByRole("heading", { level: 1 }),
+    ).toHaveText(call.heading);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (window as unknown as { heights: number[] }).heights.at(-1) ?? 0,
+        ),
+      )
+      .toBeGreaterThan(32);
+  });
+}

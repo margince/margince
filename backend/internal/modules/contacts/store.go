@@ -89,6 +89,10 @@ type Store struct {
 	grantCarrier GrantCarrier
 	// shareRequests files the request a held address raises; nil asks nobody.
 	shareRequests ShareRequests
+	// leadArrivals tells a contact's owner about a lead refused for them; nil tells nobody.
+	leadArrivals LeadArrivals
+	// leadQualifyTasks files the durable follow-up when captured work lands on a lead.
+	leadQualifyTasks LeadQualifyTasks
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
@@ -97,6 +101,18 @@ type Store struct {
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a
 // transaction the caller owns. Compose injects capture's implementation.
 type ConsumerMailReader func(context.Context, pgx.Tx) (*freemail.Matcher, error)
+
+// LeadQualifyTasks writes the owner follow-up in the transaction that files
+// the arrival, so a committed message never outruns its task.
+type LeadQualifyTasks interface {
+	FileLeadReplyTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
+}
+
+// WithLeadQualifyTasks wires the shared lead-arrival follow-up writer.
+func (s *Store) WithLeadQualifyTasks(tasks LeadQualifyTasks) *Store {
+	s.leadQualifyTasks = tasks
+	return s
+}
 
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.

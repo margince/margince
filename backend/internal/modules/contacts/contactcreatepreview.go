@@ -17,12 +17,11 @@ import (
 
 // ContactCreationPreview resolves creation defaults and identity before approval.
 type ContactCreationPreview struct {
+	Employer        ContactEmployerPreview
 	Input           CreateContactInput
 	CustomFields    map[string]any
 	ReviewContactID *ids.ContactID
 	Acquisition     Acquisition
-	MatchingLeadIDs []ids.LeadID
-	Promotions      []ContactCreationPromotion
 	Social          []ContactSocialInput
 }
 
@@ -34,6 +33,9 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	}
 	in.Emails, in.Phones = slices.Clone(in.Emails), slices.Clone(in.Phones)
 	creatorCtx := principal.WithActor(ctx, creator)
+	if err := refuseAgentContactExtras(creatorCtx, in); err != nil {
+		return out, err
+	}
 	if _, err := s.readyContactCreate(creatorCtx, &in); err != nil {
 		return out, err
 	}
@@ -47,7 +49,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 			return err
 		}
 		in.OwnerID = owner
-		match, err := admitAndDedupeContactCreate(ctx, tx, in)
+		match, _, err := admitAndDedupeContactCreate(ctx, tx, in)
 		if err != nil {
 			return err
 		}
@@ -61,6 +63,10 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 		if err != nil {
 			return err
 		}
+		out.Employer, err = s.previewContactEmployerTx(creatorCtx, tx, in.Employer, in.Emails)
+		if err != nil {
+			return err
+		}
 		out.Input = in
 		if out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields); err != nil {
 			return err
@@ -69,16 +75,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 			return err
 		}
 		out.Acquisition = normalizedAcquisition(acquisitionForCreate(in))
-		allowed, err := mayPromoteHeldLeads(creatorCtx)
-		if err != nil || !allowed {
-			return err
-		}
-		out.MatchingLeadIDs, err = previewContactHeldLeads(ctx, tx, in.Emails)
-		if err != nil {
-			return err
-		}
-		out.Promotions, err = s.previewContactPromotions(ctx, creatorCtx, tx, in, out.MatchingLeadIDs)
-		return err
+		return nil
 	})
 	if err != nil {
 		return ContactCreationPreview{}, err
@@ -86,11 +83,31 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	return out, nil
 }
 
-func admitAndDedupeContactCreate(ctx context.Context, tx pgx.Tx, in CreateContactInput) (ContactResolution, error) {
-	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
-		return ContactResolution{}, err
+// refuseAgentContactExtras is what an agent's contact create may not carry, for
+// the preview and the write alike.
+func refuseAgentContactExtras(ctx context.Context, in CreateContactInput) error {
+	return refuseAgentConvert(ctx, in.ConvertLeadIDs)
+}
+
+// admitAndDedupeContactCreate runs a typed create's identity refusals in order.
+// First a contact holding an address, then a live lead, then the ladder. It
+// answers the leads the create converts.
+//
+// The lead check takes the identity locks before the ladder's subject locks.
+// So a LinkedIn lock is never taken after a subject lock.
+func admitAndDedupeContactCreate(ctx context.Context, tx pgx.Tx, in CreateContactInput) (ContactResolution, []ids.LeadID, error) {
+	if err := refuseAgentContactExtras(ctx, in); err != nil {
+		return ContactResolution{}, nil, err
 	}
-	return manualDedupeContact(ctx, tx, in)
+	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
+		return ContactResolution{}, nil, err
+	}
+	converting, err := admitLeadHolders(ctx, tx, contactKeys(in.Emails, in.Social), in.ConvertLeadIDs)
+	if err != nil {
+		return ContactResolution{}, nil, err
+	}
+	match, err := manualDedupeContact(ctx, tx, in)
+	return match, converting, err
 }
 
 func contactCreationReviewTarget(ctx context.Context, tx pgx.Tx, match ContactResolution) (*ids.ContactID, error) {

@@ -94,7 +94,7 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 		}
 	}
 	for _, address := range in.Attendees {
-		if err := c.CheckRecipient(ctx, host, in.ContactID, address); err != nil {
+		if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {
 			return connector.CalendarReceipt{}, err
 		}
 	}
@@ -132,15 +132,10 @@ func (c schedulingCalendar) Lookup(ctx context.Context, host ids.UserID, provide
 }
 
 func (c schedulingCalendar) CheckRecipient(ctx context.Context, host ids.UserID, contactID ids.UUID, address string) error {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	rbac, seat, err := c.identity.EffectiveAuthority(ctx, workspace, host.UUID)
+	hostCtx, err := c.recipientContext(ctx, host)
 	if err != nil {
 		return err
 	}
-	hostCtx := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID, SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs})
 	contact, err := contacts.NewStore(InstallationDB(c.pool)).GetContact(hostCtx, ids.From[ids.ContactKind](contactID), storekit.LiveOnly)
 	if err != nil {
 		return err
@@ -153,6 +148,39 @@ func (c schedulingCalendar) CheckRecipient(ctx context.Context, host ids.UserID,
 		}
 	}
 	return &activities.SchedulingArgumentError{Field: "attendee_email", Code: "recipient_mismatch", Message: "Add the attendee's email to this contact before sending an invitation"}
+}
+
+func (c schedulingCalendar) checkAppointmentRecipient(ctx context.Context, host ids.UserID, appointment connector.CalendarAppointment, address string) error {
+	if appointment.LeadID.IsZero() {
+		return c.CheckRecipient(ctx, host, appointment.ContactID, address)
+	}
+	hostCtx, err := c.recipientContext(ctx, host)
+	if err != nil {
+		return err
+	}
+	lead, err := contacts.NewStore(InstallationDB(c.pool)).GetLead(hostCtx, ids.From[ids.LeadKind](appointment.LeadID), storekit.IncludeArchived)
+	if err != nil {
+		return err
+	}
+	if lead.PromotedContactId != nil {
+		return c.CheckRecipient(ctx, host, ids.UUID(*lead.PromotedContactId), address)
+	}
+	if lead.Email != nil && strings.EqualFold(string(*lead.Email), address) {
+		return nil
+	}
+	return &activities.SchedulingArgumentError{Field: "attendee_email", Code: "recipient_mismatch", Message: "Use the lead's email before sending an invitation"}
+}
+
+func (c schedulingCalendar) recipientContext(ctx context.Context, host ids.UserID) (context.Context, error) {
+	workspace, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return nil, apperrors.ErrPermissionDenied
+	}
+	rbac, seat, err := c.identity.EffectiveAuthority(ctx, workspace, host.UUID)
+	if err != nil {
+		return nil, err
+	}
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID, SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs}), nil
 }
 
 func (c schedulingCalendar) List(ctx context.Context, host ids.UserID, provider string) ([]connector.CalendarOption, error) {

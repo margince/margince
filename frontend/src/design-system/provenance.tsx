@@ -4,7 +4,9 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { providerName } from "../format/connectorprovider";
+import { sourceSystemName } from "../format/sourcesystem";
 import { isMessageKey, type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { Badge } from "./atoms";
 import "./trust.css";
 
@@ -54,15 +56,29 @@ import "./trust.css";
 // correspondence. The author is the only field on the row that knows better,
 // so where it is present it is what the tag says.
 export type Provenance =
-  | { kind: "agent"; agent?: string; job?: string }
+  // `forName` is the colleague the agent worked for, when the record says.
+  | { kind: "agent"; agent?: string; job?: string; forName?: string }
   | { kind: "connector"; connector: string }
-  | { kind: "system"; job?: string }
+  | { kind: "system"; job?: string; relay?: RelaySend }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
   | { kind: "buyer" }
   // A row the CSV importer wrote. `uploadName` is what the administrator called
   // the upload, never the record's `source` stamp that carries it.
   | { kind: "import"; uploadName?: string }
   | { kind: "unknown" };
+
+// A mail the installation's relay sent on a member's behalf. `member` says
+// whether that member is the reader, so a colleague's send never reads "for you".
+export type RelaySend = Readonly<{
+  member: "self" | "colleague" | "unknown";
+  fromAddress: string | null;
+}>;
+
+const RELAY_LABEL = {
+  self: "trust.relayForYou",
+  colleague: "trust.relayForColleague",
+  unknown: "trust.relaySent",
+} as const satisfies Record<RelaySend["member"], MessageKey>;
 
 // Who wrote an imported row where it came from, as the contract reports it.
 // Taken from the generated schema rather than spelled again here: a
@@ -86,10 +102,25 @@ export function ProvenanceTag({
   // rule nobody inferred: drawn in the AI tone, either would tell a reader a
   // model decided something. Every other arm is the neutral badge, told apart
   // by its words.
-  return (
-    <Badge tone={provenance.kind === "agent" ? "ai" : "default"}>
+  const relay = provenance.kind === "system" && Boolean(provenance.relay);
+  const tag = (
+    // A relay tag's last words say whom it was for, so it wraps, never cuts.
+    <Badge tone={provenance.kind === "agent" ? "ai" : "default"} wrap={relay}>
       {provenanceLabel(provenance, t, renderUser)}
     </Badge>
+  );
+  const from =
+    provenance.kind === "system" ? provenance.relay?.fromAddress : null;
+  if (!from) {
+    return tag;
+  }
+  return (
+    <span className="provenance-relay">
+      {tag}
+      <span className="t-caption">
+        {t("trust.relayFrom", { address: from })}
+      </span>
+    </span>
   );
 }
 
@@ -110,12 +141,16 @@ export function provenanceLabel(
         (provenance.job &&
           (jobLabel("agentJob", provenance.job, t) ??
             extensionJobLabel(provenance.job)));
+      const name = provenance.forName;
+      if (name) {
+        return agent
+          ? t("trust.agentFor", { agent, name })
+          : t("trust.agentUnnamedFor", { name });
+      }
       return agent ? t("trust.agentTag", { agent }) : t("trust.agentUnnamed");
     }
-    case "system": {
-      const job = provenance.job && jobLabel("systemJob", provenance.job, t);
-      return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
-    }
+    case "system":
+      return systemLabel(provenance, t);
     case "connector":
       return t("trust.connectorTag", {
         connector: providerName(provenance.connector, t),
@@ -131,6 +166,17 @@ export function provenanceLabel(
   }
 }
 
+function systemLabel(
+  provenance: Extract<Provenance, { kind: "system" }>,
+  t: Translator,
+): string {
+  if (provenance.relay) {
+    return t(RELAY_LABEL[provenance.relay.member]);
+  }
+  const job = provenance.job && jobLabel("systemJob", provenance.job, t);
+  return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
+}
+
 /**
  * The import arm in words. Exported for a reader that shows a record's source
  * as plain text (a lead's Source fact) rather than as a tag.
@@ -139,8 +185,12 @@ export function importLabel(
   provenance: Extract<Provenance, { kind: "import" }>,
   t: Translator,
 ): string {
+  // A connector import is named by the system's key ("hubspot"); the reader
+  // sees the product's own spelling, the same one an author's "via" gets.
   return provenance.uploadName
-    ? t("trust.importedFrom", { uploadName: provenance.uploadName })
+    ? t("trust.importedFrom", {
+        uploadName: sourceSystemName(provenance.uploadName),
+      })
     : t("trust.imported");
 }
 
@@ -180,7 +230,7 @@ function humanLabel(
   if (provenance.author) {
     const { display_name: name, via } = provenance.author;
     return via
-      ? t("trust.loggedInByVia", { via, name })
+      ? t("trust.loggedInByVia", { via: sourceSystemName(via), name })
       : t("trust.loggedInBy", { name });
   }
   if (provenance.self) {

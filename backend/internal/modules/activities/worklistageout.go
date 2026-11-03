@@ -28,7 +28,7 @@ const worklistAgeOutDays = 30
 // day's page, the assignee column for the team board that counts their day.
 func worklistAgeOutClause(asOf time.Time, pinner, identities string, arg func(any) int) string {
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
-	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
+	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR `+storekit.TaskDueSQL("a")+` IS NULL OR `+storekit.TaskDueSQL("a")+` >= $%d
 		OR `+humanReopenedTaskSQL("a")+`
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d)
 		OR %s)`,

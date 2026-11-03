@@ -45,11 +45,23 @@ func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, appro
 		return nil, err
 	}
 	consents := consent.NewStore(r.db)
-	store := contacts.NewStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil)).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
+	store := newContactsStore(r.db).WithFieldCatalog(customfields.NewService(r.db.Pool(), nil)).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
 	plan, err := store.PreviewContactCreationForActor(ctx, in, creator)
+	if reason := contacts.EmployerRefusalReason(err); reason != "" {
+		out.State = previewIncompleteState
+		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: "employer_unresolved", Summary: "Choose an unambiguous employer that the creator may link.", BlocksApproval: true}}
+		return out, nil
+	}
 	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == contacts.MachineAddressCode {
 		out.State = previewIncompleteState
 		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: refused.Code, Summary: refused.Message, BlocksApproval: true}}
+		return out, nil
+	}
+	// The create the agent proposed would make a second record for a live lead,
+	// so the writer refuses it, and the preview says the same.
+	if _, held := errors.AsType[*contacts.LeadHoldsIdentityError](err); held {
+		out.State = previewIncompleteState
+		out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: contacts.CodeLeadHoldsEmail, Summary: err.Error(), BlocksApproval: true}}
 		return out, nil
 	}
 	if previewUnavailable(err) {
@@ -72,9 +84,13 @@ func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, appro
 func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan contacts.ContactCreationPreview) ([]crmcontracts.ApprovalPreviewDetail, []string, error) {
 	in := plan.Input
 	fields := map[string]any{fieldFullName: in.FullName, previewFieldFirstName: in.FirstName, previewFieldLastName: in.LastName, fieldTitle: in.Title, bulkParamOwner: in.OwnerID, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem, previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID, "creation_acquisition": plan.Acquisition.Kind}
+	fields["company_id"], fields["company_name"] = in.Employer.CompanyID, in.Employer.CompanyName
+	if plan.Employer.CompanyID != nil {
+		fields["company_id"] = plan.Employer.CompanyID
+	}
 	maps.Copy(fields, plan.CustomFields)
 	maps.Copy(fields, creationAddressFields(in.Address))
-	if err := creationFieldsVisible(ctx, string(recordTypeContact), map[string]any{addressField: in.Address, previewFieldSocial: in.Social, previewFieldEmails: in.Emails, "phones": in.Phones, "acquisition": plan.Acquisition}); err != nil {
+	if err := creationFieldsVisible(ctx, string(recordTypeContact), map[string]any{addressField: in.Address, previewFieldSocial: in.Social, previewFieldEmails: in.Emails, previewFieldPhones: in.Phones, "acquisition": plan.Acquisition}); err != nil {
 		return nil, nil, err
 	}
 	details, err := r.creationFieldDetails(ctx, string(recordTypeContact), fields)
@@ -90,6 +106,9 @@ func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan 
 	}
 	details = append(details, communications...)
 	effects := []string{"create_contact_record", "create_workspace_visible", "record_contact_acquisition"}
+	if plan.Employer.Effect != "" {
+		effects = append(effects, plan.Employer.Effect)
+	}
 	if plan.ReviewContactID != nil {
 		value, err := r.referenceValue(ctx, companionContactField, plan.ReviewContactID.String())
 		if err != nil {
@@ -97,29 +116,6 @@ func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan 
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: previewCreationDuplicate, Value: value})
 		effects = append(effects, "queue_duplicate_review")
-	}
-	for _, promotion := range plan.Promotions {
-		value, err := r.referenceValue(ctx, "lead_id", promotion.LeadID.String())
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "creation_promoted_lead", Value: value})
-		changes, err := r.creationFieldDetails(ctx, string(recordTypeContact), promotion.Patch.After())
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, changes...)
-		for _, phone := range promotion.Phones {
-			details = append(details, previewDetail("promotion_contact_phone", phone.Phone))
-		}
-		carried, err := r.promotionCarryDetails(ctx, promotion.SourceCarry, true)
-		if err != nil {
-			return nil, nil, err
-		}
-		details = append(details, carried...)
-	}
-	if len(plan.Promotions) > 0 {
-		effects = append(effects, "create_promote_matching_leads")
 	}
 	return details, effects, nil
 }

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/ai backend/internal/modules/ai/providerkeys.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/pricesync.go backend/internal/modules/ai/routing.go backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/residency.go -->
+<!-- describes: frontend/src/features/ai frontend/src/features/settings/providerhealth.tsx backend/internal/compose/systemhealthoperations.go backend/internal/modules/ai/providerkeys.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/pricesync.go backend/internal/modules/ai/routing.go backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/residency.go -->
 # AI providers
 
 An AI provider is the company whose models Margince calls. It is Anthropic,
@@ -210,11 +210,11 @@ To check the change, come back to **Recent calls** after some calls. A call's ow
 Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?
-To see whether an AI provider is working, open **Settings**, then **System health**. Read **AI provider status** in the **Status** row at the top.
-It says "Answering" while every provider answers. **AI models** also shows a second badge on each provider under **Providers**.
+Open **Settings**, then **System health**. The **Overview** shows a provider problem when it needs action, with its effect and next step.
+For the recorded errors, open **Diagnostics**, choose **AI availability**, and read **AI provider status**. Each error names the provider, reason and **Started**. Blocked providers also show **Next check**.
 
-When a provider is not answering as normal, the row says how many need attention, and the **AI provider status** card opens under it. The card lists each one with why, **Started** and **Next check**.
-The card shows what the server and the background worker found in their calls, and only roles with **AI diagnostics read** can see it.
+The card shows errors found during calls. If none are recorded, that does not prove every provider is available. Opening the page does not test a provider. Only roles with **AI diagnostics read** can see these details.
+**AI models** also shows a badge on each provider with a problem under **Providers**.
 Also called: is the AI down, AI outage, model provider health, AI provider status.
 
 ### What does "Out of credit", "Key rejected", "Unreachable" or "Degraded" mean on an AI provider?
@@ -237,6 +237,6 @@ Also called: AI task stuck, task waiting, deferred AI work, AI outage per task.
 
 ### What does a provider badge on AI models mean?
 A badge next to a provider under **Providers** means Margince has found it not answering: **Out of credit**, **Key rejected**, **Unreachable** or **Degraded**.
-Fix the cause named on **Settings**, then **System health**, in the **AI provider status** card under the **Status** row. Testing a new key under **Providers** clears it at once.
+Fix the cause under **Settings**, **System health**, **Diagnostics**, then **AI availability**. Testing a new key under **Providers** clears it at once.
 A rate limit reply or a "no permission for this model" refusal does not mark a provider: Margince tries the next model. Only three timeouts in a row mark it **Degraded**.
 Also called: provider status, provider down, API key refused, out of credit.

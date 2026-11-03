@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -29,6 +29,7 @@ import {
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
 type Band = GrowthFit["band"];
@@ -122,7 +123,6 @@ export function GrowthFitPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
@@ -134,17 +134,7 @@ export function GrowthFitPanel({
       );
     },
   });
-  const reassess = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.POST("/companies/{id}/growth-fit", {
-          params: { path: { id: companyId } },
-        }),
-      );
-    },
-    onSuccess: (data) =>
-      queryClient.setQueryData(["company-growth-fit", companyId], data),
-  });
+  const { reassess, outcome } = useReassess(companyId);
 
   const written = fit.data;
   // A payload this build cannot read is not a company we know nothing about.
@@ -231,6 +221,18 @@ export function GrowthFitPanel({
           />
         </>
       )}
+      {/* Mounted before the answer, so a screen reader announces it when it
+          fills in. A live region inserted with its text is often skipped. */}
+      <div role="status">
+        {outcome && (
+          <PanelBody>
+            <ReassessOutcome
+              outcome={outcome}
+              bandLabel={t(BAND_LABELS[outcome.band])}
+            />
+          </PanelBody>
+        )}
+      </div>
       {reassess.error && (
         <PanelBody>
           <ErrorLine error={reassess.error} />

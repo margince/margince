@@ -49,7 +49,8 @@ const ENTRIES = [
     stored: true,
     value:
       '{"tokens_per_full_user":12000000,"company_monthly_tokens":null,"tokens_per_light_user":3000000}',
-    default: null,
+    default:
+      '{"tokens_per_full_user":8000000,"company_monthly_tokens":null,"tokens_per_light_user":2000000}',
     origin: { source: "env", name: "MARGINCE_AI_BUDGET" },
   },
   // The longest key and variable name the registry holds, set from the
@@ -128,5 +129,19 @@ export const FilteredFromSearch: Story = {
     await expect(canvas.getByRole("searchbox")).toHaveValue(
       "MARGINCE_HTTP_PORT",
     );
+  },
+};
+
+// The page's main question: which values did somebody set.
+export const NotDefault: Story = {
+  render: () => page("#/settings/configuration?source=changed"),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("ai.budget");
+    await expect(canvas.queryByText("http.port")).toBeNull();
+    await expect(canvas.queryByText("worker.concurrency")).toBeNull();
+    await expect(
+      canvas.getByRole("button", { name: "Not default 3" }),
+    ).toHaveAttribute("aria-pressed", "true");
   },
 };

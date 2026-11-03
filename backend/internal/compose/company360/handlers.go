@@ -83,17 +83,27 @@ func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id c
 // about a record the caller never named and cannot connect to anything they
 // did send.
 func introRequestFrom(body crmcontracts.DraftIntroRequestJSONRequestBody) (IntroRequest, error) {
-	for field, id := range map[string]ids.UUID{
-		"contact_id":  ids.UUID(body.ContactId),
-		"via_user_id": ids.UUID(body.ViaUserId),
-	} {
-		if err := httperr.RequireBodyID(field, id); err != nil {
-			return IntroRequest{}, err
-		}
+	if err := httperr.RequireBodyID("via_user_id", ids.UUID(body.ViaUserId)); err != nil {
+		return IntroRequest{}, err
 	}
 	req := IntroRequest{
-		ContactID: ids.From[ids.ContactKind](ids.UUID(body.ContactId)),
 		ViaUserID: ids.From[ids.UserKind](ids.UUID(body.ViaUserId)),
+		Function:  body.Function,
+	}
+	// An absent contact_id is the ask for somebody at the account. A present
+	// but zero one is a client bug, refused by name for the reason above.
+	if body.ContactId != nil {
+		if err := httperr.RequireBodyID("contact_id", ids.UUID(*body.ContactId)); err != nil {
+			return IntroRequest{}, err
+		}
+		contact := ids.From[ids.ContactKind](ids.UUID(*body.ContactId))
+		req.ContactID = &contact
+	}
+	// The generated type carries the enum check and never runs it, so an
+	// unknown function would reach the draft and answer as a colleague mismatch.
+	if req.Function != nil && !req.Function.Valid() {
+		return IntroRequest{}, httperr.Validation("function", "invalid",
+			"function is one of the functions the reach answer names")
 	}
 	// A null deal_id means "the account in general" and is an ordinary case. A
 	// present-but-zero one is a client bug, and answering "that deal is not

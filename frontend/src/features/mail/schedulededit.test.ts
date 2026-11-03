@@ -34,7 +34,6 @@ it("seeds the composer from the first link and the grounding links after it", ()
   expect(editSeedOf(SEND)).toMatchObject({
     anchor: { type: "company", id: "company-1" },
     bcc: ["boss@acme.test"],
-    recipientId: "contact-1",
     dealId: "deal-1",
     projectId: "",
   });
@@ -93,12 +92,12 @@ it("seeds a reply from the thread's links and names the email it answers", () =>
   expect(
     editSeedOf(reply, [
       { entity_type: "company", entity_id: "company-9" },
-      { entity_type: "contact", entity_id: "contact-9" },
+      { entity_type: "deal", entity_id: "deal-9" },
     ]),
   ).toMatchObject({
     replyTo: "activity-1",
     anchor: { type: "company", id: "company-9" },
-    recipientId: "contact-9",
+    dealId: "deal-9",
   });
 });
 

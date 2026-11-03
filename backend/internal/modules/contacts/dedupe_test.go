@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -96,11 +97,41 @@ func TestEmailDomain(t *testing.T) {
 		{"Jane.Doe@Acme.COM", "acme.com"},
 		{"  jane@acme.com  ", "acme.com"},
 		{"weird@sub@acme.com", "acme.com"},
+		{"anna@Bücher.example", "xn--bcher-kva.example"},
+		{"anna@xn--bcher-kva.example", "xn--bcher-kva.example"},
 		{"not-an-address", ""},
 		{"", ""},
 	} {
 		if got := emailDomain(tc.in); got != tc.want {
 			t.Fatalf("emailDomain(%q) = %q, want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+// A Unicode domain and its punycode spelling are one mail domain, so a
+// contact's addresses in both spellings name it once.
+func TestBothSpellingsOfADomainAreOneMailDomain(t *testing.T) {
+	got := mailDomainsOf([]string{"anna@bücher.example", "ben@xn--bcher-kva.example", "no-domain", "cara@acme.com"})
+	if want := []string{"xn--bcher-kva.example", "acme.com"}; !slices.Equal(got, want) {
+		t.Fatalf("mailDomainsOf = %v, want %v", got, want)
+	}
+}
+
+// A domain in unicode and the same domain in punycode are one domain here, as
+// they are everywhere else in the tree.
+//
+// Two companies whose names differ by an accent stay two. The fold punycodes
+// rather than unaccenting, and that pair is the one the old fold guarded.
+func TestOneDomainFoldKeepsAccentedCompaniesApart(t *testing.T) {
+	t.Parallel()
+	munich := normalizeDomain("münich.example")
+	if got := normalizeDomain("xn--mnich-kva.example"); got != munich {
+		t.Errorf("punycode folds to %q and unicode to %q, want one domain", got, munich)
+	}
+	if got := normalizeDomain("MÜNICH.example"); got != munich {
+		t.Errorf("upper case folds to %q, want %q", got, munich)
+	}
+	if plain := normalizeDomain("munich.example"); plain == munich {
+		t.Errorf("munich.example folds to %q, the same as the accented one", plain)
 	}
 }

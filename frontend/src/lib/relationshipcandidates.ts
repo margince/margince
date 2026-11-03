@@ -9,6 +9,7 @@
 // chosen edge points at.
 
 import { api } from "../api/client";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import type { EntityKind } from "./entity";
 import { unwrap } from "./problem";
 
@@ -54,9 +55,9 @@ async function searchDealCandidates(q: string): Promise<Candidate[]> {
       params: { query: { limit: DEAL_PICKER_PAGE } },
     }),
   );
-  const needle = q.toLowerCase();
+  const words = searchWords(q);
   return data.data
-    .filter((deal) => deal.name.toLowerCase().includes(needle))
+    .filter((deal) => holdsEveryWord(words, [deal.name]))
     .slice(0, 10)
     .map((deal) => ({ id: deal.id, name: deal.name }));
 }

@@ -1,0 +1,34 @@
+name: signature_prints_the_family_name_first
+task: enrich
+site: signature
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A signature that labels its name line "Họ và tên" prints the family name first.
+# A reader that splits by position writes the family name into first_name.
+fixture:
+  full_name: Đặng Khoa
+  email: khoa.dang@saigon-packaging.test
+  body: |
+    Hi Tomas,
+
+    The sample cartons arrive on Thursday. I will send the tracking number
+    once the courier confirms the pickup.
+
+    Best regards,
+
+    Họ và tên: Đặng Khoa
+    Procurement Manager
+    Saigon Packaging Co.
+expect:
+  outcome: accepted
+  answer:
+    first_name: Khoa
+    last_name: Đặng
+    title: Procurement Manager
+    company_name: Saigon Packaging Co.
+  judge: none
+  judge_none_reason: >
+    The two name columns are expected verbatim, so a reply that keeps the
+    printed order as given-then-family writes the swapped pair and disagrees.
+    The title and company are pinned so a reply that spends itself on the name
+    still has to read the rest of the block.

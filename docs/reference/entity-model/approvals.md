@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-35 columns · primary key `(id)` · referenced by 4 foreign keys
+37 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,6 +17,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `co_target_entity_type` | `text` |  |  |
 | `co_target_version` | `bigint` |  |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
+| `context_digest` | `text` |  |  |
 | `decided_at` | `timestamp with time zone` |  |  |
 | `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `decided_by_system` | `boolean`, default `false` | yes |  |
@@ -38,6 +39,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `staged_in_conversation_of` | `uuid` |  | Points at `app_user.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `approved`, `rejected`, `expired`. |
 | `summary` | `text` |  | One-line description of the proposed change. |
+| `summary_parts` | `jsonb` |  | The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. |
 | `target_entity_id` | `uuid` |  |  |
 | `target_entity_type` | `text` |  | Entity the effect mutates (for precondition re-validation). |
 | `target_label` | `text` |  | What the target record was CALLED when this proposal was staged, where its type has a name at all. |
@@ -78,6 +80,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `approval_requested_decider_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'))) EXECUTE FUNCTION refuse_retired_member_work('requested_decider_id')`
 - `trg_approval_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## approval_autonomy_policy

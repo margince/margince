@@ -10,13 +10,20 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { today } from "../../format/calendarday";
+import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "../ai/ai-price-sync";
 import { FxRatesCard } from "./rates";
+
+// The reader's zone, real unless a test puts the reader somewhere else.
+const viewer = vi.hoisted(() => ({ zone: undefined as string | undefined }));
+vi.mock("../../format/timezone", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../format/timezone")>();
+  return { ...actual, viewerZone: () => viewer.zone ?? actual.viewerZone() };
+});
 
 // Each price sheet has three honest states, and a grant picks which one:
 // WITHHELD without the object's read grant (fx_rate and ai_model_rate are
@@ -29,6 +36,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  viewer.zone = undefined;
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -407,7 +415,31 @@ describe("the rate sheets", () => {
     expect(pickToday).toHaveProperty("disabled", false);
     await user.click(pickToday);
 
-    expect(effective.value).toBe(formatDate(today(), "en", viewerZone()));
+    expect(effective.value).toBe(
+      formatDate(todayIn(AI_RATE_DAY_ZONE), "en", viewerZone()),
+    );
+  });
+
+  // West of UTC in the evening the server's UTC day is already tomorrow, and it
+  // refuses an earlier day as rate_past. The form opens on the server's day.
+  it("opens a model price on the day the server counts as today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-21T02:00:00Z"));
+    viewer.zone = "America/New_York";
+    const user = userEvent.setup();
+    mount(RATE_SETTER);
+    await screen.findByText("claude-opus-4-8");
+    await user.click(
+      within(rateCard("Model prices")).getByRole("button", {
+        name: "Add model rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const effective = dialog.getByRole<HTMLInputElement>("textbox", {
+      name: "Effective",
+    });
+
+    expect(effective.value).toBe(formatDate("2026-07-21", "en", viewerZone()));
   });
 
   it("shows write affordances for an admin", async () => {

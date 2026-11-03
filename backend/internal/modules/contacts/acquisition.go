@@ -19,11 +19,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -78,21 +80,8 @@ type Acquisition struct {
 	// Kind is one of the constants above. Empty means the door did not say,
 	// and recordAcquisition writes unknown_legacy rather than nothing.
 	Kind string
-	// OccurredAt is when the ACT happened, which is not when this row was
-	// written. A message captured on Tuesday may have arrived on Friday, and a
-	// contact created when a human finally answers a triage question was
-	// acquired when the message came in, not when somebody got round to it.
-	//
-	// This is not bookkeeping. The Art. 14 disclosure deadline runs one month
-	// from the ACQUISITION, and compose/noticecaseopen.go dates the duty from
-	// `coalesce(occurred_at, captured_at)` — so a door that leaves this empty
-	// gives every contact it makes a deadline starting the day the row was
-	// written. For anything captured in arrears that deadline is late, and the
-	// lateness is invisible: the case looks perfectly on time.
-	//
-	// Nil means the door genuinely does not know, and captured_at then stands
-	// in. That is the honest fallback rather than a guess, and it is what every
-	// door did before this field existed.
+	// OccurredAt records the acquisition or captured activity time when known.
+	// An unknown source needs review; capture time only bounds a confirmed indirect duty.
 	OccurredAt *time.Time
 }
 
@@ -114,6 +103,8 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	return nil
 }
 
+const acquisitionActivityEntity = "activity"
+
 // RecordSubjectWroteTx records, once, that an existing contact has written to
 // us — evidence that arrived after the contact was created.
 //
@@ -132,16 +123,24 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 func RecordSubjectWroteTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, mail ids.UUID, sent time.Time, capturedBy string,
 ) error {
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence
-		       (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
-		SELECT $1, $2, 'activity', $3, $4, $5
-		 WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence
-		                    WHERE contact_id = $1 AND kind = $2)`,
-		contactID, AcquiredSubjectInitiated, mail, sent, capturedBy); err != nil {
-		return fmt.Errorf("contacts: recording that this contact wrote to us: %w", err)
+	var proof ids.UUID
+	err := tx.QueryRow(ctx, `
+ INSERT INTO contact_acquisition_evidence
+ (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
+ SELECT @proof_contact, @kind, @proof_entity, @mail, @sent, @actor
+ WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence WHERE contact_id = @proof_contact AND kind = @kind)
+ RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, "actor": capturedBy}).Scan(&proof)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
 	}
-	return nil
+	if err != nil {
+		return fmt.Errorf("contacts: record direct sender evidence: %w", err)
+	}
+	// The event catalog has no source-proof event, and contact.updated would
+	// describe a contact field that did not change.
+	_, err = storekit.Audit(ctx, tx, "create", "contact_acquisition_evidence", proof, nil,
+		map[string]any{acquisitionKindField: AcquiredSubjectInitiated, "source_entity_type": acquisitionActivityEntity, "source_entity_id": mail, "occurred_at": sent})
+	return err
 }
 
 // acquisitionForCreate is the acquisition a typed create records: what the

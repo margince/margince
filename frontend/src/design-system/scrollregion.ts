@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type RefObject, useEffect, useLayoutEffect, useState } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 type ScrollAxis = "inline" | "block";
 
@@ -28,6 +35,92 @@ function overflows(element: HTMLElement | null, axis: ScrollAxis): boolean {
     return element.scrollHeight - element.clientHeight > 1;
   }
   return element.scrollWidth - element.clientWidth > 1;
+}
+
+/** Which ends of a sideways box hold content out of view. */
+export type ClippedEdges = Readonly<{ start: boolean; end: boolean }>;
+
+type EdgeKey = "none" | "start" | "end" | "both";
+
+const EDGES: Record<EdgeKey, ClippedEdges> = {
+  none: { start: false, end: false },
+  start: { start: true, end: false },
+  end: { start: false, end: true },
+  both: { start: true, end: true },
+};
+
+/**
+ * The ends a sideways scroll hides, from the three numbers a browser reports.
+ * `scrollLeft` is negative in a right-to-left box, so its size is what counts.
+ * The pixel of slack keeps sub-pixel rounding from reading as a clipped edge.
+ */
+export function clippedEdges(
+  box: Readonly<{
+    scrollLeft: number;
+    scrollWidth: number;
+    clientWidth: number;
+  }>,
+): ClippedEdges {
+  return EDGES[edgeKey(box)];
+}
+
+function edgeKey(
+  box: Readonly<{
+    scrollLeft: number;
+    scrollWidth: number;
+    clientWidth: number;
+  }>,
+): EdgeKey {
+  const hidden = box.scrollWidth - box.clientWidth;
+  if (hidden <= 1) {
+    return "none";
+  }
+  const scrolled = Math.abs(box.scrollLeft);
+  const start = scrolled > 1;
+  const end = scrolled < hidden - 1;
+  if (start === end) {
+    return start ? "both" : "none";
+  }
+  return start ? "start" : "end";
+}
+
+/**
+ * Follows which ends of a sideways box are clipped. It is read again on every
+ * render, on a scroll, and on a resize of the box or anything in it.
+ */
+export function useClippedEdges(
+  box: RefObject<HTMLElement | null>,
+): ClippedEdges {
+  const subscribe = useMemo(() => watchEdges(box), [box]);
+  const key = useSyncExternalStore<EdgeKey>(
+    subscribe,
+    () => (box.current ? edgeKey(box.current) : "none"),
+    () => "none",
+  );
+  return EDGES[key];
+}
+
+// The box is read when React subscribes, after the commit that mounted it.
+function watchEdges(box: RefObject<HTMLElement | null>) {
+  return (changed: () => void) => {
+    const element = box.current;
+    if (!element) {
+      return () => undefined;
+    }
+    element.addEventListener("scroll", changed, { passive: true });
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(changed);
+    observer?.observe(element);
+    for (const child of element.children) {
+      observer?.observe(child);
+    }
+    return () => {
+      element.removeEventListener("scroll", changed);
+      observer?.disconnect();
+    };
+  };
 }
 
 /**

@@ -71,33 +71,20 @@ func TestAWithheldRowContributesItsDateButNotItsWords(t *testing.T) {
 	}
 }
 
-func TestTheHealthFactorsCarryNoProseToQuote(t *testing.T) {
-	// The formula's own sentences are written for a numeric readout. Handing
-	// them to a writer produces a card that pastes a statistic where the
-	// reader wanted the situation — and that reads a measurement WINDOW ("in
-	// the last 90 days") as elapsed time. The projection sends numbers, so
-	// there is nothing to paste.
+func TestTheModelReadsSourceRecordsWithoutAggregateHealthSignals(t *testing.T) {
 	health := deals.DealHealth{AtRisk: true}
-	in := project(
-		facts{deal: openDeal(), now: testNow, loc: time.UTC, health: &health},
-		crmcontracts.DealStatusCardMove{Action: ActionNone},
-	)
-	if len(in.Health) == 0 {
-		t.Fatal("the summary carries no health signal at all")
-	}
-	encoded, err := json.Marshal(in.Health)
+	in := project(facts{deal: openDeal(), now: testNow, loc: time.UTC, health: &health},
+		crmcontracts.DealStatusCardMove{Action: ActionNone})
+	encoded, err := json.Marshal(in)
 	if err != nil {
-		t.Fatalf("encoding the health signal: %v", err)
+		t.Fatal(err)
 	}
-	// Every sentence the formula writes ends in a full stop; a measurement
-	// does not. If one reaches the prompt, it is quotable.
-	if strings.Contains(string(encoded), ". ") || strings.Contains(string(encoded), `.\"`) {
-		t.Fatalf("the health signal carries prose the model can paste: %s", encoded)
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
 	}
-	for _, f := range in.Health {
-		if strings.Contains(f.Key, " ") {
-			t.Fatalf("factor key %q reads as a sentence", f.Key)
-		}
+	if _, found := fields["health"]; found {
+		t.Fatal("aggregate health entered the model's source context")
 	}
 }
 

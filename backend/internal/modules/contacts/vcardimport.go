@@ -76,6 +76,9 @@ type VCardResult struct {
 	ContactID *ids.ContactID
 	// Reason says why a card was skipped, in words a reader can act on.
 	Reason string
+	// LeadID is the live lead holding a skipped card's address or profile,
+	// when the caller may read it: convert it instead.
+	LeadID *ids.LeadID
 	// Fields is what the import did with each field, for a card it created
 	// or updated; nil for every other outcome.
 	Fields []VCardField
@@ -232,7 +235,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		return result, nil
 	}
 	if err != nil {
-		skipped, err := s.skipHeldCard(ctx, err, index, result.FullName)
+		skipped, err := s.skipHeldCard(ctx, err, index, result.FullName, !source.IsZero())
 		if err != nil {
 			return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
 		}
@@ -315,6 +318,7 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	}
 	// Parsing a field and then dropping it is the quieter defect. A reader who
 	// sees an address on the card expects to find it on the record.
+	contact.Employer = EmployerChoice{CompanyName: new(entry.Company), Role: contact.Title, Source: vcardSource}
 	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{

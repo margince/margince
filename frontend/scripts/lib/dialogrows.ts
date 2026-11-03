@@ -26,7 +26,6 @@ import {
   type Prop,
   primitiveKey,
   rootsOf,
-  tag,
   upper,
   type Values,
   variantsOf,
@@ -73,7 +72,7 @@ const DIALOG: Chain[] = [[["modal"]]];
 
 // A component that renders a dialog around its children.
 const wraps = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
-  upper(n) && isDialogTag(n.getSourceFile(), tag(n), keys);
+  isDialogTag(n, keys);
 // `role="dialog"` alone makes any element a dialog box.
 const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
   literal(n, "role") === "dialog" || wraps(g, n);

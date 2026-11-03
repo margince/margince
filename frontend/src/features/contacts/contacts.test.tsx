@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { LocaleProvider } from "../../i18n";
+import { WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { ContactsScreen } from "./contacts";
 
@@ -101,6 +102,35 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     expect(window.location.hash).toBe("#/contacts/p-1");
   });
 
+  it("writes to a row's address in the composer, without opening the row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ ...anna, primary_email: "anna.weber@brandt.example" }],
+          page: { next_cursor: null },
+        }),
+      ),
+    );
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactsScreen />
+      </WriteToProvider>,
+    );
+    await waitFor(() => expect(window.location.hash).toContain("sort="));
+    const listed = window.location.hash;
+    await userEvent.click(
+      await screen.findByRole("button", { name: "anna.weber@brandt.example" }),
+    );
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-1",
+      address: "anna.weber@brandt.example",
+    });
+    expect(window.location.hash).toBe(listed);
+  });
+
   it("says a row is unassigned rather than leaving the owner blank", async () => {
     vi.stubGlobal(
       "fetch",
@@ -177,13 +207,13 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     render(<ContactsScreen />);
 
     const company = await screen.findByRole("link", { name: "Brandt AG" });
-    expect(company.getAttribute("href")).toBe("#/companies/o-1");
+    expect(company.getAttribute("href")).toBe("/#/companies/o-1");
     // The row's own identity link still goes to the contact. Asserting BOTH is
     // what says these are two destinations rather than one of them having
     // quietly taken the other's place.
     const links = await screen.findAllByRole("link");
     const hrefs = links.map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/contacts/p-1");
+    expect(hrefs).toContain("/#/contacts/p-1");
   });
 
   it("renders the honest error state with the RFC7807 detail", async () => {

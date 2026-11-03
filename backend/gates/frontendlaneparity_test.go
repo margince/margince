@@ -57,6 +57,10 @@ type makeTarget struct {
 // match, because ?/: are excluded from the name.
 var makeRuleLine = regexp.MustCompile(`^([a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*):(?:[ \t]+(.*))?$`)
 
+// matchAnything is the target of a `%:` rule, which make uses for any name the
+// file declares no rule for.
+const matchAnything = "%"
+
 // A literal assignment: `NAME := words`, `NAME = words`, `NAME ?= words`,
 // `NAME += words`, optionally continued with a trailing backslash. Only the
 // upper-case spelling, which is what this Makefile uses for its own variables.
@@ -192,6 +196,12 @@ func parseMakefile(t *testing.T, path string) map[string]*makeTarget {
 			}
 			continue
 		}
+		if strings.HasPrefix(line, matchAnything+":") {
+			// Its prerequisite only makes it run every time; it is not a leg.
+			current = []string{matchAnything}
+			targets[matchAnything] = &makeTarget{}
+			continue
+		}
 		match := makeRuleLine.FindStringSubmatch(line)
 		if strings.HasPrefix(line, "#") || match == nil {
 			continue
@@ -204,10 +214,33 @@ func parseMakefile(t *testing.T, path string) map[string]*makeTarget {
 			targets[name].pulls = append(targets[name].pulls, strings.Fields(match[2])...)
 		}
 	}
+	resolveUndeclared(targets)
 	if targets[localGateRoot] == nil {
 		t.Fatalf("%s declares no %q target — the local gate was renamed, so this gate was about to compare nothing", path, localGateRoot)
 	}
 	return targets
+}
+
+// resolveUndeclared gives every pulled name with no rule of its own the
+// match-anything rule's entry, as make does. The root hands such a name to
+// backend/, which is work this graph does not see into.
+func resolveUndeclared(targets map[string]*makeTarget) {
+	forward, ok := targets[matchAnything]
+	if !ok {
+		return
+	}
+	delete(targets, matchAnything)
+	var undeclared []string
+	for _, target := range targets {
+		for _, name := range target.pulls {
+			if targets[name] == nil {
+				undeclared = append(undeclared, name)
+			}
+		}
+	}
+	for _, name := range undeclared {
+		targets[name] = forward
+	}
 }
 
 // reachable walks from roots over prerequisites and delegations alike.
@@ -412,6 +445,26 @@ func TestASubMakeBehindAVariableIsStillReadAsLegs(t *testing.T) {
 	if value, ok := vars["DERIVED"]; ok {
 		t.Errorf("DERIVED was collected as %q, but its value names another variable — "+
 			"collecting it would make this gate a partial implementation of make", value)
+	}
+}
+
+// TestALegWithNoRuleRunsThroughTheMatchAnythingRule holds the root's
+// forwarding as make reads it. A leg the file declares no rule for is the `%:`
+// rule's work, not a name with nothing behind it.
+func TestALegWithNoRuleRunsThroughTheMatchAnythingRule(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "Makefile")
+	makefile := localGateRoot + ": composition\n\techo checked\n" +
+		"%: FORCE\n\t$(MAKE) -C backend $@\n"
+	if err := os.WriteFile(path, []byte(makefile), 0o600); err != nil {
+		t.Fatalf("writing the fixture Makefile: %v", err)
+	}
+	targets := parseMakefile(t, path)
+	if leg := targets["composition"]; leg == nil || !leg.works {
+		t.Errorf("composition reads as %+v, want the forwarded rule's work", leg)
+	}
+	if _, ok := targets[matchAnything]; ok {
+		t.Errorf("the %q rule was kept as a target, so a walk could reach it as a leg", matchAnything)
 	}
 }
 

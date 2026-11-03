@@ -85,7 +85,7 @@ describe("the Overview's Contacts card", () => {
     const contacts = within(card("Contacts"));
     expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
@@ -93,6 +93,24 @@ describe("the Overview's Contacts card", () => {
     expect(
       contacts.getAllByText("Head of Fleet · Brandt Automotive GmbH").length,
     ).toBe(2);
+  });
+
+  it("stacks its cards as the card list, which keeps a gap between them", () => {
+    stub();
+    renderCards({
+      view: view({
+        contacts: {
+          data: [
+            contact("p-1", "Ravi One", 80),
+            contact("p-2", "Dana Two", 40),
+          ],
+          page: emptyPage,
+        },
+      }),
+    });
+    const list = within(card("Contacts")).getByRole("list");
+    expect(list).toHaveClass("record-card-list");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("says no economic buyer is named while a deal is open and nobody holds the seat", () => {
@@ -124,6 +142,37 @@ describe("the Overview's Contacts card", () => {
       }),
     });
     expect(screen.queryByText("No economic buyer named yet")).toBeNull();
+  });
+
+  it("names the first known seat and draws no pill for a role it does not know", () => {
+    stub();
+    renderCards({
+      view: view({
+        contacts: {
+          data: [
+            contact("p-1", "Dana Buyer", 80, {
+              deal_roles: [
+                { deal_id: "d-1", role: "toString" },
+                { deal_id: "d-2", role: "blocker" },
+              ],
+            }),
+            contact("p-2", "Lena Middle", 40, {
+              deal_roles: [
+                { deal_id: "d-1", role: "constructor" },
+                { deal_id: "d-2", role: "gatekeeper" },
+              ],
+            }),
+          ],
+          page: emptyPage,
+        },
+      }),
+    });
+    const contacts = card("Contacts");
+    expect(within(contacts).getByText("Blocker")).toBeInTheDocument();
+    // A prototype name found by a bare index would print the function's source.
+    expect(contacts.textContent).not.toMatch(
+      /function|toString|constructor|gatekeeper/,
+    );
   });
 });
 
@@ -228,7 +277,7 @@ describe("the details' Way in row", () => {
     expect(screen.getByText("Way in")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
   });
 });

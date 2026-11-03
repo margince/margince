@@ -53,9 +53,6 @@ func (s *Store) PreviewLeadDemotion(ctx context.Context, id ids.LeadID, opts ...
 		if err := stillTheLeadTheCallerDescribed(lead, contactID, options); err != nil {
 			return err
 		}
-		if err := reopenedLeadContactFree(ctx, tx, id); err != nil {
-			return err
-		}
 		outcome, err := promotedOutcome(ctx, tx, id)
 		if err != nil {
 			return err
@@ -80,16 +77,17 @@ func demotionUnwind(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID
 	if err := ensureNoLiveDeal(ctx, tx, contactID); err != nil {
 		return "", err
 	}
-	if outcome == outcomeCreated {
-		shared, err := isSharedByOthers(ctx, tx, leadID, contactID)
-		if err != nil {
-			return "", err
-		}
-		if !shared {
-			return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed, nil
-		}
+	if outcome != outcomeCreated {
+		return "", &ContactStaysError{Merged: true}
 	}
-	return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly, nil
+	shared, err := isSharedByOthers(ctx, tx, leadID, contactID)
+	if err != nil {
+		return "", err
+	}
+	if shared {
+		return "", &ContactStaysError{}
+	}
+	return crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed, nil
 }
 
 func demotionFieldsWritable(ctx context.Context) error {

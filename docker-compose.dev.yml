@@ -195,15 +195,15 @@ services:
     # slowdown. The lane has more packages than 16 and keeps growing; keep this
     # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
     # refuses to run rather than wrap the mapping.
-    # 80 logical databases, in three blocks that must not overlap:
+    # 81 logical databases, in three blocks that must not overlap:
     #   0        bare `make dev`
-    #   1..63    the parallel integration lane, one per package
+    #   1..64    the parallel integration lane, one per package
     #            (REDIS_DBS in scripts/test-integration-parallel.sh,
     #             testdb.RedisDBs — the two must agree)
-    #   64..79   per-worktree dev stacks, one per slug (scripts/dev.sh)
+    #   65..80   per-worktree dev stacks, one per slug (scripts/dev.sh)
     # A slug sharing a db with a test package would have its streams FLUSHDB'd
     # mid-run, and the test would read a dev stack's events as its own.
-    command: ["redis-server", "--databases", "80"]
+    command: ["redis-server", "--databases", "81"]
     ports:
       - "16379:6379"
     healthcheck:
@@ -226,7 +226,7 @@ services:
     # build is the same server under the same `server /data` command. It runs
     # as uid 65532 by default; root keeps an existing volume, written by the
     # old root-run image, readable.
-    image: cgr.dev/chainguard/minio@sha256:268d68a2a3b6fc65f905a61f84d7eab6345ce6bff14f551e2b028ec31e6a1341
+    image: cgr.dev/chainguard/minio@sha256:113218d9c3d1030eb74b91facc799365d06b6a427a3b842b168163ddd07113fe
     user: "0:0"
     environment:
       MINIO_ROOT_USER: minioadmin

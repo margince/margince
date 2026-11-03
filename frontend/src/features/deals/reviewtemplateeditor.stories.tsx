@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, within } from "storybook/test";
+import { translate } from "../../i18n";
 import { StoryProviders } from "../../testing/story-utils";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 
@@ -48,4 +50,40 @@ export const DrawerDark: Story = { globals: { theme: "dark" } };
 export const DrawerPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+/** A built-in question shows in the reader's language; an added one as typed. */
+export const Vietnamese: Story = {
+  render: (args) => (
+    <StoryProviders locale="vi">
+      <ReviewTemplateEditor
+        {...args}
+        template={{
+          ...args.template,
+          label_key: "reviewTemplates.builtin.win_review",
+          questions: [
+            {
+              key: "why_we_won",
+              label: "Why did we win?",
+              label_key: "reviewTemplates.builtin.question.why_we_won",
+              type: "text",
+              required: true,
+            },
+            ...args.template.questions.slice(1),
+          ],
+        }}
+      />
+    </StoryProviders>
+  ),
+  // The drawer fades in, so its name and fields are read, not its opacity.
+  play: async () => {
+    const drawer = await screen.findByRole("dialog", {
+      name: translate("vi", "reviewTemplates.builtin.win_review"),
+    });
+    await expect(
+      within(drawer).getByDisplayValue(
+        translate("vi", "reviewTemplates.builtin.question.why_we_won"),
+      ),
+    ).toBeInTheDocument();
+  },
 };

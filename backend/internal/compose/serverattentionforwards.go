@@ -56,8 +56,8 @@ func (s Server) GetHiddenBacklogRows(
 }
 
 // GetHandledForYou forwards the reader's own receipt of what was done.
-func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetHandledForYou(w, r)
+func (s Server) GetHandledForYou(w http.ResponseWriter, r *http.Request, params crmcontracts.GetHandledForYouParams) {
+	s.attentionHandlers.GetHandledForYou(w, r, params)
 }
 
 // GetTeamExceptions forwards the lead's read of what is going wrong.

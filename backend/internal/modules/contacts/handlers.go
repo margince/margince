@@ -194,10 +194,50 @@ func duplicateLeadProblem(err error) *httperr.DetailedError {
 	if dupLeadLinkedIn, ok := errors.AsType[*DuplicateLeadLinkedInError](err); ok {
 		return httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID))
 	}
-	if dupContactLead, ok := errors.AsType[*DuplicateContactLeadError](err); ok {
-		return httperr.Duplicate("duplicate_contact_lead", duplicateID(dupContactLead.ExistingID.UUID))
-	}
 	return nil
+}
+
+// leadHoldsProblem is the 409 for a contact write over a key a live lead holds,
+// or nil when err is no such refusal. It names only leads the caller may read.
+func leadHoldsProblem(err error) *httperr.DetailedError {
+	held, ok := errors.AsType[*LeadHoldsIdentityError](err)
+	if !ok {
+		return nil
+	}
+	if len(held.LeadIDs) == 0 {
+		// Nothing the caller may read holds it: no id, no key, no convert, as
+		// contact_held_by_colleague answers a hidden contact holder.
+		return httperr.Duplicate("lead_holds_email", "")
+	}
+	leadIDs := make([]string, 0, len(held.LeadIDs))
+	for _, lead := range held.LeadIDs {
+		leadIDs = append(leadIDs, lead.String())
+	}
+	problem := httperr.Duplicate("lead_holds_email", leadIDs[0])
+	problem.Details["lead_ids"] = leadIDs
+	problem.Details["field"] = held.Field
+	problem.Details["convertible"] = held.Convertible
+	return problem
+}
+
+// contactHoldsProblem is the 409 for a lead write over a key a live contact
+// holds, or nil when err is no such refusal. It names only a contact the caller
+// may read, and says whether its owner was told.
+func contactHoldsProblem(err error) *httperr.DetailedError {
+	held, ok := errors.AsType[*ContactHoldsIdentityError](err)
+	if !ok {
+		return nil
+	}
+	problem := httperr.Duplicate(CodeContactHoldsEmail, duplicateID(held.ContactID.UUID))
+	problem.Detail = held.Error()
+	if problem.Details == nil {
+		problem.Details = map[string]any{}
+	}
+	if held.Field != "" {
+		problem.Details["field"] = held.Field
+	}
+	problem.Details["owner_notified"] = held.OwnerNotified
+	return problem
 }
 
 // writeStoreErr maps this module's typed store errors onto the wire
@@ -236,6 +276,14 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if dup := duplicateLeadProblem(err); dup != nil {
 		httperr.Write(w, r, dup)
+		return
+	}
+	if held := leadHoldsProblem(err); held != nil {
+		httperr.Write(w, r, held)
+		return
+	}
+	if held := contactHoldsProblem(err); held != nil {
+		httperr.Write(w, r, held)
 		return
 	}
 	if primaryConflict, ok := errors.AsType[*PrimaryConflictError](err); ok {

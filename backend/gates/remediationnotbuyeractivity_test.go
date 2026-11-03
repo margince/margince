@@ -26,8 +26,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // recencyFunctions are the SQL functions that answer "when did the other side
@@ -167,9 +170,10 @@ func sortStrings(s []string) {
 // reader that runs its own max(occurred_at) is invisible to a gate that only
 // reads migrations, and it was four such readers — not the helpers — that
 // still counted remediation work when this column first landed.
-// engagementFragment is the shared exclusion these readers call instead of
-// spelling an origin themselves (internal/platform/auth/engagementorigin.go).
-const engagementFragment = "auth.OriginIsEngagement"
+// engagementFragments are the shared exclusions these readers call instead of
+// spelling an origin themselves. relstrength.WrittenByHumanSQL composes the
+// origin rule, which TestWrittenByHumanCarriesTheOriginRule holds.
+var engagementFragments = []string{"auth.OriginIsEngagement", "relstrength.WrittenByHumanSQL"}
 
 // gatekit:fixture the reader files this census covers and what each computes —
 // expected data naming the subjects, not waivers excusing them.
@@ -203,10 +207,21 @@ func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
 		// because it names WHICH files ask the question at all — the fact a
 		// pattern-matching gate cannot recover.
 		body := string(raw)
-		if !strings.Contains(body, remediationOrigin) && !strings.Contains(body, engagementFragment) {
-			t.Errorf("%s computes %s and neither mentions %q nor calls %s — a second spelling "+
+		if !strings.Contains(body, remediationOrigin) &&
+			!slices.ContainsFunc(engagementFragments, func(f string) bool { return strings.Contains(body, f) }) {
+			t.Errorf("%s computes %s and neither mentions %q nor calls one of %v — a second spelling "+
 				"of last_activity_at that still counts work the product filed "+
-				"about the record", file, what, remediationOrigin, engagementFragment)
+				"about the record", file, what, remediationOrigin, engagementFragments)
 		}
+	}
+}
+
+// TestWrittenByHumanCarriesTheOriginRule holds the second fragment above to
+// the first: a reader that calls it excludes every system origin.
+func TestWrittenByHumanCarriesTheOriginRule(t *testing.T) {
+	t.Parallel()
+	if !strings.Contains(relstrength.WrittenByHumanSQL("a"), relstrength.OriginIsEngagementSQL("a")) {
+		t.Error("relstrength.WrittenByHumanSQL no longer carries OriginIsEngagementSQL, so a recency " +
+			"reader that calls it counts work the product filed about the record")
 	}
 }

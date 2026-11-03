@@ -27,6 +27,9 @@ const ReservedSourceSystemPrefix = "mirror:"
 // Their source identity links task state to the original email obligation.
 const EmailRequestSource = "email_request"
 
+// AcceptedRecommendationSource keys a human-accepted observation for idempotent replay.
+const AcceptedRecommendationSource = "accepted_recommendation"
+
 // NoActivityReminderSource and CheckInCadenceSource name the quiet-account
 // reminders the automation engine mints, and they are reserved for the same
 // reason EmailRequestSource is: the activity store keys its idempotent replay
@@ -57,6 +60,11 @@ const (
 	LeadQualifyTaskSource    = "lead_qualify"
 	AssuranceTaskSource      = "assurance"
 	OvernightReconcileSource = "overnight-reconcile"
+	// LeadRepliedSource asks a lead's owner to qualify a lead who wrote or
+	// booked. LeadForContactSource tells a contact's owner about a lead that
+	// arrived for their contact and was not created.
+	LeadRepliedSource    = "lead_replied"
+	LeadForContactSource = "lead_for_contact"
 )
 
 // WhichDealSource names the one "Which deal is this about?" task capture raises
@@ -69,17 +77,26 @@ const WhichDealSource = "which_deal"
 // notice, held until the notice is through, and deleted when it fails.
 const WebsiteLeadSource = "siteread"
 
+// WebFormSource names a lead or note a website form wrote. Its source_id is
+// the form and the submission's key, so a sender's retry lands once. That
+// holds only while no client can spell it.
+const WebFormSource = "web_form"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
 // carries the old spelling.
 var internalSourceSystems = map[string]bool{
-	EmailRequestSource:       true,
-	NoActivityReminderSource: true,
-	CheckInCadenceSource:     true,
-	CommitmentTaskSource:     true,
-	WebsiteLeadSource:        true,
-	WhichDealSource:          true,
+	EmailRequestSource:           true,
+	AcceptedRecommendationSource: true,
+	NoActivityReminderSource:     true,
+	CheckInCadenceSource:         true,
+	CommitmentTaskSource:         true,
+	WebsiteLeadSource:            true,
+	WhichDealSource:              true,
+	LeadRepliedSource:            true,
+	LeadForContactSource:         true,
+	WebFormSource:                true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -115,6 +132,10 @@ const ReminderAnchorSeparator = ":anchor:"
 func EngineReminderSources() []string {
 	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
+
+// RetiredTaskSources are automatic task families whose writers were removed.
+// Their rows remain current until a user completes them.
+func RetiredTaskSources() []string { return []string{LeadQualifyTaskSource} }
 
 // InternalSourceSystems lists the exact reserved identities, sorted. It is the
 // one place that knows the membership, so the refusal message and any census

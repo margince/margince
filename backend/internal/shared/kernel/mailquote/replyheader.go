@@ -11,8 +11,8 @@ import (
 // An Outlook reply header is a sender field with a sent-date field within the
 // next few lines. "Von:" alone is ordinary prose in German mail.
 var (
-	replyHeaderFrom = regexp.MustCompile(`^(Von|From):\s`)
-	replyHeaderSent = regexp.MustCompile(`^(Gesendet|Sent|Datum|Date):\s`)
+	replyHeaderFrom = regexp.MustCompile(`^\*{0,2}(Von|From):\*{0,2}\s`)
+	replyHeaderSent = regexp.MustCompile(`^\*{0,2}(Gesendet|Sent|Datum|Date):\*{0,2}\s`)
 )
 
 // replyHeaderWindow is how many lines from the sender field the sent-date

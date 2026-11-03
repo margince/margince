@@ -103,6 +103,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	e.svc = NewApprovalsService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
 	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.DB(), e.Activities))
+	e.svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
 
 	// The colleague who logs the meeting is the one the readings name as
 	// promiser. A distinct name, because two parties sharing one name make the

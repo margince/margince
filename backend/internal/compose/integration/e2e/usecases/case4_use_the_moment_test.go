@@ -24,13 +24,13 @@ package usecases
 // PRIMARY lookup, this suite starts reaching the network — which is a reason to
 // fail loudly, not a reason to soften the fixture.
 //
-// WHAT THIS SUITE DOES NOT COVER. The fixture writes geocode_status='ok' with
-// its coordinates directly, so it exercises the READ side of geocoding and
-// nothing else: the address-to-coordinates writer, its hash check and its
-// ledger row are a separate subsystem with a separate suite, and these tests
-// stay green if that writer breaks. That is the right split — a journey test
-// asserting a geocoding provider's arithmetic would be testing Nominatim — but
-// it does mean "case 4 is green" is not a claim that addresses get geocoded.
+// What this suite does not cover. The fixture writes a point at status 'ok'
+// directly, so it exercises the read side of geocoding and nothing else. The
+// address-to-coordinates writer, its hash check and its ledger row are a
+// separate subsystem with a separate suite. These tests stay green if that
+// writer breaks. That is the right split, since a journey test asserting a
+// geocoding provider's arithmetic would be testing Nominatim. It does mean
+// "case 4 is green" is not a claim that addresses get geocoded.
 
 import (
 	"encoding/json"
@@ -72,12 +72,13 @@ const (
 // therefore cannot pass them.
 func (s *scenario) seedLocatedCompany(t *testing.T, name, city string, lat, lon float64, owner ids.UUID) ids.UUID {
 	t.Helper()
-	return s.seedID(t, `INSERT INTO company
-		(id, owner_id, display_name, address_line1, address_city,
-		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
-		 source, captured_by)
-		VALUES ($1, $2, $3, 'Hauptstrasse 1', $4, $5, $6, 'ok', 'test', 'seeded', 'manual', 'human:x')`,
-		owner, name, city, lat, lon)
+	company := s.seedID(t, `INSERT INTO company
+		(id, owner_id, display_name, address_line1, address_city, source, captured_by)
+		VALUES ($1, $2, $3, 'Hauptstrasse 1', $4, 'manual', 'human:x')`,
+		owner, name, city)
+	s.seed(t, `INSERT INTO company_geocode_state (company_id, lat, lon, status, provider, input_hash, geocoded_at)
+		VALUES ($1, $2, $3, 'ok', 'test', 'seeded', now())`, company, lat, lon)
+	return company
 }
 
 // queryPlan runs one plan and decodes the answer.

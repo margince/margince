@@ -1,9 +1,20 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
+import { useNow } from "../format/now";
+import { dayInZone } from "../format/timezone";
 import type { MessageKey } from "../i18n/en";
+import {
+  CLOSE_DAY_DIAL,
+  closeDayRange,
+  type DayRange,
+  narrowsByRange,
+  rangeQueryParams,
+} from "./dealranges";
 import { throwProblem, unwrap } from "./problem";
+import { useRecordZone } from "./recordzone";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
+import { useInstallationSettings } from "./uploadlimit";
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -41,6 +52,8 @@ export type DealFilters = {
   sort: string;
   includeArchived: boolean;
   filters: Record<string, string>;
+  /** The close-day dial read as days, which needs today and the fiscal year. */
+  closeDay?: DayRange;
 };
 
 // Drawing mode and pipeline selection are URL dials, not deal-list filters.
@@ -92,7 +105,17 @@ export function dealsQueryParams(f: DealFilters) {
       parseTagIDs(filters.tag_id),
       parseTagMode(filters.tag_mode),
     ),
+    ...rangeQueryParams(filters, f.closeDay),
   };
+}
+
+// The close-day dial as days. "This quarter" is the fiscal quarter holding
+// today in the installation's zone, the one the reports count.
+function useCloseDay(value: string | undefined): DayRange | undefined {
+  const today = dayInZone(useNow(0), useRecordZone());
+  const fiscalStart =
+    useInstallationSettings().data?.fiscal_year_start_month ?? 1;
+  return closeDayRange(value, today, fiscalStart);
 }
 
 /**
@@ -104,9 +127,13 @@ export function dealsQueryParams(f: DealFilters) {
  * every matching deal, so it names the true count. A column saying "40 deals"
  * above six cards is what a pipeline view must not do.
  */
-export function useDeals(f: DealFilters) {
+export function useDeals(f: DealFilters, enabled = true) {
+  const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
-    queryKey: ["deals", f],
+    enabled,
+    // The days, not the dial's word: a list opened after the quarter turns
+    // never reuses the old quarter's cached page. Today is read at mount.
+    queryKey: ["deals", f, closeDay],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
@@ -114,7 +141,12 @@ export function useDeals(f: DealFilters) {
     queryFn: async ({ pageParam }) => {
       return unwrap(
         await api.GET("/deals", {
-          params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
+          params: {
+            query: {
+              ...dealsQueryParams({ ...f, closeDay }),
+              cursor: pageParam,
+            },
+          },
         }),
       );
     },
@@ -167,6 +199,7 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (f.filters.owner_team_id || f.filters.unassigned === "true") {
     return "deals.totalsNoTeamFilter";
   }
+  if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
   return undefined;
 }
 
@@ -184,7 +217,7 @@ export function totalsRefusedBecause(
 // useDeals fetches. The server converts each deal before grouping by stage.
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
-export function useStageTotals(f: DealFilters) {
+export function useStageTotals(f: DealFilters, enabled = true) {
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
@@ -193,7 +226,7 @@ export function useStageTotals(f: DealFilters) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: totalsWithheldBecause(f) === undefined,
+    enabled: enabled && totalsWithheldBecause(f) === undefined,
     queryFn: async (): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },

@@ -89,6 +89,10 @@ function recordTypesInHistory(source: ts.SourceFile): string[] {
     .map((literal) => literal.text);
 }
 
+// Body fields that tell the update what else to do and are never a column it
+// writes, so no history row can name them.
+const INSTRUCTIONS = new Set(["convert_lead_ids"]);
+
 function updateBodyName(recordType: string): string {
   return `Update${recordType[0].toUpperCase()}${recordType.slice(1)}Request`;
 }
@@ -109,7 +113,8 @@ function fieldsARecordUpdateWrites(): Map<string, string[]> {
         fields = membersOf(node.type)
           .map((member) => member.name)
           .filter(ts.isIdentifier)
-          .map((name) => name.text);
+          .map((name) => name.text)
+          .filter((name) => !INSTRUCTIONS.has(name));
       }
       ts.forEachChild(node, walk);
     };

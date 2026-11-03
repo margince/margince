@@ -301,3 +301,42 @@ describe("a postal address whose country does not fit", () => {
     expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
   });
 });
+it("converts the lead that holds an edited address by saving again", async () => {
+  const user = userEvent.setup();
+  const sent: Record<string, unknown>[] = [];
+  mount((body) => {
+    const sentBody = body as Record<string, unknown>;
+    sent.push(sentBody);
+    if (!sentBody.convert_lead_ids) {
+      return jsonResponse(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          code: "lead_holds_email",
+          details: {
+            existing_id: "lead-9",
+            lead_ids: ["lead-9"],
+            convertible: true,
+            field: "emails",
+          },
+        },
+        409,
+      );
+    }
+    return jsonResponse({ ...contact, version: 4 });
+  });
+  await user.click(await screen.findByRole("button", { name: "Edit emails" }));
+  const input = screen.getByDisplayValue("dana@brandt.example");
+  await user.clear(input);
+  await user.type(input, "dana@lead.example");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Convert the lead" }),
+  );
+  await waitFor(() => expect(sent).toHaveLength(2));
+  expect(sent[1]).toMatchObject({
+    convert_lead_ids: ["lead-9"],
+    emails: [expect.objectContaining({ email: "dana@lead.example" })],
+  });
+});

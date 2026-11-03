@@ -22,6 +22,7 @@ const (
 	previewActorHuman              = "human"
 	previewCreationDuplicate       = "creation_duplicate"
 	previewCreationPosition        = "creation_position"
+	previewFieldAssigneeID         = "assignee_id"
 	previewFieldBuyerCompanyID     = "buyer_company_id"
 	previewFieldClosedAt           = "closed_at"
 	previewFieldCommercialMotion   = "commercial_motion"

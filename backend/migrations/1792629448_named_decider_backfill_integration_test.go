@@ -26,7 +26,7 @@ func TestTheDeciderBackfillPutsAPromiseOnlyToItsPromiser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1792641896")); err != nil {
 		t.Fatalf("up: %v", err)
 	}
 	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1792641896"), 2); err != nil {

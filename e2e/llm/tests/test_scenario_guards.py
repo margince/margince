@@ -40,25 +40,6 @@ class GuardCase(unittest.TestCase):
         self.assertTrue(any(marker in p for p in missed), f"{answer!r} passed the guard naming {marker!r}")
 
 
-class BusinessCardTest(GuardCase):
-    scenario = "case2-business-card.yaml"
-
-    def test_a_flagged_same_name_contact_is_the_queued_match(self):
-        self.assertGreen(
-            "Lucy Vo has been added to the CRM. A same-name contact was flagged, but their "
-            "email, phone, title, and company differ, so Lucy was kept as a separate contact."
-        )
-
-    def test_an_answer_silent_on_the_match_still_fails(self):
-        self.assertMissed("Lucy Vo has been added to the CRM at Terralogic.", "possible match")
-
-    def test_flagged_about_something_else_is_not_the_match(self):
-        self.assertMissed(
-            "Lucy Vo has been added to the CRM at Terralogic. I flagged her as a priority follow-up.",
-            "possible match",
-        )
-
-
 class UseTheMomentTest(GuardCase):
     scenario = "case4-use-the-moment.yaml"
     advice = "whoever owns"
@@ -142,11 +123,11 @@ class FinishTheImportTest(GuardCase):
 class FairLeadsTest(GuardCase):
     scenario = "case43-the-fair-leads-are-prospects.yaml"
 
-    def test_the_held_company_named_with_its_suffix(self):
-        self.assertGreen("All four are prospects. Emsland Ventilbau GmbH needed your sign-off; I approved it.")
+    def test_the_company_somebody_had_set_named_with_its_suffix(self):
+        self.assertGreen("All four are prospects. Emsland Ventilbau GmbH was the one somebody had set to target.")
 
     def test_an_answer_that_names_nobody_still_fails(self):
-        self.assertMissed("All four are prospects now; one needed your sign-off and I approved it.", "Emsland")
+        self.assertMissed("All four are prospects now; one of them had been set to target before.", "Emsland")
 
 
 if __name__ == "__main__":

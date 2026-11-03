@@ -20,10 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,6 +36,12 @@ import (
 // of them would silently fall back to the shipped baseline and ignore the
 // workspace's own corrections.
 func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
+	return newCounterpartyStoreAt(pool, time.Now)
+}
+
+func newCounterpartyStoreAt(pool *pgxpool.Pool, now func() time.Time) *contacts.Store {
+	tasks := newLeadWorkTasks(InstallationDB(pool), slog.Default())
+	tasks.now = now
 	// The VAT-check enqueue rides here rather than being passed in, because
 	// every caller of this constructor is several layers below the composition
 	// that holds a job runner. A site read's accepted fields land through the
@@ -49,18 +52,12 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 	// resolved, and a meeting the capture limiter held for having no record is
 	// no longer that record-less thing once it does. activities owns the
 	// derivation, contacts may not import it, so compose hands it over.
-	return contacts.NewStore(InstallationDB(pool)).
+	return withContactMergeCarriers(InstallationDB(pool), newContactsStore(InstallationDB(pool))).
+		WithLeadQualifyTasks(tasks).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).
-		WithGeocodeEnqueue(boundGeocodeEnqueue).
-		// A captured contact can take a lead over (promoteheld.go), and a
-		// promotion carries the lead's stops and consent links or refuses —
-		// wired as the server's store wires them (serverassembly.go).
-		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
-		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
+		WithGeocodeEnqueue(boundGeocodeEnqueue)
 }
 
 // contactsEnsurer adapts the contacts module's auto-create engine onto
@@ -87,6 +84,7 @@ type contactsEnsurer struct {
 
 func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	res, err := p.store.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
+		Admission:       in.Admission,
 		Email:           in.Email,
 		DisplayName:     in.DisplayName,
 		Domain:          in.Domain,
@@ -113,14 +111,15 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if err != nil {
 		return capture.EnsureOutcome{}, err
 	}
+	// The sender is a lead. Filing and its qualify task committed in the ensure.
+	if !res.LeadID.IsZero() {
+		return capture.EnsureOutcome{}, nil
+	}
 	// The ensure left this domain's company question open. Nothing is
 	// created until it is answered, so queueing the read that answers it is not
 	// an optimization here — it is the rest of the work.
 	if res.TriagePending {
 		p.triage.domainPending(ctx, res.TriageDomain)
-	}
-	if res.DomainSplit != nil {
-		p.raiseDomainSplit(ctx, *res.DomainSplit, in.Source, in.CapturedBy)
 	}
 	if in.Replied {
 		p.promoteOnReply(ctx, in, res.ContactID)
@@ -167,10 +166,7 @@ func (p contactsEnsurer) liftVendorMark(ctx context.Context, email string, conta
 	}
 }
 
-// EnsureChannelCounterparty is the same adaptation for an inbound channel
-// message (telegram-oa design §6.4). No company is derived and so no web
-// dossier is queued: this path derives no employer even from a corroborating
-// address, so there is nothing for the enrich trigger to read a website from.
+// EnsureChannelCounterparty adapts channel identity and any corroborating work address.
 func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in capture.EnsureChannelRequest) (capture.EnsureOutcome, error) {
 	res, err := p.store.EnsureChannelCounterparty(ctx, contacts.EnsureChannelCounterpartyInput{
 		Identity:           in.Identity,
@@ -180,6 +176,9 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 		Source:             in.Source,
 		CapturedBy:         in.CapturedBy,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return capture.EnsureOutcome{}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13 on the channel key: an erased subject stays dead — a deliberate
 		// no-op, not a fault for the reconcile queue, and nothing was created
@@ -188,6 +187,9 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 	}
 	if err != nil {
 		return capture.EnsureOutcome{}, err
+	}
+	if !res.LeadID.IsZero() {
+		return capture.EnsureOutcome{}, nil
 	}
 	if res.Conflict != nil {
 		p.raiseIdentityConflict(ctx, *res.Conflict, in.Source, in.CapturedBy)
@@ -207,19 +209,6 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 // identity retries this call, and dedupequeue's own pair index absorbs the
 // repeat (EnqueueIdentityConflict's own contract), so a transient failure
 // here self-heals on the next message rather than needing a retry queue.
-// raiseDomainSplit is the company half of the same act: the ensure attached the
-// contact to the lower-id company and wrote nothing onto the other, so what
-// remains is telling a human that two companies answered to one sender's
-// domains. Same posture as raiseIdentityConflict below — own transaction, after
-// the ensure committed, logged and never returned — because the message is
-// already on the timeline and must stay there.
-func (p contactsEnsurer) raiseDomainSplit(ctx context.Context, split contacts.DomainSplit, source, capturedBy string) {
-	if _, err := p.store.EnqueueDomainSplit(ctx, split, source, capturedBy); err != nil {
-		p.log.ErrorContext(ctx, "capture: domain-split review failed to enqueue",
-			"routed_to", split.RoutedTo.String(), "rival", split.Rival.String(), "err", err)
-	}
-}
-
 func (p contactsEnsurer) raiseIdentityConflict(ctx context.Context, conflict contacts.LaneConflict, source, capturedBy string) {
 	if _, err := p.store.EnqueueIdentityConflict(ctx, conflict, source, capturedBy); err != nil {
 		p.log.ErrorContext(ctx, "capture: identity-conflict review failed to enqueue",

@@ -32,7 +32,8 @@ const openDeal: BoardDeal = {
   companyId: "",
   valueMinor: 4_800_000,
   currency: "EUR",
-  ageMs: 0,
+  idleSince: "2026-09-15T12:00:00Z",
+  measuredAt: Date.parse("2026-09-15T12:00:00Z"),
 };
 const archivedDeal: BoardDeal = {
   ...openDeal,
@@ -120,7 +121,7 @@ describe("DealPipelineBoard", () => {
       within(drawer)
         .getByRole("link", { name: "Open deal" })
         .getAttribute("href"),
-    ).toBe("#/deals/d1");
+    ).toBe("/#/deals/d1");
   });
 
   it("writes to the deal through the shell's one composer", async () => {

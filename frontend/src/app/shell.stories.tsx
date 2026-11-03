@@ -202,9 +202,9 @@ export const SettingsHeadWithActionPhone: Story = {
   render: () => <SettingsHeadWithVerb />,
 };
 
-/** A company's wide logo owns the expanded head, with Margince credited on the
- * line beneath it. This is deliberately not an Avatar story: squeezing this
- * asset into the navigation rows' square is the failure this state catches. */
+/** A company with only a wide wordmark wears its monogram in the head. A
+ * wordmark contained into the head's square renders as a smear, not as a
+ * missing image, and that smear is the failure this state catches. */
 export const CompanyWordmark: Story = {
   render: () => {
     stubSession();
@@ -273,11 +273,9 @@ function SidebarExample({
 // Margince" with the version badge beside it; at 56px the attribution goes and
 // the badge stays, shortened to one glyph.
 //
-// What is NOT in either panel: the search and the account block. Both moved to
+// Neither panel holds the search or the account block. Both live in
 // the strip above (app/topbar.tsx), which is why these frames render that strip
-// rather than the sidebar alone — and the current row's own signal is now a tint
-// plus a weight plus the accent on its glyph, with the indicator bar that used to
-// sit in the gutter gone.
+// rather than the sidebar alone.
 export const SidebarStates: Story = {
   name: "sidebar — expanded and collapsed",
   render: () => {
@@ -300,16 +298,12 @@ export const SidebarStates: Story = {
 };
 
 /**
- * The two marks in the two panels that ask for them, side by side.
- *
- * This is the frame the second slot exists for: the same company, wordmark
- * across the open head and badge alone in the 56px rail. Reading them together
- * is the only way to see that the swap happens at all, and the only way to
- * catch the failure it replaced — a wordmark contained into a 32px square,
- * which renders as a smear rather than as a missing image.
+ * The company's square icon in both panels, side by side: the open head's
+ * card beside the 56px rail. The wide wordmark is seeded too, and appears in
+ * neither, because the head draws one square mark at every width.
  */
 export const CompanyMarksAtBothWidths: Story = {
-  name: "sidebar — wordmark expanded, badge collapsed",
+  name: "sidebar — the company's square icon at both widths",
   render: () => {
     stubSession();
     return (
@@ -318,6 +312,32 @@ export const CompanyMarksAtBothWidths: Story = {
           logoUrl={COMPANY_WORDMARK}
           logoIconUrl={COMPANY_BADGE}
         >
+          <div style={{ display: "flex", height: "100vh" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed={false} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed />
+            </div>
+          </div>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * A company name near the 200 characters the installation allows. The head
+ * keeps one line at every width and ends the name in an ellipsis; hovering or
+ * focusing the name shows the whole of it.
+ */
+export const LongCompanyName: Story = {
+  name: "sidebar — a very long company name",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation displayName="Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien, nachhaltige Technologien und die digitale Transformation e. V.">
           <div style={{ display: "flex", height: "100vh" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <SidebarExample initiallyCollapsed={false} />

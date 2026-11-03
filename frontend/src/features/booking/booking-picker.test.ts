@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { expect, it } from "vitest";
-import { weekDays } from "./booking-picker";
+import { togglePick } from "./booking-invite";
+import { overlapsAPick, weekDays } from "./booking-picker";
 
 it("shows the days a host's working hours reach on the reader's clock, not the host's weekdays", () => {
   // Tokyo 09:00–17:00 is Los Angeles 17:00 the evening before until 01:00, so
@@ -45,4 +46,27 @@ it("shows only the host’s working days when both clocks agree", () => {
     "Europe/Berlin",
   );
   expect(days.map((day) => day.key)).toEqual(["2026-10-06", "2026-10-08"]);
+});
+
+// A 30-minute time on the 15-minute grid, as the picker offers it.
+const halfHour = (start: string) => ({
+  start,
+  end: new Date(Date.parse(start) + 30 * 60000).toISOString(),
+});
+
+it("refuses a proposed time that shares minutes with one already picked", () => {
+  const first = halfHour("2026-11-09T08:30:00Z");
+  const overlapping = halfHour("2026-11-09T08:45:00Z");
+  const touching = halfHour("2026-11-09T09:00:00Z");
+
+  expect(overlapsAPick([first], overlapping)).toBe(true);
+  expect(overlapsAPick([first], touching)).toBe(false);
+  // A pick is never blocked by itself, so it can still be unpicked.
+  expect(overlapsAPick([first], first)).toBe(false);
+
+  expect(togglePick([first], overlapping, "propose")).toEqual([first]);
+  expect(togglePick([first], touching, "propose")).toEqual([first, touching]);
+  expect(togglePick([first], first, "propose")).toEqual([]);
+  // An invite holds one time, so a new one replaces it.
+  expect(togglePick([first], overlapping, "invite")).toEqual([overlapping]);
 });

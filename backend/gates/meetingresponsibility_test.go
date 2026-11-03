@@ -6,7 +6,7 @@
 package gates
 
 // Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL
-// or UnclaimedMeetingSQL. A reader that compares the host column by itself
+// or UnclaimedMeetingSQL, or the meeting credit rule built on it. A reader that compares the host column by itself
 // credits a captured meeting to whoever imported the calendar. The Worklist,
 // follow-ups and weekly figures credit the colleagues who took part.
 
@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var meetingRuleRenderers = []string{"MeetingResponsibilitySQL", "UnclaimedMeetingSQL"}
+var meetingRuleRenderers = []string{"MeetingResponsibilitySQL", "UnclaimedMeetingSQL", "MeetingCreditSQL", "MeetingCreditedSeatSQL", "MeetingCreditedSeatsSQL", "MeetingCreditedSeatsAtChangeSQL", "MeetingCreditedSeatAtChangeSQL"}
 
 const meetingRuleFile = "internal/platform/database/storekit/meetingresponsibility.go"
 
@@ -50,6 +50,8 @@ var attendanceRoles = regexp.MustCompile(`(?i)role\s+IN\s*\(\s*'(?:organizer'\s*
 // meetingHostReaders are the files allowed to read the host column or the
 // attendance roles without the rule, each with the question it asks instead.
 var meetingHostReaders = gatekit.Waive(map[string]string{
+	"internal/modules/capture/partyadmissionread.go": "Provider-roster admission requires the importing seat to organize or accept that same roster, then excludes declined guests and capped parties. It asks whether a guest is eligible evidence, not which member owns meeting responsibility.",
+	"internal/compose/memberreferences.go":           "classifies foreign keys and blocks retirement while calendar credentials or invitations still depend on that member; it does not attribute meeting attendance",
 	"internal/platform/auth/activitywritescope.go": "asks who may change the row; the host may edit a meeting " +
 		"whatever the attendance evidence says",
 	"internal/modules/activities/scheduling.go": "asks which slots the host's booking calendar already holds; " +
@@ -58,13 +60,6 @@ var meetingHostReaders = gatekit.Waive(map[string]string{
 		"holds; busy time belongs to the calendar, not to attendance",
 	"internal/modules/capture/participantpastcap.go": "writes the attendance rows the rule reads, and skips a " +
 		"seat that already has one",
-	"internal/compose/metricmeetings.go": "asks whose meeting it is and answers differently: it credits the " +
-		"host recorded at the status change, which on a captured meeting is the importer, so analytics can " +
-		"credit a colleague the weekly scorecard does not; a known divergence until a one-owner credit rule " +
-		"built on attendance exists",
-	"internal/compose/reportspecs.go": "asks whose meeting it is and answers differently: the activity and " +
-		"meeting-conversion reports group and filter by the stored host, the same divergence as the " +
-		"meetings-held metric",
 	"internal/modules/activities/activityprojection.go": "reads the host column out so a screen can show who " +
 		"hosted; it decides nothing about whose work the meeting is",
 })

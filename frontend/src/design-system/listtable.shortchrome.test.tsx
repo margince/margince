@@ -48,7 +48,7 @@ function Short({
       hideShortChrome
       pending={pending}
       problem={problem}
-      search={{ value: search, onChange: () => undefined }}
+      search={{ value: search, answered: search, onChange: () => undefined }}
       archived={
         archivable
           ? { checked: showingArchived, onChange: () => undefined }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -65,30 +66,21 @@ func TestLeadCreationPreviewMatchesActorDefaultsAndNormalization(t *testing.T) {
 	}
 }
 
-func TestLeadCreationPreviewUsesContactDefaultsAndReplaysExistingLead(t *testing.T) {
+func TestLeadCreationPreviewRefusesTheDeprecatedContactID(t *testing.T) {
 	e := setupPromoteConsent(t)
-	contact, err := e.store.CreateContact(e.ctx, CreateContactInput{FullName: "Known Buyer", Title: new("Director"), Emails: []ContactEmailInput{{Email: "known@example.test", EmailType: "work", IsPrimary: true}}, Source: "manual"})
+	contact, err := e.store.CreateContact(e.ctx, CreateContactInput{FullName: "Known Buyer", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := CreateLeadInput{FromContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual", SourceSystem: new("preview-fixture"), SourceID: new("one")}
-	preview, err := e.store.PreviewLeadCreation(e.ctx, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if preview.Input.FullName == nil || *preview.Input.FullName != "Known Buyer" || preview.Input.Title == nil || *preview.Input.Title != "Director" {
-		t.Fatalf("contact defaults: %+v", preview)
-	}
-	lead, created, err := e.store.CreateLead(e.ctx, in)
-	if err != nil || !created {
-		t.Fatalf("create: %v,%v", created, err)
-	}
-	replay, err := e.store.PreviewLeadCreation(e.ctx, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if replay.Existing == nil || replay.Existing.Id != lead.Id {
-		t.Fatalf("replay preview: %+v", replay)
+	in := CreateLeadInput{RequestedContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual"}
+	for name, err := range map[string]error{
+		"preview": func() error { _, err := e.store.PreviewLeadCreation(e.ctx, in); return err }(),
+		"create":  func() error { _, _, err := e.store.CreateLead(e.ctx, in); return err }(),
+	} {
+		var invalid *httperr.DetailedError
+		if !errors.As(err, &invalid) || len(invalid.Fields) != 1 || invalid.Fields[0].Field != contactIDField {
+			t.Errorf("%s contact_id = %v, want a field refusal independent of the supplied row", name, err)
+		}
 	}
 }
 
@@ -151,33 +143,5 @@ func TestLeadCreationPreviewUsesCreatorDefaultsWithoutBorrowingPermissions(t *te
 	creator.Permissions.RowScope = principal.RowScopeAll
 	if _, err := e.store.PreviewLeadCreationForActor(denied, in, creator); err == nil {
 		t.Fatal("creator permissions widened reviewer access")
-	}
-}
-
-func TestLeadCreationPreviewRefusesHiddenInheritedContactFields(t *testing.T) {
-	e := setupPromoteConsent(t)
-	contact, err := e.store.CreateContact(e.ctx, CreateContactInput{FullName: "Existing buyer", Emails: []ContactEmailInput{{Email: "hidden@example.test", EmailType: "work", IsPrimary: true}}, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	actor, ok := principal.Actor(e.ctx)
-	if !ok {
-		t.Fatal("missing fixture actor")
-	}
-	actor.Permissions.RowScope = principal.RowScopeOwn
-	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: contactEntity, Field: fieldEmail, Condition: principal.MaskAlways}}
-	ctx := principal.WithActor(e.ctx, actor)
-	in := CreateLeadInput{FromContactID: new(ids.From[ids.ContactKind](ids.UUID(contact.Id))), Source: "manual"}
-	preview, err := e.store.PreviewLeadCreation(ctx, in)
-	if err == nil || preview.Input.Email != nil {
-		t.Fatalf("hidden contact email entered preview: %+v, %v", preview, err)
-	}
-	in.Email = new("supplied@example.test")
-	preview, err = e.store.PreviewLeadCreation(ctx, in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if preview.Input.Email == nil || *preview.Input.Email != "supplied@example.test" {
-		t.Fatalf("explicit value replaced: %+v", preview)
 	}
 }

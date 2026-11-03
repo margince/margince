@@ -156,7 +156,6 @@ func TestARoomEditThatRepeatsADepartedStewardStillSavesItsTitle(t *testing.T) {
 	saved, err := store.UpdateRoom(ctx, ids.From[ids.DealRoomKind](ids.UUID(room.Id)), dealrooms.UpdateRoomInput{
 		Title: &title, StewardUserID: &repeated,
 	})
-
 	if err != nil {
 		t.Fatalf("a title edit that repeats the standing steward was refused because that steward left: %v", err)
 	}

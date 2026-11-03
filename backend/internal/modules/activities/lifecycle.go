@@ -122,7 +122,7 @@ func updateActivityInTx(
 	// stamps the moment and reopening clears it, so the flag is bound once and
 	// read three times.
 	done := arg(in.IsDone)
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		UPDATE activity SET
 		  subject = coalesce($%[2]d, subject),
 		  body = coalesce($%[3]d, body),
@@ -150,14 +150,14 @@ func updateActivityInTx(
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg)),
-		args...); err != nil {
+		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg))
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// Read back BEFORE auditing: done_at is stamped by the statement above
 	// and a transcript body is renormalized on the way in, so the row is the
 	// only place that says what this write actually stored.
-	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, id, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)
 	}
@@ -168,10 +168,10 @@ func updateActivityInTx(
 	// already holds is somebody saving a form, and recording it would make
 	// "booked twice" a countable event.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:     in.recordedAt,
-		ActivityID:     id,
-		Status:         changedMeetingStatus(current, out),
-		ScheduledStart: &out.OccurredAt,
+		RecordedAt: in.recordedAt,
+		ActivityID: id,
+		Status:     changedMeetingStatus(current, out),
+		Scheduled:  scheduledAs(out.OccurredAt, string(out.OccurredPrecision)),
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -206,7 +206,7 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.Body != nil {
 		p.Set("body", current.Body, *in.Body)
 	}
-	if in.OccurredAt != nil {
+	if in.OccurredAt != nil && !SameStoredStart(*in.OccurredAt, current.OccurredAt) {
 		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
 	}
 	if in.OccurredPrecision != nil {
@@ -272,7 +272,7 @@ func admitActivityPatch(
 	}
 	// A held row must reach the UPDATE afterwards so its own CHECK trigger —
 	// not this read — is what refuses the write.
-	current, err := readActivityForWrite(ctx, tx, id, held)
+	current, err := readActivityForWrite(ctx, tx, id, held, orWallClock(in.recordedAt))
 	if err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
@@ -318,6 +318,16 @@ func admitActivityPatch(
 	}
 	if !held && !in.calendarSettlement && changesInvitation(*in) {
 		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
+	if !held {
+		if err := refuseOutcomeBeforeStart(ctx, tx, current, *in); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
+	if !held {
+		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -377,7 +387,7 @@ func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivit
 // archived_at), and the transaction never commits — the trigger refuses
 // every write to a held row, so there is nothing left to roll back deliberately.
 func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) error {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -386,6 +396,9 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 			return err
 		}
 		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return err
+		}
+		if err := auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
 			return err
 		}
 		if !held {
@@ -399,24 +412,20 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 // ArchiveActivity retires one activity, conditioned on ifVersion wherever the
 // caller's authority named a version.
 //
-// The write rides storekit's guarded patch rather than a bare UPDATE, for the
-// reason ApplyGuarded's own doc gives — *an unguarded update is not
-// expressible* — which the archive verb was quietly the exception to. With a
-// pin it is the optimistic CAS, so an archive a human released against version
-// 4 lands on version 4 or answers skew; without one it takes the row lock, so
-// it is never LESS guarded than the bare statement it replaces. The gone and
-// already-archived cases keep answering ErrNotFound, which is the same
-// existence-hiding answer as before.
+// The write rides storekit's guarded patch (ApplyGuarded). With a pin it is the
+// optimistic CAS: an archive released against version 4 lands on 4 or answers
+// skew. Without one it takes the row lock. A gone or already-archived
+// row answers ErrNotFound, which hides whether it exists.
 func (s *Store) ArchiveActivity(
 	ctx context.Context, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption,
 ) (crmcontracts.Activity, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
+		out, err = archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts), s.now())
 		return err
 	})
 	if err != nil {
@@ -428,21 +437,24 @@ func (s *Store) ArchiveActivity(
 // ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
 // a bulk undo that retires the tasks its change filed in one commit.
 func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption) error {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return err
 	}
-	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
+	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts), s.now())
 	return err
 }
 
 func archiveActivityInTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions, asOf time.Time,
 ) (crmcontracts.Activity, error) {
 	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := refuseIfTouched(ctx, tx, id, o); err != nil {
@@ -452,7 +464,7 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	p := storekit.NewPatch()
-	p.Set("archived_at", nil, time.Now().UTC())
+	p.Set("archived_at", nil, asOf.UTC())
 	// held drops the filter AND the pin: the filter lets the UPDATE reach
 	// activity_refuse_restricted_mutation instead of a LiveOnly clause
 	// hiding the row again, and the pin — a CAS by WHERE clause that never
@@ -471,7 +483,7 @@ func archiveActivityInTx(
 	}
 	var evidence map[string]any
 	if o.reason != "" {
-		evidence = map[string]any{archiveReasonKey: o.reason, "rule_version": o.ruleVersion}
+		evidence = map[string]any{archiveReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
@@ -482,5 +494,5 @@ func archiveActivityInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, archived); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return readActivity(ctx, tx, id, storekit.IncludeArchived)
+	return readActivityAt(ctx, tx, id, storekit.IncludeArchived, asOf)
 }

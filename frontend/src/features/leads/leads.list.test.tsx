@@ -10,10 +10,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
   emptyPage,
   jsonResponse,
+  LEAD_GRANTS,
   lead,
   render,
   SHIPPED_LEAD_ORIGINS,
@@ -400,6 +402,51 @@ describe("LeadsScreen — rich create (P-15)", () => {
     expect(posted).not.toHaveProperty("source");
   });
 
+  it("names the partner that referred the lead when the installation has one", async () => {
+    let posted: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "POST" && url.includes("/leads")) {
+        posted = JSON.parse(await request.text());
+        return jsonResponse({ ...lead, id: "l-new" }, 201);
+      }
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, company: ["read"], partner: ["read"] },
+          }).authorization,
+        });
+      }
+      if (
+        url.includes("/v1/companies") &&
+        url.includes("relationship_type=partner")
+      ) {
+        return jsonResponse({
+          data: [{ id: "c-9", display_name: "Referrer GmbH" }],
+          page: { has_more: false },
+        });
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await user.click(
+      await form.findByRole("combobox", { name: "Referred by partner" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Referrer GmbH" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toBeTruthy());
+    expect(posted).toMatchObject({ partner_company_id: "c-9" });
+  });
+
   it("finds an exact email duplicate before POST and links to it", async () => {
     let postCount = 0;
     stubFetch(async (url, method) => {
@@ -433,6 +480,42 @@ describe("LeadsScreen — rich create (P-15)", () => {
     expect(postCount).toBe(0);
     await userEvent.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/leads/existing-lead");
+  });
+
+  it("sends a lead for an existing contact to the contact, and says a new opportunity is a deal", async () => {
+    stubFetch(async (url, method) => {
+      if (method === "POST" && url.includes("/leads")) {
+        return new Response(
+          JSON.stringify({
+            code: "contact_holds_email",
+            status: 409,
+            detail: "they are already a contact",
+            details: {
+              existing_id: "held-contact",
+              field: "email",
+              owner_notified: true,
+            },
+          }),
+          {
+            status: 409,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        );
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(screen.getByLabelText("Full name *"), "Mara Held");
+    await user.type(screen.getByLabelText("Email"), "mara@customer.example");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(
+      await screen.findByText(/open a deal on the contact/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText("View existing record"));
+    expect(window.location.hash).toBe("#/contacts/held-contact");
   });
 });
 
@@ -533,6 +616,38 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
         ),
       ).toBe(true),
     );
+  });
+});
+
+describe("LeadsScreen — Back from a lead", () => {
+  it("returns to All when the rep left the list on All", async () => {
+    const { urls } = stubFetchWithMe(async (url) => {
+      if (url.includes("/leads")) {
+        return jsonResponse({
+          data: [lead],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (url.includes("/teams")) {
+        return jsonResponse({ data: [], page: { next_cursor: null } });
+      }
+      return undefined;
+    });
+    const first = render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(window.location.hash).toContain("owner_id=all"));
+
+    // Opening a lead unmounts the list; Back mounts it again on that address.
+    first.unmount();
+    urls.length = 0;
+    render(<LeadsScreen />);
+    await screen.findByText("Jonas Petersen");
+
+    const leadReads = urls.filter((url) => url.includes("/leads?"));
+    expect(leadReads.length).toBeGreaterThan(0);
+    expect(leadReads.some((url) => url.includes("owner_id"))).toBe(false);
+    expect(window.location.hash).toContain("owner_id=all");
   });
 });
 

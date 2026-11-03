@@ -24,7 +24,6 @@ export type EditSeed = Readonly<{
   draftRef: string;
   sendAt: string;
   context: CommunicationContext | "";
-  recipientId: string;
   dealId: string;
   projectId: string;
 }>;
@@ -105,7 +104,6 @@ export function editSeedOf(
     draftRef: send.draft_ref ?? "",
     sendAt: localDateTimeValue(send.scheduled_at),
     context: send.communication_context ?? "",
-    recipientId: idOf("contact"),
     dealId: idOf("deal"),
     projectId: idOf("project"),
   };

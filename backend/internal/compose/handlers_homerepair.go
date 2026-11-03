@@ -81,6 +81,10 @@ func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Requ
 	if !httperr.Decode(w, r, &in) {
 		return
 	}
+	if err := admitReviewedRepairActions(in); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
 	defer cancel()
 	review, err := homeRepairReviewInput(in.Review)
@@ -113,7 +117,7 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 	if review.PreviewToken != "" {
 		out.PreviewToken = &review.PreviewToken
 	}
-	revalidate := 0
+	revalidate, normalize := 0, 0
 	for _, task := range scope.Tasks {
 		item := crmcontracts.HomeRepairTask{Id: openapi_types.UUID(task.ID), Version: task.Version, Action: crmcontracts.HomeRepairTaskAction(task.Action), Reason: task.Reason}
 		if task.BeforeVerdict != "" {
@@ -129,9 +133,14 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 			item.Snapshot = &task.Snapshot
 		}
 		out.Tasks = append(out.Tasks, item)
+		if !legacyHomeRepairAction(task.Action) {
+			out.RequiresActionReview = new(true)
+		}
 		switch task.Action {
 		case repairReclassifyMessage:
 			out.Counts.Reclassify++
+		case repairNormalizeTask:
+			normalize++
 		case repairArchiveReminder:
 			out.Counts.Archive++
 		case repairWithdrawProposal:
@@ -147,6 +156,9 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 		default:
 			return crmcontracts.HomeRepairReview{}, apperrors.ErrInvalidArgument
 		}
+	}
+	if normalize > 0 {
+		out.Counts.Normalize = &normalize
 	}
 	if revalidate > 0 {
 		out.Counts.Revalidate = &revalidate

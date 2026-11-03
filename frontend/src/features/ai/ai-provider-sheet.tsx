@@ -13,13 +13,14 @@ import { DataTable } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
-import { today } from "../../format/calendarday";
+import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
 import { stable } from "../../format/collate";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { borrowedRows, useAiModelCatalogue } from "../../lib/ai-models";
+import { providerName } from "../../lib/ai-provider-names";
 import type { ProviderUse } from "../../lib/ai-routing-query";
 import { useCan, useCanUpsert } from "../../lib/capability";
 import { ProviderRefreshLine } from "../settings/rate-catalogue-refresh";
@@ -27,7 +28,6 @@ import { type BoundModel, PriceForm } from "../settings/rate-manual";
 import { RemovePriceDialog } from "../settings/rate-remove";
 import { usePriceSync } from "./ai-price-sync";
 import { pricingPageFor } from "./ai-provider-links";
-import { providerName } from "./ai-provider-names";
 import { TierChips } from "./ai-terms";
 import "./ai-settings.css";
 
@@ -231,10 +231,7 @@ function ProviderPrices({
                 {" · "}
                 <a href={page} target="_blank" rel="noreferrer noopener">
                   {t("aiProviders.priceSource")}
-                  <span className="sr-only">
-                    {" "}
-                    {t("aiProviders.opensNewTab")}
-                  </span>
+                  <span className="sr-only"> {t("common.opensNewTab")}</span>
                 </a>
               </>
             ) : null}
@@ -320,7 +317,7 @@ function PriceTable({
             render: (r) => (
               <span className="ai-sheet-model">
                 {r.model_id}
-                {r.effective_date > today() ? (
+                {r.effective_date > todayIn(AI_RATE_DAY_ZONE) ? (
                   <Badge>
                     {t("aiRates.manual.from", {
                       date: formatDate(r.effective_date, locale, viewerZone()),

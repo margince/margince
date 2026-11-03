@@ -39,6 +39,11 @@ func (EmbedDriftSweepArgs) Kind() string { return "embed_drift_sweep" }
 // workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (EmbedDriftSweepArgs) FleetWide() {}
 
+// SessionLocked says the worker holds embedDriftSweepLock for the run.
+func (EmbedDriftSweepArgs) SessionLocked() {}
+
+const embedDriftSweepLock = "embed_drift_sweep"
+
 // embedDriftSweepWorker heals every live workspace's drift.
 //
 // One worker where there were two (ADR-0103): the dispatcher that enqueued an
@@ -55,7 +60,25 @@ type embedDriftSweepWorker struct {
 	log      *slog.Logger
 }
 
-func (w *embedDriftSweepWorker) Work(ctx context.Context, _ *river.Job[EmbedDriftSweepArgs]) error {
+func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDriftSweepArgs]) error {
+	release, held, err := holdSessionLock(ctx, w.pool, embedDriftSweepLock, w.log)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if !held {
+		w.log.InfoContext(ctx, "another embed drift sweep is running; leaving the pass to it")
+		return nil
+	}
+	defer release()
+	// The kind has no timeout, so the rescuer never reaches a row a killed
+	// worker left running. Holding the lock proves none of them is alive.
+	orphaned, err := jobs.DiscardOrphanedRuns(ctx, w.pool, job.Kind, job.ID)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if orphaned > 0 {
+		w.log.InfoContext(ctx, "closed embed drift sweep rows left running by a dead worker", "closed", orphaned)
+	}
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
 }
 

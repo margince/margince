@@ -45,6 +45,10 @@ type CorrectionReceipt struct {
 	// wondering whether their Undo landed.
 	Reversed bool
 	Version  int64
+	// Who made the correction, as its audit row records them.
+	ActorType  string
+	ActorID    string
+	OnBehalfOf *ids.UUID
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals
@@ -109,7 +113,8 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
  CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
- THEN a.evidence ELSE '{}'::jsonb END
+ THEN a.evidence ELSE '{}'::jsonb END,
+			       a.actor_type, a.actor_id, a.on_behalf_of
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
@@ -130,7 +135,8 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			var evidence []byte
 			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
 				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence); err != nil {
+				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence,
+				&row.ActorType, &row.ActorID, &row.OnBehalfOf); err != nil {
 				return err
 			}
 			row.EstimateBasis = correctionEstimateBasis(evidence)

@@ -45,12 +45,6 @@ export const renderWith = (client: QueryClient, ui: ReactNode): RenderResult =>
   );
 
 /**
- * The head's stage marker: the house Badge on the attribution row, carrying no
- * class of its own. Temporary, with app/betabadge.tsx.
- */
-export const MARKER = ".ws-company .badge";
-
-/**
  * The `/me` snapshot of a rep — a seat that may not read the company profile —
  * carrying the installation's brand, which `/me` hands every seat.
  */

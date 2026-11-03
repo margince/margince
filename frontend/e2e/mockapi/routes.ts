@@ -19,6 +19,7 @@ import {
   aiProviderKeys,
   aiRouting,
   aiUsage,
+  aiUsageSummary,
   anna,
   approval,
   automationCatalog,
@@ -96,8 +97,43 @@ export const routes: readonly MockRoute[] = [
       ],
     }),
   },
+  // One website form, so the card draws a row with its verbs.
+  {
+    method: "GET",
+    path: "/web-forms",
+    handle: reply({
+      data: [
+        {
+          id: "wf-contact",
+          name: "Contact page",
+          form_key: "e2eContactPageFormKey00000000000",
+          sender: "browser",
+          allowed_origins: ["https://www.example.com"],
+          lead_origin: "website",
+          owner_id: null,
+          field_map: {},
+          consent_required: false,
+          consent_policy_version: null,
+          consent_wording: null,
+          redirect_url: null,
+          success_message: null,
+          state: "active",
+          secret_configured: false,
+          version: 1,
+          created_at: "2026-09-01T09:00:00Z",
+          updated_at: "2026-09-01T09:00:00Z",
+          archived_at: null,
+        },
+      ],
+      secrets_available: true,
+    }),
+  },
   // The anonymous reads the signed-out surface makes, by design.
   { path: "/embeddings/reindex/status", handle: session.reindexStatus },
+  {
+    path: "/embeddings/reindex/identities",
+    handle: session.reindexIdentitiesRead,
+  },
   { path: "/auth/capabilities", handle: session.authCapabilities },
   { path: "/assistant/profile", handle: reply(session.assistantProfile) },
   { path: () => true, handle: records.projects },
@@ -129,6 +165,16 @@ export const routes: readonly MockRoute[] = [
   { path: "/contacts/p-new", handle: reply(records.newContact) },
   { path: "/contacts/p-jonas", handle: reply(records.jonas) },
   { method: "POST", path: "/companies", handle: records.createCompany },
+  {
+    method: "GET",
+    path: "/companies/o-new/link-candidates",
+    handle: reply(records.newCompanyCandidates),
+  },
+  {
+    method: "POST",
+    path: "/companies/o-new/link-contacts",
+    handle: reply({ data: [] }, 201),
+  },
   { path: "/companies/o-new", handle: reply(records.newCompany) },
   { method: "POST", path: "/leads", handle: records.createLead },
   { path: "/leads/l-new", handle: reply(records.createdLead) },
@@ -240,8 +286,18 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: /^\/deals\/([^/]+)\/commitments$/,
+    handle: reply({ data: [], complete: true, has_more: false }),
+  },
+  {
+    method: "GET",
     path: /^\/deals\/([^/]+)\/win-evidence$/,
     handle: records.getDealWinEvidence,
+  },
+  {
+    method: "GET",
+    path: /^\/deals\/([^/]+)\/commitments$/,
+    handle: reply({ data: [], has_more: false, complete: true }),
   },
   { path: (path) => path.startsWith("/deals/"), handle: records.getDeal },
   { method: "GET", path: "/magic", handle: reply(work.magicReceipt) },
@@ -252,7 +308,17 @@ export const routes: readonly MockRoute[] = [
     path: /^\/brief\/items\/([^/]+)\/(act|dismiss)$/,
     handle: work.markBriefItem,
   },
-  { path: "/approvals", handle: reply(page([approval])) },
+  // The fixture approval names no record, so a record page's own read is empty.
+  {
+    path: "/approvals",
+    handle: ({ url, json }) =>
+      json(page(url.searchParams.has("target_entity_id") ? [] : [approval])),
+  },
+  {
+    method: "GET",
+    path: "/approvals/pending-count",
+    handle: reply({ count: 1, as_of: "2026-07-06T08:00:00Z" }),
+  },
   {
     method: "GET",
     path: "/worklist",
@@ -271,6 +337,7 @@ export const routes: readonly MockRoute[] = [
     path: "/activities/a-quarterly",
     handle: reply(insight.quarterlyReview),
   },
+  { method: "GET", path: "/activities/latest-inbound", handle: empty },
   {
     method: "GET",
     path: /^\/activities\/([^/]+)$/,
@@ -366,6 +433,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { path: "/ai/usage/summary", handle: reply(aiUsageSummary) },
   { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },

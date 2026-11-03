@@ -139,3 +139,19 @@ export const settlementRepairReview: components["schemas"]["HomeRepairReview"] =
       },
     ],
   };
+
+export const provenanceRepairReview: components["schemas"]["HomeRepairReview"] =
+  {
+    ...repairReview,
+    requires_action_review: true,
+    limit: 1,
+    counts: { ...repairReview.counts, archive: 0, review: 0, normalize: 1 },
+    tasks: [
+      {
+        id: reviewedTaskID,
+        version: 1,
+        action: "normalize_automatic_task",
+        reason: "legacy_source_and_generated_date",
+      },
+    ],
+  };

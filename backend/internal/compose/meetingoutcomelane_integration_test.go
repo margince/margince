@@ -98,7 +98,7 @@ func TestTheOutcomeLaneReachesBackAFortnightAndNoFurther(t *testing.T) {
 // exactly the installations whose calendars are connected.
 func TestAnAnsweredMeetingLeavesTheOutcomeLane(t *testing.T) {
 	e := integration.Setup(t)
-	now := todayAt(14 * time.Hour)
+	now := todayAt(14*time.Hour).AddDate(0, 0, -1)
 	at := now.Truncate(24 * time.Hour).Add(9 * time.Hour)
 	bookCustomerMeeting(t, e, "Nobody has said", at, "")
 	bookCustomerMeeting(t, e, "Still booked", at, "booked")

@@ -38,6 +38,7 @@ const gmail: CaptureConnection = {
     "https://www.googleapis.com/auth/gmail.send",
   ],
   last_synced_at: "2026-07-23T09:30:00Z",
+  last_success_at: "2026-07-23T09:30:00Z",
   backfill: { state: "done", window: "6m" },
 };
 

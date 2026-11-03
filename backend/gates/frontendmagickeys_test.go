@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	magicKeyRegistry = "../frontend/src/features/sign-in/magic.keys.ts"
+	magicKeyRegistry = "../frontend/src/lib/magickeys.ts"
 	magicKeyCatalog  = "../frontend/src/i18n/en.ts"
 	// magicKeyFloor guards against a vacuous pass. The lanes mint around thirty
 	// keys today; the floor sits low enough that retiring a vocabulary does not

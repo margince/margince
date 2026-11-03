@@ -1,6 +1,6 @@
 # CASE 59 — File it on the meeting and the contract.
 #
-# Case 57 keeps a file on a company. A signed contract belongs somewhere
+# A file can be kept on a company. A signed contract belongs somewhere
 # narrower: on the meeting where it was signed, and filed against the agreement
 # it is paper for, which is where finance looks. attach_document takes an
 # activity as its parent and a contract_id beside it, and this case asks a model
@@ -12,7 +12,7 @@
 # The scenario cannot know the ids, which the seed mints fresh, so the call is
 # held to carrying a contract_id at all, and the end state says whose it is.
 #
-# THE FILE ARRIVES AS BASE64 IN THE PROMPT, for the reason case 57 gives: a CLI
+# THE FILE ARRIVES AS BASE64 IN THE PROMPT, because a CLI
 # candidate has no file tool, so the bytes it sends are the bytes it copied.
 # A small but well-formed PDF.
 #

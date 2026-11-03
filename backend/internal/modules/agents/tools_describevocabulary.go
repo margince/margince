@@ -34,6 +34,7 @@ func (readWorkspace) routeTargets() map[string]string {
 		"report_blocks":     "describe_report_blocks",
 		"report_vocabulary": "describe_report_vocabulary",
 		"colleagues":        "list_colleagues",
+		"member_retirement": "preview_member_retirement",
 		"pipelines":         "list_pipelines",
 		"channel_providers": "list_channel_providers",
 	}

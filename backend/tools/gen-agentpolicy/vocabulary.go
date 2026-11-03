@@ -181,16 +181,26 @@ func renderVocabulary(v vocabulary) string {
 		typeName, prefix, doc string
 		values                []string
 	}{
-		{"agentAccess", "access",
-			"agentAccess is an operation's admission class for an AGENT principal.", v.access},
-		{"agentTier", "tier",
-			"agentTier is the autonomy tier the gate admits against, identical on REST and MCP.", v.tier},
-		{"agentRecordType", "recordType",
-			"agentRecordType is the record an operation targets; the zero value means it declares none.", v.recordType},
-		{"agentScope", "scope",
-			"agentScope is the passport cap an operation consumes. Unlike the others it has no zero\n// value in practice: every tool operation declares one, so the gate never has to invent it.", v.scope},
-		{"agentServedBy", "servedBy",
-			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. The zero value means the gate admits a call the tool also serves.", v.servedBy},
+		{
+			"agentAccess", "access",
+			"agentAccess is an operation's admission class for an AGENT principal.", v.access,
+		},
+		{
+			"agentTier", "tier",
+			"agentTier is the autonomy tier the gate admits against, identical on REST and MCP.", v.tier,
+		},
+		{
+			"agentRecordType", "recordType",
+			"agentRecordType is the record an operation targets; the zero value means it declares none.", v.recordType,
+		},
+		{
+			"agentScope", "scope",
+			"agentScope is the passport cap an operation consumes. Unlike the others it has no zero\n// value in practice: every tool operation declares one, so the gate never has to invent it.", v.scope,
+		},
+		{
+			"agentServedBy", "servedBy",
+			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. The zero value means the gate admits a call the tool also serves.", v.servedBy,
+		},
 	} {
 		fmt.Fprintf(&b, "\n// %s\n//\n// Values are the closed set declared by components.schemas.%s in\n"+
 			"// api/crm.yaml; a value outside it fails generation.\ntype %s string\n\nconst (\n",

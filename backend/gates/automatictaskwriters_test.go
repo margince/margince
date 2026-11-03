@@ -58,7 +58,6 @@ var taskSourceWriters = map[string][]string{
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
 	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
-	"compose/leadqualify.go:remindUnqualifiedLeads":                       {provenance.LeadQualifyTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
 	"compose/reconcile.go:followUpConfirmEffect":                          {provenance.OvernightReconcileSource},
 	"modules/activities/requesttask.go:emailRequestTaskInput":             {provenance.EmailRequestSource},
@@ -72,14 +71,19 @@ var taskSourceWriters = map[string][]string{
 	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
+	"compose/webformleads.go:Land":                                        {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
-	"compose/leadqualify.go:logQualifyReminder":                           {provenance.LeadQualifyTaskSource},
+	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
+	"compose/leadworktasks.go:arrivalTaskInput":                           {provenance.LeadForContactSource},
+	"compose/leadworktasks.go:logSystemTaskTx":                            {writesForItsCaller},
 	"modules/activities/emailrequesttasks.go:captureEmailRequest":         {provenance.EmailRequestSource},
 	"modules/activities/requesttask.go:takeEmailRequest":                  {provenance.EmailRequestSource},
 	"compose/bulkrecordverbs.go:applyTask":                                {writesHumanTask},
 	"modules/activities/handlers_activity.go:LogActivity":                 {writesHumanTask},
 	"modules/activities/handlers_task.go:CreateTask":                      {writesHumanTask},
 	"modules/activities/handlers_task.go:TaskInputFrom":                   {writesHumanTask},
+	"modules/activities/recommendation.go:checkTaskRecommendation":        {provenance.AcceptedRecommendationSource},
+	"compose/taskrecommendationseam.go:taskRecommendationFrom":            {writesHumanTask},
 	"modules/activities/requesttask.go:emailRequestTask":                  {provenance.EmailRequestSource},
 	"compose/csvactivitywriter.go:createActivity":                         {writesCallerSource},
 	"compose/extcore.go:Create":                                           {writesCallerSource},
@@ -102,15 +106,20 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
 	"modules/activities/companyscope.go:ownQueueClause":                   "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",
+	"modules/activities/companyscope.go:teamQueueClause":                  "narrows a list the caller already gates with the worklist clauses",
+	"modules/activities/handover.go:openTasksAssignedTo":                  "a handover moves every open task the departed member holds, current or not, so none stays on the seat",
+	"modules/activities/handover.go:recordTasksTx":                        "a record's handover counts and moves every open task its giver holds on that record, current or not",
 	"modules/activities/homerepair.go:pristineRepairTaskSQL":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/homerepair.go:readHomeRepairTasksTx":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
+	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
 	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
@@ -333,7 +342,7 @@ func taskCensusFaults(found taskCensus, declarations map[string][]string) []stri
 		}
 	}
 	for _, family := range families {
-		if !claimed[family] {
+		if !claimed[family] && !slices.Contains(provenance.RetiredTaskSources(), family) {
 			faults = append(faults, "storekit family "+family+" has no writer")
 		}
 	}

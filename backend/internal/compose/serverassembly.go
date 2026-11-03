@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,8 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
-	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -38,13 +39,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -63,7 +62,7 @@ import (
 // contacts→deals edge (leadDealOpener) — both injected here for the same
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
-	return contacts.NewHandlers(InstallationDB(pool)).
+	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
@@ -71,24 +70,10 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
-		// A merge carries the retiring subject's stops, or it refuses. consent
-		// owns communication_suppression; contacts owns the merge; neither
-		// imports the other, so the edge is injected here. The consent links
-		// and the introduction asks ride the same way.
-		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
-		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
-		WithProviderRunReader(integrations.ReadRunForContactTx).
-		WithMergeSignalReader(signals.PreviewSignalCarryTx).
-		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
-		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
-		WithMergeContentReader(activities.NewStore(InstallationDB(pool))).
-		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
-		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithShareRequests(contactShareRequests(pool)).
-		WithInstallationRenamer(installationRenamer(pool))
+		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithInstallationRenamer(installationRenamer(pool)).
+		WithConsumerMail(capture.MatcherTx)
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling
@@ -100,6 +85,8 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithTaskRecommendation(taskRecommendationReader(pool)).
+		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
@@ -113,7 +100,9 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(contacts.NewStore(InstallationDB(pool)), bookingConsentAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		WithPublicBooking(newContactsStore(InstallationDB(pool)), bookingConsentAdapter{
+			store: consent.NewStore(InstallationDB(pool)),
+		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
 		// preference token behind the List-Unsubscribe URL.
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
@@ -129,7 +118,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
 		// like every other cross-module edge on this path.
-		WithSignature(signatureReader{store: contacts.NewStore(InstallationDB(pool))}).
+		WithSignature(signatureReader{store: newContactsStore(InstallationDB(pool))}).
 		// The name on the envelope. identity owns who the acting human is —
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
@@ -212,9 +201,10 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 	staged := approvalsServiceWithEffects(pool)
-	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.homeCache = homecache.New(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
-	s.magicHandlers = magic.NewHandlers(s.magicService)
+	s.magicHandlers = magic.NewHandlers(s.magicService).WithHomeCache(s.homeCache)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture
@@ -228,19 +218,25 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // sits behind the grant that reads the thing being shared. Splitting them
 // across the literal and here would put half of that seam out of sight of the
 // other half.
+// newForecastHandlers is the forecast surface over its seams, every call
+// recorded through it keeping its baseline.
+func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
+	return forecasting.NewHandlers(
+		newForecastStoreFor(pool),
+		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
+		WithReaderRows(ForecastReaderContributions)
+}
+
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
-	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
 	}
-	s.forecastHandlers = forecasting.NewHandlers(
-		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
-		func() time.Time { return time.Now().UTC() },
-	)
+	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
@@ -249,6 +245,8 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+	s.sdrSummaryHandlers = newSdrSummaryHandlers(
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),
@@ -345,15 +343,15 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// instance, like every other contacts-backed shadow here: the company
 	// form's write shape is contacts's, the transport is compose's.
 	s.companyHandlers = companyHandlers{
-		store: contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
+		store: newContactsStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
 			WithGeocodeEnqueue(boundGeocodeEnqueue),
 		rollout: companyContextRolloutOnboarding,
 	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
 	s.onboardingStateHandlers = onboardingStateHandlers{
-		state: identity.NewOnboardingStore(InstallationDB(pool)), company: contacts.NewStore(InstallationDB(pool)),
+		state: identity.NewOnboardingStore(InstallationDB(pool)), company: newContactsStore(InstallationDB(pool)),
 		proposal: &onboardingProposalEngine{
-			state: identity.NewOnboardingStore(InstallationDB(pool)), contacts: contacts.NewStore(InstallationDB(pool)),
+			state: identity.NewOnboardingStore(InstallationDB(pool)), contacts: newContactsStore(InstallationDB(pool)),
 			rollout: companyContextRolloutOnboarding,
 		},
 	}
@@ -371,7 +369,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The model lane is nil here: WithCompanyBrief binds the api role's
 	// summarize lane, and without it the brief serves its deterministic
 	// floor.
-	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
+	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
 	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
 	// Both stores, because answering a domain question is two different acts:
@@ -388,19 +386,25 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
+		return suggestionSink().ConversationSuggestions(ctx, anchor)
+	}}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
 		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
 		recompute: activities.RecomputeAudienceTx,
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
-	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool)
+	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
+	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
-		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
+		WithSignalWords(signalSummaryWords)
 	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
@@ -483,7 +487,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.
-		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))}).
+		WithCorrectionApplier(correctionApplier{store: newContactsStore(InstallationDB(pool))}).
 		// The privacy queues name the contacts and leads they point at through
 		// the resolver every other surface names records with.
 		WithRecordNames(newAttentionNames(InstallationDB(pool)))

@@ -22,7 +22,11 @@ import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { useRosterPartial, useRosterPartialHint } from "./entityref";
+import {
+  RosterFailedLine,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "./entityref";
 
 const SEARCH_LIMIT = 20;
 
@@ -171,7 +175,7 @@ function ColleaguesField({
 }>) {
   const t = useT();
   const me = useMe();
-  const options = useAssignableUserOptions();
+  const { options, roster } = useAssignableUserOptions();
   const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   const labelOf = new Map(
     options.map((option) => [option.value, option.label]),
@@ -202,6 +206,7 @@ function ColleaguesField({
           />
         )}
       </Field>
+      <RosterFailedLine kind="user" roster={roster} />
       {value.colleagueIds.length > 0 && (
         <TokenList
           items={value.colleagueIds.map((id) => ({

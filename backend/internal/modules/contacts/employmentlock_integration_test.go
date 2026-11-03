@@ -107,7 +107,7 @@ func TestTheDomainBacklogWaitsOnEachContactsEmploymentLock(t *testing.T) {
 	contact := e.seedUnmarkedIncumbent(ctx, t)
 	// A second contact on the same domain, so this is the bulk path it exists to
 	// be rather than a one-row special case.
-	e.openTriageFirst(ctx, t, "colleague@newemployer-race.test", "A Colleague", "newemployer-race.test")
+	e.openTriage(ctx, t, "colleague@newemployer-race.test", "A Colleague", "newemployer-race.test")
 	readID := e.startTriageRead(ctx, t, "newemployer-race.test")
 
 	holder, pid := e.holdEmploymentLock(ctx, t, contact)
@@ -217,7 +217,7 @@ func TestTheDomainCandidateListDoesNotPreJudgeWhoNeedsAnEmployment(t *testing.T)
 	settled, _ := e.seedEmployedContact(ctx, t,
 		"Already Employed", "settled@newemployer-race.test", "Incumbent Employer GmbH", "incumbent-race.test")
 	// And one with nothing, who is a candidate under either reading.
-	e.openTriageFirst(ctx, t, "colleague@newemployer-race.test", "A Colleague", "newemployer-race.test")
+	e.openTriage(ctx, t, "colleague@newemployer-race.test", "A Colleague", "newemployer-race.test")
 
 	var candidates []ids.ContactID
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {

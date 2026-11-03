@@ -94,6 +94,12 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// changeWords describes what a write changed (changewords.go). Nil
+	// answers no changes.
+	changeWords ChangeWords
+	// contactCases is the case decision merge_records reaches; nil leaves
+	// the verb to pairs.
+	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
 }
@@ -238,10 +244,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	switch {
-	// An auto-execute call may still carry approval_id: the retry of a per-field
-	// precedence staging (interfaces.md §2.1) admits at the auto-execute tier, so
-	// its asserted authority is consumed by redeemPresented — validated against
-	// the identical-call hash, never ignored.
+	// An auto-execute call may still carry approval_id. The retry of a staged
+	// call can resolve at the auto-execute tier, so a fresh run goes through
+	// redeemPresented, which validates the identical-call hash. A completed
+	// idempotent retry replays its recorded result before that.
 	case err == nil, !res.ApprovalID.IsZero() && errors.Is(err, apperrors.ErrRequiresApproval) && r.approvals != nil:
 		return r.runClaimed(ctx, t, spec, res)
 	case !errors.Is(err, apperrors.ErrRequiresApproval) || r.approvals == nil:
@@ -262,9 +268,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // handler still marshals only its own payload and never sees the envelope,
 // which is what keeps thirty tools from carrying thirty spellings of it.
 //
-// The failure path deliberately seals nothing: a refusal is an error, and an
-// error carries the sentinel and the message the caller acts on, not a document
-// with an empty payload inside it.
+// The failure path seals nothing of its own. A refusal is an error, and it
+// carries the sentinel and the message the caller acts on. A refusal that
+// carries an answer for a view has that answer sealed (shownrefusal.go).
 // runClaimed is the one path from admission to a handler: claim the retry key,
 // redeem any asserted approval, run, and record what the run produced.
 //
@@ -328,7 +334,11 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, trace := withTrace(ctx)
 	ctx, facts := withEnvelopeFacts(ctx)
 	ctx = agentvolume.WithEffectTally(ctx)
-	noteRowScope(ctx)
+	// An answer about the caller reads no workspace rows, so it has nothing a
+	// row scope could have hidden.
+	if !spec.SelfDescribing {
+		noteRowScope(ctx)
+	}
 	// Capture privacy is a second boundary with the same failure mode, and it
 	// binds an administrator that row scope does not. Whether it took anything
 	// is a fact about the read, so the report is installed here and read once
@@ -336,11 +346,13 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, withheld := auth.WithWithheldReport(ctx)
 	out, err := t.Handle(ctx, args)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, sealShown(err, func(answer json.RawMessage) (json.RawMessage, error) {
+			return sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, answer)
+		})
 	}
 	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
-	sealed, err := sealEnvelope(spec, trace, facts, out)
+	sealed, err := sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, out)
 	if err != nil {
 		return nil, 0, err
 	}

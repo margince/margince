@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -77,7 +79,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
-	anchor := contacts.NewStore(InstallationDB(pool))
+	anchor := newContactsStore(InstallationDB(pool))
 	authH := identity.NewHandlers(identitySvc).
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
@@ -99,6 +101,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
+	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
@@ -218,7 +222,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// answers honestly and nothing can reach the network. WithProvider
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
-		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: contacts.NewStore(InstallationDB(pool))}),
+		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: newContactsStore(InstallationDB(pool))}, signalSummaryWords),
 		// The reversal seam is wired at construction rather than as an option:
 		// undoability is part of what the history surface MEANS, and a server
 		// that served the history without it would render buttons that answer
@@ -260,7 +264,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool)))),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -276,20 +280,19 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// ForecastDeals, where the caller's authority already sits.
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
-		assuranceHandlers: assurance.NewHandlers(
-			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
-			AssuranceExceptionsIn,
+		assuranceHandlers: assurance.NewHandlers(answeringAssuranceStore(pool), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		),
+		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview(pool)),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
 		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
 		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
-		companyOfferedHandlers: companyOfferedHandlers{store: contacts.NewStore(InstallationDB(pool))},
+		reviewAnswerHandlers:   newReviewAnswerHandlers(pool),
+		companyOfferedHandlers: companyOfferedHandlers{store: newContactsStore(InstallationDB(pool))},
 		strengthHandlers: strengthHandlers{
-			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
+			contacts: newContactsStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
 		access: NewRecordAccessReads(pool),
 		// The schema-change pool is boot-optional; nil
@@ -308,6 +311,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// happened and the transport works out when an unanswered ask goes
 		// stale, so two clocks here would let an ask be born already due.
 		introductionHandlers: introductions.NewHandlers(introStore, time.Now),
+		initiativeHandlers:   initiatives.NewHandlers(newInitiativeStore(pool)),
 		// The accept-write needs no option to wire: it resolves the reading a
 		// human was already shown (RD-AC-N-5) rather than producing one, so it
 		// works wherever the readings do. An attachment that has never been read
@@ -322,6 +326,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// key, wired by WithWebhookSigningKey (the api role sources it from
 		// the environment). Without it those paths answer an honest 503.
 		webhooksHandlers: newWebhookHandlers(pool, nil, log),
+		// Website forms: browser forms work everywhere; a signed sender needs
+		// the secret store WithKeyvault binds.
+		webFormsHandlers: newWebFormHandlers(pool, log),
 		log:              log,
 		dealsStore:       deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		// Fail-closed until WithAgentVolume rebinds it. A role serving the agent surface
@@ -343,3 +350,5 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// builds it after the option loop, where the Server is the one served.
 	return srv
 }
+
+var _ crmcontracts.ServerInterface = Server{}

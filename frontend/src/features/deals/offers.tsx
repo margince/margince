@@ -7,6 +7,7 @@ import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatMoney, formatNumber } from "../../format/format";
+import { offerStatusLabel } from "../../format/offerstatus";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -178,7 +179,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 change it, so they take the band rather than the head. */}
             <Panel
               title={offer.offer_number}
-              titleAction={<Badge>{offer.status}</Badge>}
+              titleAction={<Badge>{offerStatusLabel(offer.status, t)}</Badge>}
               actions={
                 <>
                   <Button

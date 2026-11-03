@@ -5,8 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
+import type { Locale } from "../../i18n";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -64,11 +66,14 @@ function thread(activities: Activity[]): RecordTimeline {
   };
 }
 
-function Standing({ activities }: Readonly<{ activities: Activity[] }>) {
-  const writer = useLeadPatch(lead, lead.id, () => undefined);
+function Standing({
+  activities,
+  record = lead,
+}: Readonly<{ activities: Activity[]; record?: Lead }>) {
+  const writer = useLeadPatch(record, record.id, () => undefined);
   return (
     <LeadHowItStands
-      lead={lead}
+      lead={record}
       writer={writer}
       terminalReasonId="lead-terminal"
       thread={thread(activities)}
@@ -79,14 +84,36 @@ function Standing({ activities }: Readonly<{ activities: Activity[] }>) {
   );
 }
 
-function renderStanding(activities: Activity[]) {
-  installFetchStub({ "GET /me": meRoute({ lead: ["read", "update"] }) });
+function renderStanding(
+  activities: Activity[],
+  record: Lead = lead,
+  locale: Locale = "en",
+) {
+  installFetchStub({
+    "GET /me": meRoute({ lead: ["read", "update"] }),
+    "GET /lead-disqualify-reasons": () => jsonResponse({ data: REASONS }),
+  });
   return (
-    <StoryProviders>
-      <Standing activities={activities} />
+    <StoryProviders locale={locale}>
+      <Standing activities={activities} record={record} />
     </StoryProviders>
   );
 }
+
+const REASONS: components["schemas"]["LeadDisqualifyReason"][] = [
+  {
+    id: "r-budget",
+    label: "No budget",
+    label_key: "leadReasons.builtin.no_budget",
+    sort_order: 30,
+    active: true,
+    system: true,
+    lead_count: 1,
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
 
 const meta = {
   title: "Records/Leads/How it stands",
@@ -124,5 +151,26 @@ export const MeetingOnlyItsDayKnown: Story = {
     const card = await nextMeetingCard(canvasElement);
     await expect(card?.textContent).toContain("Depot site visit");
     await expect(card?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+  },
+};
+
+// The server sends the reason's stored English label. A German reader sees
+// the built-in reason in German.
+export const ClosedForABuiltInReason: Story = {
+  render: () =>
+    renderStanding(
+      [],
+      {
+        ...lead,
+        status: "disqualified",
+        disqualify_reason_id: "r-budget",
+        disqualify_reason: "No budget",
+      },
+      "de",
+    ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(/Geschlossen: Kein Budget\./),
+    ).toBeInTheDocument();
   },
 };

@@ -5,8 +5,17 @@
 import { cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  LIFECYCLE_LABELS as FORMAT_LABELS,
+  LIFECYCLE_OPTIONS as FORMAT_OPTIONS,
+} from "../format/companylifecycle";
 import { type Locale, LocaleProvider, useT } from "../i18n";
-import { formatSizeBand, useHealthReason } from "./companylookups";
+import {
+  formatSizeBand,
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+  useHealthReason,
+} from "./companylookups";
 
 afterEach(cleanup);
 
@@ -50,5 +59,12 @@ describe("formatSizeBand", () => {
       wrapper,
     });
     expect(result.current).toBe(expected);
+  });
+});
+
+describe("the lifecycle lookups", () => {
+  it("are the one list and label map the format layer holds", () => {
+    expect(LIFECYCLE_OPTIONS).toBe(FORMAT_OPTIONS);
+    expect(LIFECYCLE_LABELS).toBe(FORMAT_LABELS);
   });
 });

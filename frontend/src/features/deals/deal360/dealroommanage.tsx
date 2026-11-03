@@ -12,7 +12,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
 import { FINISHED_STATES, refusalFor } from "../../../components/dealroom";
-import { useRoster } from "../../../components/roster";
+import { RosterFailedLine, useRoster } from "../../../components/roster";
 import { Field, Textarea, TextInput } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
 import { ChoiceList } from "../../../design-system/choicelist";
@@ -269,6 +269,7 @@ export function ManageRoomDialog({
               />
             )}
           </Field>
+          <RosterFailedLine kind="user" roster={roster} />
         </div>
         <Eyebrow as="h3">{t("roomtab.manage.textHeading")}</Eyebrow>
         <Field label={t("roompage.text.titleLabel")} required>

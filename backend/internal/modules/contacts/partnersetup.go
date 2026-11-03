@@ -33,17 +33,22 @@ func (e *PartnerAlreadySetUpError) MessageFault() (code, message string) {
 }
 
 // CheckPartnerSetUp answers whether the caller could set up a partner program
-// on the company now. The agent path asks it before staging an approval.
-// UpsertPartner asks it again under the company lock. A program set up by a
-// human while the approval waited is then refused at the write.
-func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID) error {
+// on the company now, starting on stage (nil for the first candidate stage).
+// The agent path asks it before staging an approval. UpsertPartner asks it
+// again under the company lock. A program set up by a human while the approval
+// waited, or a stage retired meanwhile, is then refused at the write.
+func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID, stage *string) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return checkPartnerSetUp(ctx, tx, companyID)
+		if err := checkPartnerSetUp(ctx, tx, companyID); err != nil {
+			return err
+		}
+		_, err := resolvePartnerStage(ctx, tx, UpsertPartnerInput{CompanyID: companyID, RelationshipStage: stage, MustCreate: true})
+		return err
 	})
 }
 
 func checkPartnerSetUp(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	if err := requirePartnerWriteGrants(ctx); err != nil {
+	if err := requirePartnerWriteGrant(ctx); err != nil {
 		return err
 	}
 	if err := auth.EnsureWritable(ctx, tx, "company", companyID.UUID); err != nil {
@@ -59,20 +64,28 @@ func checkPartnerSetUp(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) 
 	return nil
 }
 
-// requirePartnerWriteGrants holds the two object grants a partner write takes.
-// Promotion adds `partner` to the company's relationship types, so the partner
-// grant alone must not become a side door onto companies.
-func requirePartnerWriteGrants(ctx context.Context) error {
-	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
-		return err
-	}
+// requirePartnerWriteGrant holds the grant every partner write takes. Promotion
+// adds `partner` to the company's relationship types, so a program is part of
+// the company and whoever may edit the company may run it.
+func requirePartnerWriteGrant(ctx context.Context) error {
 	return auth.Require(ctx, "company", principal.ActionUpdate)
+}
+
+// requireMarginTierGrant holds the partner grant on a write that sets or clears
+// the margin tier, because the tier prices every later commission. It reads the
+// clears the caller sent, before a set-up adds its own.
+func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
+	if in.MarginTier == nil && !slices.Contains(in.Cleared, partnerFieldMarginTier) {
+		return nil
+	}
+	return auth.Require(ctx, "partner", principal.ActionUpdate)
 }
 
 // asFreshProgram makes a set-up start from the column defaults even when it
 // revives an archived row. That means no margin tier, no gate metrics, no
 // served segments and certification "applied". Terms the caller sent stay.
-// The rest must not carry over from a program a human once approved.
+// The rest must not carry over from a program a human once approved. The
+// stage is resolvePartnerStage's: without one, the first active candidate stage.
 func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 	cleared := slices.Clone(in.Cleared)
 	cleared = append(cleared, partnerFieldMarginTier)
@@ -91,9 +104,6 @@ func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 	in.Cleared = cleared
 	if in.CertStatus == nil {
 		in.CertStatus = new("applied")
-	}
-	if in.RelationshipStage == nil {
-		in.RelationshipStage = new("research")
 	}
 	return in
 }

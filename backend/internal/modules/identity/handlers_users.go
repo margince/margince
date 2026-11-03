@@ -101,6 +101,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		TeamIDs:      teams,
 	})
 	if err != nil {
+		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
@@ -447,13 +448,18 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		}
 		in.Source = *req.Source
 	}
-	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
+	userID, created, err := h.svc.provisionFormerMember(r.Context(), actor, in)
 	if err != nil {
+		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a seat with this email already exists; a former member is recorded once, "+
 				"and somebody who came back is reactivated from the roster rather than added again")
 		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
-	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.writeUserByID(w, r, actor, userID, status)
 }

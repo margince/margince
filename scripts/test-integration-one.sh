@@ -51,7 +51,8 @@ db="margince_it_one_$$"
 make_clone "$db"
 # Teardown keeps the test status unless it is the only failure: a clone that
 # cannot be dropped is a leaked database and must not report a green run.
-trap 'st=$?; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
+census="$(mktemp -d)"
+trap 'st=$?; rm -rf "$census"; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
 
 run_flag=()
 [[ -n "$RUN" ]] && run_flag=(-run "$RUN")
@@ -59,6 +60,7 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
 
 ( cd backend \
     && MARGINCE_ENV=dev \
+       MARGINCE_SQL_CENSUS_DIR="$census" \
        MARGINCE_TEST_CLONE_DB="$db" \
        MARGINCE_TEST_DSN="$(owner_clone_dsn "$db")" \
        MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
@@ -66,3 +68,9 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
        MARGINCE_TEST_REDIS="$MARGINCE_TEST_REDIS" \
        MARGINCE_TEST_REDIS_DB="$MARGINCE_TEST_REDIS_DB" \
     go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
+# A package that opened no pool wrote no census, and has no statement to check.
+if compgen -G "$census/census-*.jsonl" > /dev/null; then
+  check_repeated_gates "$census" "$census/repeated-gates.txt"
+else
+  echo "test-integration-one: no pool opened, so no statement to check for a repeated content gate"
+fi

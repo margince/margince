@@ -1,10 +1,11 @@
 import type { components } from "../api/schema";
 import { acquisitionKindLabel } from "../format/acquisitionkind";
-import { COMPANY_LIFECYCLE_LABELS } from "../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../format/companylifecycle";
 import { RELATIONSHIP_TYPE_LABELS } from "../format/companyrelationships";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { DEAL_STATUS_LABEL } from "../format/dealstatus";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import { industryWords } from "../format/industry";
 import { LEAD_STATUS_LABEL } from "../format/leadstatus";
 import { offerStatusLabel } from "../format/offerstatus";
 import { templateLanguage } from "../format/offertemplatelocale";
@@ -21,10 +22,15 @@ import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
 import { contextOptions } from "./compose-context";
+import {
+  MEMBER_RETIREMENT_EFFECT_LABELS,
+  memberRetirementBlocker,
+} from "./memberretirement";
 import { KIND_LABELS } from "./relationshipkinds";
 import { WON_REASON_LABELS } from "./winreason";
 
 const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
+  ...MEMBER_RETIREMENT_EFFECT_LABELS,
   create_activity_record: "approval.import.createActivity",
   import_close_deal: "approval.import.closeDeal",
   rearm_held_message: "approval.scheduled.rearm",
@@ -51,9 +57,11 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   archive_template_preserve_offers: "approval.preview.archiveTemplate",
   archive_offer_preserve_lines: "approval.preview.archiveOffer",
   record_confirmation_only: "approval.preview.confirmationOnly",
+  create_contact_employer: "approval.preview.createEmployer",
+  reuse_contact_employer: "approval.preview.reuseEmployer",
+  resolve_contact_employer: "approval.preview.resolveEmployer",
   create_contact_record: "approval.preview.createContact",
   record_contact_acquisition: "approval.preview.recordAcquisition",
-  create_promote_matching_leads: "approval.preview.createPromotions",
   create_offer_draft: "approval.preview.createOffer",
   assign_offer_number: "approval.preview.assignOfferNumber",
   create_offer_template: "approval.preview.createTemplate",
@@ -74,8 +82,12 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_lead_archive_source: "approval.preview.promotionArchive",
   promote_create_contact: "approval.preview.promotionCreate",
   promote_fill_contact: "approval.preview.promotionFill",
+  promote_seat_contact_on_existing_deal:
+    "approval.preview.promotionExistingDealEffect",
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
+  promote_fill_company_industry: "approval.preview.promotionFillIndustry",
+  promote_propose_company: "approval.preview.promotionProposeCompany",
   restore_lead_archive_contact: "approval.preview.demoteArchive",
   restore_lead_preserve_contact: "approval.preview.demotePreserve",
   send_without_human_signature: "approval.preview.unsignedSend",
@@ -169,6 +181,7 @@ const PREVIEW_TEXT_FORMATTERS = new Map<
   ["billing_model", billingModelLabel],
   ["locale", templateLanguage],
   ["offer_status", offerStatusLabel],
+  ["promotion_company_industry", (value, t) => industryWords(t, value)],
 ]);
 
 const PREVIEW_CATALOG_ALIASES: Readonly<Record<string, string>> = {
@@ -254,7 +267,7 @@ function previewLabel(value: Value, field: string, t: Translator): string {
   };
   const labels =
     catalogs[catalogField] ??
-    (value.kind === "lifecycle" ? COMPANY_LIFECYCLE_LABELS : undefined);
+    (value.kind === "lifecycle" ? LIFECYCLE_LABELS : undefined);
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];
@@ -278,6 +291,14 @@ const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
   sender_signature_private: "approval.preview.signaturePrivate",
   import_scope_unavailable: "approval.preview.importScopeUnavailable",
   email_names_no_one: "approval.preview.machineAddress",
+  lead_holds_email: "approval.preview.leadHoldsEmail",
+};
+
+// The sentence a card shows for a preview it cannot explain.
+const PREVIEW_STATE_LABELS: Partial<Record<string, MessageKey>> = {
+  stale: "approval.preview.stale",
+  incomplete: "approval.preview.incomplete",
+  needs_wider_sight: "approval.preview.needsWiderSight",
 };
 
 export function commercialPreviewDisplay(
@@ -295,18 +316,20 @@ export function commercialPreviewDisplay(
       label: t("approval.preview.conflict"),
       value: label
         ? t(label)
-        : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
+        : conflict.kind.startsWith("member_retirement_")
+          ? memberRetirementBlocker(
+              conflict.kind.slice("member_retirement_".length),
+              t,
+            )
+          : conflict.summary.trim() || t("approval.preview.incompleteEvidence"),
       comparison: null,
     };
   });
   const readable = preview.version === 1 || preview.version === 2;
   if (!readable || preview.state !== "ready") {
     const key =
-      readable && preview.state === "stale"
-        ? "approval.preview.stale"
-        : readable && preview.state === "incomplete"
-          ? "approval.preview.incomplete"
-          : "approval.preview.unavailable";
+      (readable && PREVIEW_STATE_LABELS[preview.state]) ||
+      "approval.preview.unavailable";
     return [
       {
         field: "preview_status",

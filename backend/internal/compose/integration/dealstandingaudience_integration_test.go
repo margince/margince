@@ -40,6 +40,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,7 +62,7 @@ func TestACachedStandingStopsRestatingAMessageTheReaderMayNoLongerRead(t *testin
 		        'gmail', 'connector:gmail:x', 'workspace')`)
 
 	reader := dealReader(e)
-	svc := dealstatus.NewService(e.Pool, nil, nil, nil, nil)
+	svc := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), nil, nil, nil)
 	seedCachedStanding(t, e, readerOf(reader, t), deal, mail,
 		"blocked", "Legal has not returned the contract they promised on Tuesday.")
 
@@ -116,7 +117,7 @@ func TestACachedStandingStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
 		VALUES ($1, 'email', 'Vertragsentwurf', 'die Rechtsabteilung prüft noch', now(), 'inbound',
 		        'gmail', 'connector:gmail:x', 'workspace')`)
 
-	svc := dealstatus.NewService(e.Pool, nil, nil, nil, nil)
+	svc := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), nil, nil, nil)
 	granted := dealReader(e)
 	seedCachedStanding(t, e, readerOf(granted, t), deal, mail,
 		"blocked", "Legal has not returned the contract they promised on Tuesday.")
@@ -166,7 +167,7 @@ func TestACachedStandingCitingNoMessageIsUnaffectedByAnAudience(t *testing.T) {
 		        'gmail', 'connector:gmail:x', 'participants')`)
 
 	reader := dealReader(e)
-	svc := dealstatus.NewService(e.Pool, nil, nil, nil, nil)
+	svc := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), nil, nil, nil)
 	// The standing rests on the DEAL's own dates, which every reader holding
 	// deal.read has already reached.
 	seedCachedStandingCiting(t, e, readerOf(reader, t), deal,
@@ -212,6 +213,8 @@ func seedCachedStandingCiting(
 ) {
 	t.Helper()
 	payload, err := json.Marshal(map[string]any{
+		"projection_version": dealstatus.ProjectionVersion,
+		"access":             map[string]any{},
 		"card": crmcontracts.DealStatusCard{
 			Verdict: &crmcontracts.DealStatusCardVerdict{
 				Standing: standing,
