@@ -1215,8 +1215,10 @@ export const en = {
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",
   "reporting.productReports": "Product sales",
-  "reporting.productReportsPurpose": "Opens Sales review for one product. No setup is needed, and nothing is written.",
-  "reporting.noProducts": "No live products yet. Add products under Settings to report on them.",
+  "reporting.productReportsPurpose":
+    "Opens Sales review for one product. No setup is needed, and nothing is written.",
+  "reporting.noProducts":
+    "No live products yet. Add products under Settings to report on them.",
   "reporting.actualsThrough": "Actuals through {at}",
   "reporting.periodNotStarted":
     "The period starts {at}; nothing has happened in it yet",

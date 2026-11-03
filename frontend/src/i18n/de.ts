@@ -1268,8 +1268,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",
   "reporting.productReports": "Produktumsatz",
-  "reporting.productReportsPurpose": "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
-  "reporting.noProducts": "Noch keine aktiven Produkte. Lege Produkte in den Einstellungen an, um darüber zu berichten.",
+  "reporting.productReportsPurpose":
+    "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
+  "reporting.noProducts":
+    "Noch keine aktiven Produkte. Lege Produkte in den Einstellungen an, um darüber zu berichten.",
   "reporting.actualsThrough": "Ist-Werte bis {at}",
   "reporting.periodNotStarted":
     "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",

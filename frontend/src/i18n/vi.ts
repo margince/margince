@@ -1244,8 +1244,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.software": "Chỉ phần mềm",
   "reporting.basis.implementation": "Chỉ triển khai",
   "reporting.productReports": "Doanh số sản phẩm",
-  "reporting.productReportsPurpose": "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
-  "reporting.noProducts": "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
+  "reporting.productReportsPurpose":
+    "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
+  "reporting.noProducts":
+    "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at}",
   "reporting.periodNotStarted":
     "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
