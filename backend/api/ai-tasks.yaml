@@ -1,21 +1,17 @@
-# ai-tasks.yaml — the AI task contract (spec §1.2, ai-operational-spec.md).
+# ai-tasks.yaml — the AI task contract.
 #
-# Authority relationship (ratified: this repository's AI runtime contract +
-# certification arc): THIS file is the normative authority for the AI task
-# DECLARATION — the task list, its tiers, each task's fallback ladder, execution
-# mode (interactive | background), budget-exhaustion posture (degrade | queue),
-# and (ADR-0074) whether the task ships at all, its named invocation sites, its
-# payload-capture posture, its company-context policy, and which cost-unit rule
-# prices it. The build repo's copy
-# (backend/api/ai-tasks.yaml) must match it verbatim; the build's
-# tools/gen-aitasks compiles that copy into the binary (tasks_gen.go) behind a
-# drift gate, the same mechanism crm.yaml already uses for the HTTP contract.
+# This file is the authority for the AI task DECLARATION — the task list, its
+# tiers, each task's fallback ladder, execution mode (interactive | background),
+# budget-exhaustion posture (degrade | queue), and (ADR-0074) whether the task
+# ships at all, its named invocation sites, its payload-capture posture, its
+# company-context policy, and which cost-unit rule prices it. tools/gen-aitasks
+# compiles it into the binary (tasks_gen.go) behind a drift gate, the same
+# mechanism crm.yaml uses for the HTTP contract.
 # Tier→model binding (which concrete provider/model serves local_small /
 # cheap_cloud / premium / frontier / local_large) stays a per-deployment config
 # (config/ai-routing.yaml, §1.4) — editing THAT never requires a rebuild.
-# Editing the ladders/posture below is a routing-POLICY change: it requires a
-# spec update here, the mirrored edit in the build repo, `make gen`, and a
-# rebuild — never a silent code diff.
+# Editing the ladders/posture below is a routing-POLICY change: it needs this
+# edit, `make gen`, and a rebuild — never a silent code diff.
 # Closed pairing invariant: interactive tasks use `degrade`; background tasks
 # use `queue`. Here `queue` means "return a typed budget deferral to the task's
 # existing durable carrier" — the router never creates an unowned generic job.
@@ -317,6 +313,29 @@ tasks:
     status: planned
     company_context: none
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
+
+  report_setup:
+    display_name: "Setting up a report from a description"
+    summary: "Turns a described sales initiative or custom report into a setup you check before saving."
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [initiative_setup, custom_report_setup]
+    company_context: none
+    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal."
+
+  report_interpret:
+    display_name: "Assessing a sales report"
+    summary: "Writes an assessment beside a report's leading chart, citing the figures it rests on."
+    ladder: [premium, cheap_cloud]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [sales_assessment]
+    company_context: none
+    no_payload: true
+    doc: "Read a report evaluation's measured cells, the deals behind its open pipeline and the decisions recorded at earlier reviews, and write a few cited sentences and one next decision on a candidate deal. A sentence quoting a number no cited cell carries is dropped, and so is a decision naming a deal outside the candidates. With no model the panel shows the page's deterministic summary."
 
   corpus_ask:
     display_name: "Document corpus question"
