@@ -57,12 +57,19 @@ export function BuyerRoomScreen() {
   const [credential, setCredential] = useState(() =>
     takeHashCredential(ROOM_ROUTE),
   );
+  // Every credential this tab has already spent, not only the last one. A link
+  // is single-use, so A → B → A must not send A twice. The server refuses the
+  // replay, and that refusal would displace the session B just opened.
+  const spent = useRef(new Set<string>());
   useEffect(() => {
     // watchAddress and not a raw `hashchange`: a Back or Forward that changes
-    // the path fires only `popstate`, and the router hears both.
+    // the path fires only `popstate`, and the router hears both. A link this
+    // tab already spent is dropped, since its exchange would never answer.
     return watchAddress(() => {
       const next = takeHashCredential(ROOM_ROUTE);
-      if (next) {
+      if (next && spent.current.has(next)) {
+        forgetHashCredential(ROOM_ROUTE, next);
+      } else if (next) {
         setCredential(next);
       }
     });
@@ -75,6 +82,9 @@ export function BuyerRoomScreen() {
   // the replayed mount (StrictMode) swaps the observer that ran it for one that
   // never hears the result, so isSuccess/isError would stay false for ever.
   const [refusal, setRefusal] = useState<Error | null>(null);
+  // The credential whose exchange has answered. Until the current one has, the
+  // screen shows "Opening", so a second link never shows the first room.
+  const [settled, setSettled] = useState<string | null>(null);
   const t = useT();
 
   const exchange = useMutation({
@@ -103,10 +113,6 @@ export function BuyerRoomScreen() {
   // mount unsubscribes the first observer and an option callback on an observer
   // nobody listens to never runs.
   const exchangeAsync = exchange.mutateAsync;
-  // Every credential this tab has ALREADY spent, not merely the last one. A
-  // link is single-use, so A → B → A must not send A twice: the server refuses
-  // the replay, and that refusal would displace the session B just opened.
-  const spent = useRef(new Set<string>());
   // Which credential the tab is currently exchanging. A reply for anything else
   // is a superseded link answering late and must not touch the session — two
   // links pasted in quick succession would race, and whichever answered last
@@ -134,6 +140,7 @@ export function BuyerRoomScreen() {
         awaiting.current = null;
         writeSession(issued.session_token);
         setToken(issued.session_token);
+        setSettled(credential);
       },
       (error: unknown) => {
         if (awaiting.current !== credential) {
@@ -141,6 +148,7 @@ export function BuyerRoomScreen() {
         }
         awaiting.current = null;
         setRefusal(error instanceof Error ? error : new Error(String(error)));
+        setSettled(credential);
       },
     );
   }, [credential, exchangeAsync]);
@@ -150,9 +158,9 @@ export function BuyerRoomScreen() {
     setToken(null);
   };
 
-  // "Opening" until the exchange has answered — not merely while the mutation
-  // is in flight, because the first render happens before the effect fires it.
-  if (credential && !token && !refusal) {
+  // "Opening" until this credential's exchange has answered, not merely while
+  // the mutation is in flight: the first render comes before the effect.
+  if (credential && credential !== settled) {
     return (
       <BuyerFrame>
         <EmptyState>{t("buyer.opening")}</EmptyState>

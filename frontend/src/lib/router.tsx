@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { noteHistoryEntry } from "./historydepth";
+import { entryDepth, noteHistoryEntry } from "./historydepth";
 import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
 import { hashWithParams, type UrlParams } from "./urlstate";
 // The screen union binds navigation and dispatch to the same route names.
@@ -276,16 +276,15 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
 // Notify subscribers synchronously so an app navigation cannot fetch the previous route.
 const watchers = new Set<() => void>();
 
-// The whole address (path, query and fragment) as of the last announcement.
-// The browser tells this module about a Back or Forward with two events, and
-// it fires both for a fragment-only move: `popstate` and then `hashchange`.
-// The second one finds the address it already announced and does nothing, so
-// one move is one announcement and one history entry counted.
-let lastAddress: string | undefined;
+// The entry as of the last announcement: its whole address and its depth
+// stamp. A fragment-only move fires `popstate` and then `hashchange`, and the
+// second event finds the entry already announced. The depth tells apart two
+// entries that share one address, such as two room links after the scrub.
+let lastEntry: string | undefined;
 
-function liveAddress(): string {
+function liveEntry(): string {
   const { pathname, search, hash } = globalThis.location;
-  return `${pathname}${search}${hash}`;
+  return `${pathname}${search}${hash} ${entryDepth() ?? ""}`;
 }
 
 function announce(): void {
@@ -297,7 +296,7 @@ function announce(): void {
   }
   // Read after publishRecordAddress has rewritten the path, so the event that
   // trails this move finds the rewritten address and counts as the same move.
-  lastAddress = liveAddress();
+  lastEntry = liveEntry();
   // A copy, so a watcher that unsubscribes while being told does not change the
   // set underneath the loop.
   for (const watcher of [...watchers]) {
@@ -306,7 +305,7 @@ function announce(): void {
 }
 
 function addressChanged(): void {
-  if (liveAddress() === lastAddress) {
+  if (liveEntry() === lastEntry) {
     return;
   }
   // A second link pasted into an open tab is a hash change and nothing else:
@@ -329,7 +328,7 @@ function subscribe(onChange: () => void): () => void {
     publishRecordAddress();
     // The entry the app starts on, so the first move is counted from it.
     noteHistoryEntry("start");
-    lastAddress = liveAddress();
+    lastEntry = liveEntry();
     globalThis.addEventListener("hashchange", addressChanged);
     globalThis.addEventListener("popstate", addressChanged);
   }

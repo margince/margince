@@ -309,6 +309,30 @@ describe("Back and Forward across a path change", () => {
     expect(globalThis.location.pathname).toBe(`/r/companies/${COMPANY}`);
   });
 
+  it("counts Back between two entries that share one address", () => {
+    globalThis.history.replaceState(null, "", "/#/home");
+    const told = vi.fn();
+    const stop = watchAddress(told);
+    const depthStamp = () =>
+      Reflect.get(Object(globalThis.history.state), "marginceDepth");
+    try {
+      globalThis.history.pushState(null, "", "/#/room");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+      const firstRoom: unknown = globalThis.history.state;
+      globalThis.history.pushState(null, "", "/#/room");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+      expect(depthStamp()).toMatchObject({ depth: 2 });
+
+      globalThis.history.replaceState(firstRoom, "", "/#/room");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(told).toHaveBeenCalledTimes(3);
+      expect(depthStamp()).toMatchObject({ depth: 1 });
+    } finally {
+      stop();
+    }
+  });
+
   it("announces one move once when both events arrive for it", () => {
     globalThis.history.replaceState(null, "", "/#/companies");
     const told = vi.fn();

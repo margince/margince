@@ -68,6 +68,10 @@ export function noteHistoryEntry(how: "moved" | "replaced" | "start"): void {
   seenAt[depth] = hash;
 }
 
+/** The depth stamped on the entry the browser is on, if it carries one. */
+export const entryDepth = (): number | undefined =>
+  stampOf(globalThis.history.state)?.depth;
+
 /** Whether `history.back()` lands on an earlier screen of this app. */
 export const backStaysInApp = (): boolean => (depth ?? 0) > 0;
 
