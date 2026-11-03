@@ -155,6 +155,45 @@ export const CompanyWithRing: Story = {
   },
 };
 
+/** At 390px the pane takes the phone inset, and the figures still run to its
+ *  edges. */
+export const CompanyWithRingPhone: Story = {
+  tags: ["uat-phone"],
+  render: CompanyWithRing.render,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("heading", {
+      name: "How it stands · 13 Aug",
+    });
+    const pane = canvasElement.querySelector(".standing-sheet-pane");
+    const figures = canvasElement.querySelector(".standing-sheet-figures");
+    if (!(pane instanceof HTMLElement) || !(figures instanceof HTMLElement)) {
+      throw new Error("the sheet drew no pane or no figures");
+    }
+    const style = getComputedStyle(pane);
+    const phoneInset = getComputedStyle(document.documentElement)
+      .getPropertyValue("--space-3")
+      .trim();
+    await expect(style.paddingLeft).toBe(phoneInset);
+    await expect(style.paddingRight).toBe(phoneInset);
+    const paneBox = pane.getBoundingClientRect();
+    const figuresBox = figures.getBoundingClientRect();
+    await expect(
+      Math.abs(
+        figuresBox.left -
+          paneBox.left -
+          Number.parseFloat(style.borderLeftWidth),
+      ),
+    ).toBeLessThanOrEqual(1);
+    await expect(
+      Math.abs(
+        paneBox.right -
+          Number.parseFloat(style.borderRightWidth) -
+          figuresBox.right,
+      ),
+    ).toBeLessThanOrEqual(1);
+  },
+};
+
 /** A deal: the verdict a model wrote, so the pill is indigo and counts its
  *  sources; the ladder runs under the rows. */
 export const DealWithLadder: Story = {

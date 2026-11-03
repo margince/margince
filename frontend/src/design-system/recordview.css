@@ -357,3 +357,13 @@
     justify-self: start;
   }
 }
+/* The first tab stands over the feed's first card, so the two insets move
+   together. */
+@media (max-width: 700px) {
+  .record-split-tabs {
+    padding-inline: var(--padPane);
+  }
+  .record-split-feed {
+    padding: var(--padPane);
+  }
+}

@@ -777,6 +777,15 @@
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
+/* On a phone a --space-5 inset spends a tenth of the width per pane, and nested
+   panes pay it twice. The width is PHONE_MAX_WIDTH in lib/viewport.ts. */
+@media (max-width: 700px) {
+  :root {
+    --padPane: var(--space-3);
+    --padPanel: var(--space-3);
+  }
+}
+
 /* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
   --bgPage: #0c1311;

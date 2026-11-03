@@ -45,7 +45,7 @@
 .panel-head-flat {
   align-items: baseline;
   min-height: 0;
-  padding: var(--space-5) var(--space-5) var(--space-2);
+  padding: var(--padPanel) var(--padPanel) var(--space-2);
   border-bottom: none;
 }
 /* The zone's title in the display face: the one word a reader finds a zone

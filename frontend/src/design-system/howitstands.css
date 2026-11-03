@@ -4,10 +4,11 @@
    readingtone.ts. */
 
 .standing-sheet > .standing-sheet-pane {
+  --standing-inset: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-6) var(--space-6) var(--space-5);
+  padding: var(--standing-inset) var(--standing-inset) var(--space-5);
   /* The edge glows from the same corner as the wash. A transparent border lets
      the last layer show through it, and the middle layer keeps the ground. */
   border-color: transparent;
@@ -21,6 +22,12 @@
     );
   background-clip: padding-box, padding-box, border-box;
   background-origin: padding-box, padding-box, border-box;
+}
+@media (max-width: 700px) {
+  .standing-sheet > .standing-sheet-pane {
+    --standing-inset: var(--padPane);
+    padding-block-end: var(--padPane);
+  }
 }
 .standing-sheet-head {
   display: flex;
@@ -112,5 +119,5 @@
   padding-bottom: 0;
 }
 .standing-sheet-figures {
-  margin-inline: calc(-1 * var(--space-6));
+  margin-inline: calc(-1 * var(--standing-inset));
 }

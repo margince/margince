@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
+import { expect, within } from "storybook/test";
 import { Badge, Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Panel, PanelBody } from "./panel";
@@ -166,4 +167,27 @@ export const Narrow: Story = {
     ),
   ],
   args: { ...Default.args },
+};
+
+// At 390px both cards take the phone inset, and the first tab still stands
+// over the feed's first card.
+export const Phone: Story = {
+  tags: ["uat-phone"],
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("The open tab's feed.");
+    const phoneInset = getComputedStyle(document.documentElement)
+      .getPropertyValue("--space-3")
+      .trim();
+    for (const part of [
+      ".record-split-details",
+      ".record-split-tabs",
+      ".record-split-feed",
+    ]) {
+      const box = canvasElement.querySelector(part);
+      if (!(box instanceof HTMLElement)) throw new Error(`no ${part}`);
+      await expect(getComputedStyle(box).paddingLeft, part).toBe(phoneInset);
+      await expect(getComputedStyle(box).paddingRight, part).toBe(phoneInset);
+    }
+  },
 };
