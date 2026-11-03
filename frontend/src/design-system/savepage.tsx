@@ -26,6 +26,8 @@ export type SaveDraft = Readonly<{
   invalid?: boolean;
   /** A default shown as the answer: saveable, yet leaving asks nothing. */
   offered?: boolean;
+  /** Names the offered value, so a Discard sets aside that value and no other. */
+  offer?: string;
   /** Writes the draft; a rejection keeps it and is shown on the bar. */
   save: () => Promise<unknown>;
   /** Puts the card back to what was last saved. */
@@ -169,12 +171,13 @@ export function useSaveDraft(draft: SaveDraft): boolean {
   const mark = registry?.mark;
   const release = registry?.release;
   const invalid = draft.invalid ?? false;
-  // Discard puts an offer aside until it ends and is offered once more.
-  const [declined, setDeclined] = useState(false);
-  if (declined && !draft.offered) {
-    setDeclined(false);
+  // Discard puts an offer aside until it ends, or the card offers another value.
+  const offer = draft.offer ?? "";
+  const [declined, setDeclined] = useState<string | null>(null);
+  if (declined !== null && !draft.offered) {
+    setDeclined(null);
   }
-  const offered = (draft.offered ?? false) && !declined;
+  const offered = (draft.offered ?? false) && declined !== offer;
 
   // Every render, so the bar's Save always calls the latest closure.
   useEffect(() => {
@@ -182,7 +185,7 @@ export function useSaveDraft(draft: SaveDraft): boolean {
       ...draft,
       offered,
       discard: () => {
-        if (offered) setDeclined(true);
+        if (offered) setDeclined(offer);
         draft.discard();
       },
     });

@@ -126,6 +126,7 @@ function useCalendarDraft(
     dirty: dirty && ready,
     // The live calendar the card picked by itself: shown as the answer, not an edit.
     offered: ready && provider !== "" && provider !== baseline.provider,
+    offer: provider,
     // The card says why beside the choice.
     invalid: !selected || !writable,
     save: async () => {

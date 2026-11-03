@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { focusManager } from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -384,6 +385,31 @@ it("discards the only connected calendar offered to a profile never saved", asyn
   await barDiscard(user);
   await waitFor(() => expect(saveBar()).toBeNull());
   expect(server.profileWrites).toEqual([]);
+});
+
+it("offers the next sole calendar after the one discarded is swapped for it", async () => {
+  const user = userEvent.setup();
+  let connected = bookingConnection;
+  const server = mount(
+    {},
+    { "GET /connectors": () => jsonResponse({ data: [connected] }) },
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+
+  connected = {
+    ...bookingConnection,
+    id: "outlook",
+    provider: "graphcal",
+    scopes: ["Calendars.ReadWrite"],
+  };
+  // The reader comes back to the tab, and the connections are read again.
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  focusManager.setFocused(undefined);
+  await user.click(await enabledSave());
+  await waitFor(() => expect(server.profileWrites).toHaveLength(1));
+  expect(server.profileWrites[0]).toMatchObject({ provider: "graphcal" });
 });
 
 it("discards never-chosen hours offered through the bar", async () => {
