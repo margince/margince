@@ -117,7 +117,7 @@ func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
 		t.Errorf("listing without company read = %v, want permission denied", err)
 	}
 	noDeal := e.withoutGrant(e.Rep1, e.Team1, "deal")
-	if _, err := e.Deals.CountOpenSuggestions(noDeal); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Deals.CountOpenSuggestions(noDeal, deals.SuggestionQuery{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("counting without deal read = %v, want permission denied", err)
 	}
 	if _, err := e.Deals.GetSuggestion(noDeal, suggestion.ID); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -621,5 +621,61 @@ func TestTheOwnerDialsNarrowTheSuggestionsToTheCompanyOwner(t *testing.T) {
 	_, _, err := e.Deals.ListSuggestions(e.signalReader(), deals.SuggestionQuery{OwnerID: &rep1, Unassigned: &unowned})
 	if _, ok := errors.AsType[*storekit.PredicateError](err); !ok {
 		t.Errorf("an owner and the unassigned queue at once = %v, want the conflicting filters refused", err)
+	}
+}
+
+// The Worklist's owner scope narrows the count with the list, in the store and
+// through the Worklist's binding to it. A scope never counts a suggestion its
+// page could not show.
+func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
+	e := setupScout(t)
+	mine := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
+	theirs := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)
+	nobodys := e.unownedCompany(t, "Fabrikam Freight")
+	for _, company := range []ids.UUID{mine, theirs, nobodys} {
+		buyer := e.employee(t, "Dana Buyer", company)
+		meeting := e.meeting(e.Admin(), t, "Scoping workshop", &buyer, e.daysAgo(3))
+		if raised, err := e.record(e.system(), t, e.meetingDraft(t, company, meeting)); err != nil || !raised {
+			t.Fatalf("the suggestion for %v = %v, %v; want it raised", company, raised, err)
+		}
+	}
+	for name, tc := range map[string]struct {
+		owners *storekit.OwnerSet
+		want   []ids.UUID
+	}{
+		"one owner":   {&storekit.OwnerSet{IDs: []ids.UUID{e.Rep1}}, []ids.UUID{mine}},
+		"unassigned":  {&storekit.OwnerSet{Unassigned: true}, []ids.UUID{nobodys}},
+		"nobody":      {&storekit.OwnerSet{}, nil},
+		"every owner": {nil, []ids.UUID{mine, theirs, nobodys}},
+	} {
+		query := deals.SuggestionQuery{ScopeOwners: tc.owners}
+		got, _, err := e.Deals.ListSuggestions(e.signalReader(), query)
+		if err != nil {
+			t.Fatalf("listing for %s: %v", name, err)
+		}
+		open, err := e.Deals.CountOpenSuggestions(e.signalReader(), query)
+		if err != nil {
+			t.Fatalf("counting for %s: %v", name, err)
+		}
+		companies := map[ids.UUID]bool{}
+		for _, suggestion := range got {
+			companies[suggestion.CompanyID] = true
+		}
+		if open != len(got) || len(got) != len(tc.want) {
+			t.Errorf("%s: listed %d and counted %d, want %d", name, len(got), open, len(tc.want))
+		}
+		seam := attentionDealSuggestions{store: e.Deals}
+		page, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
+		if err != nil {
+			t.Fatalf("the Worklist listing for %s: %v", name, err)
+		}
+		if seamOpen, err := seam.CountOpen(e.signalReader(), tc.owners); err != nil || seamOpen != len(tc.want) || len(page) != len(tc.want) {
+			t.Errorf("%s: the Worklist listed %d and counted %d (err %v), want %d", name, len(page), seamOpen, err, len(tc.want))
+		}
+		for _, company := range tc.want {
+			if !companies[company] {
+				t.Errorf("%s: the suggestion for %v is missing from %v", name, company, got)
+			}
+		}
 	}
 }

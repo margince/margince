@@ -52,5 +52,14 @@ func (s *Store) PreviewInvitation(ctx context.Context, host ids.UserID, in crmco
 	if profile.Provider == "" || profile.CalendarId == "" {
 		return connector.CalendarAppointment{}, apperrors.ErrInvalidArgument
 	}
-	return invitationAppointment(profile, in), nil
+	appointment := invitationAppointment(profile, in)
+	if s.calendar == nil {
+		return appointment, nil
+	}
+	roster, err := s.invitationRoster(ctx, host, in, invitationIntent{})
+	if err != nil {
+		return connector.CalendarAppointment{}, err
+	}
+	appointment.Attendees, appointment.Roster = rosterAddresses(roster), roster
+	return appointment, nil
 }

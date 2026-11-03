@@ -756,7 +756,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## offer
 
-26 columns · primary key `(id)` · referenced by 3 foreign keys
+27 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -770,7 +770,8 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at send (RT-PR-C2). |
 | `gross_minor` | `bigint`, default `0` | yes | net + tax; derived, never client-set. |
 | `intro_text` | `text` |  |  |
-| `issuer_snapshot` | `jsonb` |  | Seller legal block captured at send time. |
+| `issuer_snapshot` | `jsonb` |  | Seller legal block captured at send time, so a later change to the legal entity leaves the sent document as it was. |
+| `legal_entity_id` | `uuid` |  | The legal entity that issues the offer: its name, address, VAT ID, bank details and logo are printed on the PDF. |
 | `net_minor` | `bigint`, default `0` | yes | Σ line nets; derived, never client-set. |
 | `offer_number` | `text` | yes | Human-facing Angebot number, minted server-side, unique per workspace (with revision). |
 | `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer. |
@@ -793,6 +794,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|
 | `buyer_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `deal_id` | `deal` | the parent cannot be deleted while this row points at it |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `template_id` | `offer_template` | deleting the parent keeps this row and clears the link |
 
 **Rules**
@@ -812,6 +814,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Indexes**
 
 - `idx_offer_deal`: `btree (deal_id, revision DESC) WHERE (archived_at IS NULL)`
+- `idx_offer_legal_entity`: `btree (legal_entity_id) WHERE (legal_entity_id IS NOT NULL)`
 - `idx_offer_status`: `btree (status) WHERE (archived_at IS NULL)`
 - `idx_offer_template_fk`: `btree (template_id) WHERE (template_id IS NOT NULL)`
 - `offer_deal_id_id_key`: `unique, btree (deal_id, id)`

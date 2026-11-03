@@ -205,7 +205,7 @@ func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (stri
 		rows, err = tx.Query(ctx, `
 			SELECT DISTINCT p.id FROM contact_email pe
 			JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-			WHERE lower(pe.email) = lower($1) AND pe.archived_at IS NULL
+			WHERE `+sameAddressSQL("pe.email", "$1")+` AND pe.archived_at IS NULL
 			LIMIT 2`, r.Email)
 	}
 	if err != nil {
@@ -261,7 +261,7 @@ func grantedForLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpo
 		  SELECT 1
 		  FROM lead l
 		  JOIN contact_consent pc ON pc.lead_id = l.id AND pc.purpose_id = $2
-		  WHERE lower(l.email) = lower($1) AND l.archived_at IS NULL
+		  WHERE `+sameAddressSQL("l.email", "$1")+` AND l.archived_at IS NULL
 		    AND pc.state = 'granted'
 		    AND (NOT $3::boolean OR EXISTS (
 		      SELECT 1 FROM consent_event ce

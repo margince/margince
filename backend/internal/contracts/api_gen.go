@@ -10459,6 +10459,45 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DomainQuestionContextSiteRead.
+const (
+	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
+	DomainQuestionContextSiteReadUnread DomainQuestionContextSiteRead = "unread"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionContextSiteRead enum.
+func (e DomainQuestionContextSiteRead) Valid() bool {
+	switch e {
+	case DomainQuestionContextSiteReadRead:
+		return true
+	case DomainQuestionContextSiteReadUnread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DomainQuestionSuggestionBasis.
+const (
+	DomainQuestionSuggestionBasisContactEmployer DomainQuestionSuggestionBasis = "contact_employer"
+	DomainQuestionSuggestionBasisNameTwin        DomainQuestionSuggestionBasis = "name_twin"
+	DomainQuestionSuggestionBasisRedirectTarget  DomainQuestionSuggestionBasis = "redirect_target"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionSuggestionBasis enum.
+func (e DomainQuestionSuggestionBasis) Valid() bool {
+	switch e {
+	case DomainQuestionSuggestionBasisContactEmployer:
+		return true
+	case DomainQuestionSuggestionBasisNameTwin:
+		return true
+	case DomainQuestionSuggestionBasisRedirectTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -15346,6 +15385,33 @@ func (e MeetingPreparationState) Valid() bool {
 	case MeetingPreparationStateNeedsReview:
 		return true
 	case MeetingPreparationStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingRecordLinkEntityType.
+const (
+	MeetingRecordLinkEntityTypeCompany MeetingRecordLinkEntityType = "company"
+	MeetingRecordLinkEntityTypeContact MeetingRecordLinkEntityType = "contact"
+	MeetingRecordLinkEntityTypeDeal    MeetingRecordLinkEntityType = "deal"
+	MeetingRecordLinkEntityTypeLead    MeetingRecordLinkEntityType = "lead"
+	MeetingRecordLinkEntityTypeProject MeetingRecordLinkEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MeetingRecordLinkEntityType enum.
+func (e MeetingRecordLinkEntityType) Valid() bool {
+	switch e {
+	case MeetingRecordLinkEntityTypeCompany:
+		return true
+	case MeetingRecordLinkEntityTypeContact:
+		return true
+	case MeetingRecordLinkEntityTypeDeal:
+		return true
+	case MeetingRecordLinkEntityTypeLead:
+		return true
+	case MeetingRecordLinkEntityTypeProject:
 		return true
 	default:
 		return false
@@ -25831,33 +25897,6 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	}
 }
 
-// Defines values for BookMeetingJSONBodyLinksEntityType.
-const (
-	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
-	BookMeetingJSONBodyLinksEntityTypeContact BookMeetingJSONBodyLinksEntityType = "contact"
-	BookMeetingJSONBodyLinksEntityTypeDeal    BookMeetingJSONBodyLinksEntityType = "deal"
-	BookMeetingJSONBodyLinksEntityTypeLead    BookMeetingJSONBodyLinksEntityType = "lead"
-	BookMeetingJSONBodyLinksEntityTypeProject BookMeetingJSONBodyLinksEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the BookMeetingJSONBodyLinksEntityType enum.
-func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
-	switch e {
-	case BookMeetingJSONBodyLinksEntityTypeCompany:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeContact:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeDeal:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeLead:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetCaptureSenderDecisionJSONBodyDecision.
 const (
 	SetCaptureSenderDecisionJSONBodyDecisionBusiness SetCaptureSenderDecisionJSONBodyDecision = "business"
@@ -31569,6 +31608,18 @@ type AssuranceFreshness struct {
 // AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
 
+// AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+type AssuranceReviewDeliveries struct {
+	// Delivered Reviews that have their task, including a task somebody already completed while the review stays open.
+	Delivered int `json:"delivered"`
+
+	// Failed Reviews whose task could not be delivered after every retry.
+	Failed int `json:"failed"`
+
+	// Pending Reviews whose task is queued or retrying.
+	Pending int `json:"pending"`
+}
+
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
 	Status AssuranceRunAcceptedStatus `json:"status"`
@@ -32389,6 +32440,11 @@ type AttentionItem struct {
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -32482,7 +32538,7 @@ type AttentionItem struct {
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
 
-	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
@@ -41116,10 +41172,11 @@ type CreateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -41154,11 +41211,15 @@ type CreateLossReasonRequest struct {
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
-	BuyerCompanyId *openapi_types.UUID   `json:"buyer_company_id,omitempty"`
-	Currency       string                `json:"currency"`
-	IntroText      *string               `json:"intro_text,omitempty"`
-	LineItems      *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source         string                `json:"source"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+	Currency       string              `json:"currency"`
+	IntroText      *string             `json:"intro_text,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
+	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
+	Source        string                `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -43106,11 +43167,16 @@ type DisqualifyLeadRequest struct {
 
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt      time.Time  `json:"asked_at"`
-	Deferred     bool       `json:"deferred"`
-	Domain       string     `json:"domain"`
-	EffectiveUrl *string    `json:"effective_url,omitempty"`
-	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+	AskedAt  time.Time `json:"asked_at"`
+	Deferred bool      `json:"deferred"`
+	Domain   string    `json:"domain"`
+
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+	EffectiveUrl  *string                `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
 	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 	Note          *string   `json:"note,omitempty"`
@@ -43118,11 +43184,70 @@ type DomainQuestion struct {
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
 }
 
+// DomainQuestionContact defines model for DomainQuestionContact.
+type DomainQuestionContact struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// DomainQuestionContext Whose mail raised a company question, and which existing company the evidence points
+// at. Every contact and company named here passed the reader's own row scope; a sender the
+// reader may not see is counted in `contact_count` and never named.
+type DomainQuestionContext struct {
+	// ContactCount How many contacts sent the mail behind the question, seen or not.
+	ContactCount int `json:"contact_count"`
+
+	// Contacts Up to three senders of the question's mail the reader may see, newest mail first.
+	Contacts []DomainQuestionContact `json:"contacts"`
+
+	// HiddenSenders True when contacts sent the mail but the reader may see none of them.
+	HiddenSenders bool `json:"hidden_senders"`
+
+	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
+	// live contact with an address on the domain, less workspace seats and anyone who already
+	// holds a primary employment. Those keep the employer they have.
+	LinkedContactCount int `json:"linked_contact_count"`
+
+	// OriginActivityId The newest mail behind the question, which the reader may read.
+	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
+
+	// SenderAddress The From address of the newest mail behind the question, which the reader may read.
+	SenderAddress *string `json:"sender_address,omitempty"`
+
+	// SiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+	SiteRead *DomainQuestionContextSiteRead `json:"site_read,omitempty"`
+
+	// SuggestedCompany An existing company the evidence points at. Sent only when exactly one live company the
+	// reader may see qualifies. Nothing is linked until the reader confirms it with
+	// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+	SuggestedCompany *DomainQuestionSuggestion `json:"suggested_company,omitempty"`
+}
+
+// DomainQuestionContextSiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+type DomainQuestionContextSiteRead string
+
 // DomainQuestionPage defines model for DomainQuestionPage.
 type DomainQuestionPage struct {
 	Data []DomainQuestion `json:"data"`
 	Page PageInfo         `json:"page"`
 }
+
+// DomainQuestionSuggestion An existing company the evidence points at. Sent only when exactly one live company the
+// reader may see qualifies. Nothing is linked until the reader confirms it with
+// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+type DomainQuestionSuggestion struct {
+	// Basis - `name_twin`: an existing company has exactly the name the site states.
+	// - `redirect_target`: the site redirects to a domain this company already owns.
+	// - `contact_employer`: a sender already has this company as their current employer.
+	Basis DomainQuestionSuggestionBasis `json:"basis"`
+	Id    openapi_types.UUID            `json:"id"`
+	Name  string                        `json:"name"`
+}
+
+// DomainQuestionSuggestionBasis - `name_twin`: an existing company has exactly the name the site states.
+// - `redirect_target`: the site redirects to a domain this company already owns.
+// - `contact_employer`: a sender already has this company as their current employer.
+type DomainQuestionSuggestionBasis string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
@@ -43428,8 +43553,9 @@ type EmailSignature struct {
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
-	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
+	// workspace's. Every send this member makes then signs with that template, filled in
+	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -43464,8 +43590,10 @@ type EmailSignatureTemplate struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+	// sender works for, sized for mail, in the message itself; the default entity's logo is
+	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
 	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
@@ -44329,7 +44457,10 @@ type ForecastAssurance struct {
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
-	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// ReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+	ReviewDeliveries AssuranceReviewDeliveries `json:"review_deliveries"`
+	RunId            openapi_types.UUID        `json:"run_id"`
 
 	// Sources Every source the run tried, and how far it reached into each.
 	Sources []ForecastAssuranceSource `json:"sources"`
@@ -48105,8 +48236,14 @@ type LegalEntity struct {
 	RegisterCourt *string `json:"register_court,omitempty"`
 
 	// RegisterNumber The entity's commercial register number.
-	RegisterNumber *string   `json:"register_number,omitempty"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
+	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+	// workspace's template. Always null on the default entity, which signs with the
+	// workspace's template (`/email-signature-template`).
+	SignatureTemplate *string   `json:"signature_template,omitempty"`
+	UpdatedAt         time.Time `json:"updated_at"`
 
 	// VatId The entity's VAT identification number.
 	VatId   *string `json:"vat_id,omitempty"`
@@ -49614,12 +49751,21 @@ type MeetingInvitationChangeAction string
 // MeetingInvitationRequest defines model for MeetingInvitationRequest.
 type MeetingInvitationRequest struct {
 	AttendeeEmail openapi_types.Email `json:"attendee_email"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	Description   string              `json:"description"`
-	End           time.Time           `json:"end"`
-	Location      string              `json:"location"`
-	Start         time.Time           `json:"start"`
-	Subject       string              `json:"subject"`
+
+	// AttendeeEmails Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+	// Each address is resolved to a contact, a colleague or a lead the host can see; an
+	// address matching nobody is invited as named by the host. Contacts and leads must hold
+	// transactional consent; colleagues and host-named addresses are not asked.
+	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
+	ContactId      openapi_types.UUID     `json:"contact_id"`
+	Description    string                 `json:"description"`
+	End            time.Time              `json:"end"`
+
+	// Links Further records to file the meeting on, beside the invitee.
+	Links    *[]MeetingRecordLink `json:"links,omitempty"`
+	Location string               `json:"location"`
+	Start    time.Time            `json:"start"`
+	Subject  string               `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -49924,6 +50070,15 @@ type MeetingReadyRequest struct {
 	// undo sends the revision it confirmed, and takes back only that confirmation.
 	PreparationRevision string `json:"preparation_revision"`
 }
+
+// MeetingRecordLink defines model for MeetingRecordLink.
+type MeetingRecordLink struct {
+	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
+}
+
+// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
@@ -50819,9 +50974,20 @@ type Offer struct {
 	Id         openapi_types.UUID `json:"id"`
 	IntroText  *string            `json:"intro_text,omitempty"`
 
-	// IssuerSnapshot Seller legal block captured at send time.
+	// IssuerSnapshot Seller legal block captured at send time, so a later change to the legal entity
+	// leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+	// document prints), `base_currency`, and, on an offer sent since offers name their
+	// legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+	// `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+	// `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
-	LineItems      *[]OfferLineItem        `json:"line_items,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
+	// logo are printed on the PDF. Null on an offer created before offers named one, which
+	// is issued by the default entity.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
 	// NetMinor Σ line nets; derived, never client-set.
 	NetMinor *int64 `json:"net_minor,omitempty"`
@@ -59982,10 +60148,11 @@ type UpdateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.
@@ -60064,11 +60231,14 @@ type UpdateOfferRequest struct {
 	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
 	// Changing the currency on a draft with no priced lines is free, and re-sending the
 	// currency the offer already holds is not a change.
-	Currency   *string             `json:"currency,omitempty"`
-	IntroText  *string             `json:"intro_text,omitempty"`
-	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
-	TermsText  *string             `json:"terms_text,omitempty"`
-	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
+	Currency  *string `json:"currency,omitempty"`
+	IntroText *string `json:"intro_text,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	TemplateId    *openapi_types.UUID `json:"template_id,omitempty"`
+	TermsText     *string             `json:"terms_text,omitempty"`
+	ValidUntil    *openapi_types.Date `json:"valid_until,omitempty"`
 }
 
 // UpdateOfferTemplateRequest Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
@@ -62782,6 +62952,11 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -64991,10 +65166,12 @@ type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
-	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
-	// build emails these addresses or adds them to a calendar event, and the
-	// created activity does not carry them either. Supply them for the caller's
-	// own record of intent, and tell the attendee yourself.
+	// AttendeeEmails Who the meeting is with. Every address is an attendee on the queued calendar
+	// event. Each address is resolved to a contact, a
+	// colleague or a lead the host can see; an address matching nobody is invited as
+	// named by the host. Contacts and leads must hold transactional consent;
+	// colleagues and host-named addresses are not asked. At most 25 attendees in
+	// total.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -65008,14 +65185,11 @@ type BookMeetingJSONBody struct {
 	// required: a meeting belonging to no record appears on no timeline and is one
 	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
-	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-	// before it stages.
-	Links []struct {
-		EntityId   openapi_types.UUID                 `json:"entity_id"`
-		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`
-	} `json:"links"`
-	Start   time.Time `json:"start"`
-	Subject *string   `json:"subject,omitempty"`
+	// so the list is bounded at 25. The first `contact` link (else the first `lead`
+	// link) is the invitee the meeting is filed on.
+	Links   []MeetingRecordLink `json:"links"`
+	Start   time.Time           `json:"start"`
+	Subject *string             `json:"subject,omitempty"`
 }
 
 // BookMeetingParams defines parameters for BookMeeting.
@@ -65040,18 +65214,7 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
-	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
-	// not yet used, and within 15 minutes of the decision. Anything else is refused with
-	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-	// human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
-
-// BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
-type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
@@ -65153,6 +65316,9 @@ type ListDomainQuestionsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Domain Return only the question about this domain; normalized to its registrable form.
+	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 }
 
 // KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
@@ -80536,6 +80702,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["legal_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.LegalEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_entity_id': %w", err)
+		}
+		delete(object, "legal_entity_id")
+	}
+
 	if raw, found := object["line_items"]; found {
 		err = json.Unmarshal(raw, &a.LineItems)
 		if err != nil {
@@ -80778,6 +80952,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		object["issuer_snapshot"], err = json.Marshal(a.IssuerSnapshot)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'issuer_snapshot': %w", err)
+		}
+	}
+
+	if a.LegalEntityId != nil {
+		object["legal_entity_id"], err = json.Marshal(a.LegalEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_entity_id': %w", err)
 		}
 	}
 
@@ -84861,7 +85042,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -88464,7 +88645,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot and queue its calendar invitation.
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -101863,8 +102044,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101890,25 +102069,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -102748,6 +102908,19 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "domain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "domain", r.URL.Query(), &params.Domain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "domain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
 		}
 		return
 	}

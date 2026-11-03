@@ -7227,18 +7227,26 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Records the meeting on the timeline. No invite is sent. Use the explicit
-         *     scheduling invitation command to create an event and notify the attendee.
+         * Book a meeting at a chosen slot and queue its calendar invitation.
+         * @description Reserves the slot and queues a calendar invitation on the host's connected calendar,
+         *     with every attendee on the one event; the calendar provider delivers it. Inspect
+         *     `invitation_status` on the returned activity: delivery is asynchronous, so a 201
+         *     means queued, not delivered.
          *
-         *     It RUNS DIRECTLY (ADR-0055), on the
-         *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
-         *     the same check the app applies. An installation that wants bookings confirmed sets a
-         *     tier floor on `book_meeting`. On success a
-         *     `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
-         *     `Idempotency-Key`.
-         *     A link that names a record the caller cannot read answers 422 naming `links`, the same for a
-         *     missing record and for one hidden by row scope.
+         *     **Behaviour change:** a booking must name who it is with. Supply at least one
+         *     `contact` or `lead` link that carries an email address, or an `attendee_emails` address
+         *     that resolves to a contact the host can see. Otherwise the request answers 422
+         *     `invitee_required`; to block time on your own calendar without an invitee, log a
+         *     `meeting` through `POST /activities`.
+         *     The host also needs a connected, writable calendar and a booking profile, the same
+         *     as `createMeetingInvitation`.
+         *
+         *     Booking onto ANOTHER host's calendar takes admin. On success a `meeting` `activity`
+         *     is logged and linked to the supplied entities. Idempotent on `Idempotency-Key`.
+         *     A link that names a record the caller cannot read answers 422 naming `links`, the
+         *     same for a missing record and for one hidden by row scope. An agent cannot call this
+         *     operation; it uses the `invite_meeting` tool, which stages the full recipient list
+         *     for approval.
          */
         post: operations["bookMeeting"];
         delete?: never;
@@ -7965,8 +7973,10 @@ export interface paths {
         /**
          * The workspace's signature template.
          * @description The layout every member's mail signs with when it is set, filled in with each member's
-         *     own name, title and phone. Read by a seat that may read installation settings; changed
-         *     by admin/ops. Governed by the `installation_settings` RBAC object.
+         *     own name, title and phone. A member assigned to a legal entity that has its own
+         *     `signature_template` signs with that one instead. Read by a seat that may read
+         *     installation settings; changed by admin/ops. Governed by the `installation_settings`
+         *     RBAC object.
          */
         get: operations["getEmailSignatureTemplate"];
         /** Set the workspace's signature template (admin/ops). */
@@ -11343,7 +11353,9 @@ export interface paths {
          *
          *     On the default entity, the fields it reads from the company profile are refused as
          *     422 `legal_entity_field_on_company_form`: change them on the company form instead.
-         *     Its `country`, `default_language`, bank details and `imprint` are its own.
+         *     Its `signature_template` is refused as 422 `legal_entity_field_on_installation`: it
+         *     signs with the workspace's template (`/email-signature-template`). Its `country`,
+         *     `default_language`, bank details and `imprint` are its own.
          *
          *     An archived entity is refused as 404.
          */
@@ -14283,6 +14295,9 @@ export interface paths {
         /**
          * Review the calling reader’s undecided domains.
          * @description Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+         *
+         *     With `domain`, the page holds that one question. A domain the reader holds no open
+         *     question about answers `404`, so the reply does not say whether a colleague holds one.
          */
         get: operations["listDomainQuestions"];
         put?: never;
@@ -25662,6 +25677,61 @@ export interface components {
             redirect_chain?: string[];
             /** @description The site triage's own sentence on a `vendor_verdict` question, in the workspace language. */
             note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
+        };
+        /**
+         * @description Whose mail raised a company question, and which existing company the evidence points
+         *     at. Every contact and company named here passed the reader's own row scope; a sender the
+         *     reader may not see is counted in `contact_count` and never named.
+         */
+        DomainQuestionContext: {
+            /** @description Up to three senders of the question's mail the reader may see, newest mail first. */
+            contacts: components["schemas"]["DomainQuestionContact"][];
+            /** @description How many contacts sent the mail behind the question, seen or not. */
+            contact_count: number;
+            /** @description True when contacts sent the mail but the reader may see none of them. */
+            hidden_senders: boolean;
+            /**
+             * @description How many contacts the reader may see that confirming a company would employ there: every
+             *     live contact with an address on the domain, less workspace seats and anyone who already
+             *     holds a primary employment. Those keep the employer they have.
+             */
+            linked_contact_count: number;
+            /** @description The From address of the newest mail behind the question, which the reader may read. */
+            sender_address?: string;
+            /**
+             * Format: uuid
+             * @description The newest mail behind the question, which the reader may read.
+             */
+            origin_activity_id?: string;
+            suggested_company?: components["schemas"]["DomainQuestionSuggestion"];
+            /**
+             * @description Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+             * @enum {string}
+             */
+            site_read?: "read" | "unread";
+        };
+        DomainQuestionContact: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /**
+         * @description An existing company the evidence points at. Sent only when exactly one live company the
+         *     reader may see qualifies. Nothing is linked until the reader confirms it with
+         *     `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+         */
+        DomainQuestionSuggestion: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * @description - `name_twin`: an existing company has exactly the name the site states.
+             *     - `redirect_target`: the site redirects to a domain this company already owns.
+             *     - `contact_employer`: a sender already has this company as their current employer.
+             * @enum {string}
+             */
+            basis: "name_twin" | "redirect_target" | "contact_employer";
         };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
@@ -34498,8 +34568,9 @@ export interface components {
             /** @description The member's phone number, filled into the workspace template's `{phone}`. */
             phone: string;
             /**
-             * @description The workspace has a signature template. Every send this member makes then signs
-             *     with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+             * @description The member's mail has a signature template: their legal entity's own, or else the
+             *     workspace's. Every send this member makes then signs with that template, filled in
+             *     with their name, title and phone, instead of `body`, unless effective personal `html` is set.
              *     An agent's send carries no sign-off.
              */
             template_active: boolean;
@@ -34510,8 +34581,10 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-             *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-             *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+             *     `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+             *     sender works for, sized for mail, in the message itself; the default entity's logo is
+             *     the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
              *     and spans with a colour and a pixel size, and drops everything else. Empty means
              *     none: each member uses personal HTML, plain text or the closing line.
              */
@@ -37781,6 +37854,21 @@ export interface components {
             description: string;
             /** @description Add a video call link from the connected calendar. Absent follows the host's profile setting. */
             video_call?: boolean;
+            /**
+             * @description Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+             *     Each address is resolved to a contact, a colleague or a lead the host can see; an
+             *     address matching nobody is invited as named by the host. Contacts and leads must hold
+             *     transactional consent; colleagues and host-named addresses are not asked.
+             */
+            attendee_emails?: string[];
+            /** @description Further records to file the meeting on, beside the invitee. */
+            links?: components["schemas"]["MeetingRecordLink"][];
+        };
+        MeetingRecordLink: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
         };
         MeetingAvailability: {
             slots: {
@@ -43934,6 +44022,16 @@ export interface components {
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
             freshness: components["schemas"]["AssuranceFreshness"];
+            review_deliveries: components["schemas"]["AssuranceReviewDeliveries"];
+        };
+        /** @description The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check. */
+        AssuranceReviewDeliveries: {
+            /** @description Reviews whose task is queued or retrying. */
+            pending: number;
+            /** @description Reviews whose task could not be delivered after every retry. */
+            failed: number;
+            /** @description Reviews that have their task, including a task somebody already completed while the review stays open. */
+            delivered: number;
         };
         /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
         AssuranceFreshness: {
@@ -46454,6 +46552,13 @@ export interface components {
             bic?: string | null;
             /** @description The legal notice the entity prints, up to 4000 characters. */
             imprint?: string | null;
+            /**
+             * @description The mail signature layout of a sender assigned to this entity, with the placeholders
+             *     of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+             *     workspace's template. Always null on the default entity, which signs with the
+             *     workspace's template (`/email-signature-template`).
+             */
+            signature_template?: string | null;
             offering?: components["schemas"]["LegalEntityOffering"];
             /** @description Where the entity's logo is streamed from. Null when it has none. */
             logo_url?: string | null;
@@ -46508,6 +46613,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            signature_template?: string;
             offering?: components["schemas"]["LegalEntityOffering"];
         };
         /** @description A field left out keeps its value; a field sent as an empty string is cleared. */
@@ -46524,6 +46630,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            signature_template?: string;
             offering?: components["schemas"]["LegalEntityOffering"];
         };
         LegalEntityMember: {
@@ -50638,10 +50745,25 @@ export interface components {
             readonly buyer_snapshot?: {
                 [key: string]: unknown;
             } | null;
-            /** @description Seller legal block captured at send time. */
+            /**
+             * @description Seller legal block captured at send time, so a later change to the legal entity
+             *     leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+             *     document prints), `base_currency`, and, on an offer sent since offers name their
+             *     legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+             *     `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+             *     `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+             *     the entity has no value for is absent.
+             */
             readonly issuer_snapshot?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer: its name, address, VAT ID, bank details and
+             *     logo are printed on the PDF. Null on an offer created before offers named one, which
+             *     is issued by the default entity.
+             */
+            readonly legal_entity_id?: string | null;
             /** Format: date */
             valid_until?: string | null;
             intro_text?: string | null;
@@ -50797,6 +50919,12 @@ export interface components {
              * @description Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
              */
             template_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer. Defaults to the entity the author works for;
+             *     for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+             */
+            legal_entity_id?: string;
             line_items?: components["schemas"]["OfferLineItemInput"][] | null;
             source: string;
         };
@@ -50819,6 +50947,11 @@ export interface components {
             template_id?: string | null;
             intro_text?: string | null;
             terms_text?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+             */
+            legal_entity_id?: string;
         };
         RejectOfferRequest: {
             /** @description Optional buyer-given decline reason (rides offer.rejected). */
@@ -52502,13 +52635,14 @@ export interface components {
             source_record?: components["schemas"]["AttentionSubject"];
             /**
              * Format: uuid
-             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             * @description The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
              */
             readonly requested_decider_id?: string;
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -54125,6 +54259,7 @@ export interface components {
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -65821,7 +65956,12 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -65917,7 +66057,12 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -66279,7 +66424,12 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -67128,15 +67278,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
-                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
-                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
-                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-                 *     human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path?: never;
             cookie?: never;
@@ -67152,10 +67293,12 @@ export interface operations {
                     end: string;
                     subject?: string;
                     /**
-                     * @description Who the meeting is with. **Accepted and not delivered to**: nothing in this
-                     *     build emails these addresses or adds them to a calendar event, and the
-                     *     created activity does not carry them either. Supply them for the caller's
-                     *     own record of intent, and tell the attendee yourself.
+                     * @description Who the meeting is with. Every address is an attendee on the queued calendar
+                     *     event. Each address is resolved to a contact, a
+                     *     colleague or a lead the host can see; an address matching nobody is invited as
+                     *     named by the host. Contacts and leads must hold transactional consent;
+                     *     colleagues and host-named addresses are not asked. At most 25 attendees in
+                     *     total.
                      */
                     attendee_emails?: string[];
                     /**
@@ -67163,15 +67306,10 @@ export interface operations {
                      *     required: a meeting belonging to no record appears on no timeline and is one
                      *     nobody will find again, which is the same reason `SendCompanyEmailRequest`
                      *     carries the bound. Each one is row-scope probed and written as its own row,
-                     *     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-                     *     before it stages.
+                     *     so the list is bounded at 25. The first `contact` link (else the first `lead`
+                     *     link) is the invitee the meeting is filed on.
                      */
-                    links: {
-                        /** @enum {string} */
-                        entity_type: "contact" | "company" | "deal" | "lead" | "project";
-                        /** Format: uuid */
-                        entity_id: string;
-                    }[];
+                    links: components["schemas"]["MeetingRecordLink"][];
                     consent?: components["schemas"]["CaptureConsent"];
                 };
             };
@@ -67186,7 +67324,7 @@ export interface operations {
                     "application/json": components["schemas"]["Activity"];
                 };
             };
-            /** @description Approval token missing for the 🟡 booking, or RBAC denied. */
+            /** @description RBAC denied, or booking onto another host's calendar without admin. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -78069,6 +78207,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Return only the question about this domain; normalized to its registrable form. */
+                domain?: string;
             };
             header?: never;
             path?: never;
@@ -78087,6 +78227,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

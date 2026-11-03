@@ -470,7 +470,7 @@ func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
 func TestTheNightlyDraftAnswersTheLatestEligibleDealMessage(t *testing.T) {
 	e := setupReconcile(t)
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	e.reconciler.WithClock(func() time.Time { return now })
+	e.reconciler.SetClock(func() time.Time { return now })
 	deal := e.SeedDeal(t, "Latest message", e.pipeline, e.open, &e.Rep1)
 	address := "buyer@latest.test"
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Buyer", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}}})

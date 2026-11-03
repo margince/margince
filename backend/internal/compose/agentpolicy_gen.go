@@ -741,7 +741,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/automations":                                                  {Op: "createAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations/runs/{id}/retry":                                  {Op: "retryAutomationRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/automations/{id}/preview":                                     {Op: "previewAutomation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"POST /v1/bookings":                                                     {Op: "bookMeeting", Access: "tool", Tool: "book_meeting", RecordType: "activity", Tier: "auto_execute", Scope: "send"},
+	"POST /v1/bookings":                                                     {Op: "bookMeeting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/brief":                                                        {Op: "generateMorningBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/brief/items/{itemId}/act":                                     {Op: "markBriefItemActed", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/brief/items/{itemId}/dismiss":                                 {Op: "markBriefItemDismissed", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
