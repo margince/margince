@@ -122,9 +122,6 @@ func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) 
 				"event", env.EventID.String(), "err", err)
 			return false
 		}
-		if payload.ChangedFields.ThreadKey != nil && env.Actor.ID == threadRepairActor {
-			return true
-		}
 		audience := payload.ChangedFields.Audience
 		return audience != nil && *audience == crmcontracts.Workspace
 	}

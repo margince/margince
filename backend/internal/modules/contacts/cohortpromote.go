@@ -35,7 +35,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -220,8 +219,8 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 		INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		SELECT a.id, 'contact', $1
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.captured_by LIKE 'connector:%'
-		   AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.captured_by LIKE 'connector:%'
+		   AND a.restricted_at IS NULL
 		   AND a.counterparty_email IN (
 		       SELECT lower(pe.email) FROM contact_email pe
 		        WHERE pe.contact_id = $1 AND pe.archived_at IS NULL)
@@ -276,16 +275,14 @@ func linkCapturedCohort(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 // arms as well would be a second guard for the one case this already covers,
 // and two guards that each pass alone are one guard with a spare.
 func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids.ContactID, error) {
-	available := "a.archived_at IS NULL AND " + auth.ActivityAvailableClause("a")
 	var out []ids.ContactID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			WITH owed AS (
 				SELECT pe.contact_id
 				  FROM activity_participant ap
-				  JOIN activity a ON a.id=ap.activity_id
 				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
-				 WHERE `+available+` AND ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
+				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_participant other
 				        WHERE other.activity_id = ap.activity_id
@@ -295,7 +292,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 				SELECT pe.contact_id
 				  FROM activity a
 				  JOIN contact_email pe ON pe.email = a.counterparty_email AND pe.archived_at IS NULL
-				 WHERE a.captured_by LIKE 'connector:%' AND `+available+`
+				 WHERE a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
 				        WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
@@ -319,7 +316,8 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 				  JOIN contact att ON att.id = ap.contact_id
 				 WHERE ap.contact_id IS NOT NULL
 				   AND a.kind = 'meeting'
-				   AND a.captured_by LIKE 'connector:%' AND `+available+`
+				   AND a.captured_by LIKE 'connector:%' AND a.restricted_at IS NULL
+				   AND a.archived_at IS NULL
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_link l
 				        WHERE l.activity_id = a.id

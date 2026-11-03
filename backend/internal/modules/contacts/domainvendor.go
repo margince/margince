@@ -134,7 +134,7 @@ func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, as
 	decider := `(SELECT CASE WHEN bool_and(vendor_seat.seat IS NOT NULL) AND count(DISTINCT vendor_seat.seat) = 1
    THEN (array_agg(vendor_seat.seat))[1] END
  FROM (SELECT ` + sole + ` AS seat FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + ` AND ` + controlling + `) vendor_seat)`
-	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE activity_thread_available(vendor_mail.thread_key) AND ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
+	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
  AND ` + controlling + ` AND ` + sole + ` = ` + reader + `
  AND ` + storekit.CurrentSourceMailClause("vendor_mail.id", asOf, arg) + ` AND ` + readable + `))`, nil
 }

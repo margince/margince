@@ -28,7 +28,7 @@ const meetingWithQuery = `
 	  FROM activity_participant ap
 	  JOIN activity a ON a.id = ap.activity_id AND a.kind = 'meeting' AND ` + activityLive + ` AND %s
 	  JOIN contact c ON c.id = ap.contact_id AND c.archived_at IS NULL
-	 WHERE activity_thread_available(a.thread_key) AND ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND %s
+	 WHERE ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND %s
 	   AND NOT %s
 	   AND NOT EXISTS (
 	       SELECT 1 FROM relationship emp

@@ -162,7 +162,7 @@ func dayAnswerCandidates(ctx context.Context, tx pgx.Tx, now time.Time, after id
 		SELECT lead.id FROM lead
 		 WHERE lead.id > $2
 		   AND EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		                WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.occurred_precision = 'day'
+		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
 		                  AND `+mayAnswerSQL("lead.id", "a")+` AND `+proven+` <= $1
 		                  AND `+leadTakesFirstResponseSQL("lead", proven)+`
 		                  AND `+auth.ActivityAvailableClause("a")+`)

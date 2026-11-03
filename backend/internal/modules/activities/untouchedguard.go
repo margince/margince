@@ -76,7 +76,7 @@ func refuseIfTouched(ctx context.Context, tx pgx.Tx, id ids.ActivityID, o archiv
 		}
 		var pristine bool
 		args := []any{id}
-		query := storekit.SQLf("SELECT %s FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id=$%d", pristineRepairTaskSQL("a"), len(args))
+		query := storekit.SQLf("SELECT %s FROM activity a WHERE a.id=$%d", pristineRepairTaskSQL("a"), len(args))
 		if err := tx.QueryRow(ctx, query, args...).Scan(&pristine); err != nil {
 			return err
 		}

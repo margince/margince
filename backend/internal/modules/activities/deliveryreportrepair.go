@@ -26,7 +26,7 @@ const DeliveryReportRuleVersion = "mailidentity.IsDeliverySystemSender"
 // has edited since (version 1). The sender test is not in the SQL: it runs in
 // Go, through the one rule the write door uses.
 const importedInboundMailScope = `FROM activity a
-	 WHERE activity_thread_available(a.thread_key) AND a.kind = 'email' AND a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.version = 1
+	 WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL AND a.version = 1
 	   AND a.counterparty_email IS NOT NULL AND starts_with(COALESCE(a.source_system, ''), '` + provenance.ReservedSourceSystemPrefix + `')`
 
 // DeliveryReport is a received mail whose sender is the mail system, with the

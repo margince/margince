@@ -175,7 +175,7 @@ func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
-		  WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		    AND NOT coalesce((%s), false) AND %s AND %s%s)`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), current,
 		opts.projectScope(arg))
@@ -229,7 +229,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         ORDER BY pl.id LIMIT 1)
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
-		WHERE a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %[1]s
+		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s%[7]s
 		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,

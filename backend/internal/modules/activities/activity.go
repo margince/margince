@@ -304,11 +304,6 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	if in.ThreadKey != "" {
-		if err := auth.EnsureThreadAvailable(ctx, tx, in.ThreadKey); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
-	}
 	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -473,7 +468,7 @@ func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string, 
 	var existing ids.ActivityID
 	err := tx.QueryRow(ctx,
 		`SELECT id FROM activity
-		   WHERE activity_thread_available(thread_key) AND source_system = $1 AND source_id = $2`,
+		   WHERE source_system = $1 AND source_id = $2`,
 		source, key).Scan(&existing)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

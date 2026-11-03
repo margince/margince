@@ -237,7 +237,7 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
 		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
-		 WHERE (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND a.archived_at IS NULL
+		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
 		   AND (`+owndomain.CoversSQL("ap.address_domain_folded", "$1")+` OR a.id = $2)`,
 		owndomain.Fold(domain), activityID, mailClockSkewAllowance).Scan(&occurred)

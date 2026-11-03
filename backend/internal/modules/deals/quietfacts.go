@@ -173,7 +173,7 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		                 WHERE every.activity_id = a.id AND every.role = $%[3]d) = 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
-		WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %[4]s AND %[5]s AND %[6]s AND a.direction = $%[2]d
+		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND %[6]s AND a.direction = $%[2]d
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction,
 		relstrength.LastActivityCountsSQL("a", "now()")), args...).

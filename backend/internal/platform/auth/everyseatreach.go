@@ -53,7 +53,7 @@ func ActivitiesReachingEverySeat(ctx context.Context, tx pgx.Tx, activityIDs []i
 	clause := activityDiscoverClause(aStranger(), "a", arg)
 
 	rows, err := tx.Query(ctx,
-		fmt.Sprintf(`SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND %s`, idsPos, clause),
+		fmt.Sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND %s`, idsPos, clause),
 		args...)
 	if err != nil {
 		return nil, err

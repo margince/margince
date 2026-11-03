@@ -319,16 +319,10 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible f
 		return 0, err
 	}
 	buyer := buyerEligible(arg)
-	pending, err := auth.ActivityRepairPendingClause(ctx, "repair_source", arg)
-	if err != nil {
-		return 0, err
-	}
 	rows, err := tx.Query(ctx, `
 		UPDATE deal_suggestion s SET state = 'superseded', decided_at = now()
 		 WHERE s.state = 'open'
 		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+` OR NOT `+buyer+`)
- AND NOT EXISTS(SELECT 1 FROM activity repair_source JOIN (`+SuggestionEvidenceActivitiesSQL("SELECT s.id::text")+`) evidence(id)
- ON evidence.id=repair_source.id WHERE repair_source.archived_at IS NULL AND (`+pending+`))
 		RETURNING s.id`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("deals: superseding suggestions: %w", err)
