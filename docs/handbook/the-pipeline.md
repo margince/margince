@@ -289,11 +289,15 @@ A date Margince set is a guess, marked "provisional close date, not confirmed by
 
 ## Reading the numbers
 
-Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. The totals at the top of each column count every matching deal, the ones not loaded yet too. Each column header carries the stage name, its win probability, how many deals are in it, the stage total, and under that the weighted total.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability, how many deals are in it, the stage total, and under that the weighted total.
 
-A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. The **Table** view loads one list.
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count.
 
-The totals count every deal you may see, which are the deals the board shows as cards. They are held back when a tag filter is on ("Loaded deals only. No total while a tag filter is on."). They are also held back when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
+If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+
+The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
+
+They are held back too when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
 
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.
