@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -168,11 +169,12 @@ func readReportingInitiativePipeline(ctx context.Context, tx pgx.Tx, frame crmco
 	query := openMetricQuery(false)
 	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
 		origin := "CASE WHEN t.id = ANY(" + b.add(members.baseline) + ") THEN 'existing' WHEN t.id = ANY(" + b.add(members.sourced) + ") THEN 'sourced' WHEN t.created_at >= " + b.add(members.launch) + " THEN 'created_after' ELSE 'added_after' END"
-		label := "CASE " + origin
+		var label strings.Builder
+		label.WriteString("CASE " + origin)
 		for key, phrase := range reportingInitiativeOriginLabels {
-			label += " WHEN '" + key + "' THEN " + b.add(said.Say(phrase))
+			label.WriteString(" WHEN '" + key + "' THEN " + b.add(said.Say(phrase)))
 		}
-		return "'origin:'||" + origin, label + " END", nil
+		return "'origin:'||" + origin, label.String() + " END", nil
 	}
 	return readDealMetricFacts(ctx, tx, frame, reportingInitiativePipeline, query)
 }

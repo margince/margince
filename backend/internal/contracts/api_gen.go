@@ -18036,6 +18036,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
 	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
@@ -18054,6 +18055,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAssessment:
+		return true
 	case ReportingCardKindBookingsTrend:
 		return true
 	case ReportingCardKindBreakdown:
@@ -53880,7 +53883,8 @@ type ReportingCard struct {
 	// Id A short id the client mints. Unique within the report, so one chart kind can be placed twice.
 	Id string `json:"id"`
 
-	// Kind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+	// Kind A chart kind, `question`, a custom analytics question the card asks for each reader, or
+	// `assessment`, the report's figures written up in a few sentences.
 	Kind   ReportingCardKind  `json:"kind"`
 	Metric *ReportingMetricID `json:"metric,omitempty"`
 
@@ -53898,7 +53902,8 @@ type ReportingCard struct {
 // ReportingCardWidth `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
 type ReportingCardWidth string
 
-// ReportingCardKind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+// ReportingCardKind A chart kind, `question`, a custom analytics question the card asks for each reader, or
+// `assessment`, the report's figures written up in a few sentences.
 type ReportingCardKind string
 
 // ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is

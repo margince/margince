@@ -22,6 +22,7 @@ import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
+import { CustomReportDrawer } from "./reporting.custombuilder";
 import { valueBasisOf } from "./reporting.dimensions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -238,6 +239,7 @@ function OverviewBody({
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
   const shape = VIEW_SHAPE[view];
   const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
@@ -269,6 +271,15 @@ function OverviewBody({
         actions={
           <>
             {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                variant="ghost"
+                onClick={() => setCustomizing(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.customize")}
+              </Button>
+            )}
             {canSave && (
               <Button
                 onClick={() => setSaving(true)}
@@ -351,6 +362,12 @@ function OverviewBody({
                   evaluation={evaluation}
                   reference={evidence}
                   onClose={closeEvidence}
+                />
+              )}
+              {customizing && (
+                <CustomReportDrawer
+                  initial={evaluation.selection}
+                  onClose={() => setCustomizing(false)}
                 />
               )}
               {saving && (
