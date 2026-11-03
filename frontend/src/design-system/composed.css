@@ -181,12 +181,11 @@
 .board-col-sub {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
   padding: 0 4px var(--space-2);
 }
-/* A MONEY FIGURE IS ONE LINE AND ELLIPSISES. An amount broken across lines is
-   unreadable, and a cut figure is visibly incomplete. The total keeps its room
-   first; the weighted figure gives way. */
+/* A MONEY FIGURE IS ONE LINE. The total is short and never gives way; the
+   weighted figure beside it ellipsises when the two do not fit. */
 .board-col-total {
   display: flex;
   align-items: baseline;
@@ -227,7 +226,7 @@
 }
 .board-col-notes > span + span::before {
   content: "·";
-  margin-inline: 6px;
+  margin-inline: var(--space-1);
 }
 /* The line that stands in for a refused total is PROSE, and the rule above is
    exactly wrong for it: ellipsised in a 240px stage it read "Loaded only —

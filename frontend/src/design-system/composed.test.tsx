@@ -389,7 +389,9 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deal")).toBeTruthy();
     expect(screen.getByText(/^€60\.5k$/i)).toBeTruthy();
-    expect(screen.getByText(/^€24\.2k$/i)).toBeTruthy();
+    expect(document.querySelector(".board-col-weighted")?.textContent).toMatch(
+      /^€24\.2k weighted$/i,
+    );
   });
 
   // A caller with a capped card fetch (the Kanban board) supplies
@@ -438,7 +440,11 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("€1,250")).toBeTruthy();
-    expect(screen.getByText(/^Rates /)).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("2 not priced")).toBeTruthy();
     expect(screen.getByText("29 deals")).toBeTruthy();
   });

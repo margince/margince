@@ -2898,7 +2898,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
   "board.weightedLabel": "gewichtet",
-  "board.ratesOn": "Kurse {date}",
+  "board.ratesOn": "Kurse vom {date}",
   "board.unpriced_one": "{count} ohne Preis",
   "board.unpriced_other": "{count} ohne Preis",
   "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",

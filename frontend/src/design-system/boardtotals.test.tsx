@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { formatDate } from "../format/format";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { largestStageTotal } from "./boardtotals";
@@ -95,6 +96,8 @@ describe("the stage totals at the head of a board column", () => {
     expect(tip).toContain(
       "6 deals have no price and are left out of both totals.",
     );
-    expect(tip).toContain("Converted at rates as of");
+    expect(tip).toContain(
+      `Converted at rates as of ${formatDate("2026-11-03T08:00:00Z", "en", UTC_ZONE)}.`,
+    );
   });
 });
