@@ -96,31 +96,37 @@ func frozenShareLanding(
 	return forecasting.LandingToWire(landing), nil
 }
 
-// sharedQualified rebuilds the qualified readings a snapshot froze, over the
-// rows this recipient may read, through forecasting.QualifiedOf: the rule the
-// live forecast applies. Nil when no policy was enforced at freeze time.
-func sharedQualified(
-	ctx context.Context, tx pgx.Tx, snapshotID ids.UUID, frame shareFrame,
-) (*forecasting.QualifiedReadings, error) {
+// applySharedQualified rebuilds the qualified readings a snapshot froze, over
+// the rows this recipient may read, through forecasting.QualifiedOf: the rule
+// the live forecast applies. A snapshot frozen with enforcement off keeps none.
+func applySharedQualified(
+	ctx context.Context, tx pgx.Tx, snapshotID ids.UUID, frame shareFrame, readings *forecasting.Readings,
+) error {
 	if frame.QualifiedPolicy == nil || *frame.QualifiedPolicy == "" {
-		return nil, nil
+		return nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	args = append(args, snapshotID)
 	visible, err := sharedVisibilityClause(ctx, tx, arg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rows, err := tx.Query(ctx, forecasting.ContributionSelect+`
 		JOIN deal d ON d.id = c.deal_id
 		WHERE c.snapshot_id = $1 AND `+visible, args...)
 	if err != nil {
-		return nil, fmt.Errorf("compose: reading a shared snapshot's qualified rows: %w", err)
+		return fmt.Errorf("compose: reading a shared snapshot's qualified rows: %w", err)
 	}
 	frozen, err := pgx.CollectRows(rows, forecasting.CollectContribution)
 	if err != nil {
-		return nil, fmt.Errorf("compose: collecting a shared snapshot's qualified rows: %w", err)
+		return fmt.Errorf("compose: collecting a shared snapshot's qualified rows: %w", err)
 	}
-	return forecasting.QualifiedOf(frozen, *frame.QualifiedPolicy)
+	qualified, err := forecasting.QualifiedOf(frozen)
+	if err != nil {
+		return err
+	}
+	readings.Qualified = &qualified
+	readings.ApplyQualifiedPolicy(*frame.QualifiedPolicy)
+	return nil
 }

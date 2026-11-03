@@ -182,17 +182,14 @@ func TestQualifiedOfRebuildsTheBlockFromFrozenRows(t *testing.T) {
 		qualified(open("kept", 100_00), viability.QualificationEligible),
 		qualified(open("out", 40_00), viability.QualificationExcluded),
 	}
-	got, err := QualifiedOf(rows, viability.PolicyVersion)
+	got, err := QualifiedOf(rows)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got == nil || got.EvidenceMinor != 100_00 || got.ExcludedMinor != 40_00 || got.ExcludedCount != 1 {
+	if got.EvidenceMinor != 100_00 || got.ExcludedMinor != 40_00 || got.ExcludedCount != 1 {
 		t.Fatalf("rebuilt %+v, want 10000 evidence and 4000 excluded", got)
 	}
-	if off, err := QualifiedOf(rows, ""); err != nil || off != nil {
-		t.Fatalf("with no policy the rebuild answered %+v, %v; want none", off, err)
-	}
-	if empty, err := QualifiedOf(nil, viability.PolicyVersion); err != nil || empty == nil || *empty != (QualifiedReadings{}) {
-		t.Fatalf("an enforced snapshot with no rows answered %+v, %v; want a zero block", empty, err)
+	if empty, err := QualifiedOf(nil); err != nil || empty != (QualifiedReadings{}) {
+		t.Fatalf("a snapshot with no rows answered %+v, %v; want a zero block", empty, err)
 	}
 }

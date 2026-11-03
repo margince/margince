@@ -168,9 +168,9 @@ func (b frozenBasis) read() *ViabilityBasis {
 }
 
 // QualifiedOf rebuilds the qualified readings from frozen rows, the way
-// Compute builds them from live deals, under the policy they were frozen with.
-// Nil when no policy was enforced.
-func QualifiedOf(rows []Contribution, policy string) (*QualifiedReadings, error) {
+// Compute builds them from live deals. The caller asks only of rows frozen
+// under an enforced policy.
+func QualifiedOf(rows []Contribution) (QualifiedReadings, error) {
 	var out Readings
 	for _, c := range rows {
 		base := int64(0)
@@ -178,14 +178,13 @@ func QualifiedOf(rows []Contribution, policy string) (*QualifiedReadings, error)
 			base = *c.BaseMinor
 		}
 		if err := qualify(&out, c, base); err != nil {
-			return nil, err
+			return QualifiedReadings{}, err
 		}
 	}
-	out.ApplyQualifiedPolicy(policy)
-	if policy == "" {
-		return nil, nil
+	if out.Qualified == nil {
+		return QualifiedReadings{}, nil
 	}
-	return out.Qualified, nil
+	return *out.Qualified, nil
 }
 
 // basisAgrees answers whether every row on both sides froze a basis under one
