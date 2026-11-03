@@ -688,16 +688,16 @@ kinds:
     args:
       Workspace: id
       Exception: id
-      Run: id
       Episode:
         scalar: true
         reason: The review's episode counter, so a job for an episode that has since ended does nothing.
     reason: >-
       Delivers one review episode as its task. Inserted in the transaction that
-      records the finding, so the delivery exists exactly when the review does,
-      and retried on the saved run and episode rather than by a new check. One
-      review's task and filing take seconds. Unique on the review and its episode
-      while one is waiting or running.
+      records the finding, so the delivery exists exactly when the review does.
+      Each attempt reads the newest finished run that observed the review, and
+      a retry never starts a new check. One review's task and filing take
+      seconds. Unique on the review and its episode while one is waiting or
+      running.
 
   close_date_sweep:
     role: worker

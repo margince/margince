@@ -288,3 +288,89 @@ func TestTheReviewTaskCompletesWhenItsLastFindingSettlesAndNotBefore(t *testing.
 		t.Errorf("%d open next-step tasks, want the rep's own task left open", got)
 	}
 }
+
+// deliveryAudits counts the audit rows the review's delivery wrote whose after
+// image carries key.
+func (v *viabilityEnv) deliveryAudits(t *testing.T, review ids.UUID, key string) int {
+	t.Helper()
+	return v.WsCount(t, `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'assurance_exception' AND entity_id = $1 AND after ? $2`, review, key)
+}
+
+func TestADeliveryGoesToTheOwnerTheDealHasWhenItRuns(t *testing.T) {
+	v := setupViability(t)
+	v.runCheck(t)
+	queued := v.queuedDeliveries(t)
+	if len(queued) != 1 {
+		t.Fatalf("%d deliveries queued, want one", len(queued))
+	}
+	v.moveDeal(t, v.Rep2)
+	if err := v.workDelivery(t, queued[0], 1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := v.assigneeOf(t, v.reviewTask(t)); got != v.Rep2.String() {
+		t.Errorf("the task went to %q, want the deal's owner when it was delivered, %s", got, v.Rep2)
+	}
+	review := queued[0].args.Exception
+	if got := v.WsScalar(t, `SELECT coalesce(delivered_assignee_id::text, '') FROM assurance_exception
+		WHERE id = $1`, review); got != v.Rep2.String() {
+		t.Errorf("the episode records %q as the seat it gave the task, want %s", got, v.Rep2)
+	}
+	if v.deliveryAudits(t, review, "delivery_state") != 1 || v.deliveryAudits(t, review, "delivery_attempt") != 1 {
+		t.Errorf("the queueing and the attempt each want one audit row on the review")
+	}
+}
+
+func TestADeliveryFilesTheFindingsOfTheNewestCheck(t *testing.T) {
+	v := setupViability(t)
+	v.runCheck(t)
+	next, err := ids.Parse(v.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		WHERE l.deal_id = $1 AND a.kind = 'task' AND a.source = 'manual'`, v.silent))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](next), settledAfterDelivery(t)); err != nil || !done {
+		t.Fatalf("completing the deal's next step: done=%v err=%v", done, err)
+	}
+	v.runCheck(t)
+	queued := v.queuedDeliveries(t)
+	if len(queued) != 1 {
+		t.Fatalf("%d deliveries queued after two checks, want the one", len(queued))
+	}
+	if err := v.workDelivery(t, queued[0], 1, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_task_item i
+		JOIN assurance_exception e ON e.id = i.exception_id
+		WHERE i.task_activity_id = $1 AND e.type = $2`, v.reviewTask(t), assurance.TypeNoNextStep); got != 1 {
+		t.Errorf("the task holds %d no-next-step findings, want the one only the second check saw", got)
+	}
+}
+
+func TestAMoveWhoseRecordWasLostIsRecordedOnTheNextPass(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	task := v.reviewTask(t)
+	review := v.reviewOf(t, v.silent)
+
+	// The task moved, and the pass failed before it recorded the move.
+	v.moveDeal(t, v.Rep2)
+	rep1, rep2 := ids.From[ids.UserKind](v.Rep1), ids.From[ids.UserKind](v.Rep2)
+	if moved, err := v.Activities.FollowSystemTaskOwner(v.Admin(), ids.From[ids.ActivityKind](task), &rep1, rep2); err != nil || !moved {
+		t.Fatalf("moving the task: moved=%v err=%v", moved, err)
+	}
+	v.check(t)
+	if got := v.WsScalar(t, `SELECT coalesce(delivered_assignee_id::text, '') FROM assurance_exception
+		WHERE id = $1`, review); got != v.Rep2.String() {
+		t.Fatalf("the episode still records %q as the seat it gave the task, want %s", got, v.Rep2)
+	}
+	if v.deliveryAudits(t, review, "delivered_assignee_id") != 1 {
+		t.Errorf("recording the move wants one audit row on the review")
+	}
+
+	v.moveDeal(t, v.Rep3)
+	v.check(t)
+	if got := v.assigneeOf(t, task); got != v.Rep3.String() {
+		t.Errorf("after the next owner change the task is with %q, want %s", got, v.Rep3)
+	}
+}

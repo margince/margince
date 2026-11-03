@@ -272,7 +272,9 @@ func heldBy(seat *ids.UserID) func(*ids.UUID) bool {
 // FollowSystemTaskOwner moves one open system-minted task to a record's new
 // owner, but only while its assignee is still the seat the system gave it.
 // An assignee somebody chose is not that seat, so their choice stays. It
-// answers whether this call moved the task.
+// answers whether the task now sits with the owner. A task an earlier call
+// already moved answers yes, so a caller that failed to record that move can
+// record it on its retry.
 //
 // A new owner who cannot hold work leaves the task where it is: the write
 // refuses that seat as not found, as AlignSystemTaskAssigneeToLead's does.
@@ -296,8 +298,11 @@ func (s *Store) FollowSystemTaskOwner(
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the system task to reassign: %w", err)
 	}
+	if assignee != nil && *assignee == owner.UUID {
+		return true, nil
+	}
 	stillGiven := heldBy(given)
-	if !stillGiven(assignee) || (assignee != nil && *assignee == owner.UUID) {
+	if !stillGiven(assignee) {
 		return false, nil
 	}
 	return s.assignSystemTask(ctx, id, version, owner, stillGiven)

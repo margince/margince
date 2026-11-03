@@ -28,13 +28,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AssuranceReviewDeliveryArgs delivers one review episode. Unique on the
-// review and its episode; the run is where its findings are read from.
+// AssuranceReviewDeliveryArgs delivers one review episode, unique on the
+// review and its episode. It carries no run: the delivery reads the newest run
+// that observed the review when it works.
 type AssuranceReviewDeliveryArgs struct {
 	Workspace ids.UUID `json:"workspace_id" river:"unique"`
 	Exception ids.UUID `json:"exception_id" river:"unique"`
 	Episode   int      `json:"episode" river:"unique"`
-	Run       ids.UUID `json:"run_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -85,7 +85,7 @@ func queueReviewDeliveries(store *assurance.Store) assurance.ReviewDeliveryFunc 
 				return err
 			}
 			args := AssuranceReviewDeliveryArgs{
-				Workspace: workspace, Exception: finding.ID, Episode: episode.Episode, Run: runID,
+				Workspace: workspace, Exception: finding.ID, Episode: episode.Episode,
 			}
 			if err := queue.EnqueueTx(ctx, tx, args, reviewDeliveryInsertOpts()); err != nil {
 				return err
@@ -136,7 +136,7 @@ func deliverReview(ctx context.Context, deps bundleDeps, args AssuranceReviewDel
 	if err != nil || episode.Episode != args.Episode {
 		return err
 	}
-	subject, review, found, err := runSubjectOf(ctx, deps, args.Run, args.Exception)
+	subject, review, found, err := runSubjectOf(ctx, deps, args.Exception)
 	if err != nil || !found {
 		return err
 	}
@@ -156,19 +156,22 @@ func deliverReview(ctx context.Context, deps bundleDeps, args AssuranceReviewDel
 	return err
 }
 
-// runSubjectOf is the review and every finding on its deal that the run
-// observed, as the bundling pass groups them.
+// runSubjectOf is the review and every finding on its deal that the newest
+// run observing the review saw, as the bundling pass groups them.
 func runSubjectOf(
-	ctx context.Context, deps bundleDeps, run, review ids.UUID,
+	ctx context.Context, deps bundleDeps, review ids.UUID,
 ) (subjectFindings, assurance.Exception, bool, error) {
 	var open []assurance.Exception
 	if err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		var err error
+		run, observed, err := deps.bundles.LatestRunObserving(ctx, tx, review)
+		if err != nil || !observed {
+			return err
+		}
 		open, err = deps.exceptions(ctx, tx, run)
 		return err
 	}); err != nil {
 		return subjectFindings{}, assurance.Exception{}, false,
-			fmt.Errorf("compose: reading the findings run %s observed: %w", run, err)
+			fmt.Errorf("compose: reading the findings the newest run observed: %w", err)
 	}
 	for _, subject := range groupBySubject(open) {
 		for _, finding := range subject.findings {

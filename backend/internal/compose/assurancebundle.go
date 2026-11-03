@@ -173,9 +173,10 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionSelect(rawFindingMoney)+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`, d.name, d.owner_id
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
+		  JOIN deal d ON d.id = e.subject_id
 		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
@@ -189,10 +190,11 @@ func bundleableFindings(
 	}
 	defer rows.Close()
 
-	// scanException, shared with AssuranceExceptions: one select list, one
-	// scanner. Two copies of a positional scan drift into reading a currency
-	// into a status, and nothing fails loudly when they do.
-	return pgx.CollectRows(rows, scanException)
+	// The labelled scanner AssuranceExceptions uses, so the owner is the deal's
+	// live owner there and here. The finding's own owner_id is the scan's
+	// snapshot, and a deal handed over since would send its task to the former
+	// owner.
+	return pgx.CollectRows(rows, scanLabelledException)
 }
 
 // cycleScopeForRun names the cycle a run's findings bundle into.

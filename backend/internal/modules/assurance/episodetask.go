@@ -90,50 +90,54 @@ func (s *Store) LinkEpisodeTask(
 // FollowedOwner records that the episode's task moved with the deal to a new
 // owner, so the next owner change is measured against this one.
 func (s *Store) FollowedOwner(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, assignee ids.UUID) error {
-	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
+	return s.recordDelivery(ctx, tx, exceptionID, episode, `
 		UPDATE assurance_exception SET delivered_assignee_id = $3, updated_at = now()
-		 WHERE id = $1 AND episode = $2`, exceptionID, episode, assignee); err != nil {
-		return fmt.Errorf("assurance: recording the review task's new assignee: %w", err)
-	}
-	return nil
+		 WHERE id = $1 AND episode = $2`, assignee.String(),
+		map[string]any{"episode": episode, "delivered_assignee_id": assignee.String()})
 }
 
 // QueueDelivery marks an undelivered episode pending. A failed one is pending
 // again: the pass that queues it is its retry.
 func (s *Store) QueueDelivery(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int) error {
-	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
+	return s.recordDelivery(ctx, tx, exceptionID, episode, `
 		UPDATE assurance_exception SET delivery_state = $3, updated_at = now()
-		 WHERE id = $1 AND episode = $2 AND task_activity_id IS NULL`,
-		exceptionID, episode, DeliveryPending); err != nil {
-		return fmt.Errorf("assurance: queueing the review's delivery: %w", err)
-	}
-	return nil
+		 WHERE id = $1 AND episode = $2 AND task_activity_id IS NULL`, DeliveryPending,
+		map[string]any{"episode": episode, "delivery_state": DeliveryPending})
 }
 
 // RecordDeliveryAttempt counts one attempt at delivering the episode, and marks
 // it failed when it was the last one the job gets and left no task.
 func (s *Store) RecordDeliveryAttempt(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, last bool) error {
-	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
-		return err
-	}
 	state := DeliveryPending
 	if last {
 		state = DeliveryFailed
 	}
-	if _, err := tx.Exec(ctx, `
+	return s.recordDelivery(ctx, tx, exceptionID, episode, `
 		UPDATE assurance_exception
 		   SET delivery_attempts = delivery_attempts + 1, updated_at = now(),
 		       delivery_state = CASE WHEN task_activity_id IS NULL THEN $3 ELSE delivery_state END
-		 WHERE id = $1 AND episode = $2`, exceptionID, episode, state); err != nil {
-		return fmt.Errorf("assurance: counting the review's delivery attempt: %w", err)
+		 WHERE id = $1 AND episode = $2`, state,
+		map[string]any{"episode": episode, "delivery_attempt": true, "last_attempt": last})
+}
+
+// recordDelivery runs one write of an episode's delivery and audits it. A write
+// that matched no row is an episode that ended since: nothing changed, so
+// nothing is audited.
+func (s *Store) recordDelivery(
+	ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, update, value string, after map[string]any,
+) error {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return err
 	}
-	return nil
+	tag, err := tx.Exec(ctx, update, exceptionID, episode, value)
+	if err != nil {
+		return fmt.Errorf("assurance: recording the review's delivery: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	_, err = storekit.AuditEvent(ctx, tx, "update", "assurance_exception", exceptionID, after)
+	return err
 }
 
 // DeliveryCounts are the open reviews by how far their delivery got. A review
