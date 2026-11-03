@@ -20,21 +20,33 @@ import (
 // viabilityFingerprintSQL is what a viability assessment read about one deal.
 // The check stores it on the receipt, and the forecast compares it with the
 // deal's current one. A difference means the evidence moved since the check.
-// A verdict that lands or changes after the message counts too, and so does a
-// guest accepting or withdrawing, because each changes the answer. Work the product filed itself is left out, so the review's own task does not
-// make its receipt stale. Archiving an activity drops it from the count, which
-// changes the fingerprint too.
+// Work the product filed itself is left out, so the review's own task does not
+// make its receipt stale. Archiving an activity drops it from the count.
+//
+// Beside the deal and its activities it covers what decides whether an
+// activity counts as the customer: each party's role, contact and response,
+// the contacts the activity is filed under, and which contact owns a
+// senderless message's address. It also covers the answers to the retired
+// buyer-silent check, which defer the question.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
 		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)),
 		        count(*) FILTER (WHERE fa.reply_verdict = '` + activities.ReplyVerdictNegative + `'),
 		        max(fa.reply_verdict_at),
-		        (SELECT count(*) FROM activity_participant fp
-		          WHERE fp.activity_id = ANY (array_agg(fa.id)) AND fp.response = 'accepted'))
+		        (SELECT md5(coalesce(string_agg(concat_ws(':', fp.activity_id, fp.role, fp.contact_id, fp.address, fp.response),
+		                 ',' ORDER BY fp.activity_id, fp.id), ''))
+		           FROM activity_participant fp WHERE fp.activity_id = ANY (array_agg(fa.id))),
+		        (SELECT md5(coalesce(string_agg(concat_ws(':', fc.activity_id, fc.contact_id), ',' ORDER BY fc.activity_id, fc.contact_id), ''))
+		           FROM activity_link fc WHERE fc.activity_id = ANY (array_agg(fa.id)) AND fc.contact_id IS NOT NULL),
+		        (SELECT md5(coalesce(string_agg(concat_ws(':', fe.email, fe.contact_id, fe.archived_at), ',' ORDER BY fe.email, fe.contact_id), ''))
+		           FROM contact_email fe WHERE fe.email = ANY (array_agg(fa.counterparty_email))))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
 		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` + visibleToAllSQL("fa") + ` AND ` +
-		relstrength.OriginIsEngagementSQL("fa") + `)))`
+		relstrength.OriginIsEngagementSQL("fa") + `),
+		(SELECT concat_ws('|', count(*), max(fr.created_at))
+		   FROM assurance_resolution fr JOIN assurance_exception fx ON fx.id = fr.exception_id
+		  WHERE fx.subject_kind = 'deal' AND fx.subject_id = ` + deal + `.id AND fx.type = '` + assurance.TypeBuyerSilent + `')))`
 }
 
 // viabilityQualificationSQL is one deal's treatment in the qualified forecast.
