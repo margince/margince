@@ -2584,7 +2584,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.phone": "Số điện thoại",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.invitation_status": "Trạng thái lời mời",
-  "history.field.attendees": "Người được mời",
+  "history.field.attendees": "Khách được mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
