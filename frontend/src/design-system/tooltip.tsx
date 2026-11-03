@@ -202,6 +202,18 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
 }
 
 /**
+ * The exact reading behind a rounded figure, on hover and on focus.
+ *
+ * Always worth showing, and the anchor takes a tab stop: a figure is not a
+ * control, so without one the exact amount is reachable by pointer only.
+ */
+export function useDetailTooltip<T extends HTMLElement = HTMLElement>(
+  text: string,
+): Tooltip<T> {
+  return useTip<T>(text, always, true);
+}
+
+/**
  * Escape hides the tip wherever focus sits (WCAG 2.2 SC 1.4.13). Captured on
  * the window: a layer under the tip opened first and would hear Escape first.
  */
