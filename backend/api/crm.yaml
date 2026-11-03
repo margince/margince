@@ -9908,6 +9908,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PublicSchedulingProfile' }
+  /public/booking/{host_slug}/preview:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicBookingPreview
+      security: []
+      summary: Read the link-preview card for a host's public booking page.
+      description: |
+        The web tier redirects a non-browser fetch of `/book/{host_slug}` here, so a link
+        preview reads the page without running the app. The HTML carries the host's name,
+        company, meeting title and duration as escaped title, description, Open Graph and
+        Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
+        address on the configured public origin, and are omitted when no usable origin is
+        configured. The company logo is the card image when there is one; otherwise the card
+        has no image. A paused page answers generic metadata that names no host. A missing
+        or revoked page answers 404 with no host metadata. Responses are `no-store` and
+        `noindex`. HEAD is answered like GET without a body. The page links to the booking
+        app, and no guest details or tokens appear in it.
+      responses:
+        '200':
+          description: Booking page card, or generic metadata for a paused page.
+          content:
+            text/html:
+              schema: { type: string }
+        default:
+          description: The page is missing, revoked or unavailable; the HTML names no host.
+          content:
+            text/html:
+              schema: { type: string }
   /public/meeting/{token}:
     parameters:
       - { name: token, in: path, required: true, schema: { type: string } }

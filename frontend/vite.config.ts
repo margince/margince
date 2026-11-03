@@ -217,6 +217,22 @@ export default defineConfig({
         rewrite: (path) =>
           path.replace(/^\/r\//, "/v1/public/record-previews/"),
       },
+      // A booking page's path, split the way nginx.conf splits it: a browser
+      // navigation gets the app, any other fetch the api's booking preview.
+      "/book/": {
+        target: proxyTarget,
+        changeOrigin: false,
+        secure: false,
+        bypass: (request) =>
+          request.headers["sec-fetch-dest"] === "document"
+            ? "/index.html"
+            : undefined,
+        rewrite: (path) =>
+          path.replace(
+            /^\/book\/([A-Za-z0-9_-]+)\/?(?:\?.*)?$/,
+            "/v1/public/booking/$1/preview",
+          ),
+      },
       "/v1": { target: proxyTarget, changeOrigin: false, secure: false },
       // The claim surface (ADR-0105). It sits beside the probes rather than
       // under /v1 because it must answer before a company exists, so it

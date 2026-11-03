@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BookingPage is the slug's resolution: which workspace, whose calendar.
@@ -43,12 +45,14 @@ type BookingPage struct {
 // before it may do anything else. The slug names the HOST, and only the host:
 // the installation the request lands in is resolved from the installation
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
-// slug reads as absent.
+// slug reads as absent, and so does a host whose account is not live. Every
+// public booking read, the preview card included, resolves here.
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT host_user_id FROM booking_page WHERE slug = $1 AND revoked_at IS NULL`,
+			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
+   WHERE p.slug = $1 AND p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u"),
 			slug).Scan(&page.HostUserID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -66,11 +70,10 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 // slug is a public identifier, not a credential — unguessable so the
 // URL cannot be enumerated, stored plaintext because it IS the URL.
 func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (string, error) {
-	var buf [24]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", fmt.Errorf("activities: booking slug entropy: %w", err)
+	slug, err := mintBookingSlug(rand.Read)
+	if err != nil {
+		return "", err
 	}
-	slug := base64.RawURLEncoding.EncodeToString(buf[:])
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO booking_page (host_user_id, slug)
 		VALUES ($1, $2)`,
@@ -78,6 +81,39 @@ func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (s
 		return "", fmt.Errorf("activities: seed booking page: %w", err)
 	}
 	return slug, nil
+}
+
+// The ids under /#/book/ that are not a host's public page. The owner is
+// frontend/src/lib/bookingaddress.ts (BOOKING_HOST_IDS, BOOKING_ID_PREFIXES),
+// next to the router that dispatches on them; frontend/nginx.conf refuses the
+// same set. TestReservedBookingIDsMatchTheRouteOwner fails when they drift.
+var (
+	reservedBookingIDs      = []string{"contact", "preview"}
+	reservedBookingPrefixes = []string{"contact-", "meeting-", "proposal-", "manage-"}
+)
+
+// bookingSlugReserved reports whether a slug would collide with a host
+// control or a guest-token address. Base64url can spell "manage-".
+func bookingSlugReserved(slug string) bool {
+	if slices.Contains(reservedBookingIDs, slug) {
+		return true
+	}
+	return slices.ContainsFunc(reservedBookingPrefixes, func(prefix string) bool { return strings.HasPrefix(slug, prefix) })
+}
+
+// mintBookingSlug draws 24 random bytes as base64url until the result is not
+// reserved. A reserved draw is about one in 10^11, so the loop is bounded.
+func mintBookingSlug(read func([]byte) (int, error)) (string, error) {
+	for range 8 {
+		var buf [24]byte
+		if _, err := read(buf[:]); err != nil {
+			return "", fmt.Errorf("activities: booking slug entropy: %w", err)
+		}
+		if slug := base64.RawURLEncoding.EncodeToString(buf[:]); !bookingSlugReserved(slug) {
+			return slug, nil
+		}
+	}
+	return "", errors.New("activities: booking slug entropy kept drawing reserved slugs")
 }
 
 // ContactEnsurer is the contacts seam of the public capture path (compose

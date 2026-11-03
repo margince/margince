@@ -11717,6 +11717,9 @@ export const en = {
   "client.isolation": "Connects only to your company",
   "client.attribution": "Every capture is attributed and auditable.",
 
+  "book.pageTitle": "Book a meeting with {host}",
+  "book.pageTitleGeneric": "Book a meeting",
+  "book.meetingTitle": "Your meeting",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",

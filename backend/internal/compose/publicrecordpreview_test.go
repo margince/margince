@@ -33,7 +33,7 @@ func TestPublicRecordPreviewRejectsPathsBeforeBindingAPrincipal(t *testing.T) {
 func TestUnavailableRecordPreviewStillOpensProtectedApp(t *testing.T) {
 	preview := recordPreview{Title: "Margince", Href: "/#/deals/01a00000-0000-7000-8000-000000000001"}
 	var body strings.Builder
-	if err := recordPreviewHTML.Execute(&body, preview); err != nil {
+	if err := previewCardHTML.Execute(&body, recordPreviewCard(preview)); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(body.String(), `src="/open-record.js"`) || !strings.Contains(body.String(), preview.Href) {

@@ -3095,6 +3095,10 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
+func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "GetPublicBookingPreview")
+}
+
 func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
 	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
 }
