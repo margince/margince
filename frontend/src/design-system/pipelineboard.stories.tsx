@@ -442,7 +442,9 @@ export const WithACountNotYetKnown: Story = {
     await expect(
       discovery.querySelector(".board-col-count:not([hidden])"),
     ).toBeNull();
-    await expect(discovery).not.toHaveTextContent("0 deals");
+    await expect(
+      discovery.querySelector(".board-col-total > .sr-only"),
+    ).toHaveAttribute("hidden");
   },
 };
 

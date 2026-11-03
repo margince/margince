@@ -280,6 +280,14 @@ export const deals = [
   },
 ];
 
+// Thirty more deals in Qualify: past one board column's page of 25.
+export const busyStageDeals = Array.from({ length: 30 }, (_, index) => ({
+  ...deals[0],
+  id: `d-busy-${index + 1}`,
+  name: `Busy deal ${index + 1}`,
+  stage_id: "s1",
+}));
+
 // The body of work the fleet deals are about. It starts in `initiative`,
 // attached to no deal, and the project page and the deal form's project
 // picker both read it.

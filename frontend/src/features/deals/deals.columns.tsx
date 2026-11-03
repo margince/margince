@@ -56,7 +56,7 @@ export function buildColumns(
 }
 
 // The report's count over every matching deal. While the report is pending,
-// withheld or refused, the loaded cards; none before a first read answers.
+// withheld or refused, the loaded cards count; before a first read, none do.
 function columnCount<Loaded extends number | null>(
   stageTotals: StageTotals | undefined,
   loaded: Loaded,

@@ -144,11 +144,11 @@ export function useDeals(f: DealFilters, enabled = true) {
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      readDealPage({
-        ...dealsQueryParams({ ...f, closeDay }),
-        cursor: pageParam,
-      }),
+    queryFn: ({ pageParam, signal }) =>
+      readDealPage(
+        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        signal,
+      ),
     getNextPageParam: nextCursorOf,
   });
 }

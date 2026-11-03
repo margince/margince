@@ -1017,9 +1017,14 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
 test("AC-pipeline-12: a busy stage's column loads its next page on its own", async ({
   page,
 }) => {
+  test.skip(Boolean(process.env.BASE_URL), "it reads the busy-stage mock");
   await mockApi(page, { busyStage: true });
   await page.goto("/#/deals");
   const qualify = page.locator('[data-stage="s1"]');
+  // The head states the report's count over every deal, not the page's cards.
+  await expect(qualify.locator(".board-col-count .optioncount")).toHaveText(
+    "31",
+  );
   // The seeded Qualify deal and thirty more: 31, of which a page reads 25.
   const cards = qualify.locator("[data-deal]");
   await expect(cards).toHaveCount(25);

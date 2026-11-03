@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { derivationFixture, reportFixtures } from "./fixtures";
+import {
+  busyStageDeals,
+  derivationFixture,
+  reportFixtures,
+  stages,
+} from "./fixtures";
 import { type Handler, page } from "./server";
 
 // A contact found only through the company the word named, and only for a
@@ -170,10 +175,33 @@ const dealsByStage = {
   ],
 };
 
+// The busy Qualify stage, counted and summed as the list pages hold it.
+function withBusyStage(report: typeof dealsByStage): typeof dealsByStage {
+  const raw = busyStageDeals.reduce((sum, deal) => sum + deal.amount_minor, 0);
+  const probability =
+    stages.find((stage) => stage.id === "s1")?.win_probability ?? 0;
+  return {
+    ...report,
+    rows: report.rows.map((row) =>
+      row.stage_id === "s1"
+        ? {
+            ...row,
+            deals: row.deals + busyStageDeals.length,
+            raw_minor: row.raw_minor + raw,
+            weighted_minor: row.weighted_minor + (raw * probability) / 100,
+          }
+        : row,
+    ),
+  };
+}
+
 // The report a caller asked for, so each Delivery section gets rows with the
 // fields it reads.
-export const report: Handler = ({ path, json }) =>
-  json(reportFixtures[path.slice("/reports/".length)] || dealsByStage);
+export const report: Handler = ({ path, json }, { options }) =>
+  json(
+    reportFixtures[path.slice("/reports/".length)] ||
+      (options.busyStage ? withBusyStage(dealsByStage) : dealsByStage),
+  );
 
 export const hierarchyRollup = {
   root_id: "o-brandt",

@@ -10,6 +10,7 @@ import {
 import {
   anna,
   brandt,
+  busyStageDeals,
   deals,
   MEETING_ACTIVITY,
   seats,
@@ -348,14 +349,6 @@ export const pipelines = page([
     ],
   },
 ]);
-
-// Thirty more deals in Qualify: past one board column's page of 25.
-const busyStageDeals = Array.from({ length: 30 }, (_, index) => ({
-  ...deals[0],
-  id: `d-busy-${index + 1}`,
-  name: `Busy deal ${index + 1}`,
-  stage_id: "s1",
-}));
 
 // The board reads the list, so the list shows the writes the detail shows. A
 // board column asks for one stage, and the server answers only that stage. The
