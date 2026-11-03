@@ -34,9 +34,12 @@ package compose
 // accumulated are archived as the sweep meets them.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -115,10 +118,9 @@ func bundleRunFindings(
 	// whole list has been walked. Minting on first sight would title every task
 	// "1 finding" and then bundle three more onto it.
 	//
-	// ONE SUBJECT'S FAILURE IS NOT THE NIGHT'S. The list is ordered by severity
-	// and then by money at stake, so aborting on the first error would suppress
-	// every task below it — a single deal whose owner has left the company would
-	// silently cost the whole workspace its remaining tasks. Each failure is
+	// One subject's failure is not the night's. Aborting on the first error
+	// would suppress every task after it. A single deal whose owner has left
+	// would cost the whole workspace its remaining tasks, so each failure is
 	// carried and the walk continues.
 	var failed []error
 	for _, subject := range groupBySubject(open) {
@@ -215,14 +217,14 @@ type subjectFindings struct {
 	findings []assurance.Exception
 }
 
-// groupBySubject collects the findings per subject, KEEPING the read's order.
+// groupBySubject collects the findings per subject. Within a subject it keeps
+// the read's order, severity and then amount, so the most material finding
+// leads its bundle. The subjects themselves come in id order.
 //
-// A map alone would not: ranging one is randomised, so the task minted for a
-// subject would take a different finding's owner from night to night, and the
-// order findings bundle in would vary for no reason a reader could see. The
-// order matters because the first finding is the one whose owner becomes the
-// assignee, and the read already sorted by severity and amount — so the owner
-// carried is the one on the most material finding.
+// The subjects are not left in the read's order because tasks are minted in
+// the order this returns, and activity ids sort by creation. Minting the bigger
+// deal's task first would tell a reader masked from amounts which deal is
+// bigger.
 func groupBySubject(open []assurance.Exception) []subjectFindings {
 	var out []subjectFindings
 	at := map[string]int{}
@@ -236,6 +238,9 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 		}
 		out[index].findings = append(out[index].findings, exception)
 	}
+	slices.SortFunc(out, func(a, b subjectFindings) int {
+		return cmp.Or(strings.Compare(a.kind, b.kind), strings.Compare(a.id.String(), b.id.String()))
+	})
 	return out
 }
 
