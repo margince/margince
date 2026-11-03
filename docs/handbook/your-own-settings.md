@@ -20,9 +20,10 @@ Also called: my profile, my account, preferences, user settings.
 ### How do I finish setting up Margince?
 To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
 It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
-The writing voice step names what is next for your voice. With too few samples it shows **Add samples**. With enough samples it shows **Build voice**. While a build runs it shows **View progress**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. After a failed build it shows the reason and **Try again**. The step is done once you use a version.
 While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
 Also called: setup list, getting started, onboarding steps.
+
+The writing voice step names what is next for your voice. With too few samples it shows **Add samples**, and with enough it shows **Build voice**. While a build runs it shows **View progress**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. After a failed build it shows the reason and **Try again**. The step is done once you use a version.
 
 ### How do I save a change on a settings page?
 To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
@@ -281,8 +282,10 @@ To set up your writing voice in Margince, open Settings → **Writing voice**, a
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. Your first version is never used on its own: setup stays open until you choose **Use this version**. If you discard it, add more samples and build again. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
+When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
 Also called: tone, writing style, Voice DNA, sound like me.
+
+Your first version is never used on its own. Setup stays open until you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
 The best samples are emails you sent, then proposals and posts, then the written
 record of calls or meetings. Leave out text others wrote, and AI drafts: Margince

@@ -73,8 +73,8 @@ export function voiceBuildPending(profile: VoiceProfile | null): boolean {
 
 /**
  * The address dial that asks the Writing voice page to scroll to and focus one
- * of its parts. Setup's voice step sets it; the page clears it once it moved
- * focus, so pressing the same step again while on the page moves focus again.
+ * of its parts. Setup's voice step sets it, and the page clears it after
+ * moving focus. Pressing the step again on the page then moves focus again.
  */
 export const VOICE_FOCUS_PARAM = "focus";
 

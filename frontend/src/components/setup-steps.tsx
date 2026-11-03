@@ -185,8 +185,8 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
     );
   }
   if (step.id === "voice") {
-    // The page moves focus to the part the dial names, even when the reader
-    // is already on it, so the action always lands on the next thing to do.
+    // The page moves focus to the part the dial names. That holds even when
+    // the reader is already on it.
     const focus = voiceFocusFor(step.voice?.state ?? null);
     return (
       <Button

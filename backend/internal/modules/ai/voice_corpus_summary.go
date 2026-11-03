@@ -79,8 +79,8 @@ func (s *VoiceStore) ProfilePresentation(ctx context.Context, profileID ids.UUID
 
 // VoiceProfileView is what a profile read derives beside the control row: the
 // corpus meter, the pending candidate and the newest build. Setup and the
-// Writing voice page read their next step off these facts, so they are served
-// together from one transaction and cannot disagree with each other.
+// Writing voice page read their next step off these facts, all read in one
+// transaction.
 type VoiceProfileView struct {
 	Summary          CorpusSummary
 	CandidateVersion *int

@@ -283,7 +283,7 @@ func TestVoiceBuildFailsWhenTheCorpusChangedSinceQueueing(t *testing.T) {
 	}
 }
 
-// The profile read carries the newest build in every status, so a page opened
+// The profile read carries the newest build in every status. A page opened
 // after the build ended elsewhere still learns that it failed and why.
 func TestVoiceProfileViewCarriesTheNewestBuild(t *testing.T) {
 	env, build := seedVoiceBuild(t, "A quote for the view.", 6)
