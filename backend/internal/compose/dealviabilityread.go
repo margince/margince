@@ -62,6 +62,9 @@ func (h dealViabilityHandlers) GetDealViability(w http.ResponseWriter, r *http.R
 
 // readDealViability reads one deal's viability in the caller's transaction.
 func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontracts.DealViability, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return crmcontracts.DealViability{}, err
+	}
 	policy, err := forecastQualifiedPolicy(ctx, tx)
 	if err != nil {
 		return crmcontracts.DealViability{}, err
