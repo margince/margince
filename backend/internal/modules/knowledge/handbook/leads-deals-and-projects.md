@@ -133,7 +133,7 @@ Leads disqualified in bulk have no one-step undo: reopen them one at a time.
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
-To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a soft green fill and a round pencil when the pointer is over it (on a touch screen the pencil always shows). Pressing the value or the pencil opens a dialog for that field.
+To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. Press the value or the mark to open a dialog for that field.
 1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Email** and **Company** open the edit form in a dialog.
 2. Fields: **Full name**, **Email**, **Title**, **Company**, **Industry**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
@@ -196,7 +196,7 @@ On a company or project page, the button is hidden when the pipeline has no open
 Also called: opportunity.
 
 ### How do I edit a deal?
-To edit a deal in Margince, open it from **Deals** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a soft green fill and a round pencil when the pointer is over it (on a touch screen the pencil always shows). Pressing the value or the pencil opens a dialog for that field.
+To edit a deal in Margince, open it from **Deals** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. Press the value or the mark to open a dialog for that field.
 1. If the panel is hidden, choose **Show details**.
 2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value** and **Company** open the edit form in a dialog.
 
@@ -287,7 +287,7 @@ Then comes **Open tasks**: the open tasks filed under the project, soonest due f
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
-To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name in the dialog and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
+To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
 You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), press its value in the project's **Details** panel instead.
 
 The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
