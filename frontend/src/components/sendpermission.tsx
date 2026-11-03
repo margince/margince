@@ -4,11 +4,12 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CommunicationStatus } from "../design-system/communicationstatus";
+import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
   sendPermissionReasonKey,
 } from "../format/sendpermissionreason";
-import { usePlural, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   decidingRefusal,
@@ -243,6 +244,7 @@ function AffectedRecipients({
 }: Readonly<{ status: SendStatus; named: boolean }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const others = status.refusing - 1;
   if (named && status.deciding) {
     const address = status.deciding.address;
@@ -251,7 +253,7 @@ function AffectedRecipients({
         {others > 0
           ? plural("sendPermission.appliesToAndMore", others, {
               address,
-              count: String(others),
+              count: formatNumber(others, locale),
             })
           : t("sendPermission.appliesTo", { address })}
       </p>
@@ -261,8 +263,8 @@ function AffectedRecipients({
     return (
       <p className="t-caption">
         {plural("sendPermission.appliesToSome", status.refusing, {
-          count: String(status.refusing),
-          total: String(status.recipients),
+          count: formatNumber(status.refusing, locale),
+          total: formatNumber(status.recipients, locale),
         })}
       </p>
     );

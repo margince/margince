@@ -113,7 +113,9 @@ describe("a refused send and the check after it", () => {
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    expect(await screen.findByRole("button", READY)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /recipients checked/i }),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     const alert = await screen.findByRole("alert");
@@ -126,7 +128,9 @@ describe("a refused send and the check after it", () => {
     // The rep changes what the message is; the old refusal is about another.
     refused = false;
     await pickWhy(WHY_LABEL.marketing);
-    expect(await screen.findByRole("button", READY)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /recipients checked/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -161,7 +165,9 @@ describe("a refused send and the check after it", () => {
 
     fixed = true;
     await queryClient.invalidateQueries({ queryKey: ["send-permission"] });
-    expect(await screen.findByRole("button", READY)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /recipients checked/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(
       screen.queryByText("Choose the deal for this follow-up."),
@@ -262,7 +268,9 @@ describe("the mark beside Send", () => {
 
     await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
     writeMessage("Body", "Body content");
-    expect(await screen.findByRole("button", READY)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /recipients checked/i }),
+    ).toBeInTheDocument();
   });
 });
 
