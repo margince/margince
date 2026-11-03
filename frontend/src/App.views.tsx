@@ -48,13 +48,8 @@ import { OnboardingScreen } from "./features/onboarding/onboarding";
 import { RESET_ROUTE } from "./features/sign-in/auth";
 import { isContactTab } from "./lib/contacttab";
 import { EXTENSION_SCREEN } from "./lib/extensions";
-import {
-  navigate,
-  parseHash,
-  routeHash,
-  routeIdentity,
-  type Screen,
-} from "./lib/router";
+import { routeIdentity } from "./lib/routeidentity";
+import { navigate, parseHash, routeHash, type Screen } from "./lib/router";
 
 // The path segments below the screen. Only two of the four are dispatched on.
 // id3 belongs to the screens that read it themselves (the consent return's
@@ -205,7 +200,7 @@ export function ScreenView({
   // boundary turns it into the retry card instead of a blank frame.
   return (
     <Suspense fallback={<ScreenPending />}>
-      {/* Keyed by what the address is about (lib/router.tsx's routeIdentity).
+      {/* Keyed by what the address is about (lib/routeidentity.ts's routeIdentity).
           Moving to another thing is then a remount rather than a re-render.
           Two reasons, and the second is the load-bearing one. A screen carries
           state about the record it was opened for: an expanded section, a

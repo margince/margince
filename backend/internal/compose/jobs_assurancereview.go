@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -73,13 +72,19 @@ func queueReviewDeliveries(store *assurance.Store) assurance.ReviewDeliveryFunc 
 		if err != nil {
 			return err
 		}
-		for _, finding := range found {
-			if !slices.Contains(assurance.ReviewTypes(), finding.Type) {
+		// Subject by subject, in groupBySubject's amount-free order: River works
+		// the jobs in insertion order, and each one mints a task.
+		for _, subject := range groupBySubject(found) {
+			finding, ok := reviewFinding(subject)
+			if !ok {
 				continue
 			}
 			episode, err := store.EpisodeTask(ctx, tx, finding.ID)
-			if err != nil || episode.Task != nil {
+			if err != nil {
 				return err
+			}
+			if episode.Task != nil {
+				continue
 			}
 			if err := store.QueueDelivery(ctx, tx, finding.ID, episode.Episode); err != nil {
 				return err

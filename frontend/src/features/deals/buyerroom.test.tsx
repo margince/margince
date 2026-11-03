@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -268,6 +269,53 @@ describe("BuyerRoomScreen", () => {
     expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
       null,
     );
+  });
+
+  it("hides the open room while a second link's exchange is pending", async () => {
+    let answerB: (response: Response) => void = () => undefined;
+    const exchangeB = new Promise<Response>((resolve) => {
+      answerB = resolve;
+    });
+    const roomFor = (title: string) =>
+      jsonResponse({ ...LIVE, room: { ...LIVE.room, title } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : null;
+        const path = new URL(
+          request ? request.url : String(input),
+          "https://test.local",
+        ).pathname.replace(/^\/v1/, "");
+        if (path === "/public/rooms/exchange") {
+          const body: unknown = await request?.json();
+          const credential = Reflect.get(Object(body), "credential");
+          if (credential === "mdr_b") {
+            return exchangeB;
+          }
+          return jsonResponse({ session_token: "mdrs_a" });
+        }
+        if (path === "/public/rooms/me") {
+          const bearerToken = request?.headers.get("Authorization");
+          return roomFor(bearerToken === "Bearer mdrs_b" ? "Room B" : "Room A");
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    globalThis.location.hash = "#/room?c=mdr_a";
+    render(<BuyerRoomScreen />);
+    await screen.findByRole("heading", { name: "Room A" });
+
+    act(() => {
+      globalThis.history.replaceState(null, "", "/#/room?c=mdr_b");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
+    expect(screen.getByText("Opening your Deal Room…")).toBeInTheDocument();
+
+    answerB(jsonResponse({ session_token: "mdrs_b" }));
+    await screen.findByRole("heading", { name: "Room B" });
+    expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
   });
 
   // The download used to spell the object-URL dance inline — create, anchor,

@@ -143,14 +143,14 @@ func followReviewOwner(ctx context.Context, deps bundleDeps, review assurance.Ex
 // adopted colleague holds, was given to nobody by the system.
 func systemGivenAssignee(ctx context.Context, deps bundleDeps, task ids.UUID, review assurance.Exception) (*ids.UUID, error) {
 	if review.OwnerID == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil is the answer "the system gave the task to nobody"
 	}
 	act, err := deps.activities.GetActivity(ctx, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the delivered task: %w", err)
 	}
 	if act.AssigneeId == nil || ids.UUID(*act.AssigneeId) != *review.OwnerID {
-		return nil, nil
+		return nil, nil //nolint:nilnil // the task sits with someone the system did not choose
 	}
 	return review.OwnerID, nil
 }
