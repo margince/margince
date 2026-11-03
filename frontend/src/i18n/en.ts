@@ -1276,7 +1276,8 @@ export const en = {
   "reporting.memberReason.picked": "Picked by hand",
   "reporting.memberReason.carried": "Promoted from a member lead",
   "reporting.memberReason.excluded": "Excluded",
-  "reporting.trackingOnlyVerdict": "Tracking only · no target to measure against",
+  "reporting.trackingOnlyVerdict":
+    "Tracking only · no target to measure against",
   "reporting.targetBy": "{target} by {deadline}",
   "reporting.knownDealValue": "{value} known deal value, all statuses",
   "reporting.baselineNote":
@@ -15794,6 +15795,9 @@ export const en = {
     "Help asked on a commitment",
   "webhooks.event.weekly_plan.help_requested.when":
     "A rep asks their lead for help on one commitment.",
+  "webhooks.event.sales_initiative.updated.label": "Sales initiative changed",
+  "webhooks.event.sales_initiative.updated.when":
+    "A sales initiative was defined, edited, launched or had its included records changed.",
   "webhooks.eventGroup.notices_notifications": "Notices and notifications",
   "webhooks.event.notice.created.label": "Notice recorded",
   "webhooks.event.notice.created.when": "A notice is recorded for one user.",
@@ -16841,7 +16845,9 @@ export const en = {
   "filters.field.amount": "Converted amount",
   "filters.field.city": "City",
   "filters.field.classification": "Classification",
+  "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
+  "filters.field.product_id": "Product",
   "filters.field.company_lifecycle": "Company lifecycle",
   "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",

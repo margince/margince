@@ -264,7 +264,7 @@ var catalog = map[string]struct {
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
 	// A sales initiative is a commercial decision about a population, not a
-	// record of its own stream: it rides the identity stream as a report
+	// record of its own stream. It rides the identity stream as a report
 	// definition does.
 	"sales_initiative.updated": {identityStreamEntity, 1},
 

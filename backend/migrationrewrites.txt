@@ -56,3 +56,6 @@
 1793602000_thread_subject_boundaries.up.sql | * | the source-erasure trigger changes only the one future basis row being updated; this migration creates empty repair ledgers and comparison metadata, and rewrites no existing domain rows
 1793664831_thread_repair_tables_are_dropped.up.sql | communication_basis | the UPDATE revokes only bases the withdrawn thread repair copied, which its inherit phase alone wrote; the dropped columns and tables rewrite no row
 1793664831_thread_repair_tables_are_dropped.down.sql | * | the down migration replays 1793602000, which creates empty repair ledgers and rewrites no existing domain row
+1793670405_a_sales_initiative_names_its_effort.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
+1793670405_a_sales_initiative_names_its_effort.down.sql | role | removes that one grant from the same fixed set of system roles
+1793670406_a_deal_base_amount_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

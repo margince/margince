@@ -92,3 +92,12 @@ UPDATE role SET permissions = jsonb_set(
       AND key IN ('rep', 'read_only', 'ops')
       AND permissions ? 'objects'
       AND NOT (permissions -> 'objects') ? 'sales_initiative';
+
+-- The member list publishes a deal's base amount as a JSON number, so the
+-- column is bounded to what a JavaScript client holds exactly.
+ALTER TABLE deal ADD CONSTRAINT deal_amount_minor_base_js_safe CHECK (amount_minor_base BETWEEN -9007199254740991 AND 9007199254740991) NOT VALID;
+
+-- A retired member cannot be handed a live initiative.
+CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON sales_initiative
+    FOR EACH ROW WHEN (NEW.owner_id IS NOT NULL AND (NEW.archived_at IS NULL))
+    EXECUTE FUNCTION refuse_retired_member_work('owner_id');

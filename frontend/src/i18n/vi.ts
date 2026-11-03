@@ -15492,6 +15492,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã nhờ hỗ trợ một cam kết",
   "webhooks.event.weekly_plan.help_requested.when":
     "Nhân viên kinh doanh nhờ trưởng nhóm hỗ trợ một cam kết.",
+  "webhooks.event.sales_initiative.updated.label":
+    "Sáng kiến bán hàng đã thay đổi",
+  "webhooks.event.sales_initiative.updated.when":
+    "Một sáng kiến bán hàng được tạo, chỉnh sửa, khởi động hoặc thay đổi các bản ghi được đưa vào.",
   "webhooks.eventGroup.notices_notifications": "Thông điệp và thông báo",
   "webhooks.event.notice.created.label": "Đã ghi nhận thông điệp",
   "webhooks.event.notice.created.when":
@@ -16502,7 +16506,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.amount": "Số tiền quy đổi",
   "filters.field.city": "Thành phố",
   "filters.field.classification": "Phân loại",
+  "filters.field.company_country": "Quốc gia của công ty",
   "filters.field.company_industry": "Ngành của công ty",
+  "filters.field.product_id": "Sản phẩm",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
   "filters.field.company_size_band": "Số nhân viên",
   "filters.field.country": "Mã quốc gia",

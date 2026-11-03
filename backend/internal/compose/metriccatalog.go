@@ -220,6 +220,12 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}
+	return out, e.projectMovementCharts(ctx, tx, frame, &out)
+}
+
+// projectMovementCharts reads the pipeline movement behind each chart that
+// asks for it, each under its own savepoint.
+func (e metricEvaluator) projectMovementCharts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, out *reporting.Evaluation) error {
 	for index, chart := range out.Result.Charts {
 		// A chart whose metric is withheld whole keeps that coverage, and its
 		// movement and the facts behind it are never read.
@@ -234,7 +240,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			return err
 		})
 		if err != nil {
-			return out, err
+			return err
 		}
 		if failed {
 			chart.Coverage = calculationFailed(frame)
@@ -245,7 +251,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		out.Result.Charts[index] = projected
 		out.Facts = append(out.Facts, facts...)
 	}
-	return out, nil
+	return nil
 }
 
 // unreadMetric is the coverage of a metric the evaluation does not read: a

@@ -3770,6 +3770,7 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency currency_code gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT
+public.deal.deal_amount_minor_base_js_safe CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
@@ -7494,6 +7495,7 @@ public.sales_initiative.objective_metric text NOT NULL gen=- def=-
 public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
 public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
 public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
 public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
 public.sales_initiative.sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0)))

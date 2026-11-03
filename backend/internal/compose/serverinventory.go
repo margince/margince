@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
@@ -210,8 +209,7 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
-	// The sales initiative transport: an effort's objective, its members and
-	// its launch. Its membership is read by the reporting engine too.
+	// The sales initiative transport; the reporting engine reads its membership too.
 	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
@@ -499,5 +497,3 @@ type Server struct {
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
 }
-
-var _ crmcontracts.ServerInterface = Server{}

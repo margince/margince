@@ -10,11 +10,8 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Column references shared across the per-entity segment engines below —
@@ -426,57 +423,6 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	}
 	withholdFromCaller(ctx, resource, merged.Fields)
 	return merged, true, nil
-}
-
-// customFieldTypes maps the six closed catalog types onto the predicate
-// engine's own. Both sets are closed and neither is this file's to extend: a
-// seventh catalog type arrives with its own entry here, and
-// TestEveryCustomFieldTypeIsFilterable fails until it has one.
-var customFieldTypes = map[string]storekit.FieldType{
-	fieldcatalog.TypeText:        storekit.FieldText,
-	fieldcatalog.TypeNumber:      storekit.FieldNumber,
-	fieldcatalog.TypeDate:        storekit.FieldDate,
-	fieldcatalog.TypeCurrency:    storekit.FieldCurrency,
-	fieldcatalog.TypeMultiselect: storekit.FieldMultiselect,
-	fieldcatalog.TypePicklist:    storekit.FieldPicklist,
-	fieldcatalog.TypeBoolean:     storekit.FieldBoolean,
-}
-
-// customField types one custom column for the predicate engine, and answers
-// false for a catalog type this engine has no operators for.
-//
-// LEFT OUT rather than refused, and the difference is the blast radius. This
-// mapping runs over EVERY column of the object, so a refusal here costs the
-// whole resolution — list-create validation, membership evaluation and
-// filtered export all fail for that record type, including for filters that
-// never name the field. Omitting contains the damage to the one field, which
-// is the same call `search`'s vocabulary makes next door on its own stated
-// grounds — an unasked field is a smaller failure than one that answers the
-// wrong comparison.
-//
-// Omission does not hide anything either, because a field the vocabulary does
-// not carry is not silently dropped from a predicate: CompilePredicate refuses
-// an unknown name with CodeFilterFieldNotAllowed, so a saved segment that
-// actually NAMES such a field says "not filterable on this resource" rather
-// than quietly matching a different set of rows. What omission must never
-// become is a guess — defaulting an unknown type to text would admit
-// `contains` on a number and read as a working filter — which is why the
-// mapping is a closed map with a gate over it rather than a switch with a
-// fallback.
-func customField(column fieldcatalog.Column) (storekit.Field, bool) {
-	fieldType, ok := customFieldTypes[column.Type]
-	if !ok {
-		return storekit.Field{}, false
-	}
-	return storekit.Field{
-		Expr: `t.` + pgx.Identifier{column.Name}.Sanitize(),
-		Type: fieldType,
-		// Straight from the catalogue, which owns them for the same reason it owns
-		// labels: they are per-workspace admin state. Empty for every non-picklist
-		// type, which is what the column itself reports.
-		Options:  column.Options,
-		Currency: column.Currency,
-	}, true
 }
 
 // errNotAFilterTree is what a jsonb value that does not decode into the

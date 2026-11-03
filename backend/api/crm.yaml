@@ -6788,6 +6788,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SalesInitiativeListResponse' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Reports]
       operationId: createSalesInitiative

@@ -48,6 +48,10 @@ The 4 tables owned by `initiatives`, as the migrations build them. [Back to the 
 - `sales_initiative_pkey`: `unique, btree (id)`
 - `sales_initiative_status_idx`: `btree (status) WHERE (archived_at IS NULL)`
 
+**Triggers**
+
+- `sales_initiative_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## sales_initiative_baseline
 
 6 columns · primary key `(initiative_id, deal_id)` · referenced by 0 foreign keys

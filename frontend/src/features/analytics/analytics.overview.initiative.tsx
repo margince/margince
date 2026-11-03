@@ -24,10 +24,11 @@ import { reportingAmount } from "./reporting.model";
 import { useMetricNames, useReportingEvaluation } from "./reporting.queries";
 
 /**
- * The initiative's own readings above the sales review: the objective since
- * the launch against its target, and the open pipeline by where each deal
- * came from. Both are one evaluation of the initiative's two metrics over
- * the window from the launch to now, whatever period the page reads.
+ * The initiative's own readings above the sales review. One is the objective
+ * since the launch against its target. The other is the open pipeline by
+ * where each deal came from. Both come from one evaluation of the
+ * initiative's two metrics, from the launch to now, whatever period the page
+ * reads.
  */
 export function InitiativePanel({
   selection,
@@ -45,6 +46,7 @@ export function InitiativePanel({
   const initiatives = useSalesInitiatives();
   const canEdit = useCanWrite("sales_initiative", "update");
   const [editing, setEditing] = useState(false);
+  const [openedAt] = useState(() => new Date().toISOString());
   const initiative = initiatives.data?.find(
     (row) => row.id === selection.initiative_id,
   );
@@ -52,9 +54,7 @@ export function InitiativePanel({
   const asked: ReportingSelection = {
     ...selection,
     period: "custom",
-    interval: launch
-      ? { start_at: launch, end_at: new Date().toISOString() }
-      : undefined,
+    interval: launch ? { start_at: launch, end_at: openedAt } : undefined,
     metrics: initiative
       ? [initiative.objective_metric, "initiative_pipeline"]
       : ["initiative_pipeline"],

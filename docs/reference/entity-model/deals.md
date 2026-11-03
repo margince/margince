@@ -140,6 +140,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `deal_amount_minor_base_js_safe`: `CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))`
 - `deal_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `deal_closed_at`: `CHECK (((status = 'open') OR (closed_at IS NOT NULL)))`
 - `deal_closed_fx`: `CHECK (((status = 'open') OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))`

@@ -46,8 +46,8 @@ func seedInitiativeDeals(t *testing.T, e *forecastEnv, start time.Time) (manufac
 }
 
 // A rule on the customer's industry includes the manufacturing deals and no
-// other; a pick adds one more; an exclusion stands over the rule; the launch
-// freezes those deals as the baseline; and a report narrowed to the
+// other. A pick adds one more, and an exclusion stands over the rule. The
+// launch freezes those deals as the baseline, and a report narrowed to the
 // initiative reads them alone.
 func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 	e := setupForecast(t)
@@ -142,6 +142,6 @@ func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 // The deal rule of the test: the customer's industry is manufacturing.
 var initiativeRulePredicate = storekitPredicate("company_industry", "eq", "manufacturing")
 
-func storekitPredicate(field, op string, value any) storekit.Predicate {
+func storekitPredicate(field, op, value string) storekit.Predicate {
 	return storekit.Predicate{Field: field, Op: op, Value: value}
 }

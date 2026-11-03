@@ -21,9 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// initiativeMembership is who belongs to the selected initiative, read once
-// per evaluation under the reader's row scope and handed to every metric
-// reader through the context. Sourced deals are the member deals a member
+// initiativeMembership is who belongs to the selected initiative. It is read
+// once per evaluation under the reader's row scope, and every metric reader
+// takes it from the context. Sourced deals are the member deals a member
 // lead was promoted into after the launch: the one evidenced origin.
 type initiativeMembership struct {
 	leads, deals, baseline, sourced []ids.UUID
@@ -55,7 +55,18 @@ func reportingInitiativeContext(ctx context.Context, tx pgx.Tx, selection crmcon
 	}
 	var name string
 	var launch *time.Time
-	err := tx.QueryRow(ctx, `SELECT name, launch_at FROM sales_initiative WHERE id = $1 AND archived_at IS NULL`, *selection.InitiativeId).Scan(&name, &launch)
+	args := []any{*selection.InitiativeId}
+	scope, err := auth.ScopeClauseFor(ctx, "sales_initiative", "sales_initiative", func(value any) int {
+		args = append(args, value)
+		return len(args)
+	})
+	if err != nil {
+		return err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	err = tx.QueryRow(ctx, `SELECT name, launch_at FROM sales_initiative WHERE id = $1 AND archived_at IS NULL AND `+scope, args...).Scan(&name, &launch)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("the selected initiative does not exist: %w", apperrors.ErrNotFound)
 	}
@@ -77,22 +88,49 @@ func loadInitiativeMembership(ctx context.Context, tx pgx.Tx, store *initiatives
 		return nil, err
 	}
 	out := &initiativeMembership{leads: membership.Leads, deals: membership.Deals, launch: membership.Launch}
-	rows, err := tx.Query(ctx, `SELECT deal_id FROM sales_initiative_baseline WHERE initiative_id = $1`, id)
-	if err != nil {
-		return nil, fmt.Errorf("read the launch baseline: %w", err)
-	}
-	if out.baseline, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID]); err != nil {
+	if out.baseline, err = readInitiativeBaseline(ctx, tx, id); err != nil {
 		return nil, err
 	}
-	if out.launch.IsZero() {
+	// Sourcing is read off the lead table, so a reader without the lead grant
+	// sees the pipeline without that origin.
+	if out.launch.IsZero() || !auth.ReadGranted(ctx, "lead") {
 		return out, nil
 	}
-	rows, err = tx.Query(ctx, `SELECT DISTINCT l.qualified_deal_id FROM lead l WHERE l.id = ANY($1) AND l.qualified_deal_id = ANY($2) AND l.promoted_at >= $3`, out.leads, out.deals, out.launch)
+	b := &reportingBindings{}
+	leadScope, err := auth.ScopeClauseFor(ctx, "lead", "l", b.arg)
+	if err != nil {
+		return nil, err
+	}
+	if leadScope == "" {
+		leadScope = "TRUE"
+	}
+	rows, err := tx.Query(ctx, `SELECT DISTINCT l.qualified_deal_id FROM lead l WHERE l.id = ANY(`+b.add(out.leads)+`) AND l.qualified_deal_id = ANY(`+b.add(out.deals)+`) AND l.promoted_at >= `+b.add(out.launch)+` AND `+leadScope, b.values...)
 	if err != nil {
 		return nil, fmt.Errorf("read the sourced deals: %w", err)
 	}
 	out.sourced, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	return out, err
+}
+
+// readInitiativeBaseline reads the deals frozen at the launch that the
+// reader's row scope reaches today, as any served deal reference is.
+func readInitiativeBaseline(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]ids.UUID, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	b := &reportingBindings{}
+	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", b.arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	rows, err := tx.Query(ctx, `SELECT b.deal_id FROM sales_initiative_baseline b JOIN deal d ON d.id = b.deal_id WHERE b.initiative_id = `+b.add(id)+` AND `+scope, b.values...)
+	if err != nil {
+		return nil, fmt.Errorf("read the launch baseline: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
 // initiativeMemberSQL narrows rows aliased `alias` to the members of the

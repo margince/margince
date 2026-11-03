@@ -19,7 +19,7 @@ import (
 )
 
 // initiativeRules evaluates an initiative's rule through the list filter
-// engine of the record type, so an initiative and a dynamic list answer one
+// engine of the record type. So an initiative and a dynamic list answer one
 // predicate the same way, under the same row scope.
 type initiativeRules struct{ collections *collections.Store }
 

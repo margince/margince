@@ -61905,6 +61905,7 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createSalesInitiative: {

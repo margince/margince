@@ -5137,6 +5137,10 @@
               "industry": {
                 "type": "string"
               },
+              "initiative_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "interval": {
                 "type": "object",
                 "properties": {

@@ -15908,6 +15908,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Hilfe zu einer Zusage angefragt",
   "webhooks.event.weekly_plan.help_requested.when":
     "Ein Teammitglied bittet die Teamleitung um Hilfe bei einer Zusage.",
+  "webhooks.event.sales_initiative.updated.label":
+    "Vertriebsinitiative geändert",
+  "webhooks.event.sales_initiative.updated.when":
+    "Eine Vertriebsinitiative wurde angelegt, bearbeitet, gestartet oder ihre enthaltenen Datensätze wurden geändert.",
   "webhooks.eventGroup.notices_notifications":
     "Hinweise und Benachrichtigungen",
   "webhooks.event.notice.created.label": "Hinweis erfasst",
@@ -16958,7 +16962,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.amount": "Umgerechneter Betrag",
   "filters.field.city": "Stadt",
   "filters.field.classification": "Klassifizierung",
+  "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
+  "filters.field.product_id": "Produkt",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
   "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",

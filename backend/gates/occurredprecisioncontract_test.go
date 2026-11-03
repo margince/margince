@@ -59,6 +59,8 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml NoticeCase.source_obtained_at":             "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
 	"api/crm.yaml NoticeCaseReview.source_obtained_at":       "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
 	"api/crm.yaml HealthFinding.first_observed_at":           "when operational evidence first recorded a condition, not an activity time",
+	"api/crm.yaml SalesInitiative.launch_at":                 "when a manager launched the initiative, the row's own instant",
+	"api/crm.yaml ReportingContext.initiative_launch_at":     "the same launch instant, named on the report frame",
 	"api/crm.yaml JobHealthGroup.first_at":                   "the first retained job execution instant",
 	"api/crm.yaml JobHealthGroup.latest_at":                  "the latest retained job execution instant",
 	"api/crm.yaml AgentClient.last_used_at":                  "when an agent client last called Margince, a request's own instant",
