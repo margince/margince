@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The offer PDF render seam: PrepareRender gathers every input
-// offer_pdf.go's RenderOfferPDF needs — the offer (its Net/Tax/GrossMinor
-// are already the totals engine's persisted output), its lines, the buyer
-// legal block, the issuer name, and the selected template's locale +
-// layout — WITHOUT ever touching blob storage. The render handler
-// (handlers_offertemplates.go) calls RenderOfferPDF over these
-// ingredients, writes the bytes to the object store, and then calls
-// SetPdfAssetRef to persist the resulting key. Splitting the read/render/
-// write this way keeps OfferStore blob-free (unlike activities'
-// attachment store, which owns its blob field, this store never imports
-// platform/blobstore).
+// The offer PDF render seam. PrepareRender gathers every input
+// offer_pdf.go's RenderOfferPDF needs. Those are the offer with its persisted
+// totals, its lines, the buyer and issuer blocks, and the template's locale
+// and layout. It never touches blob storage. The render handler
+// (handlers_offertemplates.go) renders, writes the bytes to the object store,
+// and calls SetPdfAssetRef to persist the key. So this store never imports
+// platform/blobstore.
 
 package deals
 
@@ -36,8 +32,10 @@ type RenderIngredients struct {
 	Offer      crmcontracts.Offer
 	LineItems  []crmcontracts.OfferLineItem
 	BuyerBlock map[string]any
-	IssuerName string
-	Locale     string
+	// Issuer is the issuing legal entity's block. Its LogoKey names the stored
+	// logo the render handler reads and embeds.
+	Issuer OfferIssuer
+	Locale string
 	// Layout is the selected offer_template's layout bag (or an empty map
 	// when the offer carries no template) — offer_pdf.go's RenderOfferPDF
 	// honors the bounded set of text keys it defines and ignores the rest.
@@ -99,7 +97,7 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		if err != nil {
 			return err
 		}
-		issuerName, err := s.resolveRenderIssuerName(ctx, tx, offer)
+		issuer, err := s.resolveRenderIssuer(ctx, tx, offer)
 		if err != nil {
 			return err
 		}
@@ -109,7 +107,7 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		}
 		out = RenderIngredients{
 			Offer: offer, LineItems: lines, BuyerBlock: buyerBlock,
-			IssuerName: issuerName, Locale: locale, Layout: layout,
+			Issuer: issuer, Locale: locale, Layout: layout,
 		}
 		return nil
 	})
@@ -150,27 +148,6 @@ func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.
 		block["legal_name"] = *legalName
 	}
 	return block, nil
-}
-
-// resolveRenderIssuerName mirrors resolveRenderBuyerBlock's frozen/live
-// split for the seller side: the frozen issuer_snapshot's workspace_name
-// once sent, else the installation's current live name.
-//
-// The live half reads the SAME source the frozen half was written from
-// (sendSnapshots), which is what stops a draft and a sent offer disagreeing
-// about who issued them. One fact, one source — and since the workspace row's
-// copy was dropped there is no second source left to read it from.
-func (s *Store) resolveRenderIssuerName(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (string, error) {
-	if offer.IssuerSnapshot != nil {
-		if name, ok := (*offer.IssuerSnapshot)["workspace_name"].(string); ok && name != "" {
-			return name, nil
-		}
-	}
-	name, err := s.issuerName(ctx, tx)
-	if err != nil {
-		return "", fmt.Errorf("render: read the installation's issuer name: %w", err)
-	}
-	return name, nil
 }
 
 // issuerName is who this installation issues a document AS, and it is the one
@@ -348,6 +325,36 @@ func (s *Store) UnreferencedOfferKeys(ctx context.Context, keys []string) ([]str
 			out = append(out, key)
 		}
 		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UnreferencedIssuerLogoKeys answers which of the logo keys no sent offer's
+// issuer snapshot names. A replaced logo is collected only when nothing
+// names it, and a sent offer still prints the logo it was sent with.
+func (s *Store) UnreferencedIssuerLogoKeys(ctx context.Context, keys []string) ([]string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	var out []string
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT k FROM unnest($1::text[]) AS k
+			 WHERE NOT EXISTS (SELECT 1 FROM offer o WHERE o.issuer_snapshot->>'`+issuerKeyLogo+`' = k)`, keys)
+		if err != nil {
+			return fmt.Errorf("check which logo keys no sent offer names: %w", err)
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return fmt.Errorf("read a logo key no sent offer names: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err

@@ -183,12 +183,11 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 	// snapshot must record the basis this offer was actually priced in.
 	// The same resolver the render takes, so what a customer saw on the draft
 	// is what the snapshot freezes as having been sent.
-	name, err := s.issuerName(ctx, tx)
+	entity, name, err := s.liveIssuer(ctx, tx, offer)
 	if err != nil {
-		return nil, nil, fmt.Errorf("snapshot issuer name: %w", err)
+		return nil, nil, fmt.Errorf("snapshot the issuer: %w", err)
 	}
-	issuer = map[string]any{"workspace_name": name, "base_currency": baseCurrency}
-	return buyer, issuer, nil
+	return buyer, issuerSnapshot(entity, name, baseCurrency), nil
 }
 
 // AcceptOffer runs sent → accepted: sets accepted_at, SYNCS the deal's
@@ -425,10 +424,10 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text,
-		                    net_minor, tax_minor, gross_minor, source, captured_by)
+		                    net_minor, tax_minor, gross_minor, source, captured_by, legal_entity_id)
 		 SELECT $1, deal_id, offer_number, $3, 'draft', currency,
 		        buyer_company_id, valid_until, intro_text, terms_text,
-		        net_minor, tax_minor, gross_minor, source, $4
+		        net_minor, tax_minor, gross_minor, source, $4, legal_entity_id
 		 FROM offer WHERE id = $2`,
 		newID, fromID, nextRevision, by); err != nil {
 		return fmt.Errorf("copy offer into new revision: %w", err)
