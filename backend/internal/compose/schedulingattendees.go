@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -211,4 +212,30 @@ func (c schedulingCalendar) InviteeAddress(ctx context.Context, host ids.UserID,
 		return "", id, nil
 	}
 	return string(*contact.PrimaryEmail), id, nil
+}
+
+// Blocker says why the host's calendar cannot take bookings. It reads the
+// connection's granted scopes and the host's authority, and calls no provider.
+func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
+	if c.registry == nil {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	scopes, err := c.registry.GrantedScopesFor(ctx, host, provider)
+	if errors.Is(err, capture.ErrNoConnection) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if !capture.CalendarWriteGranted(provider, scopes) {
+		return crmcontracts.SchedulingProfileBlockerCalendarReadOnly, nil
+	}
+	err = c.Check(ctx, host, provider)
+	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return crmcontracts.SchedulingProfileBlockerNone, nil
 }

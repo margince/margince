@@ -26036,7 +26036,7 @@ paths:
             schema: { $ref: '#/components/schemas/InviteUserRequest' }
       responses:
         '201':
-          description: The invited member.
+          description: The invited member, and whether the invitation email was handed to the mail relay.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
@@ -26814,6 +26814,52 @@ paths:
             configuration gap), `member_not_active` (the member is suspended or deactivated, so
             redemption would refuse the link this call would mint), or `archived_role_held` (the
             member holds an archived role; an admin gives them a live role first).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Issuance rate limit reached for this actor or this target.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /users/{id}/resend-invite:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: resendUserInvite
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Mail an invited member a new set-password link. Admin-only, human-only.
+      description: |
+        For an invited member whose invitation email the relay refused, and only then: the live
+        link's `invite_email_state` must be `failed`. Mints a new single-use
+        set-password link exactly as `issueUserPasswordLink` does (it supersedes the old one,
+        writes the same audit row and emits `user.password_link_issued`), then mails it instead
+        of returning it. Shares that operation's rate limits per actor and per target. Nothing
+        retries on its own: an admin sends again from the roster.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The member, and whether the new invitation email was handed to the sender.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            Refused, with the reason distinguished by the problem `code`:
+            `mail_unavailable` (this installation has no outbound relay or no link origin, so
+            nothing can be mailed; `issueUserPasswordLink` is the way then),
+            `invite_email_not_failed` (the member's live link was never mailed, or its mail is
+            still `sending` or was `sent`; a resend would supersede a link that may still arrive),
+            `member_not_invited`
+            (the member has already set a password, or is suspended or deactivated), or
+            `archived_role_held` (the member holds an archived role; an admin gives them a live
+            role first).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -27873,6 +27919,10 @@ paths:
           in: query
           schema: { type: string }
           description: Case-insensitive name/SKU substring match.
+        - name: tax_category
+          in: query
+          schema: { type: string, enum: [standard, reduced, exempt, unclassified] }
+          description: Only products in this tax category; `unclassified` lists those nobody has classified yet.
       responses:
         '200':
           description: A page of products.
@@ -27963,6 +28013,75 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{id}/translations:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Offers]
+      operationId: listProductTranslations
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The product's name and description in further languages.
+      description: |
+        An offer in one of these languages takes the product's name from here when a line is
+        added; an offer in any other language takes `Product.name`. Needs `product:read`.
+      responses:
+        '200':
+          description: The translations, by language.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductTranslationListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /products/{id}/translations/{language}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: language
+        in: path
+        required: true
+        description: 'ISO 639-1, lower case, for example `de`.'
+        schema: { type: string, pattern: '^[a-z]{2}$' }
+    put:
+      tags: [Offers]
+      operationId: putProductTranslation
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Set the product's name and description in one language.
+      description: |
+        Needs `product:update`. A later change here reaches only lines added afterwards: a
+        line already on an offer keeps the text it was added with.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PutProductTranslationRequest' }
+      responses:
+        '200':
+          description: The translation as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductTranslation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Offers]
+      operationId: deleteProductTranslation
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Remove the product's text in one language.
+      description: Needs `product:update`. Removing a language the product has no text in is not an error.
+      responses:
+        '204': { description: The product has no text in that language now. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- deal rooms ------------------------------
   # The buyer-facing Deal Room: one room per deal. This is the SELLER's
@@ -30364,10 +30483,13 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: { type: string, enum: [open, weighted, evidence, best_case], default: open }
+          schema: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted], default: open }
           description: >-
-            Which of the four money answers this movement explains. A waterfall is drawn
-            for ONE of them; mixing two adds figures that do not belong in one total.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them;
+            mixing two adds figures that do not belong in one total. The `qualified_` readings
+            are the baseline ones over the deals the customer still supports. Against a snapshot
+            frozen with no viability policy, or under another one, a qualified movement puts its
+            whole difference in `definition`.
       x-mcp-tool: { verb: forecast_movement, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -34205,6 +34327,65 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /tax-rates:
+    get:
+      tags: [Rates]
+      operationId: listTaxRates
+      security: [ { cookieAuth: [] } ]   # human session only — the sheet is an admin view, not an agent surface
+      x-agent-access: human-only
+      summary: The tax rate sheet, every recorded rate, newest first within each country and category.
+      description: |
+        Needs `tax_rate:read`, which admin and ops hold. With `country`, only that country's
+        rates. A rate is in force from its `valid_from` until the next rate of the same country
+        and category starts.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[A-Za-z]{2}$' }
+          description: ISO 3166-1 alpha-2.
+      responses:
+        '200':
+          description: The rates.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Rates]
+      operationId: recordTaxRate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Record a standard or reduced tax rate for a country from a day on.
+      description: |
+        Needs `tax_rate:create`. A rate is added and never changed or removed: to change a
+        rate, record a new one from a later day. `valid_from` is today or later in the
+        installation's zone, or a day before the earliest rate of that country and category,
+        which extends the history back (422 `tax_rate_past` otherwise). A second rate for the
+        same country, category and day is refused as 409.
+
+        The first rate recorded for a category of the installation's own country classifies
+        the rate card: every unclassified live product whose `default_tax_rate` equals the
+        rate is put in that category, in the same transaction. A product with any other rate,
+        a typed 0% included, stays unclassified for the admin to decide.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordTaxRateRequest' }
+      responses:
+        '201':
+          description: The recorded rate, and how many products it classified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateRecorded' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /ai-model-rates:
     get:
       tags: [Rates]
@@ -36138,8 +36319,8 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
-          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureManagerCall]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureQualifiedCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureQualifiedWeighted, SettingsForwardMeasureManagerCall]
           description: |
             Which remaining-pipeline reading a projected landing is built from. A setting
             rather than a fixed choice, because it is a question about how this installation
@@ -36147,11 +36328,18 @@ components:
             something by it, and one that commits everything does not — their weighted number
             is the honest one.
 
-            `commit_evidence` is the default and the strictest: committed deals whose close
-            date somebody confirmed, a provisional date being a guess that stays out.
+            `commit_evidence` is the strictest baseline: committed deals whose close date
+            somebody confirmed, a provisional date being a guess that stays out.
+            `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+            the deals the customer still supports (the `qualified` block on `GET /forecast`).
             `manager_call` takes the authored call as the whole period's landing and is not
             added to what is already won; with no current call the read falls back to
             `commit_evidence` and says so in the landing's `caveat`.
+
+            With no measure saved, the landing uses `qualified_commit_evidence` while the
+            installation enforces viability reviews and `commit_evidence` otherwise; this field
+            then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+            client shows an unknown value by its name.
     UpdateInstallationSettingsRequest:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
@@ -36326,7 +36514,7 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: |
             Which remaining-pipeline reading a projected landing is built from. Never frozen:
             it is applied on READ and stores nothing, so changing it re-computes every landing
@@ -52281,7 +52469,11 @@ components:
 
     PublicSchedulingProfile:
       type: object
-      required: [host_name, company_name, title, location, duration_minutes, enabled]
+      required: [host_name, company_name, title, location, duration_minutes, enabled, paused]
+      description: |
+        A guest's view of a booking page. A paused page names its host and says `paused: true`;
+        every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+        `video_app`), so the guest learns nothing about the calendar behind the page.
       properties:
         host_name: { type: string }
         company_name: { type: string }
@@ -52290,6 +52482,7 @@ components:
         location: { type: string }
         duration_minutes: { type: integer }
         enabled: { type: boolean }
+        paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], description: Present when new meetings get a video call link from the host's calendar. }
     SchedulingProfile:
       type: object
@@ -52314,6 +52507,15 @@ components:
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
         video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
+        blocker:
+          type: string
+          readOnly: true
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable]
+          description: |
+            Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+            the page names no calendar (a page saved before the profile existed reads this way).
+            `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+            the connection is gone or refused. Answered on the host's own profile read only.
     SchedulingAliasRequest:
       type: object
       required: [alias]
@@ -58232,7 +58434,7 @@ components:
         target: *id003
         basis:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing: *id003
         won: *id003
@@ -59121,6 +59323,27 @@ components:
         to_user_id: { type: string, format: uuid }
         preview_token: { type: string, minLength: 1 }
 
+    InviteEmailHandoff:
+      type: object
+      description: |
+        What became of an invitation email at the time of the answer, as on the Deal Room invite.
+      required: [sendable, queued]
+      properties:
+        sendable:
+          type: boolean
+          description: |
+            Whether this installation has an outbound relay and a link origin configured, so the
+            set-password link can be mailed at all. False means the admin passes the link on by
+            hand (`issueUserPasswordLink`).
+        queued:
+          type: boolean
+          description: |
+            Whether the invitation email was handed to the sender. The send runs after the answer,
+            so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+            refuses the address is reported a moment later as the member's
+            `invite_email_state` on the roster, where `resend_invite` is offered.
+      additionalProperties: false
+
     User:
       type: object
       description: A seat — human or first-party agent. Mirrors `app_user`.
@@ -59200,6 +59423,19 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        invite_email_state:
+          type: [string, 'null']
+          enum: [sending, sent, failed, null]
+          description: >
+            What became of the email that carries this invited member's live set-password link.
+            `sending` while the send runs; a client polls the roster until it settles. `sent` once
+            the relay took it, and `failed` once the relay refused it, where `resend_invite` is
+            offered. Null for an active member, for a link an admin issued and passed on by hand,
+            and for a send that never answered within a few minutes. Present only on the
+            administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+        invite_email:
+          allOf: [ { $ref: '#/components/schemas/InviteEmailHandoff' } ]
+          description: Present only on the answers of `inviteUser` and `resendUserInvite`.
         merged_from:
           type: array
           items: { $ref: '#/components/schemas/SeatName' }
@@ -59208,7 +59444,7 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
+            enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >
             The member verbs the CALLER would be admitted to on this user right now, computed by
             the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
@@ -59216,7 +59452,9 @@ components:
             holds everything the verb reaches), the member's status and kind, the last-admin
             guard, an archived role still held, the licensed seat ceiling on reactivation,
             whether this installation can build a set-password link, and whether the member has
-            a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s
+            a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member.
+            `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is
+            `failed` and this installation can send mail. Present on `listUsers`'s
             management view for a human caller only; absent means not computed, and a client
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
@@ -59726,6 +59964,7 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
+        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -59813,6 +60052,14 @@ components:
             a different population. Empty when nothing was frozen, and always empty for
             `managed_teams`, which nothing is frozen against.
         qualified: { $ref: '#/components/schemas/ForecastQualifiedReadings' }
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: >-
+            Whether the installation enforced viability reviews for this read. `enforcing` always
+            comes with a `qualified` block, a zero one when the period and scope hold no visible
+            deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by
+            this field, not by whether `qualified` is present.
         self_correcting:
           type: boolean
           description: >-
@@ -60049,12 +60296,15 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
-          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureWeighted, ForwardMeasureManagerCall]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureQualifiedCommitEvidence, ForwardMeasureWeighted, ForwardMeasureQualifiedWeighted, ForwardMeasureManagerCall]
           description: >-
             Which reading the forward half was built from — the one ACTUALLY used, which
             is not always the one configured: a manager-call installation with no current
-            call falls back to commit evidence and says so in `caveat`.
+            call falls back to commit evidence and says so in `caveat`, and a qualified measure
+            on a read with no qualified block falls back to its baseline with caveat
+            `qualified_unavailable`. The set can grow, so a client shows an unknown value by
+            its name.
         won_minor:
           type: integer
           format: int64
@@ -60076,14 +60326,15 @@ components:
             amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
-          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          enum: [call_absent, call_below_actual, qualified_unavailable]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual, LandingCaveatQualifiedUnavailable]
           description: >-
             Why this answer is not the plain one, absent when it is. `call_absent` is a
             manager-call installation with no current call. `call_below_actual` is an
             authored call less than the money already won — reported and never corrected,
             because the call is somebody's stated belief and the server does not overrule
-            it.
+            it. `qualified_unavailable` is a qualified measure on a read with no qualified
+            block (enforcement off), so `measure` names the baseline reading used instead.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -60535,7 +60786,7 @@ components:
         equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: { type: string, enum: [open, weighted, evidence, best_case] }
+        reading: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted] }
         opening_minor: { type: integer, format: int64 }
         closing_minor: { type: integer, format: int64 }
         buckets:
@@ -60556,12 +60807,15 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost,
-                 reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded,
+                 reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
             `stage_weight` is a deal that changed stage and with it its chance. `record_changed`
             is a deal whose chance or risk effect moved while it stayed in its stage, because
-            outcomes were recorded since.
+            outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only
+            in a qualified reading: a deal that left it because its viability review excluded it,
+            one that came back, and one that left because its review status became unknown.
+            The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: { type: integer, format: int64 }
         deal_count: { type: integer }
       additionalProperties: false
@@ -61551,7 +61805,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate]
 
     RbacAction:
       type: string
@@ -64258,6 +64512,32 @@ components:
       required: [user_id]
       properties:
         user_id: { type: string, format: uuid }
+    ProductTranslation:
+      type: object
+      required: [language, name, version, updated_at]
+      properties:
+        language: { type: string, description: 'ISO 639-1, lower case.' }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        version: { type: integer, format: int64 }
+        updated_at: { type: string, format: date-time }
+    ProductTranslationListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ProductTranslation' }
+    PutProductTranslationRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 500 }
+        description:
+          type: string
+          maxLength: 4000
+          description: Left out or empty, the language has a name and no description.
     CompanyProfile:
       type: object
       description: |
@@ -68035,6 +68315,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.' }
         active: { type: boolean }
@@ -68047,6 +68328,40 @@ components:
       additionalProperties: true
       x-extension: true
 
+    TaxRate:
+      type: object
+      required: [id, country, category, rate, valid_from, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2.' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, description: 'Percent with two decimals, for example "19.00".' }
+        valid_from: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+    TaxRateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TaxRate' }
+    RecordTaxRateRequest:
+      type: object
+      required: [country, category, rate, valid_from]
+      additionalProperties: false
+      properties:
+        country: { type: string, pattern: '^[A-Za-z]{2}$' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, pattern: '^[0-9]{1,2}(\.[0-9]{1,2})?$', description: 'Percent, for example "19" or "7.70".' }
+        valid_from: { type: string, format: date }
+    TaxRateRecorded:
+      type: object
+      required: [rate, classified_products]
+      properties:
+        rate: { $ref: '#/components/schemas/TaxRate' }
+        classified_products:
+          type: integer
+          description: How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
     ProductListResponse:
       type: object
       required: [data, page]
@@ -68066,6 +68381,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit or send null to leave it unclassified.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
@@ -68084,6 +68400,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }
@@ -68816,6 +69133,13 @@ components:
             `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
             `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
             the entity has no value for is absent.
+        language:
+          type: [string, 'null']
+          description: |
+            The language the offer's new lines take product names in (ISO 639-1). It defaults to
+            the issuing legal entity's `default_language`, else the language of the offer's
+            template. Null on an offer created before offers had one: its lines take
+            `Product.name`. The template's own fixed labels follow the template, not this.
         legal_entity_id:
           type: [string, 'null']
           format: uuid
@@ -68924,6 +69248,10 @@ components:
           description: |
             The legal entity that issues the offer. Defaults to the entity the author works for;
             for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language new lines take product names in. Unset is the entity's, else the template's.
         line_items:
           type: [array, 'null']
           items: { $ref: '#/components/schemas/OfferLineItemInput' }
@@ -68953,6 +69281,10 @@ components:
           type: string
           format: uuid
           description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language lines added from now on take product names in. Lines already on the offer keep theirs.
       additionalProperties: false
 
     RejectOfferRequest:
@@ -70010,7 +70342,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: |
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
@@ -70045,12 +70377,16 @@ components:
       properties:
         bar:
           type: string
-          enum: [created, advanced, slipped, won, lost, other]
+          enum: [created, advanced, slipped, excluded, reinstated, not_checked, won, lost, other]
           x-enum-varnames: [WeeklyBarCreated, WeeklyBarAdvanced, WeeklyBarSlipped,
+                            WeeklyBarExcluded, WeeklyBarReinstated, WeeklyBarNotChecked,
                             WeeklyBarWon, WeeklyBarLost, WeeklyBarOther]
           description: |
-            Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+            Which move this is. Folded from the forecast engine's movement buckets, whose
             grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+            `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+            qualified measure: a deal that left or rejoined the qualified number on its viability
+            review alone, or left because its review status became unknown. The set can grow.
 
             `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
             reprice, a category move and a stage move each go both ways, and reading the cause

@@ -895,6 +895,9 @@ export const en = {
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
+  "reporting.movement.excluded": "Left out after review",
+  "reporting.movement.reinstated": "Counted again after review",
+  "reporting.movement.not_checked": "Not checked",
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
@@ -1467,6 +1470,10 @@ export const en = {
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.commit_evidence": "commit evidence",
   "reporting.compare.basis.weighted": "the weighted pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "supported commit evidence",
+  "reporting.compare.basis.qualified_weighted":
+    "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
@@ -1867,6 +1874,8 @@ export const en = {
   "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
+  "scheduling.pausedUnavailable":
+    "{host} is not taking bookings through this page right now.",
   "scheduling.unavailable":
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
@@ -6159,6 +6168,9 @@ export const en = {
   "offer.legalEntity": "Issued by",
   "offer.legalEntityHint":
     "The legal entity whose name, address, VAT ID, bank details and logo the offer prints.",
+  "offer.language": "Language",
+  "offer.languageHint":
+    "Two letters, for example de. Lines added from now on take product names in this language.",
   "offer.validUntil": "Valid until",
   "offer.introText": "Intro text",
   "offer.termsText": "Terms text",
@@ -6414,6 +6426,10 @@ export const en = {
   "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "From supported commit evidence",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
   "brief.weekly.bridge": "Weekly change",
   "brief.weekly.bridge.opening": "Monday",
@@ -6425,6 +6441,9 @@ export const en = {
   "brief.weekly.bar.created": "Created",
   "brief.weekly.bar.advanced": "Advanced",
   "brief.weekly.bar.slipped": "Slipped",
+  "brief.weekly.bar.excluded": "Left after review",
+  "brief.weekly.bar.reinstated": "Back after review",
+  "brief.weekly.bar.not_checked": "Not checked",
   "brief.weekly.bar.won": "Won",
   "brief.weekly.bar.lost": "Lost",
   "brief.weekly.bar.other": "Rates and definitions",
@@ -13161,6 +13180,28 @@ export const en = {
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set model price",
   "settings.rates.notSaved": "Rate not saved",
+  "taxRates.title": "Tax rates",
+  "taxRates.withheld": "Only an Admin or Ops can see the tax rates.",
+  "taxRates.intro":
+    "The standard and reduced tax rate of each country, each from the day it takes effect. A rate is never changed: record a new one from a later day.",
+  "taxRates.empty": "No tax rates yet.",
+  "taxRates.add": "Record a rate",
+  "taxRates.modalTitle": "Record a tax rate",
+  "taxRates.colCountry": "Country",
+  "taxRates.colCategory": "Category",
+  "taxRates.colRate": "Rate",
+  "taxRates.colFrom": "From",
+  "taxRates.category.standard": "Standard",
+  "taxRates.category.reduced": "Reduced",
+  "taxRates.category.exempt": "Exempt",
+  "taxRates.countryPlaceholder": "Choose a country",
+  "taxRates.rateHint": "Percent, for example 19 or 7.7.",
+  "taxRates.fromHint":
+    "Today or later. A day before the country’s first rate extends its history.",
+  "taxRates.notSaved": "Rate not saved",
+  "taxRates.save": "Record rate",
+  "taxRates.recorded_one": "Rate recorded. It classified {count} product.",
+  "taxRates.recorded_other": "Rate recorded. It classified {count} products.",
   "settings.rates.setRate": "Save",
   "settings.rates.refresh": "Refresh from sources",
   "settings.rates.refreshEnqueued":
@@ -13536,6 +13577,7 @@ export const en = {
   "roles.object.import_run": "Data imports",
   "roles.object.finance": "Finance data",
   "roles.object.fx_rate": "Currency rates",
+  "roles.object.tax_rate": "Tax rates",
   "roles.object.data_coverage": "Data coverage",
   "roles.object.knowledge_corpus": "Knowledge sources",
   "roles.object.knowledge_document": "Knowledge documents",
@@ -13739,6 +13781,7 @@ export const en = {
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
   "users.status.invited": "Invited",
+  "users.status.inviteMailFailed": "Invitation email failed",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.handover.action": "Hand over work",
@@ -13774,6 +13817,8 @@ export const en = {
     "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
   "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
+  "users.resendInvite": "Resend invitation",
+  "users.inviteResent": "Invitation sent again to {name}",
   "users.link.title": "Set-password link for {name}",
   "users.link.pending": "Creating link…",
   // Two sentences, no dash (VOICE-RULE-5).
@@ -13883,6 +13928,20 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.taxCategory": "Tax category",
+  "product.taxCategoryUnset": "Not classified",
+  "product.taxCategoryFilter": "Tax category",
+  "product.taxCategoryFilterAll": "All tax categories",
+  "product.translations": "Translations",
+  "product.translationsTitle": "{name} in other languages",
+  "product.translationsHint":
+    "An offer in one of these languages names the product this way. A line already on an offer keeps the name it was added with.",
+  "product.translationsEmpty": "No other languages yet.",
+  "product.translationRemove": "Remove {language}",
+  "product.translationLanguage": "Language",
+  "product.translationLanguageHint":
+    "Two letters, for example de. Saving a language that is already listed replaces it.",
+  "product.translationSave": "Save language",
   "product.archive": "Archive product",
   "product.archiveConfirm":
     "Archive this product? Existing offer lines keep their snapshot.",
@@ -14189,6 +14248,10 @@ export const en = {
     "Commit evidence: confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":
     "Weighted: every open deal at its stage probability",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Supported commit evidence: confirmed close dates the customer still supports",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Supported weighted: open deals the customer still supports, at their stage probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
   "forecast.landing": "Landing",
@@ -14196,6 +14259,9 @@ export const en = {
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.commit_evidence": "Won + confirmed commit",
   "forecast.basis.weighted": "Won + weighted open deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Won + supported confirmed commit",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
@@ -14225,6 +14291,8 @@ export const en = {
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows commit evidence.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":
     "The call is below the amount already won. It is shown as recorded, not corrected.",
   "forecast.pipelineNeeded": "Deal value needed",

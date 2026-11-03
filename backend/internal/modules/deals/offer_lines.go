@@ -62,8 +62,8 @@ type OfferLineInputRow struct {
 
 // insertOfferLines inserts each input line in order, numbering the 422
 // error by the caller's 1-based line position.
-func insertOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, currency string, lines []OfferLineInputRow) error {
-	planned, _, err := planNewOfferLines(ctx, tx, currency, lines)
+func insertOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, currency, language string, lines []OfferLineInputRow) error {
+	planned, _, err := planNewOfferLines(ctx, tx, currency, language, lines)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ type resolvedOfferLine struct {
 	IntervalCount  *int
 }
 
-func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency string, in OfferLineInputRow) error {
-	line, err := resolveOfferLine(ctx, tx, offerCurrency, in)
+func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency, language string, in OfferLineInputRow) error {
+	line, err := resolveOfferLine(ctx, tx, offerCurrency, language, in)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
-		if err := insertOfferLine(ctx, tx, offerID, current.Currency, in); err != nil {
+		if err := insertOfferLine(ctx, tx, offerID, current.Currency, languageOf(current.Language), in); err != nil {
 			return err
 		}
 		totals, err := recomputeOfferTotals(ctx, tx, offerID)

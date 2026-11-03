@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.1 KB |
+| Tool catalog | 158.3 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41799 |
+| Approx. wire tokens | 41851 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
-| Input schemas | 65.6 KB | 41% | Yes, every step |
+| Input schemas | 65.8 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.4 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **100.6 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -78,7 +78,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1846 |
+| [`find_records`](#find_records) | Find records | yes |  | 1854 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 875 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 908 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -3851,6 +3851,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "tag_mode": {
           "type": "string"
         },
+        "tax_category": {
+          "type": "string"
+        },
         "thread_key": {
           "type": "string"
         },
@@ -7456,12 +7459,15 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "type": "string"
     },
     "reading": {
-      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
       "enum": [
         "open",
         "weighted",
         "evidence",
-        "best_case"
+        "best_case",
+        "qualified_evidence",
+        "qualified_best_case",
+        "qualified_weighted"
       ],
       "type": "string"
     },
@@ -7907,6 +7913,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "priced_count": {
           "type": "integer"
+        },
+        "qualification_mode": {
+          "type": "string"
         },
         "qualified": {
           "properties": {

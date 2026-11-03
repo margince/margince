@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go frontend/src/features/settings/taxrates.tsx -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -99,6 +99,8 @@ The PDF prints the offer's own **Intro text** above the lines and its **Terms te
 
 Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
 
+Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words a template prints, such as its headings, follow the template's own language.
+
 ## What an offer refuses
 
 - **An empty offer cannot be sent.** "the offer has no line items to send".
@@ -143,6 +145,12 @@ A product holds a name, a SKU if you want one, a description, a unit, a unit pri
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 
 **Kind** says what a product is: **Software**, **Implementation** or **Other**. The commercial mix on Analytics groups won value by it. You can leave it empty, and the mix then shows the product's value as **Unclassified product**.
+
+### How do I keep tax rates?
+<!-- opens: settings/company -->
+An Admin or Ops keeps the **Tax rates** card under **Settings → Company profile**. Choose **Record a rate**, then fill **Country**, **Category** (**Standard** or **Reduced**), **Rate** and **From**. A rate is never changed or removed: to change one, record a new rate from a later day. A **From** day before the first rate of that **Country** adds to its history.
+
+**Tax category** on a product says which rate it takes: **Standard**, **Reduced** or **Exempt**. The first rate you record for a category of your own **Country** sorts the products for you. Each product whose **Default tax rate %** is that rate gets that category. A product with any other rate, 0% included, stays **Not classified** until you choose. The **Tax category** filter on the products list shows those. Offers still take each product's **Default tax rate %** for now.
 
 ### Snapshots, and why a line does not move
 

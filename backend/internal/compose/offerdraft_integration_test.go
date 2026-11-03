@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"strings"
 	"testing"
@@ -386,7 +387,7 @@ func TestGroundOfferLinesPropagatesANonNotFoundProductLookupError(t *testing.T) 
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
 
-	if _, err := drafter.groundOfferLines(canceled, candidates, dealContext, "EUR"); err == nil {
+	if _, err := drafter.groundOfferLines(canceled, candidates, dealContext, "EUR", "en"); err == nil {
 		t.Fatalf("groundOfferLines error = nil, want a propagated error — a failed product lookup must never be silently treated as ungrounded")
 	}
 }
@@ -478,5 +479,48 @@ func TestDraftOfferLinesStripsSecretsBeforeTheModelCall(t *testing.T) {
 	}
 	if strings.Contains(string(call.Payload), secret) {
 		t.Fatalf("the outbound payload still contains the raw secret: %s", call.Payload)
+	}
+}
+
+// A line the drafter grounds on a product carries the product's name in the
+// offer's language, as a line added by hand does.
+func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
+	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "German draft deal",
+		"The client wants ongoing onboarding support for their new hires.")
+	perms := offerDraftPerms
+	perms.Objects = maps.Clone(offerDraftPerms.Objects)
+	perms.Objects["product"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	editor := e.As(e.AdminUser, nil, perms)
+	unit := "unit"
+	product, err := e.Deals.CreateProduct(editor, deals.CreateProductInput{
+		Name: "Onboarding Support", Unit: &unit, UnitPriceMinor: 15000, Currency: "EUR", Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("seed product: %v", err)
+	}
+	productID := ids.From[ids.ProductKind](ids.UUID(product.Id))
+	if _, err := e.Deals.PutProductTranslation(editor, productID, "de", "Einarbeitungsbegleitung", nil); err != nil {
+		t.Fatalf("translate the product: %v", err)
+	}
+	german := "de"
+	if _, _, err := e.Deals.UpdateOffer(ctx, offerID, deals.UpdateOfferInput{Language: &german}); err != nil {
+		t.Fatalf("make the offer German: %v", err)
+	}
+
+	fake := ai.NewFakeClient().Script(`{"lines":[
+		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"` + source + `",
+		 "product_id":"` + product.Id.String() + `"}
+	]}`)
+	result, err := newOfferDrafterFixture(t, e, fake).DraftOfferLines(ctx, offerID)
+	if err != nil {
+		t.Fatalf("draft offer lines: %v", err)
+	}
+	offerLineByDescription(t, result.Offer, "Einarbeitungsbegleitung")
+	calls := fake.Calls()
+	if len(calls) == 0 || !strings.Contains(string(calls[0].Payload), "Einarbeitungsbegleitung") {
+		t.Error("the model was shown the rate card's English name, not the offer's German one")
 	}
 }

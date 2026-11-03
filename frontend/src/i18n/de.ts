@@ -943,6 +943,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Neue Deals",
   "reporting.movement.pulled_in": "In den Zeitraum vorgezogen",
   "reporting.movement.pushed_out": "Aus dem Zeitraum geschoben",
+  "reporting.movement.excluded": "Nach Prüfung herausgenommen",
+  "reporting.movement.reinstated": "Nach Prüfung wieder gezählt",
+  "reporting.movement.not_checked": "Nicht geprüft",
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
@@ -1528,6 +1531,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
   "reporting.compare.basis.commit_evidence": "belegten Commit-Deals",
   "reporting.compare.basis.weighted": "der gewichteten Pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "gestützten Commit-Deals",
+  "reporting.compare.basis.qualified_weighted":
+    "der gestützten gewichteten Pipeline",
   "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
@@ -1945,6 +1952,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Termin absagen und den Gast benachrichtigen?",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
+  "scheduling.pausedUnavailable":
+    "{host} nimmt über diese Seite gerade keine Buchungen an.",
   "scheduling.unavailable":
     "Diese Buchungsseite ist nicht verfügbar. Wende dich an die organisierende Person.",
   "scheduling.publicUrlMissing":
@@ -6183,6 +6192,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.legalEntity": "Ausgestellt von",
   "offer.legalEntityHint":
     "Der Rechtsträger, dessen Name, Adresse, USt-IdNr., Bankverbindung und Logo das Angebot druckt.",
+  "offer.language": "Sprache",
+  "offer.languageHint":
+    "Zwei Buchstaben, zum Beispiel de. Neue Positionen übernehmen Produktnamen in dieser Sprache.",
   "offer.validUntil": "Gültig bis",
   "offer.introText": "Einleitungstext",
   "offer.termsText": "Bedingungstext",
@@ -6413,6 +6425,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "Aus gestützten Commit-Belegen",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "Aus gestützten gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
     "Aus der Einschätzung der Führungskraft",
   "brief.weekly.bridge": "Veränderung der Woche",
@@ -6425,6 +6441,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Neu erstellt",
   "brief.weekly.bar.advanced": "Vorangekommen",
   "brief.weekly.bar.slipped": "Verschoben",
+  "brief.weekly.bar.excluded": "Nach Prüfung raus",
+  "brief.weekly.bar.reinstated": "Nach Prüfung zurück",
+  "brief.weekly.bar.not_checked": "Nicht geprüft",
   "brief.weekly.bar.won": "Gewonnen",
   "brief.weekly.bar.lost": "Verloren",
   "brief.weekly.bar.other": "Wechselkurse und Definitionen",
@@ -13183,6 +13202,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "taxRates.title": "Steuersätze",
+  "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
+  "taxRates.intro":
+    "Der normale und der ermäßigte Steuersatz jedes Landes, jeweils ab dem Tag, an dem er gilt. Ein Satz wird nie geändert: Erfasse einen neuen ab einem späteren Tag.",
+  "taxRates.empty": "Noch keine Steuersätze.",
+  "taxRates.add": "Satz erfassen",
+  "taxRates.modalTitle": "Steuersatz erfassen",
+  "taxRates.colCountry": "Land",
+  "taxRates.colCategory": "Kategorie",
+  "taxRates.colRate": "Satz",
+  "taxRates.colFrom": "Ab",
+  "taxRates.category.standard": "Normal",
+  "taxRates.category.reduced": "Ermäßigt",
+  "taxRates.category.exempt": "Steuerfrei",
+  "taxRates.countryPlaceholder": "Land auswählen",
+  "taxRates.rateHint": "Prozent, zum Beispiel 19 oder 7,7.",
+  "taxRates.fromHint":
+    "Heute oder später. Ein Tag vor dem ersten Satz des Landes ergänzt dessen Verlauf.",
+  "taxRates.notSaved": "Satz nicht gespeichert",
+  "taxRates.save": "Satz erfassen",
+  "taxRates.recorded_one": "Satz erfasst. Er hat {count} Produkt eingeordnet.",
+  "taxRates.recorded_other":
+    "Satz erfasst. Er hat {count} Produkte eingeordnet.",
   "settings.rates.setRate": "Speichern",
   "settings.rates.refresh": "Aus Quellen aktualisieren",
   "settings.rates.refreshEnqueued":
@@ -13568,6 +13610,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.import_run": "Datenimporte",
   "roles.object.finance": "Finanzdaten",
   "roles.object.fx_rate": "Währungskurse",
+  "roles.object.tax_rate": "Steuersätze",
   "roles.object.data_coverage": "Datenabdeckung",
   "roles.object.knowledge_corpus": "Wissensquellen",
   "roles.object.knowledge_document": "Wissensdokumente",
@@ -13773,6 +13816,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
   "users.status.invited": "Eingeladen",
+  "users.status.inviteMailFailed": "Einladungs-E-Mail fehlgeschlagen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
   "users.handover.action": "Arbeit übergeben",
@@ -13809,6 +13853,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.resendInvite": "Einladung erneut senden",
+  "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",
   "users.link.pending": "Link wird erstellt…",
   "users.link.body":
@@ -13922,6 +13968,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.taxCategory": "Steuerkategorie",
+  "product.taxCategoryUnset": "Nicht eingeordnet",
+  "product.taxCategoryFilter": "Steuerkategorie",
+  "product.taxCategoryFilterAll": "Alle Steuerkategorien",
+  "product.translations": "Übersetzungen",
+  "product.translationsTitle": "{name} in anderen Sprachen",
+  "product.translationsHint":
+    "Ein Angebot in einer dieser Sprachen nennt das Produkt so. Eine Position, die schon auf einem Angebot steht, behält ihren Namen.",
+  "product.translationsEmpty": "Noch keine anderen Sprachen.",
+  "product.translationRemove": "{language} entfernen",
+  "product.translationLanguage": "Sprache",
+  "product.translationLanguageHint":
+    "Zwei Buchstaben, zum Beispiel de. Eine Sprache, die schon in der Liste steht, wird ersetzt.",
+  "product.translationSave": "Sprache speichern",
   "product.archive": "Produkt archivieren",
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",
@@ -14238,6 +14298,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Commit-Belege: nur bestätigte Abschlussdaten",
   "installationSettings.forwardMeasure.weighted":
     "Gewichtet: jeder offene Deal mit der Wahrscheinlichkeit seiner Phase",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Gestützte Commit-Belege: bestätigte Abschlussdaten, die der Kunde noch stützt",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit der Wahrscheinlichkeit ihrer Phase",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
@@ -14245,6 +14309,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Gewonnen + gestützter bestätigter Commit",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
@@ -14277,6 +14344,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "Die Zählung gestützter Deals ist aus, daher zeigt dies alle Deals.",
   "forecast.landing.caveat.call_below_actual":
     "Die Einschätzung liegt unter dem bereits gewonnenen Betrag. Die Einschätzung wird wie erfasst angezeigt, nicht korrigiert.",
   "forecast.pipelineNeeded": "Benötigter Deal-Wert",
