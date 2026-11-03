@@ -16,7 +16,7 @@ fixture:
     - {label: bookings_won, value: "0 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
     - {label: open_pipeline, value: "37000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
   candidate_deals:
-    - {label: globex, name: "Globex renewal", amount: "25000 EUR", stage: Proposal}
+    - {label: globex, name: "Globex renewal", amount: "25000 EUR"}
   decisions:
     - deal: globex
       text: "Call the buyer about the budget owner"

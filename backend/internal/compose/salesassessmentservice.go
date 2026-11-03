@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,6 +37,7 @@ const (
 	assessmentCandidates = 8
 	assessmentDecisions  = 20
 	assessmentKeepFor    = time.Hour
+	assessmentKeepAtMost = 256
 )
 
 // salesAssessments writes the Sales review's assessment. The model reads the
@@ -68,10 +71,10 @@ func (s *salesAssessments) withLane(lane completer, routingVersion string) *sale
 	return s
 }
 
-// Get answers the assessment of one selection for the reader. The
+// Assess answers the assessment of one selection for the reader. The
 // evaluation is read under their own grants first, so a selection they may
 // not read refuses before any model is asked. Refresh forces a new call.
-func (s *salesAssessments) Get(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool) (crmcontracts.SalesAssessment, error) {
+func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool) (crmcontracts.SalesAssessment, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
@@ -87,7 +90,8 @@ func (s *salesAssessments) Get(ctx context.Context, selection crmcontracts.Repor
 	if err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
-	key := assessmentKey(actor.UserID.String(), evaluation, in, s.routingVersion)
+	lang := identity.BaseLanguageForPrompt(ctx, s.db.Pool())
+	key := assessmentKey(actor.UserID.String(), lang, s.routingVersion, selection, in)
 	if !refresh {
 		if out, found := s.cached(key); found {
 			return out, nil
@@ -101,7 +105,7 @@ func (s *salesAssessments) Get(ctx context.Context, selection crmcontracts.Repor
 		}
 	}
 	defer release()
-	out := s.write(ctx, evaluation, in)
+	out := s.write(ctx, evaluation, in, lang)
 	if out.GeneratedBy == crmcontracts.WrittenByModel {
 		s.keep(key, out)
 	}
@@ -138,15 +142,32 @@ func (s *salesAssessments) cached(key string) (crmcontracts.SalesAssessment, boo
 	return kept.out, true
 }
 
+// keep stores a written assessment and lets the stale and the oldest go, so
+// the map stays bounded whatever a day of reviews asked.
 func (s *salesAssessments) keep(key string, out crmcontracts.SalesAssessment) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.kept[key] = keptAssessment{at: s.now(), out: out}
+	now := s.now()
+	for other, kept := range s.kept {
+		if now.Sub(kept.at) > assessmentKeepFor {
+			delete(s.kept, other)
+		}
+	}
+	for len(s.kept) >= assessmentKeepAtMost {
+		oldest, at := "", now
+		for other, kept := range s.kept {
+			if kept.at.Before(at) {
+				oldest, at = other, kept.at
+			}
+		}
+		delete(s.kept, oldest)
+	}
+	s.kept[key] = keptAssessment{at: now, out: out}
 }
 
 // write asks the model, or serves the deterministic floor: no sentences,
 // and generated_by says so, so the page writes the summary it can.
-func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, in salesassessment.Input) crmcontracts.SalesAssessment {
+func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, in salesassessment.Input, lang string) crmcontracts.SalesAssessment {
 	out := crmcontracts.SalesAssessment{
 		EvaluationKey: evaluation.EvaluationKey,
 		GeneratedAt:   s.now().UTC(),
@@ -160,7 +181,6 @@ func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.Re
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, assessmentDeadline)
 	defer cancel()
-	lang := identity.BaseLanguageForPrompt(ctx, s.db.Pool())
 	res, err := ai.Ask(laneCtx, s.lane, salesassessment.Request(in, lang), func(reply string) error {
 		_, err := salesassessment.Parse(reply, in)
 		return err
@@ -198,18 +218,22 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 }
 
 // assessmentKey is what one written assessment answers for: this reader,
-// these figures, these decisions, this prompt and this model binding.
-func assessmentKey(reader string, evaluation crmcontracts.ReportingEvaluation, in salesassessment.Input, routingVersion string) string {
+// this selection, everything the model read, this prompt and this model
+// binding. The evaluation's own instant is left out, so the same figures
+// read a minute later are the same assessment.
+func assessmentKey(reader, lang, routingVersion string, selection crmcontracts.ReportingSelection, in salesassessment.Input) string {
 	hash := sha256.New()
-	for _, part := range []string{reader, evaluation.EvaluationKey, evaluation.Context.PopulationFingerprint, evaluation.Context.StateAt.UTC().Format(time.RFC3339), routingVersion, salesassessment.PromptVersion} {
+	for _, part := range []string{reader, lang, routingVersion, salesassessment.PromptVersion} {
 		hash.Write([]byte(part))
 		hash.Write([]byte{0})
 	}
-	for _, cell := range in.Cells {
-		hash.Write([]byte(cell.ID + "=" + cell.Value + "\x00"))
-	}
-	for _, decision := range in.Decisions {
-		hash.Write([]byte(decision.ID + "=" + decision.Status + "=" + decision.Result + "\x00"))
+	for _, read := range []any{selection, in} {
+		encoded, err := json.Marshal(read)
+		if err != nil {
+			encoded = []byte(fmt.Sprint(read))
+		}
+		hash.Write(encoded)
+		hash.Write([]byte{0})
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
@@ -318,23 +342,30 @@ func (s *salesAssessments) candidates(ctx context.Context, selection crmcontract
 }
 
 // recordedDecisions are the decisions on the candidate deals, newest first,
-// each with its outcome when one was recorded.
+// each with its outcome when one was recorded. Read per deal, so a busy
+// workspace's other decisions never push a candidate's own out of view.
 func (s *salesAssessments) recordedDecisions(ctx context.Context, candidates []salesassessment.CandidateIn) ([]salesassessment.DecisionIn, error) {
-	if len(candidates) == 0 {
-		return nil, nil
-	}
-	deals := map[string]bool{}
+	out := []salesassessment.DecisionIn{}
 	for _, candidate := range candidates {
-		deals[candidate.ID] = true
+		deal, err := uuid.Parse(candidate.ID)
+		if err != nil {
+			return nil, fmt.Errorf("a candidate deal id: %w", err)
+		}
+		dealID := ids.UUID(deal)
+		listed, err := s.decisions.List(ctx, &dealID, nil)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, decisionsIn(listed, assessmentDecisions-len(out))...)
 	}
-	listed, err := s.decisions.List(ctx, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	return out, nil
+}
+
+func decisionsIn(listed []crmcontracts.SalesDecision, room int) []salesassessment.DecisionIn {
 	out := []salesassessment.DecisionIn{}
 	for _, decision := range listed {
-		if !deals[decision.DealId.String()] || len(out) == assessmentDecisions {
-			continue
+		if len(out) == room {
+			break
 		}
 		in := salesassessment.DecisionIn{ID: decision.Id.String(), Text: decision.Decision, Deal: decision.DealId.String(), Status: string(decision.Status)}
 		if decision.OwnerId != nil {
@@ -348,7 +379,7 @@ func (s *salesAssessments) recordedDecisions(ctx context.Context, candidates []s
 		}
 		out = append(out, in)
 	}
-	return out, nil
+	return out
 }
 
 func assessmentCells(in salesassessment.Input) []crmcontracts.SalesAssessmentCell {

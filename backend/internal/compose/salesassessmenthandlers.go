@@ -25,7 +25,7 @@ func (h salesAssessmentHandlers) AssessSalesReview(w http.ResponseWriter, r *htt
 		return
 	}
 	refresh := body.Refresh != nil && *body.Refresh
-	out, err := h.svc.Get(r.Context(), body.Selection, refresh)
+	out, err := h.svc.Assess(r.Context(), body.Selection, refresh)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return

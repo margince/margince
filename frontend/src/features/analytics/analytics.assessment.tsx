@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -69,7 +69,6 @@ export function AssessmentPanel({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
-  const client = useQueryClient();
   const empty = evaluation.context.scope_holds_deals === false;
   const { query, refresh } = useSalesAssessment(selection, !empty);
   const [reading, setReading] = useState(false);
@@ -82,13 +81,7 @@ export function AssessmentPanel({
       tone={written ? "ai" : undefined}
       titleAction={
         query.data ? (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              refresh();
-              client.invalidateQueries({ queryKey: [ASSESSMENT_KEY] });
-            }}
-          >
+          <Button variant="ghost" onClick={refresh}>
             {t("analytics.assessment.refresh")}
           </Button>
         ) : undefined

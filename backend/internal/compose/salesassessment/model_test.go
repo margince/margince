@@ -37,6 +37,23 @@ func TestParseDropsASentenceQuotingANumberNoCitedCellCarries(t *testing.T) {
 	if len(written.Sentences) != 1 || !strings.HasPrefix(written.Sentences[0].Text, "Sales won") {
 		t.Fatalf("kept %+v, want the one sentence whose figure its cell carries", written.Sentences)
 	}
+	guessed, err := Parse(`{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]},{"text":"About 21 deals closed.","kind":"observation","cells":["metric:bookings_won"]},{"text":"Two deals carry 2 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":null}`, assessmentInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(guessed.Sentences) != 1 {
+		t.Fatalf("kept %+v, want a two-digit opening of a figure and a one-digit guess dropped", guessed.Sentences)
+	}
+}
+
+func TestParseDropsADecisionQuotingANumberNoCellCarries(t *testing.T) {
+	written, err := Parse(`{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-1","text":"Offer a 15 percent discount."},"confidence":"low"}`, assessmentInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written.Next != nil {
+		t.Fatalf("a decision with an invented figure was kept: %+v", written.Next)
+	}
 }
 
 func TestParseRefusesAReplyWithNoGroundedSentence(t *testing.T) {
@@ -45,6 +62,9 @@ func TestParseRefusesAReplyWithNoGroundedSentence(t *testing.T) {
 	}
 	if _, err := Parse(`{"sentences":[{"text":"The deal deal-1 is late.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":null}`, assessmentInput()); err == nil {
 		t.Fatal("a reply spelling an id in reader text was kept")
+	}
+	if _, err := Parse(`{"sentences":[{"text":"See 0198F3A1-7C42-7E0B-9D51-2A6F4B8C1E07 for the figure.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":null}`, assessmentInput()); err == nil {
+		t.Fatal("a reply spelling a uuid the input never carried was kept")
 	}
 }
 

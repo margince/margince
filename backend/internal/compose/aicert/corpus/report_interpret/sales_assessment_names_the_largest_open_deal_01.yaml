@@ -3,8 +3,8 @@ task: report_interpret
 site: sales_assessment
 source: hand_authored
 sanitized_by: hand_authored/claude-fable-5
-# A quarter behind its target with one large open deal in proposal. The
-# assessment reads the gap off the cells and names that deal.
+# A quarter behind its target with one large open deal. The assessment reads
+# the gap off the cells and names that deal.
 fixture:
   frame:
     scope: Whole company
@@ -18,8 +18,8 @@ fixture:
     - {label: open_pipeline, value: "370000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
     - {label: closed_win_rate, value: "0.33 ratio", unit: ratio, window: "2026-10-01 to 2026-11-03", coverage: ok}
   candidate_deals:
-    - {label: linden, name: "Linden press line", amount: "250000 EUR", stage: Proposal}
-    - {label: tern, name: "Tern customer portal", amount: "120000 EUR", stage: Qualified}
+    - {label: linden, name: "Linden press line", amount: "250000 EUR"}
+    - {label: tern, name: "Tern customer portal", amount: "120000 EUR"}
   decisions: []
 expect:
   outcome: accepted
@@ -35,6 +35,6 @@ expect:
     that matters. It must cite sales won and the open pipeline, and it must
     not invent a figure the cells do not carry: a percentage gap or a
     "remaining to target" number no cell holds fails the scenario. The next
-    decision must name the Linden press line, the larger deal in proposal,
-    with one concrete thing to decide. A decision on the smaller qualified
-    deal scores low; no decision at all fails.
+    decision must name the Linden press line, the larger open deal, with one
+    concrete thing to decide. A decision on the smaller deal scores low; no
+    decision at all fails.

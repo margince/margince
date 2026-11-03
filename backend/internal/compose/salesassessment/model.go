@@ -17,6 +17,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -75,7 +76,6 @@ type CandidateIn struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Amount  string `json:"amount"`
-	Stage   string `json:"stage,omitempty"`
 	OwnerID string `json:"owner_id"`
 }
 
@@ -189,7 +189,7 @@ func Parse(reply string, in Input) (Written, error) {
 		return Written{}, errors.New("assessment reply reads no figure")
 	}
 	if parsed.Next != nil {
-		out.Next = keepDecision(parsed.Next.DealID, parsed.Next.OwnerID, parsed.Next.Text, in.Candidates, known)
+		out.Next = keepDecision(parsed.Next.DealID, parsed.Next.OwnerID, parsed.Next.Text, in, known)
 	}
 	if confidences[parsed.Confidence] {
 		out.Confidence = parsed.Confidence
@@ -234,9 +234,6 @@ func numbersCarried(text string, cited []string, cells map[string]CellIn) bool {
 		}
 	}
 	for _, run := range digitRuns(text) {
-		if len(run) < 2 {
-			continue
-		}
 		if !carried[run] && !carriedWithin(run, carried) {
 			return false
 		}
@@ -244,9 +241,13 @@ func numbersCarried(text string, cited []string, cells map[string]CellIn) bool {
 	return true
 }
 
-// carriedWithin admits a shorter spelling of a carried figure, as "21.6" of
-// "21600" is, and a year that opens a cited window.
+// carriedWithin admits a rounded spelling of a carried figure, as "21.6" of
+// "21600" is. Three digits at least, so a two-digit guess is not read as an
+// opening of some longer figure.
 func carriedWithin(run string, carried map[string]bool) bool {
+	if len(run) < 3 {
+		return false
+	}
 	for value := range carried {
 		if strings.HasPrefix(value, run) {
 			return true
@@ -279,12 +280,24 @@ func digitRuns(text string) []string {
 	return runs
 }
 
-func keepDecision(dealID, ownerID, text string, candidates []CandidateIn, known map[string]bool) *NextDecision {
+// keepDecision keeps a decision on a candidate deal, for that deal's owner,
+// whose numbers the cells carry. A figure the model invented for a deal is
+// the one thing the reader would act on without a check.
+func keepDecision(dealID, ownerID, text string, in Input, known map[string]bool) *NextDecision {
 	text = strings.TrimSpace(text)
 	if text == "" || len([]rune(text)) > maxDecisionRune || refuseIDs(text, known) != nil {
 		return nil
 	}
-	for _, candidate := range candidates {
+	cells := map[string]CellIn{}
+	var every []string
+	for _, cell := range in.Cells {
+		cells[cell.ID] = cell
+		every = append(every, cell.ID)
+	}
+	if !numbersCarried(text, every, cells) {
+		return nil
+	}
+	for _, candidate := range in.Candidates {
 		if candidate.ID != dealID {
 			continue
 		}
@@ -299,7 +312,12 @@ func keepDecision(dealID, ownerID, text string, candidates []CandidateIn, known 
 	return nil
 }
 
+// refuseIDs refuses an id in reader text: the shared rule for a uuid in prose,
+// and the ids this request carried in any spelling.
 func refuseIDs(text string, known map[string]bool) error {
+	if claims.SpellsRecordID(text) {
+		return errors.New("reply spells a record id in reader text")
+	}
 	for id := range known {
 		if id != "" && strings.Contains(text, id) {
 			return errors.New("reply spells an id in reader text")
