@@ -119,7 +119,9 @@ describe("a string too long for its row", () => {
       vi.advanceTimersByTime(10_000);
     });
 
-    expect(screen.getByRole("tooltip")).toHaveTextContent(LONG);
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent(LONG);
+    expect(row).toHaveAttribute("aria-describedby", tip.id);
   });
 
   it("dismisses on Escape without waiting for focus to move", async () => {
