@@ -1165,6 +1165,13 @@ export const en = {
     "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
+  "reporting.coverageThresholds": "Account coverage limits",
+  "reporting.coverageThresholdsHelp":
+    "What the Account coverage section counts as at risk. The limits apply from the next read.",
+  "reporting.maxEngagedSeats": "Engaged contacts at most",
+  "reporting.untouchedDays": "Days without exchange in pipeline",
+  "reporting.silentDays": "Days without exchange after a win",
+  "reporting.wonWithinDays": "Days a win counts",
   "reporting.captureContexts": "Record daily pipeline history",
   "reporting.captureHelp":
     "Choose fixed teams and pipelines to build movement history. Two comparable daily captures are needed.",
@@ -1259,6 +1266,27 @@ export const en = {
   "reporting.targetValue": "Target",
   "reporting.targetHint": "Leave empty for tracking only.",
   "reporting.deadline": "Deadline",
+  "reporting.setup.suggestReport": "Suggest filters and charts",
+  "reporting.setup.suggestInitiative": "Suggest the goal",
+  "reporting.setup.busy": "Reading your description",
+  "reporting.setup.retry": "Try again",
+  "reporting.setup.noModel":
+    "A proposal from your words needs an AI model configured. You can still choose the setup by hand.",
+  "reporting.setup.proposedTitle": "Proposed from your words",
+  "reporting.setup.nothingTitle": "Nothing here matches your words",
+  "reporting.setup.apply": "Use proposal",
+  "reporting.setup.dismiss": "Dismiss",
+  "reporting.setup.source": "{field}: {value}, from “{phrase}”",
+  "reporting.setup.openTitle": "Still open",
+  "reporting.setup.unusedTitle": "Could not use",
+  "reporting.setup.unusedItem": "“{phrase}”: {reason}",
+  "reporting.setup.fieldName": "Name",
+  "reporting.setup.fieldCountry": "Country",
+  "reporting.setup.fieldMetric": "Metric",
+  "reporting.setup.fieldChart": "Chart",
+  "reporting.describeInitiative": "Describe the initiative",
+  "reporting.describeInitiativeHint":
+    "What you want to push, for whom and by when. The words stay with the initiative.",
   "reporting.nameDoesNotDecide":
     "The name does not decide membership. The next step defines the rule or the records that belong.",
   "reporting.chooseIncludedRecords": "Choose included records",
@@ -7660,6 +7688,48 @@ export const en = {
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
   "analytics.sectionDelivery": "Delivery",
+  "analytics.sectionAccounts": "Account coverage",
+  "analytics.accounts.views": "Risk views",
+  "analytics.accounts.singleThreaded": "Single-contact deals",
+  "analytics.accounts.untouched": "Untouched in pipeline",
+  "analytics.accounts.silent": "Won but silent",
+  "analytics.accounts.pending": "Judging the accounts",
+  "analytics.accounts.thresholds":
+    "At risk means: at most {seats} engaged contact on a deal, no exchange in {untouched} days while in pipeline, no exchange in {silent} days after a win within {won} days.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Open deals where at most {seats} contact inside the account has exchanged mail or met with you lately.",
+  "analytics.accounts.untouchedPurpose":
+    "Accounts with an open deal and no exchange either way in the last {days} days.",
+  "analytics.accounts.silentPurpose":
+    "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
+  "analytics.accounts.noActivityGrant":
+    "Judging accounts needs permission to read activities.",
+  "analytics.accounts.none": "Nothing at risk here.",
+  "analytics.accounts.truncated":
+    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
+  "analytics.accounts.withheld_one":
+    "{count} more deal has contacts you may not see, so it is not judged.",
+  "analytics.accounts.withheld_other":
+    "{count} more deals have contacts you may not see, so they are not judged.",
+  "analytics.accounts.account": "Account",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Owner",
+  "analytics.accounts.engagedSeats": "Engaged contacts",
+  "analytics.accounts.seatsOf": "{engaged} of {named}",
+  "analytics.accounts.openDeals": "Open deals",
+  "analytics.accounts.wonDeal": "Won deal",
+  "analytics.accounts.lastExchange": "Last exchange",
+  "analytics.accounts.never": "Never",
+  "analytics.accounts.daysAgo": "{date}, {days} days ago",
+  "analytics.accounts.evidencePurpose": "What this reading rests on.",
+  "analytics.accounts.factSeats":
+    "{engaged} of {named} contacts named on the deal exchanged mail or met with you in the last 90 days.",
+  "analytics.accounts.factStage": "The deal is in stage {stage}.",
+  "analytics.accounts.factOpen_one": "{count} open deal on this account.",
+  "analytics.accounts.factOpen_other": "{count} open deals on this account.",
+  "analytics.accounts.factWon": "{deal} was won on {date}.",
+  "analytics.accounts.factInbound": "They last wrote: {date}.",
+  "analytics.accounts.factOutbound": "You last wrote: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
@@ -19492,6 +19562,8 @@ export const en = {
   "aiTask.name.owed_verdict": "Unanswered-message triage",
   "aiTask.name.propose_roles": "Buying-role reading",
   "aiTask.name.rate_extract": "Exchange rate extraction",
+  "aiTask.name.report_interpret": "Assessing a sales report",
+  "aiTask.name.report_setup": "Setting up a report from a description",
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
   "aiTask.name.signal_extract": "Signal extraction",
@@ -19739,6 +19811,26 @@ export const en = {
   "analytics.hero.prior": "Same point of the previous period: {amount}",
   "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
+  "analytics.assessment.title": "Assessment",
+  "analytics.assessment.pending": "Reading the figures",
+  "analytics.assessment.refresh": "Refresh assessment",
+  "analytics.assessment.retry": "Retry",
+  "analytics.assessment.noSales": "No measured sales in this selection.",
+  "analytics.assessment.deterministic":
+    "Written from the figures alone. An AI model would add its reading here once one is set up.",
+  "analytics.assessment.nextDecision": "Next decision",
+  "analytics.assessment.noDecision": "No supported decision.",
+  "analytics.assessment.viewEvidence": "View evidence",
+  "analytics.assessment.evidenceTitle": "What the assessment rests on",
+  "analytics.assessment.evidencePurpose":
+    "Each sentence names the figures it reads. Open a figure to see its records.",
+  "analytics.assessment.confidence": "Confidence: {level}",
+  "analytics.assessment.kind.observation": "Observation",
+  "analytics.assessment.kind.claim": "Reported",
+  "analytics.assessment.kind.hypothesis": "Hypothesis",
+  "analytics.assessment.level.low": "low",
+  "analytics.assessment.level.medium": "medium",
+  "analytics.assessment.level.high": "high",
   "analytics.decisions.title": "Decisions from the last review",
   "analytics.decisions.purpose":
     "Each decision is a task on its deal with an owner and a review date. Completing it records the work, not a sale.",
