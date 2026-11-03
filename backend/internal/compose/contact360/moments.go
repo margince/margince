@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v6"
+const ruleVersion = "contact-moment-ladder-v7"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -377,13 +377,11 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
+	// ONE anchor for the headline and the explanation: our last message, read
+	// at its own precision, so one card never states two ages for one silence.
 	waiting := occurredday.DaysSince(occurredday.Moment{At: outbound, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)}, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
-	}
-	quietFor := waiting
-	if page.LastInboundAt != nil {
-		quietFor = occurredday.DaysSince(occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)}, now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound, page.LastOutboundPrecision)
 	return crmcontracts.ContactMoment{
@@ -391,7 +389,7 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), quietFor),
+		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), waiting),
 		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,

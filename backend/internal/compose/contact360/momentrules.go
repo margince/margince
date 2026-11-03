@@ -182,49 +182,52 @@ func (said momentCopy) bookMeeting() crmcontracts.ContactMomentAction {
 	}
 }
 
-// inboundEvidence names the actual message where the page is showing it, and
-// falls back to the bare fact when the timeline is capped past it.
+// inboundEvidence cites the message the last-touch query picked, by its id.
 //
-// The fallback is honest rather than silent: the claim is true either way, and
-// pretending there is a row to open when the reader would land on nothing is
-// worse than saying the message is older than this page shows.
+// The id comes from the same statement that picked the date
+// (Contact360.last_live_inbound_activity_id), never from matching a time
+// against the capped timeline page: two rows can share a time, and the newest
+// inbound may sit past the first page. A citation that names the row keeps the
+// link and the dismissal fingerprint stable however the timeline pages.
 func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound time.Time, precision *crmcontracts.OccurredPrecision) crmcontracts.ContactMomentEvidence {
-	return directionEvidence(page, inbound, precision, said.Say(momentWords.TheirMessage))
+	return directionEvidence(page, inbound, precision, page.LastLiveInboundActivityId, said.Say(momentWords.TheirMessage))
 }
 
-// outboundEvidence is the same lookup for the message WE sent.
+// outboundEvidence is the same citation for the message WE sent.
 func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound time.Time, precision *crmcontracts.OccurredPrecision) []crmcontracts.ContactMomentEvidence {
 	return []crmcontracts.ContactMomentEvidence{
-		directionEvidence(page, outbound, precision, said.Say(momentWords.LastSentMessage)),
+		directionEvidence(page, outbound, precision, page.LastOutboundActivityId, said.Say(momentWords.LastSentMessage)),
 	}
 }
 
-func directionEvidence(page *crmcontracts.Contact360, at time.Time, precision *crmcontracts.OccurredPrecision, fallback string) crmcontracts.ContactMomentEvidence {
+// directionEvidence names the cited row. The subject is borrowed from the
+// timeline page when that row is on it; otherwise the label says what the row
+// is, and the id still opens it.
+func directionEvidence(page *crmcontracts.Contact360, at time.Time, precision *crmcontracts.OccurredPrecision, id *openapi_types.UUID, fallback string) crmcontracts.ContactMomentEvidence {
 	evidence := crmcontracts.ContactMomentEvidence{
 		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,
 		Label:             fallback,
 		ObservedAt:        &at,
 		ObservedPrecision: precision,
 	}
-	if activity, ok := findActivityAt(page, at); ok {
-		id := activity.Id
-		evidence.Id = &id
-		if activity.Subject != nil && *activity.Subject != "" {
-			evidence.Label = *activity.Subject
-		}
+	if id == nil {
+		return evidence
+	}
+	cited := *id
+	evidence.Id = &cited
+	if activity, ok := activityOnPage(page, cited); ok && activity.Subject != nil && *activity.Subject != "" {
+		evidence.Label = *activity.Subject
 	}
 	return evidence
 }
 
-// findActivityAt finds the timeline row for an instant the page reported
-// separately. The two come from the same transaction, so a match is exact
-// rather than approximate.
-func findActivityAt(page *crmcontracts.Contact360, at time.Time) (crmcontracts.Activity, bool) {
+// activityOnPage finds a cited row on the timeline page, by id.
+func activityOnPage(page *crmcontracts.Contact360, id openapi_types.UUID) (crmcontracts.Activity, bool) {
 	if page.Activities == nil {
 		return crmcontracts.Activity{}, false
 	}
 	for _, a := range page.Activities.Data {
-		if a.OccurredAt.Equal(at) {
+		if a.Id == id {
 			return a, true
 		}
 	}

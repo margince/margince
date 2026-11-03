@@ -7,6 +7,15 @@ package contact360
 // one statement. The page's last-touch section is this over a set of one; the
 // ranked queue asks it for every contact a page names. One reader, so the row
 // a rep acts on and the record it opens cannot disagree about who wrote last.
+//
+// It reads the caller's own correspondence: the messages whose content the
+// caller may open. These dates drive personal follow-up advice — the
+// Overview dates, the relationship wording, the gone-quiet card and the same
+// reader's Worklist rows — so a reply the reader can open must count, and a
+// reply the reader cannot open must not. The shared metrics are a different
+// reading on purpose: relationship strength (contacts/strength.go) and the
+// colleague graph count only what the whole workspace may see
+// (auth.AudienceWorkspaceOnly), because every colleague reads the same number.
 
 import (
 	"context"
@@ -20,15 +29,22 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // LastTouch is when they last wrote to us and when we last wrote to them. Nil
-// on either side means it never happened, not that the answer was withheld: a
-// withheld answer is a refusal from LastTouchFor, never a zero in its map.
+// on either side means no message the caller can open records it, not that
+// the answer was withheld: a withheld answer is a refusal from LastTouchFor,
+// never a zero in its map.
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// The rows behind InboundAt, OutboundAt and LiveInboundAt, picked by the
+	// same statement. Evidence cites these ids rather than matching a time
+	// against the capped timeline page: two rows can share a time, and the
+	// row may sit past the first page.
+	InboundID, OutboundID, LiveInboundID *ids.UUID
 	// LiveInboundAt is InboundAt without the email an import brought in as
 	// history. Only the re-engaged suggestion reads it; every other consumer
 	// counts imported mail as engagement.
@@ -88,12 +104,13 @@ func dated(at *time.Time, precision string) *occurredday.Moment {
 // a calendar invitation, a sending system's notice or the product's own mail
 // is nobody writing.
 //
-// An aggregate, not a per-row read: it has to agree for every colleague, so it
-// asks whether the WORKSPACE may see the row (auth.AudienceWorkspaceOnly)
-// rather than the caller-scoped arm the timeline uses for content — a private
-// message narrowed to its participants must not move the date a colleague
-// outside them reads here, the same rule relationship strength holds
-// (contacts/strength.go).
+// The caller's content gate, not the workspace-only aggregate rule: a reply
+// the caller may open is evidence for the caller's own follow-up advice, so a
+// participant on a private thread sees it counted and a colleague outside
+// that thread sees exactly what they saw before. Discovering that a
+// row exists is not enough; the caller must be able to read it, so a row
+// shown only as withheld moves no date. The system principal has no reader to
+// answer for, and reads the workspace-only basis instead.
 func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, opts AssembleOptions) (map[ids.ContactID]LastTouch, error) {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return nil, err
@@ -115,16 +132,21 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	if visible == "" {
 		visible = scopeAll
 	}
-	scope, err := activityDiscoverScope(ctx, arg)
+	// The content gate runs once, over every activity a wanted contact is on,
+	// and each direction tests membership in that set: a copy of the gate per
+	// direction is planned separately and held by the pooled connection.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, fmt.Sprintf(`
+		SELECT l.activity_id FROM activity_link l WHERE l.contact_id = ANY($%[1]d)
+		UNION ALL
+		SELECT ap.activity_id FROM activity_participant ap WHERE ap.contact_id = ANY($%[1]d)`, wantedPos), arg)
 	if err != nil {
 		return nil, err
 	}
 	// The activities this contact is on, shared by both directions; the
 	// inbound arm adds authorship on top.
 	reached := fmt.Sprintf(`FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
-		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
-		auth.AudienceWorkspaceOnly("a"))
+		WHERE a.archived_at IS NULL AND %s AND a.id IN (SELECT id FROM readable_activity)%s%s`,
+		fmt.Sprintf(contactReachesActivity, "c.id"), projectScope(opts, arg), readerlessBasis(ctx))
 	asOf := "now()"
 	if !opts.AsOf.IsZero() {
 		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
@@ -135,22 +157,24 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)
 	// One newest row per direction carries its time and its precision together.
 	query := fmt.Sprintf(`
+		WITH readable_activity AS MATERIALIZED (%[9]s)
 		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
 		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
-		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, '')
+		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, ''),
+		       inbound.touched_id, outbound.touched_id, live.touched_id
 		FROM contact c
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
 		                     %[1]s AND %[2]s %[8]s) inbound ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
 		                     %[1]s AND %[5]s %[8]s) outbound ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
 		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s %[8]s) exchange ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow, readable)
 	// Inside a composed read it reuses its generic plan. It keys on the contacts
 	// and spells every kind as a literal, and it plans far slower than it runs.
 	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -171,12 +195,23 @@ func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, o
 		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
 			&touch.ContactAt, &touch.PrecedingContactAt,
 			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision,
-			&touch.LiveInboundPrecision, &touch.PrecedingPrecision); err != nil {
+			&touch.LiveInboundPrecision, &touch.PrecedingPrecision,
+			&touch.InboundID, &touch.OutboundID, &touch.LiveInboundID); err != nil {
 			return err
 		}
 		out[contactID] = touch
 	}
 	return rows.Err()
+}
+
+// readerlessBasis narrows the reading to workspace-visible rows when no human
+// reads it. The content gate reads every audience for the system principal,
+// and a date computed for nobody must not count a private message.
+func readerlessBasis(ctx context.Context) string {
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalSystem {
+		return auth.AudienceWorkspaceOnly("a")
+	}
+	return ""
 }
 
 // newestRow picks a direction's newest row, the one max(a.occurred_at) names.

@@ -199,15 +199,23 @@ function ContactFacts({
 // "Never" is a reading rather than a gap: a customer nobody has ever answered
 // is the strongest case on the page for answering now, and an em dash would
 // leave the reader to guess whether the fact was missing or the silence real.
+//
+// A contact's pair counts the messages this reader can open (the contact
+// page's last_touch_basis), so its absence says that rather than "Never".
+// An account's pair is the company page's workspace reading.
 function spoken(
   at: string | null | undefined,
   precision: OccurredPrecision,
+  holder: TouchHolder,
   t: Translator,
   locale: Locale,
   zone: string,
 ): string {
-  return at
-    ? formatActivityWhen(at, precision, locale, zone)
+  if (at) {
+    return formatActivityWhen(at, precision, locale, zone);
+  }
+  return holder === "contact"
+    ? t("worklist.pane.noneAccessible")
     : t("worklist.pane.never");
 }
 
@@ -263,6 +271,7 @@ export function lastTouch(
         moments.last_inbound_at,
         // A time sent without its precision is an instant.
         moments.last_inbound_precision ?? "instant",
+        touch.holder,
         t,
         locale,
         zone,
@@ -273,6 +282,7 @@ export function lastTouch(
       value: spoken(
         moments.last_outbound_at,
         moments.last_outbound_precision ?? "instant",
+        touch.holder,
         t,
         locale,
         zone,

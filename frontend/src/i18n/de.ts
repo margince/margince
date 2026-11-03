@@ -16618,13 +16618,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.lastRecordedExchange":
     "seit dem letzten erfassten Austausch mit diesem Kontakt",
   "contact.standing.lastInbound": "Letzte eingegangene Nachricht",
+  "contact.standing.noneAccessible": "Keine, die du öffnen kannst",
   "contact.standing.direction.twoWay": "Beide Seiten haben geschrieben.",
   "contact.standing.direction.inboundOnly":
-    "Bisher hat nur der Kontakt geschrieben. Dein Team hat noch nichts gesendet.",
+    "In den Nachrichten, die du öffnen kannst, hat nur der Kontakt geschrieben. Von deinem Team ist nichts dabei.",
   "contact.standing.direction.outboundOnly":
-    "Nur ausgehende Nachrichten deines Teams sind erfasst. Eine Antwort ist nicht erfasst.",
+    "In den Nachrichten, die du öffnen kannst, hat nur dein Team geschrieben. Eine Antwort ist nicht dabei.",
   "contact.standing.direction.none":
-    "Noch keine Nachrichten, in keiner Richtung.",
+    "Keine Nachrichten in den Daten, die du öffnen kannst.",
   "contact.subtitle.at": "bei",
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
@@ -17797,6 +17798,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
   "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
+  "worklist.pane.noneAccessible": "Keine, die du öffnen kannst",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
   "worklist.why.title": "Warum das Aufmerksamkeit braucht",

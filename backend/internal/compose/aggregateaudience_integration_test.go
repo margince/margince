@@ -85,11 +85,9 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 }
 
 // TestAHeldMessageDoesNotMoveLastTouch drives the real contact360.Service —
-// the composite read GET /contacts/{id}/360 serves — through lastTouchSection:
-// the content gate (auth.ActivityAudienceArm, used correctly by
-// readActivities in the same file) is the wrong tool for an AGGREGATE,
-// which has to answer the same for every colleague and needs
-// auth.AudienceWorkspaceOnly instead.
+// the composite read GET /contacts/{id}/360 serves — through lastTouchSection.
+// The dates count the messages the caller can open, so a held message the
+// caller is not in the audience of must not move them, even for an admin.
 func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "spaet@kanzlei.example")
@@ -130,7 +128,7 @@ func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	}
 	if after.LastInboundAt == nil || !after.LastInboundAt.Equal(openAt) {
 		t.Fatalf("last-inbound moved to %v when a HELD message arrived (want it to stay at %v) — "+
-			"a colleague outside its audience is told a private message just came in",
+			"a reader outside its audience is told a private message just came in",
 			after.LastInboundAt, openAt)
 	}
 }

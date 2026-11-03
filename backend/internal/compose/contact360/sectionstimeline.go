@@ -70,9 +70,8 @@ func activityScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityContentClause)
 }
 
-// activityDiscoverScope is the DISCOVER gate for the sections that disclose a
-// date and a direction and nothing else (last touch): a limited conversation
-// still counts as a touch, its content stays withheld.
+// activityDiscoverScope is the DISCOVER gate for the timeline rows: a limited
+// conversation still shows as a row, its content withheld.
 func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityDiscoverClause)
 }
@@ -328,7 +327,8 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 //
 // The set reader over a set of one: this page and a queue row naming the same
 // contact are answered by the statement in lasttouch.go, under the same
-// scopes. The record read above already admitted the contact, so the set
+// scopes. Both count the messages the caller can open (last_touch_basis), the
+// same rows the History tab lets this reader open. The record read above already admitted the contact, so the set
 // reader's own row scope narrows nothing here.
 func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
@@ -336,8 +336,13 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 		return err
 	}
 	touch := touched[contactID]
+	basis := crmcontracts.Contact360LastTouchBasisReadableByCaller
+	out.LastTouchBasis = &basis
 	out.LastInboundAt = touch.InboundAt
 	out.LastOutboundAt = touch.OutboundAt
+	out.LastInboundActivityId = wireActivityID(touch.InboundID)
+	out.LastOutboundActivityId = wireActivityID(touch.OutboundID)
+	out.LastLiveInboundActivityId = wireActivityID(touch.LiveInboundID)
 	out.LastLiveInboundAt = touch.LiveInboundAt
 	out.LastContactAt = touch.ContactAt
 	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
@@ -347,6 +352,15 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	direction := crmcontracts.RelationshipDirection(touch.Direction())
 	out.RelationshipDirection = &direction
 	return nil
+}
+
+// wireActivityID carries a picked row's id onto the wire, nil when no row was.
+func wireActivityID(id *ids.UUID) *openapi_types.UUID {
+	if id == nil {
+		return nil
+	}
+	wire := openapi_types.UUID(*id)
+	return &wire
 }
 
 // networkSection answers "who here knows them", warmest first — the

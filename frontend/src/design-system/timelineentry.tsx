@@ -89,6 +89,17 @@ export type TimelineEntry = {
    */
   direction?: "inbound" | "outbound" | null;
   /**
+   * Which side WROTE it, when that is known: `ours` is a colleague, `theirs`
+   * is the other side. Distinct from `direction`, which is only how the
+   * message travelled: a colleague's mail captured as an inbound copy is
+   * still ours, and a contact's reply stored with an outbound transport is
+   * still theirs. The activity adapter fills it from the shared rule
+   * (lib/messagevoice.ts correspondenceSide, the frontend twin of
+   * activities.WroteItOurSide). Absent means fall back to `direction`; see
+   * sideOf.
+   */
+  side?: "ours" | "theirs";
+  /**
    * Who was on the other end, already resolved to names by the caller.
    *
    * "We sent" answers half a question. The half a reader came for is who it
@@ -245,12 +256,28 @@ export const TIMELINE_ICON = {
 // get. A mail we did not write is not a place to render a friendly label over
 // a different address.
 
-// directionClass tracks the row to one side of the spine: ours or theirs.
-export function directionClass(direction: TimelineEntry["direction"]): string {
-  if (direction === "outbound") {
+// sideOf answers which side wrote an entry. Known authorship wins; transport
+// direction answers only for an entry that carries no side, the same order
+// correspondenceSide uses. Every authorship reading on the timeline (the
+// spine side, a thread's lead and mark, the per-side counts) goes through
+// here, so no surface reads raw direction as authorship.
+export function sideOf(entry: TimelineEntry): "ours" | "theirs" | undefined {
+  if (entry.side) {
+    return entry.side;
+  }
+  if (entry.direction === "outbound") {
+    return "ours";
+  }
+  return entry.direction === "inbound" ? "theirs" : undefined;
+}
+
+// sideClass tracks the row to one side of the spine: ours or theirs.
+export function sideClass(entry: TimelineEntry): string {
+  const side = sideOf(entry);
+  if (side === "ours") {
     return "tl-out";
   }
-  return direction === "inbound" ? "tl-in" : "";
+  return side === "theirs" ? "tl-in" : "";
 }
 
 export function noteClass(entry: TimelineEntry): string {
@@ -385,9 +412,10 @@ export function threadSides(entries: readonly TimelineEntry[]): {
     if (entry.automaticKind) {
       continue;
     }
-    if (entry.direction === "inbound") {
+    const side = sideOf(entry);
+    if (side === "theirs") {
       theirs++;
-    } else if (entry.direction === "outbound") {
+    } else if (side === "ours") {
       ours++;
     }
   }

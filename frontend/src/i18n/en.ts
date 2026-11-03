@@ -16492,12 +16492,14 @@ export const en = {
   "contact.standing.lastRecordedExchange":
     "since last recorded contact exchange",
   "contact.standing.lastInbound": "Last inbound message",
+  "contact.standing.noneAccessible": "None you can open",
   "contact.standing.direction.twoWay": "Both sides have written.",
   "contact.standing.direction.inboundOnly":
-    "Only they have written so far. Nothing has gone out from your team.",
+    "In the messages you can open, only they have written. Nothing from your team appears.",
   "contact.standing.direction.outboundOnly":
-    "Only outgoing messages from your team are recorded. No reply is recorded.",
-  "contact.standing.direction.none": "No messages either way yet.",
+    "In the messages you can open, only your team has written. No reply appears.",
+  "contact.standing.direction.none":
+    "No messages either way in what you can open.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
@@ -17644,6 +17646,7 @@ export const en = {
   "worklist.pane.lastFromCompany": "Last from this company",
   "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
+  "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
   "worklist.why.title": "Why this needs attention",
