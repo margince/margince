@@ -1038,11 +1038,10 @@ jobs:
       # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        # A CAP ON THE HANG, not on the scan. The scan of today's tree takes
-        # about eight minutes, upload and dependency data included: 7.5 on a
-        # green run, and one cut at eight after its analysis had published.
-        # Twenty minutes is a hang, not a slow day, and still ends inside the
-        # job's thirty with the step's own message.
+        # A CAP ON THE HANG, not on the scan. A whole scan, upload and
+        # dependency data included, runs well under twenty minutes, so twenty
+        # is a hang and not a slow day. It still ends inside the job's thirty
+        # with the step's own message.
         #
         # What it bounds is the action's signature verification of the scanner
         # download, which fetches SonarSource's key from a public keyserver. On
