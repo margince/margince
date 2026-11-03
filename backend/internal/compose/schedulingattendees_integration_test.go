@@ -211,6 +211,59 @@ func TestEveryGuestARecordHoldsIsAskedOfTheGate(t *testing.T) {
 			VALUES ('bounced@elsewhere.test', 'hard_bounce', 'test', 'human:test', 'subject')`)
 		refused(t, w, invitee, "bounced@elsewhere.test")
 	})
+	stopped := func(t *testing.T, w attendeeWorld, address, kind string) {
+		t.Helper()
+		w.e.WsExec(t, `INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level)
+			VALUES ($1, $2, 'test', 'human:test', 'subject')`, address, kind)
+	}
+	t.Run("a stop on the address of a contact who granted consent", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.contact(t, w.e.Rep1, "bounced@buyer.test", "granted")
+		stopped(t, w, "bounced@buyer.test", "hard_bounce")
+		refused(t, w, invitee, "bounced@buyer.test")
+	})
+	t.Run("a restriction on an address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		stopped(t, w, "restricted@elsewhere.test", "processing_restriction")
+		refused(t, w, invitee, "restricted@elsewhere.test")
+	})
+	t.Run("a marketing objection does not stop an invitation", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		stopped(t, w, "objector@elsewhere.test", "marketing_objection")
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", "objector@elsewhere.test"))
+		if err != nil {
+			t.Fatalf("a marketing objection refused a calendar invitation: %v", err)
+		}
+		if err := consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); err != nil {
+			t.Fatalf("a marketing objection refused a calendar invitation: %v", err)
+		}
+	})
+	t.Run("a lead typed in mixed case", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		lead(t, w, "mixed@lead.test")
+		refused(t, w, invitee, "Mixed@Lead.TEST")
+	})
+	t.Run("a contact's secondary address", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		other := w.contact(t, w.e.Rep1, "primary@buyer.test", "withdrawn")
+		w.e.WsExec(t, `INSERT INTO contact_email(contact_id,email,is_primary,source,captured_by) VALUES ($1,'secondary@buyer.test',false,'manual','human:test')`, other)
+		refused(t, w, invitee, "secondary@buyer.test")
+	})
+	t.Run("a merged contact's address", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		source := w.contact(t, w.e.Rep1, "merged@buyer.test", "withdrawn")
+		target := w.contact(t, w.e.Rep1, "survivor@buyer.test", "")
+		if _, err := w.e.Contacts.MergeContact(w.e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
+			t.Fatal(err)
+		}
+		refused(t, w, invitee, "merged@buyer.test")
+	})
 	t.Run("an address no record holds", func(t *testing.T) {
 		w := newAttendeeWorld(t)
 		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")

@@ -136,14 +136,24 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 }
 
 // consentAddresses checks every attendee once more before the provider sends,
-// and answers the addresses the consent gate must clear. The primary invitee
+// and answers the addresses the consent gate must clear. Any attendee whose
+// address carries a stop that binds an invitation refuses the whole send. The primary invitee
 // is checked against its own contact or lead. A further attendee is resolved
 // afresh, and the stricter of its queued and its current answer wins. An
 // address gated when it was queued stays gated after its contact or lead lost
 // it. The gate then refuses it as a subject it cannot find.
 func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserID, in connector.CalendarAppointment) ([]string, error) {
+	gate := consentGateFor(c.pool)
 	gated := make([]string, 0, len(in.Attendees))
 	for i, address := range in.Attendees {
+		// A stop on the address binds every attendee, whatever record holds it.
+		suppressed, err := gate.InvitationSuppressed(ctx, address)
+		if err != nil {
+			return nil, err
+		}
+		if suppressed {
+			return nil, fmt.Errorf("compose: %s is suppressed: %w", address, apperrors.ErrConsentNotGranted)
+		}
 		if i == 0 || len(in.Roster) != len(in.Attendees) {
 			if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {
 				return nil, err
@@ -158,15 +168,6 @@ func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserI
 		queued := in.Roster[i]
 		if queued.AskConsent || !strings.EqualFold(queued.Address, address) || resolved[0].AskConsent {
 			gated = append(gated, address)
-			continue
-		}
-		// No consent subject to ask, but a stop on the address still binds.
-		suppressed, err := consentGateFor(c.pool).AddressSuppressed(ctx, address)
-		if err != nil {
-			return nil, err
-		}
-		if suppressed {
-			return nil, fmt.Errorf("compose: %s is suppressed: %w", address, apperrors.ErrConsentNotGranted)
 		}
 	}
 	return gated, nil

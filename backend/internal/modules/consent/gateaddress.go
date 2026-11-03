@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -36,15 +37,20 @@ func (g *Gate) AddressHasSubject(ctx context.Context, address string) (bool, err
 	return held, nil
 }
 
-// AddressSuppressed reports a live suppression recorded against the address
-// itself, such as a hard bounce. It is the stop that still binds an address no
-// contact or lead holds.
-func (g *Gate) AddressSuppressed(ctx context.Context, address string) (bool, error) {
+// invitationCategory is what a calendar invitation to a booked meeting is: the
+// guest agreed to meet, so it continues something they asked for. A marketing
+// objection does not bind it; a bounce, a restriction or a general stop does.
+const invitationCategory = commsauthz.CategoryRequestedFollowup
+
+// InvitationSuppressed reports a live suppression recorded against the address
+// itself, such as a hard bounce, that binds a calendar invitation. The rule is
+// suppressionBinds, the one every send is judged by.
+func (g *Gate) InvitationSuppressed(ctx context.Context, address string) (bool, error) {
 	var stops []liveStop
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		stops, err = liveSuppression(ctx, tx, ids.Nil.String(), connector.Recipient{Email: address})
 		return err
 	})
-	return len(stops) > 0, err
+	return suppressionBindsAny(stops, invitationCategory, nil), err
 }
