@@ -11,8 +11,14 @@ import { type Route, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
-import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
-import { NavLevelView, useNavLevel } from "./navlevel";
+import {
+  currentClaim,
+  MOBILE_PRIMARY,
+  NAV,
+  type NavSection,
+  type NavTrailLevel,
+} from "./nav";
+import { drawsRow, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
@@ -142,6 +148,38 @@ function railClasses(
     .join(" ");
 }
 
+/** Whether More's menu is open. A new address (Back and Forward too) or a widen
+ *  past the phone width closes it, during render, so no frame shows it stale. */
+function useMenuOpen(here: string, phone: boolean) {
+  const [open, setOpen] = useState(false);
+  const [openedAt, setOpenedAt] = useState(here);
+  if (openedAt !== here) {
+    setOpenedAt(here);
+    setOpen(false);
+  }
+  if (open && !phone) {
+    setOpen(false);
+  }
+  return [open, setOpen] as const;
+}
+
+/** Whether the level holds a row the phone bar leaves to its More menu. */
+function hasOffBarRows(level: NavTrailLevel): boolean {
+  return level.groups.some((group) =>
+    group.items.some((entry) => drawsRow(level, "offbar", entry.id)),
+  );
+}
+
+/** Whether focus sits in the menu, or fell to the body when a press left it. */
+function holdsOrDropsFocus(menu: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  return (
+    active === null ||
+    active === document.body ||
+    (menu?.contains(active) ?? false)
+  );
+}
+
 export type RailProps = {
   route: Route;
   counts?: ShellCounts;
@@ -165,54 +203,39 @@ export function WorkspaceRail({
   // At phone width the same markup is a bottom bar; More opens a menu over it
   // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
-  const [openAt, setOpenAt] = useState<string | undefined>(undefined);
-  const here = routeHash(route);
-  // Keyed by the address it opened at, so any navigation closes it.
-  const menuOpen = openAt === here;
   const phone = usePhoneViewport();
+  const [open, setOpen] = useMenuOpen(routeHash(route), phone);
   const more = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
 
-  // The menu, not the nav: a press on the bar or the agent closes it too.
-  const closeMenu = useCallback(() => setOpenAt(undefined), []);
-  usePopoverDismiss(menuOpen, menu, closeMenu);
+  // A row that navigates closes the menu and leaves focus to the page it opens.
+  const closeMenu = useCallback(() => setOpen(false), [setOpen]);
 
   // A section's entries take over the panel, one level at a time. The phone
   // bar keeps its destinations on a section route, which is reached from the
   // page head there (app/sectionswitcher.tsx).
   const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
+  // A seat whose destinations all fit on the bar has nothing for More to open.
+  const hasMenu = hasOffBarRows(level.shown);
+  const menuOpen = open && phone && hasMenu;
 
-  // The menu takes focus, or Tab walks a page nobody can see; focus it took down
-  // with it returns to More. The ref spares the mount, which keeps its focus.
-  const menuOpened = useRef(false);
-  useEffect(() => {
-    if (menuOpen) {
-      menuOpened.current = true;
-      menu.current?.querySelector<HTMLElement>(".navitem")?.focus();
-      return;
-    }
-    if (!menuOpened.current) {
-      return;
-    }
-    menuOpened.current = false;
-    if (
-      document.activeElement === null ||
-      document.activeElement === document.body
-    ) {
+  // Escape or a press outside hands focus the menu held, or dropped on the
+  // scrim, back to More. A press that focused a control of its own keeps it.
+  const dismissMenu = useCallback(() => {
+    const dropped = holdsOrDropsFocus(menu.current);
+    setOpen(false);
+    if (dropped) {
       more.current?.focus();
     }
-  }, [menuOpen]);
+  }, [setOpen]);
+  usePopoverDismiss(menuOpen, menu, dismissMenu);
 
-  // The menu exists only at phone width; the control that closes it is not
-  // rendered above the breakpoint. Widening the window while it is open would
-  // otherwise leave the page locked and inert with nothing on screen to release
-  // it. The width is already subscribed to above, so this reads that answer
-  // rather than opening a second media query of its own.
+  // The menu takes focus, or Tab walks a page nobody can see.
   useEffect(() => {
-    if (menuOpen && !phone) {
-      setOpenAt(undefined);
+    if (menuOpen) {
+      menu.current?.querySelector<HTMLElement>(".navitem")?.focus();
     }
-  }, [menuOpen, phone]);
+  }, [menuOpen]);
 
   // `inert` takes the dimmed page out of Tab, the accessibility tree and pointer
   // reach. The skip link sits outside `.main`, so it goes inert too, and the
@@ -293,32 +316,34 @@ export function WorkspaceRail({
         />
         {/* Carries the active state for every destination the menu holds, so
             the closed bar always shows where you are. */}
-        <button
-          type="button"
-          ref={more}
-          className={offBar ? "railmore active" : "railmore"}
-          // Open, this control closes the menu, so it says so in the name as
-          // well as in the glyph. A control whose name stays the same while its
-          // job changes is the one a screen reader gets wrong.
-          aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
-          aria-expanded={menuOpen}
-          // The state has to reach a screen reader as well as the eye: the
-          // hidden row is out of the accessibility tree at this width. Dropped
-          // once the menu is open, because the real row is then visible and
-          // carries it. Two elements claiming the current page is worse than
-          // none.
-          aria-current={menuOpen ? undefined : moreClaim}
-          onClick={() => setOpenAt(menuOpen ? undefined : here)}
-        >
-          {/* Both glyphs stay drawn, so one can turn into the other. */}
-          <span className="railmore-glyphs" aria-hidden>
-            <Menu className="railmore-open" />
-            <X className="railmore-close" />
-          </span>
-          <span className="navlabel">
-            {menuOpen ? t("shell.closeMenu") : t("shell.more")}
-          </span>
-        </button>
+        {hasMenu && (
+          <button
+            type="button"
+            ref={more}
+            className={offBar ? "railmore active" : "railmore"}
+            // Open, this control closes the menu, so it says so in the name as
+            // well as in the glyph. A control whose name stays the same while its
+            // job changes is the one a screen reader gets wrong.
+            aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
+            aria-expanded={menuOpen}
+            // The state has to reach a screen reader as well as the eye: the
+            // hidden row is out of the accessibility tree at this width. Dropped
+            // once the menu is open, because the real row is then visible and
+            // carries it. Two elements claiming the current page is worse than
+            // none.
+            aria-current={menuOpen ? undefined : moreClaim}
+            onClick={() => setOpen(!menuOpen)}
+          >
+            {/* Both glyphs stay drawn, so one can turn into the other. */}
+            <span className="railmore-glyphs" aria-hidden>
+              <Menu className="railmore-open" />
+              <X className="railmore-close" />
+            </span>
+            <span className="navlabel">
+              {menuOpen ? t("shell.closeMenu") : t("shell.more")}
+            </span>
+          </button>
+        )}
         <div className="grow" />
         {/* The sidebar's foot is the agent. It is the one thing in the chrome
             that reports rather than navigates, and it never claims the current

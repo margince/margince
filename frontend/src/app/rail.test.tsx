@@ -511,7 +511,8 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     );
   });
 
-  // The agent's panel would otherwise open under the scrim.
+  // The agent's panel would otherwise open under the scrim. The press keeps the
+  // focus it gave its own control, so More does not take it back.
   it.each([
     ["a bar destination", () => screen.getByRole("link", { name: "Deals" })],
     [
@@ -530,9 +531,11 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
     await user.click(screen.getByRole("button", { name: "More" }));
 
-    await user.click(target());
+    const pressed = target();
+    await user.click(pressed);
     expect(container.querySelector(".railmenu")).toBeNull();
-    expect(document.activeElement).not.toBe(document.body);
+    expect(container.querySelector(".railscrim")).toBeNull();
+    expect(document.activeElement).toBe(pressed);
   });
 
   it("tabs through the menu's rows and then the bar's", async () => {

@@ -147,8 +147,8 @@ function LinkRow({
 
 /**
  * A real `role="menu"`, so a keyboard reader can reach both submenus. Its head
- * is the identity, a row into the seat's own account page. The identity also
- * names the menu, so a reader in menu mode hears whose account they act on.
+ * is the identity, a row into the seat's own account page. Focus lands on it,
+ * so a reader in menu mode hears whose account they act on.
  */
 function AccountPanel({
   identity,
@@ -167,7 +167,7 @@ function AccountPanel({
 }>) {
   const t = useT();
   const signOutSeat = setup ? SETUP_SEAT + 1 : SETUP_SEAT;
-  const { seat, walk, move } = useRovingSeats(signOutSeat + 1);
+  const { seat, walk, move, holds } = useRovingSeats(signOutSeat + 1);
   const theme = useFlyout(THEME_SEAT, move);
   const help = useFlyout(HELP_SEAT, move);
 
@@ -175,9 +175,21 @@ function AccountPanel({
   // is one the keyboard reader has to walk into with a key nothing told them
   // about, and it is what makes the Escape return below mean anything.
   const hasHead = Boolean(identity.label);
+  const headless = useRef(!hasHead);
   useEffect(() => {
-    move(hasHead ? WHO_SEAT : SETTINGS_SEAT);
-  }, [move, hasHead]);
+    move(headless.current ? SETTINGS_SEAT : WHO_SEAT);
+  }, [move]);
+  // A head that arrives late takes focus only from the row focus first landed
+  // on, never from a row the reader walked to.
+  useEffect(() => {
+    if (!hasHead || !headless.current) {
+      return;
+    }
+    headless.current = false;
+    if (holds(SETTINGS_SEAT)) {
+      move(WHO_SEAT);
+    }
+  }, [hasHead, holds, move]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Tab leaves the menu, so the menu goes with it (the APG menu-button
@@ -196,11 +208,7 @@ function AccountPanel({
       className="accountmenu topbar-popover"
       id={id}
       role="menu"
-      aria-label={
-        identity.spoken
-          ? `${t("shell.accountAria")} — ${identity.spoken}`
-          : t("shell.accountAria")
-      }
+      aria-label={t("shell.accountAria")}
       // Focusable only by script: the roving tabstop lives on the rows.
       tabIndex={-1}
       ref={panel}

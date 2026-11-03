@@ -63,7 +63,8 @@ export const TopBar: Story = {
 };
 
 /**
- * The panel, open: who you are, with the chip before the name and address.
+ * The panel, open: who you are, with the chip before the name and address. The
+ * menu is named "Account", like the trigger, and focus lands on that head row.
  * Then settings, theme, the booking link, help and feedback, and sign out under
  * its own rule. Only Sign out has a leading glyph, because nobody wants to press
  * it by accident. A chevron says a layer is behind its row.
@@ -82,6 +83,10 @@ export const TopBarMenu: Story = {
     const linesBox = lines.getBoundingClientRect();
     await expect(chipBox.right).toBeLessThan(linesBox.left);
     await expect(middle(chipBox)).toBeCloseTo(middle(linesBox), 0);
+    // Named as the trigger is; the head, which names the seat, takes focus.
+    const menu = within(document.body).getByRole("menu", { name: "Account" });
+    await expect(menu.contains(who)).toBe(true);
+    await expect(document.activeElement).toBe(who);
   },
   render: () => {
     stubSession();

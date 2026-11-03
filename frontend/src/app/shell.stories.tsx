@@ -749,7 +749,21 @@ export const PhoneMoreMenu: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The burger and the cross, as drawn once the turn between them settles.
+    const glyphs = () =>
+      [".railmore-open", ".railmore-close"].map((glyph) => {
+        const drawn = canvasElement.querySelector(glyph);
+        return drawn ? getComputedStyle(drawn).opacity : "missing";
+      });
+    const turned = (burger: string, cross: string) =>
+      waitFor(() => expect(glyphs()).toEqual([burger, cross]));
+    await turned("1", "0");
     await userEvent.click(canvas.getByRole("button", { name: "More" }));
+    await turned("0", "1");
+    await userEvent.click(canvas.getByRole("button", { name: "Close" }));
+    await turned("1", "0");
+    await userEvent.click(canvas.getByRole("button", { name: "More" }));
+    await turned("0", "1");
     const close = await canvas.findByRole("button", { name: "Close" });
     await expect(close).toHaveAttribute("aria-expanded", "true");
     const menu = canvasElement.querySelector(".railmenu");

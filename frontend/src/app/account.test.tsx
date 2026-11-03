@@ -4,7 +4,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
@@ -431,10 +437,87 @@ describe("AccountMenu", () => {
     expect(who?.querySelector(".acctmail")?.textContent).toBe(
       "test@example.test",
     );
-    // And in the menu's own name, so a reader entering it in menu mode is told
-    // whose account it is without having to leave to find out.
-    expect(screen.getByRole("menu", { name: /Test User/ })).toBe(
+    // The menu is named by what it is, as the trigger is. The head row names
+    // whose account it is, and focus lands on it.
+    expect(screen.getByRole("menu", { name: "Account" })).toBe(
       container.querySelector(".accountmenu"),
     );
+    expect(document.activeElement).toBe(head());
+  });
+});
+
+// A session whose /me names nobody yet: no head row, and focus starts on
+// Settings. The client is returned, so a case can let /me answer later.
+const renderHeadless = () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const me = meFixture();
+  client.setQueryData(["me"], {
+    ...me,
+    user: { ...me.user, display_name: "", email: "" },
+  });
+  // The mount's own refetch never answers, so only the case changes /me.
+  vi.stubGlobal("fetch", () => new Promise(() => undefined));
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <AccountMenu />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return client;
+};
+
+describe("AccountMenu before /me names the seat", () => {
+  it("starts on Settings and walks only the rows it draws", async () => {
+    const user = userEvent.setup();
+    renderHeadless();
+    await openMenu(user, glyphTrigger());
+    expect(screen.queryByRole("menuitem", { name: /account settings/ })).toBe(
+      null,
+    );
+    expect(document.activeElement).toBe(row("Settings"));
+
+    const walked = [];
+    for (let step = 0; step < 5; step++) {
+      await user.keyboard("{ArrowDown}");
+      walked.push(document.activeElement?.textContent);
+    }
+    expect(walked).toEqual([
+      "Theme",
+      "My booking link",
+      "Help and feedback",
+      "Sign out",
+      "Settings",
+    ]);
+    await user.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(row("Sign out"));
+    await user.keyboard("{Home}");
+    expect(document.activeElement).toBe(row("Settings"));
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(row("Sign out"));
+  });
+
+  it("hands focus to the head when /me answers while focus is on Settings", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    expect(document.activeElement).toBe(row("Settings"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await waitFor(() => expect(document.activeElement).toBe(head()));
+  });
+
+  it("leaves focus on the row the reader walked to when /me answers", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Theme"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await screen.findByRole("menuitem", { name: /account settings/ });
+    expect(document.activeElement).toBe(row("Theme"));
   });
 });
