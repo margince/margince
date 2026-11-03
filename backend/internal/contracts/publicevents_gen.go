@@ -507,6 +507,27 @@ func (e PublicEventRetentionRestrictedAction) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventSalesInitiativeUpdatedStatus.
+const (
+	Draft PublicEventSalesInitiativeUpdatedStatus = "draft"
+	Ended PublicEventSalesInitiativeUpdatedStatus = "ended"
+	Live  PublicEventSalesInitiativeUpdatedStatus = "live"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventSalesInitiativeUpdatedStatus enum.
+func (e PublicEventSalesInitiativeUpdatedStatus) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Ended:
+		return true
+	case Live:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventTeamChangedChange.
 const (
 	PublicEventTeamChangedChangeArchived      PublicEventTeamChangedChange = "archived"
@@ -655,6 +676,7 @@ const (
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
 	RoleChanged                           SubscribableEventType = "role.changed"
+	SalesInitiativeUpdated                SubscribableEventType = "sales_initiative.updated"
 	SignalDetected                        SubscribableEventType = "signal.detected"
 	SignalResolved                        SubscribableEventType = "signal.resolved"
 	SignalUpdated                         SubscribableEventType = "signal.updated"
@@ -919,6 +941,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case RoleChanged:
 		return true
+	case SalesInitiativeUpdated:
+		return true
 	case SignalDetected:
 		return true
 	case SignalResolved:
@@ -1084,6 +1108,9 @@ type PublicEventActivityChangedFields struct {
 
 	// Subject The activity's new subject (absent when this update did not touch it).
 	Subject *string `json:"subject,omitempty"`
+
+	// ThreadKey The activity's new conversation key, when its thread grouping changed.
+	ThreadKey *string `json:"thread_key,omitempty"`
 }
 
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried. A subscriber that must know re-reads the row under its own audience, the same way a human does.
@@ -1815,7 +1842,7 @@ type PublicEventDealUpdated struct {
 
 // PublicEventEmailSignatureChanged Payload for email_signature.changed. A member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later. So the change is audited and published rather than written silently. The payload leaves out the signature text. That text is the member's own words about themselves, often with a direct line or an address. A subscriber needs to know the sign-off moved, not what it says.
 type PublicEventEmailSignatureChanged struct {
-	// HasSignature Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned".
+	// HasSignature Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false.
 	HasSignature bool `json:"has_signature"`
 }
 
@@ -2467,6 +2494,17 @@ type PublicEventRoleChanged struct {
 	// UserId The member whose role changed.
 	UserId openapi_types.UUID `json:"user_id"`
 }
+
+// PublicEventSalesInitiativeUpdated Payload for sales_initiative.updated. A sales initiative was defined, changed, launched or had its picked and excluded records changed. The entity is the initiative. `changed_fields` names what moved rather than carrying it; the definition and the members stay on the record.
+type PublicEventSalesInitiativeUpdated struct {
+	// ChangedFields Which parts moved, such as definition, status, members.
+	ChangedFields []string                                `json:"changed_fields"`
+	InitiativeId  openapi_types.UUID                      `json:"initiative_id"`
+	Status        PublicEventSalesInitiativeUpdatedStatus `json:"status"`
+}
+
+// PublicEventSalesInitiativeUpdatedStatus defines model for PublicEventSalesInitiativeUpdated.Status.
+type PublicEventSalesInitiativeUpdatedStatus string
 
 // PublicEventSignalDetected Payload for signal.detected. A signal was created (signals/signal.go's CreateSignal). The entity_type and entity_id data fields name the signal's subject (deal | company | contact) when it is known at creation time. They differ from the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver. The resolution_confidence field is set only when the signal was created already resolved.
 type PublicEventSignalDetected struct {
@@ -3319,6 +3357,10 @@ func (PublicEventRoleChanged) EventType() string { return "role.changed" }
 
 func (PublicEventRoleChanged) EntityType() string { return "user" }
 
+func (PublicEventSalesInitiativeUpdated) EventType() string { return "sales_initiative.updated" }
+
+func (PublicEventSalesInitiativeUpdated) EntityType() string { return "sales_initiative" }
+
 func (PublicEventSignalDetected) EventType() string { return "signal.detected" }
 
 func (PublicEventSignalDetected) EntityType() string { return "signal" }
@@ -3549,6 +3591,7 @@ var PublicEventVersions = map[string]int{
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
 	"role.changed":                              1,
+	"sales_initiative.updated":                  1,
 	"signal.detected":                           1,
 	"signal.resolved":                           1,
 	"signal.updated":                            1,
@@ -3586,7 +3629,7 @@ var PublicEventSamples = map[string]string{
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3697,6 +3740,7 @@ var PublicEventSamples = map[string]string{
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"sales_initiative.updated":                  "{\"changed_fields\":[\"Sample changed fields\"],\"initiative_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"draft\"}",
 	"signal.detected":                           "{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\",\"kind\":\"Sample kind\",\"resolution_confidence\":1.5,\"resolution_state\":\"Sample resolution state\",\"severity\":\"Sample severity\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_channel\":\"Sample source channel\"}",
 	"signal.resolved":                           "{\"match_confidence\":1.5,\"matched_on\":\"Sample matched on\",\"resolution_state\":\"Sample resolution state\",\"resolved_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"resolved_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"signal.updated":                            "{\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

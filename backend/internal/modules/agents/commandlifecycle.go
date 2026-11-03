@@ -39,8 +39,9 @@ import (
 // "promote this lead" and "promote this lead because they replied" are not the
 // same decision. The evidence note does not: nothing here reads it.
 type PromoteLeadCommand struct {
-	LeadID  ids.UUID
-	Trigger string
+	DealChoice datasource.PromotionDealChoice
+	LeadID     ids.UUID
+	Trigger    string
 }
 
 // NewPromoteLeadCall binds one promotion to the resolver that answers for it,
@@ -79,6 +80,9 @@ func (r *promoteLeadResolver) Subject(ctx context.Context, cmd PromoteLeadComman
 // no reply must never even reach the inbox — and then the lead itself, the
 // same two ways patchResolver.Guards refuses its own target.
 func (r *promoteLeadResolver) Guards(ctx context.Context, cmd PromoteLeadCommand) error {
+	if err := datasource.ValidatePromotionDeals(datasource.PromotionDealSelection{New: cmd.DealChoice.Deal != nil, Existing: cmd.DealChoice.ExistingDealID != nil}); err != nil {
+		return err
+	}
 	if err := requireGenuineTrigger(cmd.Trigger); err != nil {
 		return err
 	}

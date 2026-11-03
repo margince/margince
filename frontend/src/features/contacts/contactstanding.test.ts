@@ -145,6 +145,118 @@ describe("contactVerdict", () => {
     });
   });
 
+  // The sentence under a moment's heading never points the other way from it.
+  it.each<[ContactMomentRule, Contact360["relationship_changes"], string]>([
+    [
+      "gone_quiet",
+      [
+        {
+          kind: "warmed",
+          at: AS_OF,
+          from_bucket: "weak",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship moved from weak to moderate.",
+    ],
+    [
+      "overdue_promise",
+      [{ kind: "replied_after_gap", at: AS_OF, days: 30 }],
+      "They replied after 30 quiet days.",
+    ],
+    [
+      "re_engaged",
+      [
+        {
+          kind: "cooled",
+          at: AS_OF,
+          from_bucket: "strong",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship cooled from strong to moderate.",
+    ],
+    [
+      "re_engaged",
+      [{ kind: "went_quiet", at: AS_OF, days: 45 }],
+      "No activity for 45 days.",
+    ],
+  ])(
+    "puts no contrary change under the %s heading",
+    (rule, changes, contrary) => {
+      const verdict = contactVerdict(
+        {
+          ...VIEW,
+          moment: moment(rule),
+          strength: strength("moderate", 54),
+          relationship_changes: changes,
+        },
+        t,
+      );
+      expect(verdict?.word).toBe(t(`contact.moment.rule.${rule}`));
+      expect(verdict?.sentence).toBeDefined();
+      expect(verdict?.sentence).not.toBe(contrary);
+    },
+  );
+
+  // The wire orders changes by consequence, not by time, so the newest one
+  // sits last here and the oldest agreeing one first.
+  it("takes the newest change that agrees with the heading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("gone_quiet"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "cooled",
+            at: "2026-07-01T09:00:00Z",
+            from_bucket: "strong",
+            to_bucket: "moderate",
+          },
+          {
+            kind: "warmed",
+            at: "2026-08-12T09:00:00Z",
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+          {
+            kind: "cooled",
+            at: "2026-08-10T09:00:00Z",
+            from_bucket: "moderate",
+            to_bucket: "weak",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship cooled from moderate to weak.",
+    );
+  });
+
+  it("keeps a band move under the band's own reading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("nothing_needed"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "warmed",
+            at: AS_OF,
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship moved from weak to moderate.",
+    );
+  });
+
   it("has no verdict when the moment and the strength are both withheld", () => {
     expect(
       contactVerdict({ ...VIEW, sections_omitted: ["moments", "strength"] }, t),
@@ -248,6 +360,60 @@ describe("contactDims", () => {
     expect(dims.find((dim) => dim.key === "reach")).toMatchObject({
       value: "No colleague in touch",
       tone: "neutral",
+    });
+  });
+
+  describe("a colleague who wrote without a reply", () => {
+    type Colleague = NonNullable<
+      NonNullable<Contact360["network"]>["colleagues"]
+    >[number];
+    const colleague = (name: string, over: Partial<Colleague>): Colleague => ({
+      user_id: `u-${name}`,
+      display_name: name,
+      strength_bucket: "weak",
+      interactions_90d: 1,
+      inbound_90d: 0,
+      outbound_90d: 1,
+      sent_90d: 1,
+      two_way: false,
+      ...over,
+    });
+    const reach = (colleagues: Colleague[]) =>
+      contactDims({ ...VIEW, network: { colleagues } }, t, "en").find(
+        (dim) => dim.key === "reach",
+      );
+    const inTouch = colleague("Bea Owner", {
+      interactions_90d: 2,
+      inbound_90d: 1,
+      two_way: true,
+    });
+
+    it("names a colleague who wrote without a reply after those in touch", () => {
+      expect(reach([inTouch, colleague("Carl Writer", {})])).toMatchObject({
+        value: "1 colleague in touch",
+        sub: "Bea Owner · also wrote: Carl Writer",
+        tone: "warning",
+      });
+    });
+
+    it("does not name a colleague who was only copied", () => {
+      expect(
+        reach([inTouch, colleague("Cleo Copied", { sent_90d: 0 })]),
+      ).toMatchObject({ value: "1 colleague in touch", sub: "Bea Owner" });
+    });
+
+    it("reads no two-way contact when colleagues only wrote", () => {
+      expect(reach([colleague("Carl Writer", {})])).toMatchObject({
+        value: "No two-way contact",
+        sub: "Carl Writer wrote, no reply yet",
+        tone: "neutral",
+      });
+    });
+
+    it("treats a missing sent_90d as not written", () => {
+      expect(
+        reach([colleague("Old Payload", { sent_90d: undefined })]),
+      ).toMatchObject({ value: "No colleague in touch", sub: undefined });
     });
   });
 

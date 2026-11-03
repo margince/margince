@@ -34,9 +34,11 @@ type ContactEdge struct {
 // and none are invented: the reciprocity term simply has nothing to say.
 func (e ContactEdge) StrengthOf(now time.Time) relstrength.Score {
 	last := e.LastAt
+	// Both contacts were on the activity, so each took part in it.
 	return relstrength.Compute(relstrength.Inputs{
-		LastInteraction: &last,
-		Count90d:        e.Count90d,
+		LastTouch:   &last,
+		LastEngaged: &last,
+		Count90d:    e.Count90d,
 	}, now)
 }
 

@@ -80,6 +80,7 @@ public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
 public.activity.guests_left_out integer NOT NULL gen=- def=0
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
+public.activity.home_read_fence_activity_reach CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON public.activity FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.inbound_sender_authenticated boolean NOT NULL gen=- def=false
@@ -131,6 +132,7 @@ public.activity_audience_member.activity_audience_member_subject_type_check CHEC
 public.activity_audience_member.activity_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_audience_member.created_by text NOT NULL gen=- def=-
+public.activity_audience_member.home_read_fence_audience_member CREATE TRIGGER home_read_fence_audience_member AFTER DELETE OR UPDATE ON public.activity_audience_member FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
@@ -177,6 +179,8 @@ public.activity_commitment_admission.captured_by text NOT NULL gen=- def=-
 public.activity_commitment_admission.current_work boolean NOT NULL gen=- def=-
 public.activity_commitment_admission.evaluated_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_commitment_admission.evidence_ids uuid[] NOT NULL gen=- def=-
+public.activity_commitment_admission.home_read_fence_commitment_admission CREATE TRIGGER home_read_fence_commitment_admission AFTER INSERT ON public.activity_commitment_admission FOR EACH ROW WHEN (((new.outcome = 'source_unavailable'::text) OR (new.renewed_by IS NOT NULL))) EXECUTE FUNCTION advance_home_read_fence()
+public.activity_commitment_admission.home_read_fence_commitment_admission_change CREATE TRIGGER home_read_fence_commitment_admission_change AFTER UPDATE ON public.activity_commitment_admission FOR EACH ROW WHEN ((((new.outcome = 'source_unavailable'::text) AND (old.outcome IS DISTINCT FROM new.outcome)) OR ((new.renewed_by IS NOT NULL) AND (old.renewed_by IS DISTINCT FROM new.renewed_by)) OR ((old.summary <> ''::text) AND (new.summary = ''::text)) OR ((old.source_quote <> ''::text) AND (new.source_quote = ''::text)) OR ((old.meaning IS NOT NULL) AND (new.meaning IS NULL)) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id) OR (old.locator IS DISTINCT FROM new.locator))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_commitment_admission.locator text NOT NULL gen=- def=-
 public.activity_commitment_admission.meaning jsonb gen=- def=-
 public.activity_commitment_admission.outcome text NOT NULL gen=- def=-
@@ -196,7 +200,7 @@ public.activity_identity.attested_by text NOT NULL gen=- def=-
 public.activity_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_identity.identity_key text NOT NULL gen=- def=-
 public.activity_identity.identity_kind text NOT NULL gen=- def=-
-public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id)
+public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id, identity_kind, identity_key)
 public.activity_identity_pkey CREATE UNIQUE INDEX activity_identity_pkey ON public.activity_identity USING btree (identity_kind, identity_key)
 public.activity_kind acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_kind.activity_kind_pkey PRIMARY KEY (kind)
@@ -222,6 +226,9 @@ public.activity_link.contact_id uuid gen=- def=-
 public.activity_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_link.deal_id uuid gen=- def=-
 public.activity_link.entity_type text NOT NULL gen=- def=-
+public.activity_link.home_read_fence_first_link CREATE TRIGGER home_read_fence_first_link AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence_on_first_link()
+public.activity_link.home_read_fence_link_change CREATE TRIGGER home_read_fence_link_change AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (((old.activity_id IS DISTINCT FROM new.activity_id) OR (old.contact_id IS DISTINCT FROM new.contact_id) OR (old.company_id IS DISTINCT FROM new.company_id) OR (old.deal_id IS DISTINCT FROM new.deal_id) OR (old.lead_id IS DISTINCT FROM new.lead_id) OR (old.project_id IS DISTINCT FROM new.project_id))) EXECUTE FUNCTION advance_home_read_fence()
+public.activity_link.home_read_fence_link_removed CREATE TRIGGER home_read_fence_link_removed AFTER DELETE ON public.activity_link FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_link.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link.lead_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
@@ -291,7 +298,7 @@ public.activity_mail_reference.activity_mail_reference_pkey PRIMARY KEY (activit
 public.activity_mail_reference.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_mail_reference.referenced_id text NOT NULL gen=- def=-
 public.activity_mail_reference_pkey CREATE UNIQUE INDEX activity_mail_reference_pkey ON public.activity_mail_reference USING btree (activity_id, referenced_id)
-public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_reference_referenced_idx ON public.activity_mail_reference USING btree (referenced_id)
+public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_reference_referenced_idx ON public.activity_mail_reference USING btree (referenced_id, activity_id)
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -372,6 +379,8 @@ public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
+public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read_fence_participant AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()
+public.activity_participant.home_read_fence_participant_removed CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.past_party_cap boolean NOT NULL gen=- def=false
 public.activity_participant.response text gen=- def=-
@@ -767,6 +776,34 @@ public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
 public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
 public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
+public.advance_home_read_fence() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM advance_home_read_fence_now('access');
+  RETURN NULL;
+END;
+
+public.advance_home_read_fence_now(fence text) secdef=false cfg=- acl=- 
+BEGIN
+  IF current_setting('margince.home_read_fence_' || fence, true) IS DISTINCT FROM 'on' THEN
+    INSERT INTO home_read_fence_pending (xact, fence) VALUES (pg_current_xact_id(), fence) ON CONFLICT DO NOTHING;
+    PERFORM set_config('margince.home_read_fence_' || fence, 'on', true);
+  END IF;
+END;
+
+public.advance_home_read_fence_on_first_link() secdef=false cfg=- acl=- 
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM (SELECT DISTINCT activity_id FROM added_links) n
+      JOIN activity a ON a.id = n.activity_id AND a.created_at < now()
+     WHERE (SELECT count(*) FROM activity_link l WHERE l.activity_id = n.activity_id)
+         = (SELECT count(*) FROM added_links al WHERE al.activity_id = n.activity_id)
+  ) THEN
+    PERFORM advance_home_read_fence_now('access');
+  END IF;
+  RETURN NULL;
+END;
+
 public.advance_report_projection_authority() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
@@ -1122,6 +1159,7 @@ public.app_user.email_domain_folded text gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
 public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
+public.app_user.home_read_fence_identity CREATE TRIGGER home_read_fence_identity AFTER UPDATE OF merged_into_user_id, email_domain_folded ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.last_active_at timestamp with time zone gen=- def=-
@@ -1539,6 +1577,7 @@ public.audit_log.before jsonb gen=- def=-
 public.audit_log.entity_id uuid NOT NULL gen=- def=-
 public.audit_log.entity_type text NOT NULL gen=- def=-
 public.audit_log.evidence jsonb gen=- def=-
+public.audit_log.home_read_fence_scrub CREATE TRIGGER home_read_fence_scrub AFTER INSERT ON public.audit_log FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))) EXECUTE FUNCTION advance_home_read_fence()
 public.audit_log.id uuid NOT NULL gen=- def=uuidv7()
 public.audit_log.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.audit_log.on_behalf_of uuid gen=- def=-
@@ -1888,6 +1927,8 @@ public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
 public.capture_import.delivered_by text[] NOT NULL gen=- def='{}'::text[]
+public.capture_import.home_read_fence_capture_import CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION advance_home_read_fence()
+public.capture_import.home_read_fence_capture_import_removed CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
@@ -1935,6 +1976,42 @@ public.capture_owner_identity_withdrawn.withdrawn_by text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn_at_idx CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at)
 public.capture_owner_identity_withdrawn_pkey CREATE UNIQUE INDEX capture_owner_identity_withdrawn_pkey ON public.capture_owner_identity_withdrawn USING btree (id)
 public.capture_owner_identity_withdrawn_user_idx CREATE INDEX capture_owner_identity_withdrawn_user_idx ON public.capture_owner_identity_withdrawn USING btree (user_id)
+public.capture_party_admission_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_admission_cursor.after_activity uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.after_user uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.capture_party_admission_cursor_pkey PRIMARY KEY (singleton)
+public.capture_party_admission_cursor.capture_party_admission_cursor_singleton_check CHECK (singleton)
+public.capture_party_admission_cursor.ceiling uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.singleton boolean NOT NULL gen=- def=true
+public.capture_party_admission_cursor_pkey CREATE UNIQUE INDEX capture_party_admission_cursor_pkey ON public.capture_party_admission_cursor USING btree (singleton)
+public.capture_party_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_source.activity_id uuid NOT NULL gen=- def=-
+public.capture_party_source.admission_blocked boolean NOT NULL gen=- def=-
+public.capture_party_source.admission_generation bigint NOT NULL gen=- def=1
+public.capture_party_source.admission_pending boolean NOT NULL gen=- def=true
+public.capture_party_source.capture_party_source_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_party_source.capture_party_source_pkey PRIMARY KEY (activity_id, user_id, provider)
+public.capture_party_source.capture_party_source_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES raw_capture(id) ON DELETE SET NULL
+public.capture_party_source.capture_party_source_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_party_source.containers text[] NOT NULL gen=- def=-
+public.capture_party_source.containers_known boolean NOT NULL gen=- def=-
+public.capture_party_source.policy_addresses text[] NOT NULL gen=- def=-
+public.capture_party_source.provider text NOT NULL gen=- def=-
+public.capture_party_source.raw_capture_id uuid gen=- def=-
+public.capture_party_source.recipients text[] NOT NULL gen=- def=-
+public.capture_party_source.sent_by_owner boolean NOT NULL gen=- def=-
+public.capture_party_source.user_id uuid NOT NULL gen=- def=-
+public.capture_party_source_original CREATE INDEX capture_party_source_original ON public.capture_party_source USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)
+public.capture_party_source_pending CREATE INDEX capture_party_source_pending ON public.capture_party_source USING btree (activity_id, user_id) WHERE admission_pending
+public.capture_party_source_pkey CREATE UNIQUE INDEX capture_party_source_pkey ON public.capture_party_source USING btree (activity_id, user_id, provider)
+public.capture_party_source_recipients CREATE INDEX capture_party_source_recipients ON public.capture_party_source USING gin (recipients) WHERE sent_by_owner
+public.capture_party_source_replay acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_source_replay.activity_id uuid NOT NULL gen=- def=-
+public.capture_party_source_replay.capture_party_source_replay_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_party_source_replay.capture_party_source_replay_pkey PRIMARY KEY (activity_id)
+public.capture_party_source_replay.outcome text NOT NULL gen=- def=-
+public.capture_party_source_replay_pkey CREATE UNIQUE INDEX capture_party_source_replay_pkey ON public.capture_party_source_replay USING btree (activity_id)
+public.capture_party_source_user CREATE INDEX capture_party_source_user ON public.capture_party_source USING btree (user_id)
 public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
@@ -2190,6 +2267,13 @@ public.commission_entry.updated_at timestamp with time zone NOT NULL gen=- def=n
 public.commission_entry.version bigint NOT NULL gen=- def=1
 public.commission_entry.void_reason text gen=- def=-
 public.commission_entry_pkey CREATE UNIQUE INDEX commission_entry_pkey ON public.commission_entry USING btree (id)
+public.commit_home_read_fence() secdef=false cfg=- acl=- 
+BEGIN
+  UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact AND fence = NEW.fence;
+  RETURN NULL;
+END;
+
 public.comms_outbound acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.comms_outbound.activity_id uuid NOT NULL gen=- def=-
 public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
@@ -2242,6 +2326,7 @@ public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
 public.comms_outbound.message_id text gen=- def=-
 public.comms_outbound.parked_at timestamp with time zone gen=- def=-
+public.comms_outbound.party_admission_pending boolean NOT NULL gen=- def=true
 public.comms_outbound.payload_expires_at timestamp with time zone gen=- def=-
 public.comms_outbound.payload_ref text gen=- def=-
 public.comms_outbound.provider text NOT NULL gen=- def=-
@@ -2273,8 +2358,9 @@ public.comms_outbound_due CREATE INDEX comms_outbound_due ON public.comms_outbou
 public.comms_outbound_link_ix CREATE INDEX comms_outbound_link_ix ON public.comms_outbound USING btree (link_id) WHERE (link_id IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
+public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
-public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
+public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id, id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_basis.captured_by text NOT NULL gen=- def=-
@@ -2534,6 +2620,7 @@ public.company.geocode_lon double precision gen=- def=-
 public.company.geocode_provider text gen=- def=-
 public.company.geocode_status text gen=- def=-
 public.company.geocoded_at timestamp with time zone gen=- def=-
+public.company.home_read_fence_company_reach CREATE TRIGGER home_read_fence_company_reach AFTER UPDATE ON public.company FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.company.id uuid NOT NULL gen=- def=uuidv7()
 public.company.industry text gen=- def=-
 public.company.is_anchor boolean NOT NULL gen=- def=false
@@ -2606,6 +2693,8 @@ public.company_domain.company_id uuid NOT NULL gen=- def=-
 public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain.domain text NOT NULL gen=- def=-
 public.company_domain.domain_folded text gen=- def=-
+public.company_domain.home_read_fence_company_domain CREATE TRIGGER home_read_fence_company_domain AFTER UPDATE ON public.company_domain FOR EACH ROW WHEN (((old.domain_folded IS DISTINCT FROM new.domain_folded) OR (old.company_id IS DISTINCT FROM new.company_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
+public.company_domain.home_read_fence_company_domain_removed CREATE TRIGGER home_read_fence_company_domain_removed AFTER DELETE ON public.company_domain FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain.is_primary boolean NOT NULL gen=- def=false
 public.company_domain.source text NOT NULL gen=- def=-
@@ -3194,6 +3283,7 @@ public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
+public.contact.home_read_fence_contact_reach CREATE TRIGGER home_read_fence_contact_reach AFTER UPDATE ON public.contact FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.contact.id uuid NOT NULL gen=- def=uuidv7()
 public.contact.last_activity_at timestamp with time zone gen=- def=-
 public.contact.last_name text gen=- def=-
@@ -3680,6 +3770,7 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency currency_code gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT
+public.deal.deal_amount_minor_base_js_safe CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
@@ -3723,6 +3814,7 @@ public.deal.expected_close_date date gen=- def=-
 public.deal.forecast_category text gen=- def=-
 public.deal.fx_rate_date date gen=- def=-
 public.deal.fx_rate_to_base numeric(20,10) gen=- def=-
+public.deal.home_read_fence_deal_owner CREATE TRIGGER home_read_fence_deal_owner AFTER UPDATE ON public.deal FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.deal.id uuid NOT NULL gen=- def=uuidv7()
 public.deal.last_activity_at timestamp with time zone gen=- def=-
 public.deal.legal_hold boolean NOT NULL gen=- def=false
@@ -3886,6 +3978,27 @@ public.deal_move_dismissal.user_id uuid NOT NULL gen=- def=-
 public.deal_move_dismissal_deal_ix CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id)
 public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON public.deal_move_dismissal USING btree (user_id, deal_id)
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
+public.deal_product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_product.amount_minor bigint gen=- def=-
+public.deal_product.component_kind text gen=- def=-
+public.deal_product.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product.currency currency_code gen=- def=-
+public.deal_product.deal_id uuid NOT NULL gen=- def=-
+public.deal_product.deal_product_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
+public.deal_product.deal_product_amount_minor_check CHECK (((amount_minor IS NULL) OR (amount_minor >= 0)))
+public.deal_product.deal_product_amount_minor_exact CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
+public.deal_product.deal_product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
+public.deal_product.deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
+public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)
+public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text])))
+public.deal_product.offer_line_item_id uuid gen=- def=-
+public.deal_product.product_id uuid NOT NULL gen=- def=-
+public.deal_product.source text NOT NULL gen=- def=-
+public.deal_product.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product_pkey CREATE UNIQUE INDEX deal_product_pkey ON public.deal_product USING btree (deal_id, product_id)
+public.deal_product_product_idx CREATE INDEX deal_product_product_idx ON public.deal_product USING btree (product_id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_risk_day.captured_by text NOT NULL gen=- def=-
 public.deal_risk_day.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -4282,6 +4395,7 @@ public.email_signature.email_signature_owner_id_fkey FOREIGN KEY (owner_id) REFE
 public.email_signature.email_signature_owner_id_key UNIQUE (owner_id)
 public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.email_signature.html text NOT NULL gen=- def=''::text
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
 public.email_signature.phone text NOT NULL gen=- def=''::text
@@ -4776,10 +4890,47 @@ public.graph_interaction_edge.graph_interaction_edge_workspace_id_user_id_fkey F
 public.graph_interaction_edge.in_count_90d integer NOT NULL gen=- def=0
 public.graph_interaction_edge.last_at timestamp with time zone NOT NULL gen=- def=-
 public.graph_interaction_edge.last_inbound_at timestamp with time zone gen=- def=-
+public.graph_interaction_edge.last_met_at timestamp with time zone gen=- def=-
 public.graph_interaction_edge.last_outbound_at timestamp with time zone gen=- def=-
+public.graph_interaction_edge.late_count_90d integer gen=- def=-
+public.graph_interaction_edge.late_out_count_90d integer gen=- def=-
 public.graph_interaction_edge.out_count_90d integer NOT NULL gen=- def=0
+public.graph_interaction_edge.sent_count_90d integer gen=- def=-
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
+public.home_read_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_cache.computed_at timestamp with time zone NOT NULL gen=- def=-
+public.home_read_cache.fence bigint NOT NULL gen=- def=-
+public.home_read_cache.home_read_cache_pkey PRIMARY KEY (reader_id, read, request_key)
+public.home_read_cache.home_read_cache_read_check CHECK ((read = ANY (ARRAY['worklist'::text, 'magic'::text])))
+public.home_read_cache.home_read_cache_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.home_read_cache.payload jsonb NOT NULL gen=- def=-
+public.home_read_cache.read text NOT NULL gen=- def=-
+public.home_read_cache.reader_id uuid NOT NULL gen=- def=-
+public.home_read_cache.request_key text NOT NULL gen=- def=-
+public.home_read_cache.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.home_read_cache.walk_id uuid gen=- def=-
+public.home_read_cache_pkey CREATE UNIQUE INDEX home_read_cache_pkey ON public.home_read_cache USING btree (reader_id, read, request_key)
+public.home_read_fence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_fence.generation bigint NOT NULL gen=- def=0
+public.home_read_fence.home_read_fence_pkey PRIMARY KEY (singleton)
+public.home_read_fence.home_read_fence_singleton_check CHECK (singleton)
+public.home_read_fence.singleton boolean NOT NULL gen=- def=true
+public.home_read_fence_pending acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_fence_pending.fence text NOT NULL gen=- def=-
+public.home_read_fence_pending.home_read_fence_at_commit CREATE CONSTRAINT TRIGGER home_read_fence_at_commit AFTER INSERT ON public.home_read_fence_pending DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION commit_home_read_fence()
+public.home_read_fence_pending.home_read_fence_at_commit TRIGGER DEFERRABLE INITIALLY DEFERRED
+public.home_read_fence_pending.home_read_fence_pending_fence_check CHECK ((fence = ANY (ARRAY['access'::text, 'receipt'::text])))
+public.home_read_fence_pending.home_read_fence_pending_pkey PRIMARY KEY (xact, fence)
+public.home_read_fence_pending.xact xid8 NOT NULL gen=- def=-
+public.home_read_fence_pending_pkey CREATE UNIQUE INDEX home_read_fence_pending_pkey ON public.home_read_fence_pending USING btree (xact, fence)
+public.home_read_fence_pkey CREATE UNIQUE INDEX home_read_fence_pkey ON public.home_read_fence USING btree (singleton)
+public.home_read_forgotten acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_forgotten.at timestamp with time zone NOT NULL gen=- def=-
+public.home_read_forgotten.home_read_forgotten_pkey PRIMARY KEY (reader_id)
+public.home_read_forgotten.home_read_forgotten_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.home_read_forgotten.reader_id uuid NOT NULL gen=- def=-
+public.home_read_forgotten_pkey CREATE UNIQUE INDEX home_read_forgotten_pkey ON public.home_read_forgotten USING btree (reader_id)
 public.idempotency_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.idempotency_key.attempt_id uuid NOT NULL gen=- def=uuidv7()
 public.idempotency_key.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5489,6 +5640,7 @@ public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
+public.lead.home_read_fence_lead_owner CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON public.lead FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.industry text gen=- def=-
 public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
@@ -5505,6 +5657,7 @@ public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retireme
 public.lead.lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))
 public.lead.lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.lead.lead_pkey PRIMARY KEY (id)
+public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
@@ -5528,6 +5681,7 @@ public.lead.partner_accepted_at timestamp with time zone gen=- def=-
 public.lead.partner_accepted_by text gen=- def=-
 public.lead.partner_company_id uuid gen=- def=-
 public.lead.phone text gen=- def=-
+public.lead.product_id uuid gen=- def=-
 public.lead.project_id uuid gen=- def=-
 public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
@@ -5636,6 +5790,7 @@ public.lead_privacy_notice.state text NOT NULL gen=- def=-
 public.lead_privacy_notice.template_key text NOT NULL gen=- def=-
 public.lead_privacy_notice.template_version integer NOT NULL gen=- def=-
 public.lead_privacy_notice_pkey CREATE UNIQUE INDEX lead_privacy_notice_pkey ON public.lead_privacy_notice USING btree (id)
+public.lead_product_idx CREATE INDEX lead_product_idx ON public.lead USING btree (product_id) WHERE (product_id IS NOT NULL)
 public.lead_score_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_score_history.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_score_history.factors jsonb NOT NULL gen=- def=-
@@ -6547,6 +6702,7 @@ public.product.archived_at timestamp with time zone gen=- def=-
 public.product.billing_interval_months integer gen=- def=-
 public.product.billing_model text gen=- def=-
 public.product.captured_by text NOT NULL gen=- def=-
+public.product.component_kind text gen=- def=-
 public.product.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.currency currency_code NOT NULL gen=- def=-
 public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0
@@ -6556,6 +6712,7 @@ public.product.name text NOT NULL gen=- def=-
 public.product.product_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
 public.product.product_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
 public.product.product_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
+public.product.product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
@@ -6578,6 +6735,7 @@ public.project.company_id uuid gen=- def=-
 public.project.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.project.description text gen=- def=-
 public.project.ended_at date gen=- def=-
+public.project.home_read_fence_project_owner CREATE TRIGGER home_read_fence_project_owner AFTER UPDATE ON public.project FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
 public.project.id uuid NOT NULL gen=- def=uuidv7()
 public.project.key text gen=- def=-
 public.project.last_activity_at timestamp with time zone gen=- def=-
@@ -6890,6 +7048,7 @@ CASE
 END
 public.record_grant.expires_at timestamp with time zone gen=- def=-
 public.record_grant.granted_by uuid NOT NULL gen=- def=-
+public.record_grant.home_read_fence_record_grant CREATE TRIGGER home_read_fence_record_grant AFTER DELETE OR UPDATE ON public.record_grant FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.record_grant.id uuid NOT NULL gen=- def=uuidv7()
 public.record_grant.lead_id uuid gen=s def=
 CASE
@@ -7176,6 +7335,7 @@ public.report_execution_pkey CREATE UNIQUE INDEX report_execution_pkey ON public
 public.report_execution_report_history CREATE INDEX report_execution_report_history ON public.report_execution USING btree (report_id, id DESC)
 public.report_projection_fence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_projection_fence.generation bigint NOT NULL gen=- def=0
+public.report_projection_fence.home_read_fence_authority CREATE TRIGGER home_read_fence_authority AFTER UPDATE ON public.report_projection_fence FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.report_projection_fence.report_projection_fence_pkey PRIMARY KEY (singleton)
 public.report_projection_fence.report_projection_fence_singleton_check CHECK (singleton)
 public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
@@ -7319,6 +7479,71 @@ public.runner_job.status text NOT NULL gen=- def='queued'::text
 public.runner_job.trigger_ref text NOT NULL gen=- def=-
 public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job USING btree (id)
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
+public.sales_initiative acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative.archived_at timestamp with time zone gen=- def=-
+public.sales_initiative.captured_by text NOT NULL gen=- def=-
+public.sales_initiative.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative.deadline date NOT NULL gen=- def=-
+public.sales_initiative.deal_rule jsonb gen=- def=-
+public.sales_initiative.description text gen=- def=-
+public.sales_initiative.id uuid NOT NULL gen=- def=uuidv7()
+public.sales_initiative.include_future boolean NOT NULL gen=- def=true
+public.sales_initiative.launch_at timestamp with time zone gen=- def=-
+public.sales_initiative.lead_rule jsonb gen=- def=-
+public.sales_initiative.name text NOT NULL gen=- def=-
+public.sales_initiative.objective_metric text NOT NULL gen=- def=-
+public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
+public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
+public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
+public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
+public.sales_initiative.sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0)))
+public.sales_initiative.sales_initiative_target_value_exact CHECK (((target_value >= '-9007199254740991'::bigint) AND (target_value <= '9007199254740991'::bigint)))
+public.sales_initiative.sales_initiative_version_exact CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.sales_initiative.source text NOT NULL gen=- def=-
+public.sales_initiative.status text NOT NULL gen=- def='draft'::text
+public.sales_initiative.target_value bigint gen=- def=-
+public.sales_initiative.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative.version bigint NOT NULL gen=- def=1
+public.sales_initiative_baseline acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_baseline.amount_minor_base bigint gen=- def=-
+public.sales_initiative_baseline.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_baseline.deal_id uuid NOT NULL gen=- def=-
+public.sales_initiative_baseline.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_baseline.sales_initiative_baseline_amount_exact CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
+public.sales_initiative_baseline.sales_initiative_baseline_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.sales_initiative_baseline.sales_initiative_baseline_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_baseline.sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id)
+public.sales_initiative_baseline.stage_id uuid gen=- def=-
+public.sales_initiative_baseline.status text NOT NULL gen=- def=-
+public.sales_initiative_baseline_pkey CREATE UNIQUE INDEX sales_initiative_baseline_pkey ON public.sales_initiative_baseline USING btree (initiative_id, deal_id)
+public.sales_initiative_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_member.captured_by text NOT NULL gen=- def=-
+public.sales_initiative_member.entered_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_member.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_member.reason text NOT NULL gen=- def=-
+public.sales_initiative_member.record_id uuid NOT NULL gen=- def=-
+public.sales_initiative_member.record_type text NOT NULL gen=- def=-
+public.sales_initiative_member.sales_initiative_member_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_member.sales_initiative_member_pkey PRIMARY KEY (initiative_id, record_type, record_id)
+public.sales_initiative_member.sales_initiative_member_reason_check CHECK ((reason = ANY (ARRAY['picked'::text, 'excluded'::text])))
+public.sales_initiative_member.sales_initiative_member_type_check CHECK ((record_type = ANY (ARRAY['lead'::text, 'deal'::text])))
+public.sales_initiative_member_pkey CREATE UNIQUE INDEX sales_initiative_member_pkey ON public.sales_initiative_member USING btree (initiative_id, record_type, record_id)
+public.sales_initiative_member_record_idx CREATE INDEX sales_initiative_member_record_idx ON public.sales_initiative_member USING btree (record_type, record_id)
+public.sales_initiative_pkey CREATE UNIQUE INDEX sales_initiative_pkey ON public.sales_initiative USING btree (id)
+public.sales_initiative_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_revision.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_revision.created_by text NOT NULL gen=- def=-
+public.sales_initiative_revision.definition jsonb NOT NULL gen=- def=-
+public.sales_initiative_revision.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_revision.reason text gen=- def=-
+public.sales_initiative_revision.revision bigint NOT NULL gen=- def=-
+public.sales_initiative_revision.sales_initiative_revision_exact CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+public.sales_initiative_revision.sales_initiative_revision_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_revision.sales_initiative_revision_pkey PRIMARY KEY (initiative_id, revision)
+public.sales_initiative_revision_pkey CREATE UNIQUE INDEX sales_initiative_revision_pkey ON public.sales_initiative_revision USING btree (initiative_id, revision)
+public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL)
 public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
 public.sales_target.id uuid NOT NULL gen=- def=-
@@ -9215,6 +9440,8 @@ public.workspace.workspace_pkey PRIMARY KEY (id)
 public.workspace_email_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace_email_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace_email_domain.domain text NOT NULL gen=- def=-
+public.workspace_email_domain.home_read_fence_workspace_domain CREATE TRIGGER home_read_fence_workspace_domain AFTER UPDATE ON public.workspace_email_domain FOR EACH ROW WHEN (((old.domain IS DISTINCT FROM new.domain) OR (old.verified AND (NOT new.verified)))) EXECUTE FUNCTION advance_home_read_fence()
+public.workspace_email_domain.home_read_fence_workspace_domain_removed CREATE TRIGGER home_read_fence_workspace_domain_removed AFTER DELETE ON public.workspace_email_domain FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.workspace_email_domain.source text NOT NULL gen=- def='mailbox'::text
 public.workspace_email_domain.verified boolean NOT NULL gen=- def=false
 public.workspace_email_domain.workspace_email_domain_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))

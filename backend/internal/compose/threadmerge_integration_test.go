@@ -190,7 +190,7 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 	if got := threadKeyOfMessage(t, e, "private@counterparty.example"); got != "private-root@counterparty.example" {
 		t.Fatalf("the other seat's message moved to thread %q; a reference it never held must not reach it", got)
 	}
-	// Nor is the forged mail merged INTO that conversation: it keeps the root
+	// Nor is the forged mail merged into that conversation: it keeps the root
 	// its own header gives it, which the private thread does not carry.
 	if got := threadKeyOfMessage(t, e, "forged@counterparty.example"); got == "private-root@counterparty.example" {
 		t.Fatal("a mail naming a message its seat never held was merged into that message's thread")

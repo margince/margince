@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -19,12 +19,17 @@ A contact's **Network** tab shows which colleagues have written with them, best 
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
+### What does Reach on the Overview count?
+**Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
+
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+
 ### How strength is worked out
 Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
-- **Recency** is cut by half every 30 days since the last exchange.
+- **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
 - **Frequency** counts up to 20 interactions in 90 days; any more add
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.

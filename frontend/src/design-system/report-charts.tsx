@@ -269,20 +269,23 @@ export function BulletChart({
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {hasTargets && (
-          <span className="report-chart-key report-chart-key-target">
-            {targetLabel}
-          </span>
-        )}
-      </div>
+      {(hasTargets || !readings.some((reading) => reading.tone)) && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
+          {hasTargets && (
+            <span className="report-chart-key report-chart-key-target">
+              {targetLabel}
+            </span>
+          )}
+        </div>
+      )}
       <ul className="report-chart-rows">
         {readings.map((reading) => (
           <li key={reading.key}>
             <Button
               variant="link"
               className="report-chart-row"
+              data-tone={reading.tone}
               onClick={() => onSelect?.(reading.key)}
               disabled={!onSelect}
               style={markGeometry(

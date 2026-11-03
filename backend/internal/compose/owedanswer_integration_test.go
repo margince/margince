@@ -95,6 +95,7 @@ type owedEnv struct {
 func setupOwed(t *testing.T) *owedEnv {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	o := &owedEnv{e: e, owner: e.Rep1, seat: seatAddress(t, e, e.Rep1), now: time.Now()}
 	// A shared mailbox, so captured mail is workspace mail: the classifier
 	// judges only mail the workspace may read.

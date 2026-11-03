@@ -74,16 +74,22 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":      "internal/compose/worklistsnap",
-	"relationship":           "internal/modules/contacts",
-	"partner":                "internal/modules/contacts",
-	"lead":                   "internal/modules/contacts",
-	"lead_score_history":     "internal/modules/contacts",
-	"lead_manual_signal":     "internal/modules/contacts",
-	"lead_source":            "internal/modules/contacts",
-	"lead_origin":            "internal/modules/contacts",
-	"lead_disqualify_reason": "internal/modules/contacts",
-	"partner_stage":          "internal/modules/contacts",
+	"worklist_snapshot": "internal/compose/worklistsnap",
+	// One reader's cached Home answers, the fence that ends them and the
+	// reader's last write, owned by the compose package that serves them.
+	"home_read_cache":         "internal/compose/homecache",
+	"home_read_fence":         "internal/compose/homecache",
+	"home_read_forgotten":     "internal/compose/homecache",
+	"home_read_fence_pending": "internal/compose/homecache",
+	"relationship":            "internal/modules/contacts",
+	"partner":                 "internal/modules/contacts",
+	"lead":                    "internal/modules/contacts",
+	"lead_score_history":      "internal/modules/contacts",
+	"lead_manual_signal":      "internal/modules/contacts",
+	"lead_source":             "internal/modules/contacts",
+	"lead_origin":             "internal/modules/contacts",
+	"lead_disqualify_reason":  "internal/modules/contacts",
+	"partner_stage":           "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
 	// administered reason a refusal names. contacts owns them because the SUBJECT
@@ -179,13 +185,18 @@ var tableOwners = map[string]string{
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
 	// TestEveryPackageOnlyWritesTablesItOwns.
-	"project":               "internal/modules/projects",
-	"project_phase_history": "internal/modules/projects",
-	"fx_rate":               "internal/modules/deals",
-	"product":               "internal/modules/deals",
-	"offer":                 "internal/modules/deals",
-	"offer_line_item":       "internal/modules/deals",
-	"offer_template":        "internal/modules/deals",
+	"project":                   "internal/modules/projects",
+	"project_phase_history":     "internal/modules/projects",
+	"fx_rate":                   "internal/modules/deals",
+	"product":                   "internal/modules/deals",
+	"offer":                     "internal/modules/deals",
+	"offer_line_item":           "internal/modules/deals",
+	"deal_product":              "internal/modules/deals",
+	"sales_initiative":          "internal/modules/initiatives",
+	"sales_initiative_revision": "internal/modules/initiatives",
+	"sales_initiative_member":   "internal/modules/initiatives",
+	"sales_initiative_baseline": "internal/modules/initiatives",
+	"offer_template":            "internal/modules/deals",
 	// activities
 	"activity":              "internal/modules/activities",
 	"transcript_read":       "internal/modules/activities",
@@ -320,6 +331,9 @@ var tableOwners = map[string]string{
 	"capture_alias_sighting":           "internal/modules/capture",
 	"capture_alias_refused":            "internal/modules/capture",
 	"capture_owner_identity_withdrawn": "internal/modules/capture",
+	"capture_party_admission_cursor":   "internal/modules/capture",
+	"capture_party_source_replay":      "internal/modules/capture",
+	"capture_party_source":             "internal/modules/capture",
 	"capture_import":                   "internal/modules/capture",
 	"capture_thread_verdict":           "internal/modules/capture",
 	"capture_counterparty_hold":        "internal/modules/capture",

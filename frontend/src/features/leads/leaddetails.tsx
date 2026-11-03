@@ -3,6 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
 import { TagsPanel } from "../../components/tagspanel";
@@ -420,6 +421,14 @@ function LeadDetailsBody({
     { key: "lists", label: t("lists.record.title"), children: lists || null },
   ];
   return (
-    <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+    <>
+      <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      {!lead.archived_at && (
+        <ConversationSuggestionsCard
+          key={lead.id}
+          record={{ type: "lead", id: lead.id }}
+        />
+      )}
+    </>
   );
 }

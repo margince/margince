@@ -472,6 +472,7 @@ func TestALegacyNarrowingKeepsItsUnknownReason(t *testing.T) {
 func setupWithOwnMailbox(t *testing.T) *integration.Env {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	e.WsExec(t, `
 		INSERT INTO capture_connection
 		       (user_id, provider, status, credential_ref, mail_posture, account_label)
@@ -484,6 +485,7 @@ func setupWithOwnMailbox(t *testing.T) *integration.Env {
 func setupWithSecondMailbox(t *testing.T) *integration.Env {
 	t.Helper()
 	e := setupWithOwnMailbox(t)
+	e.GrantRole(t, e.Rep2, "rep")
 	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "shared")
 	return e
 }

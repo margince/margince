@@ -25,7 +25,7 @@ import type { Project } from "../projects/projects.form";
 import { searchProjectReferences } from "../records/recordreferences";
 import type { LeadWriter } from "./leads";
 
-// The lead's Deals tab: the deal it opened once qualified, and the project
+// The lead's Deals tab: the deal chosen during qualification once qualified, and the project
 // its details name.
 
 type Lead = components["schemas"]["Lead"];
@@ -186,7 +186,7 @@ export function LeadProjectAttachButton({
 }
 
 /**
- * LeadDealsTab: the deal this lead opened, or the way to open one, then the
+ * LeadDealsTab: the deal this lead joined or opened, or the way to qualify, then the
  * project it names, with Attach/Change. A lead earns a deal by being
  * qualified, never by a second create here, so the deal panel's verb is
  * Qualify. It is gone once a deal is named or the lead is closed.

@@ -18,6 +18,7 @@ import (
 
 type stubSignature struct {
 	body     string
+	html     string
 	template string
 	title    string
 	phone    string
@@ -28,7 +29,7 @@ type stubSignature struct {
 
 func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (SenderSignature, error) {
 	s.askedID = userID
-	return SenderSignature{Body: s.body, Template: s.template, Title: s.title, Phone: s.phone, LogoKey: s.logoKey}, s.err
+	return SenderSignature{Body: s.body, HTML: s.html, Template: s.template, Title: s.title, Phone: s.phone, LogoKey: s.logoKey}, s.err
 }
 
 func humanCtx(userID ids.UUID) context.Context {
@@ -144,7 +145,7 @@ func TestNoSignatureReaderSendsUnsigned(t *testing.T) {
 // beneath a closing — claims a hand that never touched it, so the agent path
 // asks for no signature and writes no closing.
 func TestAnAgentSendSignsNothing(t *testing.T) {
-	reader := &stubSignature{}
+	reader := &stubSignature{html: "<p>Personal</p>", template: "<p>Company</p>"}
 	store := (&Store{}).WithSignature(reader).WithSenderName(&stubSenderName{name: "Lars Jankowfsky"})
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:assistant", UserID: ids.NewV7(),

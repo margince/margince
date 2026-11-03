@@ -29,6 +29,7 @@ import {
 } from "./analytics.overview.context";
 import { DecisionSummary } from "./analytics.overview.decision";
 import { HeroAside } from "./analytics.overview.hero";
+import { InitiativePanel } from "./analytics.overview.initiative";
 import {
   InterventionPanel,
   useInterventions,
@@ -49,6 +50,7 @@ import type {
   ReportingSelection,
 } from "./reporting.model";
 import {
+  applyDimensions,
   customInterval,
   useOverviewFilters,
   validDateRange,
@@ -112,6 +114,7 @@ function SalesReviewBody({
     interval: customInterval(filters.period, filters.start, filters.end, zone),
     target_basis: filters.targetBasis,
     close_window: filters.closeWindow,
+    ...filters.dimensions,
     metrics,
     blocks: [],
   };
@@ -188,6 +191,12 @@ function SalesReviewBody({
           {(evaluation) => (
             <>
               {emptyNotice(evaluation.context.scope_holds_deals)}
+              {selection.initiative_id && (
+                <InitiativePanel
+                  selection={selection}
+                  onEvidence={openEvidence}
+                />
+              )}
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}
@@ -332,6 +341,7 @@ function changeFilters(
     filters.setPipelineId(next.pipeline_id ?? "");
   if (next.close_window !== filters.closeWindow)
     filters.setCloseWindow(next.close_window);
+  applyDimensions(filters, next);
 }
 
 // The question Sales review answered, defaults spelled out: the default

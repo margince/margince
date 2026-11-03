@@ -3,6 +3,7 @@ export type ChartReading = Readonly<{
   label: string;
   value: number | null;
   amount: string;
+  tone?: "success" | "warning" | "danger" | "neutral";
   comparison?: number | null;
   comparisonAmount?: string;
   target?: number | null;

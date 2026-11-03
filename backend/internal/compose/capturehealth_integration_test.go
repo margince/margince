@@ -106,6 +106,9 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	if health.Classifier.Unsure != 1 {
 		t.Errorf("unsure = %d, want the one waiting on a human", health.Classifier.Unsure)
 	}
+	if health.OwnerReviews == nil || len(*health.OwnerReviews) != 0 {
+		t.Fatalf("decision owners = %+v; unstaged and automatic work must not require human review", health.OwnerReviews)
+	}
 }
 
 // seedCapturedContact writes a contact capture minted into rep's mailbox, still

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -37,8 +37,9 @@ A move to a new start clears **Held** or **No-show**, so the meeting asks how it
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row. A customer meeting that has
-started with no outcome also shows **Update** on the contact's **Meetings** tab and on the timeline.
+A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
+has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+and on the timeline. To say more, or to record a no-show, press **Add notes**:
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
@@ -89,6 +90,12 @@ Margince checks your hours, notice and live calendar again each time a guest boo
 ## What your guest sees
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
+
+Your booking link has the form `https://<your Margince address>/book/<code>`. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+
+When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
+
+A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

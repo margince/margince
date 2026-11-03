@@ -87,11 +87,13 @@ describe("strengthSentence", () => {
     );
   });
 
-  it("says it has been a while once recency has decayed", () => {
+  it("says it has been a while once recency has decayed, dated by their part", () => {
     const old = weak(
-      { all: 1, inbound: 0, outbound: 1 },
+      { all: 2, inbound: 1, outbound: 1 },
       {
-        last_interaction: "2026-05-01T09:00:00Z",
+        // Our later send moves the last contact, not when they took part.
+        last_interaction: "2026-07-01T09:00:00Z",
+        last_engaged: "2026-05-01T09:00:00Z",
         factors: {
           recency: 0.1,
           frequency: 0.05,
@@ -101,7 +103,26 @@ describe("strengthSentence", () => {
       },
     );
     expect(sentence(old)).toBe(
-      "Weak: it has been a while. You last were in touch on 1 May.",
+      "Weak: it has been a while. They last wrote to you or met you on 1 May.",
+    );
+  });
+
+  it("says no reply was counted when they never took part", () => {
+    const sendsOnly = weak(
+      { all: 3, inbound: 0, outbound: 3 },
+      {
+        factors: {
+          recency: 0,
+          frequency: 0.15,
+          reciprocity: 0.25,
+          direction: 0,
+        },
+      },
+    );
+    expect(sentence(sendsOnly)).toBe(
+      translate("en", "contact.strength.sentence.weakNoReply", {
+        last: "11 Aug",
+      }),
     );
   });
 

@@ -78,7 +78,11 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if err != nil {
 		return "", false, err
 	}
-	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope, withheld, nil
+	dimensions, err := leadDimensionSQL(ctx, frame, b, "l")
+	if err != nil {
+		return "", false, err
+	}
+	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope + dimensions + initiativeMemberSQL(ctx, b, "l", string(recordTypeLead)), withheld, nil
 }
 
 func orUnnarrowed(clause string) string {
@@ -171,7 +175,7 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsPromoted, string(recordTypeLead), query, b, withheld)
 }
 
-// leadQualifiedBySQL holds for a lead qualified into a deal before at: the
+// leadQualifiedBySQL holds for a lead joined to an existing or new deal before at: the
 // Leads qualified reading's value, which the team review's members share.
 func leadQualifiedBySQL(at string) string {
 	return "l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<" + at

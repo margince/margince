@@ -33,11 +33,8 @@ var listRecordsCopy = toolCopy{
 }
 
 var readViewCopy = toolCopy{
-	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
-		"company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each " +
-		"view answers what its REST route answers.",
-	Limits: "Name the view, its id and any of its filters. A view refuses an argument it does not " +
-		"take and names the ones it does.",
+	Purpose: "Read derived record views, workspace reference lists and reporting objects through their REST routes.",
+	Limits:  "Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
 }
 
 var changeRecordPartsCopy = toolCopy{
@@ -276,10 +273,10 @@ var qualifyLeadCopy = toolCopy{
 
 var promoteLeadCopy = toolCopy{
 	Purpose: "Turn a lead who has genuinely engaged into a contact record, carrying their history " +
-		"across.",
+		"across. Optionally seat the contact on an open, writable existing deal of its employer, or open a new deal in the same transaction.",
 	Limits: "It requires a trigger naming the engagement that justifies it — a reply, a booked " +
 		"or held meeting, or a human's decision. Cold outreach that nobody answered is not a " +
-		"promotion, and there is no trigger for it.",
+		"promotion, and there is no trigger for it. existing_deal_id and deal are mutually exclusive.",
 	Instead: "Use qualify_lead when the lead is merely incomplete rather than ready, and " +
 		"disqualify_lead when the engagement says the opposite.",
 	Retain: "By default the lead is promoted when this call answers and the promoted contact's " +
