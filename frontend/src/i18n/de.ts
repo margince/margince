@@ -5687,7 +5687,64 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
-  "legalEntities.countryHint": "Zwei Buchstaben, zum Beispiel AT.",
+  "legalEntities.edit": "Bearbeiten",
+  "legalEntities.archive": "Archivieren",
+  "legalEntities.editTitle": "{name} bearbeiten",
+  "legalEntities.save": "Speichern",
+  "legalEntities.defaultFromCompany":
+    "Der Standard übernimmt Name, Firmierung, Adresse, USt-IdNr., Registereintrag, Angebot und Logo aus dem Unternehmensprofil. Ändere sie dort.",
+  "legalEntities.sectionAddress": "Adresse",
+  "legalEntities.line1": "Straße und Hausnummer",
+  "legalEntities.line2": "Adresszusatz",
+  "legalEntities.postalCode": "Postleitzahl",
+  "legalEntities.city": "Ort",
+  "legalEntities.region": "Region oder Bundesland",
+  "legalEntities.sectionRegister": "Steuer und Register",
+  "legalEntities.vatId": "USt-IdNr.",
+  "legalEntities.registerCourt": "Registergericht",
+  "legalEntities.registerNumber": "Registernummer",
+  "legalEntities.sectionBank": "Bankverbindung",
+  "legalEntities.bankHolder": "Kontoinhaber",
+  "legalEntities.iban": "IBAN",
+  "legalEntities.bic": "BIC",
+  "legalEntities.sectionDocuments": "Dokumente",
+  "legalEntities.defaultLanguage": "Dokumentsprache",
+  "legalEntities.defaultLanguageHint":
+    "Zwei Buchstaben, zum Beispiel de. Leer lassen, um die Sprache der Vorlage zu nutzen.",
+  "legalEntities.imprint": "Impressum",
+  "legalEntities.imprintHint":
+    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+  "legalEntities.sectionOffering": "Was er verkauft",
+  "legalEntities.offerSummary": "Angebot",
+  "legalEntities.icp": "Idealer Kunde",
+  "legalEntities.valueProposition": "Nutzenversprechen",
+  "legalEntities.usp": "Was ihn abhebt",
+  "legalEntities.sectionLogo": "Logo",
+  "legalEntities.logoAdd": "Logo hinzufügen",
+  "legalEntities.logoReplace": "Logo ersetzen",
+  "legalEntities.logoHint":
+    "PNG, JPEG, GIF, WebP, ICO oder SVG. Es wird gespeichert, sobald du es auswählst.",
+  "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
+  "legalEntities.logoRemove": "Logo entfernen",
+  "legalEntities.countryPlaceholder": "Land auswählen",
+  "legalEntities.countryInstallation": "Land der Installation",
+  "legalEntities.countryInstallationHint":
+    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
+  "legalEntities.archiveTitle": "{name} archivieren?",
+  "legalEntities.archiveBody":
+    "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",
+  "legalEntities.hasMembers":
+    "Für diesen Rechtsträger arbeiten noch Mitglieder. Ordne sie zuerst auf der Seite Mitglieder einem anderen zu.",
+  "legalEntities.assessedAgainst":
+    "Unternehmen werden noch an dem gemessen, was dieser Rechtsträger verkauft. Wähle für sie zuerst einen anderen.",
+  "legalEntities.nameTaken": "Ein anderer Rechtsträger hat diesen Namen schon.",
+  "legalEntities.invalidIban":
+    "Diese IBAN ist nicht gültig. Prüfe die Ziffern.",
+  "legalEntities.invalidBic":
+    "Diese BIC ist nicht gültig. Eine BIC hat 8 oder 11 Buchstaben und Ziffern.",
+  "legalEntities.invalidCountry": "Wähle ein Land aus der Liste.",
+  "legalEntities.invalidLanguage":
+    "Gib einen Sprachcode aus zwei Buchstaben ein, zum Beispiel de.",
   "lossReasons.title": "Verlustgründe",
   "lossReasons.sub":
     "Die Gründe, aus denen du wählst, wenn ein Deal verloren geht. Berichte zählen verlorene Deals danach.",
@@ -13652,6 +13709,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
   "users.roleOf": "Rolle von {name}",
+  "users.entityLabel": "Rechtsträger",
+  "users.entityOf": "Rechtsträger von {name}",
+  "users.entitySaved": "{name} arbeitet jetzt für {entity}",
   "users.rolesReplace":
     "Eine Rolle, die du auswählst, ersetzt alle bisherigen.",
   "users.deactivate": "Deaktivieren",

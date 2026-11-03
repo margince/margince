@@ -218,6 +218,21 @@ const ADMIN_USER_ADMIN: Record<string, string[]> = {
 };
 type BackendPrincipal = { roles: string[]; allow?: Record<string, string[]> };
 
+// The legal entities the roster's entity column reads: the default alone
+// unless a case names more, and who each further entity lists as its members.
+export type BackendEntities = Readonly<{
+  entities: readonly {
+    id: string;
+    is_default: boolean;
+    display_name: string;
+  }[];
+  members: Readonly<Record<string, readonly string[]>>;
+}>;
+const DEFAULT_ENTITY_ONLY: BackendEntities = {
+  entities: [{ id: "le-default", is_default: true, display_name: "Acme" }],
+  members: {},
+};
+
 /** The signed-in admin a caller gets when it names no principal. */
 const ADMIN_PRINCIPAL: BackendPrincipal = {
   roles: ["admin"],
@@ -227,6 +242,7 @@ const ADMIN_PRINCIPAL: BackendPrincipal = {
 export function backend(
   calls: { method: string; url: string; body?: unknown }[],
   me: BackendPrincipal = ADMIN_PRINCIPAL,
+  legal: BackendEntities = DEFAULT_ENTITY_ONLY,
 ) {
   const allow = me.allow ?? {};
   const objects: Record<string, Record<string, boolean>> = {};
@@ -261,7 +277,7 @@ export function backend(
         admin_password_link: true,
       });
     }
-    const read = readRoute(req, allow);
+    const read = readRoute(req, allow) ?? entityRoute(req, legal);
     if (read !== undefined) {
       return read;
     }
@@ -357,6 +373,39 @@ function readRoute(
             ...rest
           }) => rest,
         ),
+    });
+  }
+  return undefined;
+}
+
+function entityRoute(
+  req: Request,
+  legal: BackendEntities,
+): Response | undefined {
+  if (req.method !== "GET") return undefined;
+  const members = /\/legal-entities\/([^/]+)\/members$/.exec(
+    new URL(req.url).pathname,
+  );
+  if (members) {
+    const entityId = members[1] ?? "";
+    return jsonResponse({
+      data: (legal.members[entityId] ?? []).map((userId) => ({
+        user_id: userId,
+        legal_entity_id: entityId,
+        assigned_at: "2026-10-01T08:00:00Z",
+      })),
+    });
+  }
+  if (new URL(req.url).pathname.endsWith("/legal-entities")) {
+    return jsonResponse({
+      data: legal.entities.map((entity) => ({
+        address: {},
+        member_count: 0,
+        version: 1,
+        created_at: "2026-10-01T08:00:00Z",
+        updated_at: "2026-10-01T08:00:00Z",
+        ...entity,
+      })),
     });
   }
   return undefined;
