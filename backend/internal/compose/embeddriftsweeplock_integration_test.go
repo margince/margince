@@ -104,7 +104,7 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 
 // River records a finished sweep only after Work returns and the lock is gone.
 // A second sweep in that window must not take the first's row for a dead
-// worker's: the first records its own completion while it still holds the lock.
+// worker's. The first records its own completion while it still holds the lock.
 func TestASweepStartingBeforeRiverRecordsTheLastLeavesItCompleted(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
