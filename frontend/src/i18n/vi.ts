@@ -12878,6 +12878,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.report_schedule": "Lịch chạy báo cáo",
   "roles.object.report_edition": "Ảnh chụp báo cáo",
   "roles.object.sales_target": "Mục tiêu doanh số",
+  "roles.object.sales_initiative": "Sáng kiến bán hàng",
   "roles.object.reporting_framework": "Thiết lập báo cáo",
   "roles.object.reporting_credit": "Kết quả SDR",
   "roles.object.capture_settings": "Quy tắc thu thập",

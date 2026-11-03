@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -51,6 +52,8 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingStageConversion, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingStageConversion].En}, string(recordTypeDeal), readReportingStageConversion},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadCohortOutcomes, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingLeadCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadCohortOutcomes].En}, string(recordTypeLead), readReportingLeadCohort},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingBookingsMix, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingBookingsMix].En}, string(recordTypeDeal), readReportingBookingsMix},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingQualifiedOpportunitiesCreated, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingQualifiedOpportunitiesCreated].En}, string(recordTypeDeal), readReportingQualifiedCount},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingInitiativePipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingInitiativePipeline].En}, string(recordTypeDeal), readReportingInitiativePipeline},
 }
 
 // reportingPresets are the selections the Analytics screen opens on. A preset
@@ -107,6 +110,9 @@ func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcont
 
 type metricEvaluator struct {
 	forecast *forecasting.Store
+	// initiatives answers the membership of a selected initiative; nil where
+	// no initiative can be selected, as in the weekly figures.
+	initiatives *initiatives.Store
 	// compared receives what the forecast reader measured for a target
 	// comparison. Evaluate gives each evaluation its own.
 	compared *forecastCapture
@@ -158,6 +164,16 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	thinTeam, err := teamBelowFloor(ctx, tx, frame.Scope, owners)
 	if err != nil {
 		return reporting.Evaluation{}, err
+	}
+	if err := requireInitiativeRead(ctx, frame); err != nil {
+		return reporting.Evaluation{}, err
+	}
+	members, err := loadInitiativeMembership(ctx, tx, e.initiatives, frame)
+	if err != nil {
+		return reporting.Evaluation{}, err
+	}
+	if members != nil {
+		ctx = withInitiativeMembership(ctx, members)
 	}
 	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}

@@ -13240,6 +13240,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.report_schedule": "Berichtszeitpläne",
   "roles.object.report_edition": "Berichts-Snapshots",
   "roles.object.sales_target": "Vertriebsziele",
+  "roles.object.sales_initiative": "Vertriebsinitiativen",
   "roles.object.reporting_framework": "Berichtseinstellungen",
   "roles.object.reporting_credit": "SDR-Ergebnisse",
   "roles.object.capture_settings": "Capture-Regeln",

@@ -13209,6 +13209,7 @@ export const en = {
   "roles.object.report_schedule": "Report schedules",
   "roles.object.report_edition": "Report snapshots",
   "roles.object.sales_target": "Sales targets",
+  "roles.object.sales_initiative": "Sales initiatives",
   "roles.object.reporting_framework": "Reporting setup",
   "roles.object.reporting_credit": "SDR outcomes",
   "roles.object.capture_settings": "Capture rules",

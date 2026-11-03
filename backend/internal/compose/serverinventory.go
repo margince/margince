@@ -210,6 +210,9 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
+	// The sales initiative transport: an effort's objective, its members and
+	// its launch. Its membership is read by the reporting engine too.
+	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each

@@ -1,0 +1,338 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package initiatives
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"slices"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// Membership is who belongs to an initiative, as the reader may see it: the
+// rule matches, the picked records and the deals promoted from member leads,
+// less the exclusions. Launch is when the baseline was frozen; zero for a draft.
+type Membership struct {
+	Leads, Deals []ids.UUID
+	// Reasons names why each included record belongs: rule, picked or carried.
+	Reasons map[ids.UUID]string
+	// Excluded are the records a hand took out, over a rule match or a pick.
+	Excluded  map[ids.UUID]bool
+	Truncated bool
+	Launch    time.Time
+}
+
+// MembershipOf answers the membership for a reporting read under the caller's
+// row scope. It is the one evaluation the report engine and the members list
+// share, so the two never disagree about who belongs.
+func (s *Store) MembershipOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (Membership, error) {
+	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+		return Membership{}, err
+	}
+	initiative, err := readInitiative(ctx, tx, id)
+	if err != nil {
+		return Membership{}, err
+	}
+	return s.membersTx(ctx, tx, initiative)
+}
+
+func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontracts.SalesInitiative) (Membership, error) {
+	out := Membership{Reasons: map[ids.UUID]string{}, Excluded: map[ids.UUID]bool{}}
+	if initiative.LaunchAt != nil {
+		out.Launch = *initiative.LaunchAt
+	}
+	id := ids.UUID(initiative.Id)
+	rows, err := tx.Query(ctx, `SELECT record_type, record_id, reason FROM sales_initiative_member WHERE initiative_id = $1`, id)
+	if err != nil {
+		return out, fmt.Errorf("read initiative members: %w", err)
+	}
+	picked := map[string][]ids.UUID{}
+	for rows.Next() {
+		var recordType, reason string
+		var recordID ids.UUID
+		if err := rows.Scan(&recordType, &recordID, &reason); err != nil {
+			rows.Close()
+			return out, err
+		}
+		if reason == "excluded" {
+			out.Excluded[recordID] = true
+		} else {
+			picked[recordType] = append(picked[recordType], recordID)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return out, err
+	}
+	leads, err := s.ruleMatches(ctx, tx, recordLead, initiative.LeadRule, &out)
+	if err != nil {
+		return out, err
+	}
+	deals, err := s.ruleMatches(ctx, tx, recordDeal, initiative.DealRule, &out)
+	if err != nil {
+		return out, err
+	}
+	out.Leads = s.include(ctx, tx, &out, leads, picked[recordLead], recordLead)
+	// A deal promoted from a member lead carries the lead's membership, the
+	// one downstream link a promotion records (lead.qualified_deal_id).
+	carried, err := carriedDeals(ctx, tx, out.Leads)
+	if err != nil {
+		return out, err
+	}
+	out.Deals = s.include(ctx, tx, &out, deals, picked[recordDeal], recordDeal)
+	for _, deal := range carried {
+		if out.Excluded[deal] || slices.Contains(out.Deals, deal) {
+			continue
+		}
+		out.Deals = append(out.Deals, deal)
+		out.Reasons[deal] = "carried"
+	}
+	return out, nil
+}
+
+// ruleMatches evaluates one rule, or answers nothing for an initiative with
+// none: no condition means no automatic matches.
+func (s *Store) ruleMatches(ctx context.Context, tx pgx.Tx, recordType string, rule *crmcontracts.SalesInitiativeRule, out *Membership) ([]ids.UUID, error) {
+	if rule == nil || len(*rule) == 0 {
+		return nil, nil
+	}
+	raw, err := json.Marshal(rule)
+	if err != nil {
+		return nil, err
+	}
+	var predicate storekit.Predicate
+	if err := json.Unmarshal(raw, &predicate); err != nil {
+		return nil, httperr.Validation(recordType+"_rule", "invalid", "the rule is not a filter tree")
+	}
+	matched, count, err := s.rules.Match(ctx, tx, recordType, predicate, ruleReadLimit)
+	if err != nil {
+		return nil, err
+	}
+	if count > len(matched) {
+		out.Truncated = true
+	}
+	return matched, nil
+}
+
+// include folds the rule matches and the picks of one record type into the
+// membership, each with its reason, with the exclusions taken out. A picked
+// record the reader may not see stays out of their reading.
+func (s *Store) include(ctx context.Context, tx pgx.Tx, out *Membership, matched, picked []ids.UUID, recordType string) []ids.UUID {
+	included := make([]ids.UUID, 0, len(matched)+len(picked))
+	for _, id := range matched {
+		if out.Excluded[id] {
+			continue
+		}
+		included = append(included, id)
+		out.Reasons[id] = "rule"
+	}
+	visible, err := visibleRecords(ctx, tx, recordType, picked)
+	if err != nil {
+		return included
+	}
+	for _, id := range visible {
+		if out.Excluded[id] || slices.Contains(included, id) {
+			continue
+		}
+		included = append(included, id)
+		out.Reasons[id] = "picked"
+	}
+	return included
+}
+
+// visibleRecords narrows picked ids to the rows the reader's row scope reaches.
+func visibleRecords(ctx context.Context, tx pgx.Tx, recordType string, picked []ids.UUID) ([]ids.UUID, error) {
+	if len(picked) == 0 {
+		return nil, nil
+	}
+	args := []any{picked}
+	scope, err := auth.ScopeClauseFor(ctx, recordType, "t", func(value any) int {
+		args = append(args, value)
+		return len(args)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	rows, err := tx.Query(ctx, `SELECT t.id FROM `+recordType+` t WHERE t.id = ANY($1) AND t.archived_at IS NULL AND `+scope, args...)
+	if err != nil {
+		return nil, fmt.Errorf("read picked %ss: %w", recordType, err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+func carriedDeals(ctx context.Context, tx pgx.Tx, leads []ids.UUID) ([]ids.UUID, error) {
+	if len(leads) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT DISTINCT l.qualified_deal_id FROM lead l JOIN deal d ON d.id = l.qualified_deal_id WHERE l.id = ANY($1) AND l.qualified_deal_id IS NOT NULL AND d.archived_at IS NULL`, leads)
+	if err != nil {
+		return nil, fmt.Errorf("read carried deals: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// Members lists the membership with labels, for the editor and the review.
+func (s *Store) Members(ctx context.Context, id ids.UUID, recordType *string) (crmcontracts.SalesInitiativeMembers, error) {
+	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+		return crmcontracts.SalesInitiativeMembers{}, err
+	}
+	out := crmcontracts.SalesInitiativeMembers{Data: []crmcontracts.SalesInitiativeMember{}}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		membership, err := s.MembershipOf(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		out.Leads, out.Deals, out.Truncated = len(membership.Leads), len(membership.Deals), membership.Truncated
+		companies := map[ids.UUID]bool{}
+		if recordType == nil || *recordType == recordLead {
+			rows, err := leadRows(ctx, tx, membership, companies)
+			if err != nil {
+				return err
+			}
+			out.Data = append(out.Data, rows...)
+		}
+		if recordType == nil || *recordType == recordDeal {
+			rows, err := dealRows(ctx, tx, membership, companies)
+			if err != nil {
+				return err
+			}
+			out.Data = append(out.Data, rows...)
+		}
+		out.Companies = len(companies)
+		return nil
+	})
+	return out, err
+}
+
+func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
+	wanted := append(slices.Clone(membership.Leads), excludedOf(membership)...)
+	if len(wanted) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT l.id, COALESCE(NULLIF(l.full_name,''), NULLIF(l.company_name,''), ''), l.company_id, c.display_name, l.status, l.created_at
+		FROM lead l LEFT JOIN company c ON c.id = l.company_id WHERE l.id = ANY($1) ORDER BY l.created_at DESC`, wanted)
+	if err != nil {
+		return nil, fmt.Errorf("read member leads: %w", err)
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.SalesInitiativeMember, error) {
+		var id ids.UUID
+		var company *ids.UUID
+		var member crmcontracts.SalesInitiativeMember
+		var status string
+		if err := row.Scan(&id, &member.Label, &company, &member.CompanyLabel, &status, &member.CreatedAt); err != nil {
+			return member, err
+		}
+		member.RecordType, member.RecordId, member.Status = recordLead, openapi_types.UUID(id), &status
+		memberReason(&member, id, membership)
+		if member.Included && company != nil {
+			companies[*company] = true
+		}
+		return member, nil
+	})
+}
+
+func dealRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
+	wanted := append(slices.Clone(membership.Deals), excludedOf(membership)...)
+	if len(wanted) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT d.id, d.name, d.company_id, c.display_name, d.status, d.amount_minor_base, d.created_at
+		FROM deal d LEFT JOIN company c ON c.id = d.company_id WHERE d.id = ANY($1) ORDER BY d.created_at DESC`, wanted)
+	if err != nil {
+		return nil, fmt.Errorf("read member deals: %w", err)
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.SalesInitiativeMember, error) {
+		var id ids.UUID
+		var company *ids.UUID
+		var member crmcontracts.SalesInitiativeMember
+		var status string
+		if err := row.Scan(&id, &member.Label, &company, &member.CompanyLabel, &status, &member.AmountMinorBase, &member.CreatedAt); err != nil {
+			return member, err
+		}
+		member.RecordType, member.RecordId, member.Status = recordDeal, openapi_types.UUID(id), &status
+		memberReason(&member, id, membership)
+		if member.Included && company != nil {
+			companies[*company] = true
+		}
+		return member, nil
+	})
+}
+
+func memberReason(member *crmcontracts.SalesInitiativeMember, id ids.UUID, membership Membership) {
+	if membership.Excluded[id] {
+		member.Reason, member.Included = crmcontracts.SalesInitiativeMemberReasonExcluded, false
+		return
+	}
+	member.Reason, member.Included = crmcontracts.SalesInitiativeMemberReason(membership.Reasons[id]), true
+}
+
+func excludedOf(membership Membership) []ids.UUID {
+	out := make([]ids.UUID, 0, len(membership.Excluded))
+	for id := range membership.Excluded {
+		out = append(out, id)
+	}
+	return out
+}
+
+// ReplaceMembers sets the picked and the excluded records. The rule rows are
+// never written: a match is evaluated live, and an exclusion stands over it.
+func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, excluded []crmcontracts.SalesInitiativeMemberRef) (crmcontracts.SalesInitiativeMembers, error) {
+	if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
+		return crmcontracts.SalesInitiativeMembers{}, err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.SalesInitiativeMembers{}, err
+	}
+	for _, ref := range picked {
+		for _, other := range excluded {
+			if ref.RecordType == other.RecordType && ref.RecordId == other.RecordId {
+				return crmcontracts.SalesInitiativeMembers{}, httperr.Validation("excluded", "conflict", "a record is picked and excluded at once")
+			}
+		}
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		before, err := lockInitiative(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM sales_initiative_member WHERE initiative_id = $1`, id); err != nil {
+			return fmt.Errorf("clear initiative members: %w", err)
+		}
+		for reason, refs := range map[string][]crmcontracts.SalesInitiativeMemberRef{"picked": picked, "excluded": excluded} {
+			for _, ref := range refs {
+				if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_member (initiative_id, record_type, record_id, reason, captured_by) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+					id, string(ref.RecordType), ids.UUID(ref.RecordId), reason, by); err != nil {
+					return fmt.Errorf("write initiative member: %w", err)
+				}
+			}
+		}
+		if _, err := tx.Exec(ctx, `UPDATE sales_initiative SET version = version + 1, updated_at = now() WHERE id = $1`, id); err != nil {
+			return fmt.Errorf("bump initiative: %w", err)
+		}
+		after, err := readInitiative(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		return recordChange(ctx, tx, "update", after, &before, []string{"members"})
+	})
+	if err != nil {
+		return crmcontracts.SalesInitiativeMembers{}, err
+	}
+	return s.Members(ctx, id, nil)
+}
