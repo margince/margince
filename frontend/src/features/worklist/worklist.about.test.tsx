@@ -115,7 +115,9 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this contact");
   expect(touch?.textContent).toContain("03/09/2026");
-  expect(touch?.textContent).toContain("Last to this contact Never");
+  expect(touch?.textContent).toContain(
+    "Last to this contact None you can open",
+  );
 });
 
 // A message logged with only its date was not sent at any hour, so its last
@@ -256,7 +258,7 @@ it("prefers the contact's moments to the account's on a row naming both", async 
   await screen.findByText(/Send the renewal terms/);
   const touch = document.querySelector(".worklist-row-touch")?.textContent;
   expect(touch).toContain("03/09/2026");
-  expect(touch).toContain("Last to this contact Never");
+  expect(touch).toContain("Last to this contact None you can open");
   expect(touch).not.toContain("this company");
   expect(touch).not.toContain("14/07/2026");
   expect(touch).not.toContain("28/08/2026");

@@ -229,3 +229,23 @@ func TestADayMessageCountsFromItsOwnDate(t *testing.T) {
 		t.Fatalf("a reply 39 days after a day message reads %q, want 39 days", back.Headline)
 	}
 }
+
+// The headline and the explanation count from one anchor, the last outbound.
+// An older reply from them must not give the headline a second, larger age.
+func TestTheGoneQuietHeadlineAndExplanationCountFromOneDate(t *testing.T) {
+	outbound := now.AddDate(0, 0, -10)
+	olderReply := now.AddDate(0, 0, -60)
+	quiet, ok := momentCopyFor("en").goneQuietMoment(readerCtx(), now,
+		&contracts.Contact360{LastOutboundAt: &outbound, LastInboundAt: &olderReply})
+	if !ok {
+		t.Fatal("no gone-quiet moment for a 10-day-old unanswered message")
+	}
+	for _, said := range []string{quiet.Headline, quiet.WhyNow} {
+		if !strings.Contains(said, "10 days") || strings.Contains(said, "60 days") {
+			t.Errorf("%q does not count from the last outbound (10 days)", said)
+		}
+	}
+	if !strings.Contains(quiet.WhyNow, "messages you can access") {
+		t.Errorf("%q does not qualify the absence by what the reader can access", quiet.WhyNow)
+	}
+}

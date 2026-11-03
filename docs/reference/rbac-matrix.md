@@ -116,6 +116,7 @@ changes none.
 | `reporting_framework` | -RU- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `role_admin` | CRUD | ---- | ---- | ---- | ---- | -R-- |
+| `sales_initiative` | CRUD | CRUD | CRUD | -R-- | -R-- | -R-- |
 | `sales_target` | CRU- | CRU- | CRU- | -R-- | -R-- | -R-- |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
 | `seat_usage` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
