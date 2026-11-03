@@ -45,7 +45,7 @@ async function lifecycleControls(): Promise<HTMLElement[]> {
     await userEvent.click(unfold);
   }
   const grid = await screen.findAllByRole("button", {
-    name: "Change Lifecycle",
+    name: /^Change Lifecycle/,
   });
   expect(header).toHaveLength(1);
   expect(grid).toHaveLength(1);
@@ -75,7 +75,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // control; the types stay read-only badges. findAllBy, not getBy: the
     // controls appear only once /me answers with the viewer's grants, which
     // resolves apart from the 360 awaited above. Two controls, the header's
-    // button and the Details grid's inline field. Both show the same value,
+    // button and the Details grid's field. Both show the same value,
     // because both read the one row and write through the same patch.
     for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Former customer");

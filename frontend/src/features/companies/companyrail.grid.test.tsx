@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { changeChoice } from "./companies.testkit";
 import {
   company,
   emptyPage,
@@ -89,10 +90,7 @@ describe("CompanyRail", () => {
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
-    // The click that starts editing already opens the picker, with no second
-    // click on the combobox first.
-    await userEvent.click(screen.getByRole("button", { name: "Change Owner" }));
-    await userEvent.click(screen.getByRole("option", { name: "Ravi Shah" }));
+    await changeChoice(userEvent.setup(), "Owner", "Ravi Shah");
     await waitFor(() => expect(patchBody).toMatchObject({ owner_id: "u-2" }));
   });
 
@@ -140,16 +138,17 @@ describe("CompanyRail", () => {
     await waitFor(() =>
       expect(screen.getByText("Mira Voss")).toBeInTheDocument(),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Change Owner" }));
-    await userEvent.click(screen.getByRole("option", { name: "Ravi Shah" }));
+    await changeChoice(userEvent.setup(), "Owner", "Ravi Shah");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain(
         "The referenced record was not found.",
       ),
     );
-    // The picker stays open on the reader's choice rather than snapping back
+    // The dialog stays open on the reader's choice rather than snapping back
     // to the old owner, the same rule InlineChoice keeps for every field.
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Owner" })).toHaveTextContent(
+      "Ravi Shah",
+    );
   });
 
   it("edits lifecycle in the grid through the header's own control", async () => {
@@ -177,12 +176,9 @@ describe("CompanyRail", () => {
       },
     });
     renderRail();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Lifecycle" }),
-    );
     // The fixture is already "customer", so pick a different value, or the
     // no-op guard skips the write.
-    await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
+    await changeChoice(userEvent.setup(), "Lifecycle", "Prospect");
     await waitFor(() =>
       expect(patchBody).toMatchObject({ lifecycle: "prospect" }),
     );
@@ -223,7 +219,7 @@ describe("CompanyRail", () => {
     });
     renderRail({ view: view({ company: threeDomains }) });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: /^Change Domain/ }),
     );
     const input = screen.getByDisplayValue("brandt.example");
     await userEvent.clear(input);
@@ -270,7 +266,7 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: /^Change Domain/ }),
     );
     await userEvent.click(screen.getByRole("button", { name: /^Remove row/ }));
     expect(onSave).not.toHaveBeenCalled();
@@ -301,7 +297,7 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Address" }),
+      await screen.findByRole("button", { name: /^Change Address/ }),
     );
     const input = screen.getByLabelText("City");
     await userEvent.clear(input);

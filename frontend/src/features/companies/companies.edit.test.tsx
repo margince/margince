@@ -10,7 +10,12 @@ import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
-import { openProfile, openRecordMenu, render } from "./companies.testkit";
+import {
+  changeChoice,
+  openProfile,
+  openRecordMenu,
+  render,
+} from "./companies.testkit";
 
 afterEach(() => {
   cleanup();
@@ -39,12 +44,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Manufacturing" }),
-    );
+    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -80,12 +80,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Manufacturing" }),
-    );
+    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({
@@ -118,7 +113,7 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
       await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: /^Change Domain/ }),
     );
     // The modal's own row-adder. The rail's details grid also offers an inline
     // "Add domain" to a seat with the grant, and this test is about the form.
@@ -223,13 +218,11 @@ describe("CompanyScreen — profile fields card (B5)", () => {
     );
     expect(screen.getByText("Fleet retrofits without downtime")).toBeTruthy();
     // The row has two controls for two acts. The value is the button that
-    // starts an edit; its accessible name invites a change, not the value.
-    // The receipt beside it opens the provenance panel. One element cannot be both.
-    const buttons = screen.getAllByRole("button");
-    const valueControl = buttons.find(
-      (el) => el.textContent?.trim() === "Fleet retrofits without downtime",
-    );
-    expect(valueControl).toBeTruthy();
+    // opens its edit, named by the verb and the value; the receipt beside it
+    // opens the provenance panel. One element cannot be both.
+    const valueControl = screen.getByRole("button", {
+      name: "Change Value proposition Fleet retrofits without downtime",
+    });
     // Scoped to the field's own row: the page's overflow menu is also an
     // aria-expanded button. A page-wide search would pass even when the value
     // lost its evidence mark.

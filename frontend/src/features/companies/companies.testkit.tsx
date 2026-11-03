@@ -4,10 +4,12 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { expect } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
@@ -53,4 +55,23 @@ export async function openRecordMenu(
 // None of it renders under any other tab.
 export async function openProfile() {
   await userEvent.click(await screen.findByRole("button", { name: "Profile" }));
+}
+
+// Changes one choice the way a reader does: the value opens its dialog, the
+// pick is only the draft, and Save stores it.
+export async function changeChoice(
+  user: UserEvent,
+  field: string,
+  option: string | RegExp,
+): Promise<void> {
+  await user.click(
+    await screen.findByRole("button", { name: new RegExp(`^Change ${field}`) }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: field });
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: field }),
+    option,
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
 }

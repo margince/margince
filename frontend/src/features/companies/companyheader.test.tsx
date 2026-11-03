@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -9,6 +15,7 @@ import { useActivityGate } from "../../components/activitygate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { changeChoice } from "./companies.testkit";
 import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyLifecycleControl } from "./companylifecycle";
@@ -141,6 +148,15 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
+// The owner's choices as its dialog offers them.
+async function openOwnerChoices(user: UserEvent) {
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Owner/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Owner" });
+  await user.click(within(dialog).getByRole("combobox", { name: "Owner" }));
+}
+
 // The owner control, as the details' Ownership row mounts it.
 function renderFacts() {
   renderInApp(<CompanyOwnerControl company={COMPANY} />);
@@ -167,7 +183,8 @@ describe("who owns this record", () => {
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
     expect(
-      (await screen.findByRole("button", { name: "Change Owner" })).textContent,
+      (await screen.findByRole("button", { name: /^Change Owner/ }))
+        .textContent,
     ).toContain("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
@@ -270,10 +287,7 @@ describe("claiming an unowned account", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
-    await user.click(await screen.findByRole("option", { name: "The Reader" }));
+    await changeChoice(user, "Owner", "The Reader");
 
     await waitFor(() =>
       expect(calls.find((call) => call.path.endsWith("/claim"))).toMatchObject({
@@ -296,9 +310,7 @@ describe("claiming an unowned account", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
+    await openOwnerChoices(user);
     await screen.findByRole("option", { name: "The Reader" });
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
@@ -312,9 +324,7 @@ describe("claiming an unowned account", () => {
       <CompanyOwnerControl company={{ ...UNOWNED, writable: true }} />,
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
+    await openOwnerChoices(user);
     expect(
       await screen.findByRole("option", { name: "A Colleague" }),
     ).toBeTruthy();
@@ -327,7 +337,7 @@ describe("claiming an unowned account", () => {
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
     expect(await screen.findByText(en["field.unset"])).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
   });
 });
 
@@ -546,7 +556,7 @@ it("names an owner for readers who cannot edit the company", async () => {
     <CompanyOwnerControl company={{ ...COMPANY, writable: false }} />,
   );
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
 });
 // The stage beside the account's name. A real control, not the inline value
 // the Details grid carries: the header's is the design system's dropdown worn
