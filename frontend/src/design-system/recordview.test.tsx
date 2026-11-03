@@ -107,7 +107,7 @@ describe("renaming the record", () => {
     onSave,
   });
 
-  it("opens the name from the heading and saves it on Enter", async () => {
+  it("opens the name from the heading in a dialog and saves it on Save", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async (_next: string) => {});
     render(<RecordView {...record} rename={rename(onSave)} />);
@@ -116,23 +116,26 @@ describe("renaming the record", () => {
       name: "Brandt Automotive GmbH",
     });
     await user.click(
-      within(heading).getByRole("button", { name: "Change Full name" }),
+      within(heading).getByRole("button", { name: /^Change Full name/ }),
     );
-    const field = screen.getByRole("textbox", { name: "Full name" });
+    const dialog = await screen.findByRole("dialog", { name: "Full name" });
+    const field = within(dialog).getByRole("textbox", { name: "Full name" });
     await user.clear(field);
-    await user.type(field, "Brandt Mobility GmbH{Enter}");
+    await user.type(field, "Brandt Mobility GmbH");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
     expect(onSave).toHaveBeenCalledWith("Brandt Mobility GmbH");
   });
 
-  it("refuses a blank name and keeps the field open", async () => {
+  it("refuses a blank name and keeps the dialog open", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async (_next: string) => {});
     render(<RecordView {...record} rename={rename(onSave)} />);
-    await user.click(screen.getByRole("button", { name: "Change Full name" }));
+    await user.click(screen.getByRole("button", { name: /^Change Full name/ }));
     const field = screen.getByRole("textbox", { name: "Full name" });
     await user.clear(field);
     await user.type(field, "   {Enter}");
     expect(await screen.findByText("This field is required.")).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Full name" })).toBeVisible();
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -141,8 +144,6 @@ describe("renaming the record", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Brandt Automotive GmbH",
     );
-    expect(
-      screen.queryByRole("button", { name: "Change Full name" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

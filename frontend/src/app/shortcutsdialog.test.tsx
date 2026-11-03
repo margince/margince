@@ -20,7 +20,7 @@ import {
 import {
   INLINE_COMMIT_KEY,
   isParagraphCommit,
-} from "../design-system/inlinetext";
+} from "../design-system/fieldeditdialog";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { PRINTABLE_KEYS } from "../testing/keys";

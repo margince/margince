@@ -5,10 +5,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "../design-system/atoms";
+import { EditableValue } from "../design-system/editablevalue";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
-import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
+import { InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
@@ -48,15 +48,15 @@ type Props = {
   canEdit: boolean;
   notice?: string;
   maskedFields?: readonly string[];
-  // On a scalar row the rendered value is a destination drawn beside the edit
-  // verb, so it is never nested in the inline-edit button.
+  // A value drawn as a destination: it keeps its own action inside the edit
+  // pill, whose padding and bubble open the editor.
   renderValues?: Readonly<Record<string, ReactNode>>;
   // A value's resting reading where it differs from the raw value its editor
   // holds; a group row reads it only when the group is that one field.
   displayValues?: Readonly<Record<string, string>>;
   links?: Readonly<Record<string, { href: string; label: string }>>;
-  // A provenance mark per field, drawn BESIDE a resting scalar value: the value
-  // is the inline-edit button, and a mark nested in it would be a second one.
+  // A provenance mark per field, drawn beside a scalar value's edit pill: a
+  // mark inside it would be a second control in one.
   marks?: Readonly<Record<string, ReactNode>>;
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
@@ -143,7 +143,7 @@ function RecordField({
   const reason = props.fields
     .map((entry) => props.readOnlyFields?.[entry.key])
     .find(Boolean);
-  // A save elsewhere on the record pauses editing without unmounting the verb.
+  // A save elsewhere on the record pauses this field, never its own open editor.
   const editable = props.canEdit && !reason;
   const canEdit = editable && (!pending || editing);
   const grouped =
@@ -166,47 +166,48 @@ function RecordField({
   const renderedValue = props.renderValues?.[field.key];
   if (grouped)
     return (
-      <FieldRow valueRef={target} label={label} align="top" stacked={editing}>
-        {!editing && renderedValue}
-        {editing ? (
-          <RecordFieldForm
-            {...props}
-            opened={opened.current}
-            pending={mutation.isPending}
-            error={mutation.error}
-            onResend={(extra) => {
-              const last = mutation.variables;
-              if (last)
-                mutation.mutate(
-                  { ...last, extra },
-                  { onSuccess: () => onEditingChange(false) },
-                );
-            }}
-            onDirtyChange={setDirty}
-            onClose={() => onEditingChange(false)}
-            onSubmit={(submitted, rows) =>
+      <FieldRow valueRef={target} label={label} align="top">
+        <GroupReading
+          props={props}
+          field={field}
+          editable={editable}
+          canEdit={canEdit}
+          reason={reason}
+          label={label}
+          onEdit={() => {
+            mutation.reset();
+            onEditingChange(true);
+          }}
+        />
+        <RecordFieldForm
+          {...props}
+          open={editing}
+          label={label}
+          opened={opened.current}
+          pending={mutation.isPending}
+          error={mutation.error}
+          onResend={(extra) => {
+            const last = mutation.variables;
+            if (last)
               mutation.mutate(
-                {
-                  values: submitted,
-                  rows: rows ?? {},
-                  baseline: opened.current,
-                  save: props.save,
-                },
+                { ...last, extra },
                 { onSuccess: () => onEditingChange(false) },
-              )
-            }
-          />
-        ) : (
-          <GroupReading
-            props={props}
-            field={field}
-            editable={editable}
-            canEdit={canEdit}
-            reason={reason}
-            label={label}
-            onEdit={() => onEditingChange(true)}
-          />
-        )}
+              );
+          }}
+          onDirtyChange={setDirty}
+          onClose={() => onEditingChange(false)}
+          onSubmit={(submitted, rows) =>
+            mutation.mutate(
+              {
+                values: submitted,
+                rows: rows ?? {},
+                baseline: opened.current,
+                save: props.save,
+              },
+              { onSuccess: () => onEditingChange(false) },
+            )
+          }
+        />
       </FieldRow>
     );
   return (
@@ -219,10 +220,8 @@ function RecordField({
       mark={props.marks?.[field.key]}
       label={label}
       values={values}
-      editable={editable}
       canEdit={canEdit}
       reason={reason}
-      editing={editing}
       onEditingChange={onEditingChange}
       onSave={saveValue}
       onDirtyChange={setDirty}
@@ -251,38 +250,31 @@ function GroupReading({
   const { locale } = useLocale();
   const { key, editLabel } = field;
   const rendered = props.renderValues?.[key];
-  if (rendered)
-    return editable ? (
-      <InlineEditVerb
-        label={label}
-        text={editLabel && t(editLabel)}
-        disabled={!canEdit}
-        onClick={onEdit}
-      />
-    ) : null;
-  const value =
-    (props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
-    groupValue(
-      props.fields,
-      props.record,
-      t,
-      locale,
-      props.maskedFields,
-      props.readOnlyFields,
-    );
-  if (!canEdit) return <span title={reason}>{value || t("field.unset")}</span>;
+  const value = rendered
+    ? null
+    : ((props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
+      groupValue(
+        props.fields,
+        props.record,
+        t,
+        locale,
+        props.maskedFields,
+        props.readOnlyFields,
+      ));
+  if (!editable || (!rendered && !canEdit))
+    return rendered ?? <span title={reason}>{value || t("field.unset")}</span>;
   return (
-    <Button
-      variant="link"
-      className="inline-editable"
-      data-empty={!value}
-      onClick={onEdit}
-      aria-label={
+    <EditableValue
+      editLabel={
         editLabel ? t(editLabel) : t("inlineChoice.change", { field: label })
       }
+      placeholder={t("field.unset")}
+      link={Boolean(rendered)}
+      editable={canEdit}
+      onEdit={onEdit}
     >
-      {value || t("field.unset")}
-    </Button>
+      {rendered ?? value}
+    </EditableValue>
   );
 }
 
@@ -295,10 +287,8 @@ function RecordScalarField({
   mark,
   label,
   values,
-  editable,
   canEdit,
   reason,
-  editing,
   onEditingChange,
   onDirtyChange,
   onSave,
@@ -311,10 +301,8 @@ function RecordScalarField({
   mark?: ReactNode;
   label: string;
   values: Record<string, string>;
-  editable: boolean;
   canEdit: boolean;
   reason?: string;
-  editing: boolean;
   onEditingChange: (editing: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
   onSave: (value: string) => Promise<void>;
@@ -322,21 +310,20 @@ function RecordScalarField({
   const t = useT();
   const { locale } = useLocale();
   const stored = values[field.key] ?? "";
-  const shown = display ?? dateDisplay(field, stored, locale);
+  const options = selectOptions(field, values, t);
   return (
     <FieldRow valueRef={valueRef} label={label}>
       {field.type === "select" ? (
         <InlineChoice
           label={label}
           hideLabel
-          value={values[field.key] ?? ""}
-          options={selectOptions(field, values, t)}
+          value={stored}
+          options={options}
           render={(value) =>
-            display && value === values[field.key]
+            display && value === stored
               ? display
-              : (selectOptions(field, values, t).find(
-                  (option) => option.value === value,
-                )?.label ?? value)
+              : (options.find((option) => option.value === value)?.label ??
+                value)
           }
           canEdit={canEdit}
           readOnlyReason={reason}
@@ -345,43 +332,38 @@ function RecordScalarField({
           onSave={onSave}
         />
       ) : (
-        <>
-          {!editing && rendered}
-          {(editable || !rendered) && (
-            <InlineText
-              label={label}
-              value={stored}
-              display={shown}
-              verb={Boolean(rendered)}
-              placeholder={t("field.unset")}
-              multiline={field.type === "textarea"}
-              type={
-                field.type === "number" ||
-                field.type === "date" ||
-                field.type === "email"
-                  ? field.type
-                  : "text"
-              }
-              maxLength={field.maxLength}
-              step={field.step ?? (field.type === "number" ? "any" : undefined)}
-              canEdit={canEdit}
-              readOnlyReason={reason}
-              onEditingChange={onEditingChange}
-              onDirtyChange={onDirtyChange}
-              onSave={onSave}
-            />
-          )}
-        </>
+        <InlineText
+          label={label}
+          value={stored}
+          display={display ?? dateDisplay(field, stored, locale)}
+          link={rendered}
+          placeholder={t("field.unset")}
+          multiline={field.type === "textarea"}
+          type={
+            field.type === "number" ||
+            field.type === "date" ||
+            field.type === "email"
+              ? field.type
+              : "text"
+          }
+          maxLength={field.maxLength}
+          step={field.step ?? (field.type === "number" ? "any" : undefined)}
+          canEdit={canEdit}
+          readOnlyReason={reason}
+          onEditingChange={onEditingChange}
+          onDirtyChange={onDirtyChange}
+          onSave={onSave}
+        />
       )}
-      {link && !editing && (
-        <OffsiteLink href={link.href}>{link.label}</OffsiteLink>
-      )}
-      {!editing && mark}
+      {link && <OffsiteLink href={link.href}>{link.label}</OffsiteLink>}
+      {mark}
     </FieldRow>
   );
 }
 
 function RecordFieldForm({
+  open,
+  label,
   opened,
   pending,
   error,
@@ -392,6 +374,8 @@ function RecordFieldForm({
   ...props
 }: Readonly<
   Props & {
+    open: boolean;
+    label: string;
     opened: FieldRecord;
     pending: boolean;
     error: unknown;
@@ -408,46 +392,54 @@ function RecordFieldForm({
   const [rows, setRows] = useState(() =>
     prefillRowsFromRecord(props.fields, opened),
   );
+  // Seeded in render on the opening, so the first frame of the form already
+  // holds the record and a key typed into it is never overwritten.
+  const [seeded, setSeeded] = useState(open);
+  if (open !== seeded) {
+    setSeeded(open);
+    if (open) {
+      setValues(prefillFromRecord(props.fields, opened));
+      setRows(prefillRowsFromRecord(props.fields, opened));
+    }
+  }
   const dirty =
-    pending ||
-    !sameEditValue(values, prefillFromRecord(props.fields, opened)) ||
-    !sameEditValue(rows, prefillRowsFromRecord(props.fields, opened));
+    open &&
+    (pending ||
+      !sameEditValue(values, prefillFromRecord(props.fields, opened)) ||
+      !sameEditValue(rows, prefillRowsFromRecord(props.fields, opened)));
   useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
-  usePublishedValues(values, props.onValuesChange);
-  const publish = props.onValuesChange;
+  const publish = open ? props.onValuesChange : undefined;
+  usePublishedValues(values, publish);
   useEffect(() => () => publish?.({}), [publish]);
   return (
-    <div inert={pending} className="form-stack">
-      <RecordFormBody
-        fields={props.fields}
-        values={values}
-        setValues={setValues}
-        rows={rows}
-        setRows={setRows}
-        pending={pending}
-        error={error ? problemMessageOf(error, t) : null}
-        existing={
-          error instanceof ProblemError
-            ? problemExistingId(error.problem)
-            : null
-        }
-        resolveExisting={props.resolveExisting}
-        notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
-        onSubmit={(submitted, submittedRows) => {
-          const original = prefillFromRecord(props.fields, opened);
-          const originalRows = prefillRowsFromRecord(props.fields, opened);
-          if (
-            sameEditValue(submitted, original) &&
-            sameEditValue(submittedRows, originalRows)
-          )
-            onClose();
-          else onSubmit(submitted, submittedRows);
-        }}
-        onClose={onClose}
-        intent="save"
-      />
-    </div>
+    <RecordFormBody
+      dialog={{ open, title: label }}
+      fields={props.fields}
+      values={values}
+      setValues={setValues}
+      rows={rows}
+      setRows={setRows}
+      pending={pending}
+      error={error ? problemMessageOf(error, t) : null}
+      existing={
+        error instanceof ProblemError ? problemExistingId(error.problem) : null
+      }
+      resolveExisting={props.resolveExisting}
+      notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
+      onSubmit={(submitted, submittedRows) => {
+        const original = prefillFromRecord(props.fields, opened);
+        const originalRows = prefillRowsFromRecord(props.fields, opened);
+        if (
+          sameEditValue(submitted, original) &&
+          sameEditValue(submittedRows, originalRows)
+        )
+          onClose();
+        else onSubmit(submitted, submittedRows);
+      }}
+      onClose={onClose}
+      intent="save"
+    />
   );
 }

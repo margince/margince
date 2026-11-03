@@ -126,7 +126,6 @@ const prefilter = new RegExp(`${[...nativeControls].join("|")}|\\\\`);
 // The tags whose `type` reaches a native input as written, derived from the
 // design system and every module the extension surface publishes from.
 const designSystemDir = join(srcDir, "design-system");
-// A date takes InlineTextControl's InlineDate branch, which renders DateInput.
 const notHosts = new Set(["InlineTextControl"]);
 // Each spreads FieldControl or SettingControlProps: an id and aria wiring, no type.
 const clearedSpreads = ["NameDialog", "NumberSetting", "ResolveSheet"];

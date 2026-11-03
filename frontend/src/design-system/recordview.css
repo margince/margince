@@ -60,23 +60,20 @@
   line-clamp: 3;
   overflow: hidden;
 }
-/* The name as its own edit button, in the heading's type at rest and open. The
-   type goes on the button and the box, never the wrapper: the refusal under the
-   box takes the type of what encloses it, and a refusal is not a headline. */
+/* The name as its own edit pill, in the heading's type. The h1 pads by the
+   pill's overhang, so the clip that holds its three lines keeps the fill. */
 .record-split-rename {
   flex: 1;
   min-inline-size: 0;
 }
 .record-split-rename .record-split-name {
-  padding-inline: var(--space-1);
-  margin-inline: calc(-1 * var(--space-1));
+  padding-block: var(--space-1);
+  padding-inline-start: var(--space-2);
+  margin-block: calc(-1 * var(--space-1));
+  margin-inline-start: calc(-1 * var(--space-2));
 }
-.record-split-rename .inline-editable {
+.record-split-rename .editable-value {
   font: inherit;
-  color: inherit;
-}
-.record-split-rename .input {
-  font: var(--fontHeadingLarge);
   color: inherit;
 }
 .record-split-lines {

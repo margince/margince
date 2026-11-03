@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Pencil } from "lucide-react";
 import { type ReactNode, useCallback, useRef, useState } from "react";
-import { Button } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
+import { EditableValue } from "../design-system/editablevalue";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineText } from "../design-system/inlinetext";
 import type { RecordRename } from "../design-system/recordview";
@@ -42,15 +40,15 @@ export type RailEdit = Readonly<{
 
 type Props = Readonly<{
   edit: RailEdit;
-  // The fields this row changes. One plain field edits in place; several, a
-  // list of rows or a value drawn as a link open the edit form.
+  // The fields this row changes. One plain field edits in a one-field dialog;
+  // several, a list of rows or a value drawn as a link open the edit form.
   keys: readonly string[];
   label: string;
   // The row's resting value, kept as the column draws it.
   reading: ReactNode;
-  // The resting value as text, for a field that edits in place.
+  // The resting value as text, for a field edited on its own.
   text?: string;
-  // The value is a link, so the edit is a glyph beside it, not the value.
+  // The value is a link: it keeps its action, and the pill around it edits.
   link?: boolean;
   beside?: ReactNode;
 }>;
@@ -102,8 +100,8 @@ function useRailWrite(edit: RailEdit) {
 }
 
 /**
- * One plain field of a record saved in place, the way a left-column row saves
- * it. The record's head renames through it too.
+ * One plain field of a record saved on its own, the way a left-column row
+ * saves it. The record's head renames through it too.
  */
 export function useRailText(edit: RailEdit, field: CreateField) {
   const t = useT();
@@ -221,38 +219,21 @@ function RailForm({
   const t = useT();
   const [open, setOpen] = useState(false);
   const { mutation, pending } = useRecordFieldWrite(edit.kind, edit.record);
-  const change = t("inlineChoice.change", { field: label });
-  const start = () => {
-    mutation.reset();
-    setOpen(true);
-  };
   return (
     <>
-      {link ? (
-        <>
-          {reading}
-          <span className="recorddetails-glyph">
-            <IconAction
-              inline
-              label={change}
-              icon={<Pencil aria-hidden="true" />}
-              disabled={pending}
-              opensDialog
-              onClick={start}
-            />
-          </span>
-        </>
-      ) : (
-        <Button
-          variant="link"
-          className="inline-editable"
-          aria-label={change}
-          disabled={pending}
-          onClick={start}
-        >
-          {reading}
-        </Button>
-      )}
+      <EditableValue
+        editLabel={t("inlineChoice.change", { field: label })}
+        placeholder={t("field.unset")}
+        link={link}
+        // A save elsewhere on the record pauses this row, never its own open form.
+        editable={open || !pending}
+        onEdit={() => {
+          mutation.reset();
+          setOpen(true);
+        }}
+      >
+        {reading}
+      </EditableValue>
       {beside}
       <EditRecordModal
         open={open}

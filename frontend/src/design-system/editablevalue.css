@@ -4,6 +4,7 @@
 /* The margins cancel the face's padding, so the text sits on the column edge
    a read-only value beside it starts from. */
 .editable-value {
+  --editableFill: var(--groundHover);
   display: inline-flex;
   align-items: flex-start;
   gap: var(--space-1);
@@ -16,6 +17,16 @@
   background: transparent;
   text-align: start;
   cursor: pointer;
+}
+
+/* Dark's row hover is a quarter shade, too faint to mark a pill on its own. */
+:root[data-theme="dark"] .editable-value {
+  --editableFill: color-mix(in srgb, var(--hoverShade) 60%, var(--ground));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .editable-value {
+    --editableFill: color-mix(in srgb, var(--hoverShade) 60%, var(--ground));
+  }
 }
 
 .editable-value-face {
@@ -40,7 +51,7 @@
   block-size: calc(1lh + 2 * var(--space-1));
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--groundHover);
+  background: var(--editableFill);
   color: var(--textSecondary);
   opacity: 0;
   transition: opacity var(--dur-state);
@@ -64,7 +75,7 @@
 /* Not on a touch screen: a tap leaves `:hover` set, and the fill would stay. */
 @media (hover: hover) {
   .editable-value:hover .editable-value-face {
-    background: var(--groundHover);
+    background: var(--editableFill);
   }
   .editable-value:hover .editable-value-bubble {
     opacity: 1;
@@ -80,7 +91,7 @@
 
 .editable-value:focus-visible .editable-value-face,
 .editable-value-link:focus-within .editable-value-face {
-  background: var(--groundHover);
+  background: var(--editableFill);
 }
 .editable-value:focus-visible .editable-value-bubble,
 .editable-value-link:focus-within .editable-value-bubble {

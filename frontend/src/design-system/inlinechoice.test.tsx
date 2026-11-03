@@ -1,11 +1,5 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,10 +7,7 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
-import { InlineText } from "./inlinetext";
-
-// The rules this control keeps are failure modes, not polish. Each one here
-// is a way a reader gets told something untrue about their own edit.
+import { pickOption } from "./select-testing";
 
 afterEach(cleanup);
 
@@ -33,10 +24,13 @@ function renderChoice(
     <LocaleProvider initial="en">
       <InlineChoice
         label="Account lifecycle"
+        hideLabel
         value="prospect"
         options={OPTIONS}
         canEdit
-        render={(v) => <>{v}</>}
+        render={(value) =>
+          OPTIONS.find((option) => option.value === value)?.label
+        }
         onSave={onSave}
         {...props}
       />
@@ -45,437 +39,99 @@ function renderChoice(
   return { onSave };
 }
 
-describe("editing a value where it is read", () => {
-  it("shows a reader who may not edit the VALUE, not a disabled control", () => {
-    renderChoice({
-      canEdit: false,
-      readOnlyReason: "This company is archived.",
-    });
-    // A disabled control says "you could do this" and then refuses. Plain text
-    // says what is true.
+const trigger = () =>
+  screen.getByRole("button", { name: "Change Account lifecycle Prospect" });
+
+async function openChooser(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(trigger());
+  return screen.findByRole("combobox", { name: "Account lifecycle" });
+}
+
+describe("a choice edited in a dialog", () => {
+  it("shows a reader who may not edit the value as plain text", () => {
+    renderChoice({ canEdit: false, readOnlyReason: "Archived." });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("prospect")).toBeTruthy();
+    expect(screen.getByText("Prospect")).toHaveAttribute("title", "Archived.");
   });
 
-  it("names the field on the trigger rather than reading out the value alone", async () => {
+  it("names the trigger by the verb and the value", () => {
     renderChoice();
-    // Without an aria-label a screen reader announces "prospect, button" — the
-    // state, with no hint that pressing it changes anything.
-    expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    ).toBeTruthy();
+    expect(trigger()).toHaveAttribute("aria-haspopup", "dialog");
   });
 
-  it("opens the list on the one click that started editing, not a second one", async () => {
+  it("prints the field's name before the value unless the layout does", () => {
+    renderChoice({ hideLabel: false });
+    expect(trigger().parentElement?.textContent).toMatch(
+      /^Account lifecycle: /,
+    );
+  });
+
+  it("opens a dialog titled by the field, holding the chooser on the stored value", async () => {
+    const user = userEvent.setup();
     renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    // The click that turned the value into a control already meant "show me
-    // the options" — a caller that has to click the combobox again before an
-    // option appears is exactly the extra press the edit-in-place pattern
-    // exists to remove.
-    expect(screen.getByRole("option", { name: "Customer" })).toBeTruthy();
+    const chooser = await openChooser(user);
+    expect(
+      screen.getByRole("dialog", { name: "Account lifecycle" }),
+    ).toBeInTheDocument();
+    expect(chooser).toHaveTextContent("Prospect");
   });
 
-  it("does not write when the reader picks the value already set", async () => {
-    const { onSave } = renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
-    // Choosing what is already set is not an edit; sending it would write an
-    // audit row for a change that did not happen.
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it("keeps the reader's choice on screen when the save is refused", async () => {
-    const onSave = vi.fn(async () => {
-      throw new ProblemError({
-        code: "version_skew",
-        detail: "Somebody else changed this record.",
-      });
-    });
-    renderChoice({ onSave });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.click(screen.getByRole("option", { name: "Customer" }));
-
-    // The refusal renders beside the control that caused it, and the picker
-    // stays open on what they chose. Snapping back would discard their answer
-    // and tell them nothing.
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        en["common.versionSkew"],
-      ),
-    );
-    expect(screen.getByRole("combobox")).toBeTruthy();
-  });
-
-  // The disclosure this control used to make, proved on the CHOICE half as
-  // well as the text half below. A version conflict cannot prove it: its
-  // detail is a sentence a reader is meant to see, so it renders identically
-  // whether or not the catalog arm is consulted. Only a refusal the catalog
-  // REPLACES separates the two.
-  it("answers a permission refusal in the reader's words, never the server's", async () => {
+  it("saves on Save, never on the pick", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn(async () => {
-      throw new ProblemError({
-        code: "permission_denied",
-        detail: "company.update: permission denied",
-      });
-    });
-    renderChoice({ onSave });
-    await user.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await user.click(screen.getByRole("option", { name: "Customer" }));
-
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "do not have permission",
-      ),
-    );
-    const alert = screen.getByRole("alert").textContent ?? "";
-    expect(alert).not.toContain("company.update");
-    expect(alert).not.toContain("permission denied");
-  });
-
-  // The counterpart of the Escape case below: leaving the editing view is what
-  // returns the reader to the trigger, so the answer they left with does not
-  // change where they land. Picking a value dropped them on the document body
-  // while backing out did not, which is the same loss of place either way.
-  it("lands focus back on the trigger after a value is picked", async () => {
-    renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.click(screen.getByRole("option", { name: "Customer" }));
-
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole("button", { name: "Change Account lifecycle" }),
-      ),
-    );
-  });
-
-  it("lets Escape back out of an open list without changing anything", async () => {
     const { onSave } = renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.keyboard("{Escape}");
-    // Back to the resting trigger, not stranded on a closed combobox with
-    // nowhere left to go — and focus lands ON it, not merely present in the
-    // document: a keyboard user who backed out with Escape must not also
-    // lose their place on the page.
-    const trigger = screen.getByRole("button", {
-      name: "Change Account lifecycle",
-    });
-    expect(trigger).toBeTruthy();
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(screen.queryByRole("combobox")).toBeNull();
+    await pickOption(user, await openChooser(user), "Customer");
     expect(onSave).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    expect(onSave).toHaveBeenCalledWith("customer");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("does not reach for the trigger when Tab leaves the open list", async () => {
-    const { onSave } = renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    // The keydown alone, deliberately, rather than `userEvent.tab()`: moving
-    // focus is the BROWSER's half of a Tab press, and it is the half no DOM
-    // emulation models. A browser remembers the place a removed focused
-    // element held — the sequential focus navigation starting point — and
-    // carries the reader on from there. jsdom keeps no such place, so once
-    // this picker unmounts the emulation restarts from the top of the
-    // document and lands on the resting trigger of its own accord, which
-    // would read here as the control having reached for focus. Dispatching
-    // the press by itself leaves exactly the half this control owns, which is
-    // the half the name of this test claims and no more. The browser's half —
-    // a Tab press carrying the reader to the next field — is checked in
-    // select.test.tsx, where the trigger survives the press and so jsdom can
-    // still model where focus goes.
-    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Tab" });
-    // Tab already moved the reader on — reclaiming focus here would fight
-    // the very key that just moved it, the opposite of what Escape does.
-    const trigger = screen.getByRole("button", {
-      name: "Change Account lifecycle",
-    });
-    expect(document.activeElement).not.toBe(trigger);
-    expect(screen.queryByRole("combobox")).toBeNull();
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it("lets Escape back out even once a save has already failed", async () => {
-    const onSave = vi.fn(async () => {
-      throw new ProblemError({
-        code: "version_skew",
-        detail: "Somebody else changed this record.",
-      });
-    });
-    renderChoice({ onSave });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.click(screen.getByRole("option", { name: "Customer" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-
-    // The popup itself is already closed at this point — Select's own Escape
-    // handling only ever claims a key press while its list is open, so this
-    // is the one exit a failed save would otherwise have none of.
-    await userEvent.keyboard("{Escape}");
-    expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    ).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("abandons an unpicked choice when the reader clicks away", async () => {
-    const { onSave } = renderChoice();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await userEvent.click(document.body);
-    expect(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    ).toBeTruthy();
-    expect(onSave).not.toHaveBeenCalled();
-  });
-});
-
-// InlineText's own commit moment: there is no Save button, so Enter and
-// losing focus are the two ways a typed value ever reaches `onSave`.
-function renderText(
-  props: Partial<React.ComponentProps<typeof InlineText>> = {},
-) {
-  const onSave = props.onSave ?? vi.fn(async () => {});
-  render(
-    <LocaleProvider initial="en">
-      <InlineText
-        label="Industry"
-        value="Automotive"
-        placeholder="Add industry"
-        canEdit
-        onSave={onSave}
-        {...props}
-      />
-    </LocaleProvider>,
-  );
-  return { onSave };
-}
-
-describe("editing free text where it is read", () => {
-  it("opens with the caret already in the field", async () => {
-    renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    // Every rule below — Enter, Escape, the blur-commit — is a keyboard or
-    // focus event ON this input, so an input the browser never focused obeys
-    // none of them: the box would sit open behind a reader who had already
-    // clicked into the next field.
-    expect(document.activeElement).toBe(screen.getByLabelText("Industry"));
-  });
-
-  it("closes when focus moves away, leaving no editor open behind the reader", async () => {
-    renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(document.body);
-    expect(screen.queryByLabelText("Industry")).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Change Industry" }),
-    ).toHaveTextContent("Automotive");
-  });
-
-  it("puts the reader back on the value after Escape", async () => {
-    renderText();
-    const trigger = screen.getByRole("button", { name: "Change Industry" });
-    await userEvent.click(trigger);
-    await userEvent.type(screen.getByLabelText("Industry"), "{Escape}");
-    // Backing out of an edit must not drop a keyboard reader onto the body:
-    // they land on the value they opened, the same as InlineChoice's own
-    // revert does.
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole("button", { name: "Change Industry" }),
-      ),
-    );
-  });
-
-  it("commits on Enter, with no Save button anywhere", async () => {
-    const { onSave } = renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-    const input = screen.getByLabelText("Industry");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Aerospace{Enter}");
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith("Aerospace"));
-  });
-
-  it("commits nothing on an input method's Enter", async () => {
-    const { onSave } = renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    const input = screen.getByLabelText("Industry");
-    await userEvent.type(input, "s");
-
-    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
-
-    expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Industry")).toHaveValue("Automotives");
-  });
-
-  it("commits on losing focus, with no explicit commit press", async () => {
-    const { onSave } = renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    const input = screen.getByLabelText("Industry");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Aerospace");
-    await userEvent.click(document.body);
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith("Aerospace"));
-  });
-
-  it("does not write on a blur that changed nothing, however often it fires", async () => {
-    const { onSave } = renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    const input = screen.getByLabelText("Industry");
-    await userEvent.click(input);
-    await userEvent.click(document.body);
-    // A blur with the value untouched is not an edit — sending it would write
-    // an audit row for a change that did not happen, and blur now fires on
-    // every exit rather than only on an explicit Save press.
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it("reverts the draft on Escape without committing it", async () => {
-    const { onSave } = renderText();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    const input = screen.getByLabelText("Industry");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Aerospace{Escape}");
-    expect(
-      screen.getByRole("button", { name: "Change Industry" }),
-    ).toHaveTextContent("Automotive");
-    expect(onSave).not.toHaveBeenCalled();
-  });
-
-  it("keeps the input mounted with the typed text on a refused save, rather than pulling focus back", async () => {
-    const onSave = vi.fn(async () => {
-      throw new ProblemError({
-        code: "version_skew",
-        detail: "Somebody else changed this record.",
-      });
-    });
-    renderText({ onSave });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change Industry" }),
-    );
-    const input = screen.getByLabelText("Industry");
-    await userEvent.clear(input);
-    await userEvent.type(input, "Aerospace{Enter}");
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        en["common.versionSkew"],
-      ),
-    );
-    // Still the editor, still the reader's own typed text — a failed save
-    // must not also lose what they wrote or drop them out of the field.
-    expect(screen.getByLabelText("Industry")).toHaveValue("Aerospace");
-  });
-
-  // The disclosure both controls used to make. `auth.Require` composes a
-  // refusal's detail from the RBAC object and the verb, so showing a caught
-  // error's own text handed the contact who was just refused the name of the
-  // permission they lack and the record kind it governs.
-  it("answers a permission refusal in the reader's words, never the server's", async () => {
+  it("closes without a write when the stored value is saved again", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn(async () => {
-      throw new ProblemError({
-        code: "permission_denied",
-        detail: "contact.update: permission denied",
-      });
-    });
-    renderText({ onSave });
-    await user.click(screen.getByRole("button", { name: "Change Industry" }));
-    const input = screen.getByLabelText("Industry");
-    await user.clear(input);
-    await user.type(input, "Aerospace{Enter}");
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "do not have permission",
-      ),
-    );
-    expect(screen.getByRole("alert").textContent).not.toContain(
-      "contact.update",
-    );
-    expect(screen.getByRole("alert").textContent).not.toContain(
-      "permission denied",
-    );
-  });
-});
-
-// A refusal beside an inline editor is that field's error, whatever refused it:
-// the element, the container that spaces it and the wiring `Field` gives every
-// other field.
-describe("a refused inline save reads as the field's own error", () => {
-  function expectFieldError(control: HTMLElement) {
-    const alert = screen.getByRole("alert");
-    expect(alert.tagName).toBe("P");
-    expect(alert).toHaveClass("field-error");
-    expect(alert.parentElement).toHaveClass("field");
-    expect(alert.parentElement).toContainElement(control);
-    expect(control).toHaveAttribute("aria-invalid", "true");
-    expect(control.getAttribute("aria-describedby")).toBe(alert.id);
-  }
-
-  const refusals = [
-    [
-      "a server's validation",
-      new ProblemError({ code: "validation_error", detail: "Too long." }),
-    ],
-    ["a failure with no cause", new Error("fetch failed")],
-  ] as const;
-
-  it.each(refusals)("on a text field, for %s", async (_name, thrown) => {
-    const user = userEvent.setup();
-    renderText({
-      onSave: vi.fn(async () => {
-        throw thrown;
-      }),
-    });
-    await user.click(screen.getByRole("button", { name: "Change Industry" }));
-    const input = screen.getByLabelText("Industry");
-    await user.clear(input);
-    await user.type(input, "Aerospace{Enter}");
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-    expectFieldError(input);
+    const { onSave } = renderChoice();
+    await openChooser(user);
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(onSave).not.toHaveBeenCalled();
   });
 
-  it.each(refusals)("on a choice, for %s", async (_name, thrown) => {
+  it("keeps the reader's choice and shows the refusal on the field", async () => {
     const user = userEvent.setup();
     renderChoice({
       onSave: vi.fn(async () => {
-        throw thrown;
+        throw new ProblemError({
+          code: "permission_denied",
+          detail: "company.update: permission denied",
+        });
       }),
     });
-    await user.click(
-      screen.getByRole("button", { name: "Change Account lifecycle" }),
-    );
-    await user.click(screen.getByRole("option", { name: "Customer" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-    expectFieldError(screen.getByRole("combobox"));
+    const chooser = await openChooser(user);
+    await pickOption(user, chooser, "Customer");
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("do not have permission");
+    expect(alert).not.toHaveTextContent("company.update");
+    expect(alert).toHaveClass("field-error");
+    expect(chooser).toHaveTextContent("Customer");
+    expect(chooser).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("tells the caller when the editor opens and closes", async () => {
+    const user = userEvent.setup();
+    const onEditingChange = vi.fn();
+    renderChoice({ onEditingChange });
+    await openChooser(user);
+    expect(onEditingChange).toHaveBeenLastCalledWith(true);
+    await user.click(screen.getByRole("button", { name: en["create.cancel"] }));
+    expect(onEditingChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("reads an unset choice as unset", () => {
+    renderChoice({ value: "" });
+    expect(
+      screen.getByRole("button", {
+        name: `Change Account lifecycle ${en["field.unset"]}`,
+      }),
+    ).toBeInTheDocument();
   });
 });

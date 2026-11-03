@@ -29,7 +29,7 @@ export function RecordBack({
   );
 }
 
-/** Renames the record where its name is read, in place like any details value. */
+/** Renames the record from its name, in a dialog like any details value. */
 export type RecordRename = Readonly<{
   // The field's own name ("Full name"), which the edit verb reads out.
   label: string;
@@ -228,8 +228,8 @@ function RecordTitle({
   );
 }
 
-// The h1 holds the name's edit button at rest, and is named by the record, not
-// by the button's verb. While open, the field stands in the heading's place.
+// The h1 holds the name's edit pill and is named by the record, not by the
+// pill's verb; the rename itself opens in a dialog.
 function RecordName({
   name,
   rename,

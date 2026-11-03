@@ -10,8 +10,8 @@ import {
 } from "../design-system/decisiondeck.verdicts";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FactList } from "../design-system/factlist";
+import { INLINE_COMMIT_KEY } from "../design-system/fieldeditdialog";
 import { Heading } from "../design-system/heading";
-import { INLINE_COMMIT_KEY } from "../design-system/inlinetext";
 import { Modal } from "../design-system/modal";
 import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
 import { type Translator, useT } from "../i18n";

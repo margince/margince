@@ -46,6 +46,11 @@ function Example() {
 }
 export const Editable: Story = { render: () => <Example /> };
 
+export const EditableDark: Story = {
+  render: () => <Example />,
+  globals: { theme: "dark" },
+};
+
 export const ReadOnly: Story = {
   render: () => (
     <InlineChoice
@@ -60,8 +65,8 @@ export const ReadOnly: Story = {
   ),
 };
 
-// A refused save keeps the picker open on the reader's answer and says why as
-// the field's error beneath it.
+// The pick waits for Save; a refused save keeps the dialog open on the
+// reader's answer and says why as the field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineChoice
@@ -81,12 +86,15 @@ export const RefusedSave: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Change Lifecycle" }),
+      await canvas.findByRole("button", { name: /^Change Lifecycle/ }),
     );
+    const dialog = await screen.findByRole("dialog", { name: "Lifecycle" });
+    await userEvent.click(within(dialog).getByRole("combobox"));
     await userEvent.click(
       await screen.findByRole("option", { name: "Customer" }),
     );
-    const refusal = await canvas.findByRole("alert");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
   },

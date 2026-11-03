@@ -65,6 +65,16 @@ export const Editable: Story = {
   },
 };
 
+// Focused, so the fill shows; dark mixes a stronger shade than its row hover.
+export const FocusedDark: Story = {
+  args: { children: "Software" },
+  globals: { theme: "dark" },
+  play: async ({ canvasElement }) => {
+    await userEvent.tab();
+    await expect(within(canvasElement).getByRole("button")).toHaveFocus();
+  },
+};
+
 export const ReadOnly: Story = {
   args: { children: "Software", onEdit: undefined },
   play: async ({ canvasElement }) => {

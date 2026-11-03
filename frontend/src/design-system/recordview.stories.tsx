@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { Badge, Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Panel, PanelBody } from "./panel";
@@ -166,4 +167,28 @@ export const Narrow: Story = {
     ),
   ],
   args: { ...Default.args },
+};
+
+// The name is an edit pill like any details value: a press opens the rename
+// dialog, titled by the field.
+export const Renamable: Story = {
+  args: {
+    ...Default.args,
+    rename: {
+      label: "Company name",
+      value: "Brandt Automotive GmbH",
+      canEdit: true,
+      onSave: async () => undefined,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const heading = within(canvasElement).getByRole("heading", { level: 1 });
+    await userEvent.click(
+      within(heading).getByRole("button", { name: /^Change Company name/ }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Company name" });
+    await expect(within(dialog).getByRole("textbox")).toHaveValue(
+      "Brandt Automotive GmbH",
+    );
+  },
 };

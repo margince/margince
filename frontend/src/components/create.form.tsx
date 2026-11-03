@@ -264,6 +264,7 @@ export function RecordFormBody({
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
       unsaved={edited}
+      closeDisabled={pending}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>
           {stack}
