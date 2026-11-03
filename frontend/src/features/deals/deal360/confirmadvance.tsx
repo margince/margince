@@ -1,9 +1,8 @@
-import { type SyntheticEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { components } from "../../../api/schema";
 import { LostReasonFields } from "../../../components/lostreasonfields";
 import { Field, Textarea } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
-import { isParagraphCommit } from "../../../design-system/inlinetext";
 import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
@@ -222,7 +221,7 @@ export function ConfirmAdvanceModal({
 
   // Enter in a picker, or ⌘/Ctrl+Enter in a note, closes the deal only when
   // Confirm would.
-  const submit = (event?: SyntheticEvent) => {
+  const submit = (event?: FormEvent) => {
     event?.preventDefault();
     if (pending && refusal === undefined && !submitting) {
       void confirm(pending);
@@ -248,15 +247,7 @@ export function ConfirmAdvanceModal({
             {t("deals.confirmTerminal", { status: shown.toStage.semantic })}
           </p>
           {(needsLostReason || needsWonReason) && (
-            <form
-              className="form-stack"
-              onSubmit={submit}
-              onKeyDown={(event) => {
-                if (isParagraphCommit(event)) {
-                  submit(event);
-                }
-              }}
-            >
+            <form className="form-stack" onSubmit={submit}>
               {needsLostReason && (
                 <LostReasonFields
                   reasons={lossReasons}

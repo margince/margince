@@ -109,6 +109,36 @@ describe("ConfirmModal", () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it("confirms on Ctrl+Enter in a note, and only while Confirm is open", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    const dialog = (reason?: string) => (
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Disqualify this lead?"
+        confirmLabel="Disqualify"
+        confirmReason={reason}
+        onConfirm={onConfirm}
+      >
+        <textarea aria-label="Note" />
+      </ConfirmModal>
+    );
+    const { rerender } = rtlRender(dialog("Choose a reason first."));
+    await user.click(screen.getByRole("textbox", { name: "Note" }));
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    rerender(dialog());
+    await user.keyboard("Moved{Enter}");
+    expect(onConfirm).not.toHaveBeenCalled();
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("textbox", { name: "Note" })).toHaveValue(
+      "Moved\n",
+    );
+  });
+
   it("fires onClose when the cancel button is clicked", async () => {
     const onClose = vi.fn();
     rtlRender(

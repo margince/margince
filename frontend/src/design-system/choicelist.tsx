@@ -195,7 +195,7 @@ export function ChoiceList<Value extends string>(
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
-      {detail}
+      {detail != null && <div className="choicelist-detail">{detail}</div>}
       {runsOf(choices).map((run) =>
         run.group === undefined ? (
           <Fragment key={run.choices[0]?.value}>

@@ -1,10 +1,11 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
+import { isParagraphCommit } from "./inlinetext";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
 
@@ -94,6 +95,19 @@ export function ConfirmModal({
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
   };
+  // Enter is a new line in a note, so ⌘/Ctrl+Enter there presses Confirm.
+  const confirmFromNote = (event: KeyboardEvent<HTMLDivElement>) => {
+    const refused = pending || confirmDisabled || confirmReason !== undefined;
+    if (
+      !(event.target instanceof HTMLTextAreaElement) ||
+      !isParagraphCommit(event) ||
+      refused
+    ) {
+      return;
+    }
+    event.preventDefault();
+    if (!refuseUnreadableField(event.target)) onConfirm();
+  };
   return (
     <Modal
       open={open}
@@ -114,7 +128,8 @@ export function ConfirmModal({
         {title}
       </Heading>
       {body && (
-        <div className="form-stack">
+        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears ⌘/Ctrl+Enter from a note inside it; Confirm stays the control
+        <div className="form-stack" onKeyDown={confirmFromNote}>
           {children}
           {error && <ErrorLine>{error}</ErrorLine>}
         </div>
