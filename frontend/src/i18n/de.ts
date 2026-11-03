@@ -7528,16 +7528,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.prospecting": "Meine Akquise",
   "analytics.overview.readings": "Wichtigste Kennzahlen",
   "analytics.overview.charts": "Diagramme",
-  "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
-  "analytics.overview.coverage": "Deckung",
   "analytics.overview.allOpen": "Gesamte offene Pipeline",
   "analytics.overview.openClosing":
     "Offene Pipeline mit Abschluss in diesem Quartal",
-  "analytics.overview.quarterOnly": "Nur dieses Quartal",
-  "analytics.overview.winRateBasis":
-    "Von den in diesem Zeitraum abgeschlossenen Deals",
-  "analytics.overview.summary": "Zusammenfassung",
-  "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
   "analytics.overview.saveViewNote":
@@ -7548,8 +7541,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
   "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
-  "analytics.overview.salesNothing":
-    "Für diesen Bereich ist keine Prognoseprüfung offen.",
   "analytics.overview.quarterOnlyTitle":
     "Das erwartete Ergebnis gilt für dieses Quartal",
   "analytics.overview.quarterOnlyBody":
@@ -7590,12 +7581,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.failed": "Konnte nicht gelesen werden",
   "analytics.prospect.failedDetail":
     "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
-  "analytics.prospect.basisAccepted":
-    "Als Deal angenommene Übergaben, {period}",
-  "analytics.prospect.noArrivals":
-    "{period} ist kein Lead eingegangen, also konnte keiner qualifiziert werden",
-  "analytics.prospect.basisQualified":
-    "Von {arrived} Leads, die {period} eingegangen sind",
   "analytics.prospect.weeksFailed":
     "Die letzten Wochen konnten nicht gelesen werden.",
   "analytics.prospect.noMeetingsWeek":
@@ -7647,7 +7632,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.doNext.all_other": "Alle {count} Einträge in deiner Worklist",
   "analytics.doNext.open": "Öffnen",
   "analytics.doNext.openNamed": "{title} öffnen",
-  "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.overview.team": "Team-Akquise",
   "analytics.team.chooseTeam": "Wähle ein Team",
   "analytics.team.chooseTeamBody":
@@ -7694,11 +7678,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{rate} dieser {rounds} Runden wurden angenommen.",
   "analytics.team.tooFewForRate":
     "Weniger als {below} sind zu wenige für eine Quote, darum steht hier keine.",
-  "analytics.team.qualifiedOf_one":
-    "{qualified} von {count} Lead aus diesem Zeitraum ist bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
-  "analytics.team.qualifiedOf_other":
-    "{qualified} von {count} Leads aus diesem Zeitraum sind bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
-  "analytics.team.qualifiedRate": "Das sind {rate} der eingegangenen Leads.",
   "analytics.team.waitingRow_one":
     "{count} Übergabe wartet auf eine Entscheidung",
   "analytics.team.waitingRow_other":
@@ -7732,8 +7711,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.handoffsHidden": "Übergaben sind für dich verborgen.",
   "analytics.team.hiddenBasis":
     "Deine Rolle umfasst das nicht. Das heißt nicht, dass es null ist.",
-  "analytics.team.nothingWaits":
-    "In diesem Zeitraum wartet nichts auf das Team.",
   "analytics.team.showHandoffs": "Übergaben zeigen",
   "analytics.team.showReasons": "Gründe zeigen",
   "analytics.team.showLeads": "Leads zeigen",
@@ -7752,12 +7729,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.target": "Monatsziel",
   "analytics.team.targetOf": "{actual} von {target}",
   "analytics.team.noTarget": "Kein Ziel",
+  "analytics.team.eventCredit":
+    "Gutschrift: verantwortliche Person bei der ersten Qualifizierung. Jeder Lead zählt einmal.",
   "analytics.team.qualificationBasis":
-    "Qualifiziert zählt die Leads aus diesem Zeitraum, die bisher qualifiziert sind. Unbeantwortet zählt die Leads, die in diesem Zeitraum geschrieben haben und noch keine Antwort haben. Beide zählen für das Teammitglied, das heute für den Lead verantwortlich ist, ein neu zugewiesener Lead also beim neuen.",
+    "Qualifiziert zählt die ersten Qualifizierungen im Zeitraum für die damals verantwortliche Person. Unbeantwortet folgt der aktuellen Verantwortung.",
   "analytics.team.handoffBasis":
     "Übergeben, zurückgegeben und abgelehnt zählen, was in diesem Zeitraum geschah. Angenommen zählt jeden Deal einmal, im Zeitraum seiner ersten Annahme. Wartet jetzt gilt für heute. Alles zählt für das Teammitglied, das damals übergeben hat.",
   "analytics.team.targetBasis":
-    "Ziele gelten pro Monat. Jedes vergleicht die bisher qualifizierten Leads vom {month} mit dem eigenen Ziel des Mitglieds.",
+    "Monatsziele vergleichen erste Qualifizierungen in {month} mit dem Ziel der Person.",
   "analytics.team.meetingsHidden": "Termine sind für dich verborgen.",
   "analytics.team.leadsHidden":
     "Qualifizierte und unbeantwortete Leads sind für dich verborgen.",
@@ -8039,6 +8018,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.myPipeline": "Meine offenen Deals",
   "analytics.sdrLeads": "Meine Leads in diesem Monat",
   "analytics.sdrReading.leads_promoted": "Qualifizierte Leads",
+  "analytics.sdrReading.leads_qualified": "Qualifizierte Leads",
   "analytics.sdrReading.lead_first_response":
     "Zeit bis zur ersten Antwort, beantwortete Leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -8341,7 +8321,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.confirmed": "Abschlussdatum bestätigt",
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Prognosekategorien",
-  "analytics.shareOfOpenPipeline": "Anteil an offener Pipeline",
+  "analytics.shareOfOpenPipeline": "Pipeline-Anteil in dieser Währung",
   "analytics.reportPipelineByCloseMonth": "Offene Pipeline nach Abschlussmonat",
   "analytics.closeMonth": "Abschlussmonat",
   "analytics.noCloseDate": "Kein Abschlussdatum",
@@ -20146,34 +20126,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gewonnener Umsatz im Vergleich zum Quartalsziel",
   "analytics.hero.attained": "{percent} % des Ziels von {target}",
   "analytics.hero.remaining": "Noch {amount} zu gewinnen",
-  "analytics.hero.shortfall":
-    "Erwartete Lücke {amount}, bei einem erwarteten Abschluss von {landing}",
-  "analytics.hero.surplus":
-    "Erwarteter Überschuss {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.shortfall": "Erwartete Lücke {amount}",
+  "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
-  "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
-  "analytics.assessment.title": "Einschätzung",
-  "analytics.assessment.pending": "Zahlen werden gelesen",
+  "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
+  "analytics.outlook.periodPipeline":
+    "Pipeline mit Abschluss in diesem Quartal",
+  "analytics.outlook.sales": "Quartalsausblick",
+  "analytics.outlook.team": "Ausblick zur Teamakquise",
+  "analytics.outlook.prospecting": "Akquiseausblick",
+  "analytics.outlook.records": "Zugehörige Datensätze anzeigen",
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
-  "analytics.assessment.noSales":
-    "Keine gemessenen Verkäufe in dieser Auswahl.",
-  "analytics.assessment.deterministic":
-    "Allein aus den Zahlen geschrieben. Ein KI-Modell ergänzt hier seine Lesart, sobald eines eingerichtet ist.",
-  "analytics.assessment.nextDecision": "Nächste Entscheidung",
-  "analytics.assessment.noDecision": "Keine gestützte Entscheidung.",
-  "analytics.assessment.viewEvidence": "Belege ansehen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",
-  "analytics.assessment.evidencePurpose":
-    "Jeder Satz nennt die Zahlen, die er liest. Öffne eine Zahl, um ihre Datensätze zu sehen.",
-  "analytics.assessment.confidence": "Sicherheit: {level}",
-  "analytics.assessment.kind.observation": "Beobachtung",
-  "analytics.assessment.kind.claim": "Berichtet",
-  "analytics.assessment.kind.hypothesis": "Vermutung",
-  "analytics.assessment.level.low": "niedrig",
-  "analytics.assessment.level.medium": "mittel",
-  "analytics.assessment.level.high": "hoch",
   "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
   "analytics.decisions.purpose":
     "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
@@ -20209,9 +20175,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.profileCompany": "Unternehmensumsatz",
   "analytics.overview.profileProduct": "Produktumsatz",
   "analytics.overview.removeFilter": "{filter} entfernen",
-  "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
-  "analytics.overview.coverageNotCompared":
-    "Der Hinweis unter dem gewonnenen Umsatz sagt, warum",
   "analytics.intervention.scope":
     "Diese Prüfungen umfassen jede Pipeline und jedes Abschlussdatum in diesem Bereich.",
   "analytics.intervention.viewAll": "Alle Prüfungen ansehen",
@@ -20234,9 +20197,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "1 Datenquelle konnte bei der letzten Prüfung nicht gelesen werden.",
   "analytics.intervention.maintenanceBody_other":
     "{count} Datenquellen konnten bei der letzten Prüfung nicht gelesen werden.",
-  "analytics.decision.composition":
-    "Woraus sich der erwartete Abschluss zusammensetzt",
-  "analytics.decision.won": "Gewonnen",
   "analytics.decision.included":
     "Zählt {included} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
   "analytics.decision.excluded": "Nicht enthalten: {parts}.",
@@ -20259,8 +20219,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.writtenChecksDeals_other": "{count} Deals",
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
-  "analytics.decision.part.commit_evidence": "Bestätigter Commit",
-  "analytics.decision.part.weighted": "Gewichtete offene Deals",
   "health.needsFix": "Beheben",
   "health.needsReview": "Prüfung nötig",
   "health.actionsNeeded_one": "Problem mit Handlungsbedarf: {count}",
@@ -20525,4 +20483,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
   "health.impact.automatic":
     "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
+  "analytics.outlook.calledAt": "Prognose vom {at}",
+  "analytics.prospect.weeksByQualification":
+    "Jeder Lead zählt in der Woche seiner ersten Qualifizierung.",
+  "analytics.team.atLeast": "Mindestens {value}",
+  "analytics.team.arrivalQualified": "Qualifizierte eingegangene Leads",
+  "analytics.team.arrivalTarget": "Ziel für eingegangene Leads",
+  "analytics.team.arrivalCredit":
+    "Eingangskohorte: Leads mit Eingang im Zeitraum, nach heutiger Verantwortung.",
+  "analytics.outlook.dealCount_one": "{count} Deal",
+  "analytics.outlook.dealCount_other": "{count} Deals",
+  "analytics.team.qualificationUnattributed_one":
+    "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "analytics.team.qualificationUnattributed_other":
+    "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
 };

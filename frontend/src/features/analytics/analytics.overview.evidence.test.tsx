@@ -54,18 +54,18 @@ describe("one evidence interaction on Sales review", () => {
     const strip = await readings();
     const door = strip.getByRole("button", {
       name: "View records",
-      description: "Closed win rate",
+      description: "Sales won",
     });
 
     await user.click(door);
 
     const dialog = within(
-      await screen.findByRole("dialog", { name: "Closed win rate" }),
+      await screen.findByRole("dialog", { name: "Sales won" }),
     );
     expect(dialog.getByText(/^Figures read .+, in EUR\./)).toBeVisible();
     await waitFor(() => expect(evidenceAsked(asked)).toHaveLength(1));
     const [request] = evidenceAsked(asked);
-    expect(request?.searchParams.get("metric")).toBe("closed_win_rate");
+    expect(request?.searchParams.get("metric")).toBe("bookings_won");
     expect(request?.searchParams.get("evaluation_key")).toBe(
       "fixture-evaluation",
     );
@@ -77,8 +77,10 @@ describe("one evidence interaction on Sales review", () => {
   it("offers no records door on coverage, whose numerator is one total and not its deals", async () => {
     openOverview("#/analytics", bySeat("leader"));
     const strip = await readings();
-    expect(strip.getByText("3.6×")).toBeVisible();
-    expect(strip.queryByRole("button", { description: "Coverage" })).toBeNull();
+    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+    expect(
+      strip.queryByRole("button", { description: "Pipeline due this quarter" }),
+    ).toBeNull();
   });
 
   it("keeps an open drawer on the receipt it was opened from when the figures are read again", async () => {
@@ -108,7 +110,7 @@ describe("one evidence interaction on Sales review", () => {
     await user.click(
       strip.getByRole("button", {
         name: "View records",
-        description: "Closed win rate",
+        description: "Sales won",
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
@@ -130,11 +132,11 @@ describe("one evidence interaction on Sales review", () => {
     const strip = await readings();
     const forecast = strip.getByRole("link", {
       name: "Open",
-      description: "Expected finish",
+      description: "Won + confirmed commit",
     });
     expect(forecast.getAttribute("href")).toMatch(/^\/#\/analytics\/forecast/);
     expect(
-      strip.queryByRole("button", { description: "Expected finish" }),
+      strip.queryByRole("button", { description: "Won + confirmed commit" }),
     ).toBeNull();
   });
 
@@ -142,7 +144,7 @@ describe("one evidence interaction on Sales review", () => {
     const user = userEvent.setup({ delay: null });
     const asked = openScenario("trueZero", "sales");
     const hero = within(
-      await screen.findByRole("region", { name: "Sales won" }),
+      await screen.findByRole("region", { name: "Opening readings" }),
     );
 
     await user.click(hero.getByRole("button", { name: "View records" }));
@@ -163,7 +165,7 @@ describe("one evidence interaction on Sales review", () => {
     const user = userEvent.setup({ delay: null });
     const asked = openScenario("sourceUnavailable", "sales");
     const hero = within(
-      await screen.findByRole("region", { name: "Sales won" }),
+      await screen.findByRole("region", { name: "Opening readings" }),
     );
 
     await user.click(hero.getByRole("button", { name: "View records" }));
@@ -226,15 +228,13 @@ describe("headline, actions and charts are ready on their own", () => {
   it("draws the figures and the actions while the chart read never answers", async () => {
     openOverview("#/analytics", bySeat("leader"), {}, undefined, isChartRead);
     const strip = await readings();
-    expect(strip.getByText("3.6×")).toBeVisible();
+    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
     expect(
-      within(screen.getByRole("region", { name: "Sales won" })).getByText(
-        "€420k",
-      ),
+      within(
+        screen.getByRole("region", { name: "Opening readings" }),
+      ).getByText("€420k"),
     ).toBeVisible();
-    expect(
-      await screen.findByRole("region", { name: "Needs your attention" }),
-    ).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(
       screen.queryByRole("heading", { name: "Open pipeline by stage" }),
     ).toBeNull();
@@ -251,7 +251,7 @@ describe("headline, actions and charts are ready on their own", () => {
     // Announced where the charts would stand, with its own retry.
     expect(await screen.findByRole("alert")).toBeVisible();
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
-    expect(strip.getByText("3.6×")).toBeVisible();
+    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
   });
 });
 
@@ -274,7 +274,7 @@ describe("a drawer belongs to the selection it was opened in", () => {
     await user.click(
       strip.getByRole("button", {
         name: "View records",
-        description: "Closed win rate",
+        description: "Sales won",
       }),
     );
     await screen.findByRole("dialog");

@@ -34,6 +34,7 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   leads_created: "leads",
   lead_status_moves: "leads",
   leads_promoted: "leads",
+  leads_qualified: "leads",
   lead_first_response: "leads",
   leads_awaiting_response: "leads",
   partner_pipeline: "partners",
@@ -180,4 +181,16 @@ export function viewRequest(
       ),
     ),
   };
+}
+
+export function workflowMetrics(
+  metrics: readonly ReportingMetricID[],
+  template?: string,
+): ReportingMetricID[] {
+  if (!template) return [...metrics];
+  return metrics.filter((metric) =>
+    template === "sdr"
+      ? metric !== "leads_qualified" && metric !== "leads_promoted"
+      : metric !== "accepted_opportunities",
+  );
 }
