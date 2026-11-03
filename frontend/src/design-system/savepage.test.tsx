@@ -56,6 +56,30 @@ function Page({
   );
 }
 
+type Offer = Readonly<{ offered: boolean; offer?: string }>;
+
+function OfferedCard({ offered, offer }: Offer) {
+  useSaveDraft({
+    dirty: false,
+    offered,
+    offer,
+    save: async () => undefined,
+    discard: () => undefined,
+  });
+  return null;
+}
+
+function OfferPage({ offered, offer }: Offer) {
+  return (
+    <LocaleProvider initial="en">
+      <SavePageProvider>
+        <OfferedCard offered={offered} offer={offer} />
+        <PageSaveBar />
+      </SavePageProvider>
+    </LocaleProvider>
+  );
+}
+
 const field = (name: string) => screen.getByRole("textbox", { name });
 const button = (name: string) => screen.queryByRole("button", { name });
 
@@ -126,6 +150,29 @@ describe("PageSaveBar", () => {
     expect(field("Name")).toHaveValue("");
     expect(field("Title")).toHaveValue("");
     expect(button(SAVE)).toBeNull();
+  });
+
+  it("brings back an offer put aside on Discard once it is offered again", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<OfferPage offered />);
+    await user.click(screen.getByRole("button", { name: DISCARD }));
+    expect(button(SAVE)).toBeNull();
+
+    rerender(<OfferPage offered={false} />);
+    rerender(<OfferPage offered />);
+    expect(button(SAVE)).toBeVisible();
+  });
+
+  it("offers a new value at once after Discard set the old one aside", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<OfferPage offered offer="gcal" />);
+    await user.click(screen.getByRole("button", { name: DISCARD }));
+    expect(button(SAVE)).toBeNull();
+
+    rerender(<OfferPage offered offer="gcal" />);
+    expect(button(SAVE)).toBeNull();
+    rerender(<OfferPage offered offer="graphcal" />);
+    expect(button(SAVE)).toBeVisible();
   });
 
   it("sends nothing while a field says its value is wrong", async () => {

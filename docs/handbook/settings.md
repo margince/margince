@@ -131,7 +131,11 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 
 **Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
 
-To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. Offers and signatures still show the default.
+To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. Offers still show the default.
+
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed, and a logo is stored as soon as you choose it. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+
+**Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
 ## Sign-in and apps
 
 The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
@@ -196,18 +200,12 @@ The same card holds **Held threads reviewed per run**. A mailbox set to *Held un
 
 The Sales group in Settings has one page per subject. There are the fields a record carries, the stages it moves through, and the lists of choices it picks from. And there are the priced things that go on an offer.
 
-- **Pipelines**: the stages a deal moves through, for the whole company. See
-  [The pipeline](the-pipeline.md#pipelines-and-stages).
-- **Stage automation**: the record of how each stage move has gone, before
-  Margince moves deals by itself. See
-  [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
-- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply
-  target, which is off by default. Origins add or take away score points.
-- **Acquisition sources**: the business channels a deal can come from. Lead
-  origins, which record where a lead came from, are separate.
+- **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
+- **Stage automation**: the record of how each stage move has gone, before Margince moves deals by itself. See [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
+- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
+- **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
 - **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).
-- **Outcome reviews**: questions a seller answers when a deal is won or lost.
-  There is one set for won and one for lost.
+- **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a
   company, deal or project. A role gives no access to the record; the owner
   keeps the responsibility for it. Each role is marked **Built-in** when it comes with

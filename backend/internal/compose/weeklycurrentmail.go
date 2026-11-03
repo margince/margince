@@ -22,8 +22,8 @@ func teamCurrentMail(team weekly.TeamReview, base string, words mailcopy.Copy) e
 		if shown == 0 {
 			body.Heading(words.MailCurrent)
 		}
-		body.Paragraph(mailcopy.OneLine(*finding.Subject.Label))
-		body.Action(words.MailReview, mailcopy.Destination(base, mailcopy.RecordFragment(string(finding.Subject.Type), finding.Subject.Id.String())))
+		body.Item(emailview.Item{Title: mailcopy.OneLine(*finding.Subject.Label)})
+		body.ItemAction(words.MailReview, mailcopy.Destination(base, mailcopy.RecordFragment(string(finding.Subject.Type), finding.Subject.Id.String())))
 		shown++
 		if shown == 3 {
 			break
@@ -36,8 +36,8 @@ func teamCurrentMail(team weekly.TeamReview, base string, words mailcopy.Copy) e
 		if shown == 0 {
 			body.Heading(words.MailCurrent)
 		}
-		body.Paragraph(mailcopy.OneLine(deal.DealName) + "\n" + fmt.Sprintf(words.MailStale, deal.DaysQuiet))
-		body.Action(words.MailReview, mailcopy.Destination(base, mailcopy.RecordFragment("deal", deal.DealID.String())))
+		body.Item(emailview.Item{Title: mailcopy.OneLine(deal.DealName), Lines: []emailview.Line{{Text: fmt.Sprintf(words.MailStale, deal.DaysQuiet), Tone: emailview.Warning}}})
+		body.ItemAction(words.MailReview, mailcopy.Destination(base, mailcopy.RecordFragment("deal", deal.DealID.String())))
 		shown++
 	}
 	if remaining := len(attention.Exceptions) + len(attention.StaleDeals) - shown; remaining > 0 {

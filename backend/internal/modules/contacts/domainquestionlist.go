@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,20 +34,27 @@ type DomainQuestion struct {
 	Forward    *DomainForwardEvidence
 	// Note is the site triage's own sentence on a vendor question, so the
 	// reader sees why the machine called the domain a vendor.
-	Note string
+	Note    string
+	Context DomainQuestionContext
 }
 
 func (s *Store) OpenDomainQuestionsForOwner(ctx context.Context) ([]DomainQuestion, error) {
-	rows, _, err := s.listReaderDomainQuestions(ctx, "", DomainQuestionLimit, false)
+	rows, _, err := s.listReaderDomainQuestions(ctx, "", DomainQuestionLimit, false, "")
 	return rows, err
 }
 
 // DomainQuestionsForOwner includes deferred questions so readers can restore them.
-func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int) ([]DomainQuestion, storekit.Page, error) {
-	return s.listReaderDomainQuestions(ctx, cursor, limit, true)
+// A non-empty domain narrows the page to that one question.
+func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int, domain string) ([]DomainQuestion, storekit.Page, error) {
+	// A value that is no domain matches no question, so the reply is the same
+	// empty page a domain the reader does not hold gets.
+	if base, ok := freemail.Hostname(domain); ok {
+		domain = base
+	}
+	return s.listReaderDomainQuestions(ctx, cursor, limit, true, domain)
 }
 
-func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, limit int, includeDeferred bool) ([]DomainQuestion, storekit.Page, error) {
+func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, limit int, includeDeferred bool, domain string) ([]DomainQuestion, storekit.Page, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -83,6 +91,9 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		if !includeDeferred {
 			where += ` AND NOT ` + deferred
 		}
+		if domain != "" {
+			where += ` AND d.domain = ` + arg(domain)
+		}
 		if cursor != "" {
 			after, err := storekit.DecodeCursor(cursor)
 			if err != nil {
@@ -91,33 +102,23 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 			where += ` AND (d.created_at, d.id) > (` + arg(after.CreatedAt) + `, ` + arg(after.ID) + `)`
 		}
 		query := `SELECT d.id, d.domain, ` + domainPendingReason + `, d.pending_reason,
-	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `
+	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `,
+	  d.candidate_company_id, d.site_unreadable
 	  FROM company_domain_disposition d WHERE ` + where + `
 	  ORDER BY d.created_at, d.id LIMIT ` + arg(limit+1)
-		rows, err := tx.Query(ctx, query, args...)
+		var known map[string]domainQuestionEvidence
+		out, known, err = scanDomainQuestionsTx(ctx, tx, query, args)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var q DomainQuestion
-			var evidence string
-			if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred); err != nil {
-				return err
-			}
-			if q.ReasonCode == PendingVendorVerdict {
-				q.Note = evidence
-			}
-			if q.ReasonCode == PendingForwardedIdentity {
-				q.Forward = &DomainForwardEvidence{}
-				if err := json.Unmarshal([]byte(evidence), q.Forward); err != nil {
-					slog.WarnContext(ctx, "domain forwarding evidence could not be decoded", "domain", q.Domain, "err", err)
-					q.Forward = nil
-				}
-			}
-			out = append(out, q)
+		contexts, err := domainQuestionContextTx(ctx, tx, known, asOf)
+		if err != nil {
+			return err
 		}
-		return rows.Err()
+		for i := range out {
+			out[i].Context = contexts[out[i].Domain]
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
@@ -129,4 +130,39 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		page.NextCursor, err = storekit.EncodeCursor(last.AskedAt, last.ID)
 	}
 	return out, page, err
+}
+
+// scanDomainQuestionsTx reads the listed questions and, beside them, the
+// stored evidence their context read needs.
+func scanDomainQuestionsTx(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DomainQuestion, map[string]domainQuestionEvidence, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	var out []DomainQuestion
+	known := map[string]domainQuestionEvidence{}
+	for rows.Next() {
+		var q DomainQuestion
+		var evidence string
+		var row domainQuestionEvidence
+		if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred,
+			&row.nameTwin, &row.siteUnreadable); err != nil {
+			return nil, nil, err
+		}
+		if q.ReasonCode == PendingVendorVerdict {
+			q.Note = evidence
+		}
+		if q.ReasonCode == PendingForwardedIdentity {
+			q.Forward = &DomainForwardEvidence{}
+			if err := json.Unmarshal([]byte(evidence), q.Forward); err != nil {
+				slog.WarnContext(ctx, "domain forwarding evidence could not be decoded", "domain", q.Domain, "err", err)
+				q.Forward = nil
+			}
+		}
+		row.reasonCode, row.redirectTarget = q.ReasonCode, redirectTargetOf(q.Forward)
+		known[q.Domain] = row
+		out = append(out, q)
+	}
+	return out, known, rows.Err()
 }

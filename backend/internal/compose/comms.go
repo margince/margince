@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -315,27 +314,6 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 		free = append(free, agents.FreeSlot{Start: s.Start, End: s.End})
 	}
 	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarBacking: backing}, nil
-}
-
-func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {
-	hostID, err := defaultHost(ctx, in.HostUserID)
-	if err != nil {
-		return nil, err
-	}
-	booked := activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](hostID), Start: in.Start, End: in.End, Subject: in.Subject,
-		LinksFromRequest: true,
-	}
-	for _, l := range in.Links {
-		booked.Links = append(booked.Links, activities.ActivityLinkInput{
-			EntityType: l.EntityType, EntityID: l.EntityID,
-		})
-	}
-	meeting, err := c.store.BookMeeting(ctx, booked)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(meeting)
 }
 
 // defaultHost resolves the calendar owner: the explicit host, else the
