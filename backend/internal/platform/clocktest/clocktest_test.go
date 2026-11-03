@@ -45,7 +45,7 @@ func TestAnAppliedClockIsNotShiftedTwice(t *testing.T) {
 func assertOffsetFromWallTime(t *testing.T, want time.Duration) {
 	t.Helper()
 
-	earliest := time.Now().Add(want)
+	earliest := time.Now().Add(want).Truncate(time.Microsecond) // as Now() cuts it
 	got := Now(t)
 	latest := time.Now().Add(want)
 
