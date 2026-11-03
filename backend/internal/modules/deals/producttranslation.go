@@ -104,7 +104,7 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	}
 	var out crmcontracts.ProductTranslation
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
+		if err := lockProductForTranslation(ctx, tx, id); err != nil {
 			return err
 		}
 		before, err := readProductTranslation(ctx, tx, id, language)
@@ -137,7 +137,7 @@ func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, 
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
+		if err := lockProductForTranslation(ctx, tx, id); err != nil {
 			return err
 		}
 		before, err := readProductTranslation(ctx, tx, id, language)
@@ -152,6 +152,16 @@ func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, 
 		}
 		return auditTranslation(ctx, tx, id, before, nil)
 	})
+}
+
+// lockProductForTranslation serializes the translation writes of one live
+// product, so the before-image each write audits is the row it replaces.
+func lockProductForTranslation(ctx context.Context, tx pgx.Tx, id ids.ProductID) error {
+	if _, err := storekit.LockRow(ctx, tx, "product", id.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	_, err := readProduct(ctx, tx, id, storekit.LiveOnly)
+	return err
 }
 
 func readProductTranslation(ctx context.Context, tx pgx.Tx, id ids.ProductID, language string) (*crmcontracts.ProductTranslation, error) {
@@ -230,4 +240,43 @@ func (h Handlers) DeleteProductTranslation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// productNamesInTx answers each product's name in language: its translation
+// where it has one, else product.name. It is the one resolver an offer line,
+// the offer drafter and the approval preview take a product's name through.
+func productNamesInTx(ctx context.Context, tx pgx.Tx, language string, products []ids.UUID) (map[ids.UUID]string, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT p.id, coalesce(t.name, p.name)
+		  FROM product p
+		  LEFT JOIN product_translation t ON t.product_id = p.id AND t.language = $2
+		 WHERE p.id = ANY($1)`, products, language)
+	if err != nil {
+		return nil, fmt.Errorf("read product names in a language: %w", err)
+	}
+	out := map[ids.UUID]string{}
+	var id ids.UUID
+	var name string
+	_, err = pgx.ForEachRow(rows, []any{&id, &name}, func() error {
+		out[id] = name
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan product names in a language: %w", err)
+	}
+	return out, nil
+}
+
+// ProductNamesIn is productNamesInTx for a caller outside a transaction.
+func (s *Store) ProductNamesIn(ctx context.Context, language string, products []ids.UUID) (map[ids.UUID]string, error) {
+	if err := auth.Require(ctx, "product", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var out map[ids.UUID]string
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = productNamesInTx(ctx, tx, language, products)
+		return err
+	})
+	return out, err
 }

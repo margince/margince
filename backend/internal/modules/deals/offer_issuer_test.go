@@ -79,3 +79,17 @@ func TestTheRenderReadsTheNamedLogoAndSkipsAMissingOne(t *testing.T) {
 		t.Errorf("a missing logo object read as %q, want none", got)
 	}
 }
+
+// A template locale names its language with `-` or `_`. A locale whose
+// language is no ISO 639-1 code takes the default template's. So a stray
+// template value never reaches the offer's language check in the table.
+func TestATemplateLocaleGivesItsLanguageOrTheDefault(t *testing.T) {
+	for locale, want := range map[string]string{
+		"de-DE": "de", "de_AT": "de", "en-GB": "en", "EN_us": "en", "fr": "fr",
+		"": "de", "x": "de", "deu-DE": "de", "12-34": "de",
+	} {
+		if got := languageOfLocale(locale); got != want {
+			t.Errorf("locale %q gives language %q, want %q", locale, got, want)
+		}
+	}
+}

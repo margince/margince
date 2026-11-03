@@ -45,11 +45,9 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 	var pBillingModel *string
 	var pIntervalMonths *int
 	err := tx.QueryRow(ctx,
-		`SELECT coalesce(t.name, p.name), p.unit, p.currency, p.default_tax_rate::text, p.unit_price_minor,
-		        p.billing_model, p.billing_interval_months
-		   FROM product p
-		   LEFT JOIN product_translation t ON t.product_id = p.id AND t.language = $2
-		  WHERE p.id = $1 AND p.archived_at IS NULL`, *productID, language).
+		`SELECT name, unit, currency, default_tax_rate::text, unit_price_minor,
+		        billing_model, billing_interval_months
+		 FROM product WHERE id = $1 AND archived_at IS NULL`, *productID).
 		Scan(&pName, &pUnit, &pCurrency, &pTax, &pPrice, &pBillingModel, &pIntervalMonths)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -58,6 +56,13 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 		return lineSnapshotDefaults{}, fmt.Errorf("read product for snapshot: %w", err)
 	}
 	if in.Description == nil {
+		names, err := productNamesInTx(ctx, tx, language, []ids.UUID{productID.UUID})
+		if err != nil {
+			return lineSnapshotDefaults{}, err
+		}
+		if name, ok := names[productID.UUID]; ok {
+			pName = name
+		}
 		in.Description = &pName
 	}
 	if in.Unit == nil {

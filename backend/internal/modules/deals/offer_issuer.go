@@ -330,7 +330,19 @@ func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEn
 	if err != nil {
 		return "", err
 	}
-	return strings.ToLower(strings.SplitN(locale, "-", 2)[0]), nil
+	return languageOfLocale(locale), nil
+}
+
+// languageOfLocale is the language part of a template locale, with `-` or
+// `_` as the separator. A locale whose language part is no ISO 639-1 code
+// takes the default template locale's language instead.
+func languageOfLocale(locale string) string {
+	part, _, _ := strings.Cut(strings.ReplaceAll(locale, "_", "-"), "-")
+	if language := strings.ToLower(part); checkLanguage(language) == nil {
+		return language
+	}
+	fallback, _, _ := strings.Cut(defaultOfferTemplateLocale, "-")
+	return strings.ToLower(fallback)
 }
 
 // languageOf is an offer's language, empty for an offer written before

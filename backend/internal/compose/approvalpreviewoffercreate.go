@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 
@@ -90,6 +91,9 @@ func (r approvalPreviewReader) offerCreationDetails(ctx context.Context, dealID 
 	}
 	lines := slices.Clone(plan.Lines)
 	slices.SortFunc(lines, func(a, b deals.OfferCreationLine) int { return *a.Input.Position - *b.Input.Position })
+	if r, err = r.withProductNamesIn(ctx, in.Language, lines); err != nil {
+		return nil, err
+	}
 	for _, line := range lines {
 		items, err := r.offerCreationLineDetails(ctx, in.Currency, line)
 		if err != nil {
@@ -125,4 +129,29 @@ func (r approvalPreviewReader) offerCreationLineDetails(ctx context.Context, cur
 		return nil, err
 	}
 	return append([]crmcontracts.ApprovalPreviewDetail{{Field: "offer_line_position", Value: value}}, items...), nil
+}
+
+// withProductNamesIn labels the lines' products by their names in the offer's
+// language, the names the created lines will carry.
+func (r approvalPreviewReader) withProductNamesIn(ctx context.Context, language *string, lines []deals.OfferCreationLine) (approvalPreviewReader, error) {
+	var products []ids.UUID
+	for _, line := range lines {
+		if line.Input.ProductID != nil {
+			products = append(products, line.Input.ProductID.UUID)
+		}
+	}
+	if len(products) == 0 || language == nil {
+		return r, nil
+	}
+	names, err := r.deals.ProductNamesIn(ctx, *language, products)
+	if err != nil {
+		return r, err
+	}
+	labels := maps.Clone(r.labels)
+	if labels == nil {
+		labels = map[string]map[ids.UUID]string{}
+	}
+	labels[string(recordTypeProduct)] = names
+	r.labels = labels
+	return r, nil
 }

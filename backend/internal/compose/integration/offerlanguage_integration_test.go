@@ -174,3 +174,76 @@ func TestProductTranslationsFollowTheProductGrant(t *testing.T) {
 		t.Errorf("the product carries %d update audit rows, want one per translation change", got)
 	}
 }
+
+// Changing a draft's language leaves the lines it already has, and the lines
+// added after take product text in the new language.
+func TestAChangedLanguageReachesOnlyTheLinesAddedAfterIt(t *testing.T) {
+	e := Setup(t)
+	product := seedRetainer(t, e)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Language switch deal", pipeline, open, &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerLanguagePerms)
+	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Language: new("en"), LineItems: productLine(product)})
+	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
+	if _, _, err := e.Deals.UpdateOffer(rep, offerID, deals.UpdateOfferInput{Language: new("de")}); err != nil {
+		t.Fatalf("switch the draft to German: %v", err)
+	}
+	added, err := e.Deals.AddOfferLineItem(rep, offerID, productLine(product)[0])
+	if err != nil {
+		t.Fatalf("add a line: %v", err)
+	}
+	if got := lineTexts(added); len(got) != 2 || got[0] != "Retainer" || got[1] != "Pauschale" {
+		t.Errorf("after the switch the lines read %q, want the English line kept and the new one German", got)
+	}
+}
+
+// A template locale written with `_`, or one with no ISO 639-1 language,
+// still gives the offer a valid language rather than a refused row.
+func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Locale shape deal", pipeline, open, &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerLanguagePerms)
+	tmpl, err := e.Deals.CreateOfferTemplate(rep, deals.CreateOfferTemplateInput{Name: "Austria", Locale: "de-AT"})
+	if err != nil {
+		t.Fatalf("create the template: %v", err)
+	}
+	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
+	for locale, want := range map[string]string{"de_AT": "de", "1x_unknown_99": "de", "en_GB": "en"} {
+		e.WsExec(t, `UPDATE offer_template SET locale = $2 WHERE id = $1`, templateID, locale)
+		created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{TemplateID: &templateID})
+		if created.Language == nil || *created.Language != want {
+			t.Errorf("template locale %q gave language %v, want %s", locale, created.Language, want)
+		}
+	}
+}
+
+// Two writes to one product's translation run one after the other, so each
+// audit row's before-image is the text the write replaced.
+func TestConcurrentTranslationWritesAuditTheTextTheyReplaced(t *testing.T) {
+	e := Setup(t)
+	product := seedRetainer(t, e)
+	desk := e.As(e.AdminUser, nil, offerLanguagePerms)
+	names := []string{"Forfait A", "Forfait B"}
+	done := make(chan error, len(names))
+	for _, name := range names {
+		go func() {
+			_, err := e.Deals.PutProductTranslation(desk, product, "fr", name, nil)
+			done <- err
+		}()
+	}
+	for range names {
+		if err := <-done; err != nil {
+			t.Fatalf("translate: %v", err)
+		}
+	}
+	rows := e.WsCount(t, `
+		SELECT count(*) FROM audit_log later JOIN audit_log earlier
+		    ON earlier.entity_id = later.entity_id AND earlier.id < later.id
+		 WHERE later.entity_id = $1 AND later.before -> 'translation_fr' IS NOT NULL
+		   AND jsonb_typeof(later.before -> 'translation_fr') = 'object'
+		   AND later.before -> 'translation_fr' = earlier.after -> 'translation_fr'`, ids.UUID(product.UUID))
+	if rows != 1 {
+		t.Errorf("%d audit rows replace the text the other write stored, want exactly one: the second write's before-image is the first write's result", rows)
+	}
+}
