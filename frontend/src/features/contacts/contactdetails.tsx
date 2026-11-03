@@ -51,7 +51,7 @@ type Employment = components["schemas"]["Contact360Employment"];
 /**
  * The left column's About and Ownership groups. Every field the design
  * lists has a row; an empty one folds behind "Show N empty fields" with the
- * word for its empty state. The rows read; the Research tab's details change them.
+ * word for its empty state.
  */
 export function useContactAboutSections(view: Contact360): DetailSection[] {
   const t = useT();
@@ -78,7 +78,8 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const record = { entityType: "contact", entityId: contact.id } as const;
-  // Every row but the employer changes in place; an empty one still folds.
+  // Every row but the employer opens its edit from its value; an empty one
+  // still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
     key: string,
@@ -254,9 +255,9 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
 }
 
 /**
- * Every field of the contact, each editing in place, with its tags, when it
- * was created and who wrote it. The Research tab draws it: the left column
- * reads the same fields, and this is where they change.
+ * Every field of the contact, each editing from its value, with its tags, when it
+ * was created and who wrote it. The Research tab draws it; the left column edits
+ * its own rows the same way.
  */
 export function ContactDetails({
   contact,

@@ -160,8 +160,8 @@ function isBlank(value: string | null | undefined): boolean {
   return !value?.trim();
 }
 
-// One details row per kind of field. Each edits in place (or in a small form,
-// for a field of several inputs) and folds while empty.
+// One details row per kind of field. Each opens its edit in a dialog (the
+// record's edit form, for a field of several inputs) and folds while empty.
 export function useRowBuilders(company: Company, edit: Edit) {
   const t = useT();
   const save = useCompanyFieldSave(company);
@@ -172,7 +172,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
   const text = (
     key: "industry" | "legal_name" | "linkedin_url" | "phone" | "email",
     label: MessageKey,
-    type?: "email",
+    shape: Readonly<{ type?: "email"; link?: ReactNode }> = {},
   ): DetailRow => ({
     key,
     term: t(label),
@@ -181,7 +181,8 @@ export function useRowBuilders(company: Company, edit: Edit) {
       <InlineText
         label={t(label)}
         value={company[key] ?? ""}
-        type={type}
+        type={shape.type}
+        link={shape.link}
         placeholder={t("field.unset")}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}
@@ -219,7 +220,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
     which: CompoundField,
     label: string,
     reading: ReactNode | undefined,
-    flag?: ReactNode,
+    shape: Readonly<{ flag?: ReactNode; link?: boolean }> = {},
   ): DetailRow => ({
     key: which,
     term: label,
@@ -231,10 +232,11 @@ export function useRowBuilders(company: Company, edit: Edit) {
           which={which}
           label={label}
           reading={reading}
+          link={shape.link}
           canEdit={edit.canEdit}
           readOnlyReason={edit.reason}
         />
-        {flag && <> {flag}</>}
+        {shape.flag && <> {shape.flag}</>}
       </>
     ),
   });
@@ -287,16 +289,13 @@ function useAboutRows(
         label: t(LIFECYCLE_LABELS[value]),
       })),
     ),
-    compound(
-      "address",
-      t("co.address.summary"),
-      addressLine(company),
-      company.address_country_mismatch && (
+    compound("address", t("co.address.summary"), addressLine(company), {
+      flag: company.address_country_mismatch && (
         <AddressCountryMismatchBadge
           mismatch={company.address_country_mismatch}
         />
       ),
-    ),
+    }),
     ...(wayIn
       ? [
           {
