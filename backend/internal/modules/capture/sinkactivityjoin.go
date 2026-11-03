@@ -19,8 +19,9 @@ type joinedCapture struct {
 	alreadyFiled bool
 }
 
-// finishJoinedActivity completes a capture that landed on an activity another
-// mailbox filed first.
+// finishJoinedActivity completes a capture that landed on an activity already
+// filed. Another mailbox, this seat's own earlier sync and a replay of the same
+// message all reach it.
 //
 // The counterpart of finishNewActivity. With both, captureActivity reads as the
 // three answers a capture can have: the row was already here, the row is new,
