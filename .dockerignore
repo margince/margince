@@ -29,8 +29,13 @@ build/composition
 # config (it is provided at runtime), so none of these are ever needed here.
 .env
 .env.*
+# The annotated template holds no value, and the server bundle ships it.
+!.env.example
 # The gitignored local instance configs (may carry real BYOK keys / the admin
 # password) — mirror .gitignore's config/ entries.
 config/margince.yaml
 config/ai-routing.yaml
 config/margince-admin-password
+
+# The release lane's own output (bundles, packed assets).
+dist
