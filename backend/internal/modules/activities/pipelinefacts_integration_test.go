@@ -340,7 +340,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// The model call happens here, in production. The narrowing lands during it.
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, open)
 
-	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	applied, err := labelCurrent(ctx, e.store, open, "commitment")
 	if err != nil {
 		t.Fatalf("writing the label: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// An open message still gets its label: a re-check that refused everything
 	// would pass every assertion above and stop attention routing entirely.
 	stillOpen := e.seed(t, capturedRow{kind: "email"})
-	if wrote, err := e.store.SetCaptureLabel(ctx, stillOpen, "commitment"); err != nil || !wrote {
+	if wrote, err := labelCurrent(ctx, e.store, stillOpen, "commitment"); err != nil || !wrote {
 		t.Errorf("an open message was not labelled (wrote=%v err=%v) — the re-check refuses more than the audience", wrote, err)
 	}
 }
@@ -394,7 +394,7 @@ func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.
 	// The model call happens here, in production. The archive lands during it.
 	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, open)
 
-	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	applied, err := labelCurrent(ctx, e.store, open, "commitment")
 	if err != nil {
 		t.Fatalf("writing the label: %v", err)
 	}
