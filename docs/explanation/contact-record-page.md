@@ -55,8 +55,10 @@ The last-touch fields (`last_inbound_at`, `last_outbound_at`, `relationship_dire
 come from `contact360.LastTouchFor` in `backend/internal/compose/contact360/lasttouch.go`. It counts
 the messages whose content the caller may open: the activity content gate, contact reach, project
 narrowing and the human-message rules. `last_touch_basis` says so on the wire. The page's moment,
-its relationship changes and the contact rows on the Worklist read the same function, so they agree
-with the History the caller can open. The query also returns the id of each picked row
+its relationship changes and the contact rows on the Worklist read the same function. So they agree
+with the History the caller can open.
+
+The query also returns the id of each picked row
 (`last_inbound_activity_id`, `last_outbound_activity_id`, `last_live_inbound_activity_id`). A
 moment cites that id as evidence and does not match a time against the capped timeline page.
 
@@ -64,7 +66,7 @@ Relationship strength and the colleague network use a different basis. They coun
 whole workspace may see (`auth.AudienceWorkspaceOnly`), so every colleague reads the same number.
 
 History names the side that wrote each message through `correspondenceSide` in
-`frontend/src/lib/messagevoice.ts`, the twin of `activities.WroteItOurSide`. The timeline adapter
+`frontend/src/lib/messagevoice.ts`, which follows the same rule as `activities.WroteItOurSide`. The timeline adapter
 sets each entry's `side` from it, and the thread lead, the mark and the per-side counts read `side`
 before transport direction.
 

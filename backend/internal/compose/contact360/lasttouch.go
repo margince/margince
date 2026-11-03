@@ -23,7 +23,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -82,6 +85,49 @@ func dated(at *time.Time, precision string) *occurredday.Moment {
 		return nil
 	}
 	return &occurredday.Moment{At: *at, DateOnly: occurredday.IsDay(precision)}
+}
+
+// lastTouchSection reads the two directions separately. Folding them into
+// one "last touch" hides the only distinction a reader acts on: a contact
+// we mailed a fortnight ago with no reply and one who wrote to us this
+// morning have the same last-touch date and opposite meanings.
+//
+// The set reader over a set of one: this page and a queue row naming the same
+// contact are answered by the statement in lasttouch.go, under the same
+// scopes. Both count the messages the caller can open (last_touch_basis), the
+// same rows the History tab lets this reader open. The record read above already admitted the contact, so the set
+// reader's own row scope narrows nothing here.
+func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
+	if err != nil {
+		return err
+	}
+	touch := touched[contactID]
+	basis := crmcontracts.Contact360LastTouchBasisReadableByCaller
+	out.LastTouchBasis = &basis
+	out.LastInboundAt = touch.InboundAt
+	out.LastOutboundAt = touch.OutboundAt
+	out.LastInboundActivityId = wireActivityID(touch.InboundID)
+	out.LastOutboundActivityId = wireActivityID(touch.OutboundID)
+	out.LastLiveInboundActivityId = wireActivityID(touch.LiveInboundID)
+	out.LastLiveInboundAt = touch.LiveInboundAt
+	out.LastContactAt = touch.ContactAt
+	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
+	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
+	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
+	out.LastLiveInboundPrecision = activitywhen.Stated(touch.LiveInboundPrecision)
+	direction := crmcontracts.RelationshipDirection(touch.Direction())
+	out.RelationshipDirection = &direction
+	return nil
+}
+
+// wireActivityID carries a picked row's id onto the wire, nil when no row was.
+func wireActivityID(id *ids.UUID) *openapi_types.UUID {
+	if id == nil {
+		return nil
+	}
+	wire := openapi_types.UUID(*id)
+	return &wire
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller

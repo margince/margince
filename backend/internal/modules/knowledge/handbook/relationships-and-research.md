@@ -65,9 +65,15 @@ Where the map is not complete, it says so: "{count} more not shown.", "Some coll
 
 ### Why do two colleagues see different last-message dates for one contact?
 
-A contact's last-message dates count only the messages you can open. This covers **Last inbound
-message** on the contact's Overview, the line that says which sides have written, the "No reply to
-the last message" card, and the dates on that contact's Worklist rows.
+A contact's last-message dates count only the messages you can open. The same rule holds for:
+
+- the date of their last message on the contact's Overview, and the line that says which sides
+  have written;
+- the "No reply to the last message" card;
+- the dates on that contact's Worklist rows.
+
+What this means for you:
+
 
 - A reply on a private thread you are part of counts for you. A colleague who cannot open that
   thread does not see the reply, and their dates, card and rows stay as they were.
@@ -75,8 +81,8 @@ the last message" card, and the dates on that contact's Worklist rows.
   cannot open may still exist.
 - Relationship strength and the colleague network are shared numbers. They count only messages the
   whole workspace can see, so every colleague reads the same number.
-- In History, a message is shown as theirs or yours by who wrote it, not by which way the copy
-  travelled. A colleague's mail that reached you as a copy is still your team's.
+- In History, a message is shown as theirs or yours by who wrote it. A colleague's mail that reached
+  you as a copy is still your team's.
 
 ### When does the Worklist suggest a quiet contact?
 
