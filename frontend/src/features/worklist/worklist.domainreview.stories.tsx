@@ -22,12 +22,45 @@ const questions: Question[] = [
     evidence_at: "2026-09-20T10:00:00Z",
     effective_url: "https://destination.example/",
     redirect_chain: ["https://alias.example/", "https://destination.example/"],
+    domain_context: {
+      contacts: [
+        { id: "01a1a000-0000-7000-8000-00000000a1e7", name: "Alex Example" },
+      ],
+      contact_count: 3,
+      hidden_senders: false,
+      sender_address: "alex@alias.example",
+      origin_activity_id: "01a1a000-0000-7000-8000-0000000000ac",
+      suggested_company: {
+        id: "01a1a000-0000-7000-8000-0000000000c0",
+        name: "Destination Company",
+        basis: "redirect_target",
+      },
+    },
   },
   {
     domain: "unreadable.example",
     deferred: false,
     reason_code: "unevidenced",
     asked_at: "2026-10-01T10:00:00Z",
+    domain_context: {
+      contacts: [],
+      contact_count: 1,
+      hidden_senders: true,
+      site_read: "unread",
+    },
+  },
+  {
+    domain: "hosting.example",
+    deferred: false,
+    reason_code: "vendor_verdict",
+    asked_at: "2026-10-01T10:00:00Z",
+    note: "Classified as a mail or hosting vendor: sells managed hosting.",
+    domain_context: {
+      contacts: [],
+      contact_count: 0,
+      hidden_senders: false,
+      sender_address: "billing@hosting.example",
+    },
   },
   {
     domain: "older.example",
@@ -38,7 +71,7 @@ const questions: Question[] = [
   },
 ];
 
-function review(initialRows: Question[]) {
+function review(initialRows: Question[], domain?: string) {
   return () => {
     let rows = initialRows;
     installFetchStub({
@@ -59,14 +92,14 @@ function review(initialRows: Question[]) {
     });
     return (
       <StoryProviders>
-        <DomainReview onClose={() => {}} />
+        <DomainReview domain={domain} onClose={() => {}} />
       </StoryProviders>
     );
   };
 }
 
 const meta: Meta<typeof DomainReview> = {
-  title: "Records/Worklist/Domain maintenance review",
+  title: "Records/Worklist/Company question review",
   component: DomainReview,
 };
 export default meta;
@@ -88,15 +121,17 @@ export const SingleUndated: Story = {
   play: async () => {
     const body = within(document.body);
     await waitFor(() =>
-      expect(body.getByRole("button", { name: "Set aside" })).toBeVisible(),
+      expect(body.getByRole("button", { name: "Not now" })).toBeVisible(),
     );
-    await userEvent.click(body.getByRole("button", { name: "Set aside" }));
+    await userEvent.click(body.getByRole("button", { name: "Not now" }));
     await waitFor(() =>
       expect(
         body.getByRole("button", { name: "Return to Review" }),
       ).toBeVisible(),
     );
-    await expect(body.getByText("unreadable.example")).toBeVisible();
+    await expect(
+      body.getByText("Which company does unreadable.example belong to?"),
+    ).toBeVisible();
   },
 };
 
@@ -106,7 +141,13 @@ export const ForwardedIdentityNeedsAMatch: Story = {
   ),
   play: async () => {
     const body = within(document.body);
-    await waitFor(() => expect(body.getByText("alias.example")).toBeVisible());
+    await waitFor(() =>
+      expect(
+        body.getByText(
+          "Which company do Alex Example and 2 other contacts work for?",
+        ),
+      ).toBeVisible(),
+    );
     await expect(
       body.queryByRole("button", { name: "Create company" }),
     ).not.toBeInTheDocument();
@@ -114,4 +155,16 @@ export const ForwardedIdentityNeedsAMatch: Story = {
       body.getByRole("button", { name: "Match company" }),
     ).toBeDisabled();
   },
+};
+
+/** Opened from a row: that one question, with its website details closed. */
+export const FocusedFromARow: Story = {
+  render: review(
+    questions.filter((row) => row.domain === "alias.example"),
+    "alias.example",
+  ),
+};
+export const FocusedFromARowDark: Story = {
+  ...FocusedFromARow,
+  globals: { theme: "dark" },
 };

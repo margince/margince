@@ -43,6 +43,9 @@ type ResolveDomainTriageInput struct {
 	Source    string
 	Evidence  string
 	ReadID    ids.UUID
+	// SiteUnreadable marks an unreadable-site answer whose site was never
+	// read, as against one that was read and named nobody.
+	SiteUnreadable bool
 
 	// DossierName is the company name the site stated. Empty falls back to the
 	// domain's registrable label, which is what the pre-triage path always
@@ -106,7 +109,7 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 		}
 		// No site, no name that explains the domain: nothing has EARNED a
 		// company. Left open, marked, and answerable later.
-		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence)
+		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence, in.SiteUnreadable)
 	})
 	if err != nil {
 		return ResolveDomainTriageResult{}, err

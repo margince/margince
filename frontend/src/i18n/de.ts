@@ -11174,13 +11174,77 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Reservierte Domain: Firmenerkennung pausiert",
   "blockedDomains.source.forwardedIdentity":
     "Eine andere Website antwortete. Firmenzuordnung prüfen.",
-  "worklist.domainReview.defer": "Zurückstellen",
+  "worklist.domainReview.defer": "Nicht jetzt",
   "worklist.domainReview.restore": "Zur Prüfung zurückholen",
   "worklist.domainReview.deferEffect":
-    "Zurückstellen entfernt diese Frage aus deiner Warteschlange, bis neue Belege eintreffen. Hier bleibt sie erreichbar.",
-  "worklist.domainReview.title": "Domains prüfen",
-  "worklist.domainReview.loading": "Domains werden geladen…",
-  "worklist.domainReview.empty": "Keine Domains zu prüfen.",
+    "Nicht jetzt nimmt die Frage von deiner Liste, bis neue Mail von der Domain eintrifft. Hier bleibt sie erreichbar.",
+  "worklist.domainReview.title": "Unternehmensfragen",
+  "worklist.source.domain_question": "Unternehmensfrage",
+  "worklist.disposition.verb.notNow": "Nicht jetzt",
+  "worklist.disposition.hint.notNow":
+    "Nimmt die Frage von deiner Liste. Neue Mail von dieser Domain bringt sie zurück.",
+  "worklist.disposition.done.notNow":
+    "Zurückgestellt. Neue Mail von dieser Domain bringt die Frage zurück.",
+  "worklist.domainQuestion.heading": "Für welches Unternehmen arbeitet {name}?",
+  "worklist.domainQuestion.headingPair":
+    "Für welches Unternehmen arbeiten {name} und ein weiterer Kontakt?",
+  "worklist.domainQuestion.headingMany":
+    "Für welches Unternehmen arbeiten {name} und {others} weitere Kontakte?",
+  "worklist.domainQuestion.headingDomain":
+    "Zu welchem Unternehmen gehört {domain}?",
+  "worklist.domainQuestion.reason.unread":
+    "Die Website konnte nicht gelesen werden. Margince kann daher nicht erkennen, zu welchem Unternehmen die Adresse gehört.",
+  "worklist.domainQuestion.reason.read":
+    "Die Website wurde gelesen, nennt aber kein Unternehmen.",
+  "worklist.domainQuestion.reason.forwarded":
+    "Die Website leitet auf eine andere Website weiter. Deshalb konnte Margince das Unternehmen nicht sicher zuordnen.",
+  "worklist.domainQuestion.reason.vendor":
+    "Die Website wirkt wie ein Mail- oder Hosting-Anbieter, der Adressen für viele Unternehmen bereitstellen kann.",
+  "worklist.domainQuestion.reason.nearDuplicate":
+    "Mehr als ein Unternehmen hier trägt schon den Namen, den die Website nennt.",
+  "worklist.domainQuestion.reason.stale":
+    "Die neueste Mail von dieser Domain ist zu alt, um sie mit der heutigen Website abzugleichen.",
+  "worklist.domainQuestion.basis.name_twin":
+    "Es trägt genau den Namen, den die Website nennt.",
+  "worklist.domainQuestion.basis.redirect_target":
+    "Die Website leitet auf die Domain dieses Unternehmens weiter.",
+  "worklist.domainQuestion.basis.contact_employer":
+    "Jemand, der geschrieben hat, arbeitet bereits dort.",
+  "worklist.domainQuestion.suggested": "Vorgeschlagenes Unternehmen: {name}.",
+  "worklist.domainQuestion.confirm": "Unternehmen bestätigen",
+  "worklist.domainQuestion.confirmEffectNone":
+    "Bestätigen verknüpft {domain} mit {company}.",
+  "worklist.domainQuestion.confirmEffect_one":
+    "Bestätigen verknüpft {domain} und den {count} Kontakt darauf mit {company}.",
+  "worklist.domainQuestion.confirmEffect_other":
+    "Bestätigen verknüpft {domain} und die {count} Kontakte darauf mit {company}.",
+  "worklist.domainQuestion.confirmed": "Unternehmen verknüpft",
+  "worklist.domainQuestion.confirmFailed":
+    "Unternehmen wurde nicht verknüpft. Versuche es erneut.",
+  "worklist.domainQuestion.choose": "Unternehmen wählen",
+  "worklist.domainQuestion.chooseAnother": "Anderes wählen",
+  "worklist.domainQuestion.stopCapturingEffect":
+    "Mails von {domain} werden aus deinen Postfächern nicht mehr gespeichert. Bereits gespeicherte Mails bleiben.",
+  "worklist.domainQuestion.originWith":
+    "Margince hat {domain} in deiner Mail gefunden mit",
+  "worklist.domainQuestion.originHidden":
+    "Margince hat {domain} in deiner Mail mit einem Kontakt gefunden, den du nicht sehen kannst.",
+  "worklist.domainQuestion.originFrom":
+    "Margince hat {domain} in deiner Mail von {address} gefunden.",
+  "worklist.domainQuestion.originUnknown":
+    "Margince hat {domain} in deiner Mail gefunden.",
+  "worklist.domainQuestion.andMore_one": "und {count} weiterer",
+  "worklist.domainQuestion.andMore_other": "und {count} weitere",
+  "worklist.domainReview.focusedTitle": "Unternehmensfrage",
+  "worklist.domainReview.details": "Details zur Website",
+  "worklist.domainReview.createEffect":
+    "Unternehmen anlegen erstellt ein neues Unternehmen und verknüpft die Kontakte der Domain damit.",
+  "worklist.domainReview.retryEffect":
+    "Website erneut lesen liest die Website noch einmal und lässt die Frage offen.",
+  "worklist.domainReview.keepVendorEffect":
+    "Als Anbieter behalten legt kein Unternehmen an und fragt nicht mehr nach dieser Domain.",
+  "worklist.domainReview.loading": "Unternehmensfragen werden geladen…",
+  "worklist.domainReview.empty": "Keine Unternehmensfragen offen.",
   "worklist.domainReview.more": "Weitere laden",
   "worklist.domainReview.forwarded": "Antwortende Website: {url}",
   "worklist.domainReview.evidenceAt": "Neuester Beleg: {date}",
@@ -11190,18 +11254,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zuordnung verknüpft diese Domain und ihre erfassten Kontakte mit dem gewählten Unternehmen.",
   "worklist.domainReview.create": "Unternehmen erstellen",
   "worklist.domainReview.retry": "Website erneut lesen",
-  "worklist.domainReview.exclude": "Domain ausschließen",
-  "worklist.domainReview.forwardedEffects":
-    "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
-  "worklist.domainReview.effects":
-    "Erstellen legt ein Unternehmen an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.domainReview.keepVendor": "Als Anbieter behalten",
-  "worklist.domainReview.vendorEffects":
-    "Erstellen legt ein Unternehmen an und verknüpft seine Kontakte. Als Anbieter behalten legt nichts an und fragt nicht erneut. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.batch.domain_questions_one": "{count} Domain prüfen",
   "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
-    "Kein Unternehmen auf der Website genannt",
+    "Kein Unternehmen über die Website gefunden",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
   "blockedDomains.source.vendorVerdict":
@@ -18000,7 +18057,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.capture_health":
     "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.ask.domain_question":
-    "Margince kann diese Domain nicht zuordnen. Lege ein Unternehmen dafür an, behalte sie als Lieferant oder schließe sie aus.",
+    "Margince konnte nicht erkennen, für welches Unternehmen dieser Kontakt arbeitet. Bestätige ein Unternehmen, wähle eines oder stoppe die Erfassung der Domain.",
   "worklist.ask.ai_work_health":
     "Eine KI-Aufgabe schlägt wiederholt fehl. Prüfe ihren KI-Anbieter in den Einstellungen.",
   "worklist.ask.bounce":
@@ -18470,7 +18527,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryFailed":
     "Die Regel konnte nicht erneut ausgeführt werden. Bitte versuche es erneut.",
   "worklist.verb.keep": "Unternehmen erstellen",
-  "worklist.verb.discard": "Domain ausschließen",
+  "worklist.verb.discard": "In deinen Postfächern nicht mehr erfassen",
   "worklist.verb.domainKept": "Unternehmen aus Domain erstellt",
   "worklist.verb.domainKeepFailed":
     "Das Unternehmen konnte nicht erstellt werden. Bitte versuche es erneut.",

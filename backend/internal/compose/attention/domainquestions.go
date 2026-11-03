@@ -13,6 +13,9 @@ import (
 	"context"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
@@ -40,5 +43,38 @@ type DomainQuestion struct {
 	AskedAt    time.Time
 	EvidenceAt *time.Time
 	// The site triage's own sentence on a vendor question.
-	Note string
+	Note    string
+	Context contacts.DomainQuestionContext
+}
+
+// DomainQuestionContextWire maps a question's context to the contract. The
+// worklist row and the review list both call it.
+func DomainQuestionContextWire(in contacts.DomainQuestionContext) *crmcontracts.DomainQuestionContext {
+	out := &crmcontracts.DomainQuestionContext{
+		Contacts:      make([]crmcontracts.DomainQuestionContact, 0, len(in.Contacts)),
+		ContactCount:  in.ContactCount,
+		HiddenSenders: in.HiddenSenders,
+	}
+	for _, contact := range in.Contacts {
+		out.Contacts = append(out.Contacts, crmcontracts.DomainQuestionContact{Id: openapi_types.UUID(contact.ID.UUID), Name: contact.Name})
+	}
+	if in.OriginID != nil {
+		origin := openapi_types.UUID(*in.OriginID)
+		out.OriginActivityId = &origin
+	}
+	if in.SenderAddress != "" {
+		out.SenderAddress = &in.SenderAddress
+	}
+	if in.SiteRead != "" {
+		read := crmcontracts.DomainQuestionContextSiteRead(in.SiteRead)
+		out.SiteRead = &read
+	}
+	if in.Suggestion != nil {
+		out.SuggestedCompany = &crmcontracts.DomainQuestionSuggestion{
+			Id:    openapi_types.UUID(in.Suggestion.CompanyID.UUID),
+			Name:  in.Suggestion.Name,
+			Basis: crmcontracts.DomainQuestionSuggestionBasis(in.Suggestion.Basis),
+		}
+	}
+	return out
 }
