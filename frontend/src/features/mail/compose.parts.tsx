@@ -246,24 +246,18 @@ export function ComposeOutcome({
   bodyKey,
   sendUnavailable,
   send,
-  contactId,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
   send: ComposeSend;
-  contactId: string | undefined;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal
-        refusal={send.refusal}
-        contactId={contactId}
-        review={send.sendReview}
-      />
+      <SendRefusal refusal={send.refusal} />
     </>
   );
 }

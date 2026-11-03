@@ -33,6 +33,7 @@ import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
+type Preview = components["schemas"]["SendAuthorizationPreview"];
 type Link = { entity_type: RelinkKind; entity_id: string };
 
 // The refusals a rep can act on, as opposed to failures. Anything else keeps
@@ -122,6 +123,9 @@ type SendRequest = {
     attachment_ids?: string[];
   };
   links: Link[];
+  // The permission question and the answer on screen when Send was pressed.
+  // A refusal describes that message, and only while both still hold.
+  asked: Readonly<{ question: string; answer: Preview | undefined }>;
 };
 
 // The one place the send's origin is chosen. An anchor sends a reply; no
@@ -193,6 +197,7 @@ function sendRequest(
     heldDraftId: string | undefined;
     context: CommunicationContext | undefined;
     links: Link[];
+    asked: SendRequest["asked"];
   }>,
 ): SendRequest {
   const { to, cc, bcc, subject, body, html } = fields;
@@ -222,7 +227,24 @@ function sendRequest(
       attachment_ids: attachmentIds,
     },
     links: where.links,
+    asked: where.asked,
   };
+}
+
+/**
+ * Whether a refused Send still describes the message on screen. It does until
+ * the question changes (a recipient, a record, the reason) or the check
+ * answers anew, so a corrected message never sits under the old refusal.
+ */
+export function refusalIsCurrent(
+  asked: SendRequest["asked"] | undefined,
+  now: Readonly<{ question: string; preview: Preview | undefined }>,
+): boolean {
+  return (
+    asked !== undefined &&
+    asked.question === now.question &&
+    asked.answer === now.preview
+  );
 }
 
 // 201 is a message that goes later; 202 is one that has gone.
@@ -336,13 +358,21 @@ export function useComposeSend({
   const links = composedLinks({ entityType, entityId }, grounding, projectId);
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
-  const permission = useSendPermission({
+  const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     enabled: open && !isChannelReply,
   });
+  // A consent refusal joins the engine's answer as ONE status, and only while
+  // it is about this message. A stale one would sit red beside a newer check.
+  const refusedNow =
+    refusal === "consent" && refusalIsCurrent(send.variables?.asked, answer);
+  const permission = {
+    ...answer,
+    refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
+  };
   // Whether the reader has pressed Send. A form that reports gaps before then
   // scolds a reader for not having finished typing.
   const [attempted, setAttempted] = useState(false);
@@ -378,6 +408,7 @@ export function useComposeSend({
         heldDraftId: savedDraft.held?.id,
         context: claimedContext,
         links,
+        asked: { question: answer.question, answer: answer.preview },
       }),
     );
   };

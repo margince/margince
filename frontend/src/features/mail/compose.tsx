@@ -33,6 +33,7 @@ import {
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
 import type { EditSeed } from "./schedulededit";
+import { SendRefusalRemedies } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -442,13 +443,24 @@ export function ComposeWindow({
               send={send}
               anchorActivity={thread.anchorActivity}
               contactOf={records.contactOf}
-              contactId={contactId}
               bodyKey={wording.body}
               permission={(override, picksReason) => (
                 <SendPermission
                   {...send.permission}
+                  refusal={
+                    send.permission.refusal && {
+                      ...send.permission.refusal,
+                      remedies: (
+                        <SendRefusalRemedies
+                          contactId={contactId}
+                          review={send.sendReview}
+                        />
+                      ),
+                    }
+                  }
                   override={override}
                   picksReason={picksReason}
+                  namesRecipients
                 />
               )}
             />

@@ -23,7 +23,41 @@ describe("sendReviewOf", () => {
       reviewId: "r-1",
       actions: ["overrule"],
       overrulable: [{ contactId: "c-1", category: "marketing" }],
+      refusals: [],
     });
+  });
+
+  // Each refused address keeps its own reason, so a missing deal link on one
+  // recipient never reads as another recipient's objection.
+  it("reads each refused recipient with its own reason", () => {
+    const review = sendReviewOf(
+      refusal({
+        review_id: "r-8",
+        available_actions: [],
+        refusals: [
+          {
+            address: "ben@example.test",
+            reason_code: "no_compatible_evidence",
+            category: "active_deal_followup",
+          },
+          { address: "ana@example.test", reason_code: "marketing_objection" },
+          { address: "noreason@example.test" },
+          "garbage",
+        ],
+      }),
+    );
+    expect(review?.refusals).toEqual([
+      {
+        address: "ben@example.test",
+        reasonCode: "no_compatible_evidence",
+        category: "active_deal_followup",
+      },
+      {
+        address: "ana@example.test",
+        reasonCode: "marketing_objection",
+        category: undefined,
+      },
+    ]);
   });
 
   // An overrule that skipped one refused contact would leave the send refused,
@@ -49,7 +83,12 @@ describe("sendReviewOf", () => {
     const review = sendReviewOf(
       refusal({ review_id: "r-2", available_actions: [] }),
     );
-    expect(review).toEqual({ reviewId: "r-2", actions: [], overrulable: [] });
+    expect(review).toEqual({
+      reviewId: "r-2",
+      actions: [],
+      overrulable: [],
+      refusals: [],
+    });
   });
 
   // A server newer than this build names an action it has never heard of.
@@ -102,6 +141,7 @@ describe("sendReviewOf", () => {
       reviewId: "r-5",
       actions: [],
       overrulable: [],
+      refusals: [],
     });
     const oddEntries = sendReviewOf(
       refusal({ review_id: "r-6", available_actions: [1, null] }),
@@ -110,6 +150,7 @@ describe("sendReviewOf", () => {
       reviewId: "r-6",
       actions: [],
       overrulable: [],
+      refusals: [],
     });
   });
 });

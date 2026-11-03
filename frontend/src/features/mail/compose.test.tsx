@@ -597,7 +597,7 @@ describe("ComposeModal", () => {
     expect(req?.headers.get("Idempotency-Key")).toBeNull();
   });
 
-  it("surfaces the default-deny consent gate on 409 without closing", async () => {
+  it("surfaces a refused send on 409 without closing", async () => {
     const onClose = vi.fn();
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
@@ -624,9 +624,12 @@ describe("ComposeModal", () => {
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(await screen.findByText(/has not granted consent/i)).toBeTruthy();
-    // The gate points at the consent surface, and the modal stays open.
-    expect(screen.getByRole("link", { name: "Review consent" })).toBeTruthy();
+    // The refusal named no reason, so it names no cause, consent included.
+    expect(
+      await screen.findByText("This message cannot be sent as it stands."),
+    ).toBeTruthy();
+    // It points at the contact, and the modal stays open.
+    expect(screen.getByRole("link", { name: "Open contact" })).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 

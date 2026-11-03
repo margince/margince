@@ -9,8 +9,8 @@ import { SendPermission } from "./sendpermission";
 // What the engine decided about a message, said where the rep is writing it.
 //
 // One component for every surface that stages a send: the composer, the
-// scheduled-send queue and the approval card. Three states and a rep sees
-// exactly one, chosen by the engine's answer. The allowed state renders
+// scheduled-send queue and the approval card. A rep sees exactly one status,
+// chosen by the engine's answer or by the refusal a pressed Send came back with. The allowed state renders
 // NOTHING, which is why it has no story: the overwhelming majority of sends
 // should cost no attention at all.
 const meta: Meta = {
@@ -95,4 +95,45 @@ export const UnprovenReadOnly: Story = {
 /** The question did not arrive. Said out loud, because silence reads as yes. */
 export const Unanswered: Story = {
   render: () => <SendPermission preview={undefined} unanswered />,
+};
+
+/** A missing deal link is a missing detail of the message, never a consent refusal. */
+export const MissingDealLink: Story = {
+  render: () => (
+    <SendPermission
+      namesRecipients
+      preview={refused({ resolved_category: "active_deal_followup" })}
+    />
+  ),
+};
+
+/** A refused Send to several people names the one that stopped it. */
+export const RefusedSendForSeveral: Story = {
+  render: () => (
+    <SendPermission
+      namesRecipients
+      preview={undefined}
+      refusal={{
+        refusals: [
+          {
+            address: "ben@example.test",
+            reasonCode: "no_compatible_evidence",
+            category: "active_deal_followup",
+          },
+          {
+            address: "anna@example.test",
+            reasonCode: "marketing_objection",
+            category: "marketing",
+          },
+        ],
+      }}
+    />
+  ),
+};
+
+/** A refused Send whose reasons this build cannot read: a stop with no cause named. */
+export const RefusedSendUnreadable: Story = {
+  render: () => (
+    <SendPermission preview={undefined} refusal={{ refusals: [] }} />
+  ),
 };

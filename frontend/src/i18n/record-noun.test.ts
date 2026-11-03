@@ -519,7 +519,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceSelectedHint",
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
-    "compose.consentBlocked",
     "compose.emptyRecipients",
     "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",

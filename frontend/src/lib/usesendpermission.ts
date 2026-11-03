@@ -55,7 +55,12 @@ export function useSendPermission(args: {
   evidence?: components["schemas"]["CommunicationEvidence"];
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
-}): { preview: Preview | undefined; asking: boolean; unanswered: boolean } {
+}): {
+  preview: Preview | undefined;
+  asking: boolean;
+  unanswered: boolean;
+  question: string;
+} {
   const recipients = args.recipients.filter((address) => address.trim() !== "");
   const links = args.links ?? [];
   // A preview with no recipient answers about nobody, and the account-send door
@@ -68,20 +73,21 @@ export function useSendPermission(args: {
     (args.anchorActivityId !== undefined || links.length > 0);
   const enabled = (args.enabled ?? true) && askable;
 
+  // The recipients, the records and the claimed context are the whole
+  // question, so they are the whole key: changing any of them must re-ask
+  // rather than serve the answer to a different message.
+  const queryKey = [
+    "send-permission",
+    args.anchorActivityId ?? "",
+    recipients,
+    links,
+    args.context ?? "",
+    args.marketingPurpose ?? "",
+    args.consentPurpose ?? "",
+    args.evidence ?? {},
+  ];
   const query = useQuery({
-    // The recipients, the records and the claimed context are the whole
-    // question, so they are the whole key: changing any of them must re-ask
-    // rather than serve the answer to a different message.
-    queryKey: [
-      "send-permission",
-      args.anchorActivityId ?? "",
-      recipients,
-      links,
-      args.context ?? "",
-      args.marketingPurpose ?? "",
-      args.consentPurpose ?? "",
-      args.evidence ?? {},
-    ],
+    queryKey,
     enabled,
     // A refusal is live state — somebody may unsubscribe between the preview
     // and the send — so this is a reading taken close to the write, never a
@@ -120,9 +126,10 @@ export function useSendPermission(args: {
       // around it: the message is still the rep's to send, and the server
       // still refuses it at the door if it must.
       const preview = answered.data;
-      if (!preview || !Array.isArray(preview.recipients)) {
+      if (!answersEveryone(preview, recipients)) {
         throwProblem({
-          title: "send permission: the preview answered without recipients",
+          title:
+            "send permission: the preview did not answer for every recipient",
         });
       }
       return preview;
@@ -138,5 +145,39 @@ export function useSendPermission(args: {
     preview: query.data,
     asking: query.isPending && enabled,
     unanswered: enabled && query.isError,
+    // The question as one value, so a refusal can tell whether it was about
+    // the message as it stands now.
+    question: JSON.stringify(queryKey),
   };
+}
+
+// An answer is one this build can draw only when it names every addressee
+// with a boolean `would_refuse`. A recipient missing from it, or one whose
+// refusal is not stated, would otherwise read as allowed.
+function answersEveryone(
+  preview: Preview | undefined,
+  asked: readonly string[],
+): preview is Preview {
+  if (!preview || !Array.isArray(preview.recipients)) return false;
+  const answered = new Set<string>();
+  const wire: readonly unknown[] = preview.recipients;
+  for (const recipient of wire) {
+    if (typeof recipient !== "object" || recipient === null) return false;
+    const address: unknown = Reflect.get(recipient, "address");
+    if (
+      typeof address !== "string" ||
+      typeof Reflect.get(recipient, "reason_code") !== "string" ||
+      typeof Reflect.get(recipient, "would_refuse") !== "boolean"
+    ) {
+      return false;
+    }
+    answered.add(normalAddress(address));
+  }
+  return asked.every((address) => answered.has(normalAddress(address)));
+}
+
+// The server stores an address trimmed and lowercased, so it may answer for
+// one in that form.
+function normalAddress(address: string): string {
+  return address.trim().toLowerCase();
 }

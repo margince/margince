@@ -4,7 +4,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
-import { decidingRecipient, SendPermission } from "./sendpermission";
+import {
+  decidingRecipient,
+  SendMark,
+  SendPermission,
+  sendStatus,
+} from "./sendpermission";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 type Recipient = components["schemas"]["SendAuthorizationPreviewRecipient"];
@@ -482,5 +487,157 @@ describe("an answer that has not arrived is not an answer", () => {
       false,
     );
     expect(state).toBe("allowed");
+  });
+});
+
+describe("one status for the message", () => {
+  const refusing = (over: Partial<Recipient>) =>
+    preview(
+      answer({
+        decided_by: "machine",
+        would_refuse: true,
+        can_be_overruled: false,
+        ...over,
+      }),
+    );
+
+  it.each([
+    [{ preview: undefined, asking: true }, "checking"],
+    [{ preview: undefined }, "idle"],
+    [{ preview: undefined, unanswered: true }, "unavailable"],
+    [{ preview: preview() }, "unavailable"],
+    [
+      { preview: preview(answer({ decided_by: "machine", verdict: "allow" })) },
+      "ready",
+    ],
+    [
+      {
+        preview: refusing({
+          reason_code: "no_compatible_evidence",
+          resolved_category: "active_deal_followup",
+        }),
+      },
+      "missingContext",
+    ],
+    [
+      { preview: refusing({ reason_code: "unknown_purpose" }) },
+      "missingContext",
+    ],
+    [
+      {
+        preview: refusing({
+          reason_code: "no_compatible_evidence",
+          resolved_category: "requested_followup",
+        }),
+      },
+      "missingEvidence",
+    ],
+    [
+      { preview: refusing({ reason_code: "no_marketing_consent" }) },
+      "missingPermission",
+    ],
+    [
+      { preview: refusing({ reason_code: "marketing_objection" }) },
+      "restricted",
+    ],
+    [{ preview: refusing({ reason_code: "a_code_from_later" }) }, "restricted"],
+  ] as const)("%o is %s", (answered, kind) => {
+    expect(sendStatus(answered).kind).toBe(kind);
+  });
+
+  // A refused Send outranks the preview it followed: the preview said ready,
+  // the send said no, and the send is the newer answer.
+  it("takes a refused send over an allowing preview", () => {
+    const status = sendStatus({
+      preview: preview(answer({ decided_by: "machine", verdict: "allow" })),
+      refusal: {
+        refusals: [
+          { address: "a@x.test", reasonCode: "no_marketing_consent" },
+          { address: "b@x.test", reasonCode: "consent_withdrawn" },
+        ],
+      },
+    });
+    expect(status).toMatchObject({
+      kind: "restricted",
+      deciding: { address: "b@x.test" },
+      refusing: 2,
+    });
+  });
+
+  it("reads a refused send with no readable reason as a stop, never as ready", () => {
+    expect(
+      sendStatus({ preview: undefined, refusal: { refusals: [] } }).kind,
+    ).toBe("restricted");
+  });
+
+  it("shows no ready mark beside a refused send", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendMark
+          preview={preview(answer({ decided_by: "machine", verdict: "allow" }))}
+          refusal={{ refusals: [] }}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
+  });
+
+  // Distinct conditions get distinct titles, so a missing deal never reads as
+  // a consent problem and a missing consent never reads as an objection.
+  it.each([
+    [
+      {
+        reason_code: "no_compatible_evidence",
+        resolved_category: "active_deal_followup",
+      },
+      "This message needs one more detail",
+      "Choose the deal for this follow-up.",
+    ],
+    [
+      { reason_code: "no_marketing_consent" },
+      "Consent needed for this message",
+      "Marketing needs the recipient’s consent, and none is on record.",
+    ],
+    [
+      { reason_code: "marketing_objection" },
+      "Message cannot be sent",
+      "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+    ],
+  ] as const)("explains %o in its own words", (over, title, sentence) => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission preview={refusing(over)} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByText(sentence)).toBeInTheDocument();
+  });
+
+  it("says how many of the recipients a refusal applies to where it may not name them", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission
+          preview={preview(
+            answer({
+              decided_by: "subject",
+              reason_code: "marketing_objection",
+              would_refuse: true,
+              can_be_overruled: false,
+            }),
+            answer({
+              address: "ben@example.test",
+              decided_by: "machine",
+              verdict: "allow",
+              reason_code: "allowed",
+              would_refuse: false,
+            }),
+          )}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("This applies to 1 of 2 recipients."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/anna@example\.test/)).toBeNull();
   });
 });

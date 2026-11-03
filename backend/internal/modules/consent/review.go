@@ -389,6 +389,10 @@ type SendRefusedError struct {
 	// Overrulable names the contact and category of each vouch the overrule
 	// action needs. Empty unless Actions offers it.
 	Overrulable []OverrulableRecipient
+	// Refusals is each refused recipient with the engine's reason, so the
+	// sender is told which address stopped and why rather than one sentence
+	// for all of them. The caller named every one of these addresses.
+	Refusals []RefusedRecipient
 }
 
 func (e *SendRefusedError) Error() string {
@@ -490,7 +494,25 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 		}
 		reference["overrulable"] = overrulable
 	}
+	if len(e.Refusals) > 0 {
+		reference["refusals"] = refusalReference(e.Refusals)
+	}
 	return reference
+}
+
+// refusalReference is what a sender may read of each refused recipient: the
+// address they wrote, the reason and the category. The subject id stays off
+// the wire, because the sender may not be able to read that record.
+func refusalReference(refusals []RefusedRecipient) []map[string]string {
+	out := make([]map[string]string, 0, len(refusals))
+	for _, r := range refusals {
+		entry := map[string]string{"address": r.Address, "reason_code": r.ReasonCode}
+		if r.Category != "" {
+			entry["category"] = r.Category
+		}
+		out = append(out, entry)
+	}
+	return out
 }
 
 // Unreferenced answers the refusal without the reference, which is what decides

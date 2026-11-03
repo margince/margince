@@ -9790,7 +9790,11 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -9866,7 +9870,11 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -10141,7 +10149,11 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
