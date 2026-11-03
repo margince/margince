@@ -46,8 +46,12 @@ func applyEditedPayload(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edite
 	if err := assertSameCallIdentity(a.ProposedChange, canonical); err != nil {
 		return err
 	}
+	// The summary's values describe the staged call, not the edit, so the
+	// summary keeps its sentence alone.
 	if _, err := tx.Exec(ctx,
-		`UPDATE approval SET proposed_change = $2, diff_hash = $3 WHERE id = $1`,
+		`UPDATE approval SET proposed_change = $2, diff_hash = $3,
+		        summary = coalesce(summary_parts->>'sentence', summary), summary_parts = NULL
+		  WHERE id = $1`,
 		id, canonical, editedHash); err != nil {
 		return err
 	}

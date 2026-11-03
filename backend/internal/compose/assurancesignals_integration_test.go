@@ -147,6 +147,11 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 	signalGrant := denied.Objects["signal"]
 	signalGrant.Update = false
 	denied.Objects["signal"] = signalGrant
+	// An admin may also answer a forecast call. Without that grant too, the
+	// reader holds no grant to answer any finding and is refused outright.
+	callGrant := denied.Objects["forecast"]
+	callGrant.Create = false
+	denied.Objects["forecast"] = callGrant
 	for _, id := range []ids.UUID{found[0].ID, ids.NewV7()} {
 		err := store.Resolve(e.As(e.AdminUser, nil, denied), id, assurance.Resolution{Outcome: assurance.OutcomeNotRelevant, Reason: "No current buyer need"}, e.now)
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {

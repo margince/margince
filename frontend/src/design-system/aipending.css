@@ -1,7 +1,8 @@
-/* The wait for a machine's answer: the indigo tile breathing, the answer's
-   ragged lines, and a light passing over both. Every animated property is
-   opacity or transform, and the reduced-motion answer is at the end of the
-   file so document order cannot undo it. */
+/* The wait for a machine's answer: the indigo tile breathing, and rows of
+   indigo and green specks drifting where the answer's lines will stand. When
+   the words land, AiReveal (aireveal.css) carries them in. Every animated
+   property is opacity or transform, and the reduced-motion answer is at the end of the file so document order cannot
+   undo it. */
 .aipending {
   position: relative;
   display: flex;
@@ -34,20 +35,34 @@
 .aipending-body .pending-note {
   color: var(--aiText);
 }
-/* One pass of light across the block, left to right, on a loop. A gradient
-   in flight rather than at rest: it stops the moment the answer lands. */
-.aipending-sheen {
+/* The answer's lines, drawn as specks instead of grey bars: two offset rows
+   in the agent's indigo and the brand green, drifting, and thinning out at
+   the line's end. PendingBody keeps the lines' ragged widths and heights.
+   The drift moves a layer one shared period (13px x 19px = 247px) wider
+   than the line, by transform, so it never repaints while the model works. */
+.aipending .pending-line {
+  position: relative;
+  overflow: hidden;
+  background: none;
+  border-radius: 0;
+  mask-image: linear-gradient(90deg, currentColor 55%, transparent);
+  animation: aipending-shimmer 1.6s var(--ease-in-out) infinite alternate;
+}
+.aipending .pending-line::before {
+  content: "";
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--aiLight) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: aipending-sheen 2.4s var(--ease-in-out) infinite;
+  inset: 0 -247px 0 0;
+  background-image:
+    radial-gradient(circle, var(--ai) 1.5px, transparent 2px),
+    radial-gradient(circle, var(--accentText) 1.2px, transparent 1.7px);
+  background-size:
+    13px 100%,
+    19px 100%;
+  background-position:
+    0 0,
+    7px 0;
+  animation: aipending-drift 25s linear infinite;
+  will-change: transform;
 }
 @keyframes aipending-breathe {
   0%,
@@ -60,20 +75,29 @@
     transform: scale(0.94);
   }
 }
-@keyframes aipending-sheen {
+@keyframes aipending-drift {
   to {
-    transform: translateX(100%);
+    transform: translateX(-247px);
   }
 }
-/* Reduced motion: the tile rests at full ink and the sheen is not drawn at
-   all. The lines under them keep the placeholder's own resting answer, which
-   atoms.css owns. */
+@keyframes aipending-shimmer {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+/* Reduced motion: the tile rests at full ink and the specks stand still. */
 @media (prefers-reduced-motion: reduce) {
   .aipending-tile {
     animation: none;
   }
-  .aipending-sheen {
+  .aipending .pending-line {
     animation: none;
-    opacity: 0;
+    opacity: 0.7;
+  }
+  .aipending .pending-line::before {
+    animation: none;
   }
 }

@@ -184,6 +184,14 @@ describe("ComposeModal — channel reply", () => {
   });
 });
 
+// Files, Relink, Remove from project and Change visibility sit in the row's
+// "More actions" menu, which mounts them on its first open.
+async function openRowMenu() {
+  await userEvent.click(
+    screen.getByRole("button", { name: /^More actions( for |$)/ }),
+  );
+}
+
 // Relink is disabled until /me answers. Once it is enabled the grants have
 // settled, so an absent control is a decision and not a pending read.
 async function relinkSettled() {
@@ -206,6 +214,7 @@ describe("TimelineActions", () => {
     kind: "note",
     links: [{ entity_type: "contact", entity_id: "c1" }],
     offers_email: true,
+    email_target: { entity_type: "contact", entity_id: "p-1" },
   };
 
   it("withholds Relink and the audience control on an activity the server says is not the reader's to change", async () => {
@@ -217,6 +226,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Relink" }).hasAttribute("disabled"),
@@ -227,11 +237,12 @@ describe("TimelineActions", () => {
     ).toBeNull();
   });
 
-  it("offers Reply on an email row and Relink alongside it", () => {
+  it("offers Reply on an email row and Relink alongside it", async () => {
     stubRoutes();
     render(
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
+    await openRowMenu();
     expect(screen.getByRole("button", { name: "Reply" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
@@ -243,6 +254,7 @@ describe("TimelineActions", () => {
     // whose timeline holds nothing captured from mail.
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Write email" }),
     ).toBeTruthy();
@@ -278,6 +290,7 @@ describe("TimelineActions", () => {
       kind: "task",
       automatic_kind: "product",
       offers_email: false,
+      email_target: undefined,
     };
     render(
       <>
@@ -338,6 +351,7 @@ describe("TimelineActions", () => {
         contactId="p-1"
       />,
     );
+    await openRowMenu();
 
     // Relink renders at once, since it never waits on reachability. That
     // proves the component mounted, and that the missing Reply button is the
@@ -419,6 +433,7 @@ describe("TimelineActions", () => {
     const { unmount } = render(
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
+    await openRowMenu();
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
     await relinkSettled();
     expect(
@@ -438,6 +453,7 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions activity={handTyped} entityType="deal" entityId="d1" />,
     );
+    await openRowMenu();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
     ).toBeNull();
@@ -465,6 +481,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
@@ -480,7 +497,7 @@ describe("TimelineActions", () => {
   // import row exists whatever it derived. Gating only on `audience_reason`
   // misses this row: Visibility opens, takes an answer, and the write is
   // refused with no working control on the page (margince#4152).
-  it("offers no audience control on a captured message with no audience_reason at all", () => {
+  it("offers no audience control on a captured message with no audience_reason at all", async () => {
     stubRoutes();
     render(
       <TimelineActions
@@ -496,6 +513,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
@@ -517,6 +535,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
@@ -533,6 +552,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     expect(
       await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
@@ -586,6 +606,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Change visibility" }),
@@ -659,6 +680,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Change visibility" }),
@@ -690,6 +712,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await openRowMenu();
     await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),

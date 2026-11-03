@@ -217,13 +217,16 @@ function mountProbe(
   allow: GrantSpec = OPERATOR,
 ) {
   const seen: string[] = [];
+  const asked: URL[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
-      const path = new URL(
+      const url = new URL(
         input instanceof Request ? input.url : String(input),
         "https://test",
-      ).pathname;
+      );
+      const path = url.pathname;
+      asked.push(url);
       seen.push(path);
       return path.endsWith("/v1/me")
         ? new Response(JSON.stringify(meFixture({ allow })), {
@@ -242,7 +245,7 @@ function mountProbe(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { seen };
+  return { seen, asked };
 }
 
 function tracePage(rows: unknown[]) {
@@ -289,6 +292,19 @@ it("answers with the newest call's instant once the trace has landed", async () 
   expect(
     await screen.findByText(new Date(summary.occurred_at).toISOString()),
   ).toBeTruthy();
+});
+
+// The header wants one instant: when the last call happened. The trace is
+// newest-first and its page defaults to fifty records, refetched every minute
+// for every admin holding the grant.
+it("asks for one call, not a page of fifty, for the last-call instant", async () => {
+  const { asked } = mountProbe(tracePage([summary]));
+
+  await waitFor(() =>
+    expect(asked.some((url) => url.pathname.includes("/ai/calls"))).toBe(true),
+  );
+  const call = asked.find((url) => url.pathname.includes("/ai/calls"));
+  expect(call?.searchParams.get("limit")).toBe("1");
 });
 
 it("says nothing is read yet while the trace is still arriving", async () => {

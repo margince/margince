@@ -116,28 +116,27 @@ const laneDomain = "domain"
 // back by this write; idempotent through dedupe_candidate's pair index, so the
 // next message from the same domains proposes nothing new.
 func (s *Store) EnqueueDomainSplit(ctx context.Context, split DomainSplit, source, capturedBy string) (bool, error) {
-	evidence := []map[string]any{
-		{
-			evidenceFieldKey: fieldMatchedLane,
-			// Both sides name the same lane, because both sides came from it.
-			// That is the statement: not "two kinds of key disagree" but "one
-			// kind of key, asked twice, gave two answers".
-			evidenceLeftKey:   laneDomain,
-			evidenceRightKey:  laneDomain,
-			evidenceSignalKey: evidenceSignalLaneSplit,
-		},
-	}
 	var recorded bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		recorded, err = recordDedupeCandidate(ctx, tx, entityCompany,
-			split.RoutedTo.UUID, split.Rival.UUID, identityConflictConfidence, evidence, source, capturedBy)
+		recorded, err = enqueueDomainSplitTx(ctx, tx, split, source, capturedBy)
 		return err
 	})
 	if err != nil {
 		return false, fmt.Errorf("contacts: enqueueing domain split review: %w", err)
 	}
 	return recorded, nil
+}
+
+func enqueueDomainSplitTx(ctx context.Context, tx pgx.Tx, split DomainSplit, source, capturedBy string) (bool, error) {
+	evidence := []map[string]any{{
+		evidenceFieldKey:  fieldMatchedLane,
+		evidenceLeftKey:   laneDomain,
+		evidenceRightKey:  laneDomain,
+		evidenceSignalKey: evidenceSignalLaneSplit,
+	}}
+	return recordDedupeCandidate(ctx, tx, entityCompany,
+		split.RoutedTo.UUID, split.Rival.UUID, identityConflictConfidence, evidence, source, capturedBy)
 }
 
 // EnqueueIdentityConflict raises the identity review for one exact-lane

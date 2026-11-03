@@ -368,7 +368,7 @@ it("offers the next meeting's join link and its own page, from the invitation th
   ).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Weekly call" }).getAttribute("href"),
-  ).toBe(`#/book/meeting-${booked.id}`);
+  ).toBe(`/#/book/meeting-${booked.id}`);
 });
 
 it("asks for no invitation for a meeting that was not booked through Margince", async () => {

@@ -378,11 +378,13 @@ var defaults = map[string]Document{
 	"ops": {
 		Objects: grid(crud, map[string]grant{
 			reportingReportDefinition: readOnly,
-			reportingSalesTarget:      readOnly,
-			reportingFrameworkObject:  readOnly,
-			reportingReportSchedule:   readOnly,
-			reportingReportEdition:    readOnly,
-			reportingCreditObject:     readOnly,
+			// An initiative is a commercial decision; an operator reads it.
+			"sales_initiative":       readOnly,
+			reportingSalesTarget:     readOnly,
+			reportingFrameworkObject: readOnly,
+			reportingReportSchedule:  readOnly,
+			reportingReportEdition:   readOnly,
+			reportingCreditObject:    readOnly,
 
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,

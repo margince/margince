@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/emailview"
@@ -33,37 +34,58 @@ func (w *weeklyGenerateWorker) openTasksMail(ctx context.Context, review weekly.
 	if err != nil {
 		return emailview.Content{}, err
 	}
-	cursor, shown := "", 0
+	tasks, err := weekTasks(ctx, service)
+	if err != nil {
+		return emailview.Content{}, err
+	}
+	shown := 0
 	var body emailview.Content
-	for {
-		day, err := service.Worklist(ctx, "mine", "tasks", ids.Nil, 100, cursor)
-		if err != nil {
-			return emailview.Content{}, err
+	for _, item := range tasks {
+		if !taskDueInReportedWeek(item, weekEnd) {
+			continue
 		}
-		for _, item := range day.Queue {
-			if !taskDueInReportedWeek(item, weekEnd) {
-				continue
-			}
-			line := mailWorkItem(item, words, zone)
-			if line == "" {
-				continue
-			}
-			if shown == 0 {
-				body.Heading(words.MailOpenNow)
-			}
-			body.Paragraph(line)
-			writeMailItemLink(&body, item, w.mail.PublicBaseURL, words)
-			shown++
-			if shown == 3 {
-				return body, nil
-			}
+		line := mailWorkItem(item, words, zone)
+		if line == "" {
+			continue
 		}
-		if day.NextCursor == nil {
+		if shown == 0 {
+			body.Heading(words.MailOpenNow)
+		}
+		body.Paragraph(line)
+		writeMailItemLink(&body, item, w.mail.PublicBaseURL, words)
+		shown++
+		if shown == 3 {
 			break
 		}
-		cursor = *day.NextCursor
 	}
 	return body, nil
+}
+
+// weekTasks reads the reader's tasks due now, then those due after today, each
+// once. A week still running holds tasks the Worklist files as upcoming.
+func weekTasks(ctx context.Context, service *attention.Service) ([]crmcontracts.WorklistItem, error) {
+	seen := map[string]bool{}
+	var out []crmcontracts.WorklistItem
+	for _, filter := range []crmcontracts.WorklistFilter{crmcontracts.WorklistFilterTasks, crmcontracts.WorklistFilterUpcoming} {
+		cursor := ""
+		for {
+			day, err := service.Worklist(ctx, "mine", string(filter), ids.Nil, 100, cursor)
+			if err != nil {
+				return nil, err
+			}
+			for _, item := range day.Queue {
+				if key := string(item.Source) + "/" + item.Id; !seen[key] {
+					seen[key] = true
+					out = append(out, item)
+				}
+			}
+			if day.NextCursor == nil {
+				break
+			}
+			cursor = *day.NextCursor
+		}
+	}
+	return out, nil
 }
 
 func taskDueInReportedWeek(item crmcontracts.WorklistItem, end time.Time) bool {

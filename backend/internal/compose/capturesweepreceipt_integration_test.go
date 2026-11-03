@@ -79,7 +79,7 @@ func latestReceipt(t *testing.T, e *integration.Env, sweep capture.Sweep) stored
 func newTestLinkReconcileWorker(e *integration.Env) *linkReconcileWorker {
 	return newLinkReconcileWorker(e.Pool,
 		contacts.NewStore(InstallationDB(e.Pool)).WithAudienceRecompute(activities.RecomputeAudienceTx),
-		slog.Default())
+		CaptureConfig{}, slog.Default())
 }
 
 func newTestConfidentialityWorker(e *integration.Env) *confidentialityVerdictWorker {
@@ -122,7 +122,7 @@ func readHealth(t *testing.T, e *integration.Env) crmcontracts.CaptureHealth {
 	var health crmcontracts.CaptureHealth
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		health, err = readCaptureHealth(context.Background(), tx, time.Now().UTC())
+		health, err = readCaptureHealth(e.Admin(), tx, time.Now().UTC())
 		return err
 	}); err != nil {
 		t.Fatalf("reading capture health: %v", err)

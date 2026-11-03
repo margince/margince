@@ -167,12 +167,13 @@ func centrePageWire(page CentrePage) crmcontracts.NotificationPage {
 // from it, so a cast would publish a value the enum does not admit.
 func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
 	out := crmcontracts.NotificationItem{
-		Id:        openapi_types.UUID(item.ID),
-		Kind:      item.Kind,
-		Subject:   item.Subject,
-		CreatedAt: item.CreatedAt,
-		ReadAt:    item.ReadAt,
-		Origin:    item.Origin,
+		Id:           openapi_types.UUID(item.ID),
+		Kind:         item.Kind,
+		Subject:      item.Subject,
+		CreatedAt:    item.CreatedAt,
+		ReadAt:       item.ReadAt,
+		Origin:       item.Origin,
+		SummaryParts: item.SubjectParts,
 	}
 	if item.Body != "" {
 		body := item.Body

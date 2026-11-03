@@ -73,7 +73,17 @@ func captureInboundThroughRealSink(
 	t *testing.T, e *integration.Env, owner ids.UUID, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
+	authorizeCaptureMailbox(t, e, owner, "a@authz.test")
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, owner), t, e, "a@authz.test", sourceID, counterparty, threadKey)
+}
+
+func authorizeCaptureMailbox(t *testing.T, e *integration.Env, owner ids.UUID, address string) {
+	t.Helper()
+	e.GrantRole(t, owner, "rep")
+	e.WsExec(t, `INSERT INTO capture_connection
+ (user_id, provider, status, credential_ref, mail_posture, account_label)
+ VALUES (@owner, 'gmail', 'connected', 'vault:test', 'shared', @address)
+ ON CONFLICT (user_id, provider) DO NOTHING`, pgx.NamedArgs{"owner": owner, "address": address})
 }
 
 // captureInboundThroughRealSinkAs is the same capture under a principal the

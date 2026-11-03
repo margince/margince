@@ -51,7 +51,10 @@ const reportVocabularyVersion = "1"
 const reportVocabularyNotation = "Each report accepts ONLY the names listed under it. `group_by` and " +
 	"`aggregates` take names from their own lists; `filters` is one object whose keys come from " +
 	"the `filters` list, which holds both equality predicates and numeric thresholds. A name " +
-	"outside a report's list is refused by name, with that list, rather than approximated."
+	"outside a report's list is refused by name, with that list, rather than approximated. A " +
+	"`*_minor` measure that is not `*_base_minor` is in each row's own currency: any aggregate but " +
+	"count over it needs `currency` in `group_by` or a `currency` filter, and the `*_base_minor` " +
+	"measures are already converted to the base currency."
 
 // ReportVocabularyResource publishes the report plan vocabularies.
 //

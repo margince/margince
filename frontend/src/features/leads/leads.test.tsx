@@ -231,9 +231,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
     await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(await screen.findByText(/Reason: the lead replied on/)).toBeTruthy();
-    // Engaged leads start with the deal block ticked; untick it here so the
-    // request is the bare promotion.
-    await userEvent.click(screen.getByTestId("lead-qualify-with-deal"));
+    await userEvent.click(
+      screen.getByRole("radio", { name: "Qualify without a deal" }),
+    );
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Qualify/,
@@ -348,7 +348,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
     await user.click(await screen.findByTestId("lead-qualify"));
-    await user.click(screen.getByTestId("lead-qualify-with-deal"));
+    await user.click(
+      await screen.findByRole("radio", { name: "Open a new deal" }),
+    );
     await user.type(
       await screen.findByTestId("lead-qualify-deal-name"),
       "Nordwind — Pilot",
@@ -395,7 +397,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         if (new URL(url).pathname.endsWith("/me")) {
           return jsonResponse(meFixture({ allow: LEAD_GRANTS }));
         }
-        if (method === "GET" && url.endsWith("/v1/connectors")) {
+        if (
+          method === "GET" &&
+          (url.endsWith("/v1/connectors") ||
+            new URL(url).pathname.endsWith("/activities/latest-inbound"))
+        ) {
           return jsonResponse({ data: [] });
         }
         return jsonResponse(lead);

@@ -101,14 +101,18 @@ type watchedCondition struct {
 
 // watchedConcerns is the closed set of conditions this lane can name, keyed by
 // the capture module's own concern vocabulary.
+const captureNotCollecting = "magic.consequence.capture_not_collecting"
+
 var watchedConcerns = map[string]watchedCondition{
+	"sync_stalled":   {sentence: "magic.action.capture_sync_stalled", consequence: captureNotCollecting},
+	"capture_silent": {sentence: "magic.action.capture_silent", consequence: "magic.consequence.capture_may_be_incomplete"},
 	"reauth_required": {
 		sentence:    "magic.action.capture_reauth_required",
-		consequence: "magic.consequence.capture_not_collecting",
+		consequence: captureNotCollecting,
 	},
 	"connection_error": {
 		sentence:    "magic.action.capture_connection_error",
-		consequence: "magic.consequence.capture_not_collecting",
+		consequence: captureNotCollecting,
 	},
 	"sync_failing": {
 		sentence:    "magic.action.capture_sync_failing",

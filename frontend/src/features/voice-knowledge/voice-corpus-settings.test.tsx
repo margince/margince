@@ -12,7 +12,22 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { useVoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
+
+// The intake as its caller owns it: the real hook feeding the real zone.
+function Intake({
+  profileId,
+  onChanged,
+  first,
+}: Readonly<{
+  profileId: string | null;
+  onChanged: () => void;
+  first?: boolean;
+}>) {
+  const intake = useVoiceIntake({ profileId, onChanged });
+  return <VoiceCorpusIntake intake={intake} first={first} />;
+}
 
 // Building a Voice DNA from Settings has to reach the same bar the onboarding
 // act reaches: a file can be handed over, and a file that turns out to be a
@@ -171,7 +186,7 @@ afterEach(() => {
 describe("handing a file to the Settings voice card", () => {
   it("offers one file control, named by the row and filtered to what it can read", () => {
     stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
     const input = fileInput();
     expect(input.accept).toBe(".txt,.md,.vtt,.srt,.json,.pdf,.docx");
     expect(input.multiple).toBe(true);
@@ -186,12 +201,10 @@ describe("handing a file to the Settings voice card", () => {
   // is, so the first-sample card states the floor itself.
   it("states the word floor for the first sample, and not after", () => {
     stubApi(PROSE);
-    const view = render(
-      <VoiceCorpusIntake first profileId={null} onChanged={() => {}} />,
-    );
+    const view = render(<Intake first profileId={null} onChanged={() => {}} />);
     expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     view.unmount();
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
     expect(screen.queryByText(/at least 800 words/)).toBeNull();
   });
 
@@ -205,7 +218,7 @@ describe("handing a file to the Settings voice card", () => {
     // The earlier content-only spelling: no name half.
     const existing = "voice:upload:d506ebb7-32";
     render(
-      <VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />,
+      <Intake profileId="vp-1" onChanged={() => {}} />,
       clientHolding([existing]),
     );
 
@@ -218,7 +231,7 @@ describe("handing a file to the Settings voice card", () => {
   it("ingests single-author prose and reports what the server kept", async () => {
     const bodies = stubApi(PROSE);
     const onChanged = vi.fn();
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={onChanged} />);
+    render(<Intake profileId="vp-1" onChanged={onChanged} />);
 
     await userEvent.upload(
       fileInput(),
@@ -233,12 +246,61 @@ describe("handing a file to the Settings voice card", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
+  // A paste is the way in for text whose file the browser cannot open.
+  it("takes pasted text as a sample and empties the box", async () => {
+    const bodies = stubApi(PROSE);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
+    const box = screen.getByLabelText("Paste text");
+    const add = screen.getByRole("button", { name: "Add text" });
+    expect(add).toHaveProperty("disabled", true);
+
+    await userEvent.type(box, "Short sentences. Concrete nouns.");
+    await userEvent.click(add);
+
+    expect(
+      await screen.findByText(/Pasted text: 640 words added/),
+    ).toBeTruthy();
+    expect(bodies[0]).toMatchObject({
+      kind: "other",
+      source_label: "Pasted text",
+      content: "Short sentences. Concrete nouns.",
+    });
+    expect(String(bodies[0]?.source_ref)).toMatch(/^voice:paste:/);
+    expect(box).toHaveProperty("value", "");
+  });
+
+  it("keeps pasted text in the box when the server refuses it", async () => {
+    stubApi({
+      status: 422,
+      body: {
+        code: "validation_error",
+        title: "Unprocessable",
+        detail: "That source is not eligible.",
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+      },
+    });
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
+    const box = screen.getByLabelText("Paste text");
+
+    await userEvent.type(box, "some words");
+    await userEvent.click(screen.getByRole("button", { name: "Add text" }));
+
+    expect(
+      await screen.findByText(/Pasted text could not be added/),
+    ).toBeTruthy();
+    expect(box).toHaveProperty("value", "some words");
+    expect(screen.getByRole("button", { name: "Add text" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
   // This is the defect the card shipped with: a meeting transcript was posted
   // straight through as kind:"other", counting every speaker's words as the
   // owner's own. Nothing may reach the corpus before the question is answered.
   it("asks who is speaking before a conversation becomes the owner's voice", async () => {
     const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(
       fileInput(),
@@ -252,7 +314,7 @@ describe("handing a file to the Settings voice card", () => {
 
   it("ingests the chosen speaker's turns as an attributed transcript", async () => {
     const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(
       fileInput(),
@@ -279,7 +341,7 @@ describe("handing a file to the Settings voice card", () => {
   // whenever that name happens to appear in both.
   it("does not carry one file's chosen speaker into the next file's question", async () => {
     const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(fileInput(), [
       fileOf("one.vtt", "Lars: first. Sam: ok."),
@@ -314,7 +376,7 @@ describe("handing a file to the Settings voice card", () => {
   // the files after it join the queue meanwhile.
   it("still takes a file while a speaker question is waiting", async () => {
     const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
     await screen.findByText(/Which speaker are you/);
 
@@ -333,7 +395,7 @@ describe("handing a file to the Settings voice card", () => {
 
   it("drops a conversation the owner declines to claim", async () => {
     const bodies = stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(fileInput(), fileOf("standup.vtt", "Lars: hi."));
     await screen.findByText(/Which speaker are you/);
@@ -352,7 +414,7 @@ describe("handing a file to the Settings voice card", () => {
   // silently ignored.
   it("names a dropped file it cannot read instead of uploading it", async () => {
     const bodies = stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     dropOnZone([new File(["binary"], "photo.png", { type: "image/png" })]);
 
@@ -374,7 +436,7 @@ describe("handing a file to the Settings voice card", () => {
         details: { errors: [{ field: "content", code: "brand_new_rule" }] },
       },
     });
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(fileInput(), fileOf("notes.txt", "some words"));
 
@@ -461,7 +523,7 @@ describe("adding many files at once", () => {
     // file up front while only previewing three would satisfy the request
     // count alone.
     let reads = 0;
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(
       fileInput(),
@@ -495,9 +557,7 @@ describe("adding many files at once", () => {
   // to start first.
   it("finishes files still queued when the card is replaced mid-intake", async () => {
     const held = stubHeldPreviews(PROSE);
-    const view = render(
-      <VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />,
-    );
+    const view = render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(
       fileInput(),
@@ -522,7 +582,7 @@ describe("adding many files at once", () => {
   // rather than queued into memory nobody will reach.
   it("declines a conversational file once five questions are already waiting", async () => {
     stubApi(CONVERSATION);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     await userEvent.upload(
       fileInput(),
@@ -556,7 +616,7 @@ describe("adding many files at once", () => {
 describe("dropping a file on the page", () => {
   it("takes a file dropped on the intake area", async () => {
     const bodies = stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     dropOnZone([fileOf("letter.txt", "Short sentences.")]);
 
@@ -567,7 +627,7 @@ describe("dropping a file on the page", () => {
   // first. Every drop test here used ONE file, so nothing caught it.
   it("takes every file in a multi-file drop", async () => {
     const bodies = stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     dropOnZone([
       fileOf("one.txt", "First sample."),
@@ -585,7 +645,7 @@ describe("dropping a file on the page", () => {
   // from one template, are exactly this shape.
   it("keeps files that share their text but not their name", async () => {
     const bodies = stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     const same = "The same words in every one of these files.";
     dropOnZone([
@@ -605,7 +665,7 @@ describe("dropping a file on the page", () => {
   // stray file silently becomes part of someone's voice.
   it("ignores a file dropped outside the card, but still stops the browser", async () => {
     const bodies = stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
     const elsewhere = document.createElement("div");
     document.body.append(elsewhere);
 
@@ -624,7 +684,7 @@ describe("dropping a file on the page", () => {
 
   it("leaves a text drag alone so native drag and drop still works", async () => {
     stubApi(PROSE);
-    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
 
     const drop = new Event("drop", { bubbles: true, cancelable: true });
     Object.defineProperty(drop, "dataTransfer", {
@@ -637,9 +697,7 @@ describe("dropping a file on the page", () => {
 
   it("removes its window listeners when the card goes away", async () => {
     stubApi(PROSE);
-    const view = render(
-      <VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />,
-    );
+    const view = render(<Intake profileId="vp-1" onChanged={() => {}} />);
     view.unmount();
 
     const drop = new Event("drop", { bubbles: true, cancelable: true });

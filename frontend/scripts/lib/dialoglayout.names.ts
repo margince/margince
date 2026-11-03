@@ -5,7 +5,6 @@
 // read per file and cached, because a dialog walk asks for them once per tag.
 
 import ts from "typescript";
-import { descendants } from "./dialoglayout.tags";
 
 // Every name a module imports or re-exports, with where it comes from. An
 // `export { A as B }` with no `from` points back into the module itself.
@@ -38,14 +37,20 @@ export function bindings(source: ts.SourceFile) {
 
 const declared = new WeakMap<ts.SourceFile, Map<string, ts.Node>>();
 
+// The file's top-level functions and constants: the only ones a name alone can
+// mean. A nested one is read from its scope, by `definitionOf`.
 export function declarations(source: ts.SourceFile) {
   const known = declared.get(source);
   if (known) return known;
   const out = new Map<string, ts.Node>();
-  for (const n of descendants(source)) {
-    const named = ts.isFunctionDeclaration(n) || ts.isVariableDeclaration(n);
-    if (named && n.name && !out.has(n.name.getText()))
-      out.set(n.name.getText(), n);
+  for (const s of source.statements) {
+    const named = ts.isVariableStatement(s)
+      ? s.declarationList.declarations
+      : [s];
+    for (const n of named) {
+      const fn = ts.isFunctionDeclaration(n) || ts.isVariableDeclaration(n);
+      if (fn && n.name && ts.isIdentifier(n.name)) out.set(n.name.text, n);
+    }
   }
   declared.set(source, out);
   return out;

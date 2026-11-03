@@ -107,6 +107,38 @@ describe("the account's document library", () => {
     );
   });
 
+  // A Docs or Drive link a mail mentioned is a row with no bytes. Its name
+  // opens the address in a new tab. An address that is not web falls back to
+  // the download route, so no scheme such as javascript: becomes an href.
+  it("opens a document link in a new tab instead of downloading it", async () => {
+    const link = (id: string, filename: string, url: string) => ({
+      ...DOCS[1],
+      id,
+      filename,
+      category: "link",
+      url,
+      bytes_withheld: true,
+    });
+    stub([
+      link("l-1", "Q4 plan", "https://docs.google.com/presentation/d/abc/edit"),
+      link("l-2", "tricky", "javascript:alert(1)"),
+    ]);
+    show(<CompanyDocumentsCard companyId="o-1" />);
+
+    const plan = await screen.findByRole("link", { name: "Q4 plan" });
+    expect(plan).toHaveAttribute(
+      "href",
+      "https://docs.google.com/presentation/d/abc/edit",
+    );
+    expect(plan).toHaveAttribute("target", "_blank");
+    expect(plan).toHaveAttribute("rel", "noopener noreferrer");
+    expect(plan).not.toHaveAttribute("download");
+    expect(screen.getByRole("link", { name: "tricky" })).toHaveAttribute(
+      "href",
+      "/v1/attachments/l-2",
+    );
+  });
+
   it("prefers the display title a human gave over the filename that arrived", async () => {
     stub(DOCS);
     show(<CompanyDocumentsCard companyId="o-1" />);

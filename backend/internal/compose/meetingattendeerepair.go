@@ -218,6 +218,10 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload
 
 // markMeetingRepaired records that this meeting's attendees have been resolved
 // under the current rule, so no later pass offers it again.
+//
+// The ledger retires with the pass. A full sweep that finds no candidate means
+// the work is done. Both then go in one migration, as ordinary cleanup: the
+// ledger holds nothing a reader needs.
 func markMeetingRepaired(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome, rule_version)

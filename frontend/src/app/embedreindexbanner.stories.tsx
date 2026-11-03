@@ -22,16 +22,12 @@ function story(reindexNeeded: boolean) {
   return () => {
     installFetchStub({
       "GET /me": admin(),
-      "GET /embeddings/reindex/status": () =>
+      "GET /embeddings/reindex/identities": () =>
         jsonResponse({
           configured_identity: "anthropic/voyage-3@1024",
           populated_identity: reindexNeeded
             ? "anthropic/voyage-2@1024"
             : "anthropic/voyage-3@1024",
-          status: "idle",
-          reindex_needed: reindexNeeded,
-          entities_pending: reindexNeeded ? 128 : 0,
-          per_workspace: [],
         }),
     });
     return (
@@ -53,7 +49,7 @@ export const Needed: Story = { render: story(true) };
 export const UpToDate: Story = { render: story(false) };
 
 // Gated to ops/admin, same as EconomyBanner: a rep sees nothing, even when
-// the status read reports reindex_needed: true.
+// the identities differ.
 export const HiddenForNonOpsRole: Story = {
   render: () => {
     installFetchStub({
@@ -61,14 +57,10 @@ export const HiddenForNonOpsRole: Story = {
         jsonResponse({
           ...meFixture({ roles: ["rep"] }),
         }),
-      "GET /embeddings/reindex/status": () =>
+      "GET /embeddings/reindex/identities": () =>
         jsonResponse({
           configured_identity: "anthropic/voyage-3@1024",
           populated_identity: "anthropic/voyage-2@1024",
-          status: "idle",
-          reindex_needed: true,
-          entities_pending: 128,
-          per_workspace: [],
         }),
     });
     return (

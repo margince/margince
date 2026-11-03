@@ -184,6 +184,9 @@ func (s *Sink) recordThisImport(
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
+	if err := recordPartyEvidenceTx(ctx, tx, id, owner, deliveringConnector(ctx), rec, fields); err != nil {
+		return err
+	}
 	// The confidentiality question for THIS seat's view of the thread, opened
 	// in the same transaction as the message it is about. A message that landed
 	// with nobody scheduled to judge it would stay held forever under the

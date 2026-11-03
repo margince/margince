@@ -64,11 +64,8 @@ const READS_FIELDS: Session = {
 function stubSession(session: Session) {
   installFetchStub({
     "GET /me": meRoute(session.allow, { roles: session.roles, seat: "full" }),
-    "GET /ai/usage": () =>
-      jsonResponse({
-        days: [],
-        budget: { monthly_tokens: 100, spent_tokens: 20, band: "normal" },
-      }),
+    "GET /ai/usage/summary": () =>
+      jsonResponse({ currency: "USD", computed_at: "2026-08-01T09:00:00Z" }),
   });
 }
 

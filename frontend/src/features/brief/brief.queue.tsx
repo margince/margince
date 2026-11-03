@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -10,7 +10,7 @@ import { useT } from "../../i18n";
 import { navigateReplacing, useHash } from "../../lib/router";
 import { useScrollMemory } from "../../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { useUrlParams } from "../../lib/urlstate";
+import { NO_URL_PARAMS, useUrlParams } from "../../lib/urlstate";
 import { WorklistScreen } from "../worklist/worklist";
 import { drawerScope } from "../worklist/worklist.address";
 import { worklistFilterFrom } from "../worklist/worklist.header";
@@ -31,6 +31,15 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
     navigateReplacing({ screen: "home" }, next);
   }, [opensOn, params]);
   return null;
+}
+
+/** Home's list is the Worklist at default dials, so records opened from it keep the way back. */
+export function HomeListReturnScope({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return (
+    <WorklistReturnScope dials={NO_URL_PARAMS}>{children}</WorklistReturnScope>
+  );
 }
 
 export function BriefQueue() {
@@ -83,7 +92,7 @@ export function BriefQueue() {
       </DrawerHead>
       <DrawerBody className="brief-queue-body" ref={body}>
         <WorklistReturnScope>
-          <WorklistScreen opensOn={owner} embedded />
+          <WorklistScreen embedded />
         </WorklistReturnScope>
       </DrawerBody>
     </Modal>

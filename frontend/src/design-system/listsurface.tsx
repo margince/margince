@@ -159,7 +159,9 @@ export function ListSurface({
       {(!bare || title || views.length > 0 || action) && (
         <div className="lt-head">
           {title && (
-            <Heading size="xlarge" className="lt-title t-display">
+            // Out of the tab order; a press that takes its own button away
+            // hands focus here (listfocus.ts).
+            <Heading size="xlarge" className="lt-title t-display" tabIndex={-1}>
               {title}
             </Heading>
           )}

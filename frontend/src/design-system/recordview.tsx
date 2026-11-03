@@ -4,10 +4,14 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
+import { ProblemError } from "../lib/problem";
+import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
 import { Heading } from "./heading";
+import { InlineText } from "./inlinetext";
 import { RecordStory } from "./recordstory";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
+import "./pagepane.css";
 import "./recordview.css";
 
 /** The way back to where the reader opened a record from, drawn over its head. */
@@ -17,19 +21,34 @@ export function RecordBack({
 }: Readonly<{ href: string; label: string }>) {
   return (
     <div className="record-back">
-      <a className="link-button" href={href}>
+      <AppLink className="link-button" href={href}>
         <ArrowLeft aria-hidden="true" />
         {label}
-      </a>
+      </AppLink>
     </div>
   );
 }
+
+/** Renames the record where its name is read, in place like any details value. */
+export type RecordRename = Readonly<{
+  // The field's own name ("Full name"), which the edit verb reads out.
+  label: string;
+  // The stored name. It may be blank where `name` draws a stand-in.
+  value: string;
+  canEdit: boolean;
+  readOnlyReason?: string;
+  onSave: (next: string) => Promise<void>;
+  onEditingChange?: (editing: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+}>;
 
 export type RecordViewProps = Readonly<{
   // A `RecordBack` over the head, or a component that may draw one. Absent
   // or null when the reader arrived any way that has no place to return to.
   back?: ReactNode;
   name: string;
+  // Absent keeps the name as plain text.
+  rename?: RecordRename;
   // The record's own image for the mark, a company's resolved logo. Null or
   // absent draws the deterministic monogram, which is the floor for every
   // record type that has no image at all.
@@ -44,6 +63,9 @@ export type RecordViewProps = Readonly<{
   badges?: ReactNode;
   // The record's state as pills: warmth, last touch, owner.
   pulse?: ReactNode;
+  // The newest unanswered thing they sent, as one line under the pills, on
+  // the tabs whose feed does not lead with it.
+  latest?: ReactNode;
   // The record's verbs, in the head under the pills.
   actions?: ReactNode;
   // The record's own id, which keys its mark. Every list row and card drawing
@@ -109,7 +131,7 @@ export function RecordView({
     <div className="record-split">
       {back}
       <div className="record-split-row">
-        <div className="record-split-details">
+        <div className="page-pane page-pane-sticky record-split-details">
           <RecordHead {...head} />
           {aside && (
             <aside className="record-aside" aria-label={t("record.context")}>
@@ -117,7 +139,7 @@ export function RecordView({
             </aside>
           )}
         </div>
-        <div className="record-split-sheet">
+        <div className="page-pane record-split-sheet">
           {tabs && (
             <div className="record-split-tabs" data-testid="record-tabs">
               {tabs}
@@ -147,20 +169,24 @@ export function RecordView({
 
 function RecordHead({
   name,
+  rename,
   avatarSrc,
   nameBadge,
   subtitle,
   pulse,
+  latest,
   badges,
   actions,
   identity,
 }: Pick<
   RecordViewProps,
   | "name"
+  | "rename"
   | "avatarSrc"
   | "nameBadge"
   | "subtitle"
   | "pulse"
+  | "latest"
   | "badges"
   | "actions"
   | "identity"
@@ -169,20 +195,63 @@ function RecordHead({
     <header className="record-split-head">
       <div className="record-split-identity">
         <Avatar name={name} identity={identity} src={avatarSrc} size="md" />
-        <Heading
-          size="large"
-          as="h1"
-          className="record-split-name"
-          title={name}
-        >
-          {name}
-        </Heading>
+        {rename?.canEdit ? (
+          <RecordName name={name} rename={rename} />
+        ) : (
+          <RecordTitle name={name}>{name}</RecordTitle>
+        )}
       </div>
       {nameBadge && <div className="record-split-lines">{nameBadge}</div>}
       {subtitle && <div className="record-split-lines">{subtitle}</div>}
       {pulse && <div className="record-split-pills">{pulse}</div>}
+      {latest}
       {actions && <div className="record-split-verbs">{actions}</div>}
       {badges}
     </header>
+  );
+}
+
+function RecordTitle({
+  name,
+  children,
+}: Readonly<{ name: string; children: ReactNode }>) {
+  return (
+    <Heading
+      size="large"
+      as="h1"
+      className="record-split-name"
+      title={name}
+      aria-label={name}
+    >
+      {children}
+    </Heading>
+  );
+}
+
+// The h1 holds the name's edit button at rest, and is named by the record, not
+// by the button's verb. While open, the field stands in the heading's place.
+function RecordName({
+  name,
+  rename,
+}: Readonly<{ name: string; rename: RecordRename }>) {
+  const t = useT();
+  return (
+    <div className="record-split-rename">
+      <InlineText
+        label={rename.label}
+        value={rename.value}
+        placeholder={name}
+        canEdit
+        frame={(resting) => <RecordTitle name={name}>{resting}</RecordTitle>}
+        onEditingChange={rename.onEditingChange}
+        onDirtyChange={rename.onDirtyChange}
+        onSave={async (next) => {
+          if (!next.trim()) {
+            throw new ProblemError({ detail: t("record.fieldRequired") });
+          }
+          await rename.onSave(next);
+        }}
+      />
+    </div>
   );
 }

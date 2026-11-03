@@ -152,8 +152,9 @@ func TestContact360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T)
 		t.Fatalf("making Anna capture-private: %v", err)
 	}
 	prober := e.As(e.Rep3, []ids.UUID{e.Team2}, AccountRepPerms)
-	probe, err := e.Contacts.CreateContact(prober, contacts.CreateContactInput{
-		FullName: "Probe Target", Source: "manual",
+	probeOwner := ids.From[ids.UserKind](e.Rep3)
+	probe, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Probe Target", Source: "manual", OwnerID: &probeOwner,
 		Emails: []contacts.ContactEmailInput{{Email: "ceo@probe.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {

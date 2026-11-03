@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func valueOf(fields []field, name string) string {
+func valueOf(fields []Field, name string) string {
 	for _, f := range fields {
 		if f.Name == name {
 			return f.Value

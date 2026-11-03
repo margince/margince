@@ -108,18 +108,8 @@ func (c *JobCensus) NilAfterLoggingWaivers() map[string]string {
 	return waivers
 }
 
-// bothGeneratedHalvesCameFromOneContract catches a half-regenerated pair. One
-// run of gen-jobs writes both tables, so the fingerprint each carries is the
-// same one — unless somebody regenerated with one output path and committed
-// only that half. The compiler believes the result either way: a Spec table
-// and a type union describing two different revisions of the file both
-// type-check, and every check below would then be comparing one revision's
-// declaration against another's wiring.
-//
-// It says nothing about api/jobs.yaml as it stands on disk. A pair regenerated
-// TOGETHER from a stale contract agrees with itself and passes here; `make
-// drift` is what compares the tables against the file, and this arm is what
-// makes the census's own reading coherent before it starts.
+// A half-regenerated catalog can compile while its registration markers describe another revision.
+// Both generated fingerprints must agree before their wiring can be compared.
 func bothGeneratedHalvesCameFromOneContract() []string {
 	if jobs.JobContractHash == jobContractHash {
 		return nil
@@ -267,16 +257,8 @@ func (c *JobCensus) everyArgsOwnedKindCarriesItsOwnInsertOpts() []string {
 	return findings
 }
 
-// noArgsTypeAnswersToASecondKind closes River's rename door. AddWorker
-// registers a work unit under Kind() AND under every value KindAliases()
-// returns, so a type that grew an alias would satisfy the closed union, pass
-// Govern, compile — and have River working rows under a kind api/jobs.yaml
-// never named. The contract cannot declare that alias either: go_type is
-// unique per kind, so one args struct is one kind here by construction.
-//
-// The registration records the aliases too, which is what makes MustBeTotal
-// refuse such a boot; this arm is the same finding at build time, where the
-// rename is being written rather than deployed.
+// River registers aliases as additional kinds, bypassing the marker for the primary kind.
+// Every accepted alias must therefore be declared in the same catalog.
 func (c *JobCensus) noArgsTypeAnswersToASecondKind() []string {
 	var findings []string
 	inspected := 0

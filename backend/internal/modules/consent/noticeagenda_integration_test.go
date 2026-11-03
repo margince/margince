@@ -53,7 +53,7 @@ func TestASentNoticeLeavesTheAgendaAndABouncedOneReturns(t *testing.T) {
 // imported after its deadline from one that fell due while recorded.
 func TestTheAgendaSaysWhenADutyWasRecorded(t *testing.T) {
 	e := setupChannelConsent(t)
-	acq := seedAcquisition(t, e, "unknown_legacy")
+	acq := seedAcquisition(t, e, "referral")
 	due := time.Date(2020, 2, 20, 0, 0, 0, 0, time.UTC)
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14, DueAt: due})

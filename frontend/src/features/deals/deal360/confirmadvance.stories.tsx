@@ -97,6 +97,7 @@ function advance(
         jsonResponse({ data: [{ name: "progress_deal", tier: "confirm" }] }),
       "GET /activities": () =>
         jsonResponse(args.tasks ?? { data: [], page: { has_more: false } }),
+      "GET /loss-reasons": () => jsonResponse({ data: LOSS_REASONS }),
       ...(args.signed === undefined
         ? {}
         : {
@@ -116,6 +117,23 @@ function advance(
   };
 }
 
+// The list a loss is picked from. A retired reason is not offered.
+const LOSS_REASONS = [
+  ["price", "Price", true],
+  ["competitor", "Chose a competitor", true],
+  ["timing", "Bad timing", false],
+].map(([key, label, active]) => ({
+  id: `reason-${key}`,
+  key,
+  label,
+  active,
+  sort_order: 10,
+  system: true,
+  version: 1,
+  created_at: "2026-10-01T08:00:00Z",
+  updated_at: "2026-10-01T08:00:00Z",
+}));
+
 const meta: Meta<typeof ConfirmAdvanceModal> = {
   title: "Records/Deal 360/Confirm advance",
   component: ConfirmAdvanceModal,
@@ -124,7 +142,7 @@ export default meta;
 
 type Story = StoryObj<typeof ConfirmAdvanceModal>;
 
-/** A loss: the reason field is on the dialog, and Confirm waits for it. */
+/** A loss: the reason picker and the note are on the dialog, and Confirm waits for a reason. */
 export const ClosingLost: Story = {
   render: advance({
     stage: terminal("Lost", "lost"),

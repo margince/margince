@@ -3,7 +3,17 @@
 
 package agents
 
-import "github.com/margince/margince/backend/internal/shared/ports/mcp"
+import (
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
+
+// The router names other parts of the server point a model to.
+const (
+	findRecordsToolName   = "find_records"
+	readAttentionToolName = "read_attention"
+	readContextToolName   = "read_context"
+)
 
 // The routers below each front one family of verbs under one listed name. A
 // call runs as the verb its action names, at that verb's tier and scope.
@@ -12,7 +22,7 @@ type findRecords struct{ routed }
 
 func (findRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "find_records", Title: "Find records", Version: toolVersionV1,
+		Name: findRecordsToolName, Title: "Find records", Version: toolVersionV1,
 		Description: findRecordsCopy.render(), Instead: findRecordsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"engine":{"description":"search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is"},
@@ -34,10 +44,11 @@ type readContext struct{ routed }
 
 func (readContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_context", Title: "Get the story so far", Version: toolVersionV1,
+		Name: readContextToolName, Title: "Get the story so far", Version: toolVersionV1,
 		Description: readContextCopy.render(), Instead: readContextCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"about":{"description":"catch_up: what has been happening on one record; meeting: what to know before a meeting; brief: this morning's brief"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.ContextURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -51,10 +62,11 @@ type readAttention struct{ routed }
 
 func (readAttention) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_attention", Title: "See what needs attention", Version: toolVersionV1,
+		Name: readAttentionToolName, Title: "See what needs attention", Version: toolVersionV1,
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.AttentionURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -91,6 +103,27 @@ func (readReports) routeTargets() map[string]string {
 	return map[string]string{"standard": "read_reporting", "run": "run_report", "evidence": "search_report_evidence"}
 }
 
+// changeReports fronts the reporting writes an agent may make. Each stays its
+// own tool, so a later report write joins as one more action, not one more
+// listed tool.
+type changeReports struct{ routed }
+
+func (changeReports) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "change_reports", Title: "Prepare saved reports", Version: toolVersionV1,
+		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
+		InputSchema: schema(`{"type":"object","properties":{
+			"action":{"description":"draft: save a report's next charts as a draft for a human to publish, or create a new report only they see"},
+			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
+	}
+}
+
+func (changeReports) routeField() string { return actionArg }
+
+func (changeReports) routeTargets() map[string]string {
+	return map[string]string{"draft": draftReportTool}
+}
+
 type readAnalytics struct{ routed }
 
 func (readAnalytics) Spec() mcp.ToolSpec {
@@ -115,7 +148,7 @@ func (changeActivities) Spec() mcp.ToolSpec {
 		Name: "change_activities", Title: "Log, plan and file activities", Version: toolVersionV1,
 		Description: changeActivitiesCopy.render(), Instead: changeActivitiesCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set"}}}`),
+			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back"}}}`),
 	}
 }
 
@@ -125,6 +158,7 @@ func (changeActivities) routeTargets() map[string]string {
 	return map[string]string{
 		"log": "log_activity", resultTypeTask: "create_task", "attach": "attach_document",
 		"relink": relinkActivityTool, "relink_many": relinkActivitiesTool,
+		"ready": confirmMeetingReadyTool, "unready": undoMeetingReadyTool,
 	}
 }
 

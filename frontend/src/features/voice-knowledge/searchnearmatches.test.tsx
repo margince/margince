@@ -38,7 +38,7 @@ describe("NearMatches", () => {
     }
     expect(
       screen.getByRole("link", { name: "Anna Kowalczyk" }).getAttribute("href"),
-    ).toBe(routeHash(route));
+    ).toBe(`/${routeHash(route)}`);
     expect(screen.getByText(/Brandtmeier/)).toBeTruthy();
   });
 });

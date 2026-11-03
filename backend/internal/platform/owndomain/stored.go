@@ -14,6 +14,14 @@ func CoversSQL(domain, own string) string {
 	return fmt.Sprintf(`(%[1]s = %[2]s OR right(%[1]s, length(%[2]s) + 1) = '.' || %[2]s)`, domain, own)
 }
 
+// CoversIndexedSQL is CoversSQL behind a range an index on (reverse(domain) COLLATE "C") serves.
+// Reversed, a domain and its subdomains sort from reverse(own) to before reverse(own) || '/'.
+func CoversIndexedSQL(domain, own string) string {
+	host := `(reverse(` + domain + `) COLLATE "C")`
+	return fmt.Sprintf(`(%[1]s >= (reverse(%[2]s) COLLATE "C") AND %[1]s < ((reverse(%[2]s) || '/') COLLATE "C") AND %[3]s)`,
+		host, own, CoversSQL(domain, own))
+}
+
 // StoredOfAddress is what an address row stores for CoversSQL: the folded
 // domain of the address, or nil when it has none.
 func StoredOfAddress(address string) *string {

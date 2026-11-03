@@ -5,9 +5,10 @@
 // open. The server decides which reminders are due (`reminder_due` on the
 // activity list); this file only decides whether this browser has shown one.
 //
-// "Once" is kept per browser, keyed by the task and its reminder instant. The
-// record is in storage every tab shares, written under a lock the tabs share. The
-// Worklist is where a reminder stays; the notification is the nudge to look.
+// "Once" is kept per browser, keyed by the task and its reminder instant, in
+// storage every tab shares and under a lock the tabs share. Across browsers the
+// server's claim decides. The Worklist is where a reminder stays; the
+// notification is the nudge to look.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -79,6 +80,28 @@ function underTabLock<T>(work: () => T): Promise<T> {
   return locks.request(LOCK, () => work());
 }
 
+/**
+ * Whether this tab is the one to show a reminder, across every browser the
+ * member is signed in on. The server grants the first claim at the reminder's
+ * instant. A claim that fails for another reason shows it anyway, as this
+ * browser alone would, so a lost request never silences a reminder.
+ */
+export async function claimDelivery(task: Activity): Promise<boolean> {
+  if (!task.remind_at) return false;
+  try {
+    const { data, response } = await api.POST(
+      "/activities/{id}/reminder-delivery",
+      {
+        params: { path: { id: task.id } },
+        body: { remind_at: task.remind_at },
+      },
+    );
+    return data ? data.claimed : response.status !== 404;
+  } catch {
+    return true;
+  }
+}
+
 export function openTaskFromNotification(id: string): void {
   globalThis.focus();
   navigate({ screen: "home" }, new Map([[TASK_PARAM, id]]));
@@ -136,10 +159,14 @@ export function useTaskReminderNotifications(signedIn: boolean): void {
   useEffect(() => {
     if (!granted || !due.data) return;
     const page = due.data;
-    void underTabLock(() => takeUnshown(page, Date.now())).then((unshown) => {
-      for (const task of unshown) show(task, t);
-      if (unshown.length > 0)
-        void client.invalidateQueries({ queryKey: worklistKey });
-    });
+    void underTabLock(() => takeUnshown(page, Date.now())).then(
+      async (unshown) => {
+        const claims = await Promise.all(unshown.map(claimDelivery));
+        const mine = unshown.filter((_, index) => claims[index]);
+        for (const task of mine) show(task, t);
+        if (mine.length > 0)
+          void client.invalidateQueries({ queryKey: worklistKey });
+      },
+    );
   }, [granted, due.data, client, t]);
 }

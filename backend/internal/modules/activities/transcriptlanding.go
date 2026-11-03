@@ -6,11 +6,10 @@ package activities
 // Reading a transcript the moment it LANDS, rather than only when somebody
 // asks for it.
 //
-// The extraction lane (ai.TaskTranscriptPropose) was fully built and had never
-// run once — transcript_read held zero rows — because the only thing that ever
-// enqueued it was POST /v1/activities/{id}/transcript-read, and nothing called
-// that. A meeting logged over the tool surface sat unread, and the commitments
-// somebody made in it were never proposed.
+// Landing starts a transcript reading (ai.TaskTranscriptPropose) in the
+// activity's transaction. POST /v1/activities/{id}/transcript-proposals also
+// starts one on request. Without landing, a meeting logged over the tool
+// surface would sit unread.
 
 import (
 	"context"
@@ -26,12 +25,9 @@ import (
 // readTranscriptOnLanding starts the reading when a transcript ARRIVES,
 // instead of waiting for somebody to ask for it.
 //
-// The extraction lane was fully built and had never run once: transcript_read
-// held zero rows. The only thing that ever enqueued it was
-// POST /v1/activities/{id}/transcript-read, and nothing called that — so a
-// meeting logged over the tool surface sat unread, and the tasks somebody
-// promised in it were never proposed. A capability nobody can reach is not a
-// capability.
+// A reading that only the explicit route can start leaves a meeting logged over
+// the tool surface unread. The tasks somebody promised in it stay unproposed.
+// So the landing path starts one too.
 //
 // Three conditions, and each one is load-bearing:
 //   - source_system = 'transcript' is the marker the retention selector and
@@ -76,7 +72,7 @@ func (s *Store) readTranscriptOnLanding(
 // in-bounds activity would vanish and the caller would be told its transcript
 // was too long — for a reading they never asked for.
 //
-// The explicit door keeps the refusal. POST /v1/activities/{id}/transcript-read
+// The explicit door keeps the refusal. POST /v1/activities/{id}/transcript-proposals
 // asks for a reading and nothing else, so 422 is the honest answer there and
 // this path does not touch it. Landing only offers one.
 func skipARefusedReading(err error) error {

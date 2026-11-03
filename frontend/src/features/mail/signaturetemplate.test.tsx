@@ -96,6 +96,7 @@ describe("a member under a workspace template", () => {
                 body: "",
                 title: "Head of Sales",
                 phone: "+49 30 1234",
+                html: "",
               }),
         ),
       ).toBe(true),

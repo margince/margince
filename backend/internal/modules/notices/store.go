@@ -48,24 +48,13 @@ type Notice struct {
 	ID         ids.UUID
 	Kind       string
 	Subject    string
-	Body       string
-	Target     Target
-	CreatedAt  time.Time
+	// SubjectParts is Subject taken apart, on an approval notice whose summary
+	// lists field values. Nil on any other notice, and on one written before.
+	SubjectParts *crmcontracts.ApprovalSummaryParts
+	Body         string
+	Target       Target
+	CreatedAt    time.Time
 }
-
-// Target is the record a notice is about, when it is about one.
-//
-// Both halves or neither, which the table's own constraint holds: a type with
-// no id names a KIND of thing and cannot be opened, and an id with no type
-// cannot be routed to a screen. The zero value is a notice about no record —
-// a capture backlog, a coach's word — and those are the majority.
-type Target struct {
-	Type string
-	ID   ids.UUID
-}
-
-// Named reports whether this notice points at a record.
-func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
 
 // NewNotice is one notice to record. It is a struct rather than a parameter
 // list because the dedupe key is the fifth thing a caller might say about a
@@ -76,7 +65,10 @@ type NewNotice struct {
 	Recipient ids.UserID
 	Kind      string
 	Subject   string
-	Body      string
+	// SubjectParts is Subject taken apart, when it is an approval's summary of
+	// a sentence and field values. The bell shows the values as a list.
+	SubjectParts *crmcontracts.ApprovalSummaryParts
+	Body         string
 	// DedupeKey is the caller's natural key for the EVENT this notice is
 	// about. A second Create carrying the same key for the same recipient
 	// answers the first notice's id and writes nothing.
@@ -217,7 +209,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	//
 	// created_at is the column's own default, so the insert returns it rather
 	// than the caller stamping a second clock beside it.
-	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin}
+	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin, in.SubjectParts}
 	holders := make([]string, len(args))
 	for i := range args {
 		holders[i] = "$" + strconv.Itoa(i+1)
@@ -225,7 +217,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	placeholders := strings.Join(holders, ", ")
 	row := tx.QueryRow(ctx, `
 		INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
-		                    dedupe_key, target_type, target_id, origin)
+		                    dedupe_key, target_type, target_id, origin, subject_parts)
 		VALUES (`+placeholders+`)
 		ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 		DO NOTHING

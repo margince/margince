@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,7 +31,7 @@ func (w *employmentImportWorker) Work(ctx context.Context, _ *river.Job[Employme
 }
 
 func (w *employmentImportWorker) processWorkspace(ctx context.Context, workspace ids.UUID) error {
-	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace)))
+	store := newContactsStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace)))
 	actor := principal.WithWorkspaceID(ctx, workspace)
 	actor = principal.SystemActing(actor, "employment_import_worker")
 	return store.SweepEmploymentImports(actor)

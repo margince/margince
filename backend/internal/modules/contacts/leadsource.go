@@ -244,7 +244,7 @@ func (s *Store) CreateLeadSource(ctx context.Context, in CreateLeadSourceInput) 
 		key = deriveSourceKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
-		return crmcontracts.LeadSource{}, &values.ParseError{Field: "key", Code: "invalid_key", Message: "key must be a non-empty lowercase value"}
+		return crmcontracts.LeadSource{}, &values.ParseError{Field: leadOriginKeyField, Code: codeInvalidKey, Message: "key must be a non-empty lowercase value"}
 	}
 	intent := in.Intent
 	if intent == "" {

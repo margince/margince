@@ -17,6 +17,8 @@ import {
   activityTimeSpan,
   dayOccurredAt,
   formatActivityWhen,
+  latestHeldDay,
+  latestHeldMoment,
   movedActivityStart,
   type OccurredPrecision,
 } from "./activitywhen";
@@ -190,15 +192,43 @@ describe("the start a moved activity is sent with", () => {
     });
   });
 
-  it("keeps an instant's time of day, and never moves it past now", () => {
+  it("keeps an instant's time of day, and never moves it past a minute before now", () => {
     const start = { at: "2026-09-15T08:30:00Z", precision: "instant" } as const;
     expect(movedActivityStart(start, "2026-09-12", "UTC", now)).toEqual({
       at: "2026-09-12T08:30:00.000Z",
       precision: "instant",
     });
     expect(movedActivityStart(start, "2026-09-25", "UTC", now).at).toBe(
-      now.toISOString(),
+      "2026-09-20T11:59:00.000Z",
     );
+  });
+
+  it("keeps a time of day on today that is just over a minute ago", () => {
+    const start = { at: "2026-09-15T11:58:59Z", precision: "instant" } as const;
+    expect(movedActivityStart(start, "2026-09-20", "UTC", now).at).toBe(
+      "2026-09-20T11:58:59.000Z",
+    );
+  });
+});
+
+describe("the last date a meeting can be filed as held on", () => {
+  it("is yesterday in the record zone for a date-only meeting", () => {
+    // Noon on the 21st in Kiritimati, still the 20th in UTC.
+    const now = new Date("2026-09-20T22:00:00Z");
+    expect(latestHeldDay("day", now, EAST)).toBe("2026-09-20");
+    expect(latestHeldDay("instant", now, EAST)).toBe("2026-09-21");
+  });
+
+  it("is still yesterday in the first minute of a day, ahead of a server clock that lags", () => {
+    const now = new Date("2026-09-20T00:00:30Z");
+    expect(latestHeldDay("instant", now, "UTC")).toBe("2026-09-19");
+    expect(latestHeldDay("day", now, "UTC")).toBe("2026-09-18");
+  });
+
+  it("starts a minute before now", () => {
+    expect(
+      latestHeldMoment(new Date("2026-09-20T00:00:30Z")).toISOString(),
+    ).toBe("2026-09-19T23:59:30.000Z");
   });
 });
 

@@ -82,6 +82,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
+- [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
+  a new forecast model is tested against, before it is scored.
+- [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
+  review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
@@ -96,8 +100,11 @@ ready before we need it, because the first date comes 24 hours after we learn of
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md): connect a client to the MCP tools.
+- [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
+- [add-an-mcp-e2e-case.md](how-to/add-an-mcp-e2e-case.md): add a test case for the MCP tools and run it
+  on Claude and Codex.
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
@@ -124,6 +131,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
+  holds, and how to compose one.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
@@ -162,6 +171,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
+- [worklist-source-census.md](reference/worklist-source-census.md): each source of work the Worklist reads, the
+  limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
 - [an-extension-cannot-add-its-own-record-k.md](reference/an-extension-cannot-add-its-own-record-k.md): the
@@ -177,6 +188,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [forecast-model-evaluation.md](reference/forecast-model-evaluation.md): the command that scores past
+  forecasts, and the values to set before a new model is tested.
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.

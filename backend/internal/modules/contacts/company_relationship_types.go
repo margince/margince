@@ -371,6 +371,8 @@ var validLifecycles = map[string]bool{
 	string(crmcontracts.CompanyLifecycleTarget):         true,
 	string(crmcontracts.CompanyLifecycleProspect):       true,
 	string(crmcontracts.CompanyLifecycleOpportunity):    true,
+	string(crmcontracts.CompanyLifecycleOnboarding):     true,
+	string(crmcontracts.CompanyLifecycleLive):           true,
 	string(crmcontracts.CompanyLifecycleCustomer):       true,
 	string(crmcontracts.CompanyLifecycleFormerCustomer): true,
 	string(crmcontracts.CompanyLifecycleDisqualified):   true,

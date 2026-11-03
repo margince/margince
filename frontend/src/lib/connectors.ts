@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { isMailbox } from "../format/connectorprovider";
 import { connectorsPollInterval } from "./capture-progress";
 import { problemCode, throwProblem } from "./problem";
 
@@ -32,6 +33,7 @@ export function useConnectors(
     /** False holds the request without leaving the key: a reader that only
      *  wants the answer when it already exists still shares the one entry. */
     enabled?: boolean;
+    refreshHealth?: boolean;
     refetchOnWindowFocus?: boolean | "always";
   }>,
 ) {
@@ -56,6 +58,21 @@ export function useConnectors(
     },
     // Live while a mailbox imports: the orb, the capture chip and the import
     // dialog all draw the run from this read.
-    refetchInterval: (query) => connectorsPollInterval(query.state.data),
+    refetchInterval: (query) =>
+      connectorsPollInterval(query.state.data) ||
+      (options?.refreshHealth ? 60_000 : false),
   });
+}
+
+/**
+ * Whether this reader has a mailbox the product can send from: a connected
+ * mail connection, not a calendar. Unanswered reads as none, because a drawer
+ * offered on a guess would open onto a refusal.
+ */
+export function useMailboxConnected(): boolean {
+  const connectors = useConnectors();
+  return (connectors.data?.data ?? []).some(
+    (connection) =>
+      connection.status === "connected" && isMailbox(connection.provider),
+  );
 }

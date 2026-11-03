@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { stubClipboard, stubDeferredClipboard } from "./clipboard-testing";
 import { CopyableText, useClipboardCopy } from "./clipboardcopy";
@@ -186,4 +186,165 @@ describe("CopyableText", () => {
       "https://crm.example.test/#/set?k=1",
     );
   });
+});
+
+it("reads a lazy report only on copy and cancels it when its identity changes", async () => {
+  const user = userEvent.setup();
+  const clipboard = stubClipboard("accepts");
+  let complete: (value: string) => void = () => {
+    throw new Error("Report not requested");
+  };
+  const read = vi.fn(
+    () =>
+      new Promise<string>((resolve) => {
+        complete = resolve;
+      }),
+  );
+  function ReportProbe({ identity }: Readonly<{ identity: string }>) {
+    const copy = useClipboardCopy(
+      { key: identity, read },
+      { ...LABELS, pending: "Reading report" },
+    );
+    return (
+      <button type="button" onClick={copy.copy}>
+        {copy.label}
+      </button>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="reader-a" />
+    </LocaleProvider>,
+  );
+  expect(read).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  expect(screen.getByRole("button", { name: "Reading report" })).toBeTruthy();
+  view.rerender(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="reader-b" />
+    </LocaleProvider>,
+  );
+  await act(async () => complete("private diagnostic"));
+  expect(clipboard.written).toEqual([]);
+  view.rerender(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="reader-a" />
+    </LocaleProvider>,
+  );
+  expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
+  view.rerender(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="reader-b" />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await act(async () => complete("current diagnostic"));
+  expect(clipboard.written).toEqual(["current diagnostic"]);
+});
+
+it("removes an old report and its failure notice when the report identity changes", async () => {
+  const user = userEvent.setup();
+  stubClipboard("refuses");
+  function ReportProbe({ identity }: Readonly<{ identity: string }>) {
+    const copy = useClipboardCopy(
+      { key: identity, read: async () => `${identity} report` },
+      LABELS,
+    );
+    return (
+      <>
+        <button type="button" onClick={copy.copy}>
+          {copy.label}
+        </button>
+        {copy.notice}
+        {copy.preparedText && (
+          <CopyableText text={copy.preparedText} label="Prepared report" />
+        )}
+      </>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="old" />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await screen.findByText(/clipboard access denied/i);
+  expect(
+    screen.getByRole("textbox", { name: "Prepared report" }).textContent,
+  ).toBe("old report");
+  view.rerender(
+    <LocaleProvider initial="en">
+      <ReportProbe identity="new" />
+    </LocaleProvider>,
+  );
+  expect(screen.queryByRole("textbox", { name: "Prepared report" })).toBeNull();
+  expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+});
+
+it("does not carry a lazy-report failure into a string copy control", async () => {
+  const user = userEvent.setup();
+  stubClipboard("refuses");
+  function Probe({ lazy }: Readonly<{ lazy: boolean }>) {
+    const copy = useClipboardCopy(
+      lazy ? { key: "report", read: async () => "report" } : "report",
+      LABELS,
+    );
+    return (
+      <>
+        <button type="button" onClick={copy.copy}>
+          {copy.label}
+        </button>
+        {copy.notice}
+      </>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <Probe lazy />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await screen.findByText(/clipboard access denied/i);
+  view.rerender(
+    <LocaleProvider initial="en">
+      <Probe lazy={false} />
+    </LocaleProvider>,
+  );
+  expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+});
+
+it("clears the old report when another read of the same report fails", async () => {
+  const user = userEvent.setup();
+  stubClipboard("refuses");
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce("old evidence")
+    .mockRejectedValueOnce(new Error("read failed"));
+  function Probe() {
+    const copy = useClipboardCopy({ key: "same report", read }, LABELS);
+    return (
+      <>
+        <button type="button" onClick={copy.copy}>
+          {copy.label}
+        </button>
+        {copy.preparedText && (
+          <CopyableText text={copy.preparedText} label="Prepared report" />
+        )}
+        {copy.notice}
+      </>
+    );
+  }
+  render(
+    <LocaleProvider initial="en">
+      <Probe />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  expect(
+    (await screen.findByRole("textbox", { name: "Prepared report" }))
+      .textContent,
+  ).toBe("old evidence");
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole("textbox", { name: "Prepared report" })).toBeNull();
 });

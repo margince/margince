@@ -27,7 +27,22 @@ const IMPORTED_MEMBER: User = {
   allowed_actions: ["edit", "change_role"],
 };
 
-function installMemberEditorRoutes() {
+const REGIONS = ["DACH", "Nordics", "Benelux", "UK & Ireland", "Iberia"];
+const KINDS = ["Sales", "Delivery", "Customer Success", "Partners", "Presales"];
+// Twenty-five teams: the size where a list of ticks stops fitting a dialog.
+const MANY_TEAMS = REGIONS.flatMap((region, row) =>
+  KINDS.map((kind, column) => ({
+    id: `20000000-0000-4000-8000-0000000000${row}${column}`,
+    name: `${region} ${kind}`,
+    member_count: ((row + column) % 6) + 2,
+  })),
+);
+
+function installMemberEditorRoutes(
+  teams: readonly { id: string; name: string }[] = [
+    { id: "20000000-0000-4000-8000-000000000001", name: "Delivery" },
+  ],
+) {
   installFetchStub({
     "GET /me": () =>
       jsonResponse(
@@ -41,9 +56,7 @@ function installMemberEditorRoutes() {
       ),
     "GET /teams": () =>
       jsonResponse({
-        data: [
-          { id: "20000000-0000-4000-8000-000000000001", name: "Delivery" },
-        ],
+        data: teams,
         page: { has_more: false },
       }),
     "GET /users/assignable-roles": () =>
@@ -76,6 +89,34 @@ export const Deactivated: Story = {
           member={{ ...IMPORTED_MEMBER, status: "deactivated" }}
           onClose={() => undefined}
         />
+      </StoryProviders>
+    );
+  },
+};
+
+export const ManyTeams: Story = {
+  render: () => {
+    installMemberEditorRoutes(MANY_TEAMS);
+    return (
+      <StoryProviders>
+        <EditMember
+          member={{
+            ...IMPORTED_MEMBER,
+            team_ids: [MANY_TEAMS[0]?.id ?? "", MANY_TEAMS[7]?.id ?? ""],
+          }}
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+export const NoTeamsYet: Story = {
+  render: () => {
+    installMemberEditorRoutes([]);
+    return (
+      <StoryProviders>
+        <EditMember member={IMPORTED_MEMBER} onClose={() => undefined} />
       </StoryProviders>
     );
   },

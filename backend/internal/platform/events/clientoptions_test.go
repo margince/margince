@@ -15,6 +15,7 @@ package events
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -52,10 +53,12 @@ func TestASuffixSelectsThatLogicalDatabase(t *testing.T) {
 // by way of a typo.
 func TestAnUnusableDatabaseIsRefusedRatherThanIgnored(t *testing.T) {
 	for _, addr := range []string{
-		"localhost:16379/",    // suffix present, index missing
-		"localhost:16379/x",   // not a number
-		"localhost:16379/-1",  // below the range
-		"localhost:16379/80",  // Redis ships `databases 16`, so 0..15
+		"localhost:16379/",   // suffix present, index missing
+		"localhost:16379/x",  // not a number
+		"localhost:16379/-1", // below the range
+		// One past what the dev compose serves, read from the ceiling so a raise
+		// moves this case with it rather than making it accepted.
+		fmt.Sprintf("localhost:16379/%d", maxRedisDB+1),
 		"localhost:16379/1/2", // two suffixes
 	} {
 		if _, err := ClientOptions(addr, ""); err == nil {
@@ -86,12 +89,12 @@ func TestAUnixSocketIsAnAddressNotADatabaseSuffix(t *testing.T) {
 
 // The top of the range the dev compose actually serves.
 func TestTheHighestServedDatabaseIsAccepted(t *testing.T) {
-	opts, err := ClientOptions("localhost:16379/79", "")
+	opts, err := ClientOptions(fmt.Sprintf("localhost:16379/%d", maxRedisDB), "")
 	if err != nil {
-		t.Fatalf("db 79 was refused, but the instance serves 80: %v", err)
+		t.Fatalf("db %d was refused, but the instance serves it: %v", maxRedisDB, err)
 	}
-	if opts.DB != 79 {
-		t.Errorf("db = %d, want 79", opts.DB)
+	if opts.DB != maxRedisDB {
+		t.Errorf("db = %d, want %d", opts.DB, maxRedisDB)
 	}
 }
 

@@ -97,7 +97,7 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 		// LiveOnly read here would answer not-found for a replay that, on a
 		// live row, correctly answers with the row unchanged.
 		var err2 error
-		out, err2 = readActivityForWrite(ctx, tx, id, held)
+		out, err2 = readActivityForWrite(ctx, tx, id, held, s.now())
 		return err2
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -307,7 +307,7 @@ func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVers
 	if ifVersion == nil || held {
 		return nil
 	}
-	current, err := readActivityForWrite(ctx, tx, id, held)
+	current, err := readActivity(ctx, tx, id, storekit.LiveOnly)
 	if err != nil {
 		return err
 	}

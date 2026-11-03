@@ -104,9 +104,9 @@ func (s *Service) grantPage(ctx context.Context, tx pgx.Tx, in ListGrantsInput, 
 	// whole table across — and no test through this API can tell the two apart,
 	// because the difference is invisible in the result. That is why it is said
 	// here rather than left to a test.
-	rows, err := tx.Query(ctx,
-		"SELECT "+grantColumns+" FROM record_grant WHERE "+where+
-			storekit.SQLf(" ORDER BY created_at DESC, id DESC LIMIT $%d", arg(limit+1)), args...)
+	query := "SELECT " + grantColumns + " FROM record_grant WHERE " + where +
+		storekit.SQLf(" ORDER BY created_at DESC, id DESC LIMIT $%d", arg(limit+1))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

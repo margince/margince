@@ -64,7 +64,7 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	var health crmcontracts.CaptureHealth
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		health, err = readCaptureHealth(ctx, tx, time.Now().UTC())
+		health, err = readCaptureHealth(e.Admin(), tx, time.Now().UTC())
 		return err
 	}); err != nil {
 		t.Fatalf("reading capture health: %v", err)
@@ -105,6 +105,9 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	}
 	if health.Classifier.Unsure != 1 {
 		t.Errorf("unsure = %d, want the one waiting on a human", health.Classifier.Unsure)
+	}
+	if health.OwnerReviews == nil || len(*health.OwnerReviews) != 0 {
+		t.Fatalf("decision owners = %+v; unstaged and automatic work must not require human review", health.OwnerReviews)
 	}
 }
 
@@ -315,5 +318,31 @@ func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
 	want := map[string]bool{"gmail": false, "gcal": true, "graphcal": true, "imap": false}
 	if !maps.Equal(calendars, want) {
 		t.Errorf("calendar flag by provider = %v, want %v", calendars, want)
+	}
+}
+
+func TestCaptureSummaryKeepsUnobservedSweepsAfterAFailedSweep(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := capture.NewSweepLedger(InstallationDB(e.Pool)).RecordSweep(ctx,
+		sweepReceiptFor(capture.Sweeps()[0], at, at, sweepTally{}, errors.New("synthetic failure"))); err != nil {
+		t.Fatal(err)
+	}
+	source, findings, err := (Server{captureHealthHandlers: captureHealthHandlers{pool: e.Pool}}).captureSummary(e.Admin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source.Availability != healthUnobserved {
+		t.Fatalf("unchecked sweep became observed: %+v", source)
+	}
+	count := 0
+	for _, finding := range findings {
+		if finding.Code == "capture_repair_unverified" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("repair finding count %d, want 1", count)
 	}
 }

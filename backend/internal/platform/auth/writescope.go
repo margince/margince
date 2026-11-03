@@ -303,7 +303,7 @@ func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.U
 	if err != nil {
 		return err
 	}
-	if Unbounded(p) || !shareableTables[table] {
+	if Unbounded(p) || !shareableTables[table] || admittedCaseMember(ctx, table, id) {
 		return nil
 	}
 	var args []any
@@ -375,14 +375,8 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 		return "(" + owner + ")"
 	}
 	me, teams := arg(p.UserID), arg(p.TeamIDs)
-	return fmt.Sprintf(`(%s OR EXISTS (
-		   SELECT 1 FROM record_grant rg
-		   WHERE rg.record_type = '%s' AND rg.record_id = %s.id
-		     AND rg.access = '%s'
-		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id IN (%s))
-		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-		owner, table, alias, grantAccessWrite, memberIdentitySQL(me), teams)
+	return fmt.Sprintf(`(%s OR %s)`, owner,
+		liveGrantSQL(table, alias+".id", "\n\t\t     AND rg.access = '"+grantAccessWrite+"'", me, teams))
 }
 
 // EnsureClaimable is the gate in front of taking ownership of a row. A claim

@@ -73,7 +73,17 @@ func (w *csvWriters) planActivityUpdate(
 	if _, why, known := activityKindReason(err, fields); known {
 		return plan, why, nil
 	}
-	return plan, migration.Reason{}, nil
+	movesStart := plan.patch.OccurredAt != nil || plan.patch.OccurredPrecision != nil
+	probes := plan.patch.MeetingStatus != nil || (movesStart && stored.Kind == activities.KindMeeting)
+	// Without the update grant the caller refuses the row for that instead.
+	if !probes || !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return plan, migration.Reason{}, nil
+	}
+	err = w.activities.ProbeOutcome(ctx, ids.From[ids.ActivityKind](id), plan.patch)
+	if _, why, known := activityKindReason(err, fields); known {
+		return plan, why, nil
+	}
+	return plan, migration.Reason{}, err
 }
 
 // reconcileActivity brings an activity up to what the file now says.
@@ -136,5 +146,5 @@ func sameOccurrence(stored storedActivity, typed map[string]any, zone *time.Loca
 		storedAt := occurredday.Moment{At: stored.OccurredAt, DateOnly: occurredday.IsDay(stored.OccurredPrecision)}
 		return occurredday.DateIn(storedAt, zone).Equal(at)
 	}
-	return !occurredday.IsDay(stored.OccurredPrecision) && stored.OccurredAt.Equal(at)
+	return !occurredday.IsDay(stored.OccurredPrecision) && activities.SameStoredStart(at, stored.OccurredAt)
 }

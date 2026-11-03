@@ -342,7 +342,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	// DISTINCT ON needs its key first in ORDER BY, and the id breaks the tie
 	// so two equally urgent commitments do not swap places between two reads
 	// of the same page.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (l.project_id)
 		       l.project_id, c.body, coalesce(pr.full_name, ''), c.due_at,
 		       c.source_activity_id, (%[4]s) AS contact_visible
@@ -356,7 +356,8 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		 ORDER BY l.project_id,
 		          (c.due_at IS NOT NULL AND c.due_at < $%[2]d) DESC,
 		          c.created_at DESC, c.id`,
-		projectsPos, nowPos, activityScope, contactScope), args...)
+		projectsPos, nowPos, activityScope, contactScope)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
 	}

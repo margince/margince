@@ -46,23 +46,51 @@ type InteractionEdge struct {
 	LastAt        time.Time
 	LastInboundAt *time.Time
 	LastOutbound  *time.Time
+	// LastMetAt is the newest meeting or call of the pair neither declined.
+	// Nil when they never met.
+	LastMetAt *time.Time
+	// LateCount90d and LateOutCount90d count the window's interactions after
+	// the contact last took part (relstrength.Inputs). They are nil on a row
+	// folded before this rule. Such a row scores by the earlier rule, from
+	// LastAt, until the next fold fills it.
+	LateCount90d    *int
+	LateOutCount90d *int
 
 	Count90d    int
 	InCount90d  int
 	OutCount90d int
-	CountTotal  int
+	// SentCount90d counts the messages this member sent the contact. It is
+	// at most OutCount90d, which also counts mail the member was copied on.
+	// Nil for a row folded before the count existed, and for a reader
+	// without activity read.
+	SentCount90d *int
+	CountTotal   int
 }
 
 // StrengthOf scores the edge at the given instant (PO-F-3b), through the same
 // arithmetic the workspace-wide score uses.
 func (e InteractionEdge) StrengthOf(now time.Time) relstrength.Score {
 	last := e.LastAt
-	return relstrength.Compute(relstrength.Inputs{
-		LastInteraction: &last,
-		Count90d:        e.Count90d,
-		Inbound90d:      e.InCount90d,
-		Outbound90d:     e.OutCount90d,
-	}, now)
+	in := relstrength.Inputs{
+		LastTouch:   &last,
+		LastEngaged: &last,
+		Count90d:    e.Count90d,
+		Inbound90d:  e.InCount90d,
+		Outbound90d: e.OutCount90d,
+	}
+	if e.LateCount90d != nil && e.LateOutCount90d != nil {
+		in.LastEngaged = latest(e.LastInboundAt, e.LastMetAt)
+		in.LateCount90d, in.LateOutbound90d = *e.LateCount90d, *e.LateOutCount90d
+	}
+	return relstrength.Compute(in, now)
+}
+
+// latest is the later of two optional moments, nil when both are.
+func latest(a, b *time.Time) *time.Time {
+	if a == nil || (b != nil && b.After(*a)) {
+		return b
+	}
+	return a
 }
 
 // Counting is over DISTINCT ACTIVITIES, never over join rows. One message
@@ -161,15 +189,8 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		    SELECT DISTINCT user_id, contact_id
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
 		),
-		folded AS (
-		    SELECT t.user_id, t.contact_id,
-		           max(a.occurred_at) AS last_at,
-		           max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS last_inbound_at,
-		           max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`) AS last_outbound_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS in_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`) AS out_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
+		counted AS (
+		    SELECT t.user_id AS edge_user, t.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met, `+graphMemberSent+` AS sent
 		      FROM target t
 		      JOIN activity_participant up
 		        ON up.user_id = t.user_id AND up.role IN `+interactionRoles+`
@@ -179,22 +200,30 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
-		     GROUP BY t.user_id, t.contact_id
+		),
+		folded AS (
+		    SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
+		      FROM (`+graphEngagedRows+`) a
+		     GROUP BY a.edge_user, a.edge_contact
 		)
 		INSERT INTO graph_interaction_edge AS e
-		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at,
-		     count_90d, in_count_90d, out_count_90d, count_total, computed_at)
-		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.count_total, now()
+		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at)
+		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now()
 		  FROM folded f
 		 ORDER BY f.user_id, f.contact_id
 		ON CONFLICT (user_id, contact_id) DO UPDATE SET
 		    last_at          = EXCLUDED.last_at,
 		    last_inbound_at  = EXCLUDED.last_inbound_at,
 		    last_outbound_at = EXCLUDED.last_outbound_at,
+		    last_met_at      = EXCLUDED.last_met_at,
 		    count_90d        = EXCLUDED.count_90d,
 		    in_count_90d     = EXCLUDED.in_count_90d,
 		    out_count_90d    = EXCLUDED.out_count_90d,
+		    sent_count_90d   = EXCLUDED.sent_count_90d,
+		    late_count_90d     = EXCLUDED.late_count_90d,
+		    late_out_count_90d = EXCLUDED.late_out_count_90d,
 		    count_total      = EXCLUDED.count_total,
 		    computed_at      = EXCLUDED.computed_at`,
 		users, contacts); err != nil {
@@ -260,8 +289,8 @@ func EdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, limit i
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
-		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
+		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = $1
@@ -271,7 +300,7 @@ func EdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, limit i
 		return nil, fmt.Errorf("search: reading who knows a contact: %w", err)
 	}
 	defer rows.Close()
-	return scanEdges(rows)
+	return scanEdges(ctx, rows)
 }
 
 // SortByStrength ranks edges warmest first at the given instant, with a
@@ -311,8 +340,8 @@ func EdgesForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]In
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
-		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
+		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = ANY($1)
@@ -321,20 +350,7 @@ func EdgesForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]In
 		return nil, fmt.Errorf("search: reading who knows a contact set: %w", err)
 	}
 	defer rows.Close()
-	return scanEdges(rows)
-}
-
-func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
-	var out []InteractionEdge
-	for rows.Next() {
-		var e InteractionEdge
-		if err := rows.Scan(&e.UserID, &e.ContactID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound,
-			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.CountTotal); err != nil {
-			return nil, err
-		}
-		out = append(out, e)
-	}
-	return out, rows.Err()
+	return scanEdges(ctx, rows)
 }
 
 // RebuildEdges re-folds the WHOLE projection for the bound workspace from the
@@ -369,6 +385,40 @@ var graphCountedActivity = relstrength.InteractionCountsAtSQL("a", "now()")
 // contact as sender, so a colleague's reply on the thread is not theirs.
 var graphWeWrote = relstrength.WeWroteSQL("a")
 
+// graphMemberSent admits a message the member sent: outbound mail or chat
+// with the member as `from`. Being copied is not writing, and a logged call or
+// meeting is not a message. It reads the member's participant row as `up`.
+var graphMemberSent = `(a.kind IN ('email','message') AND ` + graphWeWrote + ` AND up.role = 'from')`
+
+// graphMet is a meeting or call of the pair that neither of them declined:
+// the contact took part whoever wrote. With the inbound date it is what the
+// edge's recency counts from. up and pp are the colleague's and the contact's
+// participant rows.
+var graphMet = `(a.kind IN ('meeting','call') AND up.response IS DISTINCT FROM 'declined'
+		AND pp.response IS DISTINCT FROM 'declined')`
+
+// graphEngagedRows adds to each counted row of a pair when the contact last
+// took part, which the fold's late counts are measured from.
+var graphEngagedRows = `SELECT c.*, max(c.occurred_at) FILTER (WHERE ` + relstrength.TheyWroteSQL("c.edge_contact", "c") +
+	` OR c.met) OVER (PARTITION BY c.edge_user, c.edge_contact) AS engaged_at FROM counted c`
+
+// graphFoldColumns are one pair's folded facts, over graphEngagedRows aliased a.
+func graphFoldColumns(window string) string {
+	late := ` AND ` + relstrength.AfterEngagedSQL("a", "engaged_at")
+	inWindow := occurredday.FromSQL("a", window)
+	return `max(a.occurred_at) AS last_at,
+		       max(a.occurred_at) FILTER (WHERE ` + relstrength.TheyWroteSQL("a.edge_contact", "a") + `) AS last_inbound_at,
+		       max(a.occurred_at) FILTER (WHERE ` + graphWeWrote + `) AS last_outbound_at,
+		       max(a.occurred_at) FILTER (WHERE a.met) AS last_met_at,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + `) AS count_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + ` AND ` + relstrength.TheyWroteSQL("a.edge_contact", "a") + `) AS in_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + ` AND ` + graphWeWrote + `) AS out_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + ` AND a.sent) AS sent_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + late + `) AS late_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + inWindow + late + ` AND ` + graphWeWrote + `) AS late_out_90d,
+		       count(DISTINCT ` + graphInteractionUnit + `) AS count_total`
+}
+
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 	// Exclusive of the incremental writers, in the order they take their locks:
@@ -385,25 +435,23 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("search: clearing the interaction projection for rebuild: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
+		WITH counted AS (
+		    SELECT up.user_id AS edge_user, pp.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met, `+graphMemberSent+` AS sent
+		      FROM activity_participant up
+		      JOIN activity_participant pp ON pp.activity_id = up.activity_id
+		      JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		       AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
+		     WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
+		       AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
+		)
 		INSERT INTO graph_interaction_edge
-		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at,
-		     count_90d, in_count_90d, out_count_90d, count_total, computed_at)
-		SELECT up.user_id, pp.contact_id,
-		       max(a.occurred_at),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`),
-		       count(DISTINCT `+graphInteractionUnit+`),
-		       now()
-		  FROM activity_participant up
-		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
-		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
-		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
-		 GROUP BY up.user_id, pp.contact_id`); err != nil {
+		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at)
+		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now()
+		  FROM (SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
+		          FROM (`+graphEngagedRows+`) a
+		         GROUP BY a.edge_user, a.edge_contact) f`); err != nil {
 		return fmt.Errorf("search: rebuilding the interaction projection: %w", err)
 	}
 	return rebuildContactEdges(ctx, tx, window)

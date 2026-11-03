@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Fragment, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -127,12 +128,19 @@ function ImportHub() {
             }
             control={
               <span className="import-hub__verbs">
-                <a className="link-button" href={routeHash(IMPORT_TEMPLATE)}>
+                <AppLink
+                  className="link-button"
+                  href={routeHash(IMPORT_TEMPLATE)}
+                >
                   {t("import.hub.preview")}
-                </a>
-                <a className="link-button" href={IMPORT_TEMPLATE_HREF} download>
+                </AppLink>
+                <AppLink
+                  className="link-button"
+                  href={IMPORT_TEMPLATE_HREF}
+                  download
+                >
                   {t("import.template.download")}
-                </a>
+                </AppLink>
               </span>
             }
           />
@@ -259,21 +267,21 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                 const by = starter && names.get(starter);
                 return (
                   <>
-                    <a className="cell-link" href={runHref(one.id)}>
+                    <AppLink className="cell-link" href={runHref(one.id)}>
                       {one.file_name || one.source_name || one.id}
-                    </a>
+                    </AppLink>
                     <div className="t-caption">
                       {by
                         ? t("import.recent.filesBy", { files, name: by })
                         : files}
                     </div>
                     {one.superseded_by ? (
-                      <a
+                      <AppLink
                         className="t-caption"
                         href={runHref(one.superseded_by)}
                       >
                         {t("import.superseded")}
-                      </a>
+                      </AppLink>
                     ) : null}
                   </>
                 );
@@ -303,9 +311,9 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                 if (one.status === "pending") {
                   return (
                     <div className="cell-actions">
-                      <a className="link-button" href={runHref(one.id)}>
+                      <AppLink className="link-button" href={runHref(one.id)}>
                         {t("import.draft.continue")}
-                      </a>
+                      </AppLink>
                       <Button
                         variant="ghost"
                         pending={

@@ -105,7 +105,15 @@ type Call struct {
 	AuthorID     ids.UUID
 	SupersedesID *ids.UUID
 	CreatedAt    time.Time
+	// HasBaseline says whether the reading the call was made against was kept.
+	// False on a call recorded before calls kept one.
+	HasBaseline bool
 }
+
+// callBaselineSQL answers whether a call's baseline was kept, for a statement
+// reading forecast_call unaliased.
+const callBaselineSQL = `EXISTS (SELECT 1 FROM forecast_snapshot b
+	WHERE b.call_id = forecast_call.id AND b.trigger = 'call' AND b.input_fingerprint IS NOT NULL)`
 
 // NewCall is what a caller supplies to record a current call.
 type NewCall struct {
@@ -364,7 +372,7 @@ func (s *Store) standingCallTx(ctx context.Context, tx pgx.Tx, period Period, sc
 	// the second reads the first's call and supersedes THAT.
 	err := tx.QueryRow(ctx, `
 		SELECT id, period_start, period_end, scope_kind, scope_id, amount_minor,
-		       currency, note, author_id, supersedes_id, created_at
+		       currency, note, author_id, supersedes_id, created_at, `+callBaselineSQL+`
 		FROM forecast_call
 		WHERE period_start = $1 AND period_end = $2
 		  AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
@@ -374,7 +382,7 @@ func (s *Store) standingCallTx(ctx context.Context, tx pgx.Tx, period Period, sc
 		period.StartDate, period.EndDate, scope.Kind, scope.ID).
 		Scan(&out.ID, &out.PeriodStart, &out.PeriodEnd, &out.Scope.Kind, &out.Scope.ID,
 			&out.AmountMinor, &out.Currency, &note, &out.AuthorID, &out.SupersedesID,
-			&out.CreatedAt)
+			&out.CreatedAt, &out.HasBaseline)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Call{}, errNoStandingCall
 	}

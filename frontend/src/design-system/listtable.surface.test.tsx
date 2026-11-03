@@ -370,7 +370,7 @@ describe("a row as a link", () => {
       />,
     );
     const [first] = screen.getAllByRole("link");
-    expect(first.getAttribute("href")).toBe(`#/rows/${testRows(2)[0].id}`);
+    expect(first.getAttribute("href")).toBe(`/#/rows/${testRows(2)[0].id}`);
   });
 
   it("leaves the cell as plain text when the caller names no address", () => {

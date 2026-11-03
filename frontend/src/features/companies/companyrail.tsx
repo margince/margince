@@ -19,6 +19,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
+import type { RecordRename } from "../../design-system/recordview";
 import { countryBeyondCity } from "../../format/address";
 import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
@@ -95,12 +96,7 @@ function RailBody({
   lists,
 }: RailProps & Readonly<{ lists?: ReactNode }>) {
   const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  const edit = {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const edit = useCompanyEditGate(company);
   const sections: DetailSection[] = [
     {
       key: "about",
@@ -135,6 +131,31 @@ function RailBody({
 
 export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
 
+/** Whether this reader may change the account's own fields, and if not, why. */
+function useCompanyEditGate(company: Company): Edit {
+  const t = useT();
+  const writable = useCanWriteRecord("company", company);
+  const reason = useCompanyReadOnlyReason(company);
+  return {
+    canEdit: writable && !reason,
+    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
+  };
+}
+
+/** The account's name as the record's head renames it, with the rail's gate. */
+export function useCompanyRename(company: Company): RecordRename {
+  const t = useT();
+  const edit = useCompanyEditGate(company);
+  const save = useCompanyFieldSave(company);
+  return {
+    label: t("create.displayName"),
+    value: company.display_name,
+    canEdit: edit.canEdit,
+    readOnlyReason: edit.reason,
+    onSave: (next) => save(mapCompanyUpdate({ display_name: next }, {})),
+  };
+}
+
 function isBlank(value: string | null | undefined): boolean {
   return !value?.trim();
 }
@@ -149,8 +170,9 @@ export function useRowBuilders(company: Company, edit: Edit) {
   const write = (key: string) => (next: string) =>
     save(mapCompanyUpdate({ [key]: next }, {}));
   const text = (
-    key: "industry" | "legal_name" | "linkedin_url",
+    key: "industry" | "legal_name" | "linkedin_url" | "phone" | "email",
     label: MessageKey,
+    type?: "email",
   ): DetailRow => ({
     key,
     term: t(label),
@@ -159,6 +181,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
       <InlineText
         label={t(label)}
         value={company[key] ?? ""}
+        type={type}
         placeholder={t("field.unset")}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}

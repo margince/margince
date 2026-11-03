@@ -1,45 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  CircleCheck,
-  CircleX,
-  Info,
-  Lightbulb,
-  type LucideIcon,
-  Sparkles,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { IconAction } from "./iconaction";
+import {
+  CheckCircleFilled,
+  ErrorFilled,
+  type Glyph,
+  InfoFilled,
+  Lightbulb2Filled,
+  WarningFilled,
+} from "./materialsymbols";
 import "./callout.css";
 
-// Callout: something the surface says ABOUT itself, rather than content.
-//
-// The product had fourteen spellings of this — three app banners duplicating
-// the same inline style object, nine screen-local classes, and a handful of
-// bare paragraphs tinted by hand. One of them, `.co-callout`, declared only a
-// top margin: the name promised a callout and the sheet delivered whitespace.
-//
-// The tones are a closed set because they are claims, not decoration. `warning`
-// says something will go wrong if you do nothing; `danger` says something is
-// wrong or is about to be irreversible; `success` confirms an action landed;
-// `info` is the default and carries no urgency at all; `discovery` says the
-// notice is about something NEW to this reader — a capability they have not
-// met, a step of onboarding — which is the one claim that is not a verdict on
-// the account; `accent` is `info` said emphatically; `ai` says a MACHINE
-// produced what the notice is about, the same claim `Panel tone="ai"` makes for
-// a card. There is no eighth: a surface reaching for one is reaching for
-// emphasis, which is what the words are for.
-//
-// The vocabulary is a VALUE the type is read from, so the story that draws
-// every tone, the gate that checks every tone has a glyph and a rule, and the
-// compiler all walk one list. Spelled twice, they drift, and the copy that goes
-// stale is always the one nobody renders.
+// Callout: what a surface says about itself, not content. Each tone is a claim,
+// so the set is closed. `info` carries no urgency. `warning`: harm if nothing is
+// done. `danger`: wrong now, or about to be irreversible. `success`: an action
+// landed. `discovery`: new to this reader. `ai`: a machine made what it is about.
 export const CALLOUT_TONES = [
   "info",
-  "accent",
   "success",
   "warning",
   "danger",
@@ -63,36 +43,25 @@ export type CalloutTone = (typeof CALLOUT_TONES)[number];
 export type CalloutKind = "outcome" | "standing" | "event";
 
 /**
- * The tone's glyph, so the claim reaches a reader who does not read colour.
- *
- * `CircleX` rather than `OctagonX` for danger: an octagon's eight short edges
- * alias into a circle at 16px, and the circular pair reads as one family beside
- * `CircleCheck` — the same outline, the opposite news.
- *
- * `accent` takes `Info` as well, because it is the same CLAIM as `info` said
- * emphatically: a second glyph there would tell a reader the two notices were
- * about different kinds of thing, when the only difference is how much of their
- * attention the surface is asking for.
+ * The tone's glyph, so the claim reaches a reader who does not read colour. A
+ * filled Material mark, since a tone mark stands alone.
  */
-const TONE_ICONS: Readonly<Record<CalloutTone, LucideIcon>> = {
-  info: Info,
-  accent: Info,
-  warning: TriangleAlert,
-  danger: CircleX,
-  success: CircleCheck,
+const TONE_ICONS: Readonly<Record<CalloutTone, Glyph>> = {
+  info: InfoFilled,
+  warning: WarningFilled,
+  danger: ErrorFilled,
+  success: CheckCircleFilled,
   // Something the reader has not met yet. Deliberately NOT a Sparkle: that
   // family is the AI mark, and a notice about a new capability drawn in it
   // would claim a machine wrote the notice.
-  discovery: Lightbulb,
+  discovery: Lightbulb2Filled,
   // The product's one mark for "a machine did this", the same glyph the
   // provenance tags and the AI badge wear.
   ai: Sparkles,
 };
 
-/**
- * How a screen reader learns about a notice whose caller did not choose a
- * loudness. The table in `Callout`'s own doc is this function, in prose.
- */
+/** With no `live`, a failed outcome is an alert and other outcomes and events a
+ * status. No `kind`, or a standing notice, arrives with the page and is silent. */
 function announcementFor(
   kind: CalloutKind | undefined,
   tone: CalloutTone,
@@ -101,55 +70,8 @@ function announcementFor(
   return kind === "outcome" && tone === "danger" ? "alert" : "status";
 }
 
-/**
- * A bordered notice on the pane's ground: the tone's icon, the heading in the
- * tone's ink, the words in ordinary ink, then whatever the reader can do about
- * it. Never a filled coloured box — colour on a page means one thing at a time,
- * and a tinted plate shouts over the record it sits in.
- *
- * One anatomy, and the heading is part of it rather than a choice. Icon,
- * heading over an optional body, `actions` at the end, then the dismiss. In a
- * narrow card the actions drop below the words. A heading alone is a complete
- * callout, and the commonest shape: most notices are one sentence, and that
- * sentence is the heading. The two faces this replaced bought density. They
- * cost a notice whose first words were sometimes a heading and sometimes not.
- * So no two of them scanned alike down a page, and the tone reached the ink of
- * one and not the other.
- *
- * `accent` is the emphasised information notice, in the brand accent: the same
- * role `Panel tone="accent"` plays — a lead, an ask, the one notice on a screen
- * that wants a MOVE rather than reporting state. Two of them on one screen is
- * no emphasis at all. It is deliberately NOT indigo: `--ai` is a claim about
- * provenance, that an agent authored what you are reading, so an emphatic
- * notice a contact wrote wearing indigo would tell every reader of that screen
- * something false about who decided.
- *
- * `live` decides how a screen reader learns about it; `kind` is the same
- * question asked in the caller's own terms. Passing neither is silent, exactly
- * as before, and an explicit `live` always wins. Otherwise:
- *
- * | `kind`     | tone     | role     |
- * |------------|----------|----------|
- * | `outcome`  | `danger` | `alert`  |
- * | `outcome`  | other    | `status` |
- * | `event`    | any      | `status` |
- * | `standing` | any      | none     |
- *
- * That is the honest reading of each: an outcome the reader caused and cannot
- * use is a failure they have to be told about, anything else that arrived while
- * they were reading is worth mentioning quietly, and a notice rendered WITH the
- * page has nothing to interrupt for. Passing `alert` to something merely
- * informative is how a reader learns to ignore all of them.
- *
- * There is no `className`, and that is the point of the prop's absence: a
- * notice needing air gets it from the stack it sits in, and one that wanted its
- * own colour, edge or plate was not this primitive at all — it was a second
- * callout wearing this one's name, which is the thing the fourteen spellings
- * above were.
- *
- * Copy never lives here: every word arrives as a prop, translated by the
- * caller.
- */
+/** The tone's icon in its ink on a wash of its hue; words and verbs in plain
+ * ink. No `className`: a notice wanting its own colour or edge is a second one. */
 export function Callout({
   tone = "info",
   kind,
@@ -167,11 +89,12 @@ export function Callout({
    * Replaces the tone's glyph, where the notice is about a nameable thing
    * rather than about how bad the news is.
    */
-  icon?: LucideIcon;
+  icon?: Glyph;
   /** The notice's first words, and the one part of it that is not optional. */
   title: ReactNode;
   /** Buttons or links, laid out after the body. */
   actions?: ReactNode;
+  /** The role to announce with, in place of the one `kind` derives. */
   live?: "status" | "alert";
   /**
    * The control that puts the notice away, at the end of the card. ONE prop
@@ -193,7 +116,7 @@ export function Callout({
       role={live ?? announcementFor(kind, tone)}
     >
       <span className="callout-icon" aria-hidden="true">
-        <Icon size={16} strokeWidth={2} />
+        <Icon size={16} />
       </span>
       <div className="callout-body">
         <div className="callout-copy">

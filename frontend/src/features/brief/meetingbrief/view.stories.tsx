@@ -62,6 +62,12 @@ export const Failed: Story = {
   }),
 };
 
+/** The reader may not open this meeting's brief. It is a boundary, not a fault,
+ *  so it offers no retry. */
+export const Withheld: Story = {
+  render: body({ kind: "withheld" }),
+};
+
 /** The same body in the dark theme: the foot's disclosure is the smallest role
  *  on the surface, and the smallest role is where the dark lift shows first. */
 export const PreparedDark: Story = {

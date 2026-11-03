@@ -57,6 +57,9 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
+	// liveHumanHelper is LiveMemberSQL narrowed to human seats, registered for
+	// the same reason.
+	liveHumanHelper = "LiveHumanSQL"
 	// liveMemberOwner holds the one literal spelling. identity's livemember.go
 	// delegates to it and passes its alias through. That is the single call the
 	// literal-alias test must not judge.
@@ -162,7 +165,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 			qualifier: importAliasOf(file, identityPath),
 			other:     importAliasOf(file, workforcePath),
 			inside:    file.Name != nil && (file.Name.Name == "identity" || file.Name.Name == "workforce"),
-			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
+			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true, liveHumanHelper: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range appUserStatements(decl, scope) {

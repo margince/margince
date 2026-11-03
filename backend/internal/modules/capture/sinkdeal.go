@@ -3,21 +3,8 @@
 
 package capture
 
-// Filing a captured mail under the one deal it is about. Capture and the deal
-// repair both run AttributeDealTx. The rule, in order, first answer wins:
-//   - a mail that already has a deal link is left alone, so a human relink
-//     always wins;
-//   - a mail filed under a project goes on that project's one open deal. None
-//     or several means no link, and the company is not asked;
-//   - else a deal a sibling in the thread is filed under, when it agrees with
-//     the mail's company;
-//   - else the one open deal of the one company the mail's participants work
-//     at. With several open deals, a participant who is a stakeholder on
-//     only one of them picks it.
-//
-// Being at a company is not proof of which of its deals a mail is about. When
-// several deals stay plausible the mail goes on none of them and the Ask seam
-// may raise one "Which deal is this about?" question.
+// Captured mail and meetings share deal attribution. Existing links are kept.
+// Meetings never follow a mail thread or ask a colleague to choose a deal.
 
 import (
 	"context"
@@ -131,13 +118,13 @@ func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates D
 	}
 	switch verdict.Outcome {
 	case DealLinked:
-		written, err := linkActivityToDeal(f, tx, activityID, verdict.Deal)
+		written, err := linkActivityToDeal(f, tx, activityID, verdict.Deal, candidates)
 		if err != nil || written != DealLinked {
 			return DealVerdict{Outcome: written}, err
 		}
 	case DealAmbiguous:
 		verdict.Question.ActivityID = activityID
-		if ask != nil {
+		if ask != nil && !facts.meeting {
 			if err := ask(f.decider, tx, verdict.Question); err != nil {
 				return DealVerdict{}, err
 			}
@@ -163,7 +150,7 @@ func (s *Sink) attributeDeal(ctx context.Context, rec connector.NormalizedRecord
 	if s.deals.Candidates == nil || s.deals.Filer == nil || ref.Type != datasource.EntityActivity {
 		return
 	}
-	if fields, ok := rec.Fields.(ActivityFields); !ok || fields.Kind != kindEmail {
+	if fields, ok := rec.Fields.(ActivityFields); !ok || !dealActivityKind(fields.Kind) {
 		return
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

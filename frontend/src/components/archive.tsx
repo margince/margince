@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -35,7 +39,8 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   // an argument rather than through a closure the render decides. A caller with
   // nothing to pass leaves Vars at void and calls mutate() as before.
   archive: (vars: Vars) => Promise<Archived>;
-  invalidate: string;
+  // A list's key prefix, or the exact keys of the reads the record sits in.
+  invalidate: string | readonly QueryKey[];
   recordKey: string;
   // What the reader is told once it is gone, already translated. REQUIRED, and
   // that is the point: the closing dialog was the only thing a reader got and
@@ -62,7 +67,11 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   return useMutation({
     mutationFn: archive,
     onSuccess: (archived) => {
-      queryClient.invalidateQueries({ queryKey: [invalidate] });
+      for (const queryKey of typeof invalidate === "string"
+        ? [[invalidate]]
+        : invalidate) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       queryClient.invalidateQueries({ queryKey: [recordKey, archived.id] });
       onDone(archived);
       toast.show(
@@ -88,11 +97,13 @@ export function ArchiveAction<Archived extends { id: string }>({
   onArchived,
   disabledReasonId,
   requires,
+  archivable,
+  refusedReason,
 }: Readonly<{
   label: string;
   confirmText: string;
   archive: () => Promise<Archived>;
-  invalidate: string;
+  invalidate: string | readonly QueryKey[];
   recordKey: string;
   // What the reader is told once it is gone. See `useArchiveRecord`.
   archivedMessage: string;
@@ -107,9 +118,16 @@ export function ArchiveAction<Archived extends { id: string }>({
   // A seat without it sees the action disabled with the reason, not a dialog
   // that ends in a refusal.
   requires: RequiredGrant;
+  // The server's per-row answer, where the record carries one. It decides in
+  // place of `requires`, because some rows are archived by their owner or
+  // author without the delete grant.
+  archivable?: boolean;
+  // What a refused reader is told, where the generic role sentence is wrong.
+  refusedReason?: string;
 }>) {
   const t = useT();
-  const refused = useGrantRefused(requires);
+  const grantRefused = useGrantRefused(requires);
+  const refused = archivable === undefined ? grantRefused : !archivable;
   const [confirming, setConfirming] = useState(false);
   const mutation = useArchiveRecord({
     archive,
@@ -127,7 +145,9 @@ export function ArchiveAction<Archived extends { id: string }>({
       <Button
         variant="danger"
         reasonId={disabledReasonId}
-        reason={refused ? t("record.actionRefused") : undefined}
+        reason={
+          refused ? (refusedReason ?? t("record.actionRefused")) : undefined
+        }
         onClick={() => setConfirming(true)}
         data-testid="archive-record"
       >

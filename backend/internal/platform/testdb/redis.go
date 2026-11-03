@@ -22,7 +22,7 @@ import (
 // TestRedisDBCountAgreesWithTheLaneAndTheServer asserts the offset rather than
 // equality — and asks the running server too, since a container started before a
 // raise keeps serving the old count whatever the file says.
-const RedisDBs = 63
+const RedisDBs = 64
 
 // defaultRedisDB is what a bare `go test` gets, outside the lane. Any db but 0
 // would do — 0 is the one a running `make dev` owns.

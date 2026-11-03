@@ -72,7 +72,7 @@ func TestEveryOwnDomainComparisonInSQLReadsFoldedDomains(t *testing.T) {
 	}
 }
 
-// coversSQLCalls returns the calls of owndomain.CoversSQL in a file.
+// coversSQLCalls returns the calls of owndomain.CoversSQL and CoversIndexedSQL in a file.
 func coversSQLCalls(file *ast.File) []*ast.CallExpr {
 	qualifier, _ := gatekit.ImportedAs(file, "github.com/margince/margince/backend/internal/platform/owndomain")
 	if qualifier == "" {
@@ -84,7 +84,7 @@ func coversSQLCalls(file *ast.File) []*ast.CallExpr {
 		if !isCall || len(call.Args) != 2 {
 			return true
 		}
-		if selector, isSelector := call.Fun.(*ast.SelectorExpr); isSelector && selector.Sel.Name == "CoversSQL" {
+		if selector, isSelector := call.Fun.(*ast.SelectorExpr); isSelector && (selector.Sel.Name == "CoversSQL" || selector.Sel.Name == "CoversIndexedSQL") {
 			if pkg, isIdent := selector.X.(*ast.Ident); isIdent && pkg.Name == qualifier {
 				calls = append(calls, call)
 			}
