@@ -5,8 +5,8 @@
 
 package compose
 
-// The deal page's viability read agrees with the forecast, and keeps showing an
-// open review after its task is done: completing the task is not an answer.
+// The deal page's viability read agrees with the forecast. It keeps showing an
+// open review after its task is done, because completing the task is no answer.
 
 import (
 	"encoding/json"

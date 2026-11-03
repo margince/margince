@@ -6,8 +6,8 @@ import { StoryProviders } from "../../../testing/story-utils";
 import { DealViabilityView } from "./dealviabilitycard";
 
 // Whether the customer still supports a deal. The state worth seeing is a
-// review whose task is done and which is still open: a done task is not an
-// answer, so the card keeps the review.
+// review whose task is done and which is still open. A done task is no answer,
+// so the card keeps the review.
 
 const meta: Meta<typeof DealViabilityView> = {
   title: "Records/Deal 360/Customer support",
