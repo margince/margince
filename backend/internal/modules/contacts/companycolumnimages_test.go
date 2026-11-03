@@ -59,3 +59,21 @@ func TestAReceiptIsKeptOnlyForARowBehindAMovedColumn(t *testing.T) {
 		t.Errorf("a row the apply replaced reads %+v, want the earlier version as before", receipts[fieldIndustry])
 	}
 }
+
+// Both catalogs that couple a profile field to a column must name the same
+// column, or the receipt map keeps whichever one it read last.
+func TestTheCatalogsCouplingAFieldToAColumnAgree(t *testing.T) {
+	for _, spec := range companyFields {
+		if spec.column == "" {
+			continue
+		}
+		if column, backed := columnBackedColdStartFields[spec.name]; backed && column != spec.column {
+			t.Errorf("%s writes %s from the form and %s from a read-back", spec.name, spec.column, column)
+		}
+	}
+	for field := range columnBackedColdStartFields {
+		if _, receipted := profileFieldColumns[field]; !receipted {
+			t.Errorf("%s has a column but no receipt mapping", field)
+		}
+	}
+}

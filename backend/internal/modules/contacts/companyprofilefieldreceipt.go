@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -25,27 +26,41 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// auditKeyProfileFields is the evidence key the receipts travel under, and
-// auditKeyRestoredProfileFields names on a restore's own entry the rows it put
-// back. Two keys, so a restore's entry is never read as receipts of its own.
-const (
-	auditKeyProfileFields         = "profile_fields"
-	auditKeyRestoredProfileFields = "restored_profile_fields"
-)
+// auditKeyProfileFields is the evidence key the receipts travel under. A
+// restore records receipts of the rows it put back under the same key, so
+// undoing the restore puts them back again.
+const auditKeyProfileFields = "profile_fields"
 
 // profileFieldColumns maps each profile field with a column behind it to that
 // column's image keys. A receipt is kept only when the entry moved the column,
 // because the Undo restores columns and the row is their receipt.
-var profileFieldColumns = map[string][]string{
-	fieldDisplayName:       {fieldDisplayName},
-	fieldLegalName:         {columnLegalName},
-	fieldIndustry:          {columnIndustry},
-	fieldOfferSummary:      {columnDescription},
-	fieldRegisteredAddress: companyAddressColumns,
-}
+//
+// It is derived from the two catalogs that couple a field to a column: the
+// read-back's columnBackedColdStartFields and the form's companyFields. The
+// display name has no catalog column because the form renames the row itself.
+var profileFieldColumns = func() map[string][]string {
+	out := map[string][]string{fieldDisplayName: {fieldDisplayName}}
+	couple := func(field, column string) {
+		if column == columnAddress {
+			out[field] = companyAddressColumns
+			return
+		}
+		out[field] = []string{column}
+	}
+	for field, column := range columnBackedColdStartFields {
+		couple(field, column)
+	}
+	for _, spec := range companyFields {
+		if spec.column != "" {
+			couple(spec.name, spec.column)
+		}
+	}
+	return out
+}()
 
-// profileFieldRow is one profile-field row as an Undo needs it. The id and
-// version tell whether it still stands; the content is what gets put back.
+// profileFieldRow is one profile-field row as an Undo needs it. The content
+// tells whether it still stands and is what gets put back; the id and version
+// pin the write.
 type profileFieldRow struct {
 	ID      ids.UUID        `json:"id"`
 	Version int64           `json:"version"`
@@ -153,18 +168,42 @@ func ProfileFieldsMovedSince(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 	if err != nil {
 		return nil, err
 	}
+	return movedProfileFields(receipts, now)
+}
+
+// movedProfileFields compares content, not version, like the column check in
+// compose/superseded.go. A row an Undo put back has a new version but holds
+// what the earlier entry left. So a walk back through entries is not refused.
+func movedProfileFields(receipts map[string]ProfileFieldReceipt, now map[string]profileFieldRow) ([]string, error) {
 	var moved []string
 	for field, receipt := range receipts {
 		current, present := now[field]
-		switch {
-		case receipt.After == nil && present,
-			receipt.After != nil && !present,
-			receipt.After != nil && (current.ID != receipt.After.ID || current.Version != receipt.After.Version):
+		stands := !present && receipt.After == nil
+		if present && receipt.After != nil {
+			var err error
+			if stands, err = sameContent(current.Content, receipt.After.Content); err != nil {
+				return nil, err
+			}
+		}
+		if !stands {
 			moved = append(moved, field)
 		}
 	}
 	slices.Sort(moved)
 	return moved, nil
+}
+
+// sameContent compares two row contents as values. Both are jsonb renderings,
+// and decoding them keeps a formatting difference from reading as a change.
+func sameContent(a, b json.RawMessage) (bool, error) {
+	var left, right map[string]any
+	if err := json.Unmarshal(a, &left); err != nil {
+		return false, fmt.Errorf("contacts: read a profile-field row's content: %w", err)
+	}
+	if err := json.Unmarshal(b, &right); err != nil {
+		return false, fmt.Errorf("contacts: read a profile-field receipt's content: %w", err)
+	}
+	return reflect.DeepEqual(left, right), nil
 }
 
 // ProfileFieldMovedError refuses a restore whose profile-field rows were
@@ -180,8 +219,8 @@ func (e *ProfileFieldMovedError) Error() string {
 // restoreProfileFieldsOf puts back the profile-field rows the reversed entry
 // moved, on the restore's own transaction. It is a no-op for every write that
 // is not a restore, and for a restore of an entry that carried no receipts.
-// It returns the fields it put back, for the restore's own evidence.
-func restoreProfileFieldsOf(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, trail storekit.AuditTrail) ([]string, error) {
+// It answers receipts of its own writes, so the restore can be undone too.
+func restoreProfileFieldsOf(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, trail storekit.AuditTrail) (map[string]ProfileFieldReceipt, error) {
 	if trail.Verb != storekit.VerbRestore {
 		return nil, nil
 	}
@@ -204,33 +243,63 @@ func restoreProfileFieldsOf(ctx context.Context, tx pgx.Tx, companyID ids.Compan
 	if err != nil || len(receipts) == 0 {
 		return nil, err
 	}
-	moved, err := ProfileFieldsMovedSince(ctx, tx, companyID.UUID, evidence)
+	before, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	moved, err := movedProfileFields(receipts, before)
 	if err != nil {
 		return nil, err
 	}
 	if len(moved) > 0 {
 		return nil, &ProfileFieldMovedError{Fields: moved}
 	}
-	fields := slices.Sorted(maps.Keys(receipts))
-	for _, field := range fields {
-		if err := restoreProfileField(ctx, tx, companyID, field, receipts[field]); err != nil {
+	for _, field := range slices.Sorted(maps.Keys(receipts)) {
+		current, present := before[field]
+		var pinned *profileFieldRow
+		if present {
+			pinned = &current
+		}
+		if err := restoreProfileField(ctx, tx, companyID, field, receipts[field].Before, pinned); err != nil {
 			return nil, err
 		}
 	}
-	return fields, nil
+	after, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	return restoreReceipts(receipts, before, after), nil
 }
 
-// restoreProfileField puts one row back as the receipt's before side names it.
-// Each statement is pinned to the row the receipt names. A write that matches
-// nothing is a row that moved between the check and the write.
-func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string, receipt ProfileFieldReceipt) error {
+// restoreReceipts records, for each row a restore put back, the row as the
+// restore found it and as it left it.
+func restoreReceipts(undone map[string]ProfileFieldReceipt, before, after map[string]profileFieldRow) map[string]ProfileFieldReceipt {
+	out := make(map[string]ProfileFieldReceipt, len(undone))
+	for field := range undone {
+		var receipt ProfileFieldReceipt
+		if row, had := before[field]; had {
+			receipt.Before = &row
+		}
+		if row, has := after[field]; has {
+			receipt.After = &row
+		}
+		out[field] = receipt
+	}
+	return out
+}
+
+// restoreProfileField makes one row hold want, or removes it when want is nil.
+// The write is pinned to the current row's id and version, which the caller
+// read under the company row lock. A write that matches nothing is a row that
+// moved between that read and the write.
+func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, field string, want, current *profileFieldRow) error {
 	var statement string
 	var args []any
 	switch {
-	case receipt.Before == nil && receipt.After != nil:
+	case want == nil && current != nil:
 		statement = `DELETE FROM company_profile_field WHERE id = $1 AND version = $2`
-		args = []any{receipt.After.ID, receipt.After.Version}
-	case receipt.Before != nil && receipt.After != nil:
+		args = []any{current.ID, current.Version}
+	case want != nil && current != nil:
 		statement = `
 			UPDATE company_profile_field t
 			   SET value = r.value, evidence_snippet = r.evidence_snippet, source_url = r.source_url,
@@ -239,8 +308,8 @@ func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 			       verified_at = r.verified_at, verified_by = r.verified_by
 			  FROM jsonb_populate_record(NULL::company_profile_field, $3::jsonb) r
 			 WHERE t.id = $1 AND t.version = $2`
-		args = []any{receipt.After.ID, receipt.After.Version, receipt.Before.Content}
-	case receipt.Before != nil:
+		args = []any{current.ID, current.Version, want.Content}
+	case want != nil:
 		statement = `
 			INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url,
 			       confidence, source, captured_by, captured_at, retrieved_at, verified_at, verified_by)
@@ -248,7 +317,7 @@ func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 			       r.captured_at, r.retrieved_at, r.verified_at, r.verified_by
 			  FROM jsonb_populate_record(NULL::company_profile_field, $3::jsonb) r
 			ON CONFLICT (company_id, field) DO NOTHING`
-		args = []any{companyID, field, receipt.Before.Content}
+		args = []any{companyID, field, want.Content}
 	default:
 		return nil
 	}
@@ -262,14 +331,14 @@ func restoreProfileField(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 	return nil
 }
 
-// withRestoredProfileFields puts back the rows a restore reverses and names
-// them on the restore's own trail.
+// withRestoredProfileFields puts back the rows a restore reverses and records
+// their receipts on the restore's own trail.
 func withRestoredProfileFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, trail storekit.AuditTrail) (storekit.AuditTrail, error) {
-	restored, err := restoreProfileFieldsOf(ctx, tx, companyID, trail)
-	if err != nil || len(restored) == 0 {
+	receipts, err := restoreProfileFieldsOf(ctx, tx, companyID, trail)
+	if err != nil || len(receipts) == 0 {
 		return trail, err
 	}
 	trail.Evidence = maps.Clone(trail.Evidence)
-	trail.Evidence[auditKeyRestoredProfileFields] = restored
+	trail.Evidence[auditKeyProfileFields] = receipts
 	return trail, nil
 }

@@ -6,7 +6,7 @@ package contacts
 // Repairing company addresses stored before the splitter existed: the whole
 // text in line 1 and every other part empty. Only text a writer derived is
 // split. Line 1 must still equal the registered_address profile text. No edit
-// of the company's own address fields may have happened since; a site read's
+// of the company's own address fields may have happened since. A site read's
 // own entry names the address columns too, and is not such an edit.
 
 import (

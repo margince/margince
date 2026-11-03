@@ -216,3 +216,62 @@ func TestAnEnrichmentOverAFilledAddressRecordsNoAddressToUndo(t *testing.T) {
 		t.Error("an enrichment that wrote no address recorded one, or a receipt for the registered_address row behind it")
 	}
 }
+
+// Undoing the Undo brings back what the enrichment wrote: the address and the
+// registered_address row both.
+func TestUndoingTheUndoOfAnEnrichedAddressBringsBothBack(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	id := e.SeedCompany(t, "Undo Twice GmbH", nil)
+	auditID := enrichAddress(t, e, id, enrichedAddress)
+	enriched, enrichedRow := addressParts(t, e, id), registeredAddressRow(t, e, id)
+
+	seam := restoreSeamFor(e)
+	if _, err := seam.Restore(ctx, "company", id, auditID, currentVersion(t, e, "company", id)); err != nil {
+		t.Fatalf("undo the enrichment: %v", err)
+	}
+	undo := latestAuditRowID(t, e, "company", id, "restore")
+	if verdict := judgeEnrichment(t, e, ctx, seam, id, undo); !verdict.Undoable {
+		t.Fatalf("the undo is refused as %s (%s), want undoable", verdict.Reason, verdict.Detail)
+	}
+	if _, err := seam.Restore(ctx, "company", id, undo, currentVersion(t, e, "company", id)); err != nil {
+		t.Fatalf("undo the undo: %v", err)
+	}
+	if got := addressParts(t, e, id); got != enriched {
+		t.Errorf("address after undoing the undo = %q, want %q", got, enriched)
+	}
+	if got := registeredAddressRow(t, e, id); got != enrichedRow {
+		t.Errorf("registered_address after undoing the undo = %q, want %q", got, enrichedRow)
+	}
+}
+
+// Walking back an enrichment, a hand edit and an earlier enrichment in order.
+// Each Undo leaves the profile row as the earlier entry left it. The next step
+// is not refused for a row that only holds a new version.
+func TestEnrichedAddressesWalkBackInOrder(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	id := e.SeedCompany(t, "Walk Back GmbH", nil)
+	empty := addressParts(t, e, id)
+	first := enrichAddress(t, e, id, enrichedAddress)
+	if _, err := e.Contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), contacts.UpdateCompanyInput{
+		Address: &crmcontracts.Address{},
+	}); err != nil {
+		t.Fatalf("clear the address by hand: %v", err)
+	}
+	cleared := latestAuditRowID(t, e, "company", id, "update")
+	second := enrichAddress(t, e, id, enrichedAddress2)
+
+	seam := restoreSeamFor(e)
+	for _, step := range []ids.UUID{second, cleared, first} {
+		if _, err := seam.Restore(ctx, "company", id, step, currentVersion(t, e, "company", id)); err != nil {
+			t.Fatalf("undo %s: %v", step, err)
+		}
+	}
+	if got := addressParts(t, e, id); got != empty {
+		t.Errorf("address after the walk back = %q, want %q", got, empty)
+	}
+	if got := registeredAddressRow(t, e, id); got != "none" {
+		t.Errorf("registered_address after the walk back = %q, want no row", got)
+	}
+}
