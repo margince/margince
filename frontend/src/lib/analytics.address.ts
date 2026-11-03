@@ -33,6 +33,7 @@ export const SECTIONS = [
   "targets",
   "definitions",
   "pipeline",
+  "accounts",
   "outcomes",
   "coverage",
   "delivery",

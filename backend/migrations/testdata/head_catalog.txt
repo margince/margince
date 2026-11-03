@@ -6136,6 +6136,24 @@ public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.mail_draft.version bigint NOT NULL gen=- def=1
 public.mail_draft_one_per_anchor CREATE UNIQUE INDEX mail_draft_one_per_anchor ON public.mail_draft USING btree (author_id, anchor_type, anchor_id)
 public.mail_draft_pkey CREATE UNIQUE INDEX mail_draft_pkey ON public.mail_draft USING btree (id)
+public.mail_topic_words(subject text) secdef=false cfg=- acl=- 
+    SELECT coalesce(array_agg(DISTINCT word), ARRAY[]::text[])
+      FROM regexp_split_to_table(lower(upper(regexp_replace(coalesce(subject, '') COLLATE "und-x-icu",
+           '\[[^]]*\]', ' ', 'g'))), '[^[:alnum:]]+') AS word
+     WHERE length(word) > 1 AND word ~ '[[:alpha:]]'
+       AND word <> ALL (ARRAY[
+           're', 'aw', 'antw', 'fwd', 'fw', 'wg', 'sv', 'vs',
+           'the', 'and', 'for', 'with', 'from', 'this', 'that', 'of', 'to', 'in', 'on', 'an', 'is', 'it', 'at', 'by', 'or',
+           'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'für', 'mit', 'von', 'zu', 'im', 'am', 'den', 'dem', 'des', 'ist',
+           'và', 'của', 'cho', 'với', 'từ', 'các', 'những', 'là'
+       ]);
+
+public.mail_topics_differ(parent_subject text, reply_subject text) secdef=false cfg=- acl=- 
+    SELECT cardinality(parent_words) > 0 AND cardinality(reply_words) > 0
+           AND NOT parent_words && reply_words
+      FROM (SELECT mail_topic_words(parent_subject) AS parent_words,
+                   mail_topic_words(reply_subject) AS reply_words) AS topics;
+
 public.maskable_field acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.maskable_field.field text NOT NULL gen=- def=-
 public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
