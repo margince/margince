@@ -112,8 +112,9 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
   // The drawer's own field; the page's head renames the deal too.
   const drawer = await screen.findByRole("dialog");
   await user.click(
-    await within(drawer).findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: /^Change Deal name/ }),
   );
+  await screen.findByRole("dialog", { name: "Deal name" });
 }
 
 describe("DealScreen — edit, archive (A3)", () => {
@@ -283,9 +284,12 @@ describe("DealScreen — edit, archive (A3)", () => {
       }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Change Referring partner" }),
+      await screen.findByRole("button", { name: /^Change Referring partner/ }),
     );
-    await user.click(screen.getByLabelText("Referring partner"));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Referring partner",
+    });
+    await user.click(within(dialog).getByLabelText("Referring partner"));
     expect(
       await screen.findByRole("option", { name: "Northgate Partners" }),
     ).toBeTruthy();
@@ -672,7 +676,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
     await openHeaderMenu();
     expect(
-      screen.queryByRole("button", { name: "Change Deal name" }),
+      screen.queryByRole("button", { name: /^Change Deal name/ }),
     ).toBeNull();
   });
 });
