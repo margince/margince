@@ -20,9 +20,15 @@ import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useViewerId } from "../../lib/session";
 import { analyticsFieldLabel } from "./analytics.questions.vocab";
 import { ReportComposition, useComposition } from "./reporting.composition";
-import { blocksOf, hasAssessment, layoutEdits } from "./reporting.layout";
+import {
+  blocksOf,
+  hasAssessment,
+  layoutEdits,
+  MAX_CARDS,
+} from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
 import { unsaveable } from "./reporting.save";
 
@@ -37,15 +43,23 @@ export type CustomReportDraft = Readonly<{
 }>;
 
 // The draft the preview page reads. One at a time: a preview is the next
-// step of the builder that was just closed, never a list.
-let held: CustomReportDraft | undefined;
+// step of the builder that was just closed, never a list. It is held for the
+// reader who wrote it, so a later sign-in in the same tab never reads it.
+let held: Readonly<{ reader: string; draft: CustomReportDraft }> | undefined;
 
-export function holdCustomReport(draft: CustomReportDraft): void {
-  held = draft;
+export function holdCustomReport(
+  reader: string,
+  draft: CustomReportDraft,
+): void {
+  held = { reader, draft };
 }
 
-export function heldCustomReport(): CustomReportDraft | undefined {
-  return held;
+export function heldCustomReport(
+  reader: string | undefined,
+): CustomReportDraft | undefined {
+  return held && reader !== undefined && held.reader === reader
+    ? held.draft
+    : undefined;
 }
 
 /** The population the builder's question reads: live open deals. */
@@ -71,10 +85,10 @@ function questionOf(
 }
 
 /**
- * The custom report builder, in one drawer: the name and the question it
- * answers, the reporting selection, the charts in their order with the
- * assessment, and a custom question. Preview opens the report in Analytics
- * before anything is saved.
+ * The custom report builder, in one drawer. It holds the name and the
+ * question the report answers, the reporting selection, the charts in their
+ * order with the assessment, and a custom question. Preview opens the report
+ * in Analytics before anything is saved.
  */
 export function CustomReportDrawer({
   initial,
@@ -89,6 +103,7 @@ export function CustomReportDrawer({
 }>) {
   const t = useT();
   const titleId = useId();
+  const reader = useViewerId();
   const composition = useComposition(draft?.selection ?? initial);
   const [name, setName] = useState(draft?.name ?? "");
   const [description, setDescription] = useState(draft?.description ?? "");
@@ -103,10 +118,15 @@ export function CustomReportDrawer({
     (count, section) => count + section.cards.length,
     0,
   );
+  const full = cards >= MAX_CARDS;
   const incomplete =
-    !name.trim() || cards === 0 || unsaveable(selection, metrics);
+    !name.trim() ||
+    cards === 0 ||
+    reader === undefined ||
+    unsaveable(selection, metrics);
   const preview = () => {
-    holdCustomReport({
+    if (reader === undefined) return;
+    holdCustomReport(reader, {
       name: name.trim(),
       description: description.trim(),
       audience,
@@ -183,6 +203,7 @@ export function CustomReportDrawer({
           >
             <Checkbox
               label={t("reporting.includeAssessment")}
+              disabled={full && !hasAssessment(kept)}
               checked={hasAssessment(kept)}
               onChange={(event) =>
                 composition.setLayout(
@@ -233,6 +254,7 @@ export function CustomReportDrawer({
           </Field>
           <Button
             variant="ghost"
+            disabled={full}
             onClick={() =>
               composition.setLayout(
                 layoutEdits.addQuestion(kept, questionOf(measure, group)),

@@ -43,8 +43,8 @@ export type Composition = Readonly<{
 
 /**
  * The state behind composing a report. Which charts a metric brings is in the
- * catalog, so until it has loaded the report's own blocks stand in and no
- * card is judged undrawable.
+ * catalog. Until it has loaded, the report's own blocks stand in and no card
+ * is judged undrawable.
  */
 export function useComposition(initial: ReportingSelection): Composition {
   const [selection, setSelection] = useState(initial);

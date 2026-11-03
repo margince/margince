@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
@@ -18,6 +18,8 @@ import {
 } from "./reporting.story-fixtures";
 
 const originalFetch = globalThis.fetch;
+// The story's signed-in reader, as /me names them.
+const VIEWER = "00000000-0000-4000-8000-000000000001";
 
 afterEach(() => {
   cleanup();
@@ -56,10 +58,11 @@ it("previews only a named report, with the assessment and the question it was gi
     screen.getByRole("checkbox", { name: "Include the assessment" }),
   );
   await user.click(screen.getByRole("button", { name: "Add this question" }));
-  expect(preview).toBeEnabled();
+  await waitFor(() => expect(preview).toBeEnabled());
 
   await user.click(preview);
-  const held = heldCustomReport();
+  expect(heldCustomReport("someone-else")).toBeUndefined();
+  const held = heldCustomReport(VIEWER);
   expect(held?.name).toBe("Germany sales review");
   expect(held?.selection.layout && hasAssessment(held.selection.layout)).toBe(
     true,
@@ -78,4 +81,26 @@ it("previews only a named report, with the assessment and the question it was gi
     reportingStoryEvaluation.selection.blocks,
   );
   expect(window.location.hash).toContain("preview");
+});
+
+it("cannot preview a report with no card, whatever its name", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <CustomReportDrawer
+        initial={{
+          ...reportingStoryEvaluation.selection,
+          blocks: [],
+          layout: undefined,
+        }}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: "Report name" }),
+    "Empty",
+  );
+  expect(screen.getByRole("button", { name: "Preview report" })).toBeDisabled();
 });

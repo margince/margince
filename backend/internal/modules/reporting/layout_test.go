@@ -152,7 +152,7 @@ func TestTheCardKindsAreTheChartKindsAndQuestion(t *testing.T) {
 	}
 }
 
-// An assessment card writes the figures up and reads nothing of its own, so
+// An assessment card writes the figures up and reads nothing of its own. So
 // it adds no block, takes no metric, and a report places it once.
 func TestAnAssessmentCardAddsNoBlockAndIsPlacedOnce(t *testing.T) {
 	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{

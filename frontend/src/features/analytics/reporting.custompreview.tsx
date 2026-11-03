@@ -14,6 +14,7 @@ import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingCharts } from "./reporting.charts";
 import {
@@ -33,7 +34,8 @@ import { useReportingEvaluation } from "./reporting.queries";
 export function CustomReportPreview() {
   const t = useT();
   const [params] = useUrlParams();
-  const draft = heldCustomReport();
+  const reader = useViewerId();
+  const draft = heldCustomReport(reader);
   if (!draft)
     return (
       <EmptyState
@@ -49,14 +51,19 @@ export function CustomReportPreview() {
         {t("reporting.noPreview")}
       </EmptyState>
     );
-  return <HeldPreview draft={draft} />;
+  return <HeldPreview initial={draft} reader={reader} />;
 }
 
-function HeldPreview({ draft }: Readonly<{ draft: CustomReportDraft }>) {
+function HeldPreview({
+  initial,
+  reader,
+}: Readonly<{ initial: CustomReportDraft; reader: string | undefined }>) {
   const t = useT();
   const client = useQueryClient();
   const canSave = useCanWrite("report_definition", "create");
   const [customizing, setCustomizing] = useState(false);
+  // The draft on screen; a closed drawer hands back whatever it previewed.
+  const [draft, setDraft] = useState(initial);
   const query = useReportingEvaluation(draft.selection);
   const contextKey = JSON.stringify(draft.selection);
   const { evidence, openEvidence, closeEvidence } =
@@ -139,7 +146,10 @@ function HeldPreview({ draft }: Readonly<{ draft: CustomReportDraft }>) {
         <CustomReportDrawer
           initial={draft.selection}
           draft={draft}
-          onClose={() => setCustomizing(false)}
+          onClose={() => {
+            setCustomizing(false);
+            setDraft(heldCustomReport(reader) ?? draft);
+          }}
         />
       )}
     </div>

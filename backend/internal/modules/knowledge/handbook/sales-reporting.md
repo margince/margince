@@ -119,7 +119,7 @@ On **Analytics → Leads**, **What became of new leads** does the same for the l
 
 ## How do I save or share a report?
 
-To build a report of your own, open **Reports** and choose **New custom report**, or choose **Customize report** on a sales review to start from what you are reading. One drawer holds the report name, what you want to understand, **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** opens the report as an unsaved preview. There, **Customize report** returns to the drawer and **Save report** keeps it under **Reports**.
+To build a report of your own, open **Reports** and choose **New custom report**. **Customize report** on a sales review opens the same window with what you are reading. The window holds the report name and the question it answers. Below come **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** shows the report before it is saved. There, **Customize report** returns to the window and **Save report** keeps the report under **Reports**.
 
 The **Assessment** card writes the report's figures up in a few sentences. It names only figures the report measured.
 

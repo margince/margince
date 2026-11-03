@@ -70,11 +70,15 @@ export function ReportingCharts({
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
     ? laidOut(evaluation.selection.layout, charts)
     : [{ items: charts.map((chart) => ({ chart, full: false })) }];
+  // The summary is written once: on its card where the layout places one.
+  const placesAssessment = sections.some((section) =>
+    section.items.some((item) => "assessment" in item),
+  );
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
       {() => (
         <div className="reporting-results">
-          <WrittenSummary evaluation={evaluation} />
+          {!placesAssessment && <WrittenSummary evaluation={evaluation} />}
           <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
           <TargetComparison
             evaluation={evaluation}
