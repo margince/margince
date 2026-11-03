@@ -13120,7 +13120,7 @@ export const en = {
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
   "voice.candidate.firstHint":
-    "If it reads like you, use it. If not, discard it and add more writing samples; the next build learns from them.",
+    "If it reads like you, use it. Setup is done once you use a version. If not, discard it, add more writing samples and build again; the next build learns from them.",
   "voice.candidate.reason.uncomparable":
     "The previous voice profile could not be compared. Review this version before replacing it.",
   "voice.candidate.reason.identity":
@@ -14546,7 +14546,20 @@ export const en = {
   "setup.caption.waitsAdmin": "Waits on an administrator.",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
-  "setup.caption.voice": "Needs 800 words you wrote.",
+  "setup.caption.voice": "Needs about {n} more words you wrote.",
+  "setup.caption.voiceSamples": "Needs writing samples of your own.",
+  "setup.caption.voiceReview": "Your voice is trained and ready to review.",
+  "setup.caption.voiceBuilding":
+    "Building your voice. It continues if you leave.",
+  "setup.caption.voiceDeferred": "Your voice build is waiting to run.",
+  "setup.caption.voiceFailed": "The last build did not finish.",
+  "setup.caption.voiceReady": "Your samples are ready to build from.",
+  "setup.caption.voiceUnknown": "Could not check your writing voice.",
+  "setup.action.voiceReview": "Review voice",
+  "setup.action.voiceProgress": "View progress",
+  "setup.action.voiceRetry": "Try again",
+  "setup.action.voiceBuild": "Build voice",
+  "setup.action.voiceOpen": "Open writing voice",
   "setup.caption.booking": "Customers book your free time.",
   "setup.caption.bookingNeedsCalendar": "Needs a calendar.",
   "setup.reminder.progress": "Setup progress",
@@ -16502,12 +16515,14 @@ export const en = {
   "contact.standing.lastRecordedExchange":
     "since last recorded contact exchange",
   "contact.standing.lastInbound": "Last inbound message",
+  "contact.standing.noneAccessible": "None you can open",
   "contact.standing.direction.twoWay": "Both sides have written.",
   "contact.standing.direction.inboundOnly":
-    "Only they have written so far. Nothing has gone out from your team.",
+    "In the messages you can open, only they have written. Nothing from your team appears.",
   "contact.standing.direction.outboundOnly":
-    "Only outgoing messages from your team are recorded. No reply is recorded.",
-  "contact.standing.direction.none": "No messages either way yet.",
+    "In the messages you can open, only your team has written. No reply appears.",
+  "contact.standing.direction.none":
+    "No messages either way in what you can open.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
@@ -17654,6 +17669,7 @@ export const en = {
   "worklist.pane.lastFromCompany": "Last from this company",
   "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
+  "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
   "worklist.why.title": "Why this needs attention",

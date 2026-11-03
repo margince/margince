@@ -12786,7 +12786,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.firstHint":
-    "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, hãy bỏ bản này và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+    "Nếu bản này đúng văn phong của bạn, hãy dùng. Thiết lập hoàn tất khi bạn dùng một phiên bản. Nếu không, hãy bỏ bản này, thêm văn mẫu và dựng lại; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.reason.uncomparable":
     "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
   "voice.candidate.reason.identity":
@@ -14226,7 +14226,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
-  "setup.caption.voice": "Cần 800 từ do bạn viết.",
+  "setup.caption.voice": "Cần thêm khoảng {n} từ do bạn viết.",
+  "setup.caption.voiceSamples": "Cần văn mẫu do chính bạn viết.",
+  "setup.caption.voiceReview":
+    "Giọng văn của bạn đã được huấn luyện và chờ bạn xem lại.",
+  "setup.caption.voiceBuilding":
+    "Đang dựng giọng văn. Việc này vẫn tiếp tục khi bạn rời trang.",
+  "setup.caption.voiceDeferred": "Bản dựng giọng văn đang chờ chạy.",
+  "setup.caption.voiceFailed": "Lần dựng gần nhất chưa hoàn tất.",
+  "setup.caption.voiceReady": "Văn mẫu của bạn đã đủ để dựng.",
+  "setup.caption.voiceUnknown": "Không kiểm tra được giọng văn của bạn.",
+  "setup.action.voiceReview": "Xem lại giọng văn",
+  "setup.action.voiceProgress": "Xem tiến độ",
+  "setup.action.voiceRetry": "Thử lại",
+  "setup.action.voiceBuild": "Dựng giọng văn",
+  "setup.action.voiceOpen": "Mở giọng văn",
   "setup.caption.booking": "Khách hàng đặt giờ rảnh của bạn.",
   "setup.caption.bookingNeedsCalendar": "Cần có lịch.",
   "setup.reminder.progress": "Tiến độ thiết lập",
@@ -16180,12 +16194,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.lastRecordedExchange":
     "từ lần trao đổi gần nhất được ghi nhận với liên hệ này",
   "contact.standing.lastInbound": "Tin nhắn đến gần nhất",
+  "contact.standing.noneAccessible": "Không có tin nhắn bạn mở được",
   "contact.standing.direction.twoWay": "Cả hai bên đều đã viết.",
   "contact.standing.direction.inboundOnly":
-    "Đến nay chỉ có họ viết. Nhóm của bạn chưa gửi gì.",
+    "Trong các tin nhắn bạn mở được, chỉ có họ viết. Không có tin nhắn nào từ nhóm của bạn.",
   "contact.standing.direction.outboundOnly":
-    "Chỉ ghi nhận tin nhắn gửi đi từ nhóm của bạn. Chưa ghi nhận trả lời.",
-  "contact.standing.direction.none": "Chưa có tin nhắn theo chiều nào.",
+    "Trong các tin nhắn bạn mở được, chỉ nhóm của bạn đã viết. Chưa có trả lời.",
+  "contact.standing.direction.none":
+    "Không có tin nhắn nào trong dữ liệu bạn mở được.",
   "contact.subtitle.at": "tại",
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
@@ -17352,6 +17368,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.lastFromCompany": "Lần cuối nhận từ công ty",
   "worklist.pane.lastToCompany": "Lần cuối gửi cho công ty",
   "worklist.pane.never": "Chưa có",
+  "worklist.pane.noneAccessible": "Không có tin nhắn bạn mở được",
   "worklist.pane.company": "Công ty",
   "worklist.pane.role": "Vai trò",
   "worklist.why.title": "Vì sao việc này cần chú ý",
