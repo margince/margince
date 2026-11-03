@@ -522,4 +522,15 @@ describe("a success that carried no body", () => {
       unwrap({ error: { title: "nope" }, response: { status: 500 } }),
     ).toThrow(/nope/);
   });
+
+  it("does not call a failure with no body a success", () => {
+    // A 404 or a 500 that carried nothing is a refusal, not a truncated
+    // answer. Called an empty success it would read to the reader as a
+    // broken server rather than the verdict it is.
+    for (const status of [400, 404, 409, 500, 503]) {
+      expect(() => unwrap({ response: { status } })).not.toThrow(
+        EmptySuccessError,
+      );
+    }
+  });
 });

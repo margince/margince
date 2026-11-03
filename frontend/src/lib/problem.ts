@@ -122,8 +122,16 @@ type ApiAnswer<R> = R extends { data: infer D; error?: undefined } ? D : never;
 // one belongs: a proxy's interstitial with a 200 on it, or a truncated answer.
 //
 // It is an Error rather than `undefined` data so a reader fails where the call
-// is, not later where a field is read. A query that throws is a query React
-// Query will retry, so this is also what makes the recovery path work.
+// is, not later where a field is read.
+//
+// Not retried. An intermediary can answer a read with a challenge carrying a
+// success status.
+//
+// A retry would ask it again for every attempt the policy allows, and the
+// challenge still stands.
+//
+// queryclient.test.ts holds that, under "never retries a challenge an
+// intermediary answered with".
 export class EmptySuccessError extends Error {
   readonly status: number;
   constructor(status: number, t?: (key: MessageKey) => string) {
@@ -154,6 +162,8 @@ export function unwrap(
   if (
     result.data === undefined &&
     status !== undefined &&
+    status >= 200 &&
+    status < 300 &&
     !bodilessStatuses.has(status)
   ) {
     throw new EmptySuccessError(status, t);
