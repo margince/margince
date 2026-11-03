@@ -141,14 +141,7 @@ func foldedPrefix(line, opener string) (int, bool) {
 // the line, so its full stop does not close the greeting.
 func addressee(line string, from int) ([]string, int, bool) {
 	var names []string
-	end := from
-	// "Hello, Bob," and "Kính gửi: Anh Nam," put a separator between the
-	// opener and the name. A message that follows it closes the greeting there.
-	separated := -1
-	if rest := strings.TrimLeft(line[end:], " \t"); strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, ":") {
-		end = len(line) - len(rest) + 1
-		separated = end
-	}
+	end, separated := openingSeparator(line, from)
 	for end < len(line) {
 		rest := line[end:]
 		start := len(rest) - len(strings.TrimLeft(rest, " \t"))
@@ -166,15 +159,14 @@ func addressee(line string, from int) ([]string, int, bool) {
 		field := rest[start : start+width]
 		word := strings.TrimRightFunc(field, unicode.IsPunct)
 		named := nameWords(word)
-		initial, _ := utf8.DecodeRuneInString(word)
-		if word == "" || messageWords[FoldName(word)] || (len(named) > 0 && !unicode.IsUpper(initial)) {
+		if stopsGreeting(word, named) {
 			if separated >= 0 && len(names) == 0 {
 				return names, separated, true
 			}
 			return names, end, false
 		}
 		end += start + width
-		if strings.Contains(word, ".") || (strings.HasSuffix(field, ".") && !last && abbreviated(word)) {
+		if keepsGreetingOpen(word, field, last) {
 			continue
 		}
 		names = append(names, named...)
@@ -183,6 +175,31 @@ func addressee(line string, from int) ([]string, int, bool) {
 		}
 	}
 	return names, end, true
+}
+
+// openingSeparator steps past the separator "Hello, Bob," and "Kính gửi: Anh
+// Nam," put between the opener and the name. separated is where a message that
+// follows it closes the greeting, or -1 with no separator.
+func openingSeparator(line string, from int) (end, separated int) {
+	rest := strings.TrimLeft(line[from:], " \t")
+	if strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, ":") {
+		end = len(line) - len(rest) + 1
+		return end, end
+	}
+	return from, -1
+}
+
+// stopsGreeting reports a word that belongs to the message, not the greeting:
+// none at all, a word messages open with, or a lower-case name.
+func stopsGreeting(word string, named []string) bool {
+	initial, _ := utf8.DecodeRuneInString(word)
+	return word == "" || messageWords[FoldName(word)] || (len(named) > 0 && !unicode.IsUpper(initial))
+}
+
+// keepsGreetingOpen reports a dotted word the greeting reads past: one with a
+// dot inside it, or an abbreviation whose full stop does not end the line.
+func keepsGreetingOpen(word, field string, last bool) bool {
+	return strings.Contains(word, ".") || (strings.HasSuffix(field, ".") && !last && abbreviated(word))
 }
 
 // abbreviated reports a dotted word that does not end the greeting: an initial
