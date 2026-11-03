@@ -37,6 +37,20 @@ func DiscardOrphanedRuns(ctx context.Context, pool *pgxpool.Pool, kind string, k
 	return tag.RowsAffected(), nil
 }
 
+// FinishOwnRun records a run as completed while its worker still holds the
+// kind's session lock. River records completion only after the worker returns
+// and the lock is gone. In that window the next run would take the finished row
+// for a dead worker's and discard it. River's own completion afterwards finds
+// the row no longer running and leaves it as it is.
+func FinishOwnRun(ctx context.Context, pool *pgxpool.Pool, id int64) error {
+	if _, err := pool.Exec(ctx, `
+		UPDATE river_job SET state = 'completed', finalized_at = now()
+		WHERE id = $1 AND state = 'running'`, id); err != nil {
+		return fmt.Errorf("recording run %d as completed: %w", id, err)
+	}
+	return nil
+}
+
 // orphanAge is how old a running row must be before it can only be a dead
 // worker's. A kind with no timeout has no such bound, so the lock alone judges.
 func orphanAge(timeout TimeoutPolicy) time.Duration {

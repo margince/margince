@@ -79,7 +79,12 @@ func (w *embedDriftSweepWorker) Work(ctx context.Context, job *river.Job[EmbedDr
 	if orphaned > 0 {
 		w.log.InfoContext(ctx, "closed embed drift sweep rows left running by a dead worker", "closed", orphaned)
 	}
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
+	if err := runPerWorkspace(ctx, w.pool, w.sweepWorkspace); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// Under the lock, so the next sweep cannot read this finished row as a dead
+	// worker's. A failed write fails the pass, and River retries it.
+	return jobs.FaultContext(ctx, jobs.FinishOwnRun(ctx, w.pool, job.ID))
 }
 
 // sweepWorkspace heals ONE workspace. It was the child job's Work, and binds

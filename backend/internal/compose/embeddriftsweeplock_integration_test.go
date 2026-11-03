@@ -97,8 +97,44 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 	if got := jobRowState(ctx, t, e.Pool, dead); got != "discarded" {
 		t.Errorf("the dead worker's row is %s, want discarded", got)
 	}
-	if got := jobRowState(ctx, t, e.Pool, own); got != "running" {
-		t.Errorf("the sweep's own row is %s, want running until River finishes it", got)
+	if got := jobRowState(ctx, t, e.Pool, own); got != "completed" {
+		t.Errorf("the sweep's own row is %s, want completed before it let go of the lock", got)
+	}
+}
+
+// River records a finished sweep only after Work returns and the lock is gone.
+// A second sweep in that window must not take the first's row for a dead
+// worker's: the first records its own completion while it still holds the lock.
+func TestASweepStartingBeforeRiverRecordsTheLastLeavesItCompleted(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	w := &embedDriftSweepWorker{
+		pool:     e.Pool,
+		store:    search.NewStore(InstallationDB(e.Pool)),
+		corpora:  knowledge.NewStore(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()),
+		embedder: &gatedEmbedder{},
+		log:      slog.Default(),
+	}
+	identity, _ := w.embedder.EmbedIdentity()
+	if err := w.store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("seeding the binding marker: %v", err)
+	}
+	sweep := func(id int64) error {
+		return w.Work(ctx, &river.Job[EmbedDriftSweepArgs]{JobRow: &rivertype.JobRow{ID: id, Kind: EmbedDriftSweepArgs{}.Kind()}})
+	}
+	first := seedSweepRow(ctx, t, e.Pool, "running")
+	if err := sweep(first); err != nil {
+		t.Fatalf("the first sweep: %v", err)
+	}
+
+	// Work has returned and released the lock; River has recorded nothing.
+	second := seedSweepRow(ctx, t, e.Pool, "running")
+	if err := sweep(second); err != nil {
+		t.Fatalf("the second sweep: %v", err)
+	}
+
+	if got := jobRowState(ctx, t, e.Pool, first); got != "completed" {
+		t.Errorf("the first sweep's row is %s, want completed", got)
 	}
 }
 
