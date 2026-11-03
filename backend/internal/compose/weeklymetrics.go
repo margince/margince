@@ -24,7 +24,11 @@ func (weeklyNumericEvaluator) Measure(ctx context.Context, tx pgx.Tx, kind strin
 	var out weekly.NumericResult
 	wireID := openapi_types.UUID(id)
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(kind), Id: &wireID}, Period: "custom", Interval: &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, TargetBasis: reportingMonthContext, CloseWindow: "all_open"}
-	frame, err := reportingContext(ctx, tx, selection, crmcontracts.ReportingFramework{}, at)
+	owners, err := readerMeasurableOwners(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	frame, err := reportingContext(ctx, tx, selection, crmcontracts.ReportingFramework{}, owners, at)
 	if err != nil {
 		return out, err
 	}

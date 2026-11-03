@@ -48,6 +48,16 @@ func freezeScope(
 	rows []forecasting.Contribution,
 ) ids.UUID {
 	t.Helper()
+	return freezeScopeIn(ctx, t, e, at, scope, nil, rows)
+}
+
+// freezeScopeIn is freezeScope for one pipeline's snapshot. A snapshot cannot
+// be moved to a pipeline after it is taken.
+func freezeScopeIn(
+	ctx context.Context, t *testing.T, e *Env, at time.Time, scope forecasting.Scope,
+	pipeline *ids.UUID, rows []forecasting.Contribution,
+) ids.UUID {
+	t.Helper()
 	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
 	var id ids.UUID
 	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
@@ -58,7 +68,7 @@ func freezeScope(
 		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
 			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base,
-			Readings: forecasting.Readings{Contributions: rows}, TakenAt: at,
+			Readings: forecasting.Readings{Contributions: rows}, TakenAt: at, PipelineID: pipeline,
 		})
 		return err
 	}); err != nil {

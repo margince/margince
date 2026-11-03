@@ -104,7 +104,7 @@ func typeformPayload(body []byte) (builderPayload, error) {
 	for _, f := range in.FormResponse.Definition.Fields {
 		titles[f.ID] = f.Title
 	}
-	var out []field
+	var out []Field
 	for _, a := range in.FormResponse.Answers {
 		name := titles[a.Field.ID]
 		switch {
@@ -115,7 +115,7 @@ func typeformPayload(body []byte) (builderPayload, error) {
 		case name == "":
 			name = a.Field.Ref
 		}
-		out = append(out, field{Name: name, Value: a.text()})
+		out = append(out, Field{Name: name, Value: a.text()})
 	}
 	out = append(out, sortedFields(in.FormResponse.Hidden)...)
 	return builderPayload{Fields: out, ID: in.EventID}, nil
@@ -145,7 +145,7 @@ func tallyPayload(body []byte) (builderPayload, error) {
 	if err := json.Unmarshal(body, &in); err != nil || in.EventType != "FORM_RESPONSE" {
 		return builderPayload{}, errUnreadable
 	}
-	var out []field
+	var out []Field
 	for _, f := range in.Data.Fields {
 		name := f.Label
 		switch {
@@ -161,7 +161,7 @@ func tallyPayload(body []byte) (builderPayload, error) {
 		if json.Unmarshal(f.Value, &chosen) == nil && len(f.Options) > 0 {
 			value = strings.Join(optionTexts(chosen, f.Options), ", ")
 		}
-		out = append(out, field{Name: name, Value: value})
+		out = append(out, Field{Name: name, Value: value})
 	}
 	return builderPayload{Fields: out, ID: in.EventID}, nil
 }

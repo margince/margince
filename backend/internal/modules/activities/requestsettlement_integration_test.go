@@ -162,7 +162,7 @@ func TestAJudgedThreadReturnsOnlyWhenSomebodyWritesAgain(t *testing.T) {
 		t.Fatal("the answered request was not offered at all")
 	}
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
@@ -229,14 +229,14 @@ func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
 	}
 	due := requestInstant.Add(96 * time.Hour)
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		DueAt: &due, Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	_, subject, done, dueAt := taskFor(t, e, request)
-	if subject != "Send the quote" {
+	if subject != "send the report" {
 		t.Errorf("the reminder is titled %q, want the thing actually owed", subject)
 	}
 	if done {
@@ -277,7 +277,7 @@ func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
 		t.Fatal("a reminder somebody dated still reads as the machine's to retitle")
 	}
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
@@ -321,6 +321,53 @@ func TestUnsureRecordsTheQuestionAndChangesNothingElse(t *testing.T) {
 		t.Error("an unsure verdict left the conversation in the backlog, so the pass would " +
 			"re-read the same words on every tick")
 	}
+}
+
+// Every settlement write carries its event, as every write does. An unsure
+// verdict touches no task, so the settlement row is the whole write, and it
+// must not commit without its outbox row.
+func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	request := seedEmailRequest(t, e, "Judged twice", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, request, "Hm.", requestInstant.Add(time.Hour))
+
+	// The first verdict creates the settlement row and the second replaces it,
+	// so both of the writer's audit sites are reached.
+	candidate := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]
+	for range 2 {
+		if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
+			Request: candidate, Verdict: RequestUnsure, Confidence: 0.4, DecidedBy: "test-model",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	audits, misannounced := settlementAudits(t, e, request, settlementVerdictCol)
+	if audits != 2 {
+		t.Fatalf("the two verdicts wrote %d settlement audit row(s), want 2", audits)
+	}
+	if misannounced != 0 {
+		t.Errorf("%d of %d settlement audit rows lack exactly one settlement event", misannounced, audits)
+	}
+}
+
+// settlementAudits counts the request's audit rows that wrote column, and those
+// of them without one, and only one, activity.updated naming a settlement change.
+func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, misannounced int) {
+	t.Helper()
+	if err := e.owner.QueryRow(e.as(), `
+		SELECT count(*), count(*) FILTER (WHERE (
+		         SELECT count(*) FROM event_outbox o
+		          WHERE o.envelope->'trace'->>'audit_log_id' = a.id::text
+		            AND o.envelope->>'type' = 'activity.updated'
+		            AND o.envelope->'payload'->'changed_fields'->>'request_settlement_changed' = 'true') <> 1)
+		  FROM audit_log a
+		 WHERE a.entity_type = 'activity' AND a.entity_id = $1 AND a.after ? $2`,
+		request, column).Scan(&audits, &misannounced); err != nil {
+		t.Fatal(err)
+	}
+	return audits, misannounced
 }
 
 // Somebody picking the work back up outranks the machine's verdict. Without

@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
+import { whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
-import { whenText } from "./worklist.copy";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 
@@ -190,4 +191,44 @@ it("names shared recipients without claiming nobody owns their reply", () => {
     sharedResponsibility({ ...shared, owner: { kind: "shared" } }, "en", t),
   ).toBeNull();
   expect(sharedResponsibility(task, "en", t)).toBeNull();
+});
+
+it("gives an approval row its proposed values as the supporting line", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    detail: undefined,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [{ field: "name", value: "Acme, Inc." }],
+      more_fields: 1,
+    },
+  };
+  expect(noticeDetail(approval, viewer, t)).toBe(
+    "Name: Acme, Inc. · 1 more not shown",
+  );
+  expect(
+    noticeDetail({ ...approval, summary_parts: undefined }, viewer, t),
+  ).toBe(undefined);
+});
+
+it("titles an approval row by its sentence, falling back to the whole title", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [],
+      more_fields: 0,
+    },
+  };
+  expect(sentenceTitled(approval).title).toBe("Update record deal");
+  const blank = {
+    ...approval,
+    summary_parts: { ...approval.summary_parts, sentence: "" },
+  };
+  expect(sentenceTitled(blank).title).toBe(
+    "Update record deal: name=Acme, Inc.",
+  );
+  expect(sentenceTitled(task)).toBe(task);
 });

@@ -36,7 +36,7 @@ func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, companyEditorPerms())
 	step := "send the agreement"
 
-	if err := e.Contacts.CheckPartnerSetUp(owner, company); err != nil {
+	if err := e.Contacts.CheckPartnerSetUp(owner, company, nil); err != nil {
 		t.Fatalf("the set-up check refused the company's own editor: %v", err)
 	}
 	written, err := e.Contacts.UpsertPartner(owner, contacts.UpsertPartnerInput{
@@ -122,7 +122,7 @@ func TestThePartnerGrantAloneCannotSetUpAProgram(t *testing.T) {
 		RowScope: principal.RowScopeOwn,
 	})
 
-	if err := e.Contacts.CheckPartnerSetUp(partnerOnly, company); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := e.Contacts.CheckPartnerSetUp(partnerOnly, company, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the set-up check without the company grant: err = %v, want permission denied", err)
 	}
 	_, err := e.Contacts.UpsertPartner(partnerOnly, contacts.UpsertPartnerInput{CompanyID: company, PartnerRole: "hosting"})

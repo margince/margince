@@ -17,14 +17,14 @@ const PresentationVersion = 2
 
 // These mirror the light design tokens; the token gate checks their source.
 const (
-	Paper       = "#f1f5f2"
+	Paper       = "#eff6f3"
 	Surface     = "#fbfcfb"
-	Accent      = "#0b7a53"
-	Ink         = "#15201b"
+	Accent      = "#045647"
+	Ink         = "#182c28"
 	DarkPaper   = "#0c1311"
 	DarkSurface = "#161d1a"
-	DarkAccent  = "#16a34a"
-	DarkInk     = "#fff"
+	DarkAccent  = "#3aae94"
+	DarkInk     = "#edf6f4"
 	Border      = "#e3eae6"
 	DarkBorder  = "#22352e"
 )

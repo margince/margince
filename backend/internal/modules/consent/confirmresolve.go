@@ -59,6 +59,7 @@ func (s *Store) ResolveConfirmToken(
 	var purposeID *ids.PurposeID
 	var contactID *ids.ContactID
 	var leadID *ids.LeadID
+	var language *string
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		// A lead's link is live while the lead is. The only link a lead holds
 		// is a website lead's privacy notice.
@@ -72,9 +73,9 @@ func (s *Store) ResolveConfirmToken(
 			                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
 			    OR EXISTS (SELECT 1 FROM lead l
 			                WHERE l.id = ct.lead_id AND l.archived_at IS NULL))
-			RETURNING ct.contact_id, ct.lead_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
+			RETURNING ct.contact_id, ct.lead_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id, ct.question_locale`,
 			hashPublicToken(token), s.now().UTC(), by == FetchByAHuman).Scan(
-			&contactID, &leadID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
+			&contactID, &leadID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID, &language)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -86,6 +87,9 @@ func (s *Store) ResolveConfirmToken(
 		}
 		if leadID != nil {
 			ref.LeadID = *leadID
+		}
+		if language != nil {
+			ref.QuestionLocale = *language
 		}
 		return err
 	})

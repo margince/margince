@@ -183,3 +183,61 @@ func fileCallsFunction(file *ast.File, name string) bool {
 	})
 	return called
 }
+
+// Every statement that writes a transition's scheduled_start also writes its
+// scheduled_precision. A date's anchor and a noon instant look the same.
+// The column CHECK refuses a new row without a precision. An UPDATE that moves
+// only the start keeps the old precision and passes it; this census finds it.
+func TestEveryMeetingHistoryStartWriterStatesItsPrecision(t *testing.T) {
+	t.Parallel()
+	var offences []string
+	judged := 0
+	for _, path := range handWrittenGoSources(t) {
+		where := filepath.ToSlash(path)
+		if strings.HasSuffix(where, "_test.go") || strings.HasPrefix(where, "internal/contracts/") {
+			continue
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", where, err)
+		}
+		for _, statement := range gatekit.SQLStatementsOf(file) {
+			if !writesMeetingHistoryStart(statement) {
+				continue
+			}
+			judged++
+			if !strings.Contains(strings.ToLower(statement), "scheduled_precision") {
+				offences = append(offences, where+": writes activity_meeting_history.scheduled_start "+
+					"without scheduled_precision. A start without its precision cannot tell a date-only "+
+					"meeting from one held at noon UTC; write both in the same statement")
+			}
+		}
+	}
+	if judged == 0 {
+		t.Fatal("no statement writing activity_meeting_history.scheduled_start was read; this gate proves nothing")
+	}
+	for _, o := range offences {
+		t.Error(o)
+	}
+}
+
+// writesMeetingHistoryStart reports whether one SQL statement puts a value in
+// the history's scheduled_start: an INSERT naming it, or an UPDATE setting it.
+func writesMeetingHistoryStart(sql string) bool {
+	lowered := strings.ToLower(sql)
+	if !strings.Contains(lowered, "scheduled_start") {
+		return false
+	}
+	if update := strings.Index(lowered, "update activity_meeting_history"); update >= 0 {
+		set := lowered[update:]
+		return strings.Contains(set, "scheduled_start =") || strings.Contains(set, "scheduled_start=")
+	}
+	insert := strings.Index(lowered, "insert into activity_meeting_history")
+	if insert < 0 {
+		return false
+	}
+	rest := lowered[insert:]
+	open := strings.Index(rest, "(")
+	closeParen := strings.Index(rest, ")")
+	return open >= 0 && closeParen > open && strings.Contains(rest[open:closeParen], "scheduled_start")
+}

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -76,4 +77,76 @@ func TestEveryPerRowMoneyMeasureIsDeclaredNative(t *testing.T) {
 // currency. The frontend relies on the same distinction.
 func looksLikeNativeMoney(measure string) bool {
 	return strings.HasSuffix(measure, "_minor") && !strings.HasSuffix(measure, "_base_minor")
+}
+
+// Every per-row money measure on every report key obeys the one currency rule
+// on both engines, and points the refused caller at a converted measure.
+func TestNoReportKeyFoldsPerRowMoneyAcrossCurrencies(t *testing.T) {
+	t.Parallel()
+	if escapes := moneyRuleEscapes(prebuiltReports); len(escapes) > 0 {
+		t.Errorf("per-row money escapes the currency rule:\n%s", strings.Join(escapes, "\n"))
+	}
+	checked := 0
+	for _, spec := range prebuiltReports {
+		checked += len(spec.nativeMeasures)
+	}
+	if checked == 0 {
+		t.Fatal("no report declares a per-row money measure, so this gate compared nothing")
+	}
+}
+
+// The gate fails on the defect it exists for: a spec offering per-row money
+// with no converted measure beside it.
+func TestTheCurrencyGateFailsAReportWithNoConvertedMeasure(t *testing.T) {
+	t.Parallel()
+	planted := prebuiltReports["open-deals-per-company"]
+	planted.measures = map[string]string{fieldAmountMinor: colAmountMinor}
+	escapes := moneyRuleEscapes(map[string]reportSpec{"planted": planted})
+	if len(escapes) == 0 {
+		t.Fatal("a report offering amount_minor and no amount_base_minor passed the gate")
+	}
+}
+
+// moneyRuleEscapes asks both engines every folding aggregate over every
+// declared per-row money measure. It names each plan answered across
+// currencies, each split plan refused, and each measure with no converted one.
+func moneyRuleEscapes(specs map[string]reportSpec) []string {
+	schema := analyticsSchemaFrom(seatWith("deal", "company", "project", "activity", "lead", "contact", "partner"), specs)
+	var escapes []string
+	for key, spec := range specs {
+		for measure := range spec.nativeMeasures {
+			name := key + "." + measure
+			if base, ok := convertedMeasure[measure]; !ok || spec.measures[base] == "" {
+				escapes = append(escapes, name+": no converted measure to offer instead")
+			}
+			if schema.Entities[key].Fields[measure].Currency == nil {
+				escapes = append(escapes, name+": the typed vocabulary does not mark it per-row money")
+			}
+			for _, fn := range []string{aggFnSum, aggFnAvg, aggFnMin, aggFnMax, aggFnMedian, aggFnP75} {
+				escapes = append(escapes, foldEscapes(schema, key, spec, fn, measure)...)
+			}
+		}
+	}
+	return escapes
+}
+
+func foldEscapes(schema analyticsquery.Schema, key string, spec reportSpec, fn, measure string) []string {
+	var escapes []string
+	plan := key + ": " + fn + "(" + measure + ")"
+	aggs := []reportAggregate{{Fn: fn, Field: measure}}
+	if refuseUngroupedNativeMoney(spec, nil, nil, aggs) == nil {
+		escapes = append(escapes, plan+" ungrouped answered on the report engine")
+	}
+	if refuseUngroupedNativeMoney(spec, []string{fieldCurrency}, nil, aggs) != nil {
+		escapes = append(escapes, plan+" by currency refused on the report engine")
+	}
+	q := analyticsquery.Query{Entity: key, Measures: []analyticsquery.Measure{{Fn: analyticsquery.AggFn(fn), Field: measure}}}
+	if q.Validate(schema) == nil {
+		escapes = append(escapes, plan+" ungrouped answered on the typed query")
+	}
+	q.GroupBy = []string{fieldCurrency}
+	if err := q.Validate(schema); err != nil {
+		escapes = append(escapes, plan+" by currency refused on the typed query: "+err.Error())
+	}
+	return escapes
 }

@@ -4,10 +4,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
-import { unwrap } from "../lib/problem";
+import { isVersionSkewOf, unwrap } from "../lib/problem";
 
 // useNoticeRead settles one notice, which is all the acknowledge verb means.
 // It is apart from useTaskUpdate because the two have different owners. A
@@ -68,36 +69,65 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
  * of activity. Widening it would let a caller send `is_done` for a meeting. The
  * server refuses that with `field_not_valid_for_kind`, and the types prevent it.
  */
+/** One answer to a meeting: its outcome, and the fields the writer changes. */
+export type MeetingOutcomeWrite = {
+  id: string;
+  // The version the answer was decided against, as the task verb carries.
+  // Without it, two readers answering one meeting both succeed, and the
+  // later one wins with no warning.
+  version: number | undefined;
+  status: "held" | "no_show" | "canceled";
+  // Each sent only when given, so an answer alone never touches the notes.
+  subject?: string;
+  body?: string | null;
+  start?: Readonly<{
+    occurred_at: string;
+    occurred_precision: components["schemas"]["OccurredPrecision"];
+  }>;
+};
+
+/**
+ * The one write of a meeting's outcome, for the outcome hook, the outcome
+ * dialog and the Log form.
+ */
+export async function writeMeetingOutcome(
+  input: MeetingOutcomeWrite,
+  t: ReturnType<typeof useT>,
+): Promise<void> {
+  unwrap(
+    await api.PATCH("/activities/{id}", {
+      params: {
+        path: { id: input.id },
+        ...ifMatch(requireVersion(input.version)),
+      },
+      body: {
+        meeting_status: input.status,
+        ...(input.subject === undefined ? {} : { subject: input.subject }),
+        ...(input.body === undefined ? {} : { body: input.body }),
+        ...input.start,
+      },
+    }),
+    t,
+  );
+}
+
 export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
+  const reread = (id: string) => {
+    for (const queryKey of invalidateKeys) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    // The meeting's own detail read too: a drawer open on it would otherwise
+    // keep showing the row as unanswered after it has been answered.
+    queryClient.invalidateQueries({ queryKey: ["activity", id] });
+  };
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      // The version the answer was decided against, as the task verb carries.
-      // Without it, two readers answering one meeting both succeed, and the
-      // later one wins with no warning.
-      version: number | undefined;
-      status: "held" | "no_show" | "canceled";
-    }) => {
-      unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.id },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: { meeting_status: input.status },
-        }),
-        t,
-      );
-    },
-    onSuccess: (_data, input) => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // The meeting's own detail read too: a drawer open on it would otherwise
-      // keep showing the row as unanswered after it has been answered.
-      queryClient.invalidateQueries({ queryKey: ["activity", input.id] });
+    mutationFn: (input: MeetingOutcomeWrite) => writeMeetingOutcome(input, t),
+    onSuccess: (_data, input) => reread(input.id),
+    // A retry must carry the version the meeting holds now, not the one refused.
+    onError: (error, input) => {
+      if (isVersionSkewOf(error)) reread(input.id);
     },
   });
 }

@@ -192,12 +192,11 @@ Notes on some tiers:
 - **T1 only trusts proof that *we* sent the mail.** It does not look at the `From` header, which
   someone can forge. An outbound message whose text says no (`not interested`, `unsubscribe`,
   `kein Interesse`) is no evidence of intent at all.
-- **T1 needs two-way mail**, and a single send is not that. Writing to someone shows intent, and intent
-  many times gets no answer. The owner of a new company mails 40 companies about an event, and 6
-  write back. So the ladder creates a contact at once only in two cases. They wrote back on a thread we
-  wrote on, or we wrote to them on two separate threads, which nobody does without meaning to. A single send
-  is not refused: it falls to T4, and the verdict engine reads the message and decides on what it
-  says.
+- **An attested send records an outside recipient.** The provider must prove that the
+  capturing seat sent it, or Margince must hold a sent delivery receipt. A draft,
+  failed delivery or untrusted direction field is no proof. To and Cc share this rule;
+  Bcc is never admitted. A live lead stays a lead. Without a trusted send or an eligible
+  meeting, a sender still passes through the other tiers.
 - **Mail to a list is no reply.** An address we wrote to once that then sends a newsletter has
   added us to a list; it has not answered us.
 - **T1 also wins over an old verdict.** A reply to a sender we once marked as noise returns

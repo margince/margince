@@ -9,6 +9,7 @@ import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
 import { useMemberFilterOptions } from "./assigneepicker";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
+import { isClearedFilterMarker } from "./listqueryparams";
 
 // The owner and team dials every owner-scoped list offers: leads, contacts,
 // companies, deals and projects. A record is owned by one colleague, so the
@@ -38,13 +39,17 @@ export function useOwnerChips(): readonly ListChip[] {
 }
 
 /** The value of one filter parameter in the address, under any list scope. */
+// The removal marker names no one, so it never reaches the names lookup.
 function useApplied(param: string): string | undefined {
   const [params] = useUrlParams();
-  const key = [...params.keys()].find(
-    (candidate) =>
+  const key = [...params.keys()].find((candidate) => {
+    const value = params.get(candidate);
+    return (
       (candidate === param || candidate.endsWith(`.${param}`)) &&
-      params.get(candidate),
-  );
+      Boolean(value) &&
+      !isClearedFilterMarker(value ?? "")
+    );
+  });
   return key ? (params.get(key) ?? undefined) : undefined;
 }
 

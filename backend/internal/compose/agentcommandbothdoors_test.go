@@ -140,6 +140,27 @@ func mergeDoors(collection, recordType string) bothDoorsFixture {
 	}
 }
 
+func caseDoors(action string, preview bool) bothDoorsFixture {
+	body := func(member, survivor ids.UUID) string {
+		return `"member_ids":["` + member.String() + `","` + survivor.String() + `"],"survivor_id":"` +
+			survivor.String() + `","owner_id":"` + survivor.String() + `","revision":"r1"`
+	}
+	return bothDoorsFixture{
+		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
+			payload := "{" + body(primary, secondary) + "}"
+			req := httptest.NewRequest(http.MethodPost,
+				"/v1/dedupe/contact-cases/"+primary.String()+"/"+action, strings.NewReader(payload))
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("contact_id", primary.String())
+			return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx)), []byte(payload)
+		},
+		args: func(primary, secondary ids.UUID) string {
+			return `{"record_type":"contact","contact_id":"` + primary.String() + `",` + body(primary, secondary) +
+				fmt.Sprintf(`,"preview":%t}`, preview)
+		},
+	}
+}
+
 // enrichDoors is the pair the gate exists for. The REST door has no depth
 // argument at all — its two ROUTES are the two depths — so the depth is
 // structural on one door and a word on the other, which is the one shape where
@@ -250,6 +271,10 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 
 	"mergeContact": mergeDoors("contacts", "contact"),
 	"mergeCompany": mergeDoors("companies", "company"),
+
+	// A case decision names the case by any member and binds to the survivor.
+	"mergeContactCase":        caseDoors("merge", false),
+	"previewContactCaseMerge": caseDoors("preview", true),
 
 	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed
 	// by record_type and resolved through the SoR provider, and this one folds a

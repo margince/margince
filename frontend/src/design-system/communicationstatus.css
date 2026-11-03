@@ -26,7 +26,7 @@
 .commstatus.popover-trigger:focus-visible {
   /* --bgHover, not --bgChip: this is a pointer resting on a control, which is
    * exactly what --bgHover is for. */
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The dense form, for a row in a list. The TARGET stays 44 — negative block

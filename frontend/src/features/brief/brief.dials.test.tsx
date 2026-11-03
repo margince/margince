@@ -104,6 +104,23 @@ describe("the Brief's dials", () => {
     expect(screen.queryByRole("button", { name: "Team" })).toBeNull();
   });
 
+  // Today reads nothing from the weekly review, so it must not ask for one;
+  // the Weekly view asks when it opens.
+  it("asks for the weekly review only once the Weekly view is chosen", async () => {
+    const calls = stubBrief(["mine"]);
+    const weeklyReads = () =>
+      calls.filter((call) => call.path === "/weekly-reviews/latest").length;
+    render(<BriefScreen />);
+
+    await screen.findByTestId("brief-readings");
+    expect(weeklyReads()).toBe(0);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.view.weekly"] }),
+    );
+    await waitFor(() => expect(weeklyReads()).toBeGreaterThan(0));
+  });
+
   // The dial writes the address, so a reader can send what they are looking at.
   it("puts the chosen view in the address", async () => {
     stubBrief(["mine"]);

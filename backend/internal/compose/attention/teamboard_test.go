@@ -82,7 +82,7 @@ type waitingSaying struct {
 	cut bool
 }
 
-func (w waitingSaying) Unanswered(context.Context, time.Time, *ids.UUID) ([]WaitingCustomer, bool, error) {
+func (w waitingSaying) Unanswered(context.Context, time.Time, WaitingFor) ([]WaitingCustomer, bool, error) {
 	return w.rows, w.cut, nil
 }
 

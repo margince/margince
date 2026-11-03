@@ -36,6 +36,8 @@ import {
   type WebFormSender,
 } from "./webformkinds";
 import "./webforms.css";
+import { OwnerField } from "./webformowner";
+import { PrivacyNoticeFields } from "./webformprivacy";
 import { SenderField } from "./webformsender";
 
 export type WebFormDraft = Readonly<{
@@ -43,9 +45,12 @@ export type WebFormDraft = Readonly<{
   sender: WebFormSender;
   origins: string;
   senderSecret: string;
+  ownerId: string;
   consentRequired: boolean;
   consentWording: string;
   consentPolicyVersion: string;
+  privacyNotice: string;
+  privacyNoticeUrl: string;
   redirectUrl: string;
   successMessage: string;
 }>;
@@ -56,9 +61,12 @@ export function draftFor(form?: WebForm): WebFormDraft {
     sender: form?.sender ?? "browser",
     origins: (form?.allowed_origins ?? []).join("\n"),
     senderSecret: "",
+    ownerId: form?.owner_id ?? "",
     consentRequired: form?.consent_required ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
+    privacyNotice: form?.privacy_notice ?? "",
+    privacyNoticeUrl: form?.privacy_notice_url ?? "",
     redirectUrl: form?.redirect_url ?? "",
     successMessage: form?.success_message ?? "",
   };
@@ -121,8 +129,10 @@ export function narrowedOrigins(
 }
 
 // The settings create and update share. Webflow's secret is sent only when one
-// was typed, so an edit that leaves the field empty keeps the stored one.
-export function webFormBodyOf(draft: WebFormDraft) {
+// was typed, so an edit that leaves the field empty keeps the stored one. The
+// owner is sent only when it changed. The server checks that a sent owner can
+// still take leads, so one who left must not block renaming the form.
+export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
   // Sent as the Origin header spells it, so a stored `:443` never refuses the
   // site. Text that is no address goes as typed, for the server to refuse.
   const origins = originsOf(draft).map((entry) => websiteOf(entry) ?? entry);
@@ -132,9 +142,14 @@ export function webFormBodyOf(draft: WebFormDraft) {
     ...(pastesSecret(draft.sender) && draft.senderSecret.trim() !== ""
       ? { sender_secret: draft.senderSecret.trim() }
       : {}),
+    ...(draft.ownerId !== (form?.owner_id ?? "")
+      ? { owner_id: optional(draft.ownerId) }
+      : {}),
     consent_required: draft.consentRequired,
     consent_wording: optional(draft.consentWording),
     consent_policy_version: optional(draft.consentPolicyVersion),
+    privacy_notice: optional(draft.privacyNotice),
+    privacy_notice_url: optional(draft.privacyNoticeUrl),
     redirect_url: optional(draft.redirectUrl),
     success_message: optional(draft.successMessage),
   };
@@ -150,7 +165,7 @@ async function saveWebForm({
     return unwrap(
       await api.PATCH("/web-forms/{id}", {
         params: { path: { id: form.id }, ...ifMatch(form.version) },
-        body: webFormBodyOf(draft),
+        body: webFormBodyOf(draft, form),
       }),
     );
   }
@@ -166,8 +181,11 @@ const FIELDS_WITH_A_SLOT = new Set([
   "sender",
   "allowed_origins",
   "sender_secret",
+  "owner_id",
   "consent_wording",
   "consent_policy_version",
+  "privacy_notice",
+  "privacy_notice_url",
   "redirect_url",
   "success_message",
 ]);
@@ -327,6 +345,11 @@ export function WebFormDrawer({
             </Field>
           )}
         </div>
+        <OwnerField
+          ownerId={draft.ownerId}
+          error={fieldErrors.get("owner_id")}
+          onChange={(ownerId) => set({ ownerId })}
+        />
         <div className="form-stack webform-part">
           <Checkbox
             checked={draft.consentRequired}
@@ -370,6 +393,12 @@ export function WebFormDrawer({
             </>
           )}
         </div>
+        <PrivacyNoticeFields
+          notice={draft.privacyNotice}
+          policy={draft.privacyNoticeUrl}
+          errors={fieldErrors}
+          onChange={set}
+        />
         <div className="form-stack webform-part">
           {draft.sender === "browser" && (
             <Field

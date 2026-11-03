@@ -13,7 +13,7 @@ import (
 )
 
 func TestReportingMutationHandlersRejectMalformedBodiesBeforeCallingTheService(t *testing.T) {
-	handlers := NewHandlers(nil)
+	handlers := NewHandlers(nil, OpeningSelection{})
 	id := crmcontracts.Id{}
 	cases := []struct {
 		name string
@@ -48,7 +48,7 @@ func TestReportingMutationHandlersRejectMalformedBodiesBeforeCallingTheService(t
 }
 
 func TestReportingRevisionHandlersRequireAnObservedVersion(t *testing.T) {
-	handlers := NewHandlers(nil)
+	handlers := NewHandlers(nil, OpeningSelection{})
 	id := crmcontracts.Id{}
 	calls := []http.HandlerFunc{
 		func(w http.ResponseWriter, r *http.Request) {
@@ -83,8 +83,30 @@ func TestReportingRevisionHandlersRequireAnObservedVersion(t *testing.T) {
 	}
 }
 
+func TestTheFirstFrameworkPublishNamesTheUnpublishedVersion(t *testing.T) {
+	for _, test := range []struct {
+		ifMatch string
+		want    int64
+		ok      bool
+	}{{"0", 0, true}, {"3", 3, true}, {"-1", 0, false}, {"", 0, false}} {
+		request := httptest.NewRequest(http.MethodPut, "/analytics/framework", nil)
+		if test.ifMatch != "" {
+			request.Header.Set("If-Match", test.ifMatch)
+		}
+		version, ok := frameworkVersion(httptest.NewRecorder(), request)
+		if version != test.want || ok != test.ok {
+			t.Fatalf("If-Match %q: version %d, ok %v", test.ifMatch, version, ok)
+		}
+	}
+	report := httptest.NewRequest(http.MethodPatch, "/analytics/reports", nil)
+	report.Header.Set("If-Match", "0")
+	if _, ok := requiredVersion(httptest.NewRecorder(), report); ok {
+		t.Fatal("a report revision starts at 1, so version 0 stays refused there")
+	}
+}
+
 func TestReportingListHandlersRejectMalformedContinuationTokens(t *testing.T) {
-	handlers := NewHandlers(nil)
+	handlers := NewHandlers(nil, OpeningSelection{})
 	cursor := "not-an-id"
 	id := crmcontracts.Id{}
 	calls := []http.HandlerFunc{
@@ -111,7 +133,7 @@ func TestReportingListHandlersRejectMalformedContinuationTokens(t *testing.T) {
 }
 
 func TestReportingQueryRejectsMalformedScopeAndDatesBeforeEvaluation(t *testing.T) {
-	handlers := NewHandlers(nil)
+	handlers := NewHandlers(nil, OpeningSelection{})
 	for _, query := range []string{"scope_id=invalid", "pipeline_id=invalid", "start_at=invalid", "start_at=2026-09-01T00:00:00Z&end_at=invalid"} {
 		for _, evidence := range []bool{false, true} {
 			response := httptest.NewRecorder()
@@ -127,7 +149,7 @@ func TestReportingQueryRejectsMalformedScopeAndDatesBeforeEvaluation(t *testing.
 		}
 	}
 	request := httptest.NewRequest(http.MethodGet, "/analytics/evaluate?period=custom&target_basis=fiscal_quarter&close_window=all_open&start_at=2026-09-01T00:00:00Z&end_at=2026-09-08T00:00:00Z", nil)
-	selection, err := SelectionFromQuery(request.URL.Query())
+	selection, err := SelectionFromQuery(request.URL.Query(), OpeningSelection{})
 	if err != nil || selection.Interval == nil || selection.Interval.EndAt.Sub(selection.Interval.StartAt).Hours() != 168 || selection.TargetBasis != "fiscal_quarter" || selection.CloseWindow != "all_open" {
 		t.Fatalf("custom selection: %+v %v", selection, err)
 	}

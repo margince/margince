@@ -33,8 +33,12 @@ const (
 	entityActivity = "activity"
 )
 
+// pairLaneTypes are the record types the queue shows pair by pair. Contact
+// pairs reach it as cases (attentioncontactcases.go).
+var pairLaneTypes = []string{entityCompany, entityLead}
+
 func (d attentionDuplicates) OpenCandidates(ctx context.Context, limit int) ([]attention.DuplicatePair, error) {
-	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit})
+	rows, _, err := d.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Limit: limit, EntityTypes: pairLaneTypes})
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +100,7 @@ func (d attentionDuplicates) DecidableSubset(
 }
 
 func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
-	return d.store.CountOpenDedupeCandidates(ctx)
+	return d.store.CountOpenDedupeCandidates(ctx, pairLaneTypes...)
 }
 
 // SettleablePairs answers which pairs a merge would actually accept.

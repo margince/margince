@@ -54,9 +54,9 @@ func TestAPrivateThreadMintsNoContact(t *testing.T) {
 
 	// The exchange that would otherwise create on sight: the owner writes, and
 	// she answers on the same thread.
+	seedPersonalThread(t, e, e.Rep1, "fam1@myco.example", []string{aunt})
 	syncSent(t, map[string]bool{"fam1@myco.example": true},
 		email(captureOwner, "", aunt, "fam1@myco.example", ""))
-	seedPersonalThread(t, e, e.Rep1, "fam1@myco.example", []string{aunt})
 
 	sync(t, email(aunt, "Aunt Anne", captureOwner, "fam1r@family.example", "fam1@myco.example"))
 
@@ -99,9 +99,9 @@ func TestAPrivateThreadDoesNotSettleTheAddressForever(t *testing.T) {
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const both = "cousin@family.example"
 
+	seedPersonalThread(t, e, e.Rep1, "mix1@myco.example", []string{both})
 	syncSent(t, map[string]bool{"mix1@myco.example": true},
 		email(captureOwner, "", both, "mix1@myco.example", ""))
-	seedPersonalThread(t, e, e.Rep1, "mix1@myco.example", []string{both})
 	sync(t, email(both, "Cousin", captureOwner, "mix1r@family.example", "mix1@myco.example"))
 
 	if n := countRows(t, e, `

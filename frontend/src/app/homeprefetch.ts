@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import {
+  InfiniteQueryObserver,
+  type QueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
+import { morningBriefOptions } from "../features/brief/brief.queries";
+import { addressFrom } from "../features/brief/brief.view";
+import { handledForYouOptions } from "../lib/handled";
+import { magicOptions } from "../lib/magic.queries";
+import type { UrlParams } from "../lib/urlstate";
+import { worklistDayOptions } from "../lib/worklistday";
+import { DEFAULT_VIEW } from "../lib/worklistviews";
+import { notePrefetched } from "./queryclient";
+
+// Home's morning reads, started as soon as the shell may draw (App.tsx). The
+// screen commits only after React's Suspense reveal, and its queries start then.
+// Each read uses its hook's own options, so the screen joins a request in
+// flight. An answer already back is noted, so the screen's mount does not fetch
+// it again (liveOnMount in queryclient.ts).
+//
+// The returned cleanup belongs to the route. A prefetch has no observer, so a
+// reader who leaves first would leave the day's Worklist assembling. Holding one
+// lets React Query abort that read once nothing observes its key.
+export function prefetchHome(
+  client: QueryClient,
+  params: UrlParams,
+): () => void {
+  if (addressFrom(params).view !== "morning") {
+    return () => undefined;
+  }
+  // Noted only when the call fetched. A prefetch also resolves on a fresh cache
+  // hit, and that answer is not one this load fetched.
+  const prefetched = (queryKey: QueryKey, fetch: () => Promise<void>) => {
+    const find = () => client.getQueryCache().find({ queryKey, exact: true });
+    const before = find()?.state.dataUpdateCount ?? 0;
+    void fetch().then(() => {
+      const query = find();
+      if (query && query.state.dataUpdateCount > before) {
+        notePrefetched(query.queryHash, query.state.dataUpdatedAt);
+      }
+    });
+  };
+  const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
+  // Held only while the read is in flight. Once it answers there is nothing to
+  // abort, and a held observer would count as a screen showing the day.
+  const release = new InfiniteQueryObserver(client, {
+    ...day,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  }).subscribe(() => undefined);
+  prefetched(day.queryKey, () =>
+    client.prefetchInfiniteQuery(day).then(release),
+  );
+  prefetched(morningBriefOptions.queryKey, () =>
+    client.prefetchQuery(morningBriefOptions),
+  );
+  prefetched(magicOptions.queryKey, () => client.prefetchQuery(magicOptions));
+  prefetched(handledForYouOptions.queryKey, () =>
+    client.prefetchInfiniteQuery(handledForYouOptions),
+  );
+  return release;
+}

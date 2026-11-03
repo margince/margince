@@ -75,3 +75,26 @@ export const PrivateToAColleague: Story = {
     await screen.findByText(/Private to Mira Voss/);
   },
 };
+
+// A partner that also buys from us: both marks on the one record, the partner's
+// kinds and stage named in its own.
+export const CustomerAndPartner: Story = {
+  render: () => (
+    <Marks
+      record={{
+        ...company,
+        lifecycle: "opportunity",
+        partner: {
+          company_id: "o-1",
+          cert_status: "certified",
+          partner_kinds: ["hosting", "referral"],
+          relationship_stage: "contract_signed",
+          stage_label: "Contract signed",
+          stage_label_key: "partnerStages.builtin.contract_signed",
+          created_at: "2026-06-01T08:00:00Z",
+          updated_at: "2026-06-01T08:00:00Z",
+        },
+      }}
+    />
+  ),
+};

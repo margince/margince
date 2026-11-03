@@ -55,7 +55,8 @@ func addressBases(emails []string) (bases, folded []string) {
 // follows it, for the reason lockPhoneLane gives. No unique index can hold a
 // base address. Without the lock, two creates of `ab@` and `ab+x@` both read
 // no incumbent and commit with no pair. The fixed lock order is phone, then
-// address base, then name.
+// address base, then name. A LinkedIn handle write takes its profile lock
+// after these (fileLinkedInTwinsAtWrite).
 func lockAddressBaseLane(ctx context.Context, tx pgx.Tx, emails []string) error {
 	bases, _ := addressBases(emails)
 	for _, base := range bases {

@@ -58,7 +58,7 @@ func reportingMovementCaptures(ctx context.Context, tx pgx.Tx, frame crmcontract
 		return nil, err
 	}
 	var b reportingBindings
-	query := "SELECT id,taken_at FROM forecast_snapshot WHERE scope_kind=" + b.add(frame.Scope.Kind) + " AND scope_id IS NOT DISTINCT FROM " + b.add(frame.Scope.Id) + "::uuid AND pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND population_fingerprint=" + b.add(frame.PopulationFingerprint) + " AND base_currency=" + b.add(frame.Currency) + " AND definition_version=" + b.add(forecasting.DefinitionVersion) + " AND period_start=" + b.add(period.StartDate) + " AND period_end=" + b.add(period.EndDate) + " AND taken_at<=" + b.add(frame.EvaluatedAt) + " ORDER BY taken_at DESC,id DESC LIMIT " + b.add(32)
+	query := "SELECT id,taken_at FROM forecast_snapshot WHERE scope_kind=" + b.add(frame.Scope.Kind) + " AND scope_id IS NOT DISTINCT FROM " + b.add(frame.Scope.Id) + "::uuid AND pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND population_fingerprint=" + b.add(frame.PopulationFingerprint) + " AND base_currency=" + b.add(frame.Currency) + " AND definition_version=" + b.add(forecasting.DefinitionVersion) + " AND period_start=" + b.add(period.StartDate) + " AND period_end=" + b.add(period.EndDate) + " AND trigger<>" + b.add(forecasting.TriggerCall) + " AND taken_at<=" + b.add(frame.EvaluatedAt) + " ORDER BY taken_at DESC,id DESC LIMIT " + b.add(32)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, err

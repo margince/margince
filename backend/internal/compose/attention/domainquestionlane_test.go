@@ -167,7 +167,7 @@ func TestDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
 				Domain: fmt.Sprintf("company-%d.test", i), AskedAt: readInstant,
 			}), readInstant))
 		}
-		grouped := foldRoutineDecisionsBounded(rows, count == DomainQuestionLimit)
+		grouped := foldRoutineDecisionsBounded(rows, map[crmcontracts.WorklistItemSource]bool{crmcontracts.WorklistItemSource(sourceDomainQuestion): count == DomainQuestionLimit})
 		assertDomainMaintenanceGroup(t, grouped, count)
 		for _, row := range append(rows, grouped...) {
 			if focusEligible(row, readInstant) {

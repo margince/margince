@@ -3,13 +3,8 @@
 
 package capture
 
-// The capture-health read: the caller's own connections that need the
-// caller's hand — a mailbox wanting re-authentication, a connection in
-// error, a sync failing, a backfill that ended in error. One concern per
-// CONNECTION, carrying the worst condition on it, so a user with one broken
-// mailbox sees one card. Derived entirely from Connections' own view — the
-// same rows the settings screen lists — so this read and that screen cannot
-// come to disagree about which mailbox is unhealthy.
+// Owner and fleet health share one classification of connection state.
+// Silence is measured at the sync boundary, without reading correspondence.
 
 import (
 	"context"
@@ -32,6 +27,8 @@ const (
 	ConcernSyncFailing = "sync_failing"
 	// ConcernBackfillFailed: the latest history import ended in error.
 	ConcernBackfillFailed = "backfill_failed"
+	ConcernSyncStalled    = "sync_stalled"
+	ConcernCaptureSilent  = "capture_silent"
 )
 
 // Connection statuses and the backfill terminal state this read derives from
@@ -62,18 +59,12 @@ type Concern struct {
 	FailingSince *time.Time
 	// LastSyncedAt is the connection's last good sync, nil when it never had one.
 	LastSyncedAt *time.Time
+	// ChangedAt is the evidence that can reopen an attention card marked Done.
+	ChangedAt *time.Time
 }
 
-// HealthConcerns answers the CALLING human's unhealthy connections, in the
-// order Connections lists them. Capture is per-user (RC-8), so there is no
-// admin view here: each user is shown their own mailboxes and nobody else's.
-// The human-only arm lives in Connections, whose refusal is the permission
-// sentinel the attention feed renders as a withheld lane.
-//
-// This read must stay within what Connections itself reads: a health caller
-// composes the registry with no sink, no authority and no vault, so a concern
-// derived from anything beyond the connection tables would be a nil
-// dereference on that caller's request path.
+// HealthConcerns reads the owner's concerns. Admin and ops use FleetConcernsTx
+// behind job_health:read; neither read needs credentials or correspondence.
 func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 	views, err := r.Connections(ctx)
 	if err != nil {
@@ -81,7 +72,7 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 	}
 	var concerns []Concern
 	for _, view := range views {
-		kind := connectionConcern(view)
+		kind := view.Concern
 		if kind == "" {
 			continue
 		}
@@ -93,23 +84,32 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 		if view.AccountLabel != nil {
 			concern.AccountLabel = *view.AccountLabel
 		}
-		concern.FailingSince = view.FailingSince
+		concern.FailingSince = view.ConcernSince
 		concern.LastSyncedAt = view.LastSuccessAt
+		concern.ChangedAt = view.LastSuccessAt
+		if kind == ConcernCaptureSilent {
+			concern.ChangedAt = view.ConcernSince
+		}
 		concerns = append(concerns, concern)
 	}
 	return concerns, nil
 }
 
-// connectionConcern classifies one connection: the worst condition on it, or
-// "" for a healthy one. A deliberately disconnected connection raises nothing
-// — the user chose that state, and a card would nag them about their own
-// decision. The condition alone travels: the sidecar's failure class stays
-// server-side, where an operator reads it, rather than in front of a rep.
-func connectionConcern(view ConnectionView) string {
+// ConcernKinds orders simultaneous concerns by their displayed priority.
+var ConcernKinds = []string{
+	ConcernReauthRequired, ConcernConnectionError, ConcernSyncFailing,
+	ConcernBackfillFailed, ConcernSyncStalled, ConcernCaptureSilent,
+}
+
+const (
+	stalledAfter   = 24 * time.Hour
+	firstSyncGrace = time.Hour
+	silentAfter    = 72 * time.Hour
+)
+
+func connectionConcern(view ConnectionView, now time.Time) string {
 	switch view.Status {
 	case statusDisconnected:
-		// A parked connection keeps its last sidecar facts; nagging about a
-		// mailbox the user turned off would be reporting their own decision.
 		return ""
 	case statusReauthRequired:
 		return ConcernReauthRequired
@@ -122,5 +122,59 @@ func connectionConcern(view ConnectionView) string {
 	if view.Backfill != nil && view.Backfill.Status == backfillStatusError {
 		return ConcernBackfillFailed
 	}
+	if view.Status != statusConnected || view.ConnectedAt.IsZero() {
+		return ""
+	}
+	if syncStalled(view, now) {
+		return ConcernSyncStalled
+	}
+	if !DeliversMail(view.Provider) {
+		return ""
+	}
+	since := deliverySince(view)
+	if silenceDismissed(view) {
+		return ""
+	}
+	if now.Sub(since) > silentAfter && now.Sub(view.ConnectedAt) > silentAfter {
+		return ConcernCaptureSilent
+	}
 	return ""
+}
+
+func deliverySince(view ConnectionView) time.Time {
+	if view.LastDeliveryAt != nil {
+		return *view.LastDeliveryAt
+	}
+	return view.ConnectedAt
+}
+
+func classifyConnection(view *ConnectionView, now time.Time) {
+	view.SyncStalled = syncStalled(*view, now)
+	view.Concern = connectionConcern(*view, now)
+	view.ConcernSince = view.FailingSince
+	switch view.Concern {
+	case "":
+		view.ConcernSince = nil
+	case ConcernBackfillFailed:
+		view.ConcernSince = view.Backfill.CompletedAt
+	case ConcernSyncStalled:
+		since := view.ConnectedAt
+		if view.LastSuccessAt != nil && view.LastSuccessAt.After(since) {
+			since = *view.LastSuccessAt
+		}
+		view.ConcernSince = &since
+	case ConcernCaptureSilent:
+		since := deliverySince(*view)
+		view.ConcernSince = &since
+	}
+}
+
+func syncStalled(view ConnectionView, now time.Time) bool {
+	return view.Status == statusConnected && !view.ConnectedAt.IsZero() &&
+		now.Sub(view.ConnectedAt) > firstSyncGrace &&
+		(view.LastSuccessAt == nil || now.Sub(*view.LastSuccessAt) > stalledAfter)
+}
+
+func silenceDismissed(view ConnectionView) bool {
+	return view.SilenceDismissedSince != nil && (view.LastDeliveryAt == nil || view.LastDeliveryAt.Equal(*view.SilenceDismissedSince))
 }

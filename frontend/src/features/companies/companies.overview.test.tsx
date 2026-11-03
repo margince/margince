@@ -603,7 +603,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     // it. Every one is asserted, since a single lookup misses a stray link.
     const names = await screen.findAllByRole("link", { name: "Anna Brandt" });
     for (const each of names) {
-      expect(each.getAttribute("href")).toBe("#/contacts/p-1");
+      expect(each.getAttribute("href")).toBe("/#/contacts/p-1");
     }
     const name = names[0];
     // The title shares its line with the company's name.

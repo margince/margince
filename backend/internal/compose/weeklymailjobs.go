@@ -26,6 +26,8 @@ type weeklyMailCandidate struct {
 	settings identity.Delivery
 	words    mailcopy.Copy
 	body     emailview.Message
+	// namesTeam says the body carries a team's week, which names each member.
+	namesTeam bool
 }
 
 type weeklySubmission struct {
@@ -43,6 +45,11 @@ func (w *weeklyGenerateWorker) mailWeekly(ctx context.Context, reviewID ids.UUID
 	if !ready {
 		return
 	}
+	w.sendWeeklyMail(ctx, reviewID, candidate, now)
+}
+
+// sendWeeklyMail claims and submits a prepared weekly mail.
+func (w *weeklyGenerateWorker) sendWeeklyMail(ctx context.Context, reviewID ids.UUID, candidate weeklyMailCandidate, now time.Time) {
 	submission, claimed, err := w.claimWeeklyMail(ctx, candidate, now)
 	if err != nil {
 		w.log.WarnContext(ctx, "weekly claim unavailable", "cause", err)
@@ -64,6 +71,14 @@ func (w *weeklyGenerateWorker) mailWeekly(ctx context.Context, reviewID ids.UUID
 			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, "delivery choices changed or could not be rechecked", w.log)
 		} else {
 			w.recordMailFailure(ctx, reviewID, "delivery choices changed or could not be rechecked")
+		}
+		return
+	}
+	if reason := w.teamWeekWithdrawn(ctx, candidate); reason != "" {
+		if routineCombines(candidate.settings) {
+			recordRoutineFailure(ctx, w.pool, submission.combined, submission.part, reason, w.log)
+		} else {
+			w.recordMailFailure(ctx, reviewID, reason)
 		}
 		return
 	}
@@ -102,7 +117,7 @@ func (w *weeklyGenerateWorker) prepareWeeklyMail(ctx context.Context, reviewID i
 		return out, false
 	}
 	words := recipientMailCopy(ctx, w.pool)
-	body, err := w.weeklyMessage(ctx, review, settings, now, words)
+	body, namesTeam, err := w.weeklyMessage(ctx, review, settings, now, words)
 	if err != nil {
 		w.log.WarnContext(ctx, "weekly content unavailable", "cause", err)
 		return out, false
@@ -110,7 +125,25 @@ func (w *weeklyGenerateWorker) prepareWeeklyMail(ctx context.Context, reviewID i
 	if len(body.Blocks) == 0 {
 		return out, false
 	}
-	return weeklyMailCandidate{review: review, settings: settings, words: words, body: body}, true
+	return weeklyMailCandidate{review: review, settings: settings, words: words, body: body, namesTeam: namesTeam}, true
+}
+
+// teamWeekWithdrawn reads the individual-performance switch again at
+// submission. A body naming a team's members was built while it was on, and
+// the switch may have gone off since. "" means the mail may go.
+func (w *weeklyGenerateWorker) teamWeekWithdrawn(ctx context.Context, candidate weeklyMailCandidate) string {
+	if !candidate.namesTeam {
+		return ""
+	}
+	allowed, err := readIndividualPerformance(ctx, w.pool)
+	if err != nil {
+		w.log.WarnContext(ctx, "individual performance setting unavailable at weekly submission", "cause", err)
+		return "the individual performance setting could not be rechecked"
+	}
+	if !allowed {
+		return "individual performance was switched off before the team week was sent"
+	}
+	return ""
 }
 
 func (w *weeklyGenerateWorker) weeklyDeliveryDue(ctx context.Context, settings identity.Delivery, now time.Time) bool {

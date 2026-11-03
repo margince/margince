@@ -151,7 +151,7 @@ describe("OwnDomainsCard", () => {
       screen
         .getByRole("link", { name: en["ownDomains.openCompany"] })
         .getAttribute("href"),
-    ).toBe("#/settings/company");
+    ).toBe("/#/settings/company");
     // The add form is behind ONE verb, in the card's header rather than in a
     // row that repeats its own label — and the field is not on the card until
     // the verb is pressed, so every row stays an answer.

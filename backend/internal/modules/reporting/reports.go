@@ -110,7 +110,8 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if after != nil {
 			where += " AND d.id>" + b.add(*after)
 		}
-		rows, err := tx.Query(ctx, "SELECT "+reportColumns+reportFrom+" WHERE "+where+" ORDER BY d.id LIMIT "+b.add(limit+1), b.values...)
+		query := "SELECT " + reportColumns + reportFrom + " WHERE " + where + " ORDER BY d.id LIMIT " + b.add(limit+1)
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -226,6 +227,10 @@ func (s *Service) CreateReport(ctx context.Context, in crmcontracts.ReportingRep
 	if err := requireReadWrite(ctx, "report_definition", principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
+	return s.insertReport(ctx, in)
+}
+
+func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
 	owner, err := actorID(ctx)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
@@ -242,7 +247,7 @@ func (s *Service) CreateReport(ctx context.Context, in crmcontracts.ReportingRep
 		if err != nil {
 			return err
 		}
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, out)
@@ -260,7 +265,10 @@ func reportDescription(typed *string) *string {
 	return &trimmed
 }
 
-func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport) error {
+// saveReportRevision stores the report's selection as its next revision, with
+// the questions its cards are bound to. Binding rewrites those cards in place,
+// so the caller answers and audits the selection as stored.
+func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report *crmcontracts.ReportingReport) error {
 	framework, err := s.framework(ctx, tx)
 	if err != nil {
 		return err
@@ -269,13 +277,25 @@ func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report crmc
 	if err != nil {
 		return err
 	}
+	kept, err := s.bindQuestions(ctx, tx, ids.UUID(report.Id), &report.Selection)
+	if err != nil {
+		return err
+	}
 	selection, err := encode(report.Selection)
 	if err != nil {
 		return err
 	}
+	questions, err := encode(kept)
+	if err != nil {
+		return err
+	}
+	versions, err := encode(s.evaluator.MetricVersions(report.Selection.Metrics))
+	if err != nil {
+		return err
+	}
 	var b bindings
-	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author)}
-	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by) VALUES ("+strings.Join(values, ",")+")", b.values...)
+	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author), b.add(questions), b.add(versions)}
+	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by,question_bindings,metric_versions) VALUES ("+strings.Join(values, ",")+")", b.values...)
 	return err
 }
 
@@ -291,7 +311,7 @@ func (s *Service) canEditReport(ctx context.Context, tx pgx.Tx, report crmcontra
 	if report.Audience == reportingTeam {
 		scope = crmcontracts.ReportingScope{Kind: reportingTeam, Id: report.AudienceTeamId}
 	}
-	if report.Audience == "private" {
+	if report.Audience == reportingPrivate {
 		return apperrors.ErrNotFound
 	}
 	_, err = s.authority.Scope(ctx, tx, scope, true)
@@ -332,7 +352,7 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 		if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 			return err
 		}
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "report_definition", id, "update", &before, out)
@@ -377,7 +397,7 @@ func (s *Service) ArchiveReport(ctx context.Context, id ids.UUID) (crmcontracts.
 
 func (s *Service) validateReportAudience(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
 	switch in.Audience {
-	case "private":
+	case reportingPrivate:
 		if in.AudienceTeamId != nil {
 			return refuse("audience_team_id", "not_allowed", "a private report has no audience team")
 		}

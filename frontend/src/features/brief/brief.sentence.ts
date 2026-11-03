@@ -81,4 +81,6 @@ const AGENDA_CATEGORY = {
   decisions: "brief.agenda.decisions",
   relationships: "brief.agenda.relationships",
   system: "brief.agenda.system",
+  // Focus never admits work due after today; one that did would be a task.
+  upcoming: "brief.agenda.tasks",
 } as const;

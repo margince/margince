@@ -36,6 +36,7 @@ import (
 const planSystem = `You prepare a salesperson for one meeting, from a JSON briefing about it.
 Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type":"activity|deal|contact","entity_id":"..."}]},"opening":{...},"top_risk":{"text":"...","evidence":[...],"say":"...","show":"...","avoid":"..."},"likely_asks":[{"question":"...","basis":"...","evidence":[...],"relevance":"high|medium|low","prepare":"..."}],"questions":[{"ask":"...","why":"...","listen_for":"...","evidence":[...]}],"scenarios":[{"label":"...","play":"...","evidence":[...]}]}.
 Write every word from the briefing and from nothing else. Never invent a fact, a name, a date or a number. If the briefing does not say it, do not write it.
+Each message says whether it is on this meeting's deal ("on_this_deal"), or names the other deal it is filed under and that deal's state. The objective and the opening serve this meeting's deal. A conversation about another deal is background only. Name a deal whose state is "lost" as lost and a "won" one as won, never as a live opportunity.
 Quote what contacts actually asked for. A question that would read the same about any other company is worthless — name the thing this account said, in their words where the briefing has them.
 Cite the ids the briefing gave you, in evidence only. An id must never appear in the text a reader sees.
 "opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare id string.
@@ -47,7 +48,7 @@ Say plainly when something is uncertain rather than filling the gap. Omit a fiel
 
 // planSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func planSystemFor(fence promptfence.Fence, lang string) string {
-	return planSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return planSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("meeting briefing")
 }
 
@@ -80,13 +81,23 @@ type PromptMoment struct {
 	Messages []PromptMessage `json:"messages,omitempty"`
 }
 
-// PromptMessage is one message, with the id a citation must name.
+// PromptMessage is one message, with the id a citation must name and the deal
+// it is filed under. Without the deal, a thread on a lost deal reads as the
+// reason for this meeting.
 type PromptMessage struct {
-	ActivityID string `json:"activity_id"`
-	At         string `json:"at"`
-	Direction  string `json:"direction,omitempty"`
-	Subject    string `json:"subject,omitempty"`
-	Text       string `json:"text,omitempty"`
+	ActivityID string      `json:"activity_id"`
+	At         string      `json:"at"`
+	Direction  string      `json:"direction,omitempty"`
+	Subject    string      `json:"subject,omitempty"`
+	Text       string      `json:"text,omitempty"`
+	OnThisDeal bool        `json:"on_this_deal"`
+	OtherDeal  *PromptDeal `json:"other_deal,omitempty"`
+}
+
+// PromptDeal is another deal a message is filed under.
+type PromptDeal struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
 }
 
 // PromptUnknown is a gap, shown so the model can aim a question at it without
@@ -115,6 +126,10 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 	for _, excerpt := range in.Excerpts {
 		byActivity[excerpt.ActivityID] = excerpt
 	}
+	filed := map[string]HistoryIn{}
+	for _, row := range in.History {
+		filed[row.ID] = row
+	}
 	for _, moment := range floor.Arc {
 		shown := PromptMoment{
 			From:  moment.Moment.From.At.UTC().Format(time.DateOnly),
@@ -127,13 +142,7 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 				if !ok {
 					continue
 				}
-				shown.Messages = append(shown.Messages, PromptMessage{
-					ActivityID: excerpt.ActivityID,
-					At:         excerpt.At.UTC().Format(time.DateOnly),
-					Direction:  excerpt.Direction,
-					Subject:    excerpt.Subject,
-					Text:       excerpt.Text,
-				})
+				shown.Messages = append(shown.Messages, promptMessageOf(excerpt, filed[id]))
 			}
 		}
 		prompt.Moments = append(prompt.Moments, shown)
@@ -144,6 +153,23 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 		})
 	}
 	return prompt
+}
+
+// promptMessageOf tags an excerpt with the deal its history row is filed under.
+// An excerpt with no history row is on no deal the brief knows of.
+func promptMessageOf(excerpt ExcerptIn, row HistoryIn) PromptMessage {
+	message := PromptMessage{
+		ActivityID: excerpt.ActivityID,
+		At:         excerpt.At.UTC().Format(time.DateOnly),
+		Direction:  excerpt.Direction,
+		Subject:    excerpt.Subject,
+		Text:       excerpt.Text,
+		OnThisDeal: row.OnDeal,
+	}
+	if row.OtherDeal != nil {
+		message.OtherDeal = &PromptDeal{Name: row.OtherDeal.Name, State: row.OtherDeal.State}
+	}
+	return message
 }
 
 // PlanRequest builds the one request this site sends. Exported for the same

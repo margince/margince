@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,7 +31,13 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
-	if err := markOwnerWithheld(ctx, tx, facts); err != nil {
+	owners, err := readerMeasurableOwners(ctx, tx)
+	if err != nil {
+		return nil, false, err
+	}
+	markOwnerWithheld(owners, facts)
+	facts, lone, err := withoutLoneColleagueMetrics(ctx, tx, facts)
+	if err != nil {
 		return nil, false, err
 	}
 	groups := map[reportingVisibilityKey][]ids.UUID{}
@@ -64,7 +69,7 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 		}
 		out = append(out, fact)
 	}
-	return a.visibleForecastProjections(ctx, tx, out, projections, withheld)
+	return a.visibleForecastProjections(ctx, tx, out, projections, withheld || lone)
 }
 
 func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibilityKey, sourceIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -165,20 +170,11 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 // outside the owners the reader may measure. Live readings and frozen editions
 // share this rule. A total counts the fact and an owner breakdown skips it. A
 // fact with no owner names no owner, so nothing is withheld on it.
-func markOwnerWithheld(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return nil
-	}
-	members, err := (reportingAuthority{}).Members(ctx, tx)
-	if err != nil {
-		return err
+func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact) {
+	if owners.Every {
+		return
 	}
 	for i := range facts {
-		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !slices.Contains(members, facts[i].OwnerID)
+		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.Includes(facts[i].OwnerID)
 	}
-	return nil
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -367,22 +368,17 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 		args = append(args, cursorTime, cursorID)
 	}
 	args = append(args, fieldHistoryScanBatch)
-	// auditActorNameJoins, the SAME spelling the compliance log and the record
-	// timeline resolve attribution through. Two rails on one screen answering
-	// "who did this" differently is how a reader comes to trust one and doubt
-	// the other, and this was the rail that named nobody.
-	//
-	// agentClientNameJoin for the same reason one hop further. It reads the tool
-	// from the passport the row recorded, so a token rotated since the change
-	// still names its client.
+	// The shared auditattribution joins, so this rail and the record timeline
+	// beside it name the same actor for one row. The tool is read from the
+	// passport the row recorded, so a token rotated since still names its client.
 	//
 	// Resolving through the passport list instead would name only the newest
 	// token of each connection.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
 		       a.occurred_at, a.before, a.after,
-		       `+auditActorNameColumn+`, obo.display_name, oc.client_name
-		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
+		       `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name
+		FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 		WHERE %s
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)

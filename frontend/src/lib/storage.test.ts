@@ -100,6 +100,7 @@ describe("a stored value", () => {
         "name" in key ? key.name : `${key.prefix}*`,
       ),
     ).toEqual([
+      "margince.palette.recents",
       "margince.locale",
       "margince.theme",
       "margince.sidebarCollapsed",
@@ -110,13 +111,19 @@ describe("a stored value", () => {
       "margince.agent.faults-seen",
       "margince.brief.introShown",
       "margince.leads.segregationNoteDismissed",
+      "margince.latestInbound.noticed:*",
       "margince.first-run.platform-declined:*",
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
       "margince.signin.returnRoute",
       "margince.room.session",
+      "margince.staleBuildReloadedAt",
       "margince.setup.reminderHidden",
       "margince.taskReminders.shown",
+      "margince.aiReveal.seen",
+      "margince.analytics.overviewView",
+      "margince.analytics.overview:*",
+      "margince.analytics.overviewTab:*",
     ]);
   });
 });

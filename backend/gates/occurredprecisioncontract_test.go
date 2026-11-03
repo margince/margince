@@ -55,6 +55,14 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml AssessNoticeSource.obtained_at":            "The privacy user enters a source date; this does not copy a captured activity timestamp.",
+	"api/crm.yaml NoticeCase.source_obtained_at":             "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
+	"api/crm.yaml NoticeCaseReview.source_obtained_at":       "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
+	"api/crm.yaml HealthFinding.first_observed_at":           "when operational evidence first recorded a condition, not an activity time",
+	"api/crm.yaml SalesInitiative.launch_at":                 "when a manager launched the initiative, the row's own instant",
+	"api/crm.yaml ReportingContext.initiative_launch_at":     "the same launch instant, named on the report frame",
+	"api/crm.yaml JobHealthGroup.first_at":                   "the first retained job execution instant",
+	"api/crm.yaml JobHealthGroup.latest_at":                  "the latest retained job execution instant",
 	"api/crm.yaml AgentClient.last_used_at":                  "when an agent client last called Margince, a request's own instant",
 	"api/crm.yaml AiCallAttempt.occurred_at":                 "when a model call was made, an ai_call row's own instant",
 	"api/crm.yaml AiCallSummary.occurred_at":                 "when a model call was made, an ai_call row's own instant",
@@ -65,6 +73,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml Automation.last_run_at":                    "when an automation last ran, the run's own instant",
 	"api/crm.yaml AutomationRun.occurred_at":                 "when an automation ran, the run's own instant",
 	"api/crm.yaml CaptureConnection.last_synced_at":          "when a mailbox sync last ran, the sync's own instant",
+	"api/crm.yaml CaptureConnectionConcern.last_success_at":  "when this mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml CaptureConnection.last_success_at":         "when this mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml MailCaptureCoverage.last_success_at":       "a successful sync checkpoint, not the time of a mail activity",
 	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":      "when a capture pass last finished, the pass's own instant",
@@ -107,6 +116,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml MagicLineRecord.occurred_at":                      "when an audited change was written, the audit row's own instant",
 	"api/crm.yaml MorningDigest.projects.phase_changes.occurred_at": "when a project changed phase, a history row's own instant",
 	"api/crm.yaml Receipt.occurred_at":                              "when an approval was decided or a correction applied, not an activity",
+	"api/crm.yaml WebForm.last_post_at":                             "when a website form last landed a post, a request's own instant",
 	"api/crm.yaml WeeklyReviewDeal.occurred_at":                     "when a deal closed or moved stage, not an activity",
 	"api/crm.yaml VoiceCorpusSource.occurred_at":                    "a voice sample's stated time, kept in voice_corpus_source and never drawn",
 	"api/crm.yaml IngestVoiceCorpusSourceRequest.occurred_at":       "a voice sample's stated time, written to voice_corpus_source, not an activity",
@@ -164,7 +174,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
 	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
-	"activated_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
+	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 
@@ -173,14 +183,14 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
-	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp,
+	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,
 
 	"expires_at": aheadStamp, "credential_expires_at": aheadStamp, "watch_expires_at": aheadStamp, "deletes_at": aheadStamp,
 	"next_attempt_at": aheadStamp, "next_retry_at": aheadStamp, "next_pass_at": aheadStamp, "next_capture_at": aheadStamp,
 	"next_sync_due_at": aheadStamp, "next_due_at": aheadStamp, "intended_due_at": aheadStamp, "resets_at": aheadStamp,
 	"resumes_at": aheadStamp, "agent_window_next_starts_at": aheadStamp, "agent_window_resets_at": aheadStamp,
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
-	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp,
+	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
 	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,

@@ -161,26 +161,18 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	// Idempotent, so the deferred call is a safety net for the paths that
-	// return before the explicit stop below rather than a second shutdown.
-	// It answers the error rather than reporting it: the deferred caller is past
-	// every assertion and can only say so, while the explicit one below must not
-	// read a row the workers it failed to drain may still be writing.
+	// Idempotent, so the deferred call is a safety net for the paths that return
+	// before the explicit stop below rather than a second shutdown.
+	stop := integration.StartedJobRunner(t, runner)
 	stopped := false
-	stopRunner := func() error {
+	stopRunner := func() {
 		if stopped {
-			return nil
+			return
 		}
 		stopped = true
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		return runner.Stop(stopCtx)
+		stop()
 	}
-	defer func() {
-		if err := stopRunner(); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}()
+	defer stopRunner()
 
 	// RunOnStart enqueues both periodic dispatchers at boot; wait for the
 	// close-date pass to complete, then assert the same outcome the direct
@@ -191,15 +183,15 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	// the same one.
 	awaitKindCompleted(t, sub, CloseDateSweepArgs{}.Kind())
 
-	// Stopped BEFORE the row is read, not at the end of the test. The wait
-	// above returns on a completion event, and the runner goes on dispatching
-	// after it — so a second pass landing between the event and the read would
-	// be asserted against without anything saying one had run. Stopping first
-	// makes the four assertions below describe one settled row.
-	// Fatal because a drain that overran leaves workers holding the very rows
-	// the assertions read, so each verdict below would be a race.
-	if err := stopRunner(); err != nil {
-		t.Fatalf("Stop: %v — the workers were still running, so the row below is not settled", err)
+	// Stopped before the row is read, rather than at the end of the test. The runner
+	// goes on dispatching after the completion event, so a second pass landing
+	// between the event and the read would be asserted against silently.
+	//
+	// A drain that overran leaves workers holding the rows below, so FailNow
+	// keeps an unsettled row from being judged.
+	stopRunner()
+	if t.Failed() {
+		t.FailNow()
 	}
 
 	swept := e.readSwept(t, id)

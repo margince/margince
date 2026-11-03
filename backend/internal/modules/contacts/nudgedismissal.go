@@ -142,7 +142,7 @@ func setNudgeAside(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, read
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		INSERT INTO relationship_nudge_dismissal
 		       (contact_id, reader_id, dismissed_until, set_by, set_at)
 		VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, $%[5]d)
@@ -150,8 +150,8 @@ func setNudgeAside(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, read
 		   SET dismissed_until = EXCLUDED.dismissed_until,
 		       set_by = EXCLUDED.set_by,
 		       set_at = EXCLUDED.set_at`,
-		arg(contactID), arg(reader), arg(until), arg(by), arg(now.UTC().Truncate(time.Microsecond))),
-		args...); err != nil {
+		arg(contactID), arg(reader), arg(until), arg(by), arg(now.UTC().Truncate(time.Microsecond)))
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("contacts: dismissing a relationship nudge: %w", err)
 	}
 	return recordNudgeDismissal(ctx, tx, contactID, actionDismissed, until, found, replaced)
@@ -235,11 +235,12 @@ func (s *Store) RestoreRelationshipNudge(ctx context.Context, contactID ids.Cont
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		var wasApplying bool
-		err := tx.QueryRow(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			DELETE FROM relationship_nudge_dismissal
 			 WHERE contact_id = $%[1]d AND reader_id = $%[2]d
 			 RETURNING dismissed_until IS NULL OR dismissed_until > $%[3]d`,
-			arg(contactID), arg(reader), arg(s.clock())), args...).Scan(&wasApplying)
+			arg(contactID), arg(reader), arg(s.clock()))
+		err := tx.QueryRow(ctx, query, args...).Scan(&wasApplying)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Never set aside. Idempotent: the reader's goal state holds.
 			return nil

@@ -18,11 +18,22 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // inEnglish is the set the English-reading cases below are pinned against.
 var inEnglish = approvalSummaryCopyFor(textlang.English)
+
+// restSummary and stagedSentence are approval.summary as the REST door stores
+// it: the parts, joined by the one joiner.
+func restSummary(said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
+	return summaryLine(said, restParts(said, pol, r, body))
+}
+
+func stagedSentence(info agents.StageInfo, said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
+	return summaryLine(said, stagedParts(info, said, pol, r, body))
+}
 
 // summaryRequest is the request shape restSummary reads. `params` are the
 // routed values in the order the pattern declares them — chi keeps that order,

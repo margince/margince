@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -24,7 +25,7 @@ type stubAtRisk struct {
 	err error
 }
 
-func (s stubAtRisk) Quiet(context.Context) ([]RiskyDeal, bool, error) {
+func (s stubAtRisk) Quiet(context.Context, *storekit.OwnerSet) ([]RiskyDeal, bool, error) {
 	return s.rows, s.cut, s.err
 }
 

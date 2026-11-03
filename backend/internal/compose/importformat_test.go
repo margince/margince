@@ -93,14 +93,15 @@ func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {
 	}
 }
 
-func TestACoreColumnIsItsTargetWithNoLabel(t *testing.T) {
+func TestACoreColumnIsItsTargetWithNoHeaderLabelAndAFieldLabelInTheCallersLanguage(t *testing.T) {
 	f, err := formatFrom(map[string]importCatalog{}, langcopy.For("de"), 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	name := columnOf(t, f, crmcontracts.ImportObjectCompany, fieldDisplayName)
-	if name.Label != nil || name.Custom || !name.RequiredOnNewRow || name.Description != importguide.Columns["company.display_name"].Description.De {
-		t.Fatalf("display_name = %+v, want the German company guide, needed on a new row, with no label", name)
+	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Firmenname" || name.Custom || !name.RequiredOnNewRow ||
+		name.Description != importguide.Columns["company.display_name"].Description.De {
+		t.Fatalf("display_name = %+v, want the German company guide and field label, no header label, needed on a new row", name)
 	}
 	if email := columnOf(t, f, crmcontracts.ImportObjectContact, fieldEmail); email.RequiredOnNewRow {
 		t.Errorf("a contact's email is marked needed on a new row: %+v", email)
@@ -156,4 +157,23 @@ func columnOf(t *testing.T, f crmcontracts.ImportFormat, object crmcontracts.Imp
 	}
 	t.Fatalf("%s has no column %s", object, name)
 	return crmcontracts.ImportFormatColumn{}
+}
+
+func TestNoCoreColumnShowsItsInternalNameToTheCaller(t *testing.T) {
+	f, err := formatFrom(map[string]importCatalog{}, langcopy.For("en"), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, file := range f.Files {
+		for _, col := range file.Columns {
+			seen++
+			if col.FieldLabel == nil || *col.FieldLabel == "" || *col.FieldLabel == col.Name || strings.Contains(*col.FieldLabel, "_") {
+				t.Errorf("%s.%s is labelled %v, which somebody choosing a field would have to translate", file.Object, col.Name, col.FieldLabel)
+			}
+		}
+	}
+	if seen == 0 {
+		t.Fatal("the format listed no columns, so this check compared nothing")
+	}
 }

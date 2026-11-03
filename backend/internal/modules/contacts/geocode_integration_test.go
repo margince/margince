@@ -87,12 +87,13 @@ func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
 	}
 }
 
-// readGeocode reads the three columns the writes above are about, on the owner
+// readGeocode reads the point the writes above are about, on the owner
 // pool, so the assertion does not depend on the store it is checking.
 func readGeocode(t *testing.T, e *dedupeEnv, companyID ids.CompanyID) (status string, lat, lon *float64) {
 	t.Helper()
 	if err := e.store.db.Pool().QueryRow(context.Background(),
-		`SELECT coalesce(geocode_status, ''), geocode_lat, geocode_lon FROM company WHERE id = $1`,
+		`SELECT coalesce(g.status, ''), g.lat, g.lon
+		   FROM company o LEFT JOIN company_geocode_state g ON g.company_id = o.id WHERE o.id = $1`,
 		companyID).Scan(&status, &lat, &lon); err != nil {
 		t.Fatalf("reading the recorded geocode: %v", err)
 	}
@@ -170,6 +171,70 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 	}
 	if slices.Contains(after, wantID) {
 		t.Error("an answered company is still swept, so every pass re-asks a settled question")
+	}
+}
+
+// A point still waiting for the copy task lives only on the company row. That
+// company was asked, so the sweep leaves it to the copy rather than spending a
+// lookup on it again.
+func TestTheSweepLeavesAPointTheCopyHasNotMovedYet(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Vorher GmbH", Source: "manual",
+		Address: &crmcontracts.Address{City: new("Stuttgart"), Country: new("DE")},
+	})
+	if err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	// The columns a point lived in before the side row held it. No writer
+	// reaches them any more, so the test writes them as such a row reads.
+	if _, err := e.store.db.Pool().Exec(context.Background(),
+		`UPDATE company SET geocode_status = 'ok', geocode_lat = 48.7, geocode_lon = 9.1 WHERE id = $1`,
+		companyID); err != nil {
+		t.Fatal(err)
+	}
+	due, err := e.store.ListGeocodeOrphans(ctx, GeocodeBackfillBatch)
+	if err != nil {
+		t.Fatalf("ListGeocodeOrphans: %v", err)
+	}
+	if slices.Contains(due, companyID) {
+		t.Error("a company whose point the copy has not moved yet is swept, so it is looked up a second time")
+	}
+}
+
+// A lookup's answer lands beside the company and leaves its version alone, so
+// an edit form opened before the answer still saves. An address edit still
+// marks the point stale in its own transaction.
+func TestAGeocodeAnswerLeavesAnOpenEditFormSaveable(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Formular GmbH", Source: "manual",
+		Address: &crmcontracts.Address{Line1: new("Rosenthaler Str. 40"), City: new("Berlin"), Country: new("DE")},
+	})
+	if err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	opened := company.Version
+	addr, ok, err := e.store.AddressForGeocode(ctx, companyID)
+	if err != nil || !ok {
+		t.Fatalf("AddressForGeocode: %v (ok=%v)", err, ok)
+	}
+	lat, lon := 52.5244, 13.4105
+	if err := e.store.RecordGeocode(ctx, companyID, GeocodeOK, &lat, &lon, "test", addr.InputHash); err != nil {
+		t.Fatalf("RecordGeocode: %v", err)
+	}
+
+	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{
+		Address: &crmcontracts.Address{Line1: new("Torstr. 1"), City: new("Berlin"), Country: new("DE")}, IfVersion: opened,
+	}); err != nil {
+		t.Fatalf("an edit opened before the answer landed was refused: %v", err)
+	}
+	if status, _, _ := readGeocode(t, e, companyID); status != GeocodeStale {
+		t.Errorf("after the address moved the point reads status %q, want stale", status)
 	}
 }
 

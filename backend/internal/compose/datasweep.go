@@ -40,6 +40,7 @@ import (
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
 	"report_projection_fence": true,
+	"home_read_fence":         true,
 	"data_task_run":           true,
 	"data_task_run_history":   true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.
@@ -71,8 +72,8 @@ var preservedResetTables = map[string]bool{
 	// `setting`: the migration seeds the built-ins and an administrator shapes
 	// the rest, and neither is a record of this workspace's customers.
 	"lead_source": true, "lead_origin": true, "lead_disqualify_reason": true,
-	// The SDR handoff reasons, on the same footing and seeded the same way.
-	"sdr_handoff_reason": true,
+	// The SDR handoff and deal loss reasons and the partner stages, seeded the same way.
+	"sdr_handoff_reason": true, "deal_loss_reason": true, "partner_stage": true,
 	// Installation configuration beside the users kept; only the migration seeds the default.
 	"legal_entity": true, "legal_entity_member": true,
 	// The two administered record vocabularies added with the standard-field

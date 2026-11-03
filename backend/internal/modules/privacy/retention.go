@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,7 +86,7 @@ const actionAnonymize = "anonymize"
 // an over-age activity's subject line — and, through redactDeliveries, in the
 // subject line of the delivery that transmitted it. One spelling, because the
 // two rows describe one message and must never read differently about it.
-const erasedActivitySubject = "Erased"
+const erasedActivitySubject = storekit.ErasedActivitySubject
 
 // retentionBatch bounds how many rows one policy acts on per pass — a
 // first run against years of backlog drains over successive nights
@@ -172,6 +173,9 @@ type RetentionService struct {
 // of what it reports erasing, and there is no configuration in which that is
 // the intended behaviour. compose.NewRetentionServiceFor supplies capture's.
 func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger, purge RawCapturePurger) *RetentionService {
+	if rawCapturePurgerMissing(purge) {
+		purge = nil
+	}
 	return &RetentionService{
 		db:               db,
 		eraser:           NewEraser(db).WithBlobstore(blob).WithRawCapturePurger(purge),
@@ -208,25 +212,23 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // RawCapturePurger deletes the provider originals behind the given activities,
 // inside the caller's transaction so they die with the text they duplicate.
 //
-// A seam rather than a fourth DELETE in this package, and NOT because privacy
-// may not write the table — it already does, twice, ratified in doc.go. It is a
-// seam because the natural-key join those rows are found by belongs to capture,
-// which writes them: a copy of that join here would be a second answer to the
-// same question, the two would drift, and the half that drifted would leave
-// originals behind while reporting success.
-// capture.PendingStore.PurgeRawCaptureTx is the implementation, already written
-// for the noise-redaction sweep.
+// It is a seam rather than a fourth DELETE in this package. Privacy may write
+// the table, and does twice (see doc.go). The natural-key join that finds those
+// rows belongs to capture, which writes them. A copy of that join here would
+// drift, and the drifted half would leave originals behind while reporting
+// success. capture.PendingStore.PurgeRawCaptureTx is the implementation.
 //
-// Where this parts company with EdgeInvalidator beside it is what an unwired
-// seam means. A missing edge invalidator leaves an aggregate for the bus
-// consumer that also handles retention.applied to correct — late, but
-// corrected. There is no second path that ages raw_capture out:
-// PurgeRawCaptureTx's own comment says so, and says why the Art. 17 purge
-// cannot stand in (it is scoped to a CONTACT, where a retention window is scoped
-// to time). So an unwired purger is not a degraded mode. It is a constructor
-// argument, and EvaluateInstallation refuses the whole pass if one arrives nil
-// anyway — before a single record is touched.
-type RawCapturePurger func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
+// An unwired seam means something else here than for EdgeInvalidator beside it.
+// A missing edge invalidator leaves an aggregate for the bus consumer of
+// retention.applied to correct later. Nothing else ages raw_capture out, as
+// PurgeRawCaptureTx's comment explains. The Art. 17 purge cannot stand in: it is
+// scoped to a contact, and a retention window is scoped to time. So the purger
+// is a constructor argument, and EvaluateInstallation refuses the whole pass,
+// before it touches a record, if it is nil.
+type RawCapturePurger interface {
+	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
+	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
+}
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without
 // a dependency one of its destructive actions cannot finish without. A sentinel

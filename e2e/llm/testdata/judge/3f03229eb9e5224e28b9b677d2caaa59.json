@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer gives 6,850,000 EUR instead of 68,500 EUR total, and both individual deal values are 100 times too large (5,600,000 instead of 56,000 for Körber, and 1,250,000 instead of 12,500 for Rheinufer).",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator) and each deal's own value, 56,000 EUR for Körber Sensorik Rollout and 12,500 EUR for Rheinufer Netzmodernisierung. Answer no if it gives a different total or a different value for either deal, quotes a figure in minor units as if it were money, or gives no total.",
+  "answer": "Together the two deals are worth 6,850,000 EUR: Körber Sensorik Rollout is 5,600,000 and Rheinufer Netzmodernisierung is 1,250,000."
+}

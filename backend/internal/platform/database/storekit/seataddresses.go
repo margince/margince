@@ -102,6 +102,19 @@ func (s SeatAddresses) For(asking ids.UUID) []string {
 	return out
 }
 
+// HoldsNoSeatAddressSQL is true when the contact holds no live address among
+// seats, the addresses For listed. A stored address may keep its Unicode domain,
+// so each seat is bound in every spelling.
+func HoldsNoSeatAddressSQL(contactID string, seats []string, arg func(any) int) string {
+	spellings := make([]string, 0, 2*len(seats))
+	for _, seat := range seats {
+		spellings = append(spellings, mailidentity.AddressSpellings(seat)...)
+	}
+	return fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM contact_email seat_address
+		WHERE seat_address.contact_id = %s AND seat_address.archived_at IS NULL
+		  AND lower(seat_address.email) = ANY($%d))`, contactID, arg(spellings))
+}
+
 func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
 	_, ok := s.declared[address][asking]
 	return ok && !asking.IsZero()

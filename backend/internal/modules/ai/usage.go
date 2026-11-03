@@ -112,12 +112,9 @@ func (m *Meter) UsageReport(ctx context.Context, budget BudgetPolicy, rates *Rat
 	if err != nil {
 		return nil, BudgetStatus{}, err
 	}
-	days, err := m.usageDays(ctx, from, to)
+	days, err := m.pricedDays(ctx, rates, from, to)
 	if err != nil {
-		return nil, BudgetStatus{}, fmt.Errorf("ai: usage report: %w", err)
-	}
-	if err := mergeDayCost(ctx, rates, days, from, to); err != nil {
-		return nil, BudgetStatus{}, fmt.Errorf("ai: usage report cost: %w", err)
+		return nil, BudgetStatus{}, err
 	}
 	status := BudgetStatus{
 		MonthlyTokens: monthly,
@@ -125,6 +122,57 @@ func (m *Meter) UsageReport(ctx context.Context, budget BudgetPolicy, rates *Rat
 		Band:          BudgetBand(spent, monthly),
 	}
 	return days, status, nil
+}
+
+// MonthSpend is the month's spend so far, as one figure.
+type MonthSpend struct {
+	// Minor is the sum of the lines that carry a cost_est_minor.
+	Minor int
+	// Priced is whether any line carried one. False means nobody knows what
+	// the month cost, which a Minor of 0 cannot say on its own.
+	Priced     bool
+	ComputedAt time.Time
+}
+
+// MonthSpend sums the cost_est_minor lines UsageReport gives for UsageWindow,
+// without the budget, decision or label reads the report also makes. It adds
+// up lines rather than pricing the month as one sum. Each line truncates to
+// whole cents on its own, and those lines are what the report's reader sees.
+func (m *Meter) MonthSpend(ctx context.Context, rates *RateStore) (MonthSpend, error) {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
+		return MonthSpend{}, err
+	}
+	from, to := m.UsageWindow()
+	days, err := m.pricedDays(ctx, rates, from, to)
+	if err != nil {
+		return MonthSpend{}, err
+	}
+	// Stamped after the reads, not at the window's end. Pricing widens the day
+	// bound, so a call recorded during the reads may be in the sum.
+	spend := MonthSpend{ComputedAt: m.now().UTC()}
+	for _, day := range days {
+		for _, line := range day.Tasks {
+			if minor, priced := lineCostMinor(line); priced {
+				spend.Minor += minor
+				spend.Priced = true
+			}
+		}
+	}
+	return spend, nil
+}
+
+// pricedDays is the report's day lines with each line's priced cost attached.
+// The usage report and the spend summary both read their money from here, so
+// the summary cannot price a line the report prices differently.
+func (m *Meter) pricedDays(ctx context.Context, rates *RateStore, from, to time.Time) ([]DayUsage, error) {
+	days, err := m.usageDays(ctx, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("ai: usage report: %w", err)
+	}
+	if err := mergeDayCost(ctx, rates, days, from, to); err != nil {
+		return nil, fmt.Errorf("ai: usage report cost: %w", err)
+	}
+	return days, nil
 }
 
 // usageDays reads the [from, to] inclusive-day window of ai_usage
