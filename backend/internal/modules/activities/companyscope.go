@@ -88,8 +88,15 @@ func companyLinkReach(operand string) string {
 		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
 			column, companyArms, operand)
 	}
-	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
+	return directLinkBranch(operand) + "\n\t\t    UNION " + linkBranch("d.company_id") +
 		"\n\t\t    UNION " + linkBranch("r.company_id")
+}
+
+// directLinkBranch is the arm that needs none of companyArms' joins. Joining
+// the activity there only to read its timestamp makes Postgres hash every
+// activity of the installation, and the foreign keys already guarantee the row.
+func directLinkBranch(operand string) string {
+	return sprintf("SELECT l.activity_id, l.company_id AS company_id FROM activity_link l\n\t\t    WHERE l.company_id = %s", operand)
 }
 
 // CompanyFiledActivityExists is the predicate over the three link arms only. A

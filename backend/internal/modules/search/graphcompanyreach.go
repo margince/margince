@@ -81,7 +81,8 @@ func activityReachesCompany(companyPos int) string {
 		return fmt.Sprintf("SELECT l.activity_id, %[1]s %[2]s\n\t\t    WHERE %[1]s = %[3]s", column, companyArms, operand)
 	}
 	participantBranch := fmt.Sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
-	return "a.id IN (SELECT reach.id FROM (" + linkBranch("l.company_id") +
+	directBranch := fmt.Sprintf("SELECT l.activity_id, l.company_id FROM activity_link l\n\t\t    WHERE l.company_id = %s", operand)
+	return "a.id IN (SELECT reach.id FROM (" + directBranch +
 		"\n\t\t    UNION " + linkBranch("d.company_id") + "\n\t\t    UNION " + linkBranch("r.company_id") +
 		"\n\t\t    UNION " + participantBranch + ") reach(id, company_id))"
 }
