@@ -68,26 +68,48 @@ function functionBody(source: string, name: string): string | undefined {
 }
 
 // The text from `text[from]`, an opening bracket, to the bracket closing it.
+// A bracket inside quotes is text, not structure.
 function balanced(text: string, from: number): string | undefined {
   const open = text[from];
   const close = open === "(" ? ")" : "}";
   let depth = 0;
+  let quote: string | undefined;
   for (let at = from; at < text.length; at++) {
-    if (text[at] === open) depth++;
-    if (text[at] === close) depth--;
+    const char = text[at];
+    if (quote !== undefined) {
+      if (char === "\\") at++;
+      else if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") quote = char;
+    else if (char === open) depth++;
+    else if (char === close) depth--;
     if (depth === 0) return text.slice(from, at + 1);
   }
   return undefined;
 }
 
-// The `query: { … }` object inside the fetcher's `api.GET(…)` call.
-function wireQuery(body: string): string | undefined {
-  const call = body.indexOf("api.GET(");
-  const args = call === -1 ? undefined : balanced(body, call + 7);
-  const query = args?.indexOf("query: {") ?? -1;
-  return args && query !== -1
-    ? balanced(args, args.indexOf("{", query))
-    : undefined;
+// Each `query: { … }` object inside one of the fetcher's `api.GET(…)` calls.
+function wireQueries(body: string): string[] {
+  return [...body.matchAll(/api\.GET\(/g)].flatMap((call) => {
+    const args = balanced(body, call.index + "api.GET".length);
+    const query = args?.indexOf("query: {") ?? -1;
+    const wire =
+      args && query !== -1
+        ? balanced(args, args.indexOf("{", query))
+        : undefined;
+    return wire ? [wire] : [];
+  });
+}
+
+// The function a screen hands `useListQuery` as `fetchPage`: a named one, or
+// one built in place as `const fetchPage = useMemo(…)`.
+function fetcherBody(source: string): string | undefined {
+  const named = /\bfetchPage: (\w+),/.exec(source)?.[1];
+  if (named !== undefined) return functionBody(source, named);
+  const inline = source.indexOf("const fetchPage = ");
+  const open = inline === -1 ? -1 : source.indexOf("(", inline);
+  return open === -1 ? undefined : balanced(source, open);
 }
 
 type ReadModule = (fromFile: string, specifier: string) => string | undefined;
@@ -106,12 +128,9 @@ function readSibling(fromFile: string, specifier: string): string | undefined {
 function spreadBuilders(
   file: string,
   source: string,
+  wire: string,
   readModule: ReadModule,
 ): string[] {
-  const fetcher = /\bfetchPage: (\w+),/.exec(source)?.[1];
-  const body = fetcher ? functionBody(source, fetcher) : undefined;
-  const wire = body === undefined ? undefined : wireQuery(body);
-  if (wire === undefined) return [];
   return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap((spread) => {
     const name = spread[1];
     // A later `sort:` key that does not read the query overrides the builder's.
@@ -133,9 +152,11 @@ function screenSendsSort(
   source: string,
   readModule: ReadModule = readSibling,
 ): boolean {
-  return (
-    sendsSort(source) ||
-    spreadBuilders(file, source, readModule).some(sendsSort)
+  const body = fetcherBody(source);
+  return (body === undefined ? [] : wireQueries(body)).some(
+    (wire) =>
+      sendsSort(wire) ||
+      spreadBuilders(file, source, wire, readModule).some(sendsSort),
   );
 }
 
@@ -265,6 +286,43 @@ describe("a fetcher's spread builder", () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it("reads past a brace inside a quoted value", () => {
+    expect(
+      sends(fetcherOf(wireCall('search: "}", ...sortedParams(query)'))),
+    ).toBe(true);
+  });
+
+  it("finds the list read behind a supporting read", () => {
+    const fetcher = fetcherOf(
+      '  const meta = await api.GET("/meta", { params: { query: { limit: 1 } } });',
+      wireCall("...sortedParams(query), limit: 50"),
+    );
+    expect(sends(fetcher)).toBe(true);
+  });
+
+  it("does, for a sort written into the wire query itself", () => {
+    const fetcher = fetcherOf(
+      '  return api.GET("/things", {',
+      "    params: {",
+      "      query: {",
+      "        sort: query.sort || undefined,",
+      "      },",
+      "    },",
+      "  });",
+    );
+    expect(sends(fetcher)).toBe(true);
+  });
+
+  it("does not, for a sort written outside the wire query", () => {
+    const fetcher = fetcherOf(
+      "  const echo = {",
+      "    sort: query.sort || undefined,",
+      "  };",
+      wireCall("limit: 50"),
+    );
+    expect(sends(fetcher)).toBe(false);
   });
 
   it("does, when a later key sets the sort from the query again", () => {

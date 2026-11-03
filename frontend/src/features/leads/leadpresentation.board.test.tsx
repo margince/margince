@@ -229,9 +229,30 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     );
   });
 
+  it("keep the report's count above leads that did not load", async () => {
+    serve((sent) =>
+      sent.url.pathname.endsWith("/leads")
+        ? json(
+            { title: "Unavailable", status: 503, code: "service_unavailable" },
+            503,
+          )
+        : json({ rows: [{ status: "promoted", leads: 5 }] }),
+    );
+    drawBoard(UNNARROWED_LIST_QUERY);
+    await waitFor(() =>
+      expect(column("promoted").textContent).toContain("5 leads"),
+    );
+    fireEvent.click(headOf("promoted"));
+
+    expect(
+      await screen.findByText(en["lead.boardTerminalRowsUnavailable"]),
+    ).toBeTruthy();
+    expect(column("promoted").textContent).toContain("5 leads");
+  });
+
   it("claim no count above a withheld column whose leads did not load, and retry them", async () => {
     let leadReads = 0;
-    serve((sent) => {
+    const served = serve((sent) => {
       if (!sent.url.pathname.endsWith("/leads")) return json({ rows: [] });
       leadReads++;
       return leadReads === 1
@@ -261,6 +282,15 @@ describe("the lead board's terminal columns under the queue's dials", () => {
       ),
     );
     expect(leadReads).toBe(2);
+    const retried = served.filter((sent) =>
+      sent.url.pathname.endsWith("/leads"),
+    )[1];
+    expect(Object.fromEntries(retried?.url.searchParams ?? [])).toMatchObject({
+      owner_id: "u-me",
+      min_score: "80",
+      status: "promoted",
+      include_archived: "true",
+    });
     expect(headOf("promoted").getAttribute("aria-expanded")).toBe("true");
     expect(
       screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
