@@ -1265,6 +1265,7 @@ export const en = {
   "reporting.objective": "Primary objective",
   "reporting.targetValue": "Target",
   "reporting.targetHint": "Leave empty for tracking only.",
+  "reporting.initiativeOwner": "Owner",
   "reporting.deadline": "Deadline",
   "reporting.setup.suggestReport": "Suggest filters and charts",
   "reporting.setup.suggestInitiative": "Suggest the goal",

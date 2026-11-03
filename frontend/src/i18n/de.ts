@@ -1317,6 +1317,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.objective": "Hauptziel",
   "reporting.targetValue": "Zielwert",
   "reporting.targetHint": "Leer lassen für reine Beobachtung.",
+  "reporting.initiativeOwner": "Verantwortlich",
   "reporting.deadline": "Frist",
   "reporting.setup.suggestReport": "Filter und Diagramme vorschlagen",
   "reporting.setup.suggestInitiative": "Ziel vorschlagen",

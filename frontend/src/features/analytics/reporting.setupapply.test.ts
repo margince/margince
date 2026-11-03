@@ -38,6 +38,7 @@ describe("applying a proposal", () => {
         target: "5",
         deadline: "",
         includeFuture: false,
+        ownerId: "",
       },
       proposal,
     );
@@ -48,6 +49,7 @@ describe("applying a proposal", () => {
       target: "250000",
       deadline: "2026-12-31",
       includeFuture: false,
+      ownerId: "",
     });
     expect(
       ruleWithProposal(
@@ -70,6 +72,7 @@ describe("applying a proposal", () => {
         target: "",
         deadline: "",
         includeFuture: true,
+        ownerId: "",
       },
       { ...proposal, objective: { metric: "closed_win_rate" } },
     );
