@@ -240,14 +240,23 @@ export function InitiativeDrawer({
     }: {
       id: string;
       body: { picked: MemberRef[]; excluded: MemberRef[] };
-    }) =>
+    }) => {
       unwrap(
         await api.PUT("/analytics/initiatives/{id}/members", {
           params: { path: { id } },
           body,
         }),
-      ),
-    onSuccess: () => {
+      );
+      // The save moved the version, and the launch names it, so the
+      // initiative is read again rather than kept from the goal's save.
+      return unwrap(
+        await api.GET("/analytics/initiatives/{id}", {
+          params: { path: { id } },
+        }),
+      );
+    },
+    onSuccess: (next) => {
+      setSaved(next);
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["reporting-evaluation"] });
       if (live) onClose();
