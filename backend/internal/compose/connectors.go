@@ -319,6 +319,9 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	}
 
 	consent := newConsentCode(*params.Code, h.callbackURL(string(provider)))
+	if st.SharedConsent {
+		consent.alsoAsked = sharedConsentCalendars[st.Then].scopes()
+	}
 	auth, err := app.authenticate(runCtx, consent)
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)

@@ -240,7 +240,8 @@ func TestOneSharedConsentConnectsTheMailboxAndItsCalendar(t *testing.T) {
 	}
 	if n := c.env.WsCount(t, `SELECT count(*) FROM capture_connection
 		WHERE user_id = $1 AND provider = 'gcal' AND status = 'connected'
-		  AND account_label = 'owner@example.com' AND $2 = ANY(provider_scopes)`, c.env.Rep1, gcal.ReadScope); n != 1 {
-		t.Errorf("connected calendar rows holding the calendar grant = %d, want 1", n)
+		  AND account_label = 'owner@example.com' AND provider_scopes @> $2::text[]`,
+		c.env.Rep1, c.google.granted); n != 1 {
+		t.Errorf("connected calendar rows recording the whole shared grant = %d, want 1", n)
 	}
 }

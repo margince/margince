@@ -37,6 +37,9 @@ type consentCode struct {
 	code        string
 	redirectURI string
 	grant       *oauthflow.TokenGrant
+	// alsoAsked are the scopes the consent URL added beyond the mail client's
+	// own. A grant whose scopes were assumed covers them too.
+	alsoAsked []string
 }
 
 func newConsentCode(code, redirectURI string) *consentCode {
@@ -69,6 +72,9 @@ func (r redeemOnce) Exchange(ctx context.Context, code, redirectURI string) (oau
 	grant, err := r.Authorizer.Exchange(ctx, code, redirectURI)
 	if err != nil {
 		return oauthflow.TokenGrant{}, err
+	}
+	if grant.ScopesAssumed {
+		grant.Scopes = append(slices.Clone(grant.Scopes), r.consent.alsoAsked...)
 	}
 	r.consent.grant = &grant
 	return grant, nil

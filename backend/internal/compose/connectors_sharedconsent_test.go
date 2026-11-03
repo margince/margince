@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -139,6 +140,30 @@ func TestAnUntickedCalendarLandsDeclinedWithoutASecondConsent(t *testing.T) {
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/denied/gcal?import=6m"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
 	}
+}
+
+// Google may name no scope when it granted the whole request. The mail client
+// then assumes its own list, so the calendar scopes the URL added are restored.
+func TestAGrantWithAssumedScopesCoversTheSharedCalendar(t *testing.T) {
+	consent := newConsentCode("the-code", "")
+	consent.alsoAsked = gcal.ConsentScopes()
+	assumed := &assumedScopesOAuth{recordingOAuth{granted: gmailScopes}}
+
+	if _, err := consent.googleAuthorizer(assumed).Exchange(context.Background(), "the-code", ""); err != nil {
+		t.Fatalf("exchange: %v", err)
+	}
+
+	if !consent.granted(gcal.ReadScope) {
+		t.Errorf("granted %v, want the calendar scope the whole request carried", consent.grant.Scopes)
+	}
+}
+
+type assumedScopesOAuth struct{ recordingOAuth }
+
+func (o *assumedScopesOAuth) Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error) {
+	grant, err := o.recordingOAuth.Exchange(ctx, code, redirectURI)
+	grant.ScopesAssumed = true
+	return grant, err
 }
 
 type stubGcalAPI struct{}
