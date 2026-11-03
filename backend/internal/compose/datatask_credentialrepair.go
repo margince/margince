@@ -13,6 +13,7 @@ package compose
 import (
 	"bytes"
 	"context"
+	"errors"
 	"maps"
 	"slices"
 	"strings"
@@ -37,10 +38,19 @@ import (
 //
 // A run that stopped between them leaves each place consistent with the rules
 // on its own.
+// credentialRepairTrigger is the migration that admits the audit-image rewrite.
+//
+// Declared as a requirement because the step is not idempotent across it. Run
+// first, maskAuditImagesBatch skips every image, reports the step done and
+// leaves those credentials in audit_log forever. Re-stamping this branch moves
+// the id, so this moves with it.
+const credentialRepairTrigger = "core/1793678429"
+
 func maskStoredCredentialsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792971164_mask_stored_credentials", Version: 1,
-		Title: "Credentials stored before the masking rules",
+		Title:    "Credentials stored before the masking rules",
+		Requires: []string{credentialRepairTrigger},
 		Steps: []datatask.Step{
 			{
 				Name: "mask_mail_text", Limit: 200, MinLimit: 10,
@@ -206,15 +216,22 @@ func maskAuditImagesBatch(
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
+	if !admits {
+		// Refused rather than scanned past. The cursor advances over every row
+		// below, so carrying on would report the step done with these images
+		// untouched, and a later run would start after them. The credentials
+		// would stay in audit_log with nothing left to revisit them.
+		//
+		// The task requires this trigger's migration, so arriving here means
+		// the trail is not the one the catalog declares.
+		return datatask.BatchOut{}, errors.New(
+			"compose: the audit trail admits no masking, so the credential repair cannot run",
+		)
+	}
 	scanned := make([]ids.UUID, 0, len(images))
 	masked := map[auditedRecord]bool{}
 	for _, image := range images {
 		scanned = append(scanned, image.ID)
-		if !admits {
-			// This installation's trail stays as it is. The rows themselves are
-			// masked by the step before this one, which needs no exception.
-			continue
-		}
 		wrote, err := storekit.MaskAuditImagesTx(ctx, tx, storekit.AuditImageRow{
 			ID: image.ID, EntityType: image.EntityType,
 			Before: image.Before, After: image.After,
@@ -272,11 +289,18 @@ type auditImageRow struct {
 //
 // Derived rather than carried between steps, so a run that stopped after the
 // text leaves this step the same work on its next pass.
-const maskedMailWithAStoredOriginal = `FROM activity a
+//
+// Selected through the purge's own condition rather than through
+// raw_capture_id. The link is stamped only on rows written since the column
+// landed, and PurgeRawCaptureTx says its natural-key arm cannot be dropped: an
+// upgraded installation has years of originals whose activity carries no link.
+// Selecting on the link alone never offered those rows to the purge, so their
+// payloads stayed readable.
+var maskedMailWithAStoredOriginal = `FROM activity a
  WHERE a.restricted_at IS NULL
    AND a.kind IN ('email', 'message')
    AND (a.subject LIKE '%' || @marker || '%' OR a.body LIKE '%' || @marker || '%')
-   AND a.raw_capture_id IS NOT NULL`
+   AND EXISTS (SELECT 1 FROM raw_capture r WHERE ` + storekit.StoredOriginalSQL("a", "r") + `)`
 
 func estimateMaskedMailOriginals(
 	ctx context.Context, q datatask.Querier, maximum int64,
