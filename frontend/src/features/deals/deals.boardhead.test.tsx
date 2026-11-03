@@ -1,5 +1,6 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StageColumnRead } from "./dealboard.queries";
@@ -55,17 +56,29 @@ describe("the deals board's counts", () => {
   it.each([
     { name: "report in play", hash: "#/deals", head: "260 deals" },
     { name: "totals withheld", hash: "#/deals?q=fleet", head: "2 deals" },
-  ])("states the board's head count with the $name", async ({ hash, head }) => {
-    window.location.hash = hash;
-    vi.stubGlobal(
-      "fetch",
-      stubBackend(twoDeals, { stageTotalsRows: reportRows }),
-    );
-    render(<DealsScreen />);
+    {
+      name: "totals refused",
+      hash: "#/deals",
+      head: "2 deals",
+      stageTotalsStatus: 403,
+    },
+  ])(
+    "states the board's head count with the $name",
+    async ({ hash, head, stageTotalsStatus }) => {
+      window.location.hash = hash;
+      vi.stubGlobal(
+        "fetch",
+        stubBackend(twoDeals, {
+          stageTotalsRows: reportRows,
+          stageTotalsStatus,
+        }),
+      );
+      render(<DealsScreen />);
 
-    expect(await screen.findByText("Fleet two")).toBeTruthy();
-    await waitFor(() => expect(headCount(head)).toHaveLength(1));
-  });
+      expect(await screen.findByText("Fleet two")).toBeTruthy();
+      await waitFor(() => expect(headCount(head)).toHaveLength(1));
+    },
+  );
 
   it("states no count while the pipelines fail", async () => {
     vi.stubGlobal(
@@ -191,6 +204,33 @@ describe("the deals board's counts", () => {
     );
     render(<DealsScreen />);
 
+    expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
+  });
+
+  // The cards a failed re-read left may no longer be all the column holds.
+  it("says the head counts only the loaded cards while a column's re-read failed", async () => {
+    window.location.hash = "#/deals?q=fleet";
+    let s1Reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      backendWith(stubBackend(twoDeals), (url) => {
+        if (url.searchParams.get("stage_id") !== "s1") return undefined;
+        s1Reads += 1;
+        return s1Reads > 1
+          ? Promise.resolve(jsonResponse({ code: "internal" }, 500))
+          : undefined;
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() => expect(headCount("2 deals")).toHaveLength(1));
+
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    expect(await within(column("s1")).findByRole("alert")).toBeTruthy();
+    expect(within(column("s1")).getByText("Fleet one")).toBeTruthy();
     expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
   });
 });

@@ -190,7 +190,7 @@ export function BoardHeadCount({
   const loadedOnly =
     !totals &&
     [...stageColumns.columns.values()].some(
-      (read) => read.hasNextPage || read.isError,
+      (read) => read.hasNextPage || read.isError || read.loadMoreError !== null,
     );
   return loadedOnly ? (
     <CountLine
