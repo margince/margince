@@ -3255,6 +3255,10 @@ func (stubs) DescribeQueryVocabulary(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "DescribeQueryVocabulary")
 }
 
+func (stubs) DescribeReadViews(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DescribeReadViews")
+}
+
 func (stubs) DescribeRecordFields(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeRecordFields")
 }

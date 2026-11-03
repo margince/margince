@@ -14286,6 +14286,18 @@ paths:
           items:
             $ref: '#/components/schemas/ReportingBlockKind'
           maxItems: 20
+      - name: product_id
+        in: query
+        schema: { $ref: '#/components/schemas/ReportingProductId' }
+      - name: country
+        in: query
+        schema: { $ref: '#/components/schemas/ReportingCountry' }
+      - name: industry
+        in: query
+        schema: { $ref: '#/components/schemas/ReportingIndustry' }
+      - name: value_basis
+        in: query
+        schema: { $ref: '#/components/schemas/ReportingValueBasis' }
   /analytics/editions/{id}/export.csv:
     get:
       tags: [Reports]
@@ -16961,6 +16973,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ListFiltersVocabulary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /read-views:
+    get:
+      tags: [Search]
+      operationId: describeReadViews
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: The views the read_view agent tool reads, and the arguments each takes.
+      description: |
+        The answer the `describe_views` agent tool gives, run by the same tool on both
+        doors: the document `margince://schema/views` publishes.
+      x-mcp-tool: { verb: describe_views, tier: auto_execute, scope: read, served_by: registry }
+      responses:
+        '200':
+          description: The read_view catalog.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReadViewsCatalog' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -48501,6 +48532,12 @@ components:
       required: [blocks]
       properties:
         blocks: { type: object, additionalProperties: true }
+    ReadViewsCatalog:
+      description: 'What `describe_views` answers.'
+      type: object
+      required: [views]
+      properties:
+        views: { type: object, additionalProperties: true }
     ReportVocabulary:
       description: 'What `describe_report_vocabulary` answers.'
       type: object

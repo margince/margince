@@ -98,7 +98,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 10 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 4422 |
+| Prompt tokens spent on tools no case requires | 4042 |
 | Use cases | 37 |
 | Acceptance criteria the cases declare, each with a statement | 76 |
 
@@ -355,8 +355,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `send_outbound` | 1.00 | 6 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
+| `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 6 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
@@ -444,8 +444,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1004 | - | - | - |
 | `change_reports` | 710 | - | - | - |
+| `read_view` | 624 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |

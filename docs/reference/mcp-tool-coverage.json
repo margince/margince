@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 10,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 4422,
+    "tokens_served_but_never_driven": 4042,
     "use_case_cases": 37,
     "acceptance_criteria_named": 76,
     "tools_added_by_shipped_units": 0,
@@ -1800,8 +1800,8 @@
   ],
   "tools": [
     {
-      "name": "read_view",
-      "tokens": 1004,
+      "name": "change_reports",
+      "tokens": 710,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1812,8 +1812,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_reports",
-      "tokens": 710,
+      "name": "read_view",
+      "tokens": 624,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2429,36 +2429,8 @@
       }
     },
     {
-      "name": "update_record",
-      "tokens": 593,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case43_the_fair_leads_are_prospects"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 5,
-          "reliability": 0.8333333333333334,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_workspace",
-      "tokens": 590,
+      "tokens": 594,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",
@@ -2491,6 +2463,34 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 5,
           "passed": 5,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "update_record",
+      "tokens": 593,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company",
+        "case43_the_fair_leads_are_prospects"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 6,
+          "passed": 5,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }

@@ -355,6 +355,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
+	RegisterReadViewsTool(r, NewReadViewsResource(nil))
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})

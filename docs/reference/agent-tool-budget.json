@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 24419,
+    "tokens": 24043,
     "median_tool_tokens": 532,
-    "mean_tool_tokens": 642
+    "mean_tool_tokens": 632
   },
   "agents": [
     {
@@ -104,10 +104,6 @@
       "tokens": 1014
     },
     {
-      "name": "read_view",
-      "tokens": 1004
-    },
-    {
       "name": "preview_import",
       "tokens": 1001
     },
@@ -136,6 +132,10 @@
       "tokens": 710
     },
     {
+      "name": "read_view",
+      "tokens": 624
+    },
+    {
       "name": "change_lists",
       "tokens": 620
     },
@@ -144,12 +144,12 @@
       "tokens": 613
     },
     {
-      "name": "update_record",
-      "tokens": 593
+      "name": "read_workspace",
+      "tokens": 594
     },
     {
-      "name": "read_workspace",
-      "tokens": 590
+      "name": "update_record",
+      "tokens": 593
     },
     {
       "name": "change_record_parts",

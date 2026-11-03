@@ -148,7 +148,8 @@
         "query": "describe_query_vocabulary",
         "record_fields": "describe_record_fields",
         "report_blocks": "describe_report_blocks",
-        "report_vocabulary": "describe_report_vocabulary"
+        "report_vocabulary": "describe_report_vocabulary",
+        "views": "describe_views"
       }
     },
     "resolve_duplicates": {

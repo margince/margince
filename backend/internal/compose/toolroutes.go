@@ -141,6 +141,11 @@ func (s Server) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_list_filters", noArguments{})
 }
 
+// DescribeReadViews serves describe_views.
+func (s Server) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_views", noArguments{})
+}
+
 // DescribeReportBlocks serves describe_report_blocks.
 func (s Server) DescribeReportBlocks(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_report_blocks", noArguments{})

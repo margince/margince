@@ -57,6 +57,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
+		{Name: "value_basis", Values: []string{"all", "software", "implementation"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evidence": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},

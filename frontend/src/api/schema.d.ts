@@ -10871,6 +10871,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/read-views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The views the read_view agent tool reads, and the arguments each takes.
+         * @description The answer the `describe_views` agent tool gives, run by the same tool on both
+         *     doors: the document `margince://schema/views` publishes.
+         */
+        get: operations["describeReadViews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -34382,6 +34403,12 @@ export interface components {
         /** @description What `describe_report_blocks` answers. */
         ReportBlockGrammar: {
             blocks: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_views` answers. */
+        ReadViewsCatalog: {
+            views: {
                 [key: string]: unknown;
             };
         };
@@ -71507,6 +71534,10 @@ export interface operations {
                 close_window?: "fiscal_quarter" | "all_open";
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
+                product_id?: components["schemas"]["ReportingProductId"];
+                country?: components["schemas"]["ReportingCountry"];
+                industry?: components["schemas"]["ReportingIndustry"];
+                value_basis?: components["schemas"]["ReportingValueBasis"];
             };
             header?: never;
             path?: never;
@@ -74161,6 +74192,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListFiltersVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReadViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The read_view catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadViewsCatalog"];
                 };
             };
             401: components["responses"]["Unauthorized"];

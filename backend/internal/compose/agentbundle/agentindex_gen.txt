@@ -277,6 +277,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /entity-resolutions` | resolveEntities | Find out whether a contact or company is already a record here, before creating one. | Read records | at once |
 | `GET /record-fields` | describeRecordFields | The fields a record create or update may write, for each record type. | Read records | at once |
 | `GET /list-filters` | describeListFilters | The filters a record list may be narrowed by, for each record type. | Read records | at once |
+| `GET /read-views` | describeReadViews | The views the read_view agent tool reads, and the arguments each takes. | Read records | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | Read records | at once |
 
 ## Approvals

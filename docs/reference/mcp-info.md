@@ -14,10 +14,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | | |
 |---|---:|
 | Tools | 38 |
-| Resources | 13 |
-| Tool catalog | 158.1 KB |
-| Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41799 |
+| Resources | 14 |
+| Tool catalog | 156.7 KB |
+| Resource catalog | 5.4 KB |
+| Approx. wire tokens | 41487 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,22 +33,23 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
-| Input schemas | 65.6 KB | 41% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
+| Input schemas | 64.1 KB | 40% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.4 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **98.9 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (13)
+### Resources (14)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
 - [`margince://schema/record-fields`](#record_fields): Record write vocabulary
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
+- [`margince://schema/views`](#read_view_views): Views read_view reads
 - [`margince://schema/report-blocks`](#report_blocks): Report block grammar
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
@@ -94,8 +95,8 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1958 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
+| [`read_view`](#read_view) | Read a view | yes |  | 624 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 594 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
@@ -154,6 +155,17 @@ carrying it.
 What each prebuilt report accepts in a report plan: the names its group_by, filters and aggregates
 admit, what it answers with no plan at all, and what a filter means when its name alone does not
 say. read_reports with kind=run names this document instead of carrying it.
+```
+
+### read_view_views
+
+`margince://schema/views` · application/json
+
+**Views read_view reads**
+
+```text
+Every view read_view reads, with the path arguments it needs and the query arguments it takes, each
+with its JSON type.
 ```
 
 ### report_blocks
@@ -9257,6 +9269,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "contract_id": {
       "type": "string"
     },
+    "country": {
+      "type": "string"
+    },
     "cursor": {
       "type": "string"
     },
@@ -9307,6 +9322,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "include_hidden": {
       "type": "boolean"
     },
+    "industry": {
+      "type": "string"
+    },
     "kind": {
       "type": "string"
     },
@@ -9345,6 +9363,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     },
     "pipeline_id": {
       "description": "comes from the workspace's pipeline list",
+      "type": "string"
+    },
+    "product_id": {
       "type": "string"
     },
     "project_id": {
@@ -9407,97 +9428,11 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "thread_cursor": {
       "type": "string"
     },
+    "value_basis": {
+      "type": "string"
+    },
     "view": {
-      "enum": [
-        "acquisition_sources",
-        "activity_review_templates",
-        "agent_open_api_document",
-        "automation",
-        "automation_catalog",
-        "automations",
-        "bulk_change",
-        "company_360",
-        "company_contacts",
-        "company_coverage",
-        "company_documents",
-        "company_facts",
-        "company_finance_summary",
-        "company_graph",
-        "company_hierarchy_rollup",
-        "company_profile_fields",
-        "company_strength",
-        "company_vat_check",
-        "consent_purposes",
-        "contact_360",
-        "contact_case",
-        "contact_cases",
-        "contact_conversation_suggestions",
-        "contact_graph",
-        "contact_strength",
-        "custom_field_live_lists",
-        "custom_fields",
-        "deal_commitments",
-        "deal_documents",
-        "deal_outcome_reviews",
-        "deal_stakeholders",
-        "deal_status",
-        "dedupe_candidate",
-        "dedupe_candidates",
-        "email_presentation",
-        "email_signature_template",
-        "explain_report",
-        "export_reporting_edition",
-        "export_reporting_evaluation",
-        "filter_vocabulary",
-        "follow_up_settings",
-        "forecast_calls",
-        "import_run",
-        "latest_inbound",
-        "latest_site_read",
-        "latest_technical_enrich",
-        "latest_transcript_read",
-        "lead_conversation_suggestions",
-        "lead_disqualify_reasons",
-        "lead_origins",
-        "lead_settings",
-        "lead_sources",
-        "list_members",
-        "lists",
-        "loss_reasons",
-        "meeting_brief",
-        "meeting_invitation",
-        "name_seats",
-        "partner_stages",
-        "pipeline",
-        "preview_contact_employment_import",
-        "project_health_assessments",
-        "project_stakeholders",
-        "record_assignments",
-        "record_lists",
-        "record_roles",
-        "relationships",
-        "reply_recipient",
-        "reporting_execution",
-        "reporting_executions",
-        "reporting_framework",
-        "reporting_schedules",
-        "reporting_target",
-        "reporting_targets",
-        "scheduling_profile",
-        "signal",
-        "signal_intro_path",
-        "signal_warmth",
-        "signals",
-        "site_read",
-        "stage",
-        "stage_automation_report",
-        "stage_evidence",
-        "stage_exit_criteria",
-        "stages",
-        "teams",
-        "transcript_read",
-        "transition_policies"
-      ],
+      "description": "a view named in margince://schema/views",
       "type": "string"
     },
     "window_days": {
@@ -9667,7 +9602,7 @@ custom field is spelled cf_<slug>.
       "type": "string"
     },
     "topic": {
-      "description": "colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary",
+      "description": "colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary, views",
       "enum": [
         "analytics",
         "channel_providers",
@@ -9678,7 +9613,8 @@ custom field is spelled cf_<slug>.
         "query",
         "record_fields",
         "report_blocks",
-        "report_vocabulary"
+        "report_vocabulary",
+        "views"
       ],
       "type": "string"
     }
