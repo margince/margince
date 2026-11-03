@@ -43,10 +43,8 @@ type BookingPage struct {
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
 // slug reads as absent, and so does a host whose account is not live. Every
 // public booking read, the preview card included, resolves here.
-//
-// The segment is a random slug, matched exactly, or a host's live alias,
-// matched lowercased. They cannot collide: a slug is 32 characters and an
-// alias at most 30 (scheduling_alias.go).
+// A slug matches as typed and an alias lowercased; a slug's 32 characters
+// keep the two apart, since an alias has at most 30.
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {

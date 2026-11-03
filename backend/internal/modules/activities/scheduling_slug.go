@@ -19,8 +19,8 @@ import (
 
 // SeedBookingPageTx mints a host's public page inside the caller's
 // transaction (the workspace bootstrap seeds one for the admin). The
-// slug is a public identifier, not a credential — unguessable so the
-// URL cannot be enumerated, stored plaintext because it IS the URL.
+// slug is a public identifier, not a credential. It is unguessable so the
+// URL cannot be enumerated, and stored in plain text because it is the URL.
 func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (string, error) {
 	slug, err := mintBookingSlug(rand.Read)
 	if err != nil {
