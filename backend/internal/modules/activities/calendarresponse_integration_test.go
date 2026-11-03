@@ -41,7 +41,7 @@ func seedCalendarMailSaying(t *testing.T, e *loadEnv, method, verdict, text stri
 	}
 	id := ids.UUID(source.Id)
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, e.rep)
-	if _, err := store.SetCaptureLabel(asClassifier(e), id, "meeting"); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, id, "meeting"); err != nil {
 		t.Fatal(err)
 	}
 	if method != "" {

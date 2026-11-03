@@ -29,7 +29,7 @@ func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 	service := newReportingService(e.Pool, func() time.Time { return start })
 	lane := &assessmentLane{reply: `{"name":"Linden push","filters":[{"field":"product","value":"` + linden.Id.String() + `","phrase":"Linden press"},{"field":"product","value":"01a19fad-0000-7000-8000-000000000000","phrase":"the other line"},{"field":"country","value":"de","phrase":"Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2099-12-31","phrase":"250k by year end"},"clarifications":["Which quarter?"],"unsupported":[]}`}
 	setups := newReportSetups(service, store, e.Pool).withLane(lane)
-	out, err := setups.Propose(ctx, crmcontracts.ReportSetupRequest{Site: crmcontracts.ReportSetupRequestSiteInitiativeSetup, Description: "Push the Linden press line in Germany"})
+	out, err := setups.ProposeSetup(ctx, crmcontracts.ReportSetupRequest{Site: crmcontracts.ReportSetupRequestSiteInitiativeSetup, Description: "Push the Linden press line in Germany"})
 	if err != nil {
 		t.Fatalf("the proposal: %v", err)
 	}
@@ -57,8 +57,8 @@ func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 func TestTheSetupProposalRefusesWithoutALane(t *testing.T) {
 	e := setupForecast(t)
 	ctx := initiativeManager(e)
-	setups := newReportSetups(newReportingService(e.Pool, time.Now), deals.NewStore(InstallationDB(e.Pool), DealsInstallation()), e.Pool)
-	if _, err := setups.Propose(ctx, crmcontracts.ReportSetupRequest{Site: crmcontracts.ReportSetupRequestSiteCustomReportSetup, Description: "Sales this month"}); err == nil {
+	setups := newReportSetups(newReportingService(e.Pool, func() time.Time { return clocktest.Now(t) }), deals.NewStore(InstallationDB(e.Pool), DealsInstallation()), e.Pool)
+	if _, err := setups.ProposeSetup(ctx, crmcontracts.ReportSetupRequest{Site: crmcontracts.ReportSetupRequestSiteCustomReportSetup, Description: "Sales this month"}); err == nil {
 		t.Fatal("a proposal without a lane answered")
 	}
 }
