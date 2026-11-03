@@ -7003,6 +7003,97 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /analytics/assessment:
+    post:
+      tags: [Reports]
+      operationId: assessSalesReview
+      x-agent-access: human-only
+      x-waits-on-model: on-miss
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        The Sales review's assessment of one selection: a few sentences on what the measured
+        figures show, each citing the cells it rests on, and one next decision on a deal the
+        reader may see. Written by the model and kept per reader until the figures or the
+        recorded decisions move; without a model, or when the model's reply cannot be grounded,
+        it answers no sentences and `generated_by` says so, and the page shows its own summary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesAssessmentRequest' }
+      responses:
+        '200':
+          description: The assessment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/setup-proposal:
+    post:
+      tags: [Reports]
+      operationId: proposeReportSetup
+      x-agent-access: human-only
+      x-waits-on-model: always
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        A sales initiative or a custom report proposed from a description in plain words:
+        the filters, metrics and charts the words name, resolved against what the reader may
+        use, with the phrase each came from, the questions the words leave open and the phrases
+        nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+        a model it answers 409 `ai_not_configured`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportSetupRequest' }
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportSetupProposal' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /analytics/account-coverage:
+    get:
+      tags: [Reports]
+      operationId: getAccountCoverage
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        The accounts at risk in one population: single-threaded deals, accounts in pipeline
+        nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+        facts behind its verdict. Counts for every view come with each answer; rows come for
+        the view asked for. The thresholds are the framework's, and the answer prints them.
+      parameters:
+      - name: scope_kind
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [owner, team, workspace]
+      - name: scope_id
+        in: query
+        required: false
+        schema: { type: string, format: uuid }
+      - name: view
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [single_threaded, untouched, silent]
+      responses:
+        '200':
+          description: The counts, the thresholds and the rows of one view.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountCoverage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects:
     get:
       tags: [Projects]
@@ -49505,6 +49596,204 @@ components:
           type: array
           items: { $ref: '#/components/schemas/SalesDecision' }
       additionalProperties: false
+    SalesAssessmentRequest:
+      type: object
+      required: [selection]
+      properties:
+        selection: { $ref: '#/components/schemas/ReportingSelection' }
+        refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
+      additionalProperties: false
+    SalesAssessment:
+      type: object
+      required: [evaluation_key, generated_at, generated_by, sentences, cells, decisions]
+      properties:
+        evaluation_key: { type: string, description: "The evaluation the assessment read." }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
+        confidence: { type: string, enum: [low, medium, high] }
+        sentences:
+          type: array
+          maxItems: 6
+          items: { $ref: '#/components/schemas/SalesAssessmentSentence' }
+        next_decision:
+          $ref: '#/components/schemas/SalesAssessmentDecision'
+        cells:
+          type: array
+          items: { $ref: '#/components/schemas/SalesAssessmentCell' }
+          description: "The figures the sentences may cite, as the model read them."
+        decisions: { type: integer, description: "How many recorded decisions the model read." }
+      additionalProperties: false
+    SalesAssessmentSentence:
+      type: object
+      required: [text, kind, cells]
+      properties:
+        text: { type: string, maxLength: 240 }
+        kind: { type: string, enum: [observation, claim, hypothesis] }
+        cells:
+          type: array
+          minItems: 1
+          items: { type: string }
+          description: The cell ids the sentence rests on.
+      additionalProperties: false
+    SalesAssessmentDecision:
+      type: object
+      required: [deal_id, owner_id, text]
+      properties:
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        text: { type: string, maxLength: 240 }
+      additionalProperties: false
+    SalesAssessmentCell:
+      type: object
+      required: [id, label, value]
+      properties:
+        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
+        label: { type: string }
+        value: { type: string }
+      additionalProperties: false
+    ReportSetupRequest:
+      type: object
+      required: [site, description]
+      properties:
+        site:
+          type: string
+          enum: [initiative_setup, custom_report_setup]
+          description: "Which drawer asks: a sales initiative's goal or a custom report."
+        description: { type: string, minLength: 1, maxLength: 2000, description: "What the reader typed. Only this and the catalog reach the model." }
+      additionalProperties: false
+    ReportSetupProposal:
+      type: object
+      required: [site, generated_by, selection, sources, clarifications, unsupported]
+      properties:
+        site: { type: string, enum: [initiative_setup, custom_report_setup] }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
+        name: { type: string, maxLength: 160, description: "A name the words suggest." }
+        selection: { $ref: '#/components/schemas/ReportSetupSelection' }
+        objective:
+          $ref: '#/components/schemas/ReportSetupObjective'
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupSource' }
+          description: "The phrase each resolved field came from."
+        clarifications:
+          type: array
+          maxItems: 4
+          items: { type: string, maxLength: 240 }
+          description: "What the words leave open, as questions to the reader."
+        unsupported:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupUnsupported' }
+      additionalProperties: false
+    ReportSetupSelection:
+      type: object
+      description: "The part of a reporting selection the words named. Absent means the words said nothing about it."
+      properties:
+        product_id: { $ref: '#/components/schemas/ReportingProductId' }
+        industry: { $ref: '#/components/schemas/ReportingIndustry' }
+        country: { $ref: '#/components/schemas/ReportingCountry' }
+        period:
+          type: string
+          enum: [this_week, this_month, last_month, last_week, this_quarter]
+        metrics:
+          type: array
+          maxItems: 8
+          items: { $ref: '#/components/schemas/ReportingMetricID' }
+        blocks:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ReportingBlockKind' }
+      additionalProperties: false
+    ReportSetupObjective:
+      type: object
+      required: [metric]
+      properties:
+        metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: integer, format: int64, minimum: 1 }
+        deadline: { type: string, format: date }
+      additionalProperties: false
+    ReportSetupSource:
+      type: object
+      required: [field, value, phrase]
+      properties:
+        field: { type: string, enum: [name, product, industry, country, period, metric, chart, objective, target_value, deadline] }
+        value: { type: string, description: "The resolved id, or the value as proposed." }
+        label: { type: string, description: "The value's name as the reader sees it." }
+        phrase: { type: string, maxLength: 240, description: "The words it was read from." }
+      additionalProperties: false
+    ReportSetupUnsupported:
+      type: object
+      required: [phrase, code, reason]
+      properties:
+        phrase: { type: string, maxLength: 240 }
+        code:
+          type: string
+          enum: [not_expressible, unknown_value, not_offered]
+          description: "`not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take."
+        reason: { type: string, maxLength: 240 }
+    AccountCoverage:
+      type: object
+      required: [scope, as_of, thresholds, framework_revision, counts, activity_readable, view, rows]
+      properties:
+        scope: { $ref: '#/components/schemas/AnalyticsScope' }
+        as_of: { type: string, format: date-time }
+        thresholds: { $ref: '#/components/schemas/AccountCoverageThresholds' }
+        framework_revision: { type: integer, format: int64 }
+        counts: { $ref: '#/components/schemas/AccountCoverageCounts' }
+        activity_readable: { type: boolean, description: "False when the reader may not read activity: the two account views are then empty and uncounted." }
+        view: { type: string, enum: [single_threaded, untouched, silent] }
+        rows:
+          type: array
+          maxItems: 200
+          items: { $ref: '#/components/schemas/AccountCoverageRow' }
+        withheld: { type: integer, description: "Deals of the view whose committee the reader could not read whole, left out rather than judged." }
+        truncated: { type: boolean, description: "True when a view had more candidates than the read judges, so its count covers the largest ones and not every one." }
+      additionalProperties: false
+    AccountCoverageCounts:
+      type: object
+      required: [single_threaded]
+      properties:
+        single_threaded: { type: integer }
+        untouched: { type: integer }
+        silent: { type: integer }
+      additionalProperties: false
+    AccountCoverageRow:
+      type: object
+      required: [company]
+      properties:
+        deal: { $ref: '#/components/schemas/AccountCoverageDeal' }
+        company: { $ref: '#/components/schemas/AccountCoverageAccount' }
+        engaged_seats: { type: integer, description: "Contacts engaged on the deal, for a single-threaded row." }
+        named_seats: { type: integer, description: "Contacts named on the deal, engaged or not." }
+        open_deals: { type: integer, description: "Open deals on the account, for an untouched row." }
+        open_amount_minor: { type: integer, format: int64, description: "Their amounts, in the installation currency, when every one carries a rate." }
+        won_deal: { $ref: '#/components/schemas/AccountCoverageDeal' }
+        last_inbound: { type: string, format: date-time }
+        last_outbound: { type: string, format: date-time }
+        days_silent: { type: integer, description: "Days since the newest exchange either way, or since the won deal closed when there was none." }
+      additionalProperties: false
+    AccountCoverageDeal:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        amount_minor: { type: integer, format: int64 }
+        currency: { type: string }
+        stage: { type: string }
+        owner_id: { type: string, format: uuid }
+        expected_close_date: { type: string, format: date }
+        closed_at: { type: string, format: date-time }
+      additionalProperties: false
+    AccountCoverageAccount:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        owner_id: { type: string, format: uuid }
+      additionalProperties: false
     SalesInitiativeMemberRef:
       type: object
       required: [record_type, record_id]
@@ -58279,6 +58568,17 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
+        account_coverage:
+          $ref: '#/components/schemas/AccountCoverageThresholds'
+    AccountCoverageThresholds:
+      type: object
+      additionalProperties: false
+      description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
+      properties:
+        max_engaged_seats: { type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1." }
+        untouched_days: { type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21." }
+        silent_days: { type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30." }
+        won_within_days: { type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180." }
     ReportingFramework:
       type: object
       additionalProperties: false
@@ -63277,6 +63577,8 @@ components:
         - owed_verdict
         - propose_roles
         - rate_extract
+        - report_interpret
+        - report_setup
         - request_settlement
         - signal_extract
         - site_extract
@@ -63300,7 +63602,7 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         request_settlement, account_scan, tag_suggest]
+         request_settlement, account_scan, tag_suggest, report_setup, report_interpret]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.

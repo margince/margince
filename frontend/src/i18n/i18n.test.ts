@@ -60,6 +60,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
   "filters.propose.unusedItem",
+  "reporting.setup.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
@@ -68,6 +69,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
+  "analytics.accounts.deal",
   "explain.col.pipeline",
   "reporting.recordType.lead",
   "reporting.recordType.deal",
