@@ -78,8 +78,11 @@ func queueReviewDeliveries(store *assurance.Store) assurance.ReviewDeliveryFunc 
 				continue
 			}
 			episode, err := store.EpisodeTask(ctx, tx, finding.ID)
-			if err != nil || episode.Task != nil {
+			if err != nil {
 				return err
+			}
+			if episode.Task != nil {
+				continue
 			}
 			if err := store.QueueDelivery(ctx, tx, finding.ID, episode.Episode); err != nil {
 				return err
