@@ -79,7 +79,9 @@ export function AccountCoverageView({
     <>
       <FilterBar
         label={t("analytics.filters")}
-        caption={query.data ? thresholdsCaption(query.data, t) : undefined}
+        caption={
+          query.data ? thresholdsCaption(query.data, locale, t) : undefined
+        }
       >
         {scopeControl}
         <SegmentedControl
@@ -102,7 +104,9 @@ export function AccountCoverageView({
         {(coverage) => (
           <Panel title={labels[view]}>
             <PanelBody>
-              <p className="t-caption">{viewPurpose(view, coverage, t)}</p>
+              <p className="t-caption">
+                {viewPurpose(view, coverage, locale, t)}
+              </p>
               {!coverage.activity_readable ? (
                 <Callout
                   tone="info"
@@ -160,35 +164,40 @@ function countsOf(coverage: AccountCoverage): Partial<Record<View, number>> {
 type Translator = ReturnType<typeof useT>;
 
 /** The thresholds in use, printed so a reader knows what "at risk" meant. */
-function thresholdsCaption(coverage: AccountCoverage, t: Translator): string {
+function thresholdsCaption(
+  coverage: AccountCoverage,
+  locale: Locale,
+  t: Translator,
+): string {
   const limits = coverage.thresholds;
   return t("analytics.accounts.thresholds", {
-    seats: String(limits.max_engaged_seats ?? 1),
-    untouched: String(limits.untouched_days ?? 21),
-    silent: String(limits.silent_days ?? 30),
-    won: String(limits.won_within_days ?? 180),
+    seats: formatNumber(limits.max_engaged_seats ?? 1, locale),
+    untouched: formatNumber(limits.untouched_days ?? 21, locale),
+    silent: formatNumber(limits.silent_days ?? 30, locale),
+    won: formatNumber(limits.won_within_days ?? 180, locale),
   });
 }
 
 function viewPurpose(
   view: View,
   coverage: AccountCoverage,
+  locale: Locale,
   t: Translator,
 ): string {
   const limits = coverage.thresholds;
   switch (view) {
     case "single_threaded":
       return t("analytics.accounts.singleThreadedPurpose", {
-        seats: String(limits.max_engaged_seats ?? 1),
+        seats: formatNumber(limits.max_engaged_seats ?? 1, locale),
       });
     case "untouched":
       return t("analytics.accounts.untouchedPurpose", {
-        days: String(limits.untouched_days ?? 21),
+        days: formatNumber(limits.untouched_days ?? 21, locale),
       });
     case "silent":
       return t("analytics.accounts.silentPurpose", {
-        days: String(limits.silent_days ?? 30),
-        won: String(limits.won_within_days ?? 180),
+        days: formatNumber(limits.silent_days ?? 30, locale),
+        won: formatNumber(limits.won_within_days ?? 180, locale),
       });
   }
 }

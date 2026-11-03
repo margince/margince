@@ -215,19 +215,12 @@ function SalesReviewBody({
                   charts={charts}
                   onEvidence={openEvidence}
                   aside={
-                    <>
-                      <AssessmentPanel
-                        selection={selection}
-                        evaluation={evaluation}
-                        onEvidence={openEvidence}
-                      />
-                      <HeroAside
-                        evaluation={evaluation}
-                        charts={charts?.data}
-                        onApply={apply}
-                        targetSetup={targetSetup}
-                      />
-                    </>
+                    <HeroAside
+                      evaluation={evaluation}
+                      charts={charts?.data}
+                      onApply={apply}
+                      targetSetup={targetSetup}
+                    />
                   }
                 />
                 <SalesReadings
@@ -262,6 +255,13 @@ function SalesReviewBody({
         />
       </div>
       {/* Past the first screen, so the decision and the first action stay on it. */}
+      {answered && (
+        <AssessmentPanel
+          selection={selection}
+          evaluation={answered}
+          onEvidence={openEvidence}
+        />
+      )}
       <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
