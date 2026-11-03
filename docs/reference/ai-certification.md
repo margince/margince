@@ -856,7 +856,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 164 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 168 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 15 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1245,7 +1245,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `partial` | 1 |
 | … best state `stale` | 16 |
 | … `absent` on every binding | 4 |
-| Scenarios in the corpus | 279 |
+| Scenarios in the corpus | 283 |
 | Committed records | 355 |
 | Bindings measured | 18 |
 
@@ -1356,7 +1356,7 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/company_brief`](#summarizecompany_brief) | - | - | - | `stale` | 2 | 13 |
 | [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`summarize/contact_brief`](#summarizecontact_brief) | - | - | - | `stale` | 3 | 13 |
-| [`summarize/deal_room_brief`](#summarizedeal_room_brief) | - | - | - | `stale` | 1 | 2 |
+| [`summarize/deal_room_brief`](#summarizedeal_room_brief) | - | - | - | `stale` | 5 | 2 |
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | - | - | - | `stale` | 1 | 13 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | - | - | - | `stale` | 2 | 13 |
 | [`tag_suggest/interest`](#tag_suggestinterest) | - | - | - | `absent` | 5 | 0 |
@@ -3265,24 +3265,28 @@ Records (13):
 </details>
 
 <details>
-<summary><code>summarize/deal_room_brief</code>: 1 scenario(s), 2 record(s), best state stale</summary>
+<summary><code>summarize/deal_room_brief</code>: 5 scenario(s), 2 record(s), best state stale</summary>
 
 ##### `summarize/deal_room_brief`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (1):
+Scenarios (5):
 
 | Scenario | Expects | Quality | Case |
 |---|---|---|---|
+| `deal_room_brief_names_the_buyer_who_set_it` | `accepted` | judge | [deal_room_brief_names_the_buyer_who_set_it_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_names_the_buyer_who_set_it_01.yaml) |
+| `deal_room_brief_only_routine_asks` | `accepted` | judge | [deal_room_brief_only_routine_asks_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_only_routine_asks_01.yaml) |
 | `deal_room_brief_reads_the_blocker` | `accepted` | judge | [deal_room_brief_reads_the_blocker_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_reads_the_blocker_01.yaml) |
+| `deal_room_brief_resolved_condition` | `accepted` | judge | [deal_room_brief_resolved_condition_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_resolved_condition_01.yaml) |
+| `deal_room_brief_seller_wrote_the_condition` | `accepted` | judge | [deal_room_brief_seller_wrote_the_condition_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_seller_wrote_the_condition_01.yaml) |
 
 Records (2):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 1800ms | 2892ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/1 | `supported_degraded` | 3 | 3 | 1.00 | 8810ms | 12438ms | 3 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/5 | `supported_degraded` | 9 | 9 | 1.00 | 1800ms | 2892ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/5 | `supported_degraded` | 3 | 3 | 1.00 | 8810ms | 12438ms | 3 | 0 | 0 | 0 |
 
 </details>
 
