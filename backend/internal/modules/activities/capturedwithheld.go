@@ -36,11 +36,11 @@ type WithheldFile struct {
 	ContentType  string
 	DeclaredType string
 	ByteSize     int
-	// Checksum fingerprints the bytes that were not kept. It serves two
-	// readers: the replay proof, which compares an arriving message's parts
-	// with the stored rows, and AdoptWithheldFiles, which refuses bytes whose
-	// fingerprint is not the one this row was named under. Empty for a private
-	// thread, whose row states nothing about its contents.
+	// Checksum fingerprints the bytes that were not kept. Two readers use it.
+	// The replay proof compares an arriving message's parts with the stored
+	// rows. AdoptWithheldFiles refuses bytes whose fingerprint is not the one
+	// this row was named under. Empty for a private thread, whose row states
+	// nothing about its contents.
 	Checksum string
 }
 
@@ -127,10 +127,10 @@ func (s *Store) AdoptWithheldFiles(
 	if err != nil || len(waiting) == 0 {
 		return 0, err
 	}
-	// The fingerprint has to match the one the row was named under. Matching on
-	// the part id alone would let a later message with different bytes at the
-	// same ordinal replace the file this row names, and the row would still
-	// read as the original.
+	// The fingerprint has to match the one the row was named under. On the part
+	// id alone, a later message with different bytes at the same ordinal would
+	// replace the file this row names. The row would still read as the
+	// original.
 	carried := make([]CapturedFile, 0, len(files))
 	for _, file := range files {
 		named, waits := waiting[file.PartID]

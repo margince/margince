@@ -58,11 +58,10 @@ func copiedOnlyTx(ctx context.Context, tx pgx.Tx, fields ActivityFields) (bool, 
 	if own.Empty() {
 		return false, nil
 	}
-	// namesSeat, not Covers: Covers admits a self-declared domain, and a seat
-	// declares one with no proof of control. A colleague at a claimed domain
-	// would then read as us being addressed, and the bytes would be kept for a
-	// message no seat here was on. addressedOpenly asks the same question the
-	// same way.
+	// namesSeat, not Covers. Covers admits a self-declared domain, which a seat
+	// claims with no proof of control. A colleague at such a domain would read
+	// as us being addressed. The bytes would then be kept for a message no seat
+	// here was on. addressedOpenly asks this the same way.
 	return !slices.ContainsFunc(envelope.DirectRecipients, own.namesSeat), nil
 }
 
