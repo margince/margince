@@ -29,6 +29,7 @@ type Store struct {
 	db             *database.DB
 	signalDecision SignalDecisionFunc
 	reviewCheck    ReviewCheckFunc
+	previewTx      PreviewTxFunc
 }
 
 // NewStore wires the store to its pool.

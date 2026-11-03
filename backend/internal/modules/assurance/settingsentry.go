@@ -36,10 +36,52 @@ var QualifiedForecastEnforced = config.DefineStored(config.Spec[bool]{
 	MachineryApplied: true, // the forecast read and the sweep read it for every seat
 })
 
+// PreviewTxFunc counts what switching enforcement on would do, in the caller's
+// transaction. Bound rather than imported: the count reads deals, and this
+// module reaches no sibling.
+type PreviewTxFunc func(ctx context.Context, tx pgx.Tx) (EnforcementPreview, error)
+
+// WithPreviewTx binds the count a save checks its caller's digest against.
+func (s *Store) WithPreviewTx(preview PreviewTxFunc) *Store {
+	wired := *s
+	wired.previewTx = preview
+	return &wired
+}
+
+// bindPreview refuses a switch-on whose digest is not what the count says now,
+// inside the transaction that saves.
+//
+// Checked on its own connection it leaves a window. A deal changing treatment
+// between the two statements is switched on against numbers nobody saw.
+//
+// Unwired, nothing is checked, which is the handler's own preview binding and
+// not this one.
+func (s *Store) bindPreview(ctx context.Context, tx pgx.Tx, seen *string) error {
+	if s.previewTx == nil || seen == nil {
+		return nil
+	}
+	current, err := s.previewTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if current.Digest == *seen {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "preview_stale",
+		Detail: "The deals this would leave out changed since you looked. " +
+			"Check the new numbers, then switch it on again.",
+	}
+}
+
 // SetQualifiedForecastEnforced switches enforcement, as an admin's act. Turning
 // it on waits for a check that judged deals. A run from before receipts existed,
 // or one that failed, leaves every deal unknown and nothing to count.
-func (s *Store) SetQualifiedForecastEnforced(ctx context.Context, cfg *config.Config, on bool) error {
+// seen is the digest the caller was shown, checked where this saves. A nil one
+// is unchecked, which is the door's question rather than this one.
+func (s *Store) SetQualifiedForecastEnforced(
+	ctx context.Context, cfg *config.Config, on bool, seen *string,
+) error {
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return err
 	}
@@ -61,7 +103,16 @@ func (s *Store) SetQualifiedForecastEnforced(ctx context.Context, cfg *config.Co
 			}
 		}
 	}
-	return config.Save(ctx, cfg, QualifiedForecastEnforced, on)
+	// The digest and the save in one transaction, so no deal changes treatment
+	// between the count and the commit.
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if on {
+			if err := s.bindPreview(ctx, tx, seen); err != nil {
+				return err
+			}
+		}
+		return config.SaveTx(ctx, cfg, tx, QualifiedForecastEnforced, on)
+	})
 }
 
 // ConfigSettings are this module's settings in the configuration registry.

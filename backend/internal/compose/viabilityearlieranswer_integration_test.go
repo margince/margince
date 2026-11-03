@@ -61,7 +61,7 @@ func TestAnEarlierAnswerIsHonouredUntilItRunsOut(t *testing.T) {
 		t.Fatalf("receipt %s %q, want waiting on the earlier answer", outcome, reasons)
 	}
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, nil); err != nil {
 		t.Fatal(err)
 	}
 	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 0 || q.UnknownCount != 0 {
