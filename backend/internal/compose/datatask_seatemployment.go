@@ -15,18 +15,46 @@ import (
 )
 
 // seatEmploymentDataTask archives the employment edges capture or a provider
-// inferred for a contact that holds a proven seat address. A colleague's
-// employer is the workspace; an edge a human made or edited stays.
+// inferred for a contact that holds a proven seat address. Then it archives the
+// contacts capture minted for a seat's login. A colleague's employer is the workspace,
+// and a colleague is a seat. What a human made or edited stays.
 func seatEmploymentDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792894995_seat_employment_edges", Version: 1,
+		ID: "core/1792894995_seat_employment_edges", Version: 2,
 		Title: "Removing employers inferred for colleagues", Requires: []string{"core/1792887436"},
 		Steps: []datatask.Step{{
 			Name: "retire_seat_employment_edges", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateSeatEmploymentEdges, Batch: retireSeatEmploymentEdgesBatch,
+		}, {
+			Name: "archive_seat_contacts", Limit: 200, MinLimit: 1,
+			Audit:    datatask.AuditPolicy{PerRecord: true},
+			Estimate: estimateSeatContacts, Batch: archiveSeatContactsBatch,
 		}},
 	}
+}
+
+func archiveSeatContactsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	after, err := datatask.UUIDCursor(in.Cursor)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	page, err := contacts.ArchiveSeatContactsTx(ctx, tx, after, in.Limit)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	return datatask.AdvanceUUID(in, page.Scanned, page.Retired)
+}
+
+func estimateSeatContacts(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+		return 0, false, err
+	}
+	count, err := contacts.CountLiveContacts(ctx, q, maximum)
+	return min(count, maximum), count > maximum, err
 }
 
 func retireSeatEmploymentEdgesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {

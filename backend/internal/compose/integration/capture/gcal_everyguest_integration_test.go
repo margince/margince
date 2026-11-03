@@ -212,9 +212,17 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 			t.Errorf("colleague %s: rows %+v, want one naming their seat", address, rows[address])
 		}
 	}
-	for _, address := range []string{guestLater, guestUnread, guestOptional} {
+	for _, address := range []string{guestLater} {
 		if len(rows[address]) != 1 || rows[address][0].contactID != nil || rows[address][0].userID != nil {
 			t.Errorf("outside guest %s: rows %+v, want one by address", address, rows[address])
+		}
+	}
+	for _, address := range []string{guestUnread, guestOptional} {
+		if len(rows[address]) != 1 || rows[address][0].contactID == nil || rows[address][0].userID != nil {
+			t.Fatalf("eligible guest %s: rows %+v, want one contact", address, rows[address])
+		}
+		if !meetingLinkedTo(t, e, meeting, ids.From[ids.ContactKind](*rows[address][0].contactID)) {
+			t.Errorf("meeting is not filed under eligible guest %s", address)
 		}
 	}
 	if len(rows[guestKnown]) != 1 || rows[guestKnown][0].contactID == nil || *rows[guestKnown][0].contactID != known.UUID {
@@ -234,7 +242,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	for _, guest := range deref(read.Guests) {
 		shown = append(shown, deref1(guest.Address))
 	}
-	if want := []string{guestLater, guestOptional, guestUnread}; !slices.Equal(shown, want) {
+	if want := []string{guestLater}; !slices.Equal(shown, want) {
 		t.Errorf("the meeting shows the guests %v, want the outside guests who are not contacts %v", shown, want)
 	}
 

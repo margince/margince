@@ -110,7 +110,7 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 			}
 		}
 		if field == fieldPhone {
-			if err := restoreSupersededPhone(ctx, tx, contactID, superseded); err != nil {
+			if err := restoreSupersededPhone(ctx, tx, contactID, current, superseded); err != nil {
 				return err
 			}
 			// The replacement's evidence goes with its number. The row below
@@ -262,16 +262,16 @@ func (h Handlers) RestoreContactProfileField(w http.ResponseWriter, r *http.Requ
 // and still ours to retire, and the old row is revived only while it is still
 // archived — a number somebody re-added by hand in the meantime is theirs, and
 // reviving a second copy of it would leave the contact holding one number twice.
-func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, want string) error {
+func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, replacement, want string) error {
 	parsed, err := values.ParsePhone(want)
 	if err != nil {
-		// The buffer holds a value this reader cannot parse back into a number,
-		// so there is nothing to revive. The evidence line is still restored;
-		// the record simply has no row to match it.
-		//nolint:nilerr // an unparseable buffered value is nothing to revive, not a fault
-		return nil
+		return apperrors.ErrConflict
 	}
 	normalized := parsed.String()
+	replacing, err := values.ParsePhone(replacement)
+	if err != nil {
+		return apperrors.ErrConflict
+	}
 
 	var replacementID, supersededID ids.UUID
 	// was.contact_id is checked, not assumed from the join. A merge re-homes only
@@ -289,23 +289,21 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 		SELECT live.id, live.superseded_phone_id
 		  FROM contact_phone live
 		  JOIN contact_phone was ON was.id = live.superseded_phone_id
-		 WHERE live.contact_id = $1 AND live.archived_at IS NULL
+		 WHERE live.contact_id = @contact AND live.phone = @replacement AND live.archived_at IS NULL
 		   AND live.superseded_phone_id IS NOT NULL
-		   AND was.contact_id = $1
-		   AND was.phone = $2 AND was.archived_at IS NOT NULL
+		   AND was.contact_id = @contact
+		   AND was.phone = @old AND was.archived_at IS NOT NULL
 		   AND NOT EXISTS (
 			SELECT 1 FROM contact_phone dup
-			 WHERE dup.contact_id = $1 AND dup.phone = $2
+			 WHERE dup.contact_id = @contact AND dup.phone = @old
 			   AND dup.archived_at IS NULL)
 		 ORDER BY live.observed_at DESC
 		 LIMIT 1
 		 FOR UPDATE OF live`,
-		contactID, normalized).Scan(&replacementID, &supersededID); err != nil {
+		pgx.StrictNamedArgs{entityContact: contactID, "old": normalized, "replacement": replacing.String()}).Scan(&replacementID, &supersededID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Nothing to move: the replacement is gone, or the number it
-			// replaced is live again already. Not a fault — the evidence line
-			// restores and the record already says what the reader wanted.
-			return nil
+			// A stale undo must not delete a live replacement's evidence.
+			return apperrors.ErrConflict
 		}
 		return fmt.Errorf("contacts: looking for the number to bring back: %w", err)
 	}

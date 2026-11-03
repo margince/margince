@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Fragment, type ReactNode, useEffect, useMemo, useRef } from "react";
+import { AppLink } from "./applink";
 import { TableScroll } from "./atoms";
 import "./atoms.css";
 import { autolinkBlocks } from "./markdown-autolink";
@@ -302,7 +303,7 @@ function renderInline(node: Inline): ReactNode {
   if (node.kind === "em") return <em>{children(node.children)}</em>;
   if (node.kind === "mark") return <mark>{children(node.children)}</mark>;
   return (
-    <a
+    <AppLink
       href={node.href}
       // An outbound link leaves this pane rather than replacing the answer
       // the reader holds it against. `noopener` stops the opened page steering this one.
@@ -310,7 +311,7 @@ function renderInline(node: Inline): ReactNode {
       rel="noopener noreferrer"
     >
       {children(node.children)}
-    </a>
+    </AppLink>
   );
 }
 

@@ -452,12 +452,12 @@ func TestSeveralFoldedRowsAheadOfASurvivorStillLandOnIt(t *testing.T) {
 // The brief's verbs survive the pass that removes the row they were attached to.
 //
 // THE defect that made this fold run last. A deal can be both in the night's
-// brief and carrying an unanswered message. The at-risk row took the brief's id;
-// dropDealsAlreadyWaiting then deleted that row, because one unanswered message
-// is one row; and the waiting row that absorbs it inherits the deal's figures
-// and reasons but not the brief's id. The entry vanished from the page, and with
-// it the act, set-aside and dismiss verbs that answer the night — which the
-// fold's own header calls a worse outcome than the duplicate it prevents.
+// brief and carrying an unanswered message. The at-risk row took the brief's id.
+// dropDealsAlreadyInHand then deleted that row, because one unanswered message
+// is one row. The waiting row that absorbs it inherits the deal's figures and
+// reasons, but not the brief's id. The entry vanished from the page, and with
+// it the act, set-aside and dismiss verbs that answer the night. The fold's own
+// header calls that worse than the duplicate it prevents.
 //
 // Written over the two passes IN THE ORDER worklist.go runs them, because the
 // order is the fix: neither pass alone is wrong.
@@ -465,7 +465,7 @@ func TestTheBriefsVerbsSurviveTheRowTheyWereAttachedTo(t *testing.T) {
 	deal, briefItem := ids.NewV7(), ids.NewV7()
 	waiting := waitingRowAbout(deal)
 
-	rows := dropDealsAlreadyWaiting([]ranked{atRiskRow(deal), waiting})
+	rows := dropDealsAlreadyInHand([]ranked{atRiskRow(deal), waiting}, time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC))
 	rows = foldBriefIntoRisk(append(rows, rankedBriefRow(briefItem, deal)))
 
 	var carrier *ranked

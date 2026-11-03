@@ -63,6 +63,7 @@ export {
   endpointBody,
   fetchRelationships,
   invalidateAfterEdge,
+  kindLabelFor,
   scopeCopy,
   scopeQueryKey,
 } from "./relationships.edges";

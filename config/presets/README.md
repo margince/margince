@@ -19,13 +19,13 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3`; zero egress | Ollama with both models pulled, nothing else |
 | [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress | two vLLM servers started with the flags in the file's header |
 
-`gemini_cloud.yaml` is the binding a dev stack starts with today, lifted out of
-`margince.dev.yaml` so it can be named and used again. The dev file still has its own copy,
-because that file is the dev posture and has to stand alone.
+`gemini_cloud.yaml` uses the provider a dev stack starts with, the Gemini Developer API, with
+`gemini-3.6-flash` in `premium` and `frontier`. The binding in `margince.dev.yaml` is its own and
+names other models there, because that file is the dev posture and has to stand alone.
 
-`gemini_vertex_eu.yaml` binds the Flash and Flash-Lite of `gemini_cloud.yaml` at their thinking
-levels, on Vertex AI at an EU location, under `eu_hosted`. Frontier takes Flash too, because Vertex
-serves no Pro model in the EU. A location outside the EU member states (London and Zürich included)
+`gemini_vertex_eu.yaml` binds the models of `gemini_cloud.yaml` at their thinking levels, on
+Vertex AI at an EU location, under `eu_hosted`. Frontier stays on Flash, because Vertex serves no
+Pro model in the EU. A location outside the EU member states (London and Zürich included)
 is refused at save. The key is a service account that holds `roles/aiplatform.user`. The steps are
 in [Gemini on Vertex AI, and EU data residency](../../docs/how-to/connect-a-cloud-model-provider.md#5-gemini-on-vertex-ai-and-eu-data-residency).
 
@@ -49,11 +49,12 @@ make e2e-ai ROUTING=.tmp/aicert/gemini_cloud_thinking_low.yaml
 Commit the records only together with the same `thinking_level:` in `gemini_cloud.yaml`. If not,
 throw them away with `git restore backend/internal/compose/aicert/records`.
 
-`openrouter_cloud_eu.yaml` fixes the host first, and takes whatever Mistral weights that host serves.
-`openrouter_cloud.yaml` instead picks the best model per tier. `premium` is the flagship of Mistral,
-`mistral-medium-3-5`. `frontier` is `mistral-small-2603`, so the fallback of `premium` reaches some
-other upstream endpoint. Every lane, embeddings included, names an EU-region endpoint in `only:`. An
-unpinned lane, or a `routing: {}`, lets the broker serve the model from any region.
+`openrouter_cloud_eu.yaml` fixes the host first, and takes whatever Mistral weights that host
+serves. `openrouter_cloud.yaml` instead picks the best model per tier. In
+`openrouter_cloud_eu.yaml`, `premium` is the flagship of Mistral, `mistral-medium-3-5`. `frontier`
+is `mistral-small-2603`, so the fallback of `premium` reaches some other upstream endpoint. Every
+lane, embeddings included, names an EU-region endpoint in `only:`. An unpinned lane, or a `routing:
+{}`, lets the broker serve the model from any region.
 
 `openrouter_cloud.yaml` cannot serve `document_extract`. That task sends a PDF, and the wire that is
 compatible with OpenAI can declare only text and image. A full certification run under it fails that

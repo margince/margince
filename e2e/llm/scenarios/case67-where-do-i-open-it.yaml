@@ -1,0 +1,33 @@
+# CASE 67 — Where do I open it.
+#
+# Every evidence entry for a deal carries a `web_url` to its page in the app. A
+# user who asks for a link to a deal needs it, and a model that has only seen an
+# id cannot give one. The stack's public base URL is the origin of the link, and
+# a deal's page is `/#/deals/<id>` on it.
+#
+# The deal is named, not picked by date: the seed derives its close dates from
+# the days left in the quarter, so two deals can tie on the last days of one.
+# The harness reads the answer and the calls, not the tool results, so it cannot
+# compare the link's id to the deal's; it holds the shape of a deal page.
+name: case67_where_do_i_open_it
+criteria: [1]
+writes: false
+
+prompt: |
+  Give me a link I can open the Körber Sensorik Rollout deal from.
+
+must_call:
+  - search_records|list_records|query_workspace|read_record|read_forecast
+
+may_call:
+  - find_records
+  - resolve_entities
+
+must_mention:
+  - "/#/deals/[0-9a-f]{8}-[0-9a-f]{4}-"
+
+judge:
+  - "Criterion 1. The answer gives a link whose path is a deal's page in the app and says it is the Körber Sensorik Rollout deal. Answer no if it gives no link, gives a link that is not a deal page, or names a different deal."
+
+runs: 3
+pass_at: 2

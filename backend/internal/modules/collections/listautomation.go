@@ -89,13 +89,14 @@ func (s *Store) ObservedChanges(ctx context.Context, id ids.ListID, version int6
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT ev.id, ev.entity_type, ev.entity_id, ev.action, count(*) OVER ()
 			FROM list_member_event ev
 			WHERE ev.list_id = $%d AND ev.occurred_at = $%d AND ev.definition_version = $%d
 			  AND ev.reason = $%d AND ev.action = ANY($%d) AND %s
 			ORDER BY ev.id LIMIT $%d`,
-			arg(id), arg(checkedAt), arg(version), arg(reasonEvaluated), arg(actions), visible, arg(limit)), args...)
+			arg(id), arg(checkedAt), arg(version), arg(reasonEvaluated), arg(actions), visible, arg(limit))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

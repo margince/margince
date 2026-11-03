@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import {
+  summaryFieldsLine,
+  summarySentence,
+} from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
@@ -36,11 +41,28 @@ export function readerTask(
   };
 }
 
+/**
+ * The row's own reading of an approval: the sentence as the title, because
+ * noticeDetail draws the values under it. Other surfaces keep the whole title.
+ */
+export function sentenceTitled(item: WorklistItem): WorklistItem {
+  const sentence = summarySentence({
+    summary: item.title,
+    summary_parts: item.summary_parts,
+  });
+  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
+}
+
 export function noticeDetail(
   item: WorklistItem,
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
+  if (item.summary_parts) {
+    return (
+      summaryFieldsLine(item.summary_parts, summaryWords(t)) ?? item.detail
+    );
+  }
   if (item.source === "domain_question" && item.domain_reason_code) {
     const label = domainReasonLabels[item.domain_reason_code];
     if (!label) return item.detail;

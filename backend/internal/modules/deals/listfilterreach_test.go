@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// teamReader reads deals and companies on team scope, under the given masks.
+// teamReader reads on team scope the objects given, under the given masks.
 func teamReader(objects map[string]principal.ObjectGrant, masks ...principal.FieldMask) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman,
@@ -28,7 +28,10 @@ func teamReader(objects map[string]principal.ObjectGrant, masks ...principal.Fie
 	})
 }
 
-var dealAndCompanyRead = map[string]principal.ObjectGrant{maskObject: {Read: true}, "company": {Read: true}}
+// dealReferenceRead reads deals and the companies and projects a deal names.
+var dealReferenceRead = map[string]principal.ObjectGrant{
+	maskObject: {Read: true}, "company": {Read: true}, "project": {Read: true},
+}
 
 func TestRefusedListFiltersNamesWhatTheListWouldRefuse(t *testing.T) {
 	for _, tc := range []struct {
@@ -37,24 +40,33 @@ func TestRefusedListFiltersNamesWhatTheListWouldRefuse(t *testing.T) {
 		want []string
 	}{
 		{"a reader of every row", systemFilterCtx(), []string{}},
-		{"a role withholding nothing", teamReader(dealAndCompanyRead), []string{}},
+		{"a role withholding nothing", teamReader(dealReferenceRead), []string{}},
 		// The amount's mask withholds the currency beside it, so the currency dial goes too.
 		{
 			"a role masking the amount",
-			teamReader(dealAndCompanyRead, principal.FieldMask{Object: maskObject, Field: "amount_minor", Condition: principal.MaskAlways}),
+			teamReader(dealReferenceRead, principal.FieldMask{Object: maskObject, Field: "amount_minor", Condition: principal.MaskAlways}),
 			[]string{filterCurrency, filterValueMax, filterValueMin},
 		},
 		{
 			"a mask that lifts where the reader may write",
-			teamReader(dealAndCompanyRead, principal.FieldMask{Object: maskObject, Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority}),
+			teamReader(dealReferenceRead, principal.FieldMask{Object: maskObject, Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority}),
 			[]string{filterCurrency, filterValueMax, filterValueMin},
 		},
 		{
 			"a role masking the partner",
-			teamReader(dealAndCompanyRead, principal.FieldMask{Object: maskObject, Field: filterPartnerCompanyID, Condition: principal.MaskAlways}),
+			teamReader(dealReferenceRead, principal.FieldMask{Object: maskObject, Field: filterPartnerCompanyID, Condition: principal.MaskAlways}),
 			[]string{filterPartnerAttribution, filterPartnerCompanyID, filterPartnerSourced},
 		},
-		{"a seat without company.read", teamReader(map[string]principal.ObjectGrant{maskObject: {Read: true}}), []string{filterCountry}},
+		{
+			"a seat without company.read",
+			teamReader(map[string]principal.ObjectGrant{maskObject: {Read: true}, "project": {Read: true}}),
+			[]string{filterCompanyID, filterCountry, filterPartnerAttribution, filterPartnerCompanyID, filterPartnerSourced},
+		},
+		{
+			"a seat without project.read",
+			teamReader(map[string]principal.ObjectGrant{maskObject: {Read: true}, "company": {Read: true}}),
+			[]string{filterProjectID},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := refusedListFilters(tc.ctx, nil)
@@ -136,7 +148,7 @@ func TestTheReachProbeResolvesTheListFilterThroughTheListResolver(t *testing.T) 
 		{"a reader refused the list", answering(apperrors.ErrPermissionDenied), []string{filterListID}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := refusedListFilters(teamReader(dealAndCompanyRead), tc.members)
+			got, err := refusedListFilters(teamReader(dealReferenceRead), tc.members)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -146,7 +158,7 @@ func TestTheReachProbeResolvesTheListFilterThroughTheListResolver(t *testing.T) 
 		})
 	}
 	fault := errors.New("the list catalogue is unreachable")
-	if _, err := refusedListFilters(teamReader(dealAndCompanyRead), answering(fault)); !errors.Is(err, fault) {
+	if _, err := refusedListFilters(teamReader(dealReferenceRead), answering(fault)); !errors.Is(err, fault) {
 		t.Errorf("a resolver fault came back as %v, want it returned", err)
 	}
 }

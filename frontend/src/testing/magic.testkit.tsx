@@ -13,11 +13,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render } from "@testing-library/react";
 import { vi } from "vitest";
 import { MagicPanel } from "../features/sign-in/magic";
-import type {
-  MagicLine,
-  MagicReceipt,
-} from "../features/sign-in/magic.queries";
 import { type Locale, LocaleProvider } from "../i18n";
+import type { MagicLine, MagicReceipt } from "../lib/magic.queries";
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

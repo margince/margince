@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -60,10 +61,14 @@ func gcalStubServing(t *testing.T, owner string, events []map[string]any) *httpt
 // syncGcalEvents connects the stubbed calendar of owner for Rep1 and runs one sync.
 func syncGcalEvents(t *testing.T, e *integration.SearchEnv, owner string, events []map[string]any) {
 	t.Helper()
+	syncGcalEventsThrough(t, e, newTestCaptureRegistry(e, newTestKeyvault(t, e)), owner, events)
+}
+
+func syncGcalEventsThrough(t *testing.T, e *integration.SearchEnv, registry *capturemod.Registry, owner string, events []map[string]any) {
+	t.Helper()
 	stub := gcalStubServing(t, owner, events)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
-	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(gcal.New(oauth, api))
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	authReq, err := gcal.AuthRequestFrom("the-code", "https://app.test/v1/connectors/gcal/callback")

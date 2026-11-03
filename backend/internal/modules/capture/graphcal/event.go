@@ -26,7 +26,8 @@ import (
 // fields are ignored — the raw original is stored verbatim as evidence
 // (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID string `json:"id"`
+	Sensitivity string `json:"sensitivity"`
+	ID          string `json:"id"`
 	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
 	// Graph's own numbering, so the same meeting read from Graph and from
 	// Google carries two ids and would dedupe as two meetings.
@@ -133,6 +134,7 @@ func decode(ev rawEvent) meetingmap.Event {
 	}
 	return meetingmap.Event{
 		ID:        ev.ID,
+		Private:   ev.Sensitivity != "" && ev.Sensitivity != "normal",
 		ICalUID:   strings.TrimSpace(ev.ICalUID),
 		Cancelled: ev.IsCancelled || ev.Removed != nil,
 		// Only "declined". A tentative answer is an attendance somebody may yet
@@ -204,4 +206,13 @@ func parseStart(start graphTime, allDay bool) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// RecordOf uses the live provider normalizer when replaying a stored event.
+func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {
+	records, err := meetingmap.NormalizeOne(raw, owner, connectorName, decodeEvent)
+	if err != nil {
+		return connector.NormalizedRecord{}, err
+	}
+	return records[0], nil
 }

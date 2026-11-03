@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import { JustInScope, useLatestInbound } from "../../components/latestinbound";
 import { RecordStory } from "../../design-system/recordstory";
 import {
   type ActivityKind,
@@ -21,7 +22,7 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "../records/recordchronology";
-import { TimelineActions } from "../records/timelineactions";
+import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
 import type { Project360 } from "./projectsections";
 
 type ChronologySlots = Readonly<{
@@ -162,4 +163,31 @@ function useProjectChronology(
       t,
     ),
   };
+}
+
+/**
+ * The newest unanswered thing anyone on the project sent, for the Next bar in
+ * `children`, with the verbs its timeline row has.
+ */
+export function ProjectLatestInbound({
+  projectId,
+  children,
+}: Readonly<{ projectId: string; children: ReactNode }>) {
+  const latest = useLatestInbound("project", projectId);
+  return (
+    <JustInScope
+      latest={latest}
+      entityType="project"
+      entityId={projectId}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="project"
+          entityId={projectId}
+        />
+      )}
+    >
+      {children}
+    </JustInScope>
+  );
 }

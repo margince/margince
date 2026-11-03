@@ -352,6 +352,11 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err := fillSizeBandFromFacts(ctx, tx, in, by, appliedFacts); err != nil {
 		return err
 	}
+	for _, fact := range []string{FactPhone, FactContactEmail} {
+		if err := fillCompanyColumnFromFact(ctx, tx, in, by, appliedFacts, fact); err != nil {
+			return err
+		}
+	}
 	after, err := readColdStartColumnImages(ctx, tx, in.CompanyID)
 	if err != nil {
 		return err

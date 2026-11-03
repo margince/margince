@@ -127,6 +127,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactSubjectReporting(ctx, tx, subject, emails); err != nil {
 			return err
 		}
+		if err := e.purgePartyProjections(ctx, tx, emails); err != nil {
+			return err
+		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
 		if err != nil {
 			return err
@@ -488,11 +491,4 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
-}
-
-func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
-	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
-		return err
-	}
-	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

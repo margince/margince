@@ -100,14 +100,12 @@ const PENDING: readonly string[] = [
   "contact.loops.dueInDays",
   "contact.strip.days",
   "embedreindex.entitiesPending",
-  "jobs.deadTotal",
   "lead.scoreSources",
   "ob.conv.recap.readTerminal",
   "ob.conv.voice.dimSentenceEvidence",
   "settings.voice.meter",
   "tagResult.totalVisible",
   "voice.insights.next.addWords",
-  "voice.insights.statSentence",
 ];
 
 /** Why one pre-existing single-key count is not yet a finding. */

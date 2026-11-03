@@ -107,7 +107,7 @@ func readingsOf(
 			// projects can never be merged by anybody, and the pair is still the
 			// reader's to dismiss as not-a-duplicate. It arrives here carrying
 			// that verb alone, and asking for a merge would drop it.
-			if len(row.item.Actions) == 0 {
+			if !readerSettles(row.item) {
 				continue
 			}
 			out.Review++
@@ -202,4 +202,12 @@ func unpricedDeals(rows []ranked) int {
 		}
 	}
 	return count
+}
+
+// readerSettles reports whether a decisions row is this reader's to settle. A
+// verb says so for a row the queue settles in place. A contact case carries no
+// verb, because it settles in its own review. Its lane raises it only for the
+// members' owners, so it counts, as the exact category total counts it.
+func readerSettles(item crmcontracts.WorklistItem) bool {
+	return item.ContactCase != nil || len(item.Actions) > 0
 }

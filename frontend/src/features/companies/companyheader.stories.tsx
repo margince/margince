@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -113,6 +114,31 @@ const roster = [
 // `record` overrides the account only where a story is about the RECORD rather
 // than the 360 read around it (who wrote it, below). The default keeps every
 // other story on the one fixture.
+// The strip and its menu share the page's activity gate, read inside the
+// providers the way the page reads it.
+function HeaderVerbs({ record }: Readonly<{ record: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <>
+      <CompanyHeaderActions
+        company={record}
+        composerOpen={false}
+        onComposerOpen={() => {}}
+        drawer={null}
+        onDrawer={() => {}}
+        activity={activity}
+      />
+      <CompanyActionBadges
+        company={record}
+        activity={activity}
+        onAddTask={() => {}}
+        onOpenHistory={() => {}}
+        onSetUpPartner={() => {}}
+      />
+    </>
+  );
+}
+
 function Header({
   view,
   loading,
@@ -155,18 +181,7 @@ function Header({
             gap: "var(--space-2)",
           }}
         >
-          <CompanyHeaderActions
-            company={record}
-            composerOpen={false}
-            onComposerOpen={() => {}}
-            drawer={null}
-            onDrawer={() => {}}
-          />
-          <CompanyActionBadges
-            company={record}
-            onOpenHistory={() => {}}
-            onSetUpPartner={() => {}}
-          />
+          <HeaderVerbs record={record} />
         </div>
       </div>
     </StoryProviders>

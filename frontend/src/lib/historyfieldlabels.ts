@@ -153,6 +153,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["provider_claims_received", "history.field.provider_claims_received"],
   ["qualifying_event", "history.field.qualifying_event"],
   ["reachability", "history.field.reachability"],
+  ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],
   ["recorded_at_level", "history.field.recorded_at_level"],
   ["reply_verdict", "history.field.reply_verdict"],

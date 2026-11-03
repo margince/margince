@@ -42,7 +42,7 @@ func TestASenderPurgeKeepsAContactTheOwnerTypedIn(t *testing.T) {
 	// Typed in by the owner, with one address and no deal; then mail arrives
 	// from it into the owner's mailbox.
 	owner := ids.From[ids.UserKind](e.Rep1)
-	typed, err := e.Contacts.CreateContact(purgeCtx(e, e.Rep1), contacts.CreateContactInput{
+	typed, err := e.Contacts.CreateContact(ownerCtx(e), contacts.CreateContactInput{
 		FullName: typedName,
 		OwnerID:  &owner,
 		Emails:   []contacts.ContactEmailInput{{Email: typedAddress, EmailType: "work", IsPrimary: true}},

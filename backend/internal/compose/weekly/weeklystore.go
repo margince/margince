@@ -42,6 +42,9 @@ type Review struct {
 	AsOf           time.Time
 	Counts         Counts
 	Deals          []DealLine
+	// MeetingsWithheld marks a week read by a seat that may not read meetings.
+	// Its meeting figures are zero, and the wire says they are withheld.
+	MeetingsWithheld bool
 	// Narrative is the sentence a model wrote about the week, empty when none
 	// did. NarratedAt is what tells "no pass ran" from "a pass ran and found
 	// the week unremarkable" — the two read identically as silence otherwise.
@@ -96,9 +99,10 @@ type Review struct {
 
 // PriorWeek is the earlier review a week is compared against.
 type PriorWeek struct {
-	LocalWeekStart time.Time
-	Counts         Counts
-	Money          Money
+	LocalWeekStart   time.Time
+	Counts           Counts
+	Money            Money
+	MeetingsWithheld bool
 }
 
 // Counts are the week's tallies. Every one is as-of the review's AsOf, which

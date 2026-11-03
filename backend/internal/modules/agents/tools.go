@@ -54,17 +54,14 @@ type StageResolver interface {
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 }
 
-// RegisterCoreTools wires the §2.1 CRUD set over one provider: the 🟢
-// tools, `advance_deal` (🟢→🟡 dynamic), and the 🟡 confirm-first tools the
-// approval loop carries — `archive_record`, `promote_lead` and
-// `merge_records`. The two write-shaped §2.2 intents that compose over the
-// SAME provider + stage seams — `qualify_lead` and `progress_deal` —
-// register here too; the read/draft intents and the lifecycle transitions
-// have their own seams (RegisterIntentTools, RegisterSlippingTools,
-// RegisterLifecycleTools).
+// RegisterCoreTools wires the record CRUD set over one provider. It holds the 🟢
+// tools, `advance_deal` (dynamic), and `archive_record`, `promote_lead` and
+// `merge_records`, which a tier floor can make confirm-first. `qualify_lead` and
+// `progress_deal` share the provider and stage seams, so they register here too.
 //
-// Every verb the contract declares with `x-mcp-tool` is registered by one of
-// those functions. A declared verb with no tool is not a gap to describe here:
+// Every verb the contract declares with `x-mcp-tool` is registered here or by
+// RegisterIntentTools, RegisterSlippingTools or RegisterLifecycleTools. A
+// declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})
@@ -77,7 +74,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
-	r.Register(mergeRecords{p: p, language: r.language})
+	r.Register(mergeRecords{p: p, language: r.language, cases: r.contactCases})
 }
 
 // schema turns a hand-written JSON schema into the wire form, COMPACTED.

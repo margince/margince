@@ -138,7 +138,8 @@ func ScoreLeadDetail(title string, intent SourceIntent, signals []BehavioralSign
 		if !known {
 			continue
 		}
-		days := now.Sub(signal.OccurredAt).Hours() / 24
+		// A booking dated ahead scores its base value: decay over a negative age would grow it.
+		days := max(now.Sub(signal.OccurredAt).Hours()/24, 0)
 		decayed := base * math.Exp2(-days/behavioralHalflifeDays)
 		ix, seen := perKind[signal.Kind]
 		if !seen {

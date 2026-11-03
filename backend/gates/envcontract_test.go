@@ -13,17 +13,16 @@ package gates
 //     docs/reference/configuration.md (the settings), docs/reference/programs.md
 //     or docs/reference/worker-diagnostics.md (every other variable);
 //  2. every MARGINCE_* var those pages name is still part of the product;
-//  3. every MARGINCE_* var a deploy entrypoint hard-requires is named in
-//     .env.example — that file is the template
-//     docs/how-to/deploy-margince.md hands an operator, so a var the container
-//     refuses to boot without must not be discoverable only by reading the
-//     entrypoint script.
+//  3. every MARGINCE_* var a deploy entrypoint hard-requires is named in the
+//     entrypoint section of programs.md.
 //
 // tools/gen-config writes .env.example and the settings tables of
-// configuration.md from the registry, and configgenerated_test.go fails a
-// stale copy. So no name in .env.example can be dead, and every documented
-// default is the declared one; these obligations cover what the generator does
-// not write.
+// configuration.md from the registry and the entrypoint scripts, and
+// configgenerated_test.go fails a stale copy. So .env.example names every
+// setting and every required entrypoint var, and every documented default is
+// the declared one. Obligation 1 exists for the variables that are not
+// settings, which no generator writes; a setting's variable passes it through
+// the generated tables.
 //
 // What these gates do NOT cover, stated rather than implied:
 //
@@ -46,9 +45,10 @@ package gates
 //     whole literal there would demand a documentation row for a variable no
 //     process consults. Its own comment records the reason. Every backquoted
 //     occurrence remains prose in a comment or an error message.
-//   - Presence, not truth. A var being named in a document does not make the
-//     prose around it accurate. These gates stop a var disappearing; they
-//     cannot stop a description going stale.
+//   - Presence, not truth, for hand-written prose: programs.md,
+//     worker-diagnostics.md and the text around the generated tables. A var
+//     named there can still have a stale description; these gates stop only
+//     the var disappearing.
 
 import (
 	"maps"
@@ -78,7 +78,6 @@ const (
 	configurationDoc = "../docs/reference/configuration.md"
 	programsDoc      = "../docs/reference/programs.md"
 	workerDoc        = "../docs/reference/worker-diagnostics.md"
-	envExample       = "../.env.example"
 )
 
 // deploySurfaceRoots are the non-Go paths that configure a deployment: the
@@ -229,30 +228,9 @@ func entrypointRequired(t *testing.T) map[string]string {
 	return required
 }
 
-// TestEntrypointRequiredVarsAreInTheEnvExample: a var the container refuses to
-// boot without belongs in the file an operator is handed, not only in the
-// script that rejects them. docs/how-to/deploy-margince.md names .env.example
-// as that file, which is what makes this an obligation rather than a nicety.
-func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
-	t.Parallel()
-	offered := namesIn(t, envExample)
-
-	required := entrypointRequired(t)
-	var missing []string
-	for _, name := range slices.Sorted(maps.Keys(required)) {
-		if !offered[name] {
-			missing = append(missing, name+" (required by "+required[name]+")")
-		}
-	}
-	if len(missing) > 0 {
-		t.Errorf("%d var(s) a deploy entrypoint refuses to boot without, absent from %s — add them, commented, with the value shape an operator must replace:\n\t%s",
-			len(missing), envExample, strings.Join(missing, "\n\t"))
-	}
-}
-
-// TestEntrypointRequiredVarsAreDocumented is obligation 1 for the half it never
-// reached: a var the deploy surface refuses to boot without has to be written
-// down somewhere an operator reads.
+// TestEntrypointRequiredVarsAreDocumented is obligation 3, the half obligation
+// 1 never reached. A var the deploy surface refuses to boot without has to be
+// written down somewhere an operator reads.
 //
 // Obligation 1 covers Go readers only, and says so. Obligation 2 counts the
 // deploy surface, but only in the permissive direction. It asks whether a name
@@ -267,8 +245,8 @@ func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
 // not the whole file, is read. `MARGINCE_DSN` is named in a dozen other rows, so
 // a whole-file match would pass with the entrypoint section deleted.
 //
-// It reuses obligation 3's `${VAR:?}` set rather than sweeping for mentions,
-// and inherits that set's stated limits. The `:-default` form is not a
+// It reads the `${VAR:?}` set of entrypointRequired rather than sweeping for
+// mentions, and inherits that set's stated limits. The `:-default` form is not a
 // requirement, and an explicit guard or `set -u` is invisible to both. A var
 // with a fallback is not one an operator must supply; requiring those would
 // admit most of the deploy surface and leave the label meaningless.

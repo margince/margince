@@ -91,6 +91,11 @@ var classByKind = map[string]string{
 	"vcard_staging_failed":    classSystem,
 	KindApprovalPending:       ClassApprovalPending,
 	KindExtension:             classSystem,
+	// The answer to a colleague's own request to be handed a record.
+	"ownership_request_accepted":  classSystem,
+	"ownership_request_declined":  classSystem,
+	"ownership_request_expired":   classSystem,
+	"ownership_request_withdrawn": classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.

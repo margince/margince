@@ -38,9 +38,6 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 		{name: "legacy future", legacy: true, linked: true, future: true},
 	} {
 		start, held := at.Add(-time.Hour), "held"
-		if tc.future {
-			start = at.Add(time.Hour)
-		}
 		input := activities.LogActivityInput{Kind: "meeting", Subject: &tc.name, OccurredAt: &start, MeetingStatus: &held, Source: "manual"}
 		if tc.linked {
 			input.Links = []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(customer.Id)}}
@@ -56,7 +53,12 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 		}
 		// Imported legacy state may differ from a captured transition's host and links.
 		var b reportingBindings
-		if _, err := e.owner.Exec(human, "UPDATE activity SET host_user_id="+b.add(e.Rep3)+" WHERE id="+b.add(meeting.Id), b.values...); err != nil {
+		set := "host_user_id=" + b.add(e.Rep3)
+		if tc.future {
+			// Writers refuse held before the start; older rows can carry it.
+			set += ", occurred_at=" + b.add(at.Add(time.Hour))
+		}
+		if _, err := e.owner.Exec(human, "UPDATE activity SET "+set+" WHERE id="+b.add(meeting.Id), b.values...); err != nil {
 			t.Fatal(err)
 		}
 		if tc.legacy {
@@ -157,14 +159,17 @@ func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.
 		{"the two attendees' team", crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, 1},
 		{"the importer's team", crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team2)}, 0},
 	} {
-		selection := crmcontracts.ReportingSelection{Scope: tc.scope, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
-		result, err := service.Evaluate(human, selection)
-		if err != nil {
-			t.Fatalf("%s: %v", tc.name, err)
-		}
-		metric := result.Metrics[0]
-		if metric.Value == nil || *metric.Value != tc.want {
-			t.Errorf("%s counts %v meetings held, want %v (%+v)", tc.name, metric.Value, tc.want, metric.Coverage)
+		// The meeting is on a Friday, so this week and this month both hold it.
+		for _, period := range []crmcontracts.ReportingSelectionPeriod{"this_month", "this_week"} {
+			selection := crmcontracts.ReportingSelection{Scope: tc.scope, Period: period, TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
+			result, err := service.Evaluate(human, selection)
+			if err != nil {
+				t.Fatalf("%s, %s: %v", tc.name, period, err)
+			}
+			metric := result.Metrics[0]
+			if metric.Value == nil || *metric.Value != tc.want {
+				t.Errorf("%s counts %v meetings held %s, want %v (%+v)", tc.name, metric.Value, period, tc.want, metric.Coverage)
+			}
 		}
 	}
 }

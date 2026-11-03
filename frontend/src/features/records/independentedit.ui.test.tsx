@@ -6,6 +6,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -228,14 +229,16 @@ it("saves a deal's name across an unrelated update using the fresh version", asy
   render(<DealScreen id="x" />);
   fireEvent.click(await screen.findByRole("button", { name: "More actions" }));
   fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  // The drawer's own field; the page's head renames the deal too.
+  const drawer = await screen.findByRole("dialog");
   fireEvent.click(
-    await screen.findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: "Change Deal name" }),
   );
-  fireEvent.change(screen.getByLabelText("Deal name"), {
+  fireEvent.change(within(drawer).getByLabelText("Deal name"), {
     target: { value: "Renamed deal" },
   });
   current = { ...original, version: 5, description: "Updated description" };
-  fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+  fireEvent.keyDown(within(drawer).getByRole("textbox"), { key: "Enter" });
   await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { name: "Renamed deal" }, version: "4" },

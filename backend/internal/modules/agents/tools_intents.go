@@ -26,15 +26,19 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-// search resolves a `record_name` on the engine search_records runs.
+// search resolves a `record_name` on the engine search_records runs. The
+// readiness verbs need no retriever and share prep_for_meeting's seam, so both
+// read one preparation revision.
 func RegisterIntentTools(
 	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader, search RecordSearch,
+	records datasource.SystemOfRecordProvider, readiness MeetingReadiness,
 ) {
+	registerMeetingReadinessTools(r, readiness)
 	if retriever == nil {
 		return
 	}
-	r.Register(catchMeUpOn{retriever: retriever, search: search})
-	r.Register(prepForMeeting{retriever: retriever, brief: brief, search: search})
+	r.Register(catchMeUpOn{retriever: retriever, search: search, records: records})
+	r.Register(prepForMeeting{retriever: retriever, brief: brief, search: search, records: records, readiness: readiness})
 }
 
 // assembleAnchored settles which record the caller meant and builds the
@@ -51,12 +55,13 @@ func RegisterIntentTools(
 // record was named in words, nor off the assembled context, which echoes what
 // a retriever chose to put there.
 func assembleAnchored(
-	ctx context.Context, search RecordSearch, retriever retrieval.Retriever, args anchorArgs,
+	ctx context.Context, search RecordSearch, records datasource.SystemOfRecordProvider,
+	retriever retrieval.Retriever, args anchorArgs,
 ) (retrieval.Context, ids.UUID, error) {
 	if err := args.validate(); err != nil {
 		return retrieval.Context{}, ids.UUID{}, err
 	}
-	anchored, err := resolveAnchor(ctx, search, args)
+	anchored, err := resolveAnchor(ctx, search, records, args)
 	if err != nil {
 		return retrieval.Context{}, ids.UUID{}, err
 	}
@@ -178,6 +183,8 @@ type catchMeUpOn struct {
 	retriever retrieval.Retriever
 	// search resolves a `record_name`. See RegisterIntentTools.
 	search RecordSearch
+	// records names the candidates when a name is asked about in the chat.
+	records datasource.SystemOfRecordProvider
 }
 
 func (t catchMeUpOn) Spec() mcp.ToolSpec {
@@ -198,7 +205,7 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, _, err := assembleAnchored(ctx, t.search, t.retriever, args)
+	assembled, _, err := assembleAnchored(ctx, t.search, t.records, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -210,12 +217,16 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 type prepForMeeting struct {
 	retriever retrieval.Retriever
 	// search resolves a `record_name`. See RegisterIntentTools.
-	search RecordSearch
+	search  RecordSearch
+	records datasource.SystemOfRecordProvider
 	// brief is the contact page's own assembler. Nil is a wiring the tool
 	// survives rather than refuses: an installation without it answers the
 	// assembled picture, which is what this tool has always returned, instead
 	// of losing a read it can still perform.
 	brief MeetingBriefReader
+	// readiness answers the caller's own preparation for a meeting anchor, so
+	// an agent reads the revision it confirms. Nil leaves it absent.
+	readiness MeetingReadiness
 }
 
 func (t prepForMeeting) Spec() mcp.ToolSpec {
@@ -236,7 +247,7 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, anchored, err := assembleAnchored(ctx, t.search, t.retriever, args)
+	assembled, anchored, err := assembleAnchored(ctx, t.search, t.records, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +282,15 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if hasBrief {
 		noteBriefEvidence(ctx, written)
 		result.Brief = &written
+	}
+	if t.readiness != nil && args.RecordType == string(datasource.EntityActivity) {
+		prepared, attends, err := t.readiness.Read(ctx, anchored)
+		if err != nil {
+			return nil, err
+		}
+		if attends {
+			result.Preparation = &prepared
+		}
 	}
 	return json.Marshal(result)
 }

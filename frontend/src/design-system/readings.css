@@ -39,6 +39,9 @@
 .meterbar-danger span {
   background: var(--danger);
 }
+.meterbar-ai span {
+  background: var(--ai);
+}
 /* Same reasoning as the tone variants above: a caller can want the accent
  * without the fade to `--warning`, which reads as a warning creeping into a
  * bar that has no low-is-bad meaning at all. */

@@ -6,6 +6,7 @@ import { Button, Field, Radio } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import type { ListChip } from "../../design-system/listsurface";
 import { MoneyInput } from "../../design-system/moneyinput";
+import { countryOptions } from "../../format/assignedcountries";
 import {
   currencyOptions,
   type LeadingCurrencies,
@@ -20,7 +21,6 @@ import {
   THIS_QUARTER,
   VALUE_DIAL,
 } from "../../lib/dealranges";
-import { countryOptions } from "./assignedcountries";
 
 // The deal list's commercial dials: when a deal closes, what it is worth, what
 // it is priced in, and where its company is. The two ranges are typed rather

@@ -50,11 +50,10 @@ const dealRepairReason = "captured_mail_deal_repair"
 
 // capturedMailSQL selects the mail the deal repair inspects: live mail a
 // connector captured. Callers append the cursor and order.
-const capturedMailSQL = `
-	SELECT a.id FROM activity a
-	 WHERE a.kind = 'email' AND a.channel_provider IS NULL
-	   AND a.captured_by LIKE 'connector:%'
-	   AND a.archived_at IS NULL AND a.restricted_at IS NULL`
+const capturedConnectorActivitySQL = `a.channel_provider IS NULL AND a.captured_by LIKE 'connector:%'
+ AND a.archived_at IS NULL AND a.restricted_at IS NULL`
+
+const capturedMailSQL = `SELECT a.id FROM activity a WHERE a.kind = 'email' AND ` + capturedConnectorActivitySQL
 
 // dealProvenanceSQL classifies a mail's deal links by their audit rows. It
 // answers how many there are and one of them. It answers whether a colleague
@@ -169,17 +168,16 @@ func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) 
 	if live, err := lockForDeal(ctx, tx, mail); err != nil || !live {
 		return DealNone, err
 	}
-	var links int
-	var linked *string
-	var human, machine bool
-	if err := tx.QueryRow(ctx, dealProvenanceSQL, mail).Scan(&links, &linked, &human, &machine); err != nil {
-		return "", fmt.Errorf("capture: reading a mail's deal provenance: %w", err)
+	links, linked, human, machine, err := readDealProvenance(ctx, tx, mail)
+	if err != nil {
+		return "", err
 	}
+
 	switch {
 	case human:
 		return DealHumanKept, nil
 	case links == 0:
-		return r.asMailbox(ctx, tx, mail, func(f dealFiling) (DealOutcome, error) {
+		return r.asMailbox(ctx, tx, mail, dealRepairReason, func(f dealFiling) (DealOutcome, error) {
 			verdict, err := fileOnDeal(f, tx, mail, r.Candidates, nil)
 			return verdict.Outcome, err
 		})
@@ -188,7 +186,7 @@ func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) 
 		if err != nil {
 			return "", fmt.Errorf("capture: reading a mail's deal link: %w", err)
 		}
-		return r.asMailbox(ctx, tx, mail, func(f dealFiling) (DealOutcome, error) {
+		return r.asMailbox(ctx, tx, mail, dealRepairReason, func(f dealFiling) (DealOutcome, error) {
 			return recheckMachineDeal(f, tx, mail, current, r.Candidates)
 		})
 	default:
@@ -199,7 +197,7 @@ func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) 
 // asMailbox runs decide as each mailbox that imported the mail, as live
 // capture runs once per capture. It stops at the first change or confirmation.
 func (r DealRepair) asMailbox(
-	ctx context.Context, tx pgx.Tx, mail ids.ActivityID, decide func(dealFiling) (DealOutcome, error),
+	ctx context.Context, tx pgx.Tx, mail ids.ActivityID, reason string, decide func(dealFiling) (DealOutcome, error),
 ) (DealOutcome, error) {
 	var capturedBy string
 	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1 AND archived_at IS NULL AND restricted_at IS NULL`, mail).Scan(&capturedBy); err != nil {
@@ -226,7 +224,7 @@ func (r DealRepair) asMailbox(
 		if err != nil {
 			return "", err
 		}
-		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": dealRepairReason, "decided_as": seat}}
+		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": reason, "decided_as": seat}}
 		decided, err := decide(f)
 		if err != nil || decided.Changed() || decided == DealMachineConfirmed {
 			return decided, err
@@ -254,13 +252,13 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
-	return replaceMachineDeal(f, tx, mail, current, verdict)
+	return replaceMachineDeal(f, tx, mail, current, verdict, candidates)
 }
 
 // replaceMachineDeal takes the rule's old link back and writes the deal the
 // rule finds now. The new deal's admission is asked before anything is taken
 // back, so a refusal is known and reported, never a move that wrote nothing.
-func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID, verdict DealVerdict) (DealOutcome, error) {
+func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID, verdict DealVerdict, candidates DealCandidates) (DealOutcome, error) {
 	target := false
 	if verdict.Outcome == DealLinked {
 		var err error
@@ -278,7 +276,7 @@ func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	case !target:
 		return DealMachineRetractedRefused, nil
 	}
-	written, err := linkActivityToDeal(f, tx, mail, verdict.Deal)
+	written, err := linkActivityToDeal(f, tx, mail, verdict.Deal, candidates)
 	if err != nil {
 		return "", err
 	}
@@ -309,4 +307,12 @@ func EstimateDealRepair(ctx context.Context, q datatask.Querier, maximum int64) 
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (`+capturedMailSQL+` LIMIT $1) AS candidates`, maximum+1).Scan(&count)
 	return min(count, maximum), count > maximum, err
+}
+
+func readDealProvenance(ctx context.Context, tx pgx.Tx, activity ids.ActivityID) (links int, linked *string, human, machine bool, err error) {
+	err = tx.QueryRow(ctx, dealProvenanceSQL, activity).Scan(&links, &linked, &human, &machine)
+	if err != nil {
+		err = fmt.Errorf("capture: reading deal-link provenance: %w", err)
+	}
+	return
 }

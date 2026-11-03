@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -138,13 +139,24 @@ func TestATeamWeekHoldingALateAnswerFreezes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	e.WsExec(t, `UPDATE lead SET sla_breached_at = $2 WHERE id = $1`, lead.Id, lead.CreatedAt.Add(30*time.Minute))
+	// The lead arrives an hour into the reviewed week. Its breach and late answer
+	// then fall in that week, however close to the week's end the test runs.
+	var week time.Time
+	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		week, err = WeekStartOf(e.repCtx, tx, clocktest.Now(t))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	arrival := week.Add(time.Hour)
+	e.WsExec(t, `UPDATE lead SET created_at = $2, sla_breached_at = $3 WHERE id = $1`,
+		lead.Id, arrival, arrival.Add(30*time.Minute))
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
-	if wrote, err := e.Contacts.RecordLeadFirstResponse(e.Admin(), leadID, lead.CreatedAt.Add(time.Hour)); err != nil || !wrote {
+	if wrote, err := e.Contacts.RecordLeadFirstResponse(e.Admin(), leadID, arrival.Add(time.Hour)); err != nil || !wrote {
 		t.Fatalf("record late response: %v, wrote=%v", err, wrote)
 	}
 
-	at := nextWeek()
+	at := week.AddDate(0, 0, 7).Add(time.Hour)
 	if _, _, err := e.engine.AssembleFor(e.repCtx, at); err != nil {
 		t.Fatal(err)
 	}

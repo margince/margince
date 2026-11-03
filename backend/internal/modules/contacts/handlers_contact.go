@@ -82,6 +82,7 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	in.SharedWithMe = params.SharedWithMe
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {
@@ -277,10 +278,7 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 		Phone:          req.Phone,
 		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
 	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {

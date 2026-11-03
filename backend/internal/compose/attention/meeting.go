@@ -71,16 +71,16 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	// down for this yet" is. Carried here rather than as a field of its own so
 	// the contract gains no vocabulary for a display hint.
 	//
-	// Set only when the answer is KNOWN. A meeting whose content this reader may
-	// not read arrives with an empty body for a reason that is not preparation,
-	// and `meetingPrep` refuses to guess; an absent kind is that refusal
-	// reaching the page, where it draws nothing.
-	if meeting.PrepKnown {
+	// Set only when the reader's own preparation is known. An absent kind draws
+	// nothing, which is right for a meeting the reader does not attend or may
+	// not read.
+	if meeting.Preparation != nil {
 		kind := "prepared"
-		if meeting.NeedsPrep {
+		if meeting.Preparation.State != crmcontracts.MeetingPreparationStateReady {
 			kind = meetingKindUnprepared
 		}
 		item.Kind = &kind
+		item.Preparation = meeting.Preparation
 	}
 	// Whose calendar it came off, where one claims it. Absent for a meeting
 	// booked in the app or captured before the host was recorded — the row then
@@ -108,7 +108,8 @@ const (
 	sourceMeetingOutcome = "meeting_outcome"
 )
 
-// meetingKindUnprepared marks a meeting with nothing written down for it.
+// meetingKindUnprepared marks a meeting the reader has not confirmed they are
+// ready for, at its current preparation revision.
 //
 // One spelling, written by meetingItem and read by classifyMeeting. A second
 // would be silent: the writer would stamp a word the reader never matches, and
@@ -120,26 +121,31 @@ const meetingKindUnprepared = "unprepared"
 
 // classifyMeeting: a meeting starting within the horizon is the most urgent
 // thing on the page, because it happens whether or not the reader acts. A day
-// meeting has no start to be near, so it is never one.
+// meeting has no start to be near, so it is never one. A reader who said they
+// are ready keeps the reminder, and the meeting leaves the urgent work.
 func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	reasons := []crmcontracts.WorklistReason{}
 	day := occurredday.IsStatedDay(item.OccurredPrecision)
+	ready := item.Preparation != nil && item.Preparation.State == crmcontracts.MeetingPreparationStateReady
 	if !day && item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
-		level = levelWaiting
+		if !ready {
+			level = levelWaiting
+		}
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
-	// Nothing written down for it, said only where the lane could actually tell
-	// — an absent kind means the reader may not read the row's content, not
-	// that the meeting is ready. Silence beats a warning nobody can act on.
-	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+	// Said only where the lane could tell. An absent kind means the reader does
+	// not attend or may not read the meeting, not that they are ready.
+	unprepared := item.Kind != nil && *item.Kind == meetingKindUnprepared
+	if unprepared {
 		reasons = append(reasons, reason("meeting_unprepared", nil))
 	}
 	consequence := "none"
-	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+	if unprepared {
 		consequence = "meeting_unprepared"
 	}
 	row := base(item, level, "meetings", crmcontracts.WorklistItemConsequence(consequence))
+	row.Preparation = item.Preparation
 	// The way into the brief, where the row named a contact to read it on. Both
 	// ids travel because neither names it alone: the activity says WHICH
 	// meeting, the contact says WHOSE page it opens on.
@@ -166,6 +172,9 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		occurredAt: occurredOf(item, asOf),
+		// The reader's own imminent preparation keeps its place whatever else
+		// the meetings lane holds: diversity limits are for routine work.
+		uncrowdable: unprepared && level == levelWaiting,
 		// The HOST, and never the reader. A team-scoped reader receives their
 		// team's meetings, so naming the reader would make every colleague's
 		// appointment look like their own — which is what this row used to do,
@@ -199,10 +208,9 @@ func hostOf(item crmcontracts.AttentionItem) ids.UUID {
 //
 // It offers `decide`, the same verb an approval carries and for the same
 // reason: the answer is given ON the row rather than somewhere else. What the
-// row asks is how the meeting went, and the three answers — held, no-show,
-// cancelled — are the meeting_status vocabulary the activity has always
-// contracted. PATCH /activities/{id} has accepted them since the field existed;
-// what was missing was anywhere to say so at the one moment a human knows.
+// row asks is how the meeting went: held or no-show through `decide`, and
+// `cancel` only where no live calendar invitation holds the meeting.
+// PATCH /activities/{id} refuses that cancel, so the row does not offer it.
 //
 // Not `open`: this row's subject is the ACTIVITY, a timeline entry with no page
 // of its own, so a verb promising to open it would advertise a destination that
@@ -216,10 +224,8 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		Title:      &subject,
 		OccurredAt: &started,
 		Subject:    subjectOf("activity", meeting.ID),
-		Actions: []crmcontracts.AttentionItemActions{
-			crmcontracts.AttentionItemActionsDecide,
-		},
-		Version: meeting.Version,
+		Actions:    meetingOutcomeActions(meeting),
+		Version:    meeting.Version,
 		// Read with the time it describes: a day meeting has no start hour.
 		OccurredPrecision: dayOnly(meeting.Precision),
 	}
@@ -236,6 +242,19 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		item.WithContact = &with
 	}
 	return item
+}
+
+// meetingOutcomeActions is what an outcome row offers. Both verbs PATCH the
+// meeting, so a reader who may not change it is offered neither.
+func meetingOutcomeActions(meeting MeetingAwaitingOutcome) []crmcontracts.AttentionItemActions {
+	if meeting.ReadOnly {
+		return []crmcontracts.AttentionItemActions{}
+	}
+	actions := []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsDecide}
+	if !meeting.CalendarManaged {
+		actions = append(actions, crmcontracts.AttentionItemActionsCancel)
+	}
+	return actions
 }
 
 // classifyUnansweredMeeting places a meeting that happened and owes an answer.
@@ -255,6 +274,7 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	// the consequence says what it costs.
 	row := base(item, levelAgreed, "meetings", "data_drifts")
 	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
+	row.Because = appendReadOnly(row, crmcontracts.WorklistItemActionsDecide)
 	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,

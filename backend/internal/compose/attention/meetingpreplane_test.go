@@ -3,9 +3,8 @@
 
 package attention
 
-// A meeting nobody has prepared says so, and a meeting this reader may not read
-// says nothing at all. The second half is the one worth a test: the row arrives
-// with an empty body either way, and only the lane knows which emptiness it is.
+// A meeting the reader has not confirmed ready says so. A meeting this reader
+// does not attend or may not read says nothing at all.
 
 import (
 	"context"
@@ -53,11 +52,11 @@ func reasonsOn(t *testing.T, rows []crmcontracts.WorklistItem, subject string) [
 	return nil
 }
 
-func TestAMeetingWithNothingWrittenDownSaysSo(t *testing.T) {
+func TestAMeetingTheReaderHasNotConfirmedSaysSo(t *testing.T) {
 	soon := readInstant.Add(30 * time.Minute)
 	svc := meetingPrepService([]Meeting{
-		{ID: ids.NewV7(), Subject: "unprepared", StartsAt: soon, NeedsPrep: true, PrepKnown: true},
-		{ID: ids.NewV7(), Subject: "prepared", StartsAt: soon, NeedsPrep: false, PrepKnown: true},
+		{ID: ids.NewV7(), Subject: "unprepared", StartsAt: soon, Preparation: ownPreparation(false)},
+		{ID: ids.NewV7(), Subject: "prepared", StartsAt: soon, Preparation: ownPreparation(true)},
 	})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
@@ -66,20 +65,19 @@ func TestAMeetingWithNothingWrittenDownSaysSo(t *testing.T) {
 	}
 
 	if got := reasonsOn(t, day.Queue, "unprepared"); !slices.Contains(got, "meeting_unprepared") {
-		t.Errorf("a meeting with nothing written down published %v, wanted meeting_unprepared among them", got)
+		t.Errorf("a meeting the reader has not confirmed published %v, wanted meeting_unprepared among them", got)
 	}
 	if got := reasonsOn(t, day.Queue, "prepared"); slices.Contains(got, "meeting_unprepared") {
 		t.Errorf("a prepared meeting published %v, which claims it is unprepared", got)
 	}
 }
 
-// The refusal case. A meeting whose content is withheld reaches the lane with
-// PrepKnown false, and the queue must say nothing rather than tell a reader to
-// prepare a meeting they cannot open.
+// The refusal case. A meeting whose content is withheld, or that the reader
+// does not attend, reaches the lane with no preparation. The queue must then
+// say nothing rather than tell a reader to prepare it.
 func TestAMeetingThisReaderCannotReadClaimsNothingAboutPreparation(t *testing.T) {
 	svc := meetingPrepService([]Meeting{{
 		ID: ids.NewV7(), Subject: "withheld", StartsAt: readInstant.Add(30 * time.Minute),
-		NeedsPrep: true, PrepKnown: false,
 	}})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
@@ -99,7 +97,7 @@ func TestAMeetingThisReaderCannotReadClaimsNothingAboutPreparation(t *testing.T)
 func TestTheUnpreparedMarkHasOneSpelling(t *testing.T) {
 	written := meetingItem(Meeting{
 		ID: ids.NewV7(), Subject: "unprepared", StartsAt: readInstant,
-		NeedsPrep: true, PrepKnown: true,
+		Preparation: ownPreparation(false),
 	})
 	if written.Kind == nil {
 		t.Fatal("meetingItem stamped no kind on a meeting it knows is unprepared")
@@ -111,4 +109,13 @@ func TestTheUnpreparedMarkHasOneSpelling(t *testing.T) {
 		}
 	}
 	t.Errorf("classifyMeeting did not read the mark meetingItem wrote (%q) — the two spellings have drifted", *written.Kind)
+}
+
+// ownPreparation is the reader's own preparation for a meeting they attend.
+func ownPreparation(ready bool) *crmcontracts.MeetingPreparation {
+	state := crmcontracts.MeetingPreparationStateNeedsReview
+	if ready {
+		state = crmcontracts.MeetingPreparationStateReady
+	}
+	return &crmcontracts.MeetingPreparation{State: state, Revision: "r1", Changed: []crmcontracts.MeetingPreparationChanged{}}
 }

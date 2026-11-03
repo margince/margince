@@ -30,19 +30,16 @@ const ifMatchHeader = "If-Match"
 
 // runAutoExecuted dispatches a call the gate admitted at the auto-execute tier.
 //
-// An X-Approval-Token on such a call is CONSUMED, whatever tool it names. A
-// staged 🟡 call can resolve 🟢 on its retry — the record moved, or the
-// per-field split staged an otherwise auto-execute patch — and the asserted
-// authority is then still an assertion: left unread, the approval stays pending
-// in a human's inbox for work that already happened, and an invalid or replayed
-// token is accepted by being ignored. The MCP door has always redeemed on this
-// arm (registry.go, runClaimed); this door redeemed for update_record alone
-// (margince/margince#812).
+// An X-Approval-Token on such a call is CONSUMED, whatever tool it names.
+// A staged 🟡 call can resolve 🟢 on its retry because the record moved.
+// The asserted authority is then still an assertion. Left unread, the approval
+// stays pending in a human's inbox for work that already happened.
+// An invalid or replayed token is rejected: consumePresentedToken writes the
+// error and the handler does not run. The MCP door redeems on this arm too
+// (registry.go, runClaimed).
 //
 // A REDEEMED call goes straight to the handler: it carries exactly the change a
-// human released, whose identity the diff_hash already bound, so re-running the
-// per-field ownership split over it would stage a second approval for the
-// overwrite that was just approved.
+// human released, whose identity the diff_hash already bound.
 func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, outcome admissionOutcome) {
 	redemption, redeemed, ok := consumePresentedToken(w, r, outcome.staging, outcome.pol, outcome.body)
 	if redeemed && !ok {

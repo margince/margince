@@ -2,8 +2,12 @@ import { Check } from "lucide-react";
 import type { ChangeEvent, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
+import { VoiceKinds } from "../../../components/voicekinds";
+import { Voiceprint } from "../../../components/voiceprint";
 import { Button, Disclosure, Radio } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
+import { Eyebrow } from "../../../design-system/eyebrow";
+import { Meter } from "../../../design-system/readings";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
@@ -76,14 +80,9 @@ function useFloorReachedAnnouncement(ready: boolean, words: number): string {
 }
 
 /**
- * The floor meter: a real `<progress>` plus the numbers behind it, reading
- * the same corpus total the sources list and the build gate already read —
- * never a second count, and never a size estimate. The bar caps at the
- * floor rather than growing past it: more words keep helping the build, but
- * the floor itself has nothing further to fill toward, so a full bar past
- * that point would misreport progress that does not exist. `ready` decides
- * only the WORDING (still short of the floor vs. cleared it); it is never
- * presented as a finished task, because more material still sharpens it.
+ * The floor meter reads the corpus total the build gate reads, never a second
+ * count. The bar caps at the floor: more words still help, but the floor has
+ * nothing further to fill. `ready` decides only the wording.
  */
 function VoiceCorpusFloorMeter({
   words,
@@ -96,11 +95,12 @@ function VoiceCorpusFloorMeter({
   const floor = formatNumber(VOICE_MIN_WORDS, locale);
   return (
     <div className="ob-voice-meter">
-      <progress
-        className="ob-voice-meter-bar"
+      <Meter
+        dense
+        tone="ai"
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
-        aria-label={t("ob.conv.voice.meterLabel", { min: floor })}
+        label={t("ob.conv.voice.meterLabel", { min: floor })}
       />
       <p className="ob-voice-meter-line t-sub">
         {ready
@@ -114,6 +114,29 @@ function VoiceCorpusFloorMeter({
         {announcement}
       </p>
     </div>
+  );
+}
+
+// The ring is the share of the build floor, and the waveform rises with it.
+// The meter under it says the same count in words, so the drawing is decoration.
+const PRINT_MIN_AMPLITUDE = 0.25;
+
+function VoicePrintCard({
+  words,
+  ready,
+}: Readonly<{ words: number; ready: boolean }>) {
+  const t = useT();
+  const fraction = Math.min(words, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
+  return (
+    <section className="ob-voice-print">
+      <Eyebrow>{t("ob.conv.voice.printLabel")}</Eyebrow>
+      <Voiceprint
+        size="medium"
+        fraction={fraction}
+        amplitude={PRINT_MIN_AMPLITUDE + (1 - PRINT_MIN_AMPLITUDE) * fraction}
+      />
+      <VoiceCorpusFloorMeter words={words} ready={ready} />
+    </section>
   );
 }
 
@@ -163,6 +186,7 @@ export function VoiceCollectScene({
       <VoiceHeroBand />
       <div className="ob-voice-collect">
         <div className="ob-voice-collect-main">
+          <VoiceKinds />
           <div className="ob-voice-drop">
             <input
               ref={fileRef}
@@ -227,8 +251,6 @@ export function VoiceCollectScene({
             )}
           </div>
 
-          <VoiceCorpusFloorMeter words={words} ready={floorCleared} />
-
           {manifest.length > 0 && (
             <section className="ob-voice-sources">
               <p className="ob-voice-sources-head t-eyebrow">
@@ -259,7 +281,10 @@ export function VoiceCollectScene({
 
           <ErrorLine>{startError}</ErrorLine>
         </div>
-        <VoiceDistillPanel manifest={manifest} summary={summary} />
+        <div className="ob-voice-collect-side">
+          <VoicePrintCard words={words} ready={floorCleared} />
+          <VoiceDistillPanel manifest={manifest} summary={summary} />
+        </div>
       </div>
 
       <div className="ob-scene-foot">

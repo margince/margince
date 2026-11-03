@@ -10,8 +10,8 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-3);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 .backfill-estimate p {
   margin: 0;

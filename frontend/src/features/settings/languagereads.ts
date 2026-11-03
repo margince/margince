@@ -9,6 +9,8 @@ const READER_LANGUAGE_READS = [
   "reporting-catalog",
   "reporting-card-preview",
   "reporting-comparison",
+  "signal",
+  "signals",
 ];
 
 export function reloadReaderLanguageReads(client: QueryClient) {

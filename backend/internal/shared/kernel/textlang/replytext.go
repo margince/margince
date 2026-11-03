@@ -195,8 +195,7 @@ func quoteStart(runes []rune) int {
 }
 
 // provenQuoteStart is quoteStart before a second sender header counted as a
-// quote. CurrentMessage keeps it: stored quote proofs hash its output, so a
-// changed cut would stop verifying proofs stored for mails of that shape.
+// quote. A quote proof stored with that cut is verified against it.
 func provenQuoteStart(runes []rune) int {
 	return quoteBoundary(runes, quoteReading{keepSecondSender: true})
 }
@@ -254,7 +253,8 @@ func quoteBoundary(runes []rune, reading quoteReading) int {
 // opensQuote is whether the line starts a quote this reading cuts at. With
 // passMarked set, a quote that marks every line with ">" is read past.
 func opensQuote(runes []rune, offset int, line []rune, passMarked bool) bool {
-	return startsQuote(line) && (!passMarked || !opensMarkedQuote(runes, offset, line))
+	return (startsQuote(line) || (passMarked && opensReplyHeader(runes, offset, line))) &&
+		(!passMarked || !opensMarkedQuote(runes, offset, line))
 }
 
 // opensMarkedQuote reports whether the line is a ">" line, or the attribution
@@ -387,8 +387,13 @@ func NewTextOnly(text string) string {
 // A forwarded original remains available in the full activity, not presented
 // here as the forwarding contact's own statement.
 func CurrentMessage(text string) string {
+	return currentMessageTo(text, quoteStart)
+}
+
+// currentMessageTo is CurrentMessage under a given quote boundary.
+func currentMessageTo(text string, boundary func([]rune) int) string {
 	runes := []rune(text)
-	if offset := provenQuoteStart(runes); offset >= 0 {
+	if offset := boundary(runes); offset >= 0 {
 		runes = runes[:offset]
 	}
 	return strings.TrimSpace(string(runes))
@@ -399,8 +404,8 @@ func CurrentMessage(text string) string {
 // text from an unmarked quote or forward down are dropped. Every reader that
 // takes a fact about the sender from a mail body reads these lines.
 //
-// CurrentMessage stops at the first ">" line instead, because stored quote
-// proofs hash its text. Both cut at the same boundaries quoteBoundary finds.
+// CurrentMessage stops at the first ">" line instead, because quote proofs
+// hash its text. Both cut at the same boundaries quoteBoundary finds.
 func SenderLines(body string) []string {
 	runes := []rune(body)
 	if offset := unmarkedQuoteStart(runes); offset >= 0 {

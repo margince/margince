@@ -1,4 +1,5 @@
 import type { Translator } from "../../i18n";
+import type { WorklistView } from "../../lib/worklistviews";
 import type { WorklistFilter } from "./worklist.queries";
 
 // The day, drawn.
@@ -34,10 +35,15 @@ export function clearSentence(
   colleague: string | null,
   t: Translator,
   hasMore = false,
+  view: WorklistView = "today",
 ): string {
   if (hasMore) return t("worklist.emptyPage");
   if (partial) {
     return t("worklist.clearOfWhatWasRead");
+  }
+  // Decisions and System each say which kind of work is clear.
+  if (view !== "today") {
+    return t(`worklist.clear.${view}`);
   }
   if (filter === "tasks") {
     return t("worklist.clearOfTasksToday");

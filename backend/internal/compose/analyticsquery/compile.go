@@ -18,6 +18,7 @@ package analyticsquery
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -52,6 +53,11 @@ type Plan struct {
 	// so discloses nothing by difference.
 	ExcludedSQL  string
 	ExcludedArgs []any
+	// ContributorsSQL answers, per group and over the answer's own `WHERE`, the
+	// distinct seats behind it, with ContributorsArgs as its bind list. Empty
+	// when the entity names no contributor.
+	ContributorsSQL  string
+	ContributorsArgs []any
 }
 
 // defaultLimit bounds an answer nobody bounded.
@@ -136,6 +142,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 		return Plan{}, err
 	}
 	where = append(where, scoped...)
+	contributorsSQL, contributorsArgs := contributors(entity, selects[:groupCount], where, args)
 
 	sql := fmt.Sprintf("SELECT %s FROM %s%s", strings.Join(selects, ", "), entity.From, whereSQL(where))
 	if groupCount > 0 {
@@ -152,6 +159,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	plan := Plan{
 		SQL: sql, Args: args, Columns: columns,
 		GroupCount: groupCount, CountColumn: countColumn,
+		ContributorsSQL: contributorsSQL, ContributorsArgs: contributorsArgs,
 	}
 	plan.ExcludedSQL, plan.ExcludedArgs, err = excludedCount(entity, q, scope)
 	if err != nil {
@@ -200,6 +208,19 @@ func excludedCount(entity Entity, q Query, scope ScopeClauses) (string, []any, e
 	where = append(where, "NOT ("+strings.Join(filters, " AND ")+")")
 	return fmt.Sprintf("SELECT count(*) FROM %s WHERE %s",
 		entity.From, strings.Join(where, " AND ")), args, nil
+}
+
+// contributors renders the statement that lists the seats behind each group.
+func contributors(entity Entity, groups, where []string, args []any) (string, []any) {
+	if entity.Contributor == "" {
+		return "", nil
+	}
+	sql := fmt.Sprintf("SELECT array_agg(DISTINCT %[1]s) FILTER (WHERE %[1]s IS NOT NULL) FROM %[2]s%[3]s",
+		entity.Contributor, entity.From, whereSQL(where))
+	if len(groups) > 0 {
+		sql += " GROUP BY " + strings.Join(groups, ", ")
+	}
+	return sql, slices.Clone(args)
 }
 
 // countRowsColumn is the name of the count every plan carries. Prefixed so it
@@ -305,6 +326,14 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 		field, ok := entity.Lookup(f.Field)
 		if !ok {
 			return nil, unknownFilterField(entity, f.Field)
+		}
+		if f.Basis != nil && field.Period != nil && !valuelessOps[f.Op] {
+			clause, err := periodClause(*field.Period, f, arg)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, clause)
+			continue
 		}
 		form := filterSQL[f.Op]
 		if valuelessOps[f.Op] {

@@ -3,6 +3,7 @@
 
 import { type ComponentProps, useId, useState } from "react";
 import { LogActivityAction } from "../../components/logactivity.action";
+import { AppLink } from "../../design-system/applink";
 import { Modal } from "../../design-system/atoms";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { Heading } from "../../design-system/heading";
@@ -107,13 +108,13 @@ function DealSummaryDrawer({
         <div className="record-stack">
           <DealStatusCardPanel key={summary.deal.id} deal={summary.deal} />
           <p>
-            <a
+            <AppLink
               className="entity-link"
               href={routeHash({ screen: "deals", id: summary.deal.id })}
               onClick={onClose}
             >
               {t("deal.openDeal")}
-            </a>
+            </AppLink>
           </p>
         </div>
       )}

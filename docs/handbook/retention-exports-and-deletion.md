@@ -79,7 +79,7 @@ To pause a rule, turn **Enabled** off; **Delete policy** removes it fully.
 Also called: data retention, retention period, auto-delete.
 
 ### How do I record a contact's consent?
-To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to mail the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
+To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to preview the mail and then send the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 
@@ -137,6 +137,11 @@ The three retention actions are **Archive**, **Anonymize** and **Erase**. With *
 The app makes this clear: "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode."
 
 Anonymize and erase clear different things. An erasure also reaches the first copies of captured messages and the files sent with those messages. It reaches the contact's leads and scores, their unsubscribe links and their Deal Room seats too. Anonymizing leaves all of those.
+
+Both actions remove stored recipient evidence used to add contacts from captured
+conversations. An access package includes only the subject's own addresses from
+messages the requester may share. It excludes other recipients' addresses and
+private folder names.
 
 ### What anonymize and erase do
 **Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.

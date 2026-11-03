@@ -186,3 +186,37 @@ test.describe("the record's column holds still", () => {
     }
   }
 });
+
+test.describe("a refused rename under the record's name", () => {
+  // The name is drawn in heading type. The refusal beneath it took that type
+  // from its wrapper: a red second headline that wrapped over five lines.
+  // The admin fixture holds no contact or company update (E2E_ADMIN_GRANTS), so
+  // those two draw their name as text and have no rename to refuse.
+  const RENAMED = RECORDS.filter(
+    (record) => record.screen !== "contacts" && record.screen !== "companies",
+  );
+  for (const record of RENAMED) {
+    test(`reads in body type on a ${record.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await openRecord(page, record.route);
+
+      const rename = page.locator(".record-split-rename");
+      await rename.locator(".inline-editable").click();
+      const field = rename.getByRole("textbox");
+      await field.fill("");
+      await field.press("Enter");
+      const refusal = rename.getByRole("alert");
+      await expect(refusal).toBeVisible();
+
+      const type = (selector: string) =>
+        page.locator(selector).evaluate((element) => {
+          const style = getComputedStyle(element);
+          return `${style.fontSize} ${style.fontWeight}`;
+        });
+      expect(
+        await type(".record-split-rename [role=alert]"),
+        "the refusal under the name is set in the name's heading type",
+      ).toBe(await type("body"));
+    });
+  }
+});

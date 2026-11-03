@@ -59,7 +59,7 @@ func TestTheQueueAsksForEveryUnresolvedState(t *testing.T) {
 	// states to get wrong: it reads as handled, so nobody looks at it again,
 	// and the duty quietly stops being anybody's — which is the failure the
 	// whole table exists to prevent.
-	want := []string{"open", "assigned", "queued", "delivery_failed", "blocked"}
+	want := []string{"open", "assigned", "queued", "delivery_failed", "blocked", "source_review"}
 	if len(got) != len(want) {
 		t.Fatalf("the queue asks for %v, want %v — a state was added to the vocabulary without "+
 			"deciding whether a case sitting in it is still owed", got, want)
@@ -108,15 +108,12 @@ func TestDataFromTheSubjectOwesNoCase(t *testing.T) {
 	}
 }
 
-// TestAnUnknownKindTakesTheStrictReading — the census above fails when the
-// vocabulary grows, but only if somebody runs it. Until then the default must
-// not go quiet: a contact whose origin nobody knows is exactly the one most
-// likely to be owed a notice.
-func TestAnUnknownKindTakesTheStrictReading(t *testing.T) {
-	duty, owed := DutyFor("harvested_from_somewhere_new")
-	if !owed || duty.Rule != RuleArt14 {
-		t.Errorf("an unrecognised acquisition kind owes %v/%q, want an Art. 14 case: a duty "+
-			"wrongly raised costs somebody a look, one wrongly skipped is invisible", owed, duty.Rule)
+func TestUnknownSourcesRequireAssessmentWithoutADeadline(t *testing.T) {
+	for _, kind := range []string{"unknown_legacy", "harvested_from_somewhere_new", ""} {
+		duty, needsCase := DutyFor(kind)
+		if !needsCase || duty.Rule != RuleUnassessed || duty.State != NoticeSourceReview || len(duty.Routes) != 0 {
+			t.Errorf("%q = %#v, %t; want source review without a sending route", kind, duty, needsCase)
+		}
 	}
 }
 

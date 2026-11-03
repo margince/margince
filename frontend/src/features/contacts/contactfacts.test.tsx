@@ -59,6 +59,29 @@ describe("a contact an import wrote", () => {
   });
 });
 
+// The archived page draws the contact from its own row, so the row's
+// `created_by` is all that can name whom an agent made it for.
+describe("a contact an agent created", () => {
+  const AGENT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+  it("names the colleague the agent worked for and the tool", () => {
+    show("manual", {
+      ...archivedContact,
+      captured_by: AGENT,
+      created_by: {
+        actor_type: "agent",
+        actor_id: AGENT,
+        on_behalf_of_name: "Anna Weber",
+        agent_client: "Claude",
+      },
+    });
+
+    expect(
+      screen.getByText("Made by Claude for Anna Weber"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("the ways to reach a contact in the header", () => {
   const stamp = { source: "manual", captured_by: "human:u-1" } as const;
   const reachable: Contact = {

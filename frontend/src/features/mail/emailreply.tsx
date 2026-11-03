@@ -57,7 +57,7 @@ export function replyAnchor(
 }
 
 /**
- * The foot of the email drawer: Reply, Forward, and the rest behind More.
+ * Actions for one expanded message: Reply, Forward, and the rest behind More.
  *
  * Reply follows the server's `can_reply`, so a withheld message offers none.
  * Every verb needs a record to file under. A message filed against nothing

@@ -99,6 +99,13 @@ func (s *Service) WithContactEmployers(e ContactEmployers) *Service {
 	return s
 }
 
+// WithMeetingOrganizers binds the reader that says which colleague organized
+// a meeting. Unbound, a meeting row's host is whose calendar it came off.
+func (s *Service) WithMeetingOrganizers(o MeetingOrganizers) *Service {
+	s.organizers = o
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //
