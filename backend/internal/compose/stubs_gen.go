@@ -367,6 +367,10 @@ func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
+func (stubs) GetAccountCoverage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAccountCoverageParams) {
+	httperr.NotImplemented(w, r, "GetAccountCoverage")
+}
+
 func (stubs) AssessSalesReview(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "AssessSalesReview")
 }

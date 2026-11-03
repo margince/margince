@@ -20008,6 +20008,17 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
+        account_coverage:
+          $ref: '#/components/schemas/AccountCoverageThresholds'
+    AccountCoverageThresholds:
+      type: object
+      additionalProperties: false
+      description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
+      properties:
+        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1."}
+        untouched_days: {type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21."}
+        silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30."}
+        won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180."}
     ReportingFramework:
       type: object
       additionalProperties: false
