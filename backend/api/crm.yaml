@@ -67146,6 +67146,12 @@ components:
         auto_learning_enabled: { type: boolean, default: false, description: Explicit owner opt-in; defaults off. }
         active_source_hash: { type: [string, 'null'], readOnly: true }
         candidate_version: { type: [integer, 'null'], minimum: 1, readOnly: true }
+        first_build_words_remaining: { type: integer, minimum: 0, readOnly: true, description: 'Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting.' }
+        latest_build:
+          description: The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id.
+          allOf: [{ $ref: '#/components/schemas/VoiceBuild' }]
+          nullable: true
+          readOnly: true
         last_built_at: { type: [string, 'null'], format: date-time, readOnly: true }
         source: { type: string }
         captured_by: { type: string, readOnly: true }

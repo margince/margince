@@ -49291,6 +49291,10 @@ export interface components {
             auto_learning_enabled: boolean;
             readonly active_source_hash: string | null;
             readonly candidate_version: number | null;
+            /** @description Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting. */
+            readonly first_build_words_remaining?: number;
+            /** @description The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id. */
+            readonly latest_build?: components["schemas"]["VoiceBuild"] | null;
             /** Format: date-time */
             readonly last_built_at: string | null;
             source: string;
