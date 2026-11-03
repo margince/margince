@@ -53,11 +53,23 @@ export function MySdrWork({
 }: Readonly<{ self: string; locale: Locale }>) {
   const t = useT();
   const readsLeads = useCan("lead", "read");
-  const summary = useSdrSummary(self, readsLeads);
+  const readsReports = useCan("report_definition", "read");
+  const evaluation = useMyLeadsEvaluation(self, readsReports);
+  // The summary counts at the evaluation's instant, so the two describe one
+  // moment. It waits only while that instant is unknown, never on a failure.
+  const summary = useSdrSummary(
+    self,
+    readsLeads && !(readsReports && evaluation.isPending),
+    evaluation.data?.context.evaluated_at,
+  );
   return (
     <>
       {readsLeads && (
-        <MyLeads self={self} locale={locale} summary={summary.data} />
+        <MyLeads
+          locale={locale}
+          summary={summary.data}
+          evaluation={readsReports ? evaluation : undefined}
+        />
       )}
       {/* Which workflow applies is the summary's answer, so a failed read
           says so instead of reading as a workspace with no handoffs. */}
@@ -88,32 +100,31 @@ export function MySdrWork({
   );
 }
 
-/** The seat's own handoff and meeting counts, under the key both views share. */
-export function useSdrSummary(self: string, enabled: boolean) {
+/**
+ * The seat's own handoff and meeting counts, under the key both views share.
+ * asOf counts them at an evaluation's instant; omitted, they are counted now.
+ */
+export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
   return useQuery({
-    queryKey: ["sdr-summary", self],
+    queryKey: ["sdr-summary", self, asOf ?? null],
     enabled,
     queryFn: async ({ signal }): Promise<SdrSummary> =>
       unwrap(
         await api.GET("/analytics/sdr-summary", {
-          params: { query: { scope_kind: "owner", scope_id: self } },
+          params: {
+            query: { scope_kind: "owner", scope_id: self, as_of: asOf },
+          },
           signal,
         }),
       ),
   });
 }
 
-function MyLeads({
-  self,
-  locale,
-  summary,
-}: Readonly<{ self: string; locale: Locale; summary?: SdrSummary }>) {
-  const t = useT();
-  const readsReports = useCan("report_definition", "read");
-  const catalog = useReportingCatalog(readsReports);
-  const evaluation = useQuery({
+/** The seat's lead readings for this month, which the summary is read beside. */
+function useMyLeadsEvaluation(self: string, enabled: boolean) {
+  return useQuery({
     queryKey: ["reporting-evaluation", "my-leads", self],
-    enabled: readsReports,
+    enabled,
     queryFn: async ({ signal }): Promise<ReportingEvaluation> => {
       const selection: ReportingSelection = {
         scope: { kind: "owner", id: self },
@@ -131,7 +142,20 @@ function MyLeads({
       );
     },
   });
-  if (!readsReports) return null;
+}
+
+function MyLeads({
+  locale,
+  summary,
+  evaluation,
+}: Readonly<{
+  locale: Locale;
+  summary?: SdrSummary;
+  evaluation?: ReturnType<typeof useMyLeadsEvaluation>;
+}>) {
+  const t = useT();
+  const catalog = useReportingCatalog(evaluation !== undefined);
+  if (!evaluation) return null;
   // The catalog's own words for "Leads qualified", so the screen never
   // restates a definition the server may change.
   const qualifiedMeans = catalog.data?.metrics.find(

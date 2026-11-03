@@ -1,11 +1,20 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
+import {
+  REPORTING_FIXTURE_ZONE,
+  reportingStoryEvaluation,
+} from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -100,6 +109,7 @@ function show(
   over: Readonly<{
     summary?: SdrSummary | "failed";
     worklist?: () => Response;
+    evaluation?: unknown;
   }> = {},
 ) {
   const asked: URL[] = [];
@@ -110,7 +120,9 @@ function show(
     }),
     "GET /analytics/metrics": () => jsonResponse(reportingSectionsCatalog),
     "GET /analytics/evaluate": () =>
-      jsonResponse({ title: "Unavailable", status: 503 }, 503),
+      over.evaluation === undefined
+        ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+        : jsonResponse(over.evaluation),
     "GET /analytics/sdr-summary": () =>
       over.summary === "failed"
         ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
@@ -146,6 +158,25 @@ function show(
 }
 
 describe("MySdrWork", () => {
+  it("reads the summary at the instant its lead readings were evaluated", async () => {
+    const asked = show({ evaluation: reportingStoryEvaluation });
+    await screen.findByText(en["analytics.sdrLeads"]);
+    const summary = asked.find((url) =>
+      url.pathname.endsWith("/analytics/sdr-summary"),
+    );
+    expect(summary?.searchParams.get("as_of")).toBe(
+      reportingStoryEvaluation.context.evaluated_at,
+    );
+  });
+
+  it("still reads the summary, at now, when the lead readings failed", async () => {
+    const asked = show();
+    const isSummary = (url: URL) =>
+      url.pathname.endsWith("/analytics/sdr-summary");
+    await waitFor(() => expect(asked.some(isSummary)).toBe(true));
+    expect(asked.find(isSummary)?.searchParams.has("as_of")).toBe(false);
+  });
+
   it("names a blocked recipient and a restricted prospect, and pages on", async () => {
     const asked = show();
     expect(await screen.findByText(en["analytics.sdrWaiting"])).toBeVisible();

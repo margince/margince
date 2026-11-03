@@ -63969,6 +63969,11 @@ type GetSdrSummaryParams struct {
 
 	// ScopeId The owner or team named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// AsOf The instant to count at, so the summary describes the same moment as an evaluation
+	// read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+	// refused, since nothing has happened by then to count.
+	AsOf *time.Time `form:"as_of,omitempty" json:"as_of,omitempty"`
 }
 
 // GetSdrSummaryParamsScopeKind defines parameters for GetSdrSummary.
@@ -98687,6 +98692,19 @@ func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
 		}
 		return
 	}

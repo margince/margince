@@ -356,3 +356,40 @@ func TestLeadEvidenceLabelHidesAMaskedCompanyName(t *testing.T) {
 		t.Fatalf("a lead labelled by a masked company name must not show it: %+v", rows)
 	}
 }
+
+// A summary read beside an evaluation counts at the evaluation's instant, not
+// at the clock's later one. A cutoff in the future is refused.
+func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+	e := f.e
+	asked := f.at.Add(time.Hour)
+	f.submit(t, "Earlier prospect", &f.ae)
+	f.at = f.at.Add(2 * time.Hour)
+	f.submit(t, "Later prospect", &f.ae)
+	f.at = f.at.Add(time.Hour)
+
+	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
+	id := openapi_types.UUID(e.Rep1)
+	var out crmcontracts.SdrSummary
+	body := sdrServe(f.ctx, t, e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+		h.GetSdrSummary(w, r, crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id, AsOf: &asked})
+	}, f.at)
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.AsOf.Equal(asked) {
+		t.Errorf("the summary answers as of %v, want the instant asked for, %v", out.AsOf, asked)
+	}
+	if out.Handoffs == nil || out.Handoffs.Waiting != 1 {
+		t.Errorf("at the asked instant only the earlier handoff waits: %+v", out.Handoffs)
+	}
+
+	future := f.at.Add(time.Hour)
+	h := newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return f.at })
+	w := httptest.NewRecorder()
+	h.GetSdrSummary(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(f.ctx),
+		crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id, AsOf: &future})
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("a future as_of answered %d, want 422", w.Code)
+	}
+}

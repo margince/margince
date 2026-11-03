@@ -30507,6 +30507,13 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The owner or team named by `scope_kind`.
+        - name: as_of
+          in: query
+          schema: { type: string, format: date-time }
+          description: |
+            The instant to count at, so the summary describes the same moment as an evaluation
+            read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+            refused, since nothing has happened by then to count.
       responses:
         '200':
           description: The summary.

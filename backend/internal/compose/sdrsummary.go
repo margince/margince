@@ -64,11 +64,19 @@ func (h sdrSummaryHandlers) GetSdrSummary(w http.ResponseWriter, r *http.Request
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
+	at := h.now().UTC()
+	if params.AsOf != nil {
+		if params.AsOf.After(at) {
+			httperr.Write(w, r, httperr.Validation("as_of", "future", "choose an instant no later than now"))
+			return
+		}
+		at = params.AsOf.UTC()
+	}
 	ctx := r.Context()
 	var out crmcontracts.SdrSummary
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readSdrSummary(ctx, tx, requested, h.now().UTC())
+		out, err = readSdrSummary(ctx, tx, requested, at)
 		return err
 	})
 	if err != nil {
