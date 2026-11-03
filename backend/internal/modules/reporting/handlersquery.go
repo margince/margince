@@ -150,6 +150,14 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 		wire := openapi_types.UUID(id)
 		selection.ProductId = &wire
 	}
+	if value := q.Get("initiative_id"); value != "" {
+		id, err := ids.Parse(value)
+		if err != nil {
+			return selection, invalid("choose a valid sales initiative")
+		}
+		wire := openapi_types.UUID(id)
+		selection.InitiativeId = &wire
+	}
 	if value := q.Get("country"); value != "" {
 		selection.Country = &value
 	}

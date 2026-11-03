@@ -879,7 +879,7 @@ export const en = {
   "reporting.closedOn": "Closed on",
   "reporting.meetingOn": "Meeting date",
   "reporting.acceptedOn": "Accepted on",
-  "reporting.record": "Record",
+  "reporting.memberRecord": "Record",
   "reporting.dealValue": "Deal value",
   "reporting.createdOn": "Created on",
   "reporting.movedOn": "Status changed on",
@@ -1007,6 +1007,31 @@ export const en = {
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
   "reporting.newCustomReport": "New custom report",
+  "reporting.previewReport": "Preview report",
+  "reporting.unsavedPreview": "Unsaved preview",
+  "reporting.assessmentCard": "Assessment",
+  "reporting.assessmentDeterministic":
+    "Written from the figures this report reads. Only measured figures are named.",
+  "reporting.useExample": "Use example",
+  "reporting.exampleQuestion":
+    "Margince sales in Germany this quarter: bookings, lead conversion and open pipeline by country.",
+  "reporting.whatToUnderstand": "What would you like to understand?",
+  "reporting.customBuilderPurpose":
+    "One report: the selection, the charts in their order and a custom question. Nothing is saved until you save the preview.",
+  "reporting.reportingSelection": "Reporting selection",
+  "reporting.includeAssessment": "Include the assessment",
+  "reporting.customQuestion": "Custom question",
+  "reporting.customQuestionHint":
+    "A grouped table of the open deals under the same selection.",
+  "reporting.measure": "Measure",
+  "reporting.groupBy": "Group by",
+  "reporting.dealCount": "Open deal count",
+  "reporting.openValueBase": "Open value, converted",
+  "reporting.addQuestionCard": "Add this question",
+  "reporting.askQuestion": "Ask a question",
+  "reporting.noPreview":
+    "No report is being previewed. Start one under Reports.",
+  "reporting.backToReports": "Back to reports",
   "reporting.stageAmountDeals_one": "{amount} · {count} priced deal",
   "reporting.stageAmountDeals_other": "{amount} · {count} priced deals",
   "reporting.stageDeals": "Priced deals",
@@ -1203,6 +1228,99 @@ export const en = {
   "reporting.period": "Date range",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
+  "reporting.pickDone": "Done",
+  "analytics.overview.chipInitiative": "Initiative: {name}",
+  "analytics.overview.profileInitiative": "Sales initiative",
+  "reporting.initiative": "Sales initiative",
+  "reporting.allInitiatives": "All initiatives",
+  "reporting.initiativeUnnamed": "Selected initiative",
+  "reporting.initiatives": "Sales initiatives",
+  "reporting.initiativesPurpose":
+    "An initiative adds an objective, included records and a launch baseline to the same report.",
+  "reporting.newInitiative": "New sales initiative",
+  "reporting.noInitiatives":
+    "No sales initiatives yet. Describe an effort and choose which records belong.",
+  "reporting.initiativeStatus.draft": "Draft",
+  "reporting.initiativeStatus.live": "Live",
+  "reporting.initiativeStatus.ended": "Ended",
+  "reporting.trackingOnly": "Tracking only",
+  "reporting.initiativeTarget": "Target {target}",
+  "reporting.initiativeSummary": "{objective} · deadline {deadline}",
+  "reporting.initiativeDrawerPurpose":
+    "First set the goal. Next choose which records belong. Nothing is enrolled until you launch.",
+  "reporting.initiativeSteps": "Setup steps",
+  "reporting.stepGoal": "Goal",
+  "reporting.stepMembers": "Included records",
+  "reporting.stepReview": "Review and launch",
+  "reporting.initiativeName": "Initiative name",
+  "reporting.initiativeNamePlaceholder":
+    "For example: Manufacturing expansion Q4",
+  "reporting.objective": "Primary objective",
+  "reporting.targetValue": "Target",
+  "reporting.targetHint": "Leave empty for tracking only.",
+  "reporting.deadline": "Deadline",
+  "reporting.nameDoesNotDecide":
+    "The name does not decide membership. The next step defines the rule or the records that belong.",
+  "reporting.chooseIncludedRecords": "Choose included records",
+  "reporting.backToGoal": "Back to goal",
+  "reporting.reviewIncludedRecords": "Review included records",
+  "reporting.saveMembership": "Save membership",
+  "reporting.backToIncludedRecords": "Back to included records",
+  "reporting.launchInitiative": "Launch sales initiative",
+  "reporting.membersPurpose":
+    "Include records that match every selected condition, or pick them by hand. The list below shows what belongs.",
+  "reporting.anyProduct": "Any product",
+  "reporting.anyIndustry": "Any industry",
+  "reporting.anyCountry": "Any country",
+  "reporting.ruleAnd": "All selected conditions apply at once.",
+  "reporting.noConditions":
+    "No conditions selected. Only picked records belong.",
+  "reporting.includeFuture": "Future matching records join automatically",
+  "reporting.pickDeals": "Pick deals",
+  "reporting.pickLeads": "Pick leads",
+  "reporting.removePick": "Remove {name}",
+  "reporting.nonePicked": "None picked",
+  "reporting.addRecord": "Add",
+  "reporting.searchRecords": "Search records",
+  "reporting.noMatchingRecords": "No matching records",
+  "reporting.pickExplains":
+    "Picking a deal does not enroll every contact at its company. A lead keeps its promotion history.",
+  "reporting.memberCounts":
+    "{leads} leads · {deals} deals · {companies} related companies",
+  "reporting.membersTruncated":
+    "The rule matches more records than one read lists.",
+  "reporting.membersPending": "Reading the matching records.",
+  "reporting.saveGoalFirst": "Save the goal to see the matching records.",
+  "reporting.include": "Include",
+  "reporting.includeRecord": "Include {name}",
+  "reporting.record": "Record",
+  "reporting.recordType.lead": "Lead",
+  "reporting.recordType.deal": "Deal",
+  "reporting.whyIncluded": "Why it belongs",
+  "reporting.memberReason.rule": "Matches the rule",
+  "reporting.memberReason.picked": "Picked by hand",
+  "reporting.memberReason.carried": "Promoted from a member lead",
+  "reporting.memberReason.excluded": "Excluded",
+  "reporting.trackingOnlyVerdict":
+    "Tracking only · no target to measure against",
+  "reporting.targetBy": "{target} by {deadline}",
+  "reporting.knownDealValue": "{value} known deal value, all statuses",
+  "reporting.baselineNote":
+    "Deals that exist at launch become the baseline. Enrolling them does not make them newly generated pipeline.",
+  "reporting.futureJoins":
+    "New records matching the rule will join automatically.",
+  "reporting.futureStays":
+    "Membership is explicitly selected. Deals promoted from member leads still carry forward.",
+  "reporting.reviewAfterLaunch": "After the launch, the overview opens for",
+  "reporting.includedRecords": "Included records",
+  "reporting.initiativeSince":
+    "Since the launch on {launch} · deadline {deadline}",
+  "reporting.initiativeDraftNotice":
+    "This initiative is a draft. Launch it under Reports to freeze its baseline.",
+  "reporting.objectiveOfTarget": "{value} of {target}",
+  "reporting.objectiveProgress": "{share} of the objective",
+  "reporting.noTargetForSlice":
+    "No target for this slice. The results stay; attainment is not compared.",
   "reporting.product": "Product",
   "reporting.allProducts": "All products",
   "reporting.productUnnamed": "Selected product",
@@ -1215,8 +1333,10 @@ export const en = {
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",
   "reporting.productReports": "Product sales",
-  "reporting.productReportsPurpose": "Opens Sales review for one product. No setup is needed, and nothing is written.",
-  "reporting.noProducts": "No live products yet. Add products under Settings to report on them.",
+  "reporting.productReportsPurpose":
+    "Opens Sales review for one product. No setup is needed, and nothing is written.",
+  "reporting.noProducts":
+    "No live products yet. Add products under Settings to report on them.",
   "reporting.actualsThrough": "Actuals through {at}",
   "reporting.periodNotStarted":
     "The period starts {at}; nothing has happened in it yet",
@@ -5214,6 +5334,8 @@ export const en = {
   "lead.scoreLoading": "Loading score factors…",
   "lead.scoreNoFactors": "No factors counted toward this score yet.",
   "lead.scoreSources": "{count} activities",
+  "lead.scoreSourcesHead": "Activities behind this factor",
+  "lead.scoreSourceNoSubject": "No subject",
   "lead.factor.decision_maker_title": "Decision-maker title",
   "lead.factor.reply": "Lead replied",
   "lead.factor.meeting_held": "Meeting held",
@@ -7280,6 +7402,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.analytics_decision":
+    "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
     "Created from a follow-up that the overnight review proposed and someone approved.",
   "tasks.origin.commitment":
@@ -11717,6 +11841,9 @@ export const en = {
   "client.isolation": "Connects only to your company",
   "client.attribution": "Every capture is attributed and auditable.",
 
+  "book.pageTitle": "Book a meeting with {host}",
+  "book.pageTitleGeneric": "Book a meeting",
+  "book.meetingTitle": "Your meeting",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",
@@ -12985,7 +13112,7 @@ export const en = {
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
   "voice.candidate.firstHint":
-    "If it reads like you, use it. If not, discard it and add more writing samples; the next build learns from them.",
+    "If it reads like you, use it. Setup is done once you use a version. If not, discard it, add more writing samples and build again; the next build learns from them.",
   "voice.candidate.reason.uncomparable":
     "The previous voice profile could not be compared. Review this version before replacing it.",
   "voice.candidate.reason.identity":
@@ -13206,6 +13333,7 @@ export const en = {
   "roles.object.report_schedule": "Report schedules",
   "roles.object.report_edition": "Report snapshots",
   "roles.object.sales_target": "Sales targets",
+  "roles.object.sales_initiative": "Sales initiatives",
   "roles.object.reporting_framework": "Reporting setup",
   "roles.object.reporting_credit": "SDR outcomes",
   "roles.object.capture_settings": "Capture rules",
@@ -14410,7 +14538,20 @@ export const en = {
   "setup.caption.waitsAdmin": "Waits on an administrator.",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
-  "setup.caption.voice": "Needs 800 words you wrote.",
+  "setup.caption.voice": "Needs about {n} more words you wrote.",
+  "setup.caption.voiceSamples": "Needs writing samples of your own.",
+  "setup.caption.voiceReview": "Your voice is trained and ready to review.",
+  "setup.caption.voiceBuilding":
+    "Building your voice. It continues if you leave.",
+  "setup.caption.voiceDeferred": "Your voice build is waiting to run.",
+  "setup.caption.voiceFailed": "The last build did not finish.",
+  "setup.caption.voiceReady": "Your samples are ready to build from.",
+  "setup.caption.voiceUnknown": "Could not check your writing voice.",
+  "setup.action.voiceReview": "Review voice",
+  "setup.action.voiceProgress": "View progress",
+  "setup.action.voiceRetry": "Try again",
+  "setup.action.voiceBuild": "Build voice",
+  "setup.action.voiceOpen": "Open writing voice",
   "setup.caption.booking": "Customers book your free time.",
   "setup.caption.bookingNeedsCalendar": "Needs a calendar.",
   "setup.reminder.progress": "Setup progress",
@@ -15696,6 +15837,9 @@ export const en = {
     "Help asked on a commitment",
   "webhooks.event.weekly_plan.help_requested.when":
     "A rep asks their lead for help on one commitment.",
+  "webhooks.event.sales_initiative.updated.label": "Sales initiative changed",
+  "webhooks.event.sales_initiative.updated.when":
+    "A sales initiative was defined, edited, launched or had its included records changed.",
   "webhooks.eventGroup.notices_notifications": "Notices and notifications",
   "webhooks.event.notice.created.label": "Notice recorded",
   "webhooks.event.notice.created.when": "A notice is recorded for one user.",
@@ -16363,12 +16507,14 @@ export const en = {
   "contact.standing.lastRecordedExchange":
     "since last recorded contact exchange",
   "contact.standing.lastInbound": "Last inbound message",
+  "contact.standing.noneAccessible": "None you can open",
   "contact.standing.direction.twoWay": "Both sides have written.",
   "contact.standing.direction.inboundOnly":
-    "Only they have written so far. Nothing has gone out from your team.",
+    "In the messages you can open, only they have written. Nothing from your team appears.",
   "contact.standing.direction.outboundOnly":
-    "Only outgoing messages from your team are recorded. No reply is recorded.",
-  "contact.standing.direction.none": "No messages either way yet.",
+    "In the messages you can open, only your team has written. No reply appears.",
+  "contact.standing.direction.none":
+    "No messages either way in what you can open.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
@@ -16743,7 +16889,9 @@ export const en = {
   "filters.field.amount": "Converted amount",
   "filters.field.city": "City",
   "filters.field.classification": "Classification",
+  "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
+  "filters.field.product_id": "Product",
   "filters.field.company_lifecycle": "Company lifecycle",
   "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",
@@ -16827,6 +16975,8 @@ export const en = {
     "For filters, no record carries an archived tag.",
   "filters.sentence.ref.project_one": "{count} project",
   "filters.sentence.ref.project_other": "{count} projects",
+  "filters.sentence.ref.product_one": "{count} product",
+  "filters.sentence.ref.product_other": "{count} products",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "{count} lead matches",
   "filters.matchLeads_other": "{count} leads match",
@@ -17511,6 +17661,7 @@ export const en = {
   "worklist.pane.lastFromCompany": "Last from this company",
   "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
+  "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
   "worklist.why.title": "Why this needs attention",
@@ -18793,6 +18944,27 @@ export const en = {
   "scheduling.noLinkYetBody":
     "Create one to share a page where guests pick a time.",
   "scheduling.replaceAddress": "Replace address",
+  "scheduling.alias.label": "Short address",
+  "scheduling.alias.help":
+    "Optional. A short address such as /book/alex is easy to share and easy to guess. Anyone who guesses it sees your booking page and your free times. Your long address keeps working.",
+  "scheduling.alias.preview": "Your link will end in {path}",
+  "scheduling.alias.save": "Save address",
+  "scheduling.alias.clear": "Remove short address",
+  "scheduling.alias.changeTitle": "Change your short address?",
+  "scheduling.alias.clearTitle": "Remove your short address?",
+  "scheduling.alias.changeHelp":
+    "{old} stops working at once. Guests who have it see that the page is not available. Nobody else can ever take it, and you can take it back at any time.",
+  "scheduling.alias.error.too_short": "Use at least 3 characters.",
+  "scheduling.alias.error.too_long": "Use at most 30 characters.",
+  "scheduling.alias.error.invalid":
+    "Use letters, digits and hyphens. Start and end with a letter or digit.",
+  "scheduling.alias.error.reserved":
+    "This address is reserved. Choose another one.",
+  "scheduling.alias.error.taken":
+    "Another booking page uses or has used this address. Choose another one.",
+  "scheduling.alias.error.no_booking_link": "Create your booking link first.",
+  "scheduling.replaceAliasHelp":
+    "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
@@ -19567,6 +19739,31 @@ export const en = {
   "analytics.hero.prior": "Same point of the previous period: {amount}",
   "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
+  "analytics.decisions.title": "Decisions from the last review",
+  "analytics.decisions.purpose":
+    "Each decision is a task on its deal with an owner and a review date. Completing it records the work, not a sale.",
+  "analytics.decisions.record": "Record decision",
+  "analytics.decisions.review": "Review decisions",
+  "analytics.decisions.none": "No decision recorded yet.",
+  "analytics.decisions.decision": "Decision",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Owner",
+  "analytics.decisions.reviewOn": "Review on",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Done",
+  "analytics.decisions.open": "Open",
+  "analytics.decisions.recordOutcome": "Record outcome",
+  "analytics.decisions.resultLine": "Outcome: {result}",
+  "analytics.decisions.chooseDeal": "Choose a deal",
+  "analytics.decisions.chooseOwner": "Choose an owner",
+  "analytics.decisions.expected": "Expected result",
+  "analytics.decisions.recordNote":
+    "A second record of the same open decision on the same deal returns that task.",
+  "analytics.decisions.confirm": "Record",
+  "analytics.decisions.whatWasDone": "What work was completed?",
+  "analytics.decisions.outcomeNote":
+    "Completing the work does not qualify or win the deal.",
+  "analytics.decisions.saveOutcome": "Save outcome",
   "analytics.overview.filtersToggle": "Filters",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Closing: {window}",

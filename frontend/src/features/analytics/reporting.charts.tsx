@@ -4,6 +4,7 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { AssessmentCard } from "./reporting.assessmentcard";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
 import {
@@ -69,11 +70,15 @@ export function ReportingCharts({
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
     ? laidOut(evaluation.selection.layout, charts)
     : [{ items: charts.map((chart) => ({ chart, full: false })) }];
+  // The summary is written once: on its card where the layout places one.
+  const placesAssessment = sections.some((section) =>
+    section.items.some((item) => "assessment" in item),
+  );
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
       {() => (
         <div className="reporting-results">
-          <WrittenSummary evaluation={evaluation} />
+          {!placesAssessment && <WrittenSummary evaluation={evaluation} />}
           <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
           <TargetComparison
             evaluation={evaluation}
@@ -169,6 +174,12 @@ function ChartSection({
               editionId={editionId}
               onEvidence={onEvidence}
             />
+          ) : "assessment" in item ? (
+            <AssessmentCard
+              key={itemKey(item)}
+              evaluation={evaluation}
+              wide={wide[index] === true}
+            />
           ) : (
             <QuestionCard
               key={itemKey(item)}
@@ -195,9 +206,9 @@ function questionMode(
 }
 
 function itemKey(item: LaidOutItem): string {
-  return "chart" in item
-    ? `${item.chart.kind}:${item.chart.metric}`
-    : `question:${item.question.id}`;
+  if ("chart" in item) return `${item.chart.kind}:${item.chart.metric}`;
+  if ("assessment" in item) return `assessment:${item.assessment.id}`;
+  return `question:${item.question.id}`;
 }
 
 // One chart in its panel. The head holds the title and one quiet door to what

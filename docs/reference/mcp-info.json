@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162265,
+    "tool_catalog_bytes": 162415,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41881,
+    "approx_wire_tokens_total": 41918,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35673,
-      "input_schema_bytes": 67447,
+      "input_schema_bytes": 67597,
       "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 103120
+      "description_plus_input_schema_bytes": 103270
     }
   },
   "tools": {
@@ -1577,6 +1577,10 @@
                   "type": "string"
                 },
                 "industry": {
+                  "type": "string"
+                },
+                "initiative_id": {
+                  "format": "uuid",
                   "type": "string"
                 },
                 "interval": {
@@ -4698,6 +4702,10 @@
                                   "type": "string"
                                 },
                                 "industry": {
+                                  "type": "string"
+                                },
+                                "initiative_id": {
+                                  "format": "uuid",
                                   "type": "string"
                                 },
                                 "interval": {
@@ -8244,6 +8252,10 @@
                   "type": "string"
                 },
                 "industry": {
+                  "type": "string"
+                },
+                "initiative_id": {
+                  "format": "uuid",
                   "type": "string"
                 },
                 "interval": {

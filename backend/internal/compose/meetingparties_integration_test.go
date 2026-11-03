@@ -475,8 +475,13 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("employing the colleague at Acme: %v", err)
 	}
+	room := addressedContact(t, e, "Boardroom", "room@resource.calendar.google.com")
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: ptrContact(room), CompanyID: &acmeID, Source: "manual"}); err != nil {
+		t.Fatal(err)
+	}
 	customer := partiesContact(t, e, "Ines Buyer", ids.UUID{}, &acmeID)
 	internal := partiesMeeting(e.Admin(), t, e, "Team sync", colleague)
+	resourceMeeting := partiesMeeting(e.Admin(), t, e, "Room reservation", room)
 	external := partiesMeeting(e.Admin(), t, e, "Review", customer)
 
 	reached := func(meeting ids.UUID) int {
@@ -487,6 +492,9 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 	}
 	if n := reached(external); n != 1 {
 		t.Errorf("the meeting with a customer reaches %d companies, want Acme", n)
+	}
+	if n := reached(resourceMeeting); n != 0 {
+		t.Fatalf("a calendar room reaches %d companies", n)
 	}
 }
 
