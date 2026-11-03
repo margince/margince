@@ -64,15 +64,15 @@ To add a contact quickly in Margince, open **Contacts** and choose **Quick captu
 Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 
 ### How do I edit a contact?
-To edit a contact in Margince, open it and click the value to change in the **Details** panel next to the record. There is no Edit button: each field changes in place.
+To edit a contact in Margince, open it and press the value to change in the **Details** panel next to the record. There is no Edit button. A value you may change shows a soft green fill and a round pencil when the pointer is over it (on a touch screen the pencil always shows). Pressing the value or the pencil opens a dialog for that field.
 1. If the panel is hidden, choose **Show details and permissions**.
-2. Click the value (an empty one says **Not set**), type and press Enter, or pick from the list. `Esc` stops.
-3. **Email**, **Phone** and **Address** open a small form with **Type**, **Primary** and **Remove**; press **Save**.
+2. Press the value (an empty one says **Not set**) or its pencil, change it in the dialog, and press **Save**. Nothing is stored until **Save**, and a choice from a list is stored on **Save**, not when you pick it. **Cancel** or `Esc` closes the dialog without saving.
+3. **Email**, **Phone** and **Address** open the edit form in a dialog. In **Email** and **Phone** each entry is one row with **Type**, **Primary** and buttons to move it up, move it down and remove it; press **Save**. Pressing an address or number itself still opens the mail composer or the call; the fill around it and the pencil open the editor.
 **Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created.
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
-A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator." Fields you cannot edit show as plain text and other actions are greyed out; point at a field or open **More actions** for the reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
+A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator." Fields you cannot edit show as plain text, with no fill and no pencil, and other actions are greyed out; point at a field or open **More actions** for the reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.
 
@@ -138,17 +138,17 @@ If the company is already in Margince, **View existing record** opens it instead
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
-To edit a company in Margince, open it and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
+To edit a company in Margince, open it and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a soft green fill and a round pencil when the pointer is over it (on a touch screen the pencil always shows). Pressing the value or the pencil opens a dialog for that field.
 1. If the panel is hidden, choose **Show details**.
-2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
+2. Press a value or its pencil, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving. **Address**, **Domains** and **Parent company** open the edit form in a dialog.
 
-To rename the company, click its name at the top of the page, type the new **Company name** and press Enter. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
 To check a VAT number with the EU VAT register, type it into **Register / VAT ID** in the company's **Details** panel. Margince checks a new number on its own.
 1. Open the company, and find **Register / VAT ID** under **Registration** in **Details**.
-2. Type the number as it is written, and press Enter.
+2. Press the number, type it as it is written in the dialog, and press **Save**.
 3. Press the mark beside the number to read the answer.
 The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
 Also called: VIES check, check a VAT ID, tax number check.

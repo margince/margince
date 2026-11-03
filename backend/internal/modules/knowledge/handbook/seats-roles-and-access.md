@@ -23,12 +23,12 @@ You need the permission to manage users. A role that may only read the page sees
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### How do I change someone's role or make someone an admin?
-To change a colleague's role in Margince, open **Settings → Members** and choose the role on their row.
+To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.
 1. Open **Settings → Members**.
 2. Find the colleague in the **Members** list.
-3. Choose the role on their row. It reads as plain text, and **Not set** when they hold no role. Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
+3. Press the role on their row, or the round pencil that shows beside it. It reads **Not set** when they hold no role. In the dialog pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving.
 4. The note "Role changed for {name}" confirms it.
-Choosing a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
+Saving a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
 
 ### How do I find and edit a colleague?

@@ -36,7 +36,7 @@ later page copies what it decides. Files: `companies.tsx` (over the limit: new z
 | Ask (prepared questions) | `AssistantPanel` as full-width rows, with no free field. The three questions are the ones the server answers (`CompanyQuestion`), so there are no new keys. One more question is a server change first | | `co.ask.nothing` |
 | About | `DossierPanel` lead, body text and sources; `SignalsSection` rows; the `GrowthFitPanel` verdict row (only when `!hasWorkInFlight`); a `"Profile"` link | own reads | `co.dossier.empty` (write it), `co.dossier.stale` `"Read over a month ago"`, `co.dossier.unavailable`; `co.factSuspect.*` with its evidence |
 | Contacts (chips) | `ContactsSection` (`RAIL_ROW_LIMIT`) as chips with `"+N"` | 360 | withheld → absent, with the sentence |
-| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the layout of five subjects inside the pane): a Details grid with inline edit, the top 3 deals, the top 3 contacts, Hold, Tags | | every rail state as today; absent while a composer is open |
+| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the layout of five subjects inside the pane): a Details grid whose values open a field dialog, the top 3 deals, the top 3 contacts, Hold, Tags | | every rail state as today; absent while a composer is open |
 | Chronology zone | stays the timeline slot of `RecordView`, on the History tab only (the 360 carries the folded thread) | | `timelineNotice`, `chronologyNotice` |
 
 States at the header level: `co.partial` on `view.isError`. A 403 keeps the one shared sentence. Each banner for
@@ -217,6 +217,6 @@ Qualifying leads, changing the lifecycle, setting a score by hand, closing deals
 changes keep their own controls and needed evidence. Fields the app works out, masked and archived fields, and
 fields you have no rights to stay read-only. Header buttons use the same record writer as Details. Dialogs for a new record stay.
 
-`RecordFields` composes the inline controls of the design system and `RecordFormBody`. Each object gives its
+`RecordFields` composes the field controls of the design system, which open a dialog and store on Save, and `RecordFormBody`. Each object gives its
 field list that exists, and a small request mapper. `RecordCustomFields` gives the section built from the
 catalog for all four kinds.
