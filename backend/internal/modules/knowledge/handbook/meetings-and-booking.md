@@ -95,7 +95,7 @@ To give your booking link a short address in Margince, open Settings → **Meeti
 Your long address keeps working. Anyone who guesses a short address sees your booking page and your free times.
 Also called: custom booking URL, personal booking address, friendly address.
 
-A short address belongs to one person at a time. Margince refuses one that another link uses, or used in the last 90 days. Some words are kept back, such as `preview` and `contact`.
+A short address belongs to one booking page at a time. Margince refuses one that another link uses, or used in the last 90 days. Some words are kept back, such as `preview`.
 
 When you change or remove your short address, the old one stops working at once. Margince asks first. You can take your old address back at any time. Nobody else can take it for 90 days. **Replace address** ends the short address too, and you can choose it again after.
 

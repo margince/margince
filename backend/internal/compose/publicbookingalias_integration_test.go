@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // aliasHosts gives the admin ("Ada") and Rep1 ("Ben") a live booking page on
@@ -36,7 +37,7 @@ type aliasHosts struct {
 func newAliasHosts(t *testing.T) *aliasHosts {
 	t.Helper()
 	e := integration.Setup(t)
-	h := &aliasHosts{e: e, now: time.Now().UTC()}
+	h := &aliasHosts{e: e, now: clocktest.Now(t)}
 	h.store = e.Activities.WithClock(func() time.Time { return h.now }).WithPublicBaseURL(previewOrigin).
 		WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Ada Host' WHERE id = $1`, e.AdminUser)
@@ -226,11 +227,9 @@ func TestTwoHostsClaimingOneAliasAtOnceGetOneWinnerAndOneFieldError(t *testing.T
 	var wg sync.WaitGroup
 	results := make([]error, 2)
 	for i, ctx := range []context.Context{h.ada, h.ben} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, results[i] = h.store.SetSchedulingAlias(ctx, "sales")
-		}()
+		})
 	}
 	wg.Wait()
 	won := 0
