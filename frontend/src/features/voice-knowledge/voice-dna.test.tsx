@@ -36,6 +36,7 @@ const PROFILE: VoiceProfile = {
   auto_learning_enabled: false,
   active_source_hash: null,
   candidate_version: null,
+  first_build_words_remaining: 380,
   last_built_at: null,
   source: "manual",
   captured_by: "human:u1",

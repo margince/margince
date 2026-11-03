@@ -85,8 +85,29 @@ func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 
 var (
 	reportingReadInput   = describedSchema[ReportingRead](pipelineIDProvenance, windowRule)
-	reportingMetricInput = describedSchema[crmcontracts.ReportMetricReference](pipelineIDProvenance, windowRule)
+	reportingMetricInput = metricReferenceSchema()
 )
+
+// metricReferenceSchema is the metric reference's shape without the
+// selection's layout. A metric reference names one figure over a population.
+// The layout places charts, which no figure reads, and reciting its sections,
+// cards and questions would cost every caller's window on every step.
+func metricReferenceSchema() json.RawMessage {
+	shape, err := describeType(reflect.TypeFor[crmcontracts.ReportMetricReference]())
+	if err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an unsupported static type must fail boot.
+		panic(fmt.Sprintf("describe metric reference: %v", err))
+	}
+	delete(shape.Properties["selection"].Properties, "layout")
+	shape.Description = pipelineIDProvenance
+	noteTimestamps(shape, windowRule)
+	raw, err := json.Marshal(shape)
+	if err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; a shape that cannot marshal must fail boot.
+		panic(fmt.Sprintf("render metric reference: %v", err))
+	}
+	return raw
+}
 
 func describedSchema[T any](description, rule string) json.RawMessage {
 	shape, err := describeType(reflect.TypeFor[T]())

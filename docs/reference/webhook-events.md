@@ -157,6 +157,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`retention.applied`](#retentionapplied) | dynamic | 1 |
 | [`retention.restricted`](#retentionrestricted) | activity | 1 |
 | [`role.changed`](#rolechanged) | user | 1 |
+| [`sales_initiative.updated`](#sales_initiativeupdated) | sales_initiative | 1 |
 | [`signal.detected`](#signaldetected) | signal | 1 |
 | [`signal.resolved`](#signalresolved) | signal | 1 |
 | [`signal.updated`](#signalupdated) | signal | 1 |
@@ -1554,6 +1555,18 @@ Payload for role.changed. A member's role assignments were replaced with the sin
 | `data.from_role` | string | no | The single prior role key (absent when the member held more than one role before this event). |
 | `data.to_role` | string | yes | The role key assigned. |
 | `data.user_id` | string (uuid) | yes | The member whose role changed. |
+
+### `sales_initiative.updated`
+
+Record: `sales_initiative` · version 1
+
+Payload for sales_initiative.updated. A sales initiative was defined, changed, launched or had its picked and excluded records changed. The entity is the initiative. `changed_fields` names what moved rather than carrying it; the definition and the members stay on the record.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.changed_fields` | array of string | yes | Which parts moved, such as definition, status, members. |
+| `data.initiative_id` | string (uuid) | yes |  |
+| `data.status` | string: `draft`, `live`, `ended` | yes |  |
 
 ### `signal.detected`
 

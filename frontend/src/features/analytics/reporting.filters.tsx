@@ -14,6 +14,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import { DimensionFilters } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
 export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
@@ -33,6 +34,7 @@ export function ReportingFilters({
   showPipeline = true,
   showTargets = true,
   showCloseWindow = showPipeline,
+  showDimensions = false,
   dates: controlledDates,
 }: Readonly<{
   showScope?: boolean;
@@ -41,6 +43,8 @@ export function ReportingFilters({
   showPipeline?: boolean;
   showTargets?: boolean;
   showCloseWindow?: boolean;
+  // The product, country, industry and value basis dials, for a deal view.
+  showDimensions?: boolean;
   dates?: Readonly<{
     from: string;
     through: string;
@@ -207,6 +211,9 @@ export function ReportingFilters({
             />
           )}
         </Field>
+      )}
+      {showDimensions && (
+        <DimensionFilters selection={selection} onChange={onChange} />
       )}
       <ErrorLine error={context.error ?? pipelines.error} />
     </div>
