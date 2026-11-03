@@ -26,6 +26,7 @@ type Provider = CaptureConnection["provider"];
 type MailProvider = ConnectorsResult["providers"][number]["provider"];
 type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
+type VoiceBuild = components["schemas"]["VoiceBuild"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
@@ -84,6 +85,29 @@ function voiceProfile(profileVersion: number): VoiceProfile {
     captured_by: "00000000-0000-4000-8000-000000000001",
     version: 1,
     created_at: "2026-01-05T09:00:00Z",
+    updated_at: "2026-01-05T09:00:00Z",
+    archived_at: null,
+  };
+}
+
+function build(status: VoiceBuild["status"]): VoiceBuild {
+  return {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    profile_id: "00000000-0000-4000-8000-0000000000a1",
+    reason: "manual",
+    status,
+    stage: null,
+    source_hash: "h",
+    source_count: 3,
+    result_version: null,
+    candidate_action: "none",
+    status_code: status === "failed" ? "model_unavailable" : null,
+    status_detail: status === "failed" ? "Model down." : null,
+    next_attempt_at: null,
+    version: 1,
+    created_at: "2026-01-05T09:00:00Z",
+    started_at: null,
+    completed_at: null,
     updated_at: "2026-01-05T09:00:00Z",
     archived_at: null,
   };
@@ -302,6 +326,54 @@ describe("deriveSetupSteps", () => {
     expect(built[2]).toMatchObject({ id: "voice", state: "done" });
   });
 
+  it("reads the voice step off the active version, the candidate and the newest build", () => {
+    const voiceState = (profile: VoiceProfile | null) =>
+      deriveSetupSteps(reads({ voice: { profile } })).find(
+        (step) => step.id === "voice",
+      );
+    const ready: VoiceProfile = { ...voiceProfile(0), maturity: "provisional" };
+
+    expect(voiceState(null)?.voice?.state).toBe("needsSamples");
+    expect(voiceState(voiceProfile(0))?.voice?.state).toBe("needsSamples");
+    expect(voiceState(ready)?.voice?.state).toBe("ready");
+    expect(voiceState({ ...ready, candidate_version: 1 })?.voice?.state).toBe(
+      "review",
+    );
+    expect(
+      voiceState({ ...ready, latest_build: build("running") })?.voice?.state,
+    ).toBe("building");
+    expect(
+      voiceState({ ...ready, latest_build: build("queued") })?.voice?.state,
+    ).toBe("building");
+    expect(
+      voiceState({ ...ready, latest_build: build("failed") })?.voice,
+    ).toMatchObject({
+      state: "failed",
+      build: { status_detail: "Model down." },
+    });
+    expect(
+      voiceState({ ...ready, latest_build: build("deferred") })?.voice?.state,
+    ).toBe("deferred");
+    // A succeeded build whose candidate was discarded is ready to build again.
+    expect(
+      voiceState({ ...ready, latest_build: build("succeeded") })?.voice?.state,
+    ).toBe("ready");
+  });
+
+  it("keeps setup complete while an active voice has a newer candidate or a failed rebuild", () => {
+    const active = voiceProfile(2);
+    for (const profile of [
+      { ...active, candidate_version: 3 },
+      { ...active, latest_build: build("failed") },
+      { ...active, latest_build: build("running") },
+    ]) {
+      const step = deriveSetupSteps(reads({ voice: { profile } })).find(
+        (entry) => entry.id === "voice",
+      );
+      expect(step).toMatchObject({ state: "done", voice: { state: "active" } });
+    }
+  });
+
   it("leaves out a step whose page the reader cannot act on", () => {
     const steps = summary(
       reads({ acts: actsFor({ voice_profile: ["read"] }) }),
@@ -372,7 +444,7 @@ afterEach(() => {
 });
 
 describe("useSetupChecklist", () => {
-  it("settles once every read answers, and drops the step a refusal feeds", async () => {
+  it("settles once every read answers, and keeps a failed voice read as unknown", async () => {
     serve({
       "/connectors": () =>
         jsonResponse({
@@ -397,9 +469,16 @@ describe("useSetupChecklist", () => {
     expect(result.current.steps.map((step) => step.id)).toEqual([
       "mail",
       "calendar",
+      "voice",
       "booking",
     ]);
-    expect([result.current.done, result.current.total]).toEqual([1, 3]);
+    // An unknown voice is never counted done, so the reminder cannot read as
+    // complete just because the profile could not be read.
+    expect(result.current.steps[2]).toMatchObject({
+      state: "open",
+      voice: null,
+    });
+    expect([result.current.done, result.current.total]).toEqual([1, 4]);
   });
 
   it("hides the reminder until the seat is forgotten at sign-out", async () => {

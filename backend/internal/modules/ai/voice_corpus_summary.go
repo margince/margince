@@ -73,17 +73,32 @@ func corpusSourceHash(ctx context.Context, tx pgx.Tx, profileID ids.UUID) (strin
 // candidate pointer without materializing them on the control row. The owner
 // predicate is repeated even for an archived profile returned by DELETE.
 func (s *VoiceStore) ProfilePresentation(ctx context.Context, profileID ids.UUID) (CorpusSummary, *int, error) {
+	view, err := s.ProfileView(ctx, profileID)
+	return view.Summary, view.CandidateVersion, err
+}
+
+// VoiceProfileView is what a profile read derives beside the control row: the
+// corpus meter, the pending candidate and the newest build. Setup and the
+// Writing voice page read their next step off these facts, so they are served
+// together from one transaction and cannot disagree with each other.
+type VoiceProfileView struct {
+	Summary          CorpusSummary
+	CandidateVersion *int
+	// LatestBuild is the newest non-archived build, nil when none was queued.
+	LatestBuild *VoiceBuild
+}
+
+// ProfileView reads the profile's derived presentation under the owner
+// predicate ProfilePresentation documents.
+func (s *VoiceStore) ProfileView(ctx context.Context, profileID ids.UUID) (VoiceProfileView, error) {
 	if err := auth.Require(ctx, "voice_profile", principal.ActionRead); err != nil {
-		return CorpusSummary{}, nil, err
+		return VoiceProfileView{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return CorpusSummary{}, nil, apperrors.ErrPermissionDenied
+		return VoiceProfileView{}, apperrors.ErrPermissionDenied
 	}
-	var (
-		summary          CorpusSummary
-		candidateVersion *int
-	)
+	var view VoiceProfileView
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx, `
@@ -97,27 +112,52 @@ func (s *VoiceStore) ProfilePresentation(ctx context.Context, profileID ids.UUID
 			return apperrors.ErrNotFound
 		}
 		var err error
-		summary, err = corpusSummary(ctx, tx, profileID)
+		view.Summary, err = corpusSummary(ctx, tx, profileID)
 		if err != nil {
 			return err
 		}
-		var candidate int
-		err = tx.QueryRow(ctx, `
-			SELECT profile_version
-			FROM voice_profile_version
-			WHERE voice_profile_id = $1 AND status = 'candidate' AND archived_at IS NULL
-			ORDER BY profile_version DESC LIMIT 1`, profileID).Scan(&candidate)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			return nil
-		case err != nil:
+		if view.CandidateVersion, err = pendingCandidateVersion(ctx, tx, profileID); err != nil {
 			return err
-		default:
-			candidateVersion = &candidate
-			return nil
 		}
+		view.LatestBuild, err = latestVoiceBuild(ctx, tx, profileID)
+		return err
 	})
-	return summary, candidateVersion, err
+	return view, err
+}
+
+// pendingCandidateVersion is the newest candidate awaiting review, or nil.
+func pendingCandidateVersion(ctx context.Context, tx pgx.Tx, profileID ids.UUID) (*int, error) {
+	var candidate int
+	err := tx.QueryRow(ctx, `
+		SELECT profile_version
+		FROM voice_profile_version
+		WHERE voice_profile_id = $1 AND status = 'candidate' AND archived_at IS NULL
+		ORDER BY profile_version DESC LIMIT 1`, profileID).Scan(&candidate)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return &candidate, nil
+	}
+}
+
+// latestVoiceBuild is the profile's newest non-archived build in any status,
+// or nil. A build that outlived the page that started it is still found here.
+func latestVoiceBuild(ctx context.Context, tx pgx.Tx, profileID ids.UUID) (*VoiceBuild, error) {
+	build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
+		SELECT %s FROM voice_build
+		WHERE voice_profile_id = $1 AND archived_at IS NULL
+		ORDER BY created_at DESC, id DESC LIMIT 1`, voiceBuildColumns), profileID))
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return &build, nil
+	}
 }
 
 // lockProfileForCorpusWrite takes the voice_profile row a corpus mutation holds

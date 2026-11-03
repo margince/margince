@@ -13110,7 +13110,7 @@ export const en = {
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
   "voice.candidate.firstHint":
-    "If it reads like you, use it. If not, discard it and add more writing samples; the next build learns from them.",
+    "If it reads like you, use it. Setup is done once you use a version. If not, discard it, add more writing samples and build again; the next build learns from them.",
   "voice.candidate.reason.uncomparable":
     "The previous voice profile could not be compared. Review this version before replacing it.",
   "voice.candidate.reason.identity":
@@ -14537,6 +14537,18 @@ export const en = {
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
   "setup.caption.voice": "Needs 800 words you wrote.",
+  "setup.caption.voiceReview": "Your voice is trained and ready to review.",
+  "setup.caption.voiceBuilding":
+    "Building your voice. It continues if you leave.",
+  "setup.caption.voiceDeferred": "Your voice build is waiting to run.",
+  "setup.caption.voiceFailed": "The last build did not finish.",
+  "setup.caption.voiceReady": "Your samples are ready to build from.",
+  "setup.caption.voiceUnknown": "Could not check your writing voice.",
+  "setup.action.voiceReview": "Review voice",
+  "setup.action.voiceProgress": "View progress",
+  "setup.action.voiceRetry": "Try again",
+  "setup.action.voiceBuild": "Build voice",
+  "setup.action.voiceOpen": "Open writing voice",
   "setup.caption.booking": "Customers book your free time.",
   "setup.caption.bookingNeedsCalendar": "Needs a calendar.",
   "setup.reminder.progress": "Setup progress",

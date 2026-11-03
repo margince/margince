@@ -312,10 +312,11 @@ func writeVoiceErr(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcontracts.VoiceProfile, error) {
-	summary, candidateVersion, err := h.voice.ProfilePresentation(ctx, p.ID)
+	view, err := h.voice.ProfileView(ctx, p.ID)
 	if err != nil {
 		return crmcontracts.VoiceProfile{}, err
 	}
+	summary := view.Summary
 	version := int(p.Version)
 	profileVersion := p.ProfileVersion
 	voiceProfileMD := p.VoiceProfileMD
@@ -333,7 +334,7 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		PersonalityMd:       p.PersonalityMD,
 		AutoLearningEnabled: p.AutoLearningEnabled,
 		ActiveSourceHash:    p.ActiveSourceHash,
-		CandidateVersion:    candidateVersion,
+		CandidateVersion:    view.CandidateVersion,
 		LastBuiltAt:         p.LastBuiltAt,
 		Maturity:            &maturity,
 		QualityBand:         &qualityBand,
@@ -343,6 +344,10 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		CreatedAt:           p.CreatedAt,
 		UpdatedAt:           updatedAt,
 		ArchivedAt:          p.ArchivedAt,
+	}
+	if view.LatestBuild != nil {
+		latest := wireVoiceBuild(*view.LatestBuild)
+		wire.LatestBuild = &latest
 	}
 	if p.OwnerID != nil {
 		owner := openapi_types.UUID(p.OwnerID.UUID)

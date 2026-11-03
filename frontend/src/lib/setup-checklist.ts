@@ -15,6 +15,11 @@ import { useSchedulingProfile } from "./scheduling-profile-query";
 import type { SettingsPageId, SettingsReach } from "./settingscatalog";
 import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { useVoiceProfile } from "./voice-profile";
+import {
+  type VoiceBuildFacts,
+  type VoiceSetupState,
+  voiceSetupState,
+} from "./voice-setup";
 
 // The setup checklist the topbar reminder and the settings home both draw.
 // Every step is read off what the product can already see, never stored, so a
@@ -51,13 +56,21 @@ export type SetupStep = Readonly<{
   reason: SetupStepReason | null;
   /** The connection that finished the step, for a caption naming it. */
   account: Readonly<{ label: string | null; provider: Provider }> | null;
+  /** The voice step's state, or null when its read failed and it is unknown.
+   * Absent on every other step. */
+  voice?: Readonly<{
+    state: VoiceSetupState;
+    build: VoiceBuildFacts | null;
+  }> | null;
 }>;
 
-/** What the reader's reads answered; null where a read was refused or failed. */
+/** What the reader's reads answered; null where a read was refused or failed.
+ * The voice read reports its failure, because its step stays on the list as
+ * unknown rather than vanishing and letting the rest read as complete. */
 export type SetupReads = Readonly<{
   acts: ReadonlySet<SettingsPageId>;
   connectors: ConnectorsResult | null;
-  voice: Readonly<{ profile: VoiceProfile | null }> | null;
+  voice: Readonly<{ profile: VoiceProfile | null }> | "failed" | null;
   scheduling: SchedulingProfile | null;
 }>;
 
@@ -180,6 +193,17 @@ function calendarStep(connectors: ConnectorsResult): Draft | null {
   });
 }
 
+function voiceStep(voice: NonNullable<SetupReads["voice"]>): Draft {
+  if (voice === "failed") {
+    return { ...draft("voice", "voice"), voice: null };
+  }
+  const state = voiceSetupState(voice.profile);
+  return {
+    ...draft("voice", "voice", { done: state === "active" }),
+    voice: { state, build: voice.profile?.latest_build ?? null },
+  };
+}
+
 function bookingStep(
   scheduling: SchedulingProfile,
   calendar: Draft | null,
@@ -206,12 +230,7 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
   const drafts = [
     connections && mailStep(connections),
     calendar,
-    acts.has("voice") && voice
-      ? draft("voice", "voice", {
-          // Zero is the schema's "no active artifact yet".
-          done: (voice.profile?.profile_version ?? 0) > 0,
-        })
-      : null,
+    acts.has("voice") && voice ? voiceStep(voice) : null,
     acts.has("meetings") && scheduling
       ? bookingStep(scheduling, calendar)
       : null,
@@ -236,6 +255,15 @@ export type SetupChecklist = Readonly<{
   hide: () => void;
 }>;
 
+function voiceRead(
+  query: ReturnType<typeof useVoiceProfile>,
+): SetupReads["voice"] {
+  if (query.data !== undefined) {
+    return { profile: query.data };
+  }
+  return query.isError ? "failed" : null;
+}
+
 export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const acts = new Set(reach.acts.map((page) => page.id));
   // Each read waits for a page that could show its step.
@@ -252,11 +280,12 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("meetings") && scheduling,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
-  // them open. The reader is never sent to something the product cannot see.
+  // them open. The voice step stays as unknown instead: dropping it could
+  // leave every remaining step done and hide the reminder on a failed read.
   const steps = deriveSetupSteps({
     acts,
     connectors: connectors.data ?? null,
-    voice: voice.data === undefined ? null : { profile: voice.data },
+    voice: voiceRead(voice),
     scheduling: scheduling.data ?? null,
   });
   return {

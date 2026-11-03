@@ -12775,7 +12775,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.firstHint":
-    "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, hãy bỏ bản này và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+    "Nếu bản này đúng văn phong của bạn, hãy dùng. Thiết lập hoàn tất khi bạn dùng một phiên bản. Nếu không, hãy bỏ bản này, thêm văn mẫu và dựng lại; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.reason.uncomparable":
     "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
   "voice.candidate.reason.identity":
@@ -14216,6 +14216,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
   "setup.caption.voice": "Cần 800 từ do bạn viết.",
+  "setup.caption.voiceReview":
+    "Giọng văn của bạn đã được huấn luyện và chờ bạn xem lại.",
+  "setup.caption.voiceBuilding":
+    "Đang dựng giọng văn. Việc này vẫn tiếp tục khi bạn rời trang.",
+  "setup.caption.voiceDeferred": "Bản dựng giọng văn đang chờ chạy.",
+  "setup.caption.voiceFailed": "Lần dựng gần nhất chưa hoàn tất.",
+  "setup.caption.voiceReady": "Văn mẫu của bạn đã đủ để dựng.",
+  "setup.caption.voiceUnknown": "Không kiểm tra được giọng văn của bạn.",
+  "setup.action.voiceReview": "Xem lại giọng văn",
+  "setup.action.voiceProgress": "Xem tiến độ",
+  "setup.action.voiceRetry": "Thử lại",
+  "setup.action.voiceBuild": "Dựng giọng văn",
+  "setup.action.voiceOpen": "Mở giọng văn",
   "setup.caption.booking": "Khách hàng đặt giờ rảnh của bạn.",
   "setup.caption.bookingNeedsCalendar": "Cần có lịch.",
   "setup.reminder.progress": "Tiến độ thiết lập",

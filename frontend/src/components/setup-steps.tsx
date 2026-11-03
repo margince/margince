@@ -5,11 +5,17 @@ import { Button } from "../design-system/atoms";
 import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { StatusBadge } from "../design-system/statusbadge";
 import { accountNameOf } from "../format/connectorprovider";
-import { useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { deferralDetail } from "../lib/deferral-detail";
 import { navigate } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import type { SetupStep, SetupStepId } from "../lib/setup-checklist";
+import {
+  VOICE_FOCUS_PARAM,
+  type VoiceSetupState,
+  voiceFocusFor,
+} from "../lib/voice-setup";
 
 const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
   mail: "setup.step.mail",
@@ -42,6 +48,63 @@ const REASON: Readonly<
   needsCalendar: "setup.caption.bookingNeedsCalendar",
 };
 
+// The unfinished voice step's caption and verb for each state. An unknown
+// state (the read failed) sends the reader to look rather than to add samples.
+const VOICE_COPY: Readonly<
+  Record<
+    Exclude<VoiceSetupState, "active"> | "unknown",
+    Readonly<{ caption: MessageKey; action: MessageKey }>
+  >
+> = {
+  review: {
+    caption: "setup.caption.voiceReview",
+    action: "setup.action.voiceReview",
+  },
+  building: {
+    caption: "setup.caption.voiceBuilding",
+    action: "setup.action.voiceProgress",
+  },
+  deferred: {
+    caption: "setup.caption.voiceDeferred",
+    action: "setup.action.voiceProgress",
+  },
+  failed: {
+    caption: "setup.caption.voiceFailed",
+    action: "setup.action.voiceRetry",
+  },
+  ready: {
+    caption: "setup.caption.voiceReady",
+    action: "setup.action.voiceBuild",
+  },
+  needsSamples: {
+    caption: "setup.caption.voice",
+    action: "setup.action.voice",
+  },
+  unknown: {
+    caption: "setup.caption.voiceUnknown",
+    action: "setup.action.voiceOpen",
+  },
+};
+
+function voiceCopy(step: SetupStep) {
+  const state = step.voice?.state;
+  return VOICE_COPY[
+    state === undefined || state === "active" ? "unknown" : state
+  ];
+}
+
+// A failed or deferred build quotes what the server recorded about it.
+function voiceCaption(t: Translator, step: SetupStep): string {
+  const build = step.voice?.build;
+  const recorded =
+    build &&
+    (step.voice?.state === "failed" || step.voice?.state === "deferred")
+      ? deferralDetail(t, build)
+      : null;
+  const caption = t(voiceCopy(step).caption);
+  return recorded ? `${caption} ${recorded}` : caption;
+}
+
 function reasonKey(step: SetupStep): MessageKey {
   if (step.reason === "needsReconnect") {
     return step.id === "mail"
@@ -55,7 +118,7 @@ function useCaption(): (step: SetupStep) => string {
   const t = useT();
   return (step) => {
     if (step.state !== "done") {
-      return t(reasonKey(step));
+      return step.id === "voice" ? voiceCaption(t, step) : t(reasonKey(step));
     }
     if (step.account) {
       const provider = t(accountNameOf(step.account.provider));
@@ -119,6 +182,24 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
       <span aria-hidden="true">
         <StatusBadge kind="done" label={t("checklist.stepDone")} />
       </span>
+    );
+  }
+  if (step.id === "voice") {
+    // The page moves focus to the part the dial names, even when the reader
+    // is already on it, so the action always lands on the next thing to do.
+    const focus = voiceFocusFor(step.voice?.state ?? null);
+    return (
+      <Button
+        variant={step.state === "current" ? "primary" : undefined}
+        onClick={() =>
+          navigate(
+            settingsHref(step.page),
+            new Map([[VOICE_FOCUS_PARAM, focus]]),
+          )
+        }
+      >
+        {t(voiceCopy(step).action)}
+      </Button>
     );
   }
   return (

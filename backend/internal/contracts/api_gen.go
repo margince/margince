@@ -60216,14 +60216,17 @@ type VoiceProfile struct {
 	ArchivedAt       *time.Time `json:"archived_at"`
 
 	// AutoLearningEnabled Explicit owner opt-in; defaults off.
-	AutoLearningEnabled bool                  `json:"auto_learning_enabled"`
-	CandidateVersion    *int                  `json:"candidate_version,omitempty"`
-	CapturedBy          *string               `json:"captured_by,omitempty"`
-	CreatedAt           time.Time             `json:"created_at"`
-	Id                  openapi_types.UUID    `json:"id"`
-	LastBuiltAt         *time.Time            `json:"last_built_at,omitempty"`
-	Maturity            *VoiceProfileMaturity `json:"maturity,omitempty"`
-	OwnerId             *openapi_types.UUID   `json:"owner_id,omitempty"`
+	AutoLearningEnabled bool               `json:"auto_learning_enabled"`
+	CandidateVersion    *int               `json:"candidate_version,omitempty"`
+	CapturedBy          *string            `json:"captured_by,omitempty"`
+	CreatedAt           time.Time          `json:"created_at"`
+	Id                  openapi_types.UUID `json:"id"`
+	LastBuiltAt         *time.Time         `json:"last_built_at,omitempty"`
+
+	// LatestBuild The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id.
+	LatestBuild *VoiceBuild           `json:"latest_build,omitempty"`
+	Maturity    *VoiceProfileMaturity `json:"maturity,omitempty"`
+	OwnerId     *openapi_types.UUID   `json:"owner_id,omitempty"`
 
 	// PersonalityMd Owner-authored preferences; model output never overwrites this field.
 	PersonalityMd string `json:"personality_md"`

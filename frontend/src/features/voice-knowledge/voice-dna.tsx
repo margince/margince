@@ -4,14 +4,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { VoiceKinds } from "../../components/voicekinds";
 import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
+import {
+  JumpBar,
+  type JumpTarget,
+  useJumpTo,
+} from "../../design-system/jumpbar";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import {
@@ -24,7 +28,13 @@ import { identifierNumber } from "../../format/format";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useVoiceProfile } from "../../lib/voice-profile";
+import {
+  parseVoiceFocus,
+  VOICE_FOCUS_PARAM,
+  type VoiceFocus,
+} from "../../lib/voice-setup";
 import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import {
@@ -74,11 +84,60 @@ function invalidateVoiceCorpus(qc: QueryClient) {
   }
 }
 
+// Where each focus dial value lands. A review that is no longer there (applied
+// or discarded elsewhere) falls back to the head of the page.
+const FOCUS_TARGETS: Readonly<Record<VoiceFocus, string>> = {
+  review: VOICE_SECTIONS.review,
+  voice: VOICE_SECTIONS.voice,
+  samples: VOICE_SECTIONS.sharpen,
+};
+
+// Answers setup's focus dial once the page has drawn what it points at, then
+// clears the dial so the same step pressed again moves focus again.
+function useSetupFocus(ready: boolean) {
+  const [params] = useUrlParams();
+  const asked = params.get(VOICE_FOCUS_PARAM);
+  const jump = useJumpTo();
+  useEffect(() => {
+    if (!asked || !ready) {
+      return;
+    }
+    const focus = parseVoiceFocus(asked);
+    const target = focus ? FOCUS_TARGETS[focus] : VOICE_SECTIONS.voice;
+    jump(document.getElementById(target) ? target : VOICE_SECTIONS.voice);
+    replaceDial(VOICE_FOCUS_PARAM, undefined);
+  }, [asked, ready, jump]);
+}
+
+// The profile read is polled while a build runs. When it reports a new
+// outcome, the reads drawn from the build's result are read again too.
+function useFollowBuildOutcome(profile: VoiceProfile, qc: QueryClient) {
+  const outcome = [
+    profile.profile_version,
+    profile.candidate_version,
+    profile.latest_build?.id,
+    profile.latest_build?.status,
+  ].join(":");
+  const seen = useRef(outcome);
+  useEffect(() => {
+    if (seen.current === outcome) {
+      return;
+    }
+    seen.current = outcome;
+    for (const key of ["voice-sources", "voice-versions", "voice-learning"]) {
+      qc.invalidateQueries({ queryKey: [key] });
+    }
+  }, [outcome, qc]);
+}
+
 export function VoiceDnaCard() {
   const t = useT();
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
+  // Before the first sample there is no section to land on; the dial is still
+  // answered, so pressing the step again works.
+  useSetupFocus(profile.data === null);
   // Owned above the empty and profile branches. The first sample mints the
   // profile and swaps one branch for the other. The files still in flight then
   // belong to the card that remains.
@@ -203,7 +262,10 @@ function VoiceDnaBody({
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [deltasAsked, setDeltasAsked] = useState(false);
   const invalidate = () => invalidateVoiceCorpus(qc);
-  const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
+  const versionsRead = useVoiceVersions(profile.id);
+  const versions = loadedVersions(versionsRead.data?.pages);
+  useSetupFocus(!versionsRead.isPending);
+  useFollowBuildOutcome(profile, qc);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
   // A first version awaiting review is the only voice there is. The page draws

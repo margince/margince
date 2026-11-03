@@ -73,6 +73,26 @@ function buildOutcomeText(
   return t(`settings.voice.buildStatus.${outcome.status}`);
 }
 
+// The newest build as the profile read recorded it, for a page opened after
+// the build started or ended elsewhere. A success says nothing here: what it
+// produced is drawn as the voice or the candidate review.
+function recordedOutcome(
+  t: ReturnType<typeof useT>,
+  profile: VoiceProfile,
+): BuildOutcome | null {
+  const build = profile.latest_build;
+  switch (build?.status) {
+    case "queued":
+    case "running":
+      return { status: "pending", detail: t("settings.voice.buildRunning") };
+    case "failed":
+    case "deferred":
+      return { status: build.status, detail: deferralDetail(t, build) };
+    default:
+      return null;
+  }
+}
+
 // Build creates a durable background build; poll to a terminal state. A slow or
 // budget-deferred build is reported as such, not spun on forever. The hero and
 // the Builds card both start builds, so the one engine behind them lives here.
@@ -161,7 +181,11 @@ export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
     words,
     blocked,
     reach,
-    progress: buildStatusLine(t, build.isPending, outcome),
+    progress: buildStatusLine(
+      t,
+      build.isPending,
+      outcome ?? recordedOutcome(t, profile),
+    ),
   };
 }
 

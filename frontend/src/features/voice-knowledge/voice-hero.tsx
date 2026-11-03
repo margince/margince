@@ -26,6 +26,7 @@ type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
  * land on the same places. */
 export const VOICE_SECTIONS = {
   voice: "vdna-voice",
+  review: "vdna-review",
   moves: "vdna-moves",
   drafts: "vdna-drafts",
   sharpen: "vdna-sharpen",
