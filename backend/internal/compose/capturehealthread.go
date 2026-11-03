@@ -88,7 +88,7 @@ func captureHeldMeetings(
 	query := `
 		SELECT count(*), min(a.created_at)
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND ` + filedMeetingHeldClause("a", arg)
+		 WHERE ` + filedMeetingHeldClause("a", arg)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&out.Count, &oldest); err != nil {
 		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
 			"compose: counting the filed meetings still held: %w", err)

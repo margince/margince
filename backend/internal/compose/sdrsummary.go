@@ -178,7 +178,7 @@ func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedSco
 		return 0, err
 	}
 	var count int
-	err = tx.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE activity_thread_available(a.thread_key) AND `+where, b.values...).Scan(&count)
+	err = tx.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE `+where, b.values...).Scan(&count)
 	return count, err
 }
 

@@ -198,7 +198,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		        ON pp.activity_id = up.activity_id
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
-		        ON a.id = up.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
+		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		),
 		folded AS (
@@ -241,7 +241,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       SELECT 1
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		         JOIN activity a ON a.id = up.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
+		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
@@ -439,7 +439,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		    SELECT up.user_id AS edge_user, pp.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met, `+graphMemberSent+` AS sent
 		      FROM activity_participant up
 		      JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		      JOIN activity a ON a.id = up.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
+		      JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		       AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		     WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		       AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
@@ -476,7 +476,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
-		  JOIN activity a ON a.id = pa.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
+		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`

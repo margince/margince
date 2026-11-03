@@ -162,9 +162,9 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			 WHERE v.id IN (SELECT id FROM picked)
 			RETURNING v.id, v.thread_key, v.user_id, v.first_activity_id,
 			          coalesce(left((SELECT a.subject FROM activity a
-			                          WHERE activity_thread_available(a.thread_key) AND a.id = v.first_activity_id AND a.restricted_at IS NULL), $4), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $4), ''),
 			          coalesce(left((SELECT a.body FROM activity a
-			                          WHERE activity_thread_available(a.thread_key) AND a.id = v.first_activity_id AND a.restricted_at IS NULL), $5), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $5), ''),
 			          coalesce((SELECT array_agg(at.filename ORDER BY at.filename)
 			                      FROM attachment at
 			                     WHERE at.entity_type = 'activity' AND at.entity_id = v.first_activity_id
@@ -226,7 +226,7 @@ func (s *ThreadVerdictStore) ResolveAs(
 		       disposition_reason = NULLIF($6, ''),
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
-		 WHERE id = $1 AND activity_thread_available(thread_key) AND status = 'pending' AND claimed_by = $7`,
+		 WHERE id = $1 AND status = 'pending' AND claimed_by = $7`,
 		t.ID, status, kind, confidence, seen, reason, t.Claim)
 	if err != nil {
 		return false, fmt.Errorf("capture: resolving the confidentiality verdict for a thread: %w", err)
@@ -355,7 +355,7 @@ func (s *ThreadVerdictStore) RecordOutcomeTx(
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_import
 		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
-		 WHERE activity_id = $1 AND user_id = $2 AND EXISTS (SELECT 1 FROM activity outcome_source WHERE outcome_source.id = capture_import.activity_id AND activity_thread_available(outcome_source.thread_key))`,
+		 WHERE activity_id = $1 AND user_id = $2`,
 		row.ActivityID, row.UserID, status, rowReasonForKind(kind))
 	if err != nil {
 		return fmt.Errorf("capture: recording a thread verdict on its import row: %w", err)

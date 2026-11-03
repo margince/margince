@@ -34,8 +34,6 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
-	"internal/modules/consent:InvalidateThreadBasisTx":      "erasure retracts source-backed lawful-ground records through an audited owner operation; lawful bases have no public event type because broadcasting one would publish a legal conclusion about the subject",
-	"internal/modules/consent:ThreadBasisCopyTx":            "a thread partition retains existing lawful-ground evidence; broadcasting a legal conclusion would expose subject data, so the authorization engine, subject-access export and erasure sweep read the basis directly while its audit records the original and derived ground identities",
 	"internal/modules/contacts:RecordSubjectWroteTx":        "source evidence is recorded with its privacy notice decision, like RelabelHeldMailTx; the closed event catalog has no acquisition-evidence event, and contact.updated would claim a change to contact fields that did not happen",
 	"internal/modules/contacts:refreshContactPhoneEvidence": "refreshing a duplicate question's evidence is review-flow state, like filing and reopening it. The closed event catalog defines no dedupe type, and no subscriber acts on a proposed match. Its audit records the replacement score and reason",
 

@@ -50,7 +50,7 @@ func OpenTasksByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, in Li
 	limit := openTasksLimit(in.Limit)
 	rows, err := tx.Query(ctx, `SELECT d.id, `+openTaskColumns()+`
 		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND `+joinAnd(where)+` ORDER BY `+openTasksOrder(in.MostRecentlySlippedFirst)+
+		WHERE `+joinAnd(where)+` ORDER BY `+openTasksOrder(in.MostRecentlySlippedFirst)+
 		fmt.Sprintf(" LIMIT %d", limit+1)+`) selected JOIN activity a ON a.id = selected.id LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+deals+` ORDER BY d.id, `+openTasksOrder(in.MostRecentlySlippedFirst), args...)
 	if err != nil {
@@ -97,7 +97,7 @@ func NextBookedMeetingsByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UU
 		WHERE on_deal.activity_id = a.id AND on_deal.deal_id = d.id)`)
 	rows, err := tx.Query(ctx, `SELECT d.id, a.id, coalesce(a.subject, ''), a.occurred_at, a.occurred_precision
 		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND `+joinAnd(where)+` ORDER BY `+occurredday.StartSQL("a")+`, a.id LIMIT 1) selected JOIN activity a ON a.id = selected.id
+		WHERE `+joinAnd(where)+` ORDER BY `+occurredday.StartSQL("a")+`, a.id LIMIT 1) selected JOIN activity a ON a.id = selected.id
 		WHERE `+deals, args...)
 	if err != nil {
 		return nil, err

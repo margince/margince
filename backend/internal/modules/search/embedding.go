@@ -156,7 +156,7 @@ func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID 
 		if entityType == entityActivity {
 			var locked ids.UUID
 			if err := tx.QueryRow(ctx,
-				`SELECT id FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, entityID).Scan(&locked); err != nil {
+				`SELECT id FROM activity WHERE id = $1 FOR SHARE`, entityID).Scan(&locked); err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
 					return nil // erased since the text was read; nothing to index
 				}
@@ -166,7 +166,7 @@ func (s *Store) writeEmbedding(ctx context.Context, entityType string, entityID 
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
 			SELECT $1, $2, 0, $3, $4, $5::vector
-			 WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND $1 = 'activity' AND a.id = $2
+			 WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE $1 = 'activity' AND a.id = $2
 			                     AND NOT (`+activityIndexable("a")+`))
 			ON CONFLICT (entity_type, entity_id, chunk_ix)
 			DO UPDATE SET chunk_hash = EXCLUDED.chunk_hash, model = EXCLUDED.model,

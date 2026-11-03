@@ -357,7 +357,7 @@ func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 		  FROM audit_log entry
 		 WHERE entry.id = ANY($%d) AND %s
 		   AND (entry.entity_type <> 'activity' OR EXISTS (
-		         SELECT 1 FROM activity held WHERE activity_thread_available(held.thread_key) AND held.id = entry.entity_id AND %s))`,
+		         SELECT 1 FROM activity held WHERE held.id = entry.entity_id AND %s))`,
 		arg(auditIDs), privacy.UnscrubbedImageSQL("entry", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))),
 		auth.ActivityAvailableClause("held"))
 	rows, err := tx.Query(ctx, query, args...)

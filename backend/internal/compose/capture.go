@@ -377,7 +377,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// One conversation under one thread key, however a mail program
 		// shortened the References chain and whichever door filed each
 		// message (threadmerge.go).
-		WithThreadJoin(threadJoiner(pool)).
+		WithThreadJoin(threadJoiner()).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

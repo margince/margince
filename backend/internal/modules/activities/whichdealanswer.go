@@ -35,12 +35,12 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 	// sender's References root, so anything else may be a spoof.
 	proven := `(` + correspondence.ConversationSQL("mail", "anchor") + ` AND ` + correspondence.ProvenSQL("mail") + `)`
 	conversation := `FROM activity anchor JOIN activity mail ON ` + proven + `
-		 WHERE anchor.id = $1 AND (mail.restricted_at IS NULL AND activity_thread_available(mail.thread_key))`
+		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL`
 	questions, err := threadIDs(ctx, tx, `SELECT q.id FROM activity anchor
 		  JOIN activity mail ON (mail.id = anchor.id OR `+proven+`)
 		  JOIN activity q ON q.source_activity_id = mail.id AND q.kind = 'task' AND q.source_system = $2
-		   AND (q.archived_at IS NULL AND activity_thread_available(q.thread_key)) AND NOT q.is_done
-		 WHERE anchor.id = $1 AND (mail.restricted_at IS NULL AND activity_thread_available(mail.thread_key))
+		   AND q.archived_at IS NULL AND NOT q.is_done
+		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL
 		 ORDER BY q.id`, mail, provenance.WhichDealSource)
 	if err != nil || len(questions) == 0 {
 		return err
