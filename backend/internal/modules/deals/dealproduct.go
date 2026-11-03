@@ -19,8 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const dealProductTable = "deal_product"
-
 // syncDealProductsFromOffer rewrites the deal's `offer` allocations from the
 // accepted offer's lines that name a product, one row per product with the
 // lines' net value. A `manual` set stays, because it is the human's answer.
