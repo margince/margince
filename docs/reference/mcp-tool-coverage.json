@@ -672,6 +672,7 @@
         3
       ],
       "requires": [
+        "change_activities",
         "schedule_meeting"
       ],
       "requires_one_of": [],
@@ -2143,6 +2144,7 @@
       "required_by_cases": [
         "case1_log_it",
         "case42_can_i_answer_on_whatsapp",
+        "case46_get_us_in_a_room",
         "case48_that_whole_thread_is_filed_wrong",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case9_filed_in_the_wrong_place"
@@ -2154,14 +2156,14 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 10,
-          "passed": 10,
+          "runs": 13,
+          "passed": 13,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 11,
-          "passed": 11,
+          "runs": 14,
+          "passed": 14,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -2555,7 +2557,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 479,
+      "tokens": 409,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"
@@ -2688,7 +2690,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 337,
+      "tokens": 342,
       "agents": [],
       "required_by_cases": [
         "case23_find_us_a_slot"

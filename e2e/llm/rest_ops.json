@@ -214,7 +214,6 @@
     "POST /v1/approvals/{id}/approve": "decide_approval",
     "POST /v1/approvals/{id}/reject": "decide_approval",
     "POST /v1/attachments": "attach_document",
-    "POST /v1/bookings": "book_meeting",
     "POST /v1/bulk/execute": "bulk_update_records",
     "POST /v1/bulk/preview": "bulk_update_records",
     "POST /v1/bulk/{id}/undo": "bulk_update_records",

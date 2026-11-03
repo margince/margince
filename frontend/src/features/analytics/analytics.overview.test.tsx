@@ -37,7 +37,7 @@ describe("where Analytics opens", () => {
     const tabs = within(row).getAllByRole("button");
     expect(tabs[0]).toHaveTextContent("Overview");
     expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("Expected finish")).toBeVisible();
+    expect(await screen.findByText("Won + confirmed commit")).toBeVisible();
   });
 
   it.each([
@@ -101,27 +101,17 @@ describe("Sales review", () => {
   it("leads with sales won and states the quarter's position in readings and words", async () => {
     open("#/analytics", bySeat("leader"));
     const strip = await readings();
-    const hero = within(screen.getByRole("region", { name: "Sales won" }));
+    const hero = within(
+      screen.getByRole("region", { name: "Opening readings" }),
+    );
     expect(hero.getByText("€420k")).toBeVisible();
-    expect(strip.queryByText("€420k")).toBeNull();
+    expect(strip.getByText("€420k")).toBeVisible();
     expect(strip.getByText("€760k")).toBeVisible();
     // The shortfall stands beside target progress, not as a reading.
-    expect(
-      hero.getByText(
-        "Projected shortfall €40k, from an expected finish of €760k",
-      ),
-    ).toBeVisible();
-    expect(strip.getByText("3.6×")).toBeVisible();
-    expect(
-      strip.getByText(
-        "€1.36m eligible to close this quarter / €380k still to win",
-      ),
-    ).toBeVisible();
-    expect(
-      screen.getByText(
-        /Expected finish for .+: €760k, €40k short of the €800k target\./,
-      ),
-    ).toBeVisible();
+    expect(hero.getByText("Projected shortfall €40k")).toBeVisible();
+    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
   });
 
   it("asks the preset's trend, stage and team charts apart from the figures, and draws them", async () => {
@@ -172,10 +162,10 @@ describe("Sales review", () => {
       { grants: ADMIN_GRANTS },
     );
     const strip = await readings();
-    expect(strip.getByText("Closed win rate")).toBeVisible();
+    expect(strip.queryByText("Closed win rate")).toBeNull();
     expect(strip.queryByText("Gap to target")).toBeNull();
     expect(screen.getByRole("link", { name: "Set targets" })).toBeVisible();
-    expect(screen.getByText(/No sales target is set for/)).toBeVisible();
+    expect(screen.queryByText(/No sales target is set for/)).toBeNull();
   });
 
   it("tells a reader who may not set targets who can", async () => {
@@ -227,8 +217,8 @@ describe("Sales review", () => {
     await readings();
     expect(screen.getByText("Could not be calculated")).toBeVisible();
     expect(
-      screen.getByText(/Some figures could not be read just now/),
-    ).toBeVisible();
+      screen.queryByText(/Some figures could not be read just now/),
+    ).toBeNull();
     expect(screen.queryByText(/Won in/)).toBeNull();
   });
 
@@ -237,17 +227,19 @@ describe("Sales review", () => {
       checks: () => jsonResponse({ title: "Unavailable", status: 503 }, 503),
     });
     await readings();
-    expect(await screen.findByText(/Some data did not load/)).toBeVisible();
+    await readings();
+    expect(screen.queryByText(/No forecast check is open/)).toBeNull();
     expect(
       screen.queryByText("No forecast check is open for this scope."),
     ).toBeNull();
   });
 
-  it("says a clear list only once the checks answered with none", async () => {
+  it("omits a process assurance when checks return none", async () => {
     open("#/analytics", bySeat("leader"));
+    await readings();
     expect(
-      await screen.findByText("No forecast check is open for this scope."),
-    ).toBeVisible();
+      screen.queryByText("No forecast check is open for this scope."),
+    ).toBeNull();
   });
 
   it("opens the deal behind a check, from an address that keeps the review", async () => {
@@ -363,10 +355,12 @@ describe("Sales review gap", () => {
         : salesEvaluation({ comparison: withoutGap }),
     );
     const strip = await readings();
-    const hero = within(screen.getByRole("region", { name: "Sales won" }));
+    const hero = within(
+      screen.getByRole("region", { name: "Opening readings" }),
+    );
     expect(
-      hero.getByText("The comparison came back without a gap."),
-    ).toBeVisible();
+      hero.queryByText("The comparison came back without a gap."),
+    ).toBeNull();
     expect(hero.queryByText(/Projected/)).toBeNull();
     expect(strip.queryByText("€0")).toBeNull();
   });

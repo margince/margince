@@ -114,7 +114,7 @@ func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
 func seedRecipientOutcomes(t *testing.T, e *mailEnv, week time.Time) {
 	t.Helper()
 	thursday := week.AddDate(0, 0, 3).Add(12 * time.Hour)
-	e.Deals = e.Deals.WithClock(func() time.Time { return thursday })
+	e.Deals = e.Deals.SetClock(func() time.Time { return thursday })
 	e.Activities = e.Activities.WithClock(func() time.Time { return thursday })
 	pipeline, open, won := integration.DealFixture(t, e.Env)
 	deal := e.SeedDeal(t, "Northstar renewal", pipeline, open, &e.Rep1)

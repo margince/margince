@@ -30,7 +30,7 @@ const reportingValueBasisAll = crmcontracts.ReportingValueBasisAll
 var reportingDimensionMetrics = []crmcontracts.ReportingMetricID{
 	reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated, reportingBookingsMix,
 	reportingQualifiedOpportunitiesCreated, reportingInitiativePipeline,
-	reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse,
+	reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse,
 }
 
 // reportingValueBasisMetrics are the readers of won value, the only figures a

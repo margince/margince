@@ -21,8 +21,9 @@ import (
 )
 
 // markDispositionUnevidenced records that a domain's question is still open
-// because nothing evidenced a company — the site could not be read, and the
-// sender's name did not explain the domain.
+// because nothing evidenced a company. Either the site could not be read, or
+// it was read and named nobody; the sender's name did not explain the domain.
+// siteUnreadable says which, so a failed read is not reported as a finding.
 //
 // It keeps status='pending' deliberately. Pending is the ONE value every
 // due-scan, queue-mark and exhaustion query treats as open, so a withheld
@@ -32,14 +33,15 @@ import (
 // Guarded on pending so it cannot overwrite an answer a HUMAN settled: an admin
 // who confirmed the company owns that verdict, and a later sweep finding the
 // site still unreadable must not quietly reopen their decision.
-func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence string) error {
+func markDispositionUnevidenced(ctx context.Context, tx pgx.Tx, domain, evidence string, siteUnreadable bool) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET pending_reason = 'unevidenced', evidence = NULLIF($2, ''),
+		       site_unreadable = $4, candidate_company_id = NULL,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1 AND status = $3
- AND (pending_reason IS DISTINCT FROM 'unevidenced' OR evidence IS DISTINCT FROM NULLIF($2, ''))`,
-		domain, evidence, DomainPending); err != nil {
+ AND (pending_reason IS DISTINCT FROM 'unevidenced' OR evidence IS DISTINCT FROM NULLIF($2, '') OR site_unreadable <> $4)`,
+		domain, evidence, DomainPending, siteUnreadable); err != nil {
 		return fmt.Errorf("contacts: recording that %s evidenced no company: %w", domain, err)
 	}
 	return nil
@@ -85,6 +87,7 @@ func withholdForStaleEvidence(
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET pending_reason = 'stale_evidence',
+		       candidate_company_id = NULL, site_unreadable = false,
 		       -- The cursor is cleared for the same reason 'unevidenced' clears
 		       -- it: re-crawling cannot make old mail newer, so the sweep must
 		       -- stop offering this domain until a message rearms it.
@@ -99,7 +102,8 @@ func withholdForStaleEvidence(
 // withholdForNearDuplicate leaves a company verdict unanswered when more than
 // one company already carries the name this domain resolved to. Picking one of
 // them by rank would be picking by uuid, so the question goes to somebody who
-// can tell, and the evidence names a rival so they need not go looking.
+// can tell. The row keeps the rival's id, so the reader can confirm it
+// instead of searching.
 //
 // The row stays PENDING for the reason stale evidence does: settling it would
 // stop every later message re-asking. The contacts keep their mail and gain no
@@ -114,14 +118,16 @@ func withholdForNearDuplicate(
 		UPDATE company_domain_disposition
 		   SET pending_reason = $2,
 		       evidence = $3,
+		       candidate_company_id = $4, site_unreadable = false,
 		       -- Cleared for the reason 'unevidenced' clears it: re-crawling
 		       -- reads the same site and reaches the same rival, so the sweep
 		       -- must stop offering this domain until a human answers it or new
 		       -- mail rearms it.
 		       next_attempt_at = NULL,
 		       updated_at = now()
-		 WHERE domain = $1 AND status = 'pending' AND (pending_reason IS DISTINCT FROM $2 OR evidence IS DISTINCT FROM $3)`,
-		in.Domain, PendingNearDuplicate, evidence); err != nil {
+		 WHERE domain = $1 AND status = 'pending' AND (pending_reason IS DISTINCT FROM $2 OR evidence IS DISTINCT FROM $3
+		   OR candidate_company_id IS DISTINCT FROM $4)`,
+		in.Domain, PendingNearDuplicate, evidence, rival.CompanyID); err != nil {
 		return fmt.Errorf("contacts: withholding %s for a name twin: %w", in.Domain, err)
 	}
 	return nil

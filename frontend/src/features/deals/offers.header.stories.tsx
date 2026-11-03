@@ -59,6 +59,41 @@ export const Open: Story = {
   },
 };
 
+/** An installation with two legal entities picks which one issues the offer. */
+export const TwoLegalEntities: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /offer-templates": () => jsonResponse(emptyPage),
+      "GET /legal-entities": () =>
+        jsonResponse({
+          data: [
+            { id: "le-default", is_default: true, display_name: "Acme" },
+            { id: "le-vienna", is_default: false, display_name: "Acme Wien" },
+          ].map((entity) => ({
+            ...entity,
+            address: {},
+            member_count: 0,
+            version: 1,
+            created_at: "2026-06-01T08:00:00Z",
+            updated_at: "2026-06-01T08:00:00Z",
+          })),
+        }),
+    });
+    return (
+      <StoryProviders>
+        <EditOfferHeaderModal
+          open
+          onClose={() => {}}
+          offer={{ ...draftOffer, legal_entity_id: "le-vienna" }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("combobox", { name: "Issued by" });
+  },
+};
+
 /** The calendar behind "Valid until", open on the day the offer runs to. */
 export const PickingValidUntil: Story = {
   ...Open,

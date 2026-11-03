@@ -88,7 +88,7 @@ func captureStaffMail(t *testing.T, e *integration.Env, mail staffMail) {
 func pinClock(t *testing.T, e *integration.Env) time.Time {
 	t.Helper()
 	now := clocktest.Now(t)
-	e.Contacts.WithClock(func() time.Time { return now })
+	e.Contacts.SetClock(func() time.Time { return now })
 	return now
 }
 
@@ -146,7 +146,7 @@ func asksAbout(ctx context.Context, t *testing.T, e *integration.Env, domain str
 	if err != nil {
 		t.Fatal(err)
 	}
-	paged, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 50)
+	paged, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 50, "")
 	if err != nil {
 		t.Fatal(err)
 	}

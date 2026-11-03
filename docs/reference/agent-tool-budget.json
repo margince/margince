@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 24495,
+    "tokens": 24430,
     "median_tool_tokens": 532,
-    "mean_tool_tokens": 644
+    "mean_tool_tokens": 642
   },
   "agents": [
     {
@@ -164,16 +164,16 @@
       "tokens": 517
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 479
-    },
-    {
       "name": "decide_approvals",
       "tokens": 429
     },
     {
       "name": "annotate_brief",
       "tokens": 417
+    },
+    {
+      "name": "schedule_meeting",
+      "tokens": 409
     },
     {
       "name": "list_approvals",
@@ -197,7 +197,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 337
+      "tokens": 342
     },
     {
       "name": "read_attention",

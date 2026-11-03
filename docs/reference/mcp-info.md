@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.7 KB |
+| Tool catalog | 158.2 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41929 |
+| Approx. wire tokens | 41810 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.9 KB | 21% | Yes, every step |
-| Input schemas | 66.0 KB | 41% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.8 KB | 22% | Yes, every step |
+| Input schemas | 65.6 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.9 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **100.4 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -72,7 +72,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
@@ -97,7 +97,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -2539,10 +2539,10 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
 meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
 occupancy was checked. This never checks invitees' availability. Use schedule_meeting with
-action=invite to request an approved calendar invitation after a time is agreed. schedule_meeting
-with action=book only records a meeting. read_context with about=meeting prepares for an existing
-meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag.
-Availability is checked again when reserving the time.
+action=invite to request an approved calendar invitation after a time is agreed. change_activities
+with action=log records a meeting without inviting anyone. read_context with about=meeting prepares
+for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated
+flag. Availability is checked again when reserving the time.
 ```
 
 <details><summary>Input schema</summary>
@@ -9796,17 +9796,16 @@ before calling, unless they asked for this call themselves; requires passport sc
 
 ### schedule_meeting
 
-**Book or invite to a meeting**
+**Invite to a meeting**
 
 ```text
-Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for and
-tells nobody else. invite sends the invitation to its attendees. invite reaches attendees outside
-the workspace, so name them and the time and get the user's yes first. Read check_availability
-before booking a time. Use change_activities with log to record a meeting that already happened.
-Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human
-approves first for invite; the action book cannot be undone, so tell the user what the call will
-change and get their yes before calling, unless they asked for this call themselves; requires
-passport scope "send".)
+Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
+invitation to every attendee: the contact, and any further addresses. invite reaches attendees
+outside the workspace, so name them and the time and get the user's yes first; the call stages for
+approval. Read check_availability before choosing a time. Use change_activities with log to record a
+meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
+its status before claiming it was delivered. (Governance: a human approves every call before it
+runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -9815,39 +9814,31 @@ passport scope "send".)
 {
   "properties": {
     "action": {
-      "description": "book: put a meeting on the calendar; invite: send the invitation to the attendees",
+      "description": "invite: put the meeting on the host's calendar and send the invitation to every attendee",
       "enum": [
-        "book",
         "invite"
       ],
       "type": "string"
     },
-    "approval_id": {
-      "description": "book only: Set on approved retry",
-      "format": "uuid",
+    "attendee_email": {
       "type": "string"
     },
-    "attendee_email": {
-      "description": "invite only",
-      "type": "string"
+    "attendee_emails": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "contact_id": {
-      "description": "invite only",
       "format": "uuid",
       "type": "string"
     },
     "description": {
-      "description": "invite only",
       "type": "string"
     },
     "end": {
       "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
-      "type": "string"
-    },
-    "host_user_id": {
-      "description": "book only",
-      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
@@ -9856,37 +9847,25 @@ passport scope "send".)
       "type": "string"
     },
     "links": {
-      "description": "book only: Who and what the meeting is about; at least one. The booking is refused without it.",
       "items": {
-        "additionalProperties": false,
         "properties": {
           "entity_id": {
             "format": "uuid",
             "type": "string"
           },
           "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
             "type": "string"
           }
         },
         "required": [
-          "entity_type",
-          "entity_id"
+          "entity_id",
+          "entity_type"
         ],
         "type": "object"
       },
-      "maxItems": 25,
-      "minItems": 1,
       "type": "array"
     },
     "location": {
-      "description": "invite only",
       "type": "string"
     },
     "start": {
@@ -9898,14 +9877,18 @@ passport scope "send".)
       "type": "string"
     },
     "video_call": {
-      "description": "invite only",
       "type": "boolean"
     }
   },
   "required": [
     "action",
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
     "start",
-    "end"
+    "subject"
   ],
   "type": "object"
 }

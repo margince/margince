@@ -131,7 +131,9 @@ func (p SendPath) withPoolDefaults(pool *pgxpool.Pool) SendPath {
 // recorder is DERIVED from the pool rather than configured, so this side of
 // the reconciliation must be able to build one.
 func (s *Server) applySendPath(pool *pgxpool.Pool) {
-	s.send.Calendar = newSchedulingCalendar(pool, s.connectorHandlers.registry)
+	if s.send.Calendar == nil {
+		s.send.Calendar = newSchedulingCalendar(pool, s.connectorHandlers.registry)
+	}
 	s.send.MeetingVault = s.vault
 	send := s.send.withPoolDefaults(pool)
 	// The directed send is wired HERE for this file's whole reason: it needs

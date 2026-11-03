@@ -124,7 +124,7 @@ it("dates the original change, not its later delivery", () => {
   ).toBe("07/09/2026, 12:00");
 });
 
-it("renders domain maintenance reasons in the reader's language", () => {
+it("asks a domain question about its company in the reader's language", () => {
   const question = {
     ...task,
     source: "domain_question" as const,
@@ -136,7 +136,9 @@ it("renders domain maintenance reasons in the reader's language", () => {
       noticeDetail(question, viewer, (key, values) =>
         translate(language, key, values),
       ),
-    ).toBe(translate(language, "blockedDomains.source.forwardedIdentity"));
+    ).toBe(
+      `${translate(language, "worklist.domainQuestion.headingDomain", { domain: question.id })} ${translate(language, "worklist.domainQuestion.reason.forwarded")}`,
+    );
   }
 });
 
@@ -149,7 +151,7 @@ it("shows the site triage's own sentence under a vendor question's reason", () =
     domain_note: sentence,
     detail: "Stored fallback prose",
   };
-  const label = translate("en", "blockedDomains.source.vendorVerdict");
+  const label = `${translate("en", "worklist.domainQuestion.headingDomain", { domain: vendor.id })} ${translate("en", "worklist.domainQuestion.reason.vendor")}`;
   expect(
     noticeDetail(vendor, viewer, (key, values) => translate("en", key, values)),
   ).toBe(`${label} ${sentence}`);

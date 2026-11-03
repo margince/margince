@@ -20,7 +20,7 @@ func TestOpenInvoiceLatenessAgreesWithItsCalendarDates(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 8, 4, 0, 5, 0, 0, zone)
-	store := NewStore(e.store.db, e.store.rates).WithClock(func() time.Time { return now })
+	store := NewStore(e.store.db, e.store.rates).SetClock(func() time.Time { return now })
 	summary, err := store.SummaryFor(e.ctx, e.company)
 	if err != nil {
 		t.Fatal(err)
