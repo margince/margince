@@ -148,6 +148,7 @@ type Server struct {
 	jobHealthHandlers
 	dataTaskHandlers
 	captureHealthHandlers
+	dealViabilityHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
 	automaticWorkHandlers

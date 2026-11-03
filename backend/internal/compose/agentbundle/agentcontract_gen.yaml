@@ -8333,6 +8333,29 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/viability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealViability
+      security: [{bearerAuth: []}]
+      summary: Whether the customer still supports this deal, and the review behind the answer.
+      description: |-
+        The deal's treatment in the qualified forecast and what it rests on: the input check's
+        last receipt and its reasons, the close date's standing, the stage chance, and the open
+        `deal_viability` review with its task. The review is shown while it is open, even when
+        its task is done: completing the task does not answer the review.
+      responses:
+        '200':
+          description: The deal's viability.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealViability'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/commitments:
     get:
       tags: [Deals]
@@ -20706,6 +20729,83 @@ components:
         close_passed: {type: boolean}
         closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
+    DealViability:
+      type: object
+      additionalProperties: false
+      required: [deal_id, qualification_mode, qualification, stage_probability, close_date_provisional, close_date_overdue]
+      properties:
+        deal_id: {type: string, format: uuid}
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: Whether the installation's qualified forecast applies `qualification`.
+        qualification:
+          type: string
+          enum: [eligible, excluded, unsupported, unknown]
+          description: >-
+            The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+        assessed_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the input check last assessed the deal; null when it never did.
+        disposition:
+          type: string
+          enum: [none, open_review, override, unsupported]
+          description: The review standing the qualification rests on.
+        complete:
+          type: boolean
+          description: Whether the deal was judged on its current evidence under the current policy.
+        policy_version: {type: string}
+        receipt:
+          $ref: '#/components/schemas/DealViabilityReceipt'
+        expected_close_date: {type: [string, 'null'], format: date}
+        close_date_provisional: {type: boolean}
+        close_date_overdue:
+          type: boolean
+          description: True when the expected close date is before today in the installation's zone.
+        stage_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The baseline chance, the deal's stage probability.
+        review:
+          $ref: '#/components/schemas/DealViabilityReview'
+    DealViabilityReceipt:
+      type: object
+      additionalProperties: false
+      description: The input check's last answer about the deal. Absent when it never assessed it.
+      required: [outcome, reasons, valid_until]
+      properties:
+        outcome: {type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.'}
+        reasons:
+          type: array
+          items: {type: string}
+          description: The reason codes the check recorded.
+        valid_until: {type: string, format: date-time}
+    DealViabilityReview:
+      type: object
+      additionalProperties: false
+      description: >-
+        The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+      required: [id, opened_at, episode]
+      properties:
+        id: {type: string, format: uuid}
+        opened_at: {type: string, format: date-time}
+        episode: {type: integer, minimum: 1}
+        delivery_state:
+          type: [string, 'null']
+          enum: [pending, failed, delivered, null]
+          description: How far handing the review to a task got; null before a pass queued it.
+        task:
+          $ref: '#/components/schemas/DealViabilityTask'
+    DealViabilityTask:
+      type: object
+      additionalProperties: false
+      description: The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+      required: [id, done]
+      properties:
+        id: {type: string, format: uuid}
+        done: {type: boolean}
     ForecastQualifiedReadings:
       type: object
       description: >-
