@@ -11705,7 +11705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "book.pageTitle": "Termin mit {host} buchen",
   "book.pageTitleGeneric": "Termin buchen",
-  "book.meetingTitle": "Ihr Termin",
+  "book.meetingTitle": "Dein Termin",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",
