@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BookingPage is the slug's resolution: which workspace, whose calendar.
@@ -44,16 +45,14 @@ type BookingPage struct {
 // before it may do anything else. The slug names the HOST, and only the host:
 // the installation the request lands in is resolved from the installation
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
-// slug reads as absent. So does the page of a host whose account is not live
-// (invited, suspended, deactivated, archived or removed): every public booking
-// read, the link-preview card included, passes through here.
+// slug reads as absent, and so does a host whose account is not live. Every
+// public booking read, the preview card included, resolves here.
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
 			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
-   WHERE p.slug = $1 AND p.revoked_at IS NULL
-   AND u.status = 'active' AND u.archived_at IS NULL AND u.removed_at IS NULL`,
+   WHERE p.slug = $1 AND p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u"),
 			slug).Scan(&page.HostUserID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
