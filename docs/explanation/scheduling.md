@@ -18,8 +18,8 @@ host can be booked is that host's call.
 ## A page with no calendar is paused, and says so
 
 A booking page saved before the profile existed names no calendar, and nothing migrates it. One
-rule, `publicPagePaused`, decides whether a page takes bookings. The guest profile, the
-availability read and the booking call all ask it. The guest profile answers `paused`, and the
+rule, `publicPagePaused`, decides whether a page is open. The guest profile, the free-time read
+and the booking call all ask it. The guest profile answers `paused`, and the
 guest page names the host instead of showing a blank refusal.
 
 The host's own profile carries `blocker`. It is read from the connection row and the host's

@@ -37,7 +37,7 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	if err != nil {
 		return nil, nil, err
 	}
-	if write && !calendarWriteGranted(provider, scopes) {
+	if write && !CalendarWriteGranted(provider, scopes) {
 		return nil, nil, connector.ErrAuthRejected
 	}
 	c, err := r.connector(provider)
@@ -68,10 +68,6 @@ var calendarWriteScopes = map[string][]string{
 // CalendarWriteGranted says whether a connection's granted scopes let it write
 // events on provider's calendar. It is the one read-only detector.
 func CalendarWriteGranted(provider string, scopes []string) bool {
-	return calendarWriteGranted(provider, scopes)
-}
-
-func calendarWriteGranted(provider string, scopes []string) bool {
 	for _, grant := range calendarWriteScopes[provider] {
 		if slices.Contains(scopes, grant) {
 			return true
