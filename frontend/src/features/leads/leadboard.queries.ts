@@ -44,6 +44,11 @@ function narrowingDials(query: ListQuery): Map<string, unknown> {
   );
 }
 
+// The list matches these two by a rule, not by equality. A connector family
+// matches each of its accounts, and `unset` a missing origin.
+const CONNECTOR_FAMILY = /^connector:[^:]*$/;
+const ORIGIN_UNSET = "unset";
+
 function isCounted(dial: string): boolean {
   return COUNTED_DIALS.some((counted) => counted === dial);
 }
@@ -53,9 +58,12 @@ function isCounted(dial: string): boolean {
 export function terminalCountsWithheldBecause(
   query: ListQuery,
 ): MessageKey | undefined {
-  const uncounted = [...narrowingDials(query).keys()].filter(
-    (dial) => !isCounted(dial),
-  );
+  const dials = narrowingDials(query);
+  const source = dials.get("source");
+  if (typeof source === "string" && CONNECTOR_FAMILY.test(source)) {
+    return "lead.boardCountsNoConnectorSource";
+  }
+  const uncounted = [...dials.keys()].filter((dial) => !isCounted(dial));
   if (uncounted.length === 0) return undefined;
   const named = WITHHELD_DIALS.find(([dial]) => uncounted.includes(dial));
   return named?.[1] ?? "lead.boardCountsNoOtherFilter";
@@ -73,11 +81,14 @@ export function leadStatusReportFilters(
   query: ListQuery,
 ): Record<string, unknown> {
   const dials = narrowingDials(query);
-  return Object.fromEntries(
+  const filters: Record<string, unknown> = Object.fromEntries(
     COUNTED_DIALS.flatMap((dial) =>
       dials.has(dial) ? [[dial, dials.get(dial)]] : [],
     ),
   );
+  // The report reads a null filter as IS NULL.
+  if (filters.origin === ORIGIN_UNSET) filters.origin = null;
+  return filters;
 }
 
 // The one lead read that counts archived leads. Under ["leads"], so every lead
@@ -97,7 +108,8 @@ export function useLeadStatusCounts(query: ListQuery) {
         },
       });
       if (error) {
-        if (response.status === 403) return null;
+        // Only an owner dial meets the owner gate; any other 403 is a failure.
+        if (response.status === 403 && filters.owner_id) return null;
         throwProblem(error);
       }
       const counts = new Map<string, number>();

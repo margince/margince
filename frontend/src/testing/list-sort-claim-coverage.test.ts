@@ -67,6 +67,19 @@ function functionBody(source: string, name: string): string | undefined {
   return end === -1 ? undefined : source.slice(start, end + 3);
 }
 
+// The fetcher's first `query: { … }`, up to the brace that closes it.
+function firstQueryObject(body: string): string | undefined {
+  const open = body.indexOf("query: {");
+  if (open === -1) return undefined;
+  let depth = 0;
+  for (let at = body.indexOf("{", open); at < body.length; at++) {
+    if (body[at] === "{") depth++;
+    if (body[at] === "}") depth--;
+    if (depth === 0) return body.slice(open, at + 1);
+  }
+  return undefined;
+}
+
 type ReadModule = (fromFile: string, specifier: string) => string | undefined;
 
 function readSibling(fromFile: string, specifier: string): string | undefined {
@@ -87,9 +100,8 @@ function spreadBuilders(
 ): string[] {
   const fetcher = /\bfetchPage: (\w+),/.exec(source)?.[1];
   const body = fetcher ? functionBody(source, fetcher) : undefined;
-  const at = body?.indexOf("query: {") ?? -1;
-  if (body === undefined || at === -1) return [];
-  const wire = body.slice(at);
+  const wire = body === undefined ? undefined : firstQueryObject(body);
+  if (wire === undefined) return [];
   return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap(([, name]) => {
     if (name === undefined) return [];
     const from = new RegExp(
@@ -189,6 +201,20 @@ describe("a fetcher's spread builder", () => {
       "});",
       "",
     ].join("\n");
+  const laterObject = [
+    'import { sortedParams } from "./things.queries";',
+    "",
+    "export async function fetchThingsPage(query: ListQuery) {",
+    '  const page = await api.GET("/things", { params: { query: { limit: 50 } } });',
+    "  const echo = { query: { ...sortedParams(query) } };",
+    "  return page;",
+    "}",
+    "",
+    "const list = useListQuery<Thing>({",
+    "    fetchPage: fetchThingsPage,",
+    "});",
+    "",
+  ].join("\n");
   const readModule = () => queries;
 
   it("sends sort when the builder it spreads does", () => {
@@ -201,6 +227,12 @@ describe("a fetcher's spread builder", () => {
     expect(
       screenSendsSort("x/things.tsx", screen("unsortedParams"), readModule),
     ).toBe(false);
+  });
+
+  it("does not, when the spread sits in a later query-shaped object", () => {
+    expect(screenSendsSort("x/things.tsx", laterObject, readModule)).toBe(
+      false,
+    );
   });
 
   it("does not, when the spread sits outside the wire query", () => {

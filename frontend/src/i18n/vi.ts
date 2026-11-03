@@ -5212,6 +5212,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lượng không thể lọc theo ngành, quốc gia hay quy mô công ty nên không hiển thị.",
   "lead.boardCountsNoOtherFilter":
     "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
+  "lead.boardCountsNoConnectorSource":
+    "Số lượng không thể lọc theo mọi lead từ một trình kết nối nên không hiển thị.",
   "lead.boardCountsOwnerNotMeasurable":
     "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":

@@ -32,6 +32,23 @@ describe("the terminal columns' counts", () => {
     });
   });
 
+  it("ask the report for leads with no origin when the dial says unset", () => {
+    const query = narrowed({ origin: "unset" });
+    expect(terminalCountsWithheldBecause(query)).toBeUndefined();
+    expect(leadStatusReportFilters(query)).toEqual({ origin: null });
+  });
+
+  it("are withheld for a whole connector, and counted for one account", () => {
+    expect(
+      terminalCountsWithheldBecause(narrowed({ source: "connector:apollo" })),
+    ).toBe("lead.boardCountsNoConnectorSource");
+    expect(
+      terminalCountsWithheldBecause(
+        narrowed({ source: "connector:apollo:a-1" }),
+      ),
+    ).toBeUndefined();
+  });
+
   it("send no filter for an unnarrowed board", () => {
     expect(leadStatusReportFilters(UNNARROWED_LIST_QUERY)).toEqual({});
   });

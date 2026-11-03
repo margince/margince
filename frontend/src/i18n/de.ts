@@ -5351,6 +5351,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
   "lead.boardCountsNoOtherFilter":
     "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
+  "lead.boardCountsNoConnectorSource":
+    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
   "lead.boardCountsOwnerNotMeasurable":
     "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, sie auszuwerten.",
   "lead.boardTerminalRowsUnavailable":

@@ -77,6 +77,41 @@ type Ask = { lead: Lead; dialog: TerminalDialog; open: boolean; seq: number };
 
 type TerminalStatus = (typeof LEAD_TERMINAL_STAGES)[number]["stage"];
 
+// The terminal pair, whose count comes from the report and whose cards are
+// fetched only for the one that is open.
+function terminalColumns({
+  openTerminal,
+  opened,
+  counts,
+  reason,
+  t,
+}: Readonly<{
+  openTerminal: TerminalStatus | null;
+  opened: Lead[];
+  counts: Map<string, number> | null | undefined;
+  reason: string | undefined;
+  t: ReturnType<typeof useT>;
+}>): BoardColumn<BoardRecord>[] {
+  return LEAD_TERMINAL_STAGES.map((stage) => {
+    const isOpen = openTerminal === stage.stage;
+    const held = isOpen
+      ? opened.filter((lead) => lead.status === stage.stage)
+      : [];
+    return {
+      stage: stage.stage,
+      label: t(stage.label),
+      // The report's figure, not the rows'. A collapsed column has no rows, and
+      // an open one holds only the fetched page. Either would understate a
+      // column whose whole population is archived.
+      count: counts ? (counts.get(stage.stage) ?? 0) : null,
+      sumHidden: reason !== undefined,
+      sumHiddenReason: reason,
+      collapsed: !isOpen,
+      deals: held.map((lead) => ({ id: lead.id, name: "" })),
+    };
+  });
+}
+
 function LeadCard({
   lead,
   onOpen,
@@ -219,30 +254,19 @@ export function LeadBoard({
       deals: held.map((lead) => ({ id: lead.id, name: "" })),
     };
   });
-  // The terminal pair, whose count comes from the report and whose cards are
-  // fetched only for the one that is open.
   const opened =
     openTerminal !== null
       ? (terminalRows.data?.pages.flatMap((page) => page.data) ?? [])
       : [];
-  for (const stage of LEAD_TERMINAL_STAGES) {
-    const isOpen = openTerminal === stage.stage;
-    const held = isOpen
-      ? opened.filter((lead) => lead.status === stage.stage)
-      : [];
-    columns.push({
-      stage: stage.stage,
-      label: t(stage.label),
-      // The report's figure, not the rows'. A collapsed column has no rows, and
-      // an open one holds only the fetched page. Either would understate a
-      // column whose whole population is archived.
-      count: counts.data?.get(stage.stage) ?? 0,
-      sumHidden: withheld !== undefined,
-      sumHiddenReason: withheld && t(withheld),
-      collapsed: !isOpen,
-      deals: held.map((lead) => ({ id: lead.id, name: "" })),
-    });
-  }
+  columns.push(
+    ...terminalColumns({
+      openTerminal,
+      opened,
+      counts: counts.data,
+      reason: withheld && t(withheld),
+      t,
+    }),
+  );
   const leadsById = new Map(
     [...live, ...opened].map((lead) => [lead.id, lead]),
   );
@@ -293,7 +317,7 @@ export function LeadBoard({
           {t("lead.boardCountsUnavailable")}
         </ErrorLine>
       )}
-      {terminalRows.isError && (
+      {openTerminal !== null && terminalRows.isError && (
         <ErrorLine
           actions={
             <Button variant="ghost" onClick={() => terminalRows.refetch()}>

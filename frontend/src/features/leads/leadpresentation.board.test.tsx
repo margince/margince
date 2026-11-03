@@ -180,6 +180,45 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     );
   });
 
+  it("state no count while the report has not answered, or failed", async () => {
+    serve(() =>
+      json(
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
+        503,
+      ),
+    );
+    drawBoard(mine());
+
+    expect(column("promoted").querySelector(STATED_COUNT)).toBeNull();
+    expect(
+      await screen.findByText(en["lead.boardCountsUnavailable"]),
+    ).toBeTruthy();
+    expect(column("promoted").querySelector(STATED_COUNT)).toBeNull();
+    expect(column("disqualified").querySelector(STATED_COUNT)).toBeNull();
+  });
+
+  it("read a 403 without an owner dial as a failure, not an owner refusal", async () => {
+    serve(() =>
+      json(
+        {
+          type: "about:blank",
+          title: "Forbidden",
+          status: 403,
+          code: "permission_denied",
+        },
+        403,
+      ),
+    );
+    drawBoard({ ...UNNARROWED_LIST_QUERY, filters: { status: "promoted" } });
+
+    expect(
+      await screen.findByText(en["lead.boardCountsUnavailable"]),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toContain(
+      en["lead.boardCountsOwnerNotMeasurable"],
+    );
+  });
+
   it("claim no count above a withheld column whose leads did not load", async () => {
     const served = serve(() =>
       json(
@@ -205,5 +244,12 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     const before = reads();
     fireEvent.click(screen.getByRole("button", { name: en["common.retry"] }));
     await waitFor(() => expect(reads()).toBe(before + 1));
+
+    fireEvent.click(head);
+    await waitFor(() =>
+      expect(
+        screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
+      ).toBeNull(),
+    );
   });
 });

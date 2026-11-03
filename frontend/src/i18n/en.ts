@@ -5301,6 +5301,8 @@ export const en = {
     "The counts cannot narrow by industry, country or company size, so none is shown.",
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
+  "lead.boardCountsNoConnectorSource":
+    "The counts cannot narrow to every lead from one connector, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
     "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
