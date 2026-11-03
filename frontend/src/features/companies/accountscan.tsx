@@ -89,8 +89,15 @@ export function useAccountScan(
       return;
     }
     // One question per account, not per reader: the ensure is the half that
-    // can cost a model call. `mutate` registers before the next consumer's
-    // effect runs, so the second one sees the first and stays quiet.
+    // can cost a model call.
+    //
+    // Two consumers mounting together are held by `isMutating`, because
+    // `mutate` registers before the next one's effect runs. One mounting
+    // afterwards is held by the answer the ensure left in the cache, which
+    // `isMutating` no longer reports.
+    if (client.getQueryData(accountScanKey(companyId)) !== undefined) {
+      return;
+    }
     if (client.isMutating({ mutationKey: accountScanKey(companyId) }) > 0) {
       return;
     }
