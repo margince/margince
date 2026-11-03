@@ -35379,7 +35379,26 @@ export interface components {
         SalesDecisionListResponse: {
             data: components["schemas"]["SalesDecision"][];
         };
+        /** @enum {string} */
+        SalesAssessmentView: "sales" | "prospecting" | "team";
+        SalesAssessmentParagraph: components["schemas"]["SalesAssessmentSentence"][];
+        /** @description An application-supplied action over the exact records named by its evidence reference. */
+        ReportingOverviewAction: {
+            id: string;
+            label: string;
+            count: number;
+            evidence: components["schemas"]["ReportingEvidenceRef"];
+        };
         SalesAssessmentRequest: {
+            /** @description Binds the explanation to the displayed evaluation and refuses changed inputs. */
+            receipt?: {
+                key: string;
+                /** Format: date-time */
+                at: string;
+                /** Format: int64 */
+                framework_revision: number;
+            };
+            view?: components["schemas"]["SalesAssessmentView"];
             selection: components["schemas"]["ReportingSelection"];
             /** @description Ask the model again, whatever is kept. */
             refresh?: boolean;
@@ -35391,6 +35410,10 @@ export interface components {
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
             model_used?: string;
+            /** @description Connected evidence-cited prose. Sentences retains a bounded projection for older clients. */
+            paragraphs?: components["schemas"]["SalesAssessmentParagraph"][];
+            /** @description Prioritized identifiers from the evaluation's overview_actions. No generated destinations or counts. */
+            action_ids?: string[];
             /** @enum {string} */
             confidence?: "low" | "medium" | "high";
             sentences: components["schemas"]["SalesAssessmentSentence"][];
@@ -42079,7 +42102,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -42230,6 +42253,17 @@ export interface components {
         };
         SdrTeamReview: {
             /**
+             * @description Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+             * @enum {string}
+             */
+            qualification_basis?: "first_qualification";
+            /** @description First qualifications in the period whose historical owner was not recorded. Member figures cover only the attributed events. */
+            qualification_unattributed?: number;
+            /** @description First qualifications in the target month whose historical owner was not recorded. */
+            qualification_target_unattributed?: number;
+            /** @description Monthly targets for first qualification events, separate from arrival-cohort targets. */
+            member_event_targets?: components["schemas"]["SdrTeamMemberTargets"];
+            /**
              * @description Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
              * @enum {string}
              */
@@ -42269,7 +42303,7 @@ export interface components {
         /** @description What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week. */
         SdrTeamMemberTargets: {
             /** @enum {string} */
-            metric: "leads_promoted";
+            metric: "leads_promoted" | "leads_qualified";
             /** @description The whole reporting month that holds the last counted instant of the period, which is the month an evaluation with `target_basis` month reads. */
             window: components["schemas"]["ReportingWindow"];
         };
@@ -42329,12 +42363,15 @@ export interface components {
         };
         /** @description One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included. */
         SdrTeamMember: {
+            /** @description First qualifications in the period credited to the owner at qualification. Counts attributed events only; qualification_unattributed identifies partial history. */
+            qualified_events?: number;
+            event_target?: components["schemas"]["SdrTeamMemberTarget"];
             /** Format: uuid */
             id: string;
             label: string;
             /** @description Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is. */
             meetings_held?: number;
-            /** @description Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`. */
+            /** @description Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the arrival-cohort reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`. */
             qualified?: number;
             /** @description Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`. */
             unanswered?: number;
@@ -42758,6 +42795,16 @@ export interface components {
          *     `priced_count` and by `fx_missing_count`.
          */
         ReportingForecastBasis: {
+            /**
+             * Format: int64
+             * @description Open deal value eligible for the forecast period, in base minor units.
+             */
+            open_pipeline_minor?: number;
+            /**
+             * Format: date-time
+             * @description Submission time of the compatible manager call.
+             */
+            call_at?: string;
             landing: components["schemas"]["ForecastLanding"];
             /** @description The fiscal quarter the landing and the range project, half-open. */
             period: components["schemas"]["ReportingWindow"];
@@ -42812,6 +42859,7 @@ export interface components {
             qualified_open_pipeline?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingEvaluation: {
+            overview_actions?: components["schemas"]["ReportingOverviewAction"][];
             evaluation_key: string;
             context: components["schemas"]["ReportingContext"];
             selection: components["schemas"]["ReportingSelection"];
@@ -42839,6 +42887,7 @@ export interface components {
             blocks: components["schemas"]["ReportingBlockKind"][];
         };
         ReportingCatalog: {
+            assessment_views?: components["schemas"]["SalesAssessmentView"][];
             /** @description Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors. */
             schedule_ready?: boolean;
             /** @description How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on. */

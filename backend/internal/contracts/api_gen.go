@@ -18474,6 +18474,7 @@ const (
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
+	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -18512,6 +18513,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsCreated:
 		return true
 	case ReportingMetricIDLeadsPromoted:
+		return true
+	case ReportingMetricIDLeadsQualified:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
@@ -19249,6 +19252,27 @@ func (e SalesAssessmentSentenceKind) Valid() bool {
 	}
 }
 
+// Defines values for SalesAssessmentView.
+const (
+	SalesAssessmentViewProspecting SalesAssessmentView = "prospecting"
+	SalesAssessmentViewSales       SalesAssessmentView = "sales"
+	SalesAssessmentViewTeam        SalesAssessmentView = "team"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentView enum.
+func (e SalesAssessmentView) Valid() bool {
+	switch e {
+	case SalesAssessmentViewProspecting:
+		return true
+	case SalesAssessmentViewSales:
+		return true
+	case SalesAssessmentViewTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesDecisionStatus.
 const (
 	SalesDecisionStatusDone SalesDecisionStatus = "done"
@@ -19635,13 +19659,16 @@ func (e SdrSummaryWorkflow) Valid() bool {
 
 // Defines values for SdrTeamMemberTargetsMetric.
 const (
-	SdrTeamMemberTargetsMetricLeadsPromoted SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsPromoted  SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsQualified SdrTeamMemberTargetsMetric = "leads_qualified"
 )
 
 // Valid indicates whether the value is a known member of the SdrTeamMemberTargetsMetric enum.
 func (e SdrTeamMemberTargetsMetric) Valid() bool {
 	switch e {
 	case SdrTeamMemberTargetsMetricLeadsPromoted:
+		return true
+	case SdrTeamMemberTargetsMetricLeadsQualified:
 		return true
 	default:
 		return false
@@ -19657,6 +19684,21 @@ const (
 func (e SdrTeamReviewMembershipBasis) Valid() bool {
 	switch e {
 	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewQualificationBasis.
+const (
+	SdrTeamReviewQualificationBasisFirstQualification SdrTeamReviewQualificationBasis = "first_qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewQualificationBasis enum.
+func (e SdrTeamReviewQualificationBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewQualificationBasisFirstQualification:
 		return true
 	default:
 		return false
@@ -54586,6 +54628,8 @@ type ReportingCardQuestion struct {
 
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
+	AssessmentViews *[]SalesAssessmentView `json:"assessment_views,omitempty"`
+
 	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
 	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
 	Metrics              []ReportingMetricDefinition `json:"metrics"`
@@ -54778,11 +54822,12 @@ type ReportingEditionQuestionStatus string
 
 // ReportingEvaluation defines model for ReportingEvaluation.
 type ReportingEvaluation struct {
-	Charts        []ReportingChart   `json:"charts"`
-	Context       ReportingContext   `json:"context"`
-	EvaluationKey string             `json:"evaluation_key"`
-	Metrics       []ReportingMetric  `json:"metrics"`
-	Selection     ReportingSelection `json:"selection"`
+	Charts          []ReportingChart           `json:"charts"`
+	Context         ReportingContext           `json:"context"`
+	EvaluationKey   string                     `json:"evaluation_key"`
+	Metrics         []ReportingMetric          `json:"metrics"`
+	OverviewActions *[]ReportingOverviewAction `json:"overview_actions,omitempty"`
+	Selection       ReportingSelection         `json:"selection"`
 }
 
 // ReportingEvidence defines model for ReportingEvidence.
@@ -54847,6 +54892,9 @@ type ReportingExecutionList struct {
 // landing's uncertainty, and it omits the deals counted by `eligible_count` minus
 // `priced_count` and by `fx_missing_count`.
 type ReportingForecastBasis struct {
+	// CallAt Submission time of the compatible manager call.
+	CallAt *time.Time `json:"call_at,omitempty"`
+
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
@@ -54862,6 +54910,9 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
+	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
 
 	// Period The fiscal quarter the landing and the range project, half-open.
 	Period ReportingWindow `json:"period"`
@@ -54973,6 +55024,14 @@ type ReportingMetricDefinitionTemporalBasis string
 
 // ReportingMetricID defines model for ReportingMetricID.
 type ReportingMetricID string
+
+// ReportingOverviewAction An application-supplied action over the exact records named by its evidence reference.
+type ReportingOverviewAction struct {
+	Count    int                  `json:"count"`
+	Evidence ReportingEvidenceRef `json:"evidence"`
+	Id       string               `json:"id"`
+	Label    string               `json:"label"`
+}
 
 // ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
 type ReportingPeriodBasis struct {
@@ -55818,6 +55877,9 @@ type RunReportRequestAggregatesFn string
 
 // SalesAssessment defines model for SalesAssessment.
 type SalesAssessment struct {
+	// ActionIds Prioritized identifiers from the evaluation's overview_actions. No generated destinations or counts.
+	ActionIds *[]string `json:"action_ids,omitempty"`
+
 	// Cells The figures the sentences may cite, as the model read them.
 	Cells      []SalesAssessmentCell      `json:"cells"`
 	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
@@ -55833,10 +55895,13 @@ type SalesAssessment struct {
 	// lane. `deterministic` — the structured fallback, used when no lane is configured
 	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
 	// reader deciding how much to trust a sentence needs to know which wrote it.
-	GeneratedBy  WrittenBy                 `json:"generated_by"`
-	ModelUsed    *string                   `json:"model_used,omitempty"`
-	NextDecision *SalesAssessmentDecision  `json:"next_decision,omitempty"`
-	Sentences    []SalesAssessmentSentence `json:"sentences"`
+	GeneratedBy  WrittenBy                `json:"generated_by"`
+	ModelUsed    *string                  `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
+
+	// Paragraphs Connected evidence-cited prose. Sentences retains a bounded projection for older clients.
+	Paragraphs *[]SalesAssessmentParagraph `json:"paragraphs,omitempty"`
+	Sentences  []SalesAssessmentSentence   `json:"sentences"`
 }
 
 // SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
@@ -55857,11 +55922,22 @@ type SalesAssessmentDecision struct {
 	Text    string             `json:"text"`
 }
 
+// SalesAssessmentParagraph defines model for SalesAssessmentParagraph.
+type SalesAssessmentParagraph = []SalesAssessmentSentence
+
 // SalesAssessmentRequest defines model for SalesAssessmentRequest.
 type SalesAssessmentRequest struct {
+	// Receipt Binds the explanation to the displayed evaluation and refuses changed inputs.
+	Receipt *struct {
+		At                time.Time `json:"at"`
+		FrameworkRevision int64     `json:"framework_revision"`
+		Key               string    `json:"key"`
+	} `json:"receipt,omitempty"`
+
 	// Refresh Ask the model again, whatever is kept.
-	Refresh   *bool              `json:"refresh,omitempty"`
-	Selection ReportingSelection `json:"selection"`
+	Refresh   *bool                `json:"refresh,omitempty"`
+	Selection ReportingSelection   `json:"selection"`
+	View      *SalesAssessmentView `json:"view,omitempty"`
 }
 
 // SalesAssessmentSentence defines model for SalesAssessmentSentence.
@@ -55874,6 +55950,9 @@ type SalesAssessmentSentence struct {
 
 // SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
 type SalesAssessmentSentenceKind string
+
+// SalesAssessmentView defines model for SalesAssessmentView.
+type SalesAssessmentView string
 
 // SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
 type SalesDecision struct {
@@ -56469,9 +56548,10 @@ type SdrTeamMeetings struct {
 
 // SdrTeamMember One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.
 type SdrTeamMember struct {
-	Accepted *int               `json:"accepted,omitempty"`
-	Id       openapi_types.UUID `json:"id"`
-	Label    string             `json:"label"`
+	Accepted    *int                 `json:"accepted,omitempty"`
+	EventTarget *SdrTeamMemberTarget `json:"event_target,omitempty"`
+	Id          openapi_types.UUID   `json:"id"`
+	Label       string               `json:"label"`
 
 	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.
 	MeetingsHeld *int `json:"meetings_held,omitempty"`
@@ -56479,12 +56559,15 @@ type SdrTeamMember struct {
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
-	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
-	Qualified *int                 `json:"qualified,omitempty"`
-	Recycled  *int                 `json:"recycled,omitempty"`
-	Rejected  *int                 `json:"rejected,omitempty"`
-	Submitted *int                 `json:"submitted,omitempty"`
-	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the arrival-cohort reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
+	Qualified *int `json:"qualified,omitempty"`
+
+	// QualifiedEvents First qualifications in the period credited to the owner at qualification. Counts attributed events only; qualification_unattributed identifies partial history.
+	QualifiedEvents *int                 `json:"qualified_events,omitempty"`
+	Recycled        *int                 `json:"recycled,omitempty"`
+	Rejected        *int                 `json:"rejected,omitempty"`
+	Submitted       *int                 `json:"submitted,omitempty"`
+	Target          *SdrTeamMemberTarget `json:"target,omitempty"`
 
 	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
 	Unanswered *int `json:"unanswered,omitempty"`
@@ -56519,6 +56602,9 @@ type SdrTeamReview struct {
 	Interval ReportingWindow  `json:"interval"`
 	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
 
+	// MemberEventTargets Monthly targets for first qualification events, separate from arrival-cohort targets.
+	MemberEventTargets *SdrTeamMemberTargets `json:"member_event_targets,omitempty"`
+
 	// MemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
 	MemberTargets *SdrTeamMemberTargets `json:"member_targets,omitempty"`
 	Members       []SdrTeamMember       `json:"members"`
@@ -56534,6 +56620,15 @@ type SdrTeamReview struct {
 
 	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
 	ObservedThrough time.Time `json:"observed_through"`
+
+	// QualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+	QualificationBasis *SdrTeamReviewQualificationBasis `json:"qualification_basis,omitempty"`
+
+	// QualificationTargetUnattributed First qualifications in the target month whose historical owner was not recorded.
+	QualificationTargetUnattributed *int `json:"qualification_target_unattributed,omitempty"`
+
+	// QualificationUnattributed First qualifications in the period whose historical owner was not recorded. Member figures cover only the attributed events.
+	QualificationUnattributed *int `json:"qualification_unattributed,omitempty"`
 
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
@@ -56553,6 +56648,9 @@ type SdrTeamReview struct {
 
 // SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
 type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewQualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+type SdrTeamReviewQualificationBasis string
 
 // SdrTeamReviewWithheldFigures defines model for SdrTeamReview.WithheldFigures.
 type SdrTeamReviewWithheldFigures string

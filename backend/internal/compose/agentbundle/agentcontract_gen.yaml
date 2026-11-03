@@ -14645,6 +14645,19 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
+    SalesAssessmentView:
+      type: string
+      enum: [sales, prospecting, team]
+    ReportingOverviewAction:
+      description: An application-supplied action over the exact records named by its evidence reference.
+      type: object
+      additionalProperties: false
+      required: [id, label, evidence, count]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        count: {type: integer, minimum: 1}
+        evidence: {$ref: '#/components/schemas/ReportingEvidenceRef'}
     Relationship:
       type: object
       description: |-
@@ -18909,6 +18922,7 @@ components:
         - leads_created
         - lead_status_moves
         - leads_promoted
+        - leads_qualified
         - lead_first_response
         - leads_awaiting_response
         - partner_pipeline
@@ -19598,6 +19612,14 @@ components:
         the field existed; a reader then says the basis is unknown and never guesses one.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_pipeline_minor:
+          type: integer
+          format: int64
+          description: Open deal value eligible for the forecast period, in base minor units.
+        call_at:
+          type: string
+          format: date-time
+          description: Submission time of the compatible manager call.
         landing:
           $ref: '#/components/schemas/ForecastLanding'
         period:
@@ -19674,6 +19696,10 @@ components:
         - metrics
         - charts
       properties:
+        overview_actions:
+          type: array
+          maxItems: 3
+          items: {$ref: '#/components/schemas/ReportingOverviewAction'}
         evaluation_key: {type: string}
         context:
           $ref: '#/components/schemas/ReportingContext'
@@ -19737,6 +19763,9 @@ components:
         - metrics
         - presets
       properties:
+        assessment_views:
+          type: array
+          items: {$ref: '#/components/schemas/SalesAssessmentView'}
         schedule_ready:
           type: boolean
           description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.

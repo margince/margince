@@ -149,7 +149,7 @@ function prospecting(
   routes: Routes = {},
   weeks: ReportingEvaluation = prospectingWeeks(
     week,
-    routes.template === "sales" ? "leads_promoted" : "accepted_opportunities",
+    routes.template === "sales" ? "leads_qualified" : "accepted_opportunities",
     routes.template === "sales" ? [1, 2, 0, 4, 2, 3] : [2, 0, 3, 1, 2, 2],
   ),
 ): Pair {
@@ -181,8 +181,8 @@ function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
 const qualificationReview = teamReviewOn(dstWeek, {
   workflow: "qualification",
   handoffs: undefined,
-  member_targets: {
-    metric: "leads_promoted",
+  member_event_targets: {
+    metric: "leads_qualified",
     window: {
       start_at: "2026-09-30T22:00:00Z",
       end_at: "2026-10-31T23:00:00Z",
@@ -196,7 +196,7 @@ const qualificationReview = teamReviewOn(dstWeek, {
     recycled: 0,
     waiting: 0,
     oldest_waiting_since: undefined,
-    ...(index === 0 ? { target: { value: 8, actual: 5 } } : {}),
+    ...(index === 0 ? { event_target: { value: 8, actual: 5 } } : {}),
   })),
 });
 
@@ -335,7 +335,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 3),
           metric("accepted_opportunities", 1),
-          metric("leads_promoted", 2, { denominator: 9 }),
+          metric("leads_qualified", 2, { denominator: 9 }),
           metric("lead_first_response", 2.4),
           metric("leads_awaiting_response", 4),
         ]),
@@ -487,7 +487,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 3),
           metric("accepted_opportunities", 1),
-          metric("leads_promoted", 2, { denominator: 9 }),
+          metric("leads_qualified", 2, { denominator: 9 }),
           metric("lead_first_response", null, {
             coverage: { status: "failed", withheld: false },
           }),
@@ -528,7 +528,7 @@ export const OVERVIEW_SCENARIOS = {
         prospectingOn(week, [
           metric("meetings_held", 0),
           metric("accepted_opportunities", 0),
-          metric("leads_promoted", 0, { denominator: 3 }),
+          metric("leads_qualified", 0, { denominator: 3 }),
           metric("lead_first_response", null, {
             coverage: { status: "insufficient_sample", withheld: false },
           }),
@@ -912,7 +912,7 @@ export const OVERVIEW_SCENARIOS = {
             coverage: { status: "ok", withheld: true },
           }),
           metric("accepted_opportunities", 2),
-          metric("leads_promoted", 3, { denominator: 11 }),
+          metric("leads_qualified", 3, { denominator: 11 }),
           metric("lead_first_response", 1.7),
           metric("leads_awaiting_response", null, {
             coverage: { status: "ok", withheld: true },
@@ -925,7 +925,7 @@ export const OVERVIEW_SCENARIOS = {
             coverage: { status: "ok", withheld: true },
           }),
           metric("accepted_opportunities", 3),
-          metric("leads_promoted", 5),
+          metric("leads_qualified", 5),
           metric("leads_awaiting_response", null, {
             coverage: { status: "ok", withheld: true },
           }),

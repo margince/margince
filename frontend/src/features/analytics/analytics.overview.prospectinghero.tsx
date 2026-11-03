@@ -157,21 +157,20 @@ function OutcomeFigure({
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const metric = metricOf(evaluation, outcome);
-  const noCohort = outcome === "leads_promoted" && metric?.denominator === 0;
-  let basis = t("analytics.prospect.basisAccepted", { period });
-  if (noCohort) basis = t("analytics.prospect.noArrivals", { period });
-  else if (outcome === "leads_promoted" && metric?.denominator != null)
-    basis = t("analytics.prospect.basisQualified", {
-      arrived: formatNumber(metric.denominator, locale),
-      period,
-    });
   return (
     <>
-      <p className="t-label">{metricName(outcome)}</p>
-      <p className="analytics-hero-value t-num">
-        {noCohort ? "—" : figureText(metric, evaluation, t, locale)}
+      <p className="t-label">
+        {outcome === "leads_promoted"
+          ? t("analytics.team.arrivalQualified")
+          : metricName(outcome)}
       </p>
-      <p className="t-caption">{basis}</p>
+      <p className="analytics-hero-value t-num">
+        {figureText(metric, evaluation, t, locale)}
+      </p>
+      <p className="t-caption">{period}</p>
+      {metric?.coverage.status === "partial" && metric.coverage.reason && (
+        <p className="t-caption">{metric.coverage.reason}</p>
+      )}
       {metric?.coverage.withheld && metric.value != null && (
         <p className="t-caption">{t("analytics.overview.partlyHidden")}</p>
       )}

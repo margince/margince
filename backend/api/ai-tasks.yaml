@@ -335,7 +335,7 @@ tasks:
     sites: [sales_assessment]
     company_context: none
     no_payload: true
-    doc: "Read a report evaluation's measured cells, the deals behind its open pipeline and the decisions recorded at earlier reviews, and write a few cited sentences and one next decision on a candidate deal. A sentence quoting a number no cited cell carries is dropped, and so is a decision naming a deal outside the candidates. With no model the panel shows the page's deterministic summary."
+    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable."
 
   corpus_ask:
     display_name: "Document corpus question"
