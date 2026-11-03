@@ -428,11 +428,9 @@ jobs:
           And each image:
 
           \`\`\`sh
-          while read -r image; do
-            cosign verify "\$image" \\
-              --certificate-identity "https://github.com/$GH_REPO/.github/workflows/release-tag.yml@refs/tags/$VERSION" \\
-              --certificate-oidc-issuer https://token.actions.githubusercontent.com
-          done < images.txt
+          xargs -I{} cosign verify {} < images.txt \\
+            --certificate-identity "https://github.com/$GH_REPO/.github/workflows/release-tag.yml@refs/tags/$VERSION" \\
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
           \`\`\`
           NOTES
 
