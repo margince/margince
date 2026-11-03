@@ -85580,6 +85580,9 @@ type ServerInterface interface {
 	// Free/busy slots for a public booking page (anonymous).
 	// (GET /public/booking/{host_slug}/availability)
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
+	// Read the link-preview card for a host's public booking page.
+	// (GET /public/booking/{host_slug}/preview)
+	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string)
@@ -90842,6 +90845,12 @@ func (_ Unimplemented) BookPublicMeeting(w http.ResponseWriter, r *http.Request,
 // Free/busy slots for a public booking page (anonymous).
 // (GET /public/booking/{host_slug}/availability)
 func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the link-preview card for a host's public booking page.
+// (GET /public/booking/{host_slug}/preview)
+func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -125050,6 +125059,32 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicBookingPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_slug" -------------
+	var hostSlug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_slug", chi.URLParam(r, "host_slug"), &hostSlug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicBookingPreview(w, r, hostSlug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPublicSchedulingProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 
@@ -136591,6 +136626,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/availability", wrapper.GetPublicAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/booking/{host_slug}/preview", wrapper.GetPublicBookingPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/profile", wrapper.GetPublicSchedulingProfile)

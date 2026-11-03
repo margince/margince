@@ -7,8 +7,9 @@ package compose
 // neither session nor workspace header, so this middleware — composed
 // between the session middleware and the contract router — resolves the
 // slug to its tenant, throttles the unauthenticated surface, and binds
-// the workspace plus a system principal confined to the two public
-// endpoints (whose responses are free/busy slots and {start,end} only).
+// the workspace plus a system principal confined to the public booking
+// endpoints (whose responses are free/busy slots, {start,end} and the
+// page's link-preview card, publicbookingpreview.go).
 // Everything downstream (idempotency claims, RBAC-gated stores, audit
 // attribution as actor_type=system) then works unchanged.
 
@@ -53,7 +54,7 @@ func newPublicBookingLimiters() publicBookingLimiters {
 	}
 }
 
-func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters) func(http.Handler) http.Handler {
+func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters, srv Server) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			proposal := strings.HasPrefix(r.URL.Path, publicProposalPrefix)
@@ -76,7 +77,19 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return
 			}
+			// A booking page's link-preview card answers in HTML whatever
+			// happens, and HEAD like GET; the generated router knows GET only.
+			_, preview := bookingPreviewSlug(r.URL.Path)
+			preview = preview && !proposal && !management
+			if preview && (r.Method != http.MethodGet && r.Method != http.MethodHead || r.URL.RawPath != "") {
+				httperr.Write(w, r, apperrors.ErrNotFound)
+				return
+			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, apperrors.ErrBudgetExceeded)
+					return
+				}
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
@@ -98,6 +111,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			}
 			if resolveErr != nil {
 				// Unknown and revoked slugs read identically as absent.
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, resolveErr)
+					return
+				}
 				httperr.Write(w, r, resolveErr)
 				return
 			}
@@ -118,6 +135,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",
 			})
+			if preview {
+				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug)
+				return
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

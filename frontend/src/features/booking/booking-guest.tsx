@@ -17,7 +17,7 @@ import { dayInZone, viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { BookingFooter, useBookingIntent } from "./booking-common";
+import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
   dayRefusal,
@@ -223,6 +223,13 @@ export function BookingGuestScreen({
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
   const publicUnavailable = !preview && !profile.data?.enabled;
+  useBookingTitle(
+    preview
+      ? null
+      : profile.data?.enabled && profile.data.host_name
+        ? t("book.pageTitle", { host: profile.data.host_name })
+        : t("book.pageTitleGeneric"),
+  );
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
@@ -344,7 +351,6 @@ export function BookingGuestScreen({
             )
           }
         </QueryGate>
-        <BookingFooter />
       </div>
     </div>
   );

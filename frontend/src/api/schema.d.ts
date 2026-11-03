@@ -6755,6 +6755,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/booking/{host_slug}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the link-preview card for a host's public booking page.
+         * @description The web tier redirects a non-browser fetch of `/book/{host_slug}` here, so a link
+         *     preview reads the page without running the app. The HTML carries the host's name,
+         *     company, meeting title and duration as escaped title, description, Open Graph and
+         *     Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
+         *     address on the configured public origin, and are omitted when no usable origin is
+         *     configured. The company logo is the card image when there is one; otherwise the card
+         *     has no image. A paused page answers generic metadata that names no host. A missing
+         *     or revoked page answers 404 with no host metadata. Responses are `no-store` and
+         *     `noindex`. HEAD is answered like GET without a body. The page links to the booking
+         *     app, and no guest details or tokens appear in it.
+         */
+        get: operations["getPublicBookingPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/meeting/{token}": {
         parameters: {
             query?: never;
@@ -65368,6 +65399,37 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPublicBookingPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                host_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Booking page card, or generic metadata for a paused page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description The page is missing, revoked or unavailable; the HTML names no host. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
         };

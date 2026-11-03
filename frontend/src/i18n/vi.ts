@@ -11388,6 +11388,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "client.attribution":
     "Mọi lần thu thập đều ghi rõ ai thu thập và có thể kiểm tra lại.",
 
+  "book.pageTitle": "Đặt lịch họp với {host}",
+  "book.pageTitleGeneric": "Đặt lịch họp",
+  "book.meetingTitle": "Cuộc họp của quý khách",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
