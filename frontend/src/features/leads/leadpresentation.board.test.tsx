@@ -15,6 +15,7 @@ import type { components } from "../../api/schema";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { LEAD_LIST_KEY } from "../../lib/leadkeys";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import { LeadBoard } from "./leadpresentation.board";
 
@@ -321,7 +322,7 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     );
 
     failing = true;
-    await board.client.invalidateQueries({ queryKey: ["leads"] });
+    await board.client.invalidateQueries({ queryKey: LEAD_LIST_KEY });
     await screen.findByText(en["lead.boardCountsUnavailable"]);
     expect(column("promoted").querySelector(STATED_COUNT)).toBeNull();
     expect(column("promoted").textContent).not.toContain("3");
