@@ -43,8 +43,9 @@ A lead has five statuses. The first three are open, the last two are final.
 
 Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
-You may move an open lead to any open step, forward or back, on its **Lead
-status** ladder. Margince itself only ever moves it forward.
+You may move an open lead to any open step, forward or back, on its **Lead status** ladder. Margince itself only ever moves it forward.
+
+On the leads board, the **Qualified** and **Disqualified** columns follow the board's filters, both their counts and their cards. When a filter cannot be counted, such as a search or tags, the count is withheld and the column says why. If the owner filter names someone whose figures you may not see, it says "No count for this owner’s leads. Only an administrator can let you measure them." If the counts or cards fail to load, the column offers **Retry**.
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
