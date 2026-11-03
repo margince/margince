@@ -7022,6 +7022,34 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /analytics/setup-proposal:
+    post:
+      tags: [Reports]
+      operationId: proposeReportSetup
+      x-agent-access: human-only
+      x-waits-on-model: always
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        A sales initiative or a custom report proposed from a description in plain words:
+        the filters, metrics and charts the words name, resolved against what the reader may
+        use, with the phrase each came from, the questions the words leave open and the phrases
+        nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+        a model it answers 409 `ai_not_configured`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportSetupRequest' }
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportSetupProposal' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects:
     get:
       tags: [Projects]
@@ -49542,6 +49570,87 @@ components:
         id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
         label: { type: string }
         value: { type: string }
+      additionalProperties: false
+    ReportSetupRequest:
+      type: object
+      required: [site, description]
+      properties:
+        site:
+          type: string
+          enum: [initiative_setup, custom_report_setup]
+          description: "Which drawer asks: a sales initiative's goal or a custom report."
+        description: { type: string, minLength: 1, maxLength: 2000, description: "What the reader typed. Only this and the catalog reach the model." }
+      additionalProperties: false
+    ReportSetupProposal:
+      type: object
+      required: [site, generated_by, selection, sources, clarifications, unsupported]
+      properties:
+        site: { type: string, enum: [initiative_setup, custom_report_setup] }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
+        name: { type: string, maxLength: 160, description: "A name the words suggest." }
+        selection: { $ref: '#/components/schemas/ReportSetupSelection' }
+        objective:
+          $ref: '#/components/schemas/ReportSetupObjective'
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupSource' }
+          description: "The phrase each resolved field came from."
+        clarifications:
+          type: array
+          maxItems: 4
+          items: { type: string, maxLength: 240 }
+          description: "What the words leave open, as questions to the reader."
+        unsupported:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupUnsupported' }
+      additionalProperties: false
+    ReportSetupSelection:
+      type: object
+      description: "The part of a reporting selection the words named. Absent means the words said nothing about it."
+      properties:
+        product_id: { $ref: '#/components/schemas/ReportingProductId' }
+        industry: { $ref: '#/components/schemas/ReportingIndustry' }
+        country: { $ref: '#/components/schemas/ReportingCountry' }
+        period:
+          type: string
+          enum: [this_week, this_month, last_month, last_week, this_quarter]
+        metrics:
+          type: array
+          maxItems: 8
+          items: { $ref: '#/components/schemas/ReportingMetricID' }
+        blocks:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ReportingBlockKind' }
+      additionalProperties: false
+    ReportSetupObjective:
+      type: object
+      required: [metric]
+      properties:
+        metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: integer, format: int64, minimum: 1 }
+        deadline: { type: string, format: date }
+      additionalProperties: false
+    ReportSetupSource:
+      type: object
+      required: [field, value, phrase]
+      properties:
+        field: { type: string, enum: [name, product, industry, country, period, metric, chart, objective, target_value, deadline] }
+        value: { type: string, description: "The resolved id, or the value as proposed." }
+        label: { type: string, description: "The value's name as the reader sees it." }
+        phrase: { type: string, maxLength: 240, description: "The words it was read from." }
+      additionalProperties: false
+    ReportSetupUnsupported:
+      type: object
+      required: [phrase, code, reason]
+      properties:
+        phrase: { type: string, maxLength: 240 }
+        code:
+          type: string
+          enum: [not_expressible, unknown_value, not_offered]
+          description: "`not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take."
+        reason: { type: string, maxLength: 240 }
       additionalProperties: false
     SalesInitiativeMemberRef:
       type: object

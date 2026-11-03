@@ -603,6 +603,10 @@ func (stubs) GetSdrTeamReview(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "GetSdrTeamReview")
 }
 
+func (stubs) ProposeReportSetup(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeReportSetup")
+}
+
 func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
 	httperr.NotImplemented(w, r, "ListReportingTargets")
 }

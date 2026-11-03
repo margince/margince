@@ -80,4 +80,5 @@ func (s *Server) wireSalesReview(pool *pgxpool.Pool) {
 	decisions := newSalesDecisions(InstallationDB(pool))
 	s.salesDecisionHandlers = salesDecisionHandlers{decisions: decisions}
 	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool))}
+	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool)}
 }

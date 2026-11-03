@@ -720,6 +720,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/analytics/reports/{id}/schedules":                             {Op: "createReportingSchedule", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/runs/{run_id}/cells/explain":                        {Op: "explainReportRunCell", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/runs/{run_id}/evidence-search":                      {Op: "searchReportEvidence", Access: "tool", Tool: "search_report_evidence", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
+	"POST /v1/analytics/setup-proposal":                                     {Op: "proposeReportSetup", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/targets":                                            {Op: "createReportingTarget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/approval-bundles/{bundle_id}/approve":                         {Op: "approveApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/approval-bundles/{bundle_id}/reject":                          {Op: "rejectApprovalBundle", Access: "tool", Tool: "decide_approval_bundle", RecordType: "", Tier: "auto_execute", Scope: "write"},

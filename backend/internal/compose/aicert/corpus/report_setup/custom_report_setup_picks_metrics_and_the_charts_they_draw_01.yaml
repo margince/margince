@@ -1,0 +1,44 @@
+name: custom_report_setup_picks_metrics_and_the_charts_they_draw
+task: report_setup
+site: custom_report_setup
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# A manager wants one product's sales over time and the open pipeline by
+# stage for this quarter. The proposal picks the two metrics, the charts
+# those metrics draw, the product and the period, and no objective.
+fixture:
+  description: "Sales won for the Linden press line over time this quarter, and the open pipeline by stage."
+  today: "2026-11-03"
+  lang: en
+  products:
+    - {label: linden, name: "Linden press line"}
+    - {label: tern, name: "Tern customer portal"}
+  catalog:
+    industries:
+      - {id: manufacturing, label: Manufacturing}
+    periods: [this_month, last_month, this_quarter]
+    metrics:
+      - {id: bookings_won, label: "Sales won", charts: [bookings_trend, metric_reading]}
+      - {id: open_pipeline, label: "Open pipeline", charts: [stage_distribution, metric_reading]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: [metric_reading]}
+    charts:
+      - {id: bookings_trend, label: bookings_trend}
+      - {id: stage_distribution, label: stage_distribution}
+      - {id: metric_reading, label: metric_reading}
+expect:
+  outcome: accepted
+  answer:
+    product: linden
+    period: this_quarter
+    metrics: [bookings_won, open_pipeline]
+    unsupported: 0
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the proposal picks Sales won and Open pipeline in that
+    order, the product Linden press line, the period this_quarter, and the
+    charts bookings_trend and stage_distribution. An objective, a country or
+    an industry the words never asked for scores low. A chart no chosen
+    metric draws, or the Tern portal, fails the scenario.

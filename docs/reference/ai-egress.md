@@ -54,7 +54,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `rate_extract` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
 | `report_interpret` | `premium` → `cheap_cloud` | no | yes | no | none | shipped |
-| `report_setup` | `cheap_cloud` → `premium` | no | no | no | none | planned |
+| `report_setup` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `request_settlement` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `signal_extract` | `frontier` | no | yes | no | none | shipped |
 | `site_extract` | `premium` | no | no | no | none | shipped |
