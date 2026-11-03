@@ -1084,6 +1084,16 @@
   }
 }
 
+/* A phone caps every corner at --r-sm. This block follows the squircle block,
+   so var(--r-sm) is the doubled rung where the browser draws squircles. */
+@media (max-width: 700px) {
+  :root {
+    --r-control: var(--r-sm);
+    --r-md: var(--r-sm);
+    --r-lg: var(--r-sm);
+  }
+}
+
 /* The monogram mesh's colours, assembled on the chip because the hues are its
  * own inline numbers: a custom property resolves where it is declared, so a
  * :root token could never see them. Only the numbers above change per theme. */

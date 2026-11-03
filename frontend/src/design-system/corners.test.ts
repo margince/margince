@@ -42,6 +42,7 @@ import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { selectorList } from "../../scripts/lib/css-rules";
 import { extensionFilesMatching } from "../../scripts/lib/source-tree";
+import { PHONE_MAX_WIDTH } from "../lib/viewport";
 import { withoutComments } from "../testing/css";
 
 const frontendRoot = resolve(__dirname, "..", "..");
@@ -83,19 +84,55 @@ function ladder(tokens: string): Map<string, string> {
   return found;
 }
 
-/** The same ladder as the squircle block redeclares it. */
-function squircleLadder(tokens: string): Map<string, string> {
-  const found = new Map<string, string>();
-  const at = tokens.indexOf("@supports (corner-shape: squircle)");
-  if (at < 0) {
-    return found;
+type AtRule = { text: string; start: number; end: number };
+
+/** Every at-rule opened by `prelude`, each read to its own closing brace. */
+function atRules(tokens: string, prelude: string): AtRule[] {
+  const out: AtRule[] = [];
+  for (let at = tokens.indexOf(prelude); at >= 0; ) {
+    let depth = 0;
+    let end = tokens.length;
+    for (let i = tokens.indexOf("{", at); i >= 0 && i < tokens.length; i += 1) {
+      if (tokens[i] === "{") depth += 1;
+      if (tokens[i] === "}") depth -= 1;
+      if (depth === 0) {
+        end = i + 1;
+        break;
+      }
+    }
+    out.push({ text: tokens.slice(at, end), start: at, end });
+    at = tokens.indexOf(prelude, end);
   }
+  return out;
+}
+
+function rungDeclarations(block: string): Map<string, string> {
+  const found = new Map<string, string>();
   const decl = /(--r-[a-z]+)\s*:\s*([^;]+);/g;
-  const block = tokens.slice(at);
   for (let m = decl.exec(block); m; m = decl.exec(block)) {
     found.set(m[1], m[2].trim());
   }
   return found;
+}
+
+const SQUIRCLE = "@supports (corner-shape: squircle)";
+const PHONE = `@media (max-width: ${PHONE_MAX_WIDTH}px)`;
+
+/** The same ladder as the squircle block redeclares it. */
+function squircleLadder(tokens: string): Map<string, string> {
+  return rungDeclarations(atRules(tokens, SQUIRCLE)[0]?.text ?? "");
+}
+
+/** The phone blocks that redeclare a rung, each with where it sits. */
+function phoneRungBlocks(
+  tokens: string,
+): { rungs: Map<string, string>; start: number }[] {
+  return atRules(tokens, PHONE)
+    .map((block) => ({
+      rungs: rungDeclarations(withoutComments(block.text)),
+      start: block.start,
+    }))
+    .filter((block) => block.rungs.size > 0);
 }
 
 type Block = { body: string; at: number };
@@ -416,6 +453,34 @@ describe("the ladder itself", () => {
           `so nothing would look wrong here.`,
       ).toBeDefined();
       expect(doubled).toBe(`${Number(value.replace("px", "")) * 2}px`);
+    }
+  });
+
+  it("caps every rung above --r-sm at --r-sm on a phone, squircle or not", () => {
+    const base = ladder(tokens);
+    const cap = Number(base.get("--r-sm")?.replace("px", ""));
+    const squircleEnd = atRules(tokens, SQUIRCLE)[0]?.end ?? 0;
+    const phone = phoneRungBlocks(tokens);
+    for (const block of phone) {
+      expect(
+        block.start > squircleEnd,
+        `a ${PHONE} block that redeclares a rung sits before the squircle ` +
+          `block, which then wins wherever the browser draws squircles.`,
+      ).toBe(true);
+    }
+    const capped = new Map(phone.flatMap((block) => [...block.rungs]));
+    for (const [name, value] of base) {
+      const px = Number(value.replace("px", ""));
+      if (name === "--r-full" || px <= cap) {
+        expect(capped.has(name), `${name} is redeclared on a phone`).toBe(
+          false,
+        );
+        continue;
+      }
+      expect(
+        capped.get(name),
+        `${name} (${value}) is larger than --r-sm and keeps its size on a phone.`,
+      ).toBe("var(--r-sm)");
     }
   });
 });
