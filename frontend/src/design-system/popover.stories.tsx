@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Badge } from "./atoms";
 import { Popover } from "./popover";
+import "./popover.stories.css";
 
 // Popover: a short aside opened beside its trigger, portalled to the body so a
 // card's own overflow clip cannot cut it off. The cases on this canvas are the
@@ -157,15 +158,31 @@ export const GhostTriggerWithBadge: Story = {
 // panel carries no placement of its own and is not moved to the trigger.
 export const Pinned: Story = {
   render: () => (
-    <Popover label="Evidence" variant="ghost" width="wide" pinned>
+    <Popover
+      label="Evidence"
+      variant="ghost"
+      width="wide"
+      pinned
+      panelClassName="popover-story-pinned"
+    >
       <p>Three emails and one call reference the March renewal date.</p>
     </Popover>
   ),
   play: async (context) => {
     await openByClick(context);
-    const panel = await within(document.body).findByText(
+    const words = await within(document.body).findByText(
       "Three emails and one call reference the March renewal date.",
     );
-    await expect(panel.closest(".popover-panel")).not.toHaveAttribute("style");
+    const panel = words.closest(".popover-panel");
+    if (!(panel instanceof HTMLElement)) throw new Error("no popover panel");
+    await expect(panel).not.toHaveAttribute("style");
+    const root = getComputedStyle(document.documentElement);
+    const space = (name: string) =>
+      Number.parseFloat(root.getPropertyValue(name));
+    const box = panel.getBoundingClientRect();
+    await expect(box.top).toBe(space("--space-8"));
+    await expect(document.documentElement.clientWidth - box.right).toBe(
+      space("--space-4"),
+    );
   },
 };

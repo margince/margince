@@ -175,6 +175,13 @@ export const NothingEverRaisedPhone: Story = {
   },
 };
 
+export const NothingEverRaisedPhoneDark: Story = {
+  globals: { viewport: { value: "phone" }, theme: "dark" },
+  tags: ["uat-phone"],
+  render: story([]),
+  play: NothingEverRaisedPhone.play,
+};
+
 // A centre with a history and nothing waiting. No bulk verb: there is nothing
 // left for it to settle, and an enabled one would promise work the reader
 // cannot find.

@@ -172,6 +172,7 @@ export const Narrow: Story = {
 // At 390px both cards take the phone inset, and the first tab still stands
 // over the feed's first card.
 export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   args: { ...Default.args },
   play: async ({ canvasElement }) => {

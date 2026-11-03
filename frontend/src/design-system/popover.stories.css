@@ -1,0 +1,6 @@
+/* Storybook scaffolding only: the placement a pinned panel's caller supplies,
+   as the top bar's own sheet does for its panels. */
+.popover-story-pinned {
+  top: var(--space-8);
+  right: var(--space-4);
+}

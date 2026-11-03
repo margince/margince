@@ -87,8 +87,8 @@ describe("usePhoneViewport", () => {
 });
 
 // A stylesheet cannot read a width this module names, so each block spells the
-// number. A block names the width it sits nearest, within the smallest gap
-// between two named widths, and must spell that same number.
+// number. A width that is neither named nor on the list of unnamed ones fails,
+// so a named block that drifts fails at any distance.
 
 const sourceRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -127,31 +127,28 @@ function mediaWidths(css: string): UpperWidth[] {
   );
 }
 
-/** The named width nearest `px`, unless it is further off than two named widths. */
-function namedWidthOf(px: number): NamedWidth | undefined {
-  const named = namedWidths();
-  const band = Math.min(
-    ...named.flatMap((one) =>
-      named
-        .filter((two) => two !== one)
-        .map((two) => Math.abs(one.px - two.px)),
-    ),
-  );
-  const [nearest] = [...named].sort(
-    (one, two) => Math.abs(px - one.px) - Math.abs(px - two.px),
-  );
-  return nearest && Math.abs(px - nearest.px) < band ? nearest : undefined;
-}
+// Every unnamed upper width the tree spells today. The census test fails a
+// listed width no sheet spells, so the list cannot hide a drift onto a stale entry.
+const UNNAMED_WIDTHS = [
+  400, 480, 520, 560, 600, 640, 760, 768, 800, 899, 900, 960, 1000, 1024, 1200,
+];
 
-/** What is wrong with a block that names `width`, or nothing. */
-function drift(found: UpperWidth, width: NamedWidth): string | undefined {
-  if (found.exclusive) {
-    return `spells a strict "<", which leaves ${width.px}px itself out of ${width.name}`;
+/** What is wrong with a block's upper width, or nothing. */
+function misspelling(found: UpperWidth): string | undefined {
+  const named = namedWidths();
+  const width = named.find(({ px }) => px === found.px);
+  if (width) {
+    return found.exclusive
+      ? `spells a strict "<", which leaves ${width.px}px itself out of ${width.name}`
+      : undefined;
   }
-  if (found.px !== width.px) {
-    return `spells ${found.px}px where ${width.name} is ${width.px}px`;
+  if (UNNAMED_WIDTHS.includes(found.px)) {
+    return undefined;
   }
-  return undefined;
+  const [nearest] = [...named].sort(
+    (one, two) => Math.abs(found.px - one.px) - Math.abs(found.px - two.px),
+  );
+  return `spells ${found.px}px, which is not ${nearest?.name} (${nearest?.px}px) or any named width, and is not in UNNAMED_WIDTHS`;
 }
 
 describe("the named widths in the stylesheets", () => {
@@ -177,7 +174,7 @@ describe("the named widths in the stylesheets", () => {
     expect(read("@container (max-width: 700px) { a {} }")).toEqual([]);
   });
 
-  it("gives a width to the named width it sits nearest, and leaves the rest", () => {
+  it("accepts a named or listed width, and fails a drift at any distance", () => {
     const names = namedWidths();
     expect(names.map(({ name }) => name)).toEqual(
       expect.arrayContaining([
@@ -186,38 +183,42 @@ describe("the named widths in the stylesheets", () => {
         "NARROW_MAX_WIDTH",
       ]),
     );
-    for (const width of names) {
-      expect(namedWidthOf(width.px)).toEqual(width);
+    const upTo = (px: number) =>
+      misspelling({ prelude: "", px, exclusive: false });
+    for (const { px } of names) {
+      expect(upTo(px)).toBeUndefined();
+      expect(UNNAMED_WIDTHS).not.toContain(px);
     }
-    expect(namedWidthOf(PHONE_MAX_WIDTH - 1)?.name).toBe("PHONE_MAX_WIDTH");
-    expect(namedWidthOf(FOLD_MAX_WIDTH + 5)?.name).toBe("FOLD_MAX_WIDTH");
-    expect(namedWidthOf(NARROW_MAX_WIDTH + 1)?.name).toBe("NARROW_MAX_WIDTH");
-    for (const unnamed of [600, 640, 760, 1024]) {
-      expect(namedWidthOf(unnamed)).toBeUndefined();
-    }
+    expect(upTo(760)).toBeUndefined();
+    expect(upTo(FOLD_MAX_WIDTH + 20)).toMatch(/not FOLD_MAX_WIDTH \(720px\)/);
+    expect(upTo(PHONE_MAX_WIDTH - 1)).toMatch(/not PHONE_MAX_WIDTH/);
+    expect(upTo(NARROW_MAX_WIDTH + 60)).toMatch(/not NARROW_MAX_WIDTH/);
+    expect(
+      misspelling({ prelude: "", px: FOLD_MAX_WIDTH, exclusive: true }),
+    ).toMatch(/strict "<"/);
   });
 
   it("spells each named width as its own number in every block that names it", () => {
     const sheets = filesMatching(sourceRoot, /\.css$/);
     const blocks = sheets.flatMap((sheet) =>
-      mediaWidths(readFileSync(sheet, "utf8")).flatMap((found) => {
-        const width = namedWidthOf(found.px);
-        return width
-          ? [{ ...found, width, sheet: relative(sourceRoot, sheet) }]
-          : [];
-      }),
+      mediaWidths(readFileSync(sheet, "utf8")).map((found) => ({
+        ...found,
+        sheet: relative(sourceRoot, sheet),
+      })),
     );
     // A walk that found no sheet, or no block for a width, would pass a drifted tree.
     expect(sheets.length).toBeGreaterThan(100);
-    for (const { name } of namedWidths()) {
-      expect(
-        blocks.filter(({ width }) => width.name === name).length,
-        `no stylesheet block names ${name}`,
-      ).toBeGreaterThan(0);
+    const spelled = new Set(blocks.map(({ px }) => px));
+    for (const { name, px } of namedWidths()) {
+      expect(spelled.has(px), `no stylesheet block names ${name}`).toBe(true);
     }
     expect(
+      UNNAMED_WIDTHS.filter((px) => !spelled.has(px)),
+      "an unnamed width no stylesheet spells any more",
+    ).toEqual([]);
+    expect(
       blocks.flatMap((block) => {
-        const wrong = drift(block, block.width);
+        const wrong = misspelling(block);
         return wrong
           ? [`${block.sheet}: @media ${block.prelude} ${wrong}`]
           : [];

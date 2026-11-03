@@ -158,6 +158,7 @@ export const CompanyWithRing: Story = {
 /** At 390px the pane takes the phone inset, and the figures still run to its
  *  edges. */
 export const CompanyWithRingPhone: Story = {
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: CompanyWithRing.render,
   play: async ({ canvasElement }) => {
