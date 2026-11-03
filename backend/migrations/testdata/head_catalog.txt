@@ -4126,6 +4126,27 @@ public.deal_move_dismissal.user_id uuid NOT NULL gen=- def=-
 public.deal_move_dismissal_deal_ix CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id)
 public.deal_move_dismissal_pkey CREATE UNIQUE INDEX deal_move_dismissal_pkey ON public.deal_move_dismissal USING btree (user_id, deal_id)
 public.deal_pkey CREATE UNIQUE INDEX deal_pkey ON public.deal USING btree (id)
+public.deal_product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_product.amount_minor bigint gen=- def=-
+public.deal_product.component_kind text gen=- def=-
+public.deal_product.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product.currency character(3) gen=- def=-
+public.deal_product.deal_id uuid NOT NULL gen=- def=-
+public.deal_product.deal_product_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
+public.deal_product.deal_product_amount_minor_check CHECK (((amount_minor IS NULL) OR (amount_minor >= 0)))
+public.deal_product.deal_product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
+public.deal_product.deal_product_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
+public.deal_product.deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
+public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)
+public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text])))
+public.deal_product.offer_line_item_id uuid gen=- def=-
+public.deal_product.product_id uuid NOT NULL gen=- def=-
+public.deal_product.source text NOT NULL gen=- def=-
+public.deal_product.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product_pkey CREATE UNIQUE INDEX deal_product_pkey ON public.deal_product USING btree (deal_id, product_id)
+public.deal_product_product_idx CREATE INDEX deal_product_product_idx ON public.deal_product USING btree (product_id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_risk_day.captured_by text NOT NULL gen=- def=-
 public.deal_risk_day.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5784,6 +5805,7 @@ public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retireme
 public.lead.lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))
 public.lead.lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.lead.lead_pkey PRIMARY KEY (id)
+public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
@@ -5807,6 +5829,7 @@ public.lead.partner_accepted_at timestamp with time zone gen=- def=-
 public.lead.partner_accepted_by text gen=- def=-
 public.lead.partner_company_id uuid gen=- def=-
 public.lead.phone text gen=- def=-
+public.lead.product_id uuid gen=- def=-
 public.lead.project_id uuid gen=- def=-
 public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
@@ -5915,6 +5938,7 @@ public.lead_privacy_notice.state text NOT NULL gen=- def=-
 public.lead_privacy_notice.template_key text NOT NULL gen=- def=-
 public.lead_privacy_notice.template_version integer NOT NULL gen=- def=-
 public.lead_privacy_notice_pkey CREATE UNIQUE INDEX lead_privacy_notice_pkey ON public.lead_privacy_notice USING btree (id)
+public.lead_product_idx CREATE INDEX lead_product_idx ON public.lead USING btree (product_id) WHERE (product_id IS NOT NULL)
 public.lead_score_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead_score_history.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_score_history.factors jsonb NOT NULL gen=- def=-
@@ -6826,6 +6850,7 @@ public.product.archived_at timestamp with time zone gen=- def=-
 public.product.billing_interval_months integer gen=- def=-
 public.product.billing_model text gen=- def=-
 public.product.captured_by text NOT NULL gen=- def=-
+public.product.component_kind text gen=- def=-
 public.product.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.currency currency_code NOT NULL gen=- def=-
 public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0
@@ -6835,6 +6860,7 @@ public.product.name text NOT NULL gen=- def=-
 public.product.product_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
 public.product.product_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
 public.product.product_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
+public.product.product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
