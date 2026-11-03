@@ -145,6 +145,10 @@ func TestTheAccountCoverageViewsJudgeEachAccountOnce(t *testing.T) {
 	if single.Truncated != nil && *single.Truncated {
 		t.Fatalf("a population under the cap reads as truncated")
 	}
+	empty := coverageOf(t, e, ctx, now.AddDate(0, 0, 400), crmcontracts.GetAccountCoverageParamsViewSilent)
+	if empty.Rows == nil || len(empty.Rows) != 0 {
+		t.Fatalf("a view with nothing at risk answers %#v, want an empty list on the wire", empty.Rows)
+	}
 }
 
 // Without the activity grant nothing is judged: every verdict reads who

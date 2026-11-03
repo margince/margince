@@ -141,9 +141,14 @@ func (s accountCoverage) judge(ctx context.Context, tx pgx.Tx, pop *coveragePopu
 	return nil
 }
 
+// capRows bounds the rows answered. An empty view is an empty list on the
+// wire, never null, which the contract promises and the screen reads.
 func capRows(rows []crmcontracts.AccountCoverageRow) []crmcontracts.AccountCoverageRow {
 	if len(rows) > coverageRows {
 		return rows[:coverageRows]
+	}
+	if rows == nil {
+		return []crmcontracts.AccountCoverageRow{}
 	}
 	return rows
 }
