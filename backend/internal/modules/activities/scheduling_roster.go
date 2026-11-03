@@ -130,7 +130,7 @@ func invitationLinks(in crmcontracts.MeetingInvitationRequest, intent invitation
 
 // stampInvitationAttendees records who is in the room: the host as organizer
 // and every invited address as attendee. A contact or colleague is written by
-// id; a lead or a host-named address by the bare address, which is how
+// id. A lead or a host-named address is written by the bare address, as
 // capture records a party who is no contact here yet. A contact the host
 // cannot see resolved as host-named, so its id never lands on this row.
 func stampInvitationAttendees(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, host ids.UserID, roster []connector.CalendarAttendee) error {

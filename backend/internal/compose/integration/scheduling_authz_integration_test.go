@@ -59,8 +59,8 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	store := bookableStore(t, e, e.Rep1, e.Rep2)
 
 	// Every booking names an invitee, because a meeting with nobody is refused
-	// before the calendar rules run. The contact is incidental here — what
-	// this test is about is whose calendar, not whose record.
+	// before the calendar rules run. The contact is incidental here: this test
+	// is about whose calendar, not whose record.
 	attendee := inviteeContact(t, e, "Calendar Client", e.Rep1)
 	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: attendee}}
 

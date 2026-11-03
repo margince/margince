@@ -5,10 +5,10 @@
 
 package integration
 
-// Scheduling (features/07 §5c): availability proposes business-hour
-// slots minus the host's existing meetings; booking commits one slot,
-// queues its calendar invitation, lands a meeting on the linked timeline,
-// and a taken slot answers slot_taken instead of double-booking.
+// Scheduling: availability proposes business-hour slots
+// minus the host's existing meetings. Booking commits one slot, queues its
+// calendar invitation and lands a meeting on the linked timeline. A taken slot
+// answers slot_taken instead of double-booking.
 
 import (
 	"context"

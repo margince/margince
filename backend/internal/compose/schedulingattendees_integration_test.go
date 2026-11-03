@@ -79,9 +79,9 @@ func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 	}
 }
 
-// The provider save asks the consent gate for contacts and leads only: a
-// colleague and an address no record holds are invited without it, and a
-// contact who withdrew consent still stops the whole invitation.
+// The provider save asks the consent gate for contacts and leads only. A
+// colleague and an address no record holds are invited without it. A contact
+// who withdrew consent still stops the whole invitation.
 func TestOnlyColleaguesAndUnknownAddressesSkipTheConsentGate(t *testing.T) {
 	w := newAttendeeWorld(t)
 	invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")

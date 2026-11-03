@@ -73,7 +73,7 @@ const (
 	AttendeeColleague = "user"
 	AttendeeLead      = "lead"
 	// AttendeeHostNamed is an address that matches no contact, colleague or
-	// lead the host can see: the host typed it, and that is all that is known.
+	// lead the host can see. The host typed it, and that is all that is known.
 	AttendeeHostNamed = "host_named"
 )
 
@@ -84,9 +84,9 @@ type CalendarAttendee struct {
 	Address string   `json:"Address"`
 	Basis   string   `json:"Basis"`
 	ID      ids.UUID `json:"ID"`
-	// AskConsent is true when the consent gate must clear this address before
-	// the provider is asked to send: every contact and lead, and a host-named
-	// address that a contact or lead the host cannot see still holds. Only a
+	// AskConsent says the consent gate must clear this address before the
+	// provider sends. It holds for every contact and lead. It also holds for a
+	// host-named address that a hidden contact or lead still holds. Only a
 	// colleague and an address no consent subject holds skip it.
 	AskConsent bool `json:"AskConsent"`
 }

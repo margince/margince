@@ -87,8 +87,8 @@ var (
 		Message: fmt.Sprintf("`duration_minutes` must be between %d and %d",
 			int(minSlotDuration.Minutes()), int(maxSlotDuration.Minutes())),
 	}
-	// The booking twin of errAvailabilityToNotAfterFrom: the booking resolver
-	// refuses the same condition before staging, and this holds it on every path
+	// The booking twin of errAvailabilityToNotAfterFrom. The booking resolver
+	// refuses the same condition before staging; this holds it on every path
 	// that does not stage, REST included.
 	errBookingEndNotAfterStart = &SchedulingArgumentError{
 		Field: "end", Code: "invalid_date_range",

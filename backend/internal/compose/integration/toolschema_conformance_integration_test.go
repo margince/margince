@@ -53,11 +53,14 @@ import (
 // and the same document an agent gets once a human has released the call. So the
 // sweep covers the confirm-first tools too.
 //
-// What it still cannot reach is named rather than implied: the tools whose
-// handler needs a seam this lane does not stand up — a live calendar
-// (invite_meeting), an outbound mail or channel provider (send_email,
-// send_message), a crawl runner or model path (enrich), a drafting brain
-// (draft_follow_ups_for). Their declared schemas are checked by derivation and
+// What it still cannot reach is named rather than implied. These tools need a
+// seam this lane does not stand up:
+//   - a live calendar (invite_meeting);
+//   - an outbound mail or channel provider (send_email, send_message);
+//   - a crawl runner or model path (enrich);
+//   - a drafting brain (draft_follow_ups_for).
+//
+// Their declared schemas are checked by derivation and
 // by the encoder-agreement test in the agents package, but not against a live
 // handler.
 func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {

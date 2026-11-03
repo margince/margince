@@ -293,8 +293,8 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // removable only by a named member giving a written reason (UndoProjectFiling).
 // relink_activity was raised to confirm-first for a project destination for
 // exactly that reason. The create path reaches the same
-// write and four tools ride it — log_activity, create_task,
-// draft_email, send_company_email — every one of them auto-execute. A passport
+// write and four tools ride it (log_activity, create_task,
+// draft_email, send_company_email), every one of them auto-execute. A passport
 // holding activity:update could call any of them in a loop and mint one mark
 // per call with nobody watching (#2266).
 //

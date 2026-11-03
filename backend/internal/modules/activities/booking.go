@@ -41,8 +41,8 @@ type BookMeetingInput struct {
 	Links          []ActivityLinkInput
 }
 
-// BookMeeting commits one slot through the invitation engine: the meeting lands
-// on the linked records' timelines, the host's calendar gets the event, and the
+// BookMeeting commits one slot through the invitation engine. The meeting lands
+// on the linked records' timelines and the host's calendar gets the event. The
 // provider sends the invite to every attendee. A taken slot answers slot_taken.
 func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
