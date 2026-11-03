@@ -156,3 +156,70 @@ func TestAQueuedContactThatLosesItsAddressIsNotSentUnchecked(t *testing.T) {
 		})
 	}
 }
+
+// Every further address a contact or lead holds goes to the consent gate, the
+// archived and promoted ones too, however the address is cased. An address no
+// record holds goes out unless a stop is recorded on it.
+func TestEveryGuestARecordHoldsIsAskedOfTheGate(t *testing.T) {
+	refused := func(t *testing.T, w attendeeWorld, invitee ids.UUID, guest string) {
+		t.Helper()
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", guest))
+		if err == nil {
+			err = consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional")
+		}
+		if !errors.Is(err, apperrors.ErrConsentNotGranted) {
+			t.Fatalf("%s answered %v, want the consent refusal", guest, err)
+		}
+	}
+	lead := func(t *testing.T, w attendeeWorld, address string) ids.UUID {
+		t.Helper()
+		id := ids.NewV7()
+		w.e.WsExec(t, `INSERT INTO lead (id, full_name, email, source, captured_by) VALUES ($1, 'Lea Lead', $2, 'manual', 'human:test')`, id, address)
+		return id
+	}
+
+	t.Run("an archived contact who withdrew", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		gone := w.contact(t, w.e.Rep1, "gone@buyer.test", "withdrawn")
+		w.e.WsExec(t, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, gone)
+		w.e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, gone)
+		refused(t, w, invitee, "gone@buyer.test")
+	})
+	t.Run("an archived lead", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `UPDATE lead SET archived_at = now() WHERE id = $1`, lead(t, w, "archived@lead.test"))
+		refused(t, w, invitee, "archived@lead.test")
+	})
+	t.Run("a promoted lead", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `UPDATE lead SET status = 'promoted', promoted_contact_id = $2, archived_at = now() WHERE id = $1`, lead(t, w, "promoted@lead.test"), invitee)
+		refused(t, w, invitee, "promoted@lead.test")
+	})
+	t.Run("a withdrawn contact typed in mixed case", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.contact(t, w.e.Rep1, "withdrawn@buyer.test", "withdrawn")
+		refused(t, w, invitee, "Withdrawn@Buyer.TEST")
+	})
+	t.Run("a suppressed address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level)
+			VALUES ('bounced@elsewhere.test', 'hard_bounce', 'test', 'human:test', 'subject')`)
+		refused(t, w, invitee, "bounced@elsewhere.test")
+	})
+	t.Run("an address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", "stranger@elsewhere.test"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); err != nil {
+			t.Fatalf("an address no record holds was refused: %v", err)
+		}
+	})
+}
