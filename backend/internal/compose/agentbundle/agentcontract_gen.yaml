@@ -11865,6 +11865,12 @@ components:
             instead of printing an id.
         linked_deal_id: {type: [string, 'null'], format: uuid}
         linked_contact_id: {type: [string, 'null'], format: uuid}
+        may_be_done:
+          $ref: '#/components/schemas/WorklistMayBeDone'
+          description: |-
+            Present on a promise task when we wrote to one of its recipients on its thread after the
+            promise. The task then asks whether that mail kept it, as the Worklist does, with the
+            same key and fingerprint. Absent for an agent, which answers no such question.
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: |-
@@ -23128,6 +23134,20 @@ components:
         timing: {type: number, minimum: 0, maximum: 1, description: bucketed days-until-expected-close urgency.}
         momentum: {type: number, minimum: 0, maximum: 1, description: '1.0 with an evidenced overnight change, else the 0.4 floor.'}
         warmth: {type: number, minimum: 0, maximum: 1}
+    WorklistMayBeDone:
+      type: object
+      description: |-
+        The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+        The contact page asks the same question under the same `claim_key`. Not yet is answered by
+        `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+      required: [contact_id, email_activity_id, wrote_at, wrote_precision, claim_key, evidence_fingerprint]
+      properties:
+        contact_id: {type: string, format: uuid, description: The recipient the mail was written to.}
+        email_activity_id: {type: string, format: uuid, description: The mail that may have kept the promise.}
+        wrote_at: {type: string, format: date-time}
+        wrote_precision: {$ref: '#/components/schemas/OccurredPrecision'}
+        claim_key: {type: string}
+        evidence_fingerprint: {type: string}
     AttentionSubject:
       type: object
       description: "The record this item is about, named so a reader knows who it concerns before opening anything."

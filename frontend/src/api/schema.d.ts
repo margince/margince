@@ -31591,6 +31591,12 @@ export interface components {
             /** Format: uuid */
             linked_contact_id?: string | null;
             /**
+             * @description Present on a promise task when we wrote to one of its recipients on its thread after the
+             *     promise. The task then asks whether that mail kept it, as the Worklist does, with the
+             *     same key and fingerprint. Absent for an agent, which answers no such question.
+             */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /**
              * @description The task's version, carried so the tick and the snooze beside this row can write with
              *     `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
              *     from has to name the row it will act on, or every press is last-write-wins.

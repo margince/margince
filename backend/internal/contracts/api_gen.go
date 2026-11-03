@@ -35626,8 +35626,13 @@ type Company360NextStep struct {
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
-	Overdue         bool                `json:"overdue"`
-	Subject         string              `json:"subject"`
+
+	// MayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+	// The contact page asks the same question under the same `claim_key`. Not yet is answered by
+	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+	Overdue   bool               `json:"overdue"`
+	Subject   string             `json:"subject"`
 
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act

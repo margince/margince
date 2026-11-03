@@ -44794,6 +44794,12 @@ components:
             instead of printing an id.
         linked_deal_id: { type: [string, 'null'], format: uuid }
         linked_contact_id: { type: [string, 'null'], format: uuid }
+        may_be_done:
+          $ref: '#/components/schemas/WorklistMayBeDone'
+          description: |
+            Present on a promise task when we wrote to one of its recipients on its thread after the
+            promise. The task then asks whether that mail kept it, as the Worklist does, with the
+            same key and fingerprint. Absent for an agent, which answers no such question.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |

@@ -113,9 +113,9 @@ func linkScope(ctx context.Context, alias string, arg func(any) int) (string, er
 // is an any-link rule, so a task reachable through a visible contact would
 // otherwise hand back the id of a deal the caller may not read — the task
 // is theirs to see, the colleague's deal is not.
-func nextStepsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, error) {
-	steps, page, _, err := readNextSteps(ctx, tx, companyID, now, opts, sectionLimit, false)
-	return steps, page, err
+func nextStepsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, []taskSource, error) {
+	steps, page, _, sources, err := readNextSteps(ctx, tx, companyID, now, opts, sectionLimit, false)
+	return steps, page, sources, err
 }
 
 // openTaskPromises reads the account's open tasks for the moment card, up to a
@@ -147,7 +147,7 @@ func nextStepsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, n
 // activities' ExcludeSystemMinted), so no two surfaces disagree about what
 // is owed.
 func openTaskPromises(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int) ([]crmcontracts.Company360NextStep, []time.Time, error) {
-	steps, _, filed, err := readNextSteps(ctx, tx, companyID, now, opts, limit, true)
+	steps, _, filed, _, err := readNextSteps(ctx, tx, companyID, now, opts, limit, true)
 	return steps, filed, err
 }
 
@@ -189,13 +189,13 @@ func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 // and cutting both at the page's is how the row that mattered falls off —
 // and whether system-minted rows are excluded. The filing moments come back
 // for the caller that ranks on them.
-func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int, promisesOnly bool) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, []time.Time, error) {
+func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, limit int, promisesOnly bool) ([]crmcontracts.Company360NextStep, crmcontracts.PageInfo, []time.Time, []taskSource, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	if activityScope == "" {
 		activityScope = scopeAll
@@ -205,15 +205,15 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	// built rather than string-substituted from one another.
 	linkVisible, err := linkScope(ctx, "dl", arg)
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	contactVisible, err := linkScope(ctx, "pl", arg)
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	extra := " AND " + activities.CurrentTaskClause("a", now, identities, arg)
 	if promisesOnly {
@@ -221,6 +221,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	}
 	query := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
+		       a.source_activity_id, coalesce(a.source_system, ''),
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -237,9 +238,10 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		opts.projectScope(arg), extra, identity.LiveMemberSQL("u"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	var filed []time.Time
+	var sources []taskSource
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
 		var step crmcontracts.Company360NextStep
 		var id ids.UUID
@@ -254,8 +256,9 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		// go and find the version first would be two round trips for one click,
 		// and the version it found could already be the wrong one.
 		var version int64
+		var source taskSource
 		if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
-			&dealID, &contactID); err != nil {
+			&source.activity, &source.system, &dealID, &contactID); err != nil {
 			return step, err
 		}
 		step.ActivityId = openapi_types.UUID(id)
@@ -266,24 +269,26 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		step.LinkedContactId = uuidPtr(contactID)
 		step.Overdue = deadline.Passed(step.DueAt, now)
 		filed = append(filed, occurredAt)
+		sources = append(sources, source)
 		return step, nil
 	})
 	if err != nil {
-		return nil, crmcontracts.PageInfo{}, nil, err
+		return nil, crmcontracts.PageInfo{}, nil, nil, err
 	}
 	// Overdue leads by construction: the SQL orders dated before undated and
 	// earliest first, and overdue is exactly "dated before now".
 	page := crmcontracts.PageInfo{HasMore: len(steps) > limit}
 	if len(steps) > limit {
-		// Drop the sentinel row the +1 fetched; the filing moments have to
-		// lose the same one or the two slices stop lining up.
+		// Drop the sentinel row the +1 fetched; the filing moments and sources
+		// have to lose the same one or the slices stop lining up.
 		steps = steps[:limit]
 		filed = filed[:limit]
+		sources = sources[:limit]
 	}
 	if steps == nil {
 		steps = []crmcontracts.Company360NextStep{}
 	}
-	return steps, page, filed, nil
+	return steps, page, filed, sources, nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {
