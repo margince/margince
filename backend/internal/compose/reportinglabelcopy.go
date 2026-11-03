@@ -49,3 +49,14 @@ var reportingLeadStatusLabels = map[crmcontracts.LeadStatus]langcopy.Phrase{
 	crmcontracts.LeadStatusPromoted:     {En: "Qualified", De: "Qualifiziert", Vi: "Đủ điều kiện"},
 	crmcontracts.LeadStatusDisqualified: {En: "Disqualified", De: "Disqualifiziert", Vi: "Đã loại"},
 }
+
+// reportingComponentKindLabels name the groups of the commercial mix: each
+// product.component_kind, a product nobody classified, and the part of a won
+// deal no product carries.
+var reportingComponentKindLabels = map[string]langcopy.Phrase{
+	"software":       {En: "Software", De: "Software", Vi: "Phần mềm"},
+	"implementation": {En: "Implementation", De: "Umsetzung", Vi: "Triển khai"},
+	"other":          {En: "Other", De: "Sonstiges", Vi: "Khác"},
+	"unclassified":   {En: "Unclassified product", De: "Nicht eingeordnetes Produkt", Vi: "Sản phẩm chưa phân loại"},
+	"unallocated":    {En: "Unallocated", De: "Nicht zugeordnet", Vi: "Chưa phân bổ"},
+}

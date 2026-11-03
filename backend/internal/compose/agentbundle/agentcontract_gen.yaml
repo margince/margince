@@ -4888,6 +4888,27 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
       description: Evaluate reporting
   /analytics/evidence:
     get:
@@ -5005,6 +5026,27 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
         - name: metric
           in: query
           required: true
@@ -18879,6 +18921,7 @@ components:
         - partner_activity
         - stage_conversion
         - lead_cohort_outcomes
+        - bookings_mix
     ReportingBlockKind:
       type: string
       description: |-
@@ -18944,6 +18987,18 @@ components:
         end_at:
           type: string
           format: date-time
+    ReportingProductId:
+      type: string
+      format: uuid
+    ReportingCountry:
+      type: string
+      pattern: '^[A-Z]{2}$'
+    ReportingIndustry:
+      type: string
+      maxLength: 120
+    ReportingValueBasis:
+      type: string
+      enum: [all, software, implementation]
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -18986,6 +19041,14 @@ components:
           enum:
             - fiscal_quarter
             - all_open
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         metrics:
           type: array
           items:
@@ -19149,6 +19212,16 @@ components:
             The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        product_label:
+          type: string
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         timezone:
           type: string
         currency:
@@ -22360,6 +22433,7 @@ components:
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.'}
         active: {type: boolean}
@@ -22387,6 +22461,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
@@ -22403,6 +22478,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}

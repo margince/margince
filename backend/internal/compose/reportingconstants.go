@@ -12,6 +12,7 @@ const (
 	reportingScope                    = "scope"
 	reportingScopeKind                = "scope_kind"
 	reportingBookingsWon              = "bookings_won"
+	reportingBookingsMix              = "bookings_mix"
 	reportingClosedWinRate            = "closed_win_rate"
 	reportingOpenPipeline             = "open_pipeline"
 	reportingStageAge                 = "stage_age"
