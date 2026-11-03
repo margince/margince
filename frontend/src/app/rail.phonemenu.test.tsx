@@ -68,6 +68,19 @@ describe("the phone More menu", () => {
     expect(more().getAttribute("aria-current")).toBe("page");
   });
 
+  // Back and Forward close the menu during render, so no row press hands focus on.
+  it("hands focus to More when a new address closes the menu", async () => {
+    const user = userEvent.setup();
+    renderPhoneShell("#/home");
+    await user.click(more());
+    expect(menu()?.contains(document.activeElement)).toBe(true);
+
+    act(() => navigate({ screen: "deals" }));
+    await waitFor(() => expect(menu()).toBeNull());
+
+    expect(document.activeElement).toBe(more());
+  });
+
   // Past the phone width there is no More, so the sidebar's current row takes
   // the focus the menu held.
   it("hands focus to the sidebar's current row when the window widens", async () => {

@@ -212,13 +212,18 @@ export function WorkspaceRail({
   // page head there (app/sectionswitcher.tsx).
   const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
 
-  // A widen closes the menu during render and More goes with it. The focus it
-  // held goes to the sidebar's current row, as a press there would leave it.
+  // A new address or a widen closes the menu during render, past `closeMenu`.
+  // Its focus goes to More, or after a widen to the sidebar's current row.
   const menuWasOpen = useRef(false);
   useEffect(() => {
-    const widened = menuWasOpen.current && !phone;
+    const closed = menuWasOpen.current && !menuOpen;
     menuWasOpen.current = menuOpen;
-    if (widened && holdsOrDropsFocus(menu.current)) {
+    if (!closed || !holdsOrDropsFocus(menu.current)) {
+      return;
+    }
+    if (phone) {
+      more.current?.focus();
+    } else {
       nav.current
         ?.querySelector<HTMLElement>(".navitem[aria-current]")
         ?.focus();
