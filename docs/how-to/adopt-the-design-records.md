@@ -217,6 +217,6 @@ Qualifying leads, changing the lifecycle, setting a score by hand, closing deals
 changes keep their own controls and needed evidence. Fields the app works out, masked and archived fields, and
 fields you have no rights to stay read-only. Header buttons use the same record writer as Details. Dialogs for a new record stay.
 
-`RecordFields` composes the field controls of the design system, which open a dialog and store on Save, and `RecordFormBody`. Each object gives its
+`RecordFields` composes `InlineText`, `InlineChoice` and `EditableValue`, which open a dialog and store on Save, and `RecordFormBody` for a field of several inputs. Each object gives its
 field list that exists, and a small request mapper. `RecordCustomFields` gives the section built from the
 catalog for all four kinds.
