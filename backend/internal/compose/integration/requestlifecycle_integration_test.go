@@ -47,7 +47,7 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 	id := ids.UUID(message.Id)
 	var version int64
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL AND activity_thread_available(thread_key)`, id).Scan(&version)
 	}); err != nil {
 		t.Fatal(err)
 	}
