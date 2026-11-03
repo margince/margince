@@ -3,7 +3,12 @@
 
 package auth
 
-import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
+import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // The audience rule for a reader that COUNTS messages rather than showing them.
 //
@@ -34,4 +39,14 @@ import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
 // answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
 	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
+}
+
+// ReaderlessAudience narrows the system principal to the rows every member may
+// read, for a per-reader date read by a job. The content gate admits every
+// audience for that principal, and no reader stands behind its answer.
+func ReaderlessAudience(ctx context.Context, alias string) string {
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalSystem {
+		return AudienceWorkspaceOnly(alias)
+	}
+	return ""
 }

@@ -95,10 +95,19 @@ func LastTouchFor(
 	if err != nil {
 		return nil, err
 	}
+	// These dates drive one reader's follow-up, so a message counts when this
+	// reader may open it, as on the contact page. One they may only discover
+	// moves no date.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx,
+		"SELECT r.activity_id FROM ("+activities.CompanyReachedActivities(wantedPos)+") r", arg)
+	if err != nil {
+		return nil, err
+	}
 	// The walk starts from the accounts and is aggregated once. Its cost is the
 	// page's own activity, not how far back a quiet account's last message is.
 	touched := "FROM (" + activities.CompanyReachedActivities(wantedPos) + ") reach " +
-		"JOIN activity a ON a.id = reach.activity_id WHERE a.archived_at IS NULL"
+		"JOIN activity a ON a.id = reach.activity_id WHERE a.archived_at IS NULL" +
+		" AND a.id IN (SELECT id FROM readable_activity)" + auth.ReaderlessAudience(ctx, "a")
 	if scope != "" {
 		touched += " AND " + scope
 	}
@@ -110,10 +119,9 @@ func LastTouchFor(
 	}
 	// The direction clocks are the roll-up of the employees' own clocks: an
 	// employee wrote it, or it reached one. Activity filed on the account alone
-	// moves only the last contact. Both skip automatic mail (DirectionClockSQL)
-	// and, like the contact page, read only what the whole workspace may see.
+	// moves only the last contact. Both skip automatic mail (DirectionClockSQL).
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		WITH touched AS (
+		WITH readable_activity AS MATERIALIZED (%[11]s), touched AS (
 		  SELECT reach.company_id, a.id, a.occurred_at, a.occurred_precision, a.kind,
 		         %[5]s AND %[7]s AS they_wrote, %[5]s AND %[8]s AS we_wrote,
 		         %[6]s AS is_interaction
@@ -138,10 +146,10 @@ func LastTouchFor(
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
+		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a"),
 		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
 		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
-		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote")), args...)
+		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote"), readable), args...)
 	if err != nil {
 		return nil, err
 	}
