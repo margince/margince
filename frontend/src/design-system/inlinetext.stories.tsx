@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
@@ -202,9 +202,9 @@ export const InGrid: Story = {
       canvas.getByRole("link", { name: "ana@example.com" }),
     ).toHaveAttribute("href", "mailto:ana@example.com");
     await userEvent.click(canvas.getByRole("button", { name: "Change Email" }));
-    await expect(
-      await screen.findByRole("dialog", { name: "Email" }),
-    ).toBeVisible();
+    const dialog = await screen.findByRole("dialog", { name: "Email" });
+    // The dialog fades in from transparent, so visible is a state it reaches.
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };
 

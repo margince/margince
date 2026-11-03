@@ -8,7 +8,7 @@ import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { StoryProviders } from "../../testing/story-utils";
 import { MemberRole, type RoleRefusal } from "./users-rolecell";
 
-// The member row's role alone. Plain words at rest, a chooser only on press,
+// The member row's role alone. Plain words at rest, a dialog only on press,
 // and a refusal that says its reason under the role.
 
 const FIELD_SALES = {
@@ -38,6 +38,18 @@ function cell(roles: string[], refusal: RoleRefusal | null = null) {
   );
 }
 
+// The pill opens the role dialog; its chooser lists the options.
+async function openChooser(canvasElement: HTMLElement) {
+  const roleOf = /Dana Kessler’s role/;
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: roleOf }),
+  );
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = await body.findByRole("dialog", { name: roleOf });
+  await userEvent.click(within(dialog).getByRole("combobox", { name: roleOf }));
+  return body;
+}
+
 const meta = {
   title: "Settings/People/Members/Role picker",
   component: MemberRole,
@@ -49,11 +61,7 @@ type Story = StoryObj<typeof meta>;
 export const SeededRole: Story = {
   render: cell(["rep"]),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
-    );
-    const body = within(canvasElement.ownerDocument.body);
+    const body = await openChooser(canvasElement);
     const held = await body.findByRole("option", { name: "User" });
     await expect(held).toHaveAttribute("aria-selected", "true");
   },
@@ -71,10 +79,7 @@ export const SeveralRolesChooser: Story = {
   render: cell(["manager", FIELD_SALES.key]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
-    );
-    const body = within(canvasElement.ownerDocument.body);
+    const body = await openChooser(canvasElement);
     const held = await body.findByRole("option", {
       name: "Team lead, Field sales DACH",
     });

@@ -36,7 +36,6 @@
 }
 .repeatablerowsfield-add {
   align-self: start;
-  margin-block-start: var(--space-1);
 }
 @container repeatablerows (min-width: 30rem) {
   .repeatablerowsfield-row {
