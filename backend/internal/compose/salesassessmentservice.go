@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -388,10 +387,4 @@ func assessmentCells(in salesassessment.Input) []crmcontracts.SalesAssessmentCel
 		out = append(out, crmcontracts.SalesAssessmentCell{Id: cell.ID, Label: cell.Label, Value: cell.Value})
 	}
 	return out
-}
-
-// assessmentSubject names the assessment on the model rail: the review, not
-// a record.
-func assessmentSubject(frame salesassessment.FrameIn) string {
-	return strings.TrimSpace(strings.Join([]string{frame.Scope, frame.Product, frame.Initiative}, " "))
 }

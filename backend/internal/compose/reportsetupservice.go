@@ -72,14 +72,14 @@ func (s *reportSetups) withLane(lane completer) *reportSetups {
 	return s
 }
 
-// Propose answers one description for the reader. The drawer's own create
+// ProposeSetup answers one description for the reader. The drawer's own create
 // grant is asked first, so a reader who could not save the result never
 // spends a model call on it.
-func (s *reportSetups) Propose(ctx context.Context, req crmcontracts.ReportSetupRequest) (crmcontracts.ReportSetupProposal, error) {
+func (s *reportSetups) ProposeSetup(ctx context.Context, req crmcontracts.ReportSetupRequest) (crmcontracts.ReportSetupProposal, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.ReportSetupProposal{}, err
 	}
-	if err := auth.Require(ctx, setupObject(req.Site), principal.ActionCreate); err != nil {
+	if err := requireSetupCreate(ctx, req.Site); err != nil {
 		return crmcontracts.ReportSetupProposal{}, err
 	}
 	description, err := httperr.RequireNonBlank("description", req.Description)
@@ -112,13 +112,13 @@ func (s *reportSetups) Propose(ctx context.Context, req crmcontracts.ReportSetup
 	return wireSetupProposal(req.Site, proposal, res.ServedModel)
 }
 
-// setupObject is the record the drawer would create, whose grant admits
-// the ask.
-func setupObject(site crmcontracts.ReportSetupRequestSite) string {
+// requireSetupCreate asks for the create grant on the record the drawer would make.
+// Each object is a literal, so the grant census reads both doors.
+func requireSetupCreate(ctx context.Context, site crmcontracts.ReportSetupRequestSite) error {
 	if site == crmcontracts.ReportSetupRequestSiteInitiativeSetup {
-		return "sales_initiative"
+		return auth.Require(ctx, "sales_initiative", principal.ActionCreate)
 	}
-	return "report_definition"
+	return auth.Require(ctx, "report_definition", principal.ActionCreate)
 }
 
 // gather reads the catalog the reader may use. That is the metrics the
