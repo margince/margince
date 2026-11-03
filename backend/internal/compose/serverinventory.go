@@ -78,8 +78,7 @@ type Server struct {
 	weeklyHandlers weekly.Handlers
 	// The day's one surface, assembled across approvals, dedupe and tasks.
 	// Named rather than embedded: briefs.Handlers already claims the
-	// unqualified name, and two embedded `Handlers` is a compile error rather
-	// than a decision anybody made.
+	// unqualified name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
 	// magicService is held so wireReversal can bind the undo judge to the SAME
@@ -200,6 +199,8 @@ type Server struct {
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
 	salesDecisionHandlers
+	salesAssessmentHandlers
+	reportSetupHandlers
 	analyticsContextHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
@@ -210,7 +211,6 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
-	// The sales initiative transport; the reporting engine reads its membership too.
 	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
