@@ -314,7 +314,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `activity_identity_activity_idx`: `btree (activity_id)`
+- `activity_identity_activity_idx`: `btree (activity_id, identity_kind, identity_key)`
 - `activity_identity_pkey`: `unique, btree (identity_kind, identity_key)`
 
 ## activity_link
@@ -390,7 +390,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_mail_reference_pkey`: `unique, btree (activity_id, referenced_id)`
-- `activity_mail_reference_referenced_idx`: `btree (referenced_id)`
+- `activity_mail_reference_referenced_idx`: `btree (referenced_id, activity_id)`
 
 ## activity_meeting_history
 

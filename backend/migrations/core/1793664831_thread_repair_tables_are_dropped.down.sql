@@ -1,4 +1,6 @@
-SET lock_timeout = '3s';
+ALTER INDEX comms_outbound_workspace_activity_ix RENAME TO comms_outbound_thread_repair_page;
+ALTER INDEX activity_mail_reference_referenced_idx RENAME TO activity_mail_reference_inverse;
+ALTER INDEX activity_identity_activity_idx RENAME TO activity_identity_repair_page;
 ALTER TABLE capture_import ADD COLUMN thread_input_hash text NOT NULL DEFAULT '';
 ALTER TABLE communication_basis ADD COLUMN thread_derived_from uuid REFERENCES communication_basis(id) ON DELETE CASCADE;
 ALTER TABLE communication_basis ADD COLUMN thread_source_activity_id uuid;
@@ -18,10 +20,7 @@ CREATE TRIGGER communication_basis_source_erased BEFORE UPDATE OF source_activit
 FOR EACH ROW EXECUTE FUNCTION communication_basis_source_erased();
 ALTER TABLE activity_mail_reference ADD COLUMN reference_order integer NOT NULL DEFAULT 0 CHECK(reference_order >= 0);
 CREATE INDEX activity_thread_repair_page ON activity(thread_key,id) WHERE kind='email';
-CREATE INDEX activity_identity_repair_page ON activity_identity(activity_id,identity_kind,identity_key);
 CREATE INDEX communication_basis_thread_repair_page ON communication_basis(thread_key,id) WHERE revoked_at IS NULL;
-CREATE INDEX comms_outbound_thread_repair_page ON comms_outbound(activity_id,id);
-CREATE INDEX activity_mail_reference_inverse ON activity_mail_reference(referenced_id,activity_id);
 CREATE INDEX activity_mail_reference_ordered ON activity_mail_reference(activity_id,reference_order,referenced_id);
 
 CREATE TABLE capture_thread_pending (source_key text PRIMARY KEY, blocked boolean NOT NULL DEFAULT false, queue_order bigint GENERATED ALWAYS AS IDENTITY);
@@ -124,4 +123,3 @@ LANGUAGE sql STABLE PARALLEL SAFE AS $$SELECT NOT EXISTS (
 ) AND NOT EXISTS(SELECT 1 FROM capture_thread_pending p WHERE p.source_key=thread AND p.blocked)
  AND NOT EXISTS(SELECT 1 FROM capture_thread_invalidation i WHERE i.source_key=thread)$$;
 
-DROP INDEX activity_identity_activity_idx, activity_mail_reference_referenced_idx, comms_outbound_workspace_activity_ix;
