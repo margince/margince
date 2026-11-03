@@ -83,10 +83,13 @@ export const ignoreSearch = () => undefined;
  * Only the QUERY the app asks for matches: a stub that answered true to
  * everything would also tell the theme the reader prefers a dark one.
  */
-export function stubPhoneViewport(): { widen: () => void } {
+export function stubPhoneViewport({ wide: startsWide = false } = {}): {
+  widen: () => void;
+  narrow: () => void;
+} {
   const phone = widthMedia(PHONE_MAX_WIDTH);
   const listeners = new Set<() => void>();
-  let wide = false;
+  let wide = startsWide;
   vi.stubGlobal("matchMedia", (query: string) => ({
     get matches() {
       return query === phone && !wide;
@@ -100,14 +103,17 @@ export function stubPhoneViewport(): { widen: () => void } {
     removeEventListener: (_: string, listener: () => void) =>
       listeners.delete(listener),
   }));
+  const resize = (toWide: boolean) => {
+    wide = toWide;
+    for (const listener of listeners) {
+      listener();
+    }
+  };
   return {
     /** The window widens past the phone width, as a rotate or a resize does. */
-    widen() {
-      wide = true;
-      for (const listener of listeners) {
-        listener();
-      }
-    },
+    widen: () => resize(true),
+    /** The window narrows to the phone width. */
+    narrow: () => resize(false),
   };
 }
 

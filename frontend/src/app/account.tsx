@@ -74,6 +74,10 @@ const HELP_SEAT = 4;
 
 const SETUP_SEAT = 5;
 
+// Sign out keeps its seat while the setup row is absent, which the walk skips.
+// So a row arriving with the menu open moves neither focus nor the tabstop.
+const SIGN_OUT_SEAT = 6;
+
 /**
  * Who is signed in, in the shapes the block prints them in.
  *
@@ -166,8 +170,7 @@ function AccountPanel({
   onShortcuts: () => void;
 }>) {
   const t = useT();
-  const signOutSeat = setup ? SETUP_SEAT + 1 : SETUP_SEAT;
-  const { seat, walk, move, holds } = useRovingSeats(signOutSeat + 1);
+  const { seat, walk, move, holds } = useRovingSeats(SIGN_OUT_SEAT + 1);
   const theme = useFlyout(THEME_SEAT, move);
   const help = useFlyout(HELP_SEAT, move);
 
@@ -282,7 +285,7 @@ function AccountPanel({
         </LinkRow>
       )}
       <hr />
-      <SignOutRow seat={seat(signOutSeat)} />
+      <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
     </div>
   );
 }

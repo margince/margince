@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -50,6 +50,8 @@ type World = Readonly<{
   providers?: readonly { provider: string; reason: string }[];
   voiceVersion?: number;
   bookingOn?: boolean;
+  /** Every read waits for it, so a test can answer them while a menu is open. */
+  answersAfter?: Promise<void>;
 }>;
 
 function serve(world: World = {}) {
@@ -85,6 +87,7 @@ function serve(world: World = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
+      await world.answersAfter;
       const path = new URL(request.url).pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
@@ -314,6 +317,42 @@ describe("SetupReminder at phone width", () => {
     await mountTopBar().answered();
     expect(await trigger()).toBeTruthy();
     expect((await openAccount()).join()).not.toContain("Finish setup");
+  });
+
+  it("stays out of the account menu after a hide on a wide screen", async () => {
+    const viewport = stubPhoneViewport({ wide: true });
+    serve();
+    const view = mountTopBar();
+    const user = userEvent.setup();
+    await user.click(await trigger());
+    await user.click(
+      screen.getByRole("button", { name: "Hide until next sign-in" }),
+    );
+    act(() => viewport.narrow());
+    await view.answered();
+    expect((await openAccount()).join()).not.toContain("Finish setup");
+  });
+
+  it("keeps focus and the tabstop on Sign out when the row arrives under it", async () => {
+    stubPhoneViewport();
+    let answer = () => {};
+    serve({ answersAfter: new Promise((resolve) => (answer = resolve)) });
+    const view = mountTopBar();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Account/ }));
+    await user.keyboard("{End}");
+    const signOut = screen.getByRole("menuitem", { name: "Sign out" });
+    expect(document.activeElement).toBe(signOut);
+
+    answer();
+    await view.answered();
+    await screen.findByRole("menuitem", { name: /Finish setup/ });
+    expect(document.activeElement).toBe(signOut);
+    expect(signOut.tabIndex).toBe(0);
+    await user.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: /Finish setup/ }),
+    );
   });
 
   it("leaves the account menu once every step is done", async () => {
