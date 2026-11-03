@@ -59,3 +59,4 @@
 1793670405_a_sales_initiative_names_its_effort.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
 1793670405_a_sales_initiative_names_its_effort.down.sql | role | removes that one grant from the same fixed set of system roles
 1793670406_a_deal_base_amount_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793672401_a_deal_product_product_keys_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
