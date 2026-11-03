@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
+import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { LeadScreen } from "./leads";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
@@ -54,22 +54,6 @@ async function showEmptyFields() {
   );
 }
 
-async function chooseIndustry(
-  user: ReturnType<typeof userEvent.setup>,
-  industry: string,
-) {
-  await user.click(
-    await screen.findByRole("button", { name: /^Change Industry/ }),
-  );
-  const dialog = await screen.findByRole("dialog", { name: "Industry" });
-  await pickOption(
-    user,
-    within(dialog).getByRole("combobox", { name: "Industry" }),
-    industry,
-  );
-  await user.click(within(dialog).getByRole("button", { name: "Save" }));
-}
-
 describe("a lead's company facts", () => {
   it("shows the linked company's industry, country and size, named for that company", async () => {
     serve(linked);
@@ -104,7 +88,7 @@ describe("a lead's company facts", () => {
     expect(within(group).queryByText("Country")).toBeNull();
     expect(within(group).queryByText("Industry")).toBeNull();
 
-    await chooseIndustry(userEvent.setup(), "Manufacturing");
+    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "manufacturing" }),
@@ -125,7 +109,11 @@ describe("a lead's company facts", () => {
     const patches = serve(lead);
     render(<LeadScreen id="l-1" />);
     await showEmptyFields();
-    await chooseIndustry(userEvent.setup(), "Logistics and Transport");
+    await changeChoice(
+      userEvent.setup(),
+      "Industry",
+      "Logistics and Transport",
+    );
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "logistics_transport" }),

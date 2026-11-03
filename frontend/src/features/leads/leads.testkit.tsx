@@ -3,7 +3,6 @@ import {
   type RenderResult,
   render as rtlRender,
   screen,
-  within,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -22,21 +21,6 @@ export async function openLeadActions(
   user: Pick<UserEvent, "click"> = userEvent,
 ) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
-}
-
-export async function assignOwner(
-  user: Pick<UserEvent, "click">,
-  colleague: string,
-) {
-  await user.click(
-    await screen.findByRole("button", { name: /^Change Owner/ }),
-  );
-  const dialog = await screen.findByRole("dialog", { name: "Owner" });
-  await user.click(
-    await within(dialog).findByRole("combobox", { name: "Owner" }),
-  );
-  await user.click(await screen.findByRole("option", { name: colleague }));
-  await user.click(within(dialog).getByRole("button", { name: "Save" }));
 }
 
 // The seven shipped lead origins GET /lead-origins serves on a fresh install.

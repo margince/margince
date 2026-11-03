@@ -1,12 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,8 +8,11 @@ import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import {
+  changeChoice,
+  openChoiceDialog,
+} from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
-import { changeChoice } from "./companies.testkit";
 import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyLifecycleControl } from "./companylifecycle";
@@ -150,11 +147,8 @@ function renderInApp(ui: ReactNode) {
 
 // The owner's choices as its dialog offers them.
 async function openOwnerChoices(user: UserEvent) {
-  await user.click(
-    await screen.findByRole("button", { name: /^Change Owner/ }),
-  );
-  const dialog = await screen.findByRole("dialog", { name: "Owner" });
-  await user.click(within(dialog).getByRole("combobox", { name: "Owner" }));
+  const { chooser } = await openChoiceDialog(user, "Owner");
+  await user.click(chooser);
 }
 
 // The owner control, as the details' Ownership row mounts it.
@@ -614,7 +608,7 @@ describe("the lifecycle control beside the name", () => {
     // The button's box (`--controlHeight`), not the inline value's 24px one:
     // what the record layout suite measures is this element.
     expect(control.classList.contains("btn")).toBe(true);
-    expect(control.classList.contains("inline-editable")).toBe(false);
+    expect(control.closest(".editable-value")).toBeNull();
     expect(control.getAttribute("data-testid")).toBe("company-lifecycle");
     expect(control.textContent).toContain("Customer");
   });

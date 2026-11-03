@@ -34,13 +34,8 @@ import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
-// The account header's editable pieces. They are the owner, changed in its own
-// one-field dialog (InlineChoice), and the write path the lifecycle control
-// (companylifecycle.tsx) shares. The record's own menu
-// (CompanyActionBadges) is the third.
-// The subtitle and facts strip live in companyheaderfacts.tsx and the header's
-// other verbs in companyheaderactions.tsx, so this file holds only the pieces
-// that write.
+// The header's pieces that write: the owner, the lifecycle's shared PATCH and
+// the record menu. The facts and other verbs live in companyheader*.tsx.
 
 type Company = components["schemas"]["Company"];
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
@@ -156,7 +151,7 @@ export function CompanyOwnerControl({
   const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
-  const claim = useClaimRecord("company", company.id, company.version);
+  const claim = useClaimRecord("company", company.id);
   const viewerId = useViewerId();
   const { options: owners, roster } = useRecordOwnerOptions();
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
@@ -224,7 +219,7 @@ export function CompanyOwnerControl({
       // who can write the row (`nameable`).
       onSave={(next) =>
         !company.owner_id && next === viewerId
-          ? claim()
+          ? claim(company.version)
           : patch({ owner_id: next })
       }
     />

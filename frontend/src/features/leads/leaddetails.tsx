@@ -378,7 +378,13 @@ function LeadDetailsBody({
         {
           key: "owner",
           term: t("lead.ownerLabel"),
-          value: <LeadOwnerControl lead={lead} writer={writer} />,
+          value: (
+            <LeadOwnerControl
+              lead={lead}
+              writer={writer}
+              terminalReasonId={terminalReasonId}
+            />
+          ),
         },
         {
           key: "status",

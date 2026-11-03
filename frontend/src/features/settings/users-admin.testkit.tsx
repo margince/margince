@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
@@ -148,13 +149,7 @@ export async function openRoleDialog(
   row: HTMLElement,
   name: string,
 ) {
-  await user.click(roleSelect(row, name));
-  const dialog = await screen.findByRole("dialog", { name: roleOf(name) });
-  return {
-    dialog,
-    chooser: within(dialog).getByRole("combobox", { name: roleOf(name) }),
-    save: within(dialog).getByRole("button", { name: "Save" }),
-  };
+  return openChoiceDialog(user, roleOf(name), roleSelect(row, name));
 }
 
 // What the role cell reads, open or at rest: neither its screen-reader text (a

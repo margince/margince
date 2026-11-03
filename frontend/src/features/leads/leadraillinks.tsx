@@ -127,10 +127,8 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
   return isEmpty ? <p>{t("lead.rail.project.empty")}</p> : null;
 }
 
-// Attaches `project_id` through the writer the Details card's project row
-// uses, so both cannot invalidate different caches or send a different
-// If-Match. Picking is the act: the list closes once the write lands and
-// stays open over a refusal.
+// Shares the Details project row's writer, so both send one If-Match.
+// Picking is the act: the list closes once stored and stays open on a refusal.
 export function LeadProjectAttachButton({
   lead,
   writer,

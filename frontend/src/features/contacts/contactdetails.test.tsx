@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { RecordDetails } from "../../design-system/recorddetails";
 import { en } from "../../i18n/en";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { view } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
@@ -180,10 +181,7 @@ it("does not offer to clear the owner of a private contact", async () => {
     visibility: "owner",
     owner_id: "u1",
   });
-  await user.click(
-    await screen.findByRole("button", { name: /^Change Owner/ }),
-  );
-  await user.click(screen.getByRole("combobox"));
+  await user.click((await openChoiceDialog(user, "Owner")).chooser);
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });
 

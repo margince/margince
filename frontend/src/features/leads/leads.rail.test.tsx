@@ -5,25 +5,20 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { changeChoice } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
-import { assignOwner } from "./leads.testkit";
 
-// The lead page writes from BOTH of its columns through one mutation, and the
-// two facts that follow from sharing it are what this file holds.
-//
-// A shared mutation reports one state to every control that reads it. So a
-// success is not automatically THIS control's success, and a failure is not
-// automatically visible where the control that caused it lives. Both went
-// wrong when the page grew its second column: assigning an owner threw away a
-// half-typed score override, and a refused rail write printed nothing at all
-// while the reader was on the History tab.
+// The lead page writes from both of its columns. A write from one control must
+// leave another control's draft alone, and a refusal must reach the reader on
+// whichever tab they are, said once.
 //
 // Kept out of `leads.test.tsx` because that file is already well past the
 // thousand-line ceiling this tree splits test files at.
@@ -125,7 +120,7 @@ async function openOverride(user: ReturnType<typeof userEvent.setup>) {
   );
 }
 
-describe("the lead page's one write, read from two columns", () => {
+describe("the lead page's writes, read from two columns", () => {
   it("keeps a half-typed override when a DIFFERENT control's write lands", async () => {
     const user = userEvent.setup();
     stubFetch((body) =>
@@ -140,12 +135,10 @@ describe("the lead page's one write, read from two columns", () => {
     );
     await user.type(screen.getByLabelText("Reason"), "Met the buyer");
 
-    // Somebody else's write, through the SAME mutation: the owner picker in
-    // the rail beside this form.
-    await assignOwner(user, "Assign to me");
+    // Somebody else's write: the owner picker in the rail beside this form.
+    await changeChoice(user, "Owner", "Assign to me");
 
-    // The override survives it. Before this, the shared mutation's success
-    // closed the form and threw away both fields.
+    // The override survives it.
     await waitFor(() =>
       expect(
         (
@@ -160,7 +153,7 @@ describe("the lead page's one write, read from two columns", () => {
     );
   });
 
-  it("states a refused write on the History tab, where the rail still writes", async () => {
+  it("states a refused owner write once, in its dialog, on the History tab", async () => {
     const user = userEvent.setup();
     stubFetch(() =>
       jsonResponse(
@@ -178,18 +171,21 @@ describe("the lead page's one write, read from two columns", () => {
     // The rail renders on every tab, so its writes can be refused on one the
     // ladder panel — where this sentence used to live — never reaches.
     await user.click(await screen.findByRole("button", { name: /^History/ }));
-    await assignOwner(user, "Assign to me");
+    await changeChoice(user, "Owner", "Assign to me");
 
-    // The dialog keeps the refusal on its field; the page states it as well.
+    const dialog = await screen.findByRole("dialog", { name: "Owner" });
     await waitFor(() =>
-      expect(
-        screen
-          .getAllByRole("alert")
-          .filter((alert) => !alert.closest("[role=dialog]"))
-          .some((alert) =>
-            /moved while you were reading it/.test(alert.textContent ?? ""),
-          ),
-      ).toBe(true),
+      expect(within(dialog).getByRole("alert").textContent).toMatch(
+        /moved while you were reading it/,
+      ),
     );
+    expect(
+      screen.getAllByRole("alert").filter((alert) => !dialog.contains(alert)),
+    ).toEqual([]);
+
+    // Cancel leaves no copy of the refusal behind on the page.
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.queryByText(/moved while you were reading it/)).toBeNull();
   });
 });

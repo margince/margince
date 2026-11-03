@@ -34,50 +34,56 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     notYours: t("lead.notYoursToChange"),
   });
   const readOnly = Boolean(readOnlyReason);
+  const send = async ({ body, version, archived }: LeadWrite) => {
+    // The last word on a terminal lead, in one place rather than per control.
+    // The server refuses every one of these writes, and a later control would
+    // otherwise have to remember. It reads the flag the press carried, so a
+    // lead that went terminal while the page was open is refused.
+    if (archived) {
+      // Catalog copy in a problem body, like every other refusal this screen
+      // shows. "A terminal lead takes no writes" is a sentence for whoever
+      // reads this file, not for whoever is refused.
+      throwProblem({ detail: t("lead.terminalReadOnly") });
+    }
+    return unwrap(
+      await api.PATCH("/leads/{id}", {
+        params: { path: { id }, ...ifMatch(requireVersion(version)) },
+        body,
+      }),
+    );
+  };
   const patch = useMutation({
     mutationKey: ["lead-edit", id],
-    mutationFn: async ({ body, version, archived }: LeadWrite) => {
-      // The last word on a terminal lead, in one place rather than per control.
-      // The server refuses every one of these writes, and a later control would
-      // otherwise have to remember. It reads the flag the press carried, so a
-      // lead that went terminal while the page was open is refused.
-      if (archived) {
-        // Catalog copy in a problem body, like every other refusal this screen
-        // shows. "A terminal lead takes no writes" is a sentence for whoever
-        // reads this file, not for whoever is refused.
-        throwProblem({ detail: t("lead.terminalReadOnly") });
-      }
-      return unwrap(
-        await api.PATCH("/leads/{id}", {
-          params: { path: { id }, ...ifMatch(requireVersion(version)) },
-          body,
-        }),
-      );
-    },
+    mutationFn: send,
     onSuccess: onChanged,
   });
-
-  // The record as it stands in this render, stamped onto the write the caller
-  // is starting. Every control goes through one of these two, so no call site
-  // has to remember to carry the version.
-  const write = (body: UpdateLeadRequest): LeadWrite => ({
-    body,
-    version: requireVersion(lead.version),
-    archived: Boolean(lead.archived_at),
+  // The owner dialog states its own refusal, so its writes stay out of the
+  // page band that reads `patch`.
+  const reassign = useMutation({
+    mutationKey: ["lead-edit", id],
+    mutationFn: send,
+    onSuccess: onChanged,
   });
-  const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
-  // For an editor that stays open over a refusal and closes once stored.
-  const saveAsync = (body: UpdateLeadRequest) => patch.mutateAsync(write(body));
-
-  // Taking an unowned lead is a claim, not a patch. The write arm refuses an
-  // ownerless row, so the request that works here is the claim door. It lives
-  // beside `patch` because the page states a refused write in one banner. A
-  // refusal thrown inside a rail that is not rendered reaches nobody.
   const claim = useMutation({
     mutationKey: ["lead-claim", lead.id],
-    mutationFn: useClaimRecord("lead", lead.id, lead.version),
+    mutationFn: useClaimRecord("lead", lead.id),
     onSuccess: onChanged,
   });
 
-  return { patch, claim, readOnly, readOnlyReason, save, saveAsync };
+  // Stamps a write with the version and closure of the lead it was made against.
+  const write = (body: UpdateLeadRequest, from: Lead): LeadWrite => ({
+    body,
+    version: requireVersion(from.version),
+    archived: Boolean(from.archived_at),
+  });
+  const save = (body: UpdateLeadRequest) => patch.mutate(write(body, lead));
+  // `from` is the lead as the dialog opened on it. Taking an unowned lead is a
+  // claim, not a patch: the write arm refuses an ownerless row.
+  const assign = (ownerId: string, from: Lead, meId: string | undefined) =>
+    !from.owner_id && ownerId === meId
+      ? claim.mutateAsync(from.version)
+      : reassign.mutateAsync(write({ owner_id: ownerId }, from));
+  const assigning = reassign.isPending || claim.isPending;
+
+  return { patch, readOnly, readOnlyReason, save, assign, assigning };
 }

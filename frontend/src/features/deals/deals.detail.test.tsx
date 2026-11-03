@@ -6,6 +6,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -283,13 +284,8 @@ describe("DealScreen — edit, archive (A3)", () => {
         name: translate("en", "deal.editDetails"),
       }),
     );
-    await user.click(
-      await screen.findByRole("button", { name: /^Change Referring partner/ }),
-    );
-    const dialog = await screen.findByRole("dialog", {
-      name: "Referring partner",
-    });
-    await user.click(within(dialog).getByLabelText("Referring partner"));
+    const { chooser } = await openChoiceDialog(user, "Referring partner");
+    await user.click(chooser);
     expect(
       await screen.findByRole("option", { name: "Northgate Partners" }),
     ).toBeTruthy();

@@ -16,9 +16,8 @@ import { navigate } from "../../lib/router";
 import type { Employment, EmploymentActions } from "./contactemployers";
 import { stillHeld } from "./employmentcurrency";
 
-// One employment edge: the company it names, the role at that company, the
-// dates, and the row's own verbs folded behind an OverflowMenu. This is the
-// only place a per-company title is corrected; `contact.title` is another field.
+// One employment edge: its company, the role there, the dates and a verb menu.
+// The only place a per-company title is corrected; `contact.title` is another.
 export function EmploymentRow({
   employment,
   canEdit,

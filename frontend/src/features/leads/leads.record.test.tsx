@@ -1,14 +1,19 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
+import { leadKey } from "../../lib/leadkeys";
+import {
+  changeChoice,
+  openChoiceDialog,
+} from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
-  assignOwner,
   jsonResponse,
   LEAD_GRANTS,
   lead,
@@ -125,17 +130,15 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     await user.click(
       await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
     );
-    await user.click(
+    // Named in full: "Change Origin" also begins "Change Origin note".
+    const { chooser, save } = await openChoiceDialog(
+      user,
+      "Origin",
       await screen.findByRole("button", { name: "Change Origin Not set" }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Origin" });
-    await pickOption(
-      user,
-      within(dialog).getByRole("combobox", { name: "Origin" }),
-      "Partner",
-    );
+    await pickOption(user, chooser, "Partner");
     expect(patchBody).toBeNull();
-    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(save);
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ origin: "partner" });
@@ -493,11 +496,11 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
   // is nobody's to change. So this asserts the claim, not the patch. A stub
   // answering the patch accepts a request the real backend rejects with 403.
   it("shows Unassigned and taking an unowned lead yourself goes through the claim door", async () => {
-    let claimed = false;
+    let claimed: string | null = null;
     let patched = false;
-    stubFetchWithMe(async (url, method) => {
+    stubFetchWithMe(async (url, method, request) => {
       if (method === "POST" && url.includes("/records/lead/l-1/claim")) {
-        claimed = true;
+        claimed = request.headers.get("If-Match");
         return jsonResponse({
           record_type: "lead",
           record_id: "l-1",
@@ -523,10 +526,45 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
     // One control, not a self-assign button beside a picker: the viewer is
     // its first option (ADR-0108).
-    await assignOwner(userEvent, "Assign to me");
+    await changeChoice(userEvent.setup(), "Owner", "Assign to me");
 
-    await waitFor(() => expect(claimed).toBe(true));
+    await waitFor(() => expect(claimed).toBe(String(lead.version)));
     expect(patched).toBe(false);
+  });
+
+  it("saves the owner against the version the dialog opened on", async () => {
+    let served = lead.version;
+    let ifMatch: string | null = null;
+    stubFetchWithMe(async (url, method, request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-42", display_name: "Dana Fischer" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (method === "PATCH" && url.includes("/leads/l-1")) {
+        ifMatch = request.headers.get("If-Match");
+        return jsonResponse({ ...lead, owner_id: "u-42", version: 9 });
+      }
+      if (method === "GET" && url.endsWith("/leads/l-1")) {
+        return jsonResponse({ ...lead, version: served });
+      }
+      return undefined;
+    }, "u-9");
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(<LeadScreen id="l-1" />, client);
+    const user = userEvent.setup();
+    const { chooser, save } = await openChoiceDialog(user, "Owner");
+
+    // The lead moves on while the dialog is open.
+    served = lead.version + 1;
+    await act(() => client.refetchQueries({ queryKey: leadKey("l-1") }));
+    await pickOption(user, chooser, "Dana Fischer");
+    await user.click(save);
+
+    await waitFor(() => expect(ifMatch).toBe(String(lead.version)));
   });
 
   // The fixture above says `writable: true`, which an ownerless lead is not.
@@ -583,8 +621,12 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     );
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
+    const owner = await screen.findByText("Unassigned");
     expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+    // The plain value still says why, as every refused control here does.
+    const reason = translate("en", "lead.notYoursToChange");
+    expect(owner).toHaveAttribute("title", reason);
+    expect(owner).toHaveAccessibleDescription(reason);
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {

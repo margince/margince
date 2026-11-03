@@ -4,9 +4,9 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { changeChoice } from "../../testing/choicedialog.testkit";
 import { LeadScreen } from "./leads";
 import {
-  assignOwner,
   jsonResponse,
   lead,
   openLeadActions,
@@ -179,6 +179,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // Qualify is gone rather than disabled: a disqualified lead is not a
     // qualifiable one, and the header's primary action is for live leads.
     expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
+    const owner = screen.getByText("Unassigned");
+    expect(owner).toHaveAttribute("title", en["lead.terminalReadOnly"]);
+    expect(owner).toHaveAccessibleDescription(reason);
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {
@@ -427,7 +430,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await assignOwner(userEvent, "Dana Fischer");
+    await changeChoice(userEvent.setup(), "Owner", "Dana Fischer");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });

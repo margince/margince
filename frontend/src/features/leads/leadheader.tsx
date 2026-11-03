@@ -202,15 +202,21 @@ function LeadOwner({
   lead,
   meId,
   editable,
+  readOnlyReason,
+  refusedReasonId,
   onAssign,
 }: Readonly<{
   lead: Lead;
   meId: string | undefined;
   editable: boolean;
-  onAssign: (ownerId: string) => Promise<unknown>;
+  readOnlyReason?: string;
+  refusedReasonId?: string;
+  onAssign: (ownerId: string, opened: Lead) => Promise<unknown>;
 }>) {
   const t = useT();
   const [picking, setPicking] = useState(false);
+  // Save sends the version the reader opened on, never a later refetch's.
+  const [opened, setOpened] = useState(lead);
   const roster = useRoster("user", picking);
   const rosterPartial = useRosterPartial("user", picking);
   const partialHint = useRosterPartialHint(rosterPartial);
@@ -236,13 +242,21 @@ function LeadOwner({
   }
   return (
     <>
-      <EditableValue
-        editLabel={t("inlineChoice.change", { field: label })}
-        editable={editable || picking}
-        onEdit={() => setPicking(true)}
-      >
-        {owner}
-      </EditableValue>
+      {editable || picking ? (
+        <EditableValue
+          editLabel={t("inlineChoice.change", { field: label })}
+          onEdit={() => {
+            setOpened(lead);
+            setPicking(true);
+          }}
+        >
+          {owner}
+        </EditableValue>
+      ) : (
+        <span title={readOnlyReason} aria-describedby={refusedReasonId}>
+          {owner}
+        </span>
+      )}
       {/* The draft starts unpicked: the current owner is no candidate, and
           Save on no pick is no write. */}
       <FieldEditDialog
@@ -252,7 +266,7 @@ function LeadOwner({
         hint={partialHint}
         onClose={() => setPicking(false)}
         onSave={async (ownerId) => {
-          await onAssign(ownerId);
+          await onAssign(ownerId, opened);
         }}
       >
         {(field) => (
@@ -277,9 +291,11 @@ function LeadOwner({
 export function LeadOwnerControl({
   lead,
   writer,
+  terminalReasonId,
 }: Readonly<{
   lead: Lead;
   writer: LeadWriter;
+  terminalReasonId: string;
 }>) {
   const me = useMe();
   // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
@@ -293,23 +309,16 @@ export function LeadOwnerControl({
   // fails is worse than none. An archived lead is refused too: a terminal
   // record is nobody's to hand on.
   const mayAssign = useCanWrite("lead", "update");
+  const refused = Boolean(lead.archived_at) || !mayAssign;
+  const meId = me.data?.user?.id;
   return (
     <LeadOwner
       lead={lead}
-      meId={me.data?.user?.id}
-      editable={
-        mayAssign &&
-        !lead.archived_at &&
-        !writer.patch.isPending &&
-        !writer.claim.isPending
-      }
-      // Picking yourself on an unowned lead goes through the claim door: the
-      // write arm refuses a PATCH to a row nobody owns.
-      onAssign={(ownerId) =>
-        !lead.owner_id && ownerId === me.data?.user?.id
-          ? writer.claim.mutateAsync()
-          : writer.saveAsync({ owner_id: ownerId })
-      }
+      meId={meId}
+      editable={!refused && !writer.patch.isPending && !writer.assigning}
+      readOnlyReason={refused ? writer.readOnlyReason : undefined}
+      refusedReasonId={refused ? terminalReasonId : undefined}
+      onAssign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
     />
   );
 }

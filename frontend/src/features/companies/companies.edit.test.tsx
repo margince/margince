@@ -6,16 +6,12 @@ import {
   companyEditFields,
   mapCompanyUpdate,
 } from "../../components/companyform";
+import { changeChoice } from "../../testing/choicedialog.testkit";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
-import {
-  changeChoice,
-  openProfile,
-  openRecordMenu,
-  render,
-} from "./companies.testkit";
+import { openProfile, openRecordMenu, render } from "./companies.testkit";
 
 afterEach(() => {
   cleanup();
