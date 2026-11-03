@@ -61,7 +61,7 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 			       -- direction guessed.
 			       coalesce(direction = 'inbound', false)
 			FROM activity
-			WHERE activity_thread_available(thread_key) AND `+ClassifyBacklogPredicate("$3")+`
+			WHERE `+ClassifyBacklogPredicate("$3")+`
 			ORDER BY occurred_at
 			LIMIT $2`, bodyLimit, limit, ruleset)
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) 
 		// attempt to remove it.
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET capture_label = $2, capture_labeled_at = now()
-			WHERE id = $1 AND capture_label IS NULL AND (archived_at IS NULL AND activity_thread_available(thread_key))
+			WHERE id = $1 AND capture_label IS NULL AND archived_at IS NULL
 			  AND audience = 'workspace' AND restricted_at IS NULL`, id, label)
 		if err != nil {
 			return fmt.Errorf("activities: setting capture label: %w", err)

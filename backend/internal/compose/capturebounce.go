@@ -29,7 +29,7 @@ type commsBounceSink struct{ store *comms.Store }
 // module's address stop. comms owns the send ledger and knows a message died;
 // consent owns what may be written to whom. Neither imports the other, so the
 // edge is injected here like every other cross-module edge.
-type consentBounceObserver struct{ purge privacy.RawCapturePurger }
+type consentBounceObserver struct{ store *consent.Store }
 
 // A bounced website lead's notice deletes the lead instead of stopping the
 // address: the address is the lead's, and the lead is not kept untold. Staging
@@ -44,7 +44,7 @@ func (o consentBounceObserver) HardBounceTx(
 	if carried {
 		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{
 			LeadID: notice.LeadID, ApprovalID: notice.ApprovalID, DeliveryID: notice.DeliveryID,
-		}, o.purge)
+		})
 	}
 	return consent.RecordHardBounceTx(ctx, tx, consent.HardBounceFact{
 		Address:    fact.Address,
@@ -73,6 +73,6 @@ func (b commsBounceSink) RecordBounce(ctx context.Context, report connector.Boun
 func newBounceSink(pool *pgxpool.Pool) commsBounceSink {
 	return commsBounceSink{store: comms.NewStore(
 		InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
-		comms.WithBounceObserver(consentBounceObserver{purge: RawCapturePurgerFor(InstallationDB(pool))}),
+		comms.WithBounceObserver(consentBounceObserver{store: consent.NewStore(InstallationDB(pool))}),
 	)}
 }

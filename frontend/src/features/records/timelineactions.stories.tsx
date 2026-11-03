@@ -113,13 +113,11 @@ export const AudienceOpen: Story = {
     activity: { ...BASE, kind: "call", subject: "Rückfragen zum Angebot" },
   },
   play: async ({ canvasElement }) => {
+    // The control waits for the reader's grants, which arrive after the first paint.
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "More actions for Rückfragen zum Angebot",
+        name: "Change visibility",
       }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change visibility" }),
     );
     await screen.findByRole("dialog", { name: "Who may read this message?" });
   },

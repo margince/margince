@@ -60,43 +60,54 @@ func (s *Service) DismissSuggestion(
 		return err
 	}
 	now := s.now().UTC()
-	return database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-			// Anything that names a record is gated: dismissing advice about an
-			// account the caller cannot read would confirm it exists.
-			if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		// Anything that names a record is gated: dismissing advice about an
+		// account the caller cannot read would confirm it exists.
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+			return err
+		}
+		// After the record gate, so a caller who may not read this account gets the
+		// same 404 whatever they put in the body. The shape check alone is
+		// account-independent, but the raisesSuggestion call below is not — keeping
+		// both on this side of the gate means there is one order to reason about.
+		if !isFingerprint(fingerprint) {
+			return httperr.Validation("fingerprint", "malformed",
+				"dismiss a suggestion by the fingerprint it was served with, unchanged")
+		}
+		// The SAME gate the scoped page passes before it renders anything. A
+		// dismissal that narrowed to a project the caller cannot open would
+		// answer 204 for a fingerprint they could never have been served, and
+		// the shape of that answer is how you probe for a project's existence.
+		if within != nil {
+			if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
 				return err
 			}
-			// Record access precedes shape validation so an unreadable account always returns 404.
-			if !isFingerprint(fingerprint) {
-				return httperr.Validation("fingerprint", "malformed",
-					"dismiss a suggestion by the fingerprint it was served with, unchanged")
-			}
-			// A scoped dismissal must not confirm a project the caller cannot read.
-			if within != nil {
-				if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
-					return err
-				}
-			}
-			raises, err := s.raisesSuggestion(ctx, tx, companyID, now, fingerprint, within)
-			if err != nil {
-				return err
-			}
-			if !raises {
-				// Resolved and unknown suggestions have the same response to avoid disclosing unserved advice.
-				return nil
-			}
-			// Existence records dismissal; repeated clicks need no additional row.
-			_, err = tx.Exec(ctx, `
+		}
+		raises, err := s.raisesSuggestion(ctx, tx, companyID, now, fingerprint, within)
+		if err != nil {
+			return err
+		}
+		if !raises {
+			// Nothing to dismiss, and that is a success rather than an error. Either
+			// the situation resolved between the render and the click — in which case
+			// the suggestion is already gone and storing a row would change nothing —
+			// or the fingerprint was never served, in which case there is nothing to
+			// silence. Saying which would answer a question the caller has no business
+			// asking.
+			return nil
+		}
+		// The row's existence IS the dismissal, so a repeat click is a no-op. Nothing
+		// reads a dismissal's age, and the id is a v7 uuid, so the instant stays
+		// recoverable for support without a column nobody reads.
+		_, err = tx.Exec(ctx, `
 			INSERT INTO suggestion_dismissal (user_id, company_id, fingerprint)
 			VALUES ($1, $2, $3)
 			ON CONFLICT (user_id, company_id, fingerprint) DO NOTHING`,
-				userID, companyID, fingerprint)
-			if err != nil {
-				return fmt.Errorf("record the suggestion dismissal: %w", err)
-			}
-			return nil
-		})
+			userID, companyID, fingerprint)
+		if err != nil {
+			return fmt.Errorf("record the suggestion dismissal: %w", err)
+		}
+		return nil
 	})
 }
 

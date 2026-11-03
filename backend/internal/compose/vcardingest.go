@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -119,18 +118,6 @@ func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngest
 		return jobs.FaultContext(ctx, err)
 	}
 	err = w.importCards(wsCtx, job.Args)
-	var pending bool
-	probeCtx := principal.SystemActing(wsCtx, "system:vcard_ingest")
-	if probeErr := InstallationDB(w.pool).Tx(probeCtx, func(tx pgx.Tx) error {
-		return tx.QueryRow(probeCtx, `SELECT EXISTS(SELECT 1 FROM activity source
- WHERE source.id=@id AND source.archived_at IS NULL AND source.restricted_at IS NULL
- AND NOT activity_thread_available(source.thread_key))`, pgx.NamedArgs{"id": job.Args.Activity}).Scan(&pending)
-	}); probeErr != nil {
-		return jobs.FaultContext(ctx, probeErr)
-	}
-	if pending {
-		return river.JobSnooze(time.Minute)
-	}
 	switch {
 	case err == nil:
 		return nil
@@ -241,7 +228,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		  FROM activity a
 		  JOIN capture_connection cc
 		    ON ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
-		 WHERE a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.id = $1 AND a.archived_at IS NULL
 		   -- INBOUND only, the same gate the signature candidates apply. A card a
 		   -- rep SENT is our own attachment coming back: forwarding a colleague's
 		   -- .vcf out of the mailbox would otherwise file it as a contact, which
@@ -338,7 +325,7 @@ func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID)
 			SELECT audience <> 'workspace'
 			       OR restricted_at IS NOT NULL
 			       OR archived_at IS NOT NULL
-			  FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, activity).Scan(&limited); err != nil {
+			  FROM activity WHERE id = $1 FOR SHARE`, activity).Scan(&limited); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// The message is gone. Nothing to import, and not a fault: it
 				// was erased or never existed, and both are answers.

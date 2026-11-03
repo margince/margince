@@ -20,17 +20,18 @@ import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
 // graph projection asked it first and carried its own copy; that copy moved
 // here rather than being joined by a second.
 
-// AudienceWorkspaceOnly admits evidence every member may see, including a task's source.
-// A caller's narrower audience must not change an aggregate shared by colleagues.
+// AudienceWorkspaceOnly filters an activity aliased by name down to the
+// activities the whole workspace may see, including a task's source audience.
+//
+// It takes no placeholder, so it renumbers nothing at a call site: a caller
+// concatenates it into a WHERE clause and the surrounding arguments keep their
+// positions.
+//
+// Deliberately NOT the reader's own audience. An aggregate is read by
+// colleagues who did not receive the mail, and a per-caller answer would give
+// two contacts different numbers for the same account — which reads as a bug and
+// discloses the difference between them. The question an aggregate asks is
+// "may EVERYONE see this", and the answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
-	return audienceWorkspaceSQL(alias, "activity_thread_available("+alias+".thread_key)")
-}
-
-// AudienceWorkspaceDeferred preserves public-evidence scope for unavailable conversation checks.
-func AudienceWorkspaceDeferred(alias string) string {
-	return audienceWorkspaceSQL(alias, "NOT activity_thread_available("+alias+".thread_key)")
-}
-
-func audienceWorkspaceSQL(alias, available string) string {
-	return " AND " + available + " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE activity_thread_available(follow_up_source.thread_key) AND follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND (follow_up_source.restricted_at IS NULL AND activity_thread_available(follow_up_source.thread_key))))"
+	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
 }

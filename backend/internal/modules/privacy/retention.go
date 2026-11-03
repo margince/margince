@@ -209,10 +209,28 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 	return &out
 }
 
-// RawCapturePurger keeps capture's original and projection ownership together.
-// Content erasure invalidates both; original expiration preserves retained thread evidence.
+// RawCapturePurger deletes the provider originals behind the given activities,
+// inside the caller's transaction so they die with the text they duplicate.
+//
+// A seam rather than a fourth DELETE in this package, and NOT because privacy
+// may not write the table — it already does, twice, ratified in doc.go. It is a
+// seam because the natural-key join those rows are found by belongs to capture,
+// which writes them: a copy of that join here would be a second answer to the
+// same question, the two would drift, and the half that drifted would leave
+// originals behind while reporting success.
+// capture.PendingStore.PurgeRawCaptureTx is the implementation, already written
+// for the noise-redaction sweep.
+//
+// Where this parts company with EdgeInvalidator beside it is what an unwired
+// seam means. A missing edge invalidator leaves an aggregate for the bus
+// consumer that also handles retention.applied to correct — late, but
+// corrected. There is no second path that ages raw_capture out:
+// PurgeRawCaptureTx's own comment says so, and says why the Art. 17 purge
+// cannot stand in (it is scoped to a CONTACT, where a retention window is scoped
+// to time). So an unwired purger is not a degraded mode. It is a constructor
+// argument, and EvaluateInstallation refuses the whole pass if one arrives nil
+// anyway — before a single record is touched.
 type RawCapturePurger interface {
-	PurgeActivityProjectionsTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
 }

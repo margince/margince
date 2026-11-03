@@ -96,7 +96,7 @@ func connectorContextTag(ctx context.Context, tx pgx.Tx, activityID, ownerID ids
 		SELECT c.context_tag_id
 		  FROM capture_connection c
 		  JOIN tag t ON t.id = c.context_tag_id AND t.archived_at IS NULL
-		  JOIN activity a ON activity_thread_available(a.thread_key) AND a.id = $1
+		  JOIN activity a ON a.id = $1
 		 WHERE c.user_id = $2
 		   AND c.archived_at IS NULL
 		   AND c.provider = split_part(a.captured_by, ':', 2)

@@ -136,15 +136,10 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
-	o.e.GrantRole(t, o.e.Rep2, "rep")
-	colleague := seatAddress(t, o.e, o.e.Rep2)
-	original := owedMail{
-		from: o.seat, cc: colleague,
+	ours := o.weWrite(t, owedMail{
 		to: "pat@customer.example", subject: "The quote",
 		messageID: "quote-" + ids.NewV7().String() + "@ws.example", at: o.now.Add(-3 * time.Hour),
-	}
-	ours := o.weWrite(t, original)
-	o.captureFor(t, o.e.Rep2, colleague, original)
+	})
 	if got := o.move(t, ours); got != crmcontracts.EmailSummaryMoveWaitingForThem {
 		t.Fatalf("our unanswered mail reads %q, want waiting_for_them", got)
 	}
@@ -152,14 +147,13 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 		return o.captureFor(t, mailbox, seat, owedMail{
 			from: "pat@customer.example", to: seat, cc: o.seat, subject: "Re: The quote",
 			messageID: "re-" + ids.NewV7().String() + "@customer.example",
-			inReplyTo: strings.Trim(o.messageIDOf(t, ours), "<>"), at: at,
+			inReplyTo: o.messageIDOf(t, ours), at: at,
 		})
 	}
 
-	private := theirReply(o.e.Rep2, colleague, o.now.Add(-2*time.Hour))
-	finishThreadRepairs(t, o.e)
+	private := theirReply(o.e.Rep2, seatAddress(t, o.e, o.e.Rep2), o.now.Add(-2*time.Hour))
 	if o.threadKey(t, private) != o.threadKey(t, ours) {
-		t.Fatalf("the reply did not join our thread: private=%q ours=%q parent=%q", o.threadKey(t, private), o.threadKey(t, ours), o.messageIDOf(t, ours))
+		t.Fatal("the reply did not join our thread, so the test cannot tell a reply from a new mail")
 	}
 	if n := o.count(t, `SELECT count(*) FROM activity WHERE id = $1 AND audience = 'workspace'`, private); n != 0 {
 		t.Fatal("the colleague's mailbox shares its mail; the case needs a private reply")
@@ -169,7 +163,6 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 	}
 
 	theirReply(o.owner, o.seat, o.now.Add(-time.Hour))
-	finishThreadRepairs(t, o.e)
 	if got := o.move(t, ours); got != crmcontracts.EmailSummaryMoveNone {
 		t.Errorf("our mail reads %q after a reply the reader can read, want none", got)
 	}

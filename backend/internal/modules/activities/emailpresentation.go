@@ -225,7 +225,7 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 		        WHERE ci.activity_id = $1 AND ci.user_id = $2
 		       UNION ALL
 		       SELECT 1 FROM activity a
-		        WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+		        WHERE a.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
                  AND a.captured_by LIKE '%:' || $2::text)`,
 		id.UUID, actor.UserID).Scan(&sender); err != nil {
 		return false, fmt.Errorf("activities: reading whether the caller sent this message: %w", err)

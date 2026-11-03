@@ -51,7 +51,7 @@ const dealRepairReason = "captured_mail_deal_repair"
 // capturedMailSQL selects the mail the deal repair inspects: live mail a
 // connector captured. Callers append the cursor and order.
 const capturedConnectorActivitySQL = `a.channel_provider IS NULL AND a.captured_by LIKE 'connector:%'
- AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL`
+ AND a.archived_at IS NULL AND a.restricted_at IS NULL`
 
 const capturedMailSQL = `SELECT a.id FROM activity a WHERE a.kind = 'email' AND ` + capturedConnectorActivitySQL
 
@@ -200,7 +200,7 @@ func (r DealRepair) asMailbox(
 	ctx context.Context, tx pgx.Tx, mail ids.ActivityID, reason string, decide func(dealFiling) (DealOutcome, error),
 ) (DealOutcome, error) {
 	var capturedBy string
-	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND restricted_at IS NULL`, mail).Scan(&capturedBy); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1 AND archived_at IS NULL AND restricted_at IS NULL`, mail).Scan(&capturedBy); err != nil {
 		return "", fmt.Errorf("capture: reading who captured a mail: %w", err)
 	}
 	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 ORDER BY user_id`, mail)

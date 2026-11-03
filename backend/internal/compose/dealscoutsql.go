@@ -92,7 +92,7 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	     AND ` + in("source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
 	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-	             WHERE activity_thread_available(ca.thread_key) AND ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
+	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
 	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	  UNION ALL
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, a.occurred_at, NULL,
@@ -109,7 +109,7 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 // workspaceEvidence admits an activity the whole workspace may read: the
 // workspace audience, live, and on a thread nobody holds.
 func workspaceEvidence(alias string) string {
-	return fmt.Sprintf(`(%[1]s.audience = 'workspace' AND %[1]s.archived_at IS NULL AND activity_thread_available(%[1]s.thread_key) AND NOT %[2]s)`,
+	return fmt.Sprintf(`(%[1]s.audience = 'workspace' AND %[1]s.archived_at IS NULL AND NOT %[2]s)`,
 		alias, capture.CounterpartyHeldOn(alias))
 }
 

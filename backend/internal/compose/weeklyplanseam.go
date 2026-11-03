@@ -106,7 +106,7 @@ func (c weeklyPlanCapacity) ForWeek(
 		return tx.QueryRow(ctx, `
 			SELECT
 			  (SELECT count(*) FROM activity m
-			    WHERE activity_thread_available(m.thread_key) AND m.kind = 'meeting' AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key))
+			    WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 			      -- NULL is a meeting nothing has said is off, which every
 			      -- other surface counts. A calendar connector writes no
 			      -- status at all, so the strict form left exactly the rep
@@ -119,7 +119,7 @@ func (c weeklyPlanCapacity) ForWeek(
 			      AND `+storekit.MeetingResponsibilitySQL("m", "$3")+`
 			      AND `+occurredday.WithinSQL("m", "$1", "$2")+`),
 			  (SELECT count(*) FROM activity t
-			    WHERE activity_thread_available(t.thread_key) AND t.kind = 'task' AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key))
+			    WHERE t.kind = 'task' AND t.archived_at IS NULL
 			      AND NOT t.is_done AND t.assignee_id = $3 AND `+current+`
 			      AND `+storekit.TaskDueSQL("t")+` >= $1 AND `+storekit.TaskDueSQL("t")+` < $2)`,
 			args...).

@@ -294,7 +294,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	if in.ConversationOf != nil {
 		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity conversation_anchor
-		          WHERE activity_thread_available(conversation_anchor.thread_key) AND conversation_anchor.id = $%d AND %s)`,
+		          WHERE conversation_anchor.id = $%d AND %s)`,
 			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)), deliveredToSQL(in.ConversationDeliveredTo, arg))))
 	}
 	if in.Query != nil && *in.Query != "" {

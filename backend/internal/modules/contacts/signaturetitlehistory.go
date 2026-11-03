@@ -39,7 +39,7 @@ var reopenSignatureHistorySQL = `
 	       AND p.archived_at IS NULL AND p.merged_into_id IS NULL
 	       AND ` + olderMailMayFillTitleSQL("p") + `
 	       AND EXISTS (SELECT 1 FROM activity_link al JOIN activity a ON a.id = al.activity_id
-	                    WHERE activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$3") + ` AND a.id <> st.activity_id)
+	                    WHERE ` + signatureSourceSQL("$3") + ` AND a.id <> st.activity_id)
 	    RETURNING st.contact_id
 	)
 	SELECT page.contact_id, EXISTS (SELECT 1 FROM reopened r WHERE r.contact_id = page.contact_id)

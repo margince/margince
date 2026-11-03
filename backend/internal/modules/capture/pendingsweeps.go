@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -222,7 +223,7 @@ func (s *PendingStore) NoiseMailForTx(ctx context.Context, tx pgx.Tx, email stri
 		  FROM activity a
 		  JOIN `+disownedSenders+` ON p.email = a.counterparty_email
 		 WHERE p.email = $2 AND p.machine AND `+noiseMailScope+withinVerdictReach()+`
-		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		   AND a.archived_at IS NULL
 		 ORDER BY a.occurred_at
 		 LIMIT $1`, limit, normalizeEmail(email))
 	if err != nil {
@@ -242,6 +243,49 @@ func (s *PendingStore) NoiseMailForTx(ctx context.Context, tx pgx.Tx, email stri
 		return nil, fmt.Errorf("capture: reading the sender's captured mail: %w", err)
 	}
 	return out, nil
+}
+
+// PurgeRawCaptureTx deletes the provider originals behind the given activities,
+// on the caller's transaction so they die with the text they duplicate.
+//
+// Without this the redaction destroys a copy and leaves the original: capture
+// writes the verbatim provider payload — full headers and body — to raw_capture,
+// keyed on the message's natural key. Nulling activity.subject/body while that
+// row survives would make "the content is destroyed" false, and raw_capture has
+// its own retention scope keyed on age, which ages an ORIGINAL rather than
+// answering an erase of the record; and Art. 17 erasure, which is scoped to a
+// CONTACT and therefore structurally unreachable for a noise-judged sender, who
+// has no contact record by construction.
+//
+// The activity row keeps its source key, so the capture natural key still
+// tombstones a replay — what goes is the content, not the fact of the message.
+func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if len(activityIDs) == 0 {
+		return nil
+	}
+	// TWO ARMS, because raw_capture has two writers and they key differently.
+	//
+	// The stored LINK is the exact one: the ingest that created the activity
+	// knew which original it read and now says so. Everything captured since
+	// that column landed is destroyed by this arm, whatever lane it came
+	// through.
+	//
+	// The NATURAL-KEY join is for the rows written before it. It holds only
+	// where the two writers' keys agree, which is mail alone — the channel
+	// sink stores the provider's redelivery key, not the domain natural key —
+	// so it is a backstop for deployed history and never the primary answer.
+	// It cannot simply be dropped: an installation upgrading today has years of
+	// originals whose activity carries no link, and a purge that skipped them
+	// would leave exactly the verbatim payloads this sweep exists to destroy.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM raw_capture r
+		 USING activity a
+		 WHERE a.id = ANY($1)
+		   AND `+storekit.StoredOriginalSQL("a", "r"),
+		activityIDs); err != nil {
+		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
+	}
+	return purgePartySourcesTx(ctx, tx, activityIDs)
 }
 
 // disownedSenders gathers the addresses the workspace has disowned, and by
@@ -282,7 +326,7 @@ func (s *PendingStore) noiseMail(ctx context.Context, extra string, limit int) (
 			SELECT DISTINCT a.id, a.occurred_at
 			  FROM activity a
 			  JOIN `+disownedSenders+` ON p.email = a.counterparty_email
-			 WHERE (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+			 WHERE a.restricted_at IS NULL
 			   AND `+noiseMailScope+extra+`
 			 ORDER BY a.occurred_at
 			 LIMIT $1`, limit)

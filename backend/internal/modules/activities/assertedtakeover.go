@@ -90,7 +90,14 @@ func TakeOverAssertedActivityTx(
 	// closes the window between that read and this write rather than repeating
 	// it.
 	//
-	// Statutory holds archive their activity, so the live-row lock also refuses them.
+	// This is ALSO the statutory-hold refusal, which is why no
+	// `restricted_at IS NULL` predicate follows it. The
+	// activity_restricted_is_archived CHECK makes held-but-live a state the
+	// table cannot hold, so every held row is archived and LiveOnly refuses it —
+	// and both writers that place a hold (privacy.PinToFloor and the erasure's
+	// restrict arm) archive in the same statement for that reason. Adding the
+	// predicate would be a fourth refusal behind three, unreachable by
+	// construction, and a reader would take it for the one doing the work.
 	// TestAMessageUnderAStatutoryHoldIsNotTakenOver holds the outcome.
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		return err

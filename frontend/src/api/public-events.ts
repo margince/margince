@@ -991,8 +991,6 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
-            /** @description The activity's new conversation key, when its thread grouping changed. */
-            thread_key?: string;
             /** @description A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate. */
             automatic_task_repaired?: boolean;
             /** @description The source's recorded commitment decisions changed; fetch the source through its normal content access gate. */

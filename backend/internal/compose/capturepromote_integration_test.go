@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,7 +28,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -417,13 +415,8 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 	const stranger = "anwalt@kanzlei.example"
 
 	seedClassifiedGmail(t, e, e.Rep1)
-	authorizeCaptureMailbox(t, e, e.Rep1, "a@authz.test")
-	o := &owedEnv{e: e, owner: e.Rep1, seat: "a@authz.test", now: clocktest.Now(t)}
-	parent := "reopen-out-1@authz.test"
-	o.weWrite(t, owedMail{to: first, subject: "Angebot", messageID: parent, at: o.now.Add(-3 * time.Hour)})
-	initial := o.capture(t, owedMail{from: first, to: o.seat, subject: "Re: Angebot", messageID: "reopen-in-1@partner.example", inReplyTo: parent, at: o.now.Add(-2 * time.Hour)})
-	finishThreadRepairs(t, e)
-	key := o.threadKey(t, initial)
+	seedAttestedOutbound(t, e, "reopen-out-1", first, "reopen-t1")
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-1", first, "reopen-t1")
 
 	// The thread is settled as ordinary, recording the sender it read.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -431,7 +424,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 			UPDATE capture_thread_verdict
 			   SET status = 'cleared', seen_addresses = ARRAY[$2::text],
 			       resolved_at = now(), next_attempt_at = NULL
-			 WHERE thread_key = $1`, key, first)
+			 WHERE thread_key = $1`, "reopen-t1", first)
 		return err
 	}); err != nil {
 		t.Fatalf("settling the thread: %v", err)
@@ -439,15 +432,14 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 
 	// A sender the verdict never read replies on the same thread. That reopens
 	// the question, and this message is what the question is now about.
-	o.capture(t, owedMail{from: stranger, to: o.seat, subject: "Re: Angebot", messageID: "reopen-in-2@kanzlei.example", inReplyTo: parent, at: o.now.Add(-time.Hour)})
-	finishThreadRepairs(t, e)
+	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-2", stranger, "reopen-t1")
 
 	var status string
 	var pointer *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT status, first_activity_id FROM capture_thread_verdict WHERE thread_key = $1`,
-			key).Scan(&status, &pointer)
+			"reopen-t1").Scan(&status, &pointer)
 	}); err != nil {
 		t.Fatalf("reading the reopened thread: %v", err)
 	}

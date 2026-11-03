@@ -108,7 +108,7 @@ func importingSeats(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]ids.UU
 		  FROM activity a
 		  JOIN app_user u
 		    ON a.captured_by = left(a.captured_by, length(a.captured_by) - 36) || u.id::text
-		 WHERE activity_thread_available(a.thread_key) AND a.id = $%d
+		 WHERE a.id = $%d
 		   AND a.captured_by LIKE 'connector:%%'`, len(legacy)), legacy...)
 	if err != nil {
 		return nil, err
