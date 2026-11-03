@@ -28,10 +28,9 @@ import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { DataCoverageView } from "./analytics.coverageview";
 import { FirstRunNotice } from "./analytics.firstrun";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
-import { MyOutcomesView } from "./analytics.outcomes";
+import { FramedSection } from "./analytics.framed";
 import { AnalyticsOverview } from "./analytics.overview";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
@@ -126,6 +125,7 @@ export function AnalyticsScreen({
           conversion: t(VIEW_SHAPE.conversion.label),
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
+          accounts: t("analytics.sectionAccounts"),
           delivery: t("analytics.sectionDelivery"),
           questions: t("analytics.sectionQuestions"),
         }}
@@ -332,13 +332,17 @@ function SectionBody({
         </>
       ) : null;
     case "coverage":
+    case "accounts":
+    case "outcomes":
       // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
-        <DataCoverageView locale={locale} timezone={context.timezone} />
-      ) : null;
-    case "outcomes":
-      return context ? (
-        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+        <FramedSection
+          section={section}
+          context={context}
+          selection={selection}
+          scopeControl={scopeControl}
+          locale={locale}
+        />
       ) : null;
     case "forecast":
       return selection && context ? (

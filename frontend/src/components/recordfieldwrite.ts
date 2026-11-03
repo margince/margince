@@ -9,7 +9,7 @@ import {
 import type { useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
-import { ProblemError } from "../lib/problem";
+import { ProblemError, problemStatus } from "../lib/problem";
 import { invalidateRecord } from "../lib/recordwritekeys";
 import type { CreateField, FormRows } from "./create";
 import type { FieldRecord, RecordFieldSave } from "./recordfieldtypes";
@@ -32,6 +32,10 @@ export function useRecordFieldWrite(kind: EntityKind, record: FieldRecord) {
   const qc = useQueryClient();
   const mutationKey = [`${kind}-edit`, record.id];
   const pending = useIsMutating({ mutationKey }) > 0;
+  const refreshRecord = () =>
+    invalidateRecord(qc, kind, record.id, {
+      anchor: rawRecord(record).is_anchor === true,
+    });
   const mutation = useMutation({
     mutationKey,
     mutationFn: async ({ values, rows, baseline, save, extra }: FieldWrite) =>
@@ -41,9 +45,7 @@ export function useRecordFieldWrite(kind: EntityKind, record: FieldRecord) {
         : save(values, rows, baseline),
     onSuccess: async () => {
       await Promise.all([
-        invalidateRecord(qc, kind, record.id, {
-          anchor: rawRecord(record).is_anchor === true,
-        }),
+        refreshRecord(),
         qc.invalidateQueries({
           queryKey: [kind === "company" ? "companies" : `${kind}s`],
         }),
@@ -51,6 +53,11 @@ export function useRecordFieldWrite(kind: EntityKind, record: FieldRecord) {
           qc.invalidateQueries({ queryKey }),
         ),
       ]);
+    },
+    // A stale version refuses every retry, so the next opening must read a fresh one.
+    onError: async (error) => {
+      const status = problemStatus(error);
+      if (status === 409 || status === 412) await refreshRecord();
     },
   });
   return { mutation, pending };

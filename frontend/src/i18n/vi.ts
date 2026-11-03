@@ -1194,6 +1194,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
   "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
+  "reporting.coverageThresholds": "Ngưỡng độ phủ công ty",
+  "reporting.coverageThresholdsHelp":
+    "Những gì phần Độ phủ công ty xem là rủi ro. Ngưỡng áp dụng từ lần đọc tiếp theo.",
+  "reporting.maxEngagedSeats": "Tối đa liên hệ gắn bó",
+  "reporting.untouchedDays": "Số ngày không trao đổi trong pipeline",
+  "reporting.silentDays": "Số ngày không trao đổi sau khi thắng",
+  "reporting.wonWithinDays": "Số ngày một lần thắng còn được tính",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",
   "reporting.captureHelp":
     "Chọn nhóm và pipeline cố định để dựng lịch sử biến động. Cần hai lần chụp hằng ngày so sánh được với nhau.",
@@ -1287,6 +1294,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.targetValue": "Chỉ tiêu",
   "reporting.targetHint": "Để trống nếu chỉ theo dõi.",
   "reporting.deadline": "Hạn",
+  "reporting.setup.suggestReport": "Gợi ý bộ lọc và biểu đồ",
+  "reporting.setup.suggestInitiative": "Gợi ý mục tiêu",
+  "reporting.setup.busy": "Đang đọc mô tả của bạn",
+  "reporting.setup.retry": "Thử lại",
+  "reporting.setup.noModel":
+    "Gợi ý từ lời mô tả cần một mô hình AI đã được thiết lập. Bạn vẫn có thể tự chọn thiết lập.",
+  "reporting.setup.proposedTitle": "Gợi ý từ lời mô tả của bạn",
+  "reporting.setup.nothingTitle": "Không có gì ở đây khớp với lời mô tả",
+  "reporting.setup.apply": "Dùng gợi ý",
+  "reporting.setup.dismiss": "Bỏ qua",
+  "reporting.setup.source": "{field}: {value}, từ “{phrase}”",
+  "reporting.setup.openTitle": "Còn bỏ ngỏ",
+  "reporting.setup.unusedTitle": "Không dùng được",
+  "reporting.setup.unusedItem": "“{phrase}”: {reason}",
+  "reporting.setup.fieldName": "Tên",
+  "reporting.setup.fieldCountry": "Quốc gia",
+  "reporting.setup.fieldMetric": "Chỉ số",
+  "reporting.setup.fieldChart": "Biểu đồ",
+  "reporting.describeInitiative": "Mô tả sáng kiến",
+  "reporting.describeInitiativeHint":
+    "Bạn muốn đẩy mạnh điều gì, cho ai và đến khi nào. Lời mô tả được giữ cùng sáng kiến.",
   "reporting.nameDoesNotDecide":
     "Tên không quyết định tư cách thành viên. Bước tiếp theo xác định quy tắc hoặc các bản ghi thuộc về.",
   "reporting.chooseIncludedRecords": "Chọn bản ghi thuộc về",
@@ -2812,8 +2840,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deal",
-  "board.weighted": "có trọng số {value}",
-  "board.convertedAt": "Đã quy đổi · tỷ giá ngày {date}",
+  "board.weightedLabel": "có trọng số",
+  "board.ratesOn": "Tỷ giá {date}",
+  "board.unpriced_one": "{count} chưa định giá",
+  "board.unpriced_other": "{count} chưa định giá",
+  "board.totalsTip":
+    "{total} đang mở, {weighted} có trọng số theo {probability}.",
+  "board.unpricedTip_one":
+    "{count} deal chưa có giá và không được tính vào hai tổng.",
+  "board.unpricedTip_other":
+    "{count} deal chưa có giá và không được tính vào hai tổng.",
+  "board.convertedTip": "Đã quy đổi theo tỷ giá ngày {date}.",
   "board.matchesIn_one": "{count} kết quả ở cột {columns}",
   "board.matchesIn_other": "{count} kết quả ở cột {columns}",
   "board.showMatches": "Đến cột",
@@ -5297,9 +5334,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.unassigned": "Chưa giao",
   "lead.terminalDisqualified": "Đã loại. Lead này ở chế độ chỉ xem.",
   "lead.marker": "Lead",
-  "lead.assign": "Giao",
   "lead.assignToMe": "Giao cho tôi",
-  "lead.assignTo": "Giao lead này cho",
   "lead.assignChoose": "Chọn một đồng nghiệp",
   "lead.assignNobodyElse": "Không có thành viên nào khác để giao lead này.",
   "lead.saveOverride": "Lưu ghi đè",
@@ -6492,7 +6527,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "field.phoneHome": "Nhà riêng",
   "field.phoneOther": "Khác",
   "field.primary": "Chính",
-  "field.removeRow": "Gỡ",
   "field.removeRowLabel": "Gỡ hàng {n}",
   "field.moveRowUp": "Chuyển hàng {n} lên",
   "field.moveRowDown": "Chuyển hàng {n} xuống",
@@ -7460,6 +7494,48 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",
   "analytics.sectionDelivery": "Triển khai",
+  "analytics.sectionAccounts": "Độ phủ công ty",
+  "analytics.accounts.views": "Các góc nhìn rủi ro",
+  "analytics.accounts.singleThreaded": "Deal chỉ có một liên hệ",
+  "analytics.accounts.untouched": "Chưa liên hệ trong pipeline",
+  "analytics.accounts.silent": "Đã thắng nhưng im lặng",
+  "analytics.accounts.pending": "Đang kiểm tra các công ty",
+  "analytics.accounts.thresholds":
+    "Rủi ro nghĩa là: tối đa {seats} liên hệ gắn bó với deal, không trao đổi trong {untouched} ngày khi còn trong pipeline, không trao đổi trong {silent} ngày sau khi thắng trong vòng {won} ngày.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Deal đang mở mà gần đây chỉ có tối đa {seats} liên hệ ở công ty trao đổi thư hoặc gặp bạn.",
+  "analytics.accounts.untouchedPurpose":
+    "Công ty có deal đang mở và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.silentPurpose":
+    "Công ty có deal thắng trong {won} ngày qua, không có deal đang mở, và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.noActivityGrant":
+    "Việc kiểm tra các công ty cần quyền đọc hoạt động.",
+  "analytics.accounts.none": "Không có gì rủi ro ở đây.",
+  "analytics.accounts.truncated":
+    "Có nhiều công ty hơn mức lần đọc này kiểm tra: số đếm chỉ gồm những công ty lớn nhất. Hãy thu hẹp các hồ sơ bạn đã chọn.",
+  "analytics.accounts.withheld_one":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.withheld_other":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.account": "Công ty",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Phụ trách",
+  "analytics.accounts.engagedSeats": "Liên hệ gắn bó",
+  "analytics.accounts.seatsOf": "{engaged} trên {named}",
+  "analytics.accounts.openDeals": "Deal đang mở",
+  "analytics.accounts.wonDeal": "Deal đã thắng",
+  "analytics.accounts.lastExchange": "Trao đổi gần nhất",
+  "analytics.accounts.never": "Chưa bao giờ",
+  "analytics.accounts.daysAgo": "{date}, {days} ngày trước",
+  "analytics.accounts.evidencePurpose": "Căn cứ của nhận định này.",
+  "analytics.accounts.factSeats":
+    "{engaged} trên {named} liên hệ được nêu trong deal đã trao đổi thư hoặc gặp bạn trong 90 ngày qua.",
+  "analytics.accounts.factStage": "Deal đang ở giai đoạn {stage}.",
+  "analytics.accounts.factOpen_one": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factOpen_other": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factWon": "{deal} đã thắng vào {date}.",
+  "analytics.accounts.factInbound": "Họ viết lần cuối: {date}.",
+  "analytics.accounts.factOutbound": "Bạn viết lần cuối: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
@@ -7793,6 +7869,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateDeals_other":
     "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.deliveryFailed_one":
+    "1 lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
+  "review.deliveryFailed_other":
+    "{count} lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
   "review.outOfDateWorkspace":
     "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateSignals_one":
@@ -9190,6 +9270,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
   "jobs.kind.assurance_deal_rescan":
     "Kiểm tra dự báo cho một giao dịch đã thay đổi",
+  "jobs.kind.assurance_review_delivery":
+    "Công việc cho một lần xem xét khách hàng",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
@@ -19158,6 +19240,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.owed_verdict": "Phân loại tin nhắn chưa được trả lời",
   "aiTask.name.propose_roles": "Xác định vai trò mua hàng",
   "aiTask.name.rate_extract": "Trích xuất tỷ giá",
+  "aiTask.name.report_interpret": "Đánh giá báo cáo bán hàng",
+  "aiTask.name.report_setup": "Thiết lập báo cáo từ mô tả",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
@@ -19410,6 +19494,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
   "analytics.hero.noPrior": "Chưa có kỳ trước để so sánh.",
   "analytics.overview.more": "Thêm",
+  "analytics.assessment.title": "Đánh giá",
+  "analytics.assessment.pending": "Đang đọc các con số",
+  "analytics.assessment.refresh": "Làm mới đánh giá",
+  "analytics.assessment.retry": "Thử lại",
+  "analytics.assessment.noSales":
+    "Không có doanh số đo được trong lựa chọn này.",
+  "analytics.assessment.deterministic":
+    "Được viết chỉ từ các con số. Một mô hình AI sẽ thêm cách đọc của nó ở đây khi được thiết lập.",
+  "analytics.assessment.nextDecision": "Quyết định tiếp theo",
+  "analytics.assessment.noDecision": "Không có quyết định được hỗ trợ.",
+  "analytics.assessment.viewEvidence": "Xem bằng chứng",
+  "analytics.assessment.evidenceTitle": "Đánh giá dựa trên điều gì",
+  "analytics.assessment.evidencePurpose":
+    "Mỗi câu nêu các con số mà nó đọc. Mở một con số để xem các bản ghi của nó.",
+  "analytics.assessment.confidence": "Độ tin cậy: {level}",
+  "analytics.assessment.kind.observation": "Quan sát",
+  "analytics.assessment.kind.claim": "Được báo cáo",
+  "analytics.assessment.kind.hypothesis": "Giả thuyết",
+  "analytics.assessment.level.low": "thấp",
+  "analytics.assessment.level.medium": "trung bình",
+  "analytics.assessment.level.high": "cao",
   "analytics.decisions.title": "Quyết định từ lần xem xét trước",
   "analytics.decisions.purpose":
     "Mỗi quyết định là một việc cần làm trên deal, do một thành viên chịu trách nhiệm, với ngày xem lại. Hoàn thành ghi nhận công việc, không phải một deal đã thắng.",

@@ -186,7 +186,7 @@ func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
 		}
 		judge := principal.SystemActing(e.Admin(), "system:owed_verdict")
 		id := ids.UUID(message.Id)
-		if applied, err := e.Activities.SetCaptureLabel(judge, id, "commitment"); err != nil || applied == private {
+		if applied, err := e.LabelCapture(judge, id, "commitment"); err != nil || applied == private {
 			t.Fatalf("capture label on private=%v: %v %v", private, applied, err)
 		}
 		if private {

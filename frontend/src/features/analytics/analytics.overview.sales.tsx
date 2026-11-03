@@ -16,6 +16,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
+import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { DecisionsPanel } from "./analytics.decisions";
 import {
@@ -254,6 +255,13 @@ function SalesReviewBody({
         />
       </div>
       {/* Past the first screen, so the decision and the first action stay on it. */}
+      {answered && (
+        <AssessmentPanel
+          selection={selection}
+          evaluation={answered}
+          onEvidence={openEvidence}
+        />
+      )}
       <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
