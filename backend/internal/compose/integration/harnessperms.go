@@ -159,6 +159,7 @@ var (
 		Objects: map[string]principal.ObjectGrant{
 			"report_definition":   {Create: true, Read: true, Update: true, Delete: true},
 			"report_schedule":     {Create: true, Read: true, Update: true, Delete: true},
+			"sales_initiative":    {Create: true, Read: true, Update: true, Delete: true},
 			"report_edition":      {Create: true, Read: true, Update: true},
 			"sales_target":        {Create: true, Read: true, Update: true},
 			"reporting_framework": {Read: true, Update: true},
@@ -301,7 +302,7 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 	out["agent_client"] = principal.ObjectGrant{Read: true}
 	// Admin describes the legal entities; ops reads them, as every other seat does.
 	out["legal_entity"] = principal.ObjectGrant{Read: true}
-	for _, object := range []string{"report_definition", "sales_target", "reporting_framework", "report_schedule", "report_edition", "reporting_credit"} {
+	for _, object := range []string{"report_definition", "sales_target", "sales_initiative", "reporting_framework", "report_schedule", "report_edition", "reporting_credit"} {
 		out[object] = principal.ObjectGrant{Read: true}
 	}
 	for _, object := range []string{
