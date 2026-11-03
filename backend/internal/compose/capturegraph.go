@@ -113,7 +113,7 @@ func newGraphCalOAuth(c GraphConfig) graphcal.OAuth {
 func registerMicrosoftConnectors(
 	reg *capture.Registry, resolve appResolver, g GraphConfig, pool *pgxpool.Pool,
 ) {
-	if resolve == nil && !g.canSync() {
+	if !appReachable(resolve, g.canSync()) {
 		return
 	}
 	reg.Register(graph.New(newGraphAuthorizer(resolve, g), graph.NewAPI(nil, "")).

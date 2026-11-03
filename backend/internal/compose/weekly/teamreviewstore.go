@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -121,6 +122,10 @@ func memberWeek(
 // yours" apart from "no such team" would let them enumerate the chart one id at
 // a time, the same reason a row-scope miss reads as 404 everywhere else.
 func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
+	// The request's own answer, so a refusal says why rather than only that.
+	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound && !allowed {
+		return auth.IndividualPerformanceOffError{}
+	}
 	switch auth.TeamWeekReachOf(ctx) {
 	case auth.ReachesEveryTeam:
 		return nil
@@ -129,6 +134,21 @@ func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
 	default:
 		return apperrors.ErrPermissionDenied
 	}
+}
+
+// refuseWhileIndividualOff refuses a team's week, written or served, while
+// the installation shows no individual performance. It reads the setting in
+// the transaction that writes or serves the week. A switch turned off during a
+// run stops the next week from being written or sent.
+func refuseWhileIndividualOff(ctx context.Context, tx pgx.Tx) error {
+	allowed, err := identity.IndividualPerformanceTx(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("weekly: reading whether individual performance is shown: %w", err)
+	}
+	if !allowed {
+		return auth.IndividualPerformanceOffError{}
+	}
+	return nil
 }
 
 // mayReadTeamLed asks whether a lead is on this team.
@@ -158,6 +178,9 @@ func (e *Engine) TeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 AND local_week_start = $2`, teamID, week)
 		var err error
@@ -187,6 +210,9 @@ func (e *Engine) LatestTeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 ORDER BY local_week_start DESC LIMIT 1`, teamID)
 		var err error

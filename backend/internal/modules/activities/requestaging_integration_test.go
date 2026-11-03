@@ -152,7 +152,7 @@ func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
 func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 	t.Helper()
 	rows, _, err := storeKnowing(e).ListActivities(e.asSeat(e.rep), ListActivitiesInput{
-		Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), TaskAsOf: &pastTheHorizon,
+		Kind: new("task"), AssigneeID: new(ids.From[ids.UserKind](e.rep)), AsOf: &pastTheHorizon,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -163,4 +163,42 @@ func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 		}
 	}
 	t.Fatal("human-held task disappeared from its assignee's current tasks")
+}
+
+// A reminder its assignee pinned holds its request past the horizon. The aged
+// pass leaves it open, and it stays the assignee's task, not a colleague's wait.
+func TestAPinnedReminderHoldsItsRequestPastTheHorizon(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	id := seedEmailRequest(t, e, "Please send the pricing", "commitment", OwedVerdictAsksUs)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var reminder, assignee ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id, assignee_id FROM activity WHERE source_activity_id = $1`, id).Scan(&reminder, &assignee); err != nil {
+		t.Fatalf("reading the reminder the pass filed: %v", err)
+	}
+	if assignee != e.rep {
+		t.Fatalf("the pass filed the reminder for %s, want the addressed rep", assignee)
+	}
+	if err := store.PinWorklistRow(e.asSeat(assignee), WorklistRowRef{Source: "task", RowID: reminder.String()}); err != nil {
+		t.Fatalf("pinning the reminder: %v", err)
+	}
+
+	if err := store.CaptureEmailRequests(asClassifier(e), pastTheHorizon); err != nil {
+		t.Fatal(err)
+	}
+	var archived bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT archived_at IS NOT NULL FROM activity WHERE id = $1`, reminder).Scan(&archived); err != nil {
+		t.Fatal(err)
+	}
+	if archived {
+		t.Fatal("the aged pass retired a reminder its assignee pinned")
+	}
+	if e.waitingAt(e.asSeat(e.other), t, pastTheHorizon)[id] {
+		t.Error("a pinned request also appeared as a colleague's wait")
+	}
+	assertCurrentHeldRequest(t, e, reminder)
 }

@@ -227,6 +227,9 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// One attendee said they are ready for a meeting, or took it back. Its
+	// own type because it is one attendee's state, not a change to the meeting.
+	"activity.readiness_recorded": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them
@@ -259,6 +262,11 @@ var catalog = map[string]struct {
 	// a checkbox.
 	"weekly_plan.updated":        {identityStreamEntity, 1},
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
+
+	// A sales initiative is a commercial decision about a population, not a
+	// record of its own stream. It rides the identity stream as a report
+	// definition does.
+	"sales_initiative.updated": {identityStreamEntity, 1},
 
 	// A call rides the identity stream because its entity is the AUTHOR. A
 	// forecast is about a pipeline, but a CALL is an assertion by a contact and

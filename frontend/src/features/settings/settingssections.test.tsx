@@ -3,15 +3,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { composeStories } from "@storybook/react-vite";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { companyContextShown } from "../../lib/companycontextreach";
+import { navigate } from "../../lib/router";
 import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
+import { settingsHref } from "../../lib/settingsrouting";
 import * as stories from "./settings.stories";
 import { COMPANY_CONTEXT_OFF } from "./settingspages.fixtures";
 import { settingsPageSections } from "./settingssearch";
+import { healthSourceLabels } from "./systemhealth.copy";
+import { healthReport } from "./systemhealth.fixtures";
+import { healthSectionForSource } from "./systemhealthnavigation";
 
 const t = (key: MessageKey) => translate("en", key);
 
@@ -82,6 +88,41 @@ function namingElements(root: HTMLElement): Element[] {
 const drawnNames = (root: HTMLElement) =>
   new Set(namingElements(root).map(visibleText));
 
+async function healthNames(Story: (typeof pageStories)[number]) {
+  navigate(settingsHref("system-health"));
+  const user = userEvent.setup();
+  const view = render(<Story />);
+  const names = new Set<string>();
+  await user.click(
+    await screen.findByRole("button", { name: t("health.diagnostics") }),
+  );
+  for (const source of healthReport.sources) {
+    const key = healthSectionForSource(source.id);
+    if (!key) throw new Error(`Missing health section for ${source.id}`);
+    await user.click(
+      await screen.findByRole("button", {
+        name: t(healthSourceLabels[source.id]),
+      }),
+    );
+    await waitFor(() => {
+      expect(drawnNames(view.container).has(t(key))).toBe(true);
+      expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
+    });
+    for (const name of drawnNames(view.container)) names.add(name);
+  }
+  await user.click(
+    screen.getByRole("button", { name: t("health.configuration") }),
+  );
+  await waitFor(() => {
+    expect(
+      drawnNames(view.container).has(t("operations.schedules.title")),
+    ).toBe(true);
+    expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
+  });
+  for (const name of drawnNames(view.container)) names.add(name);
+  return names;
+}
+
 describe("each settings page's sections are the names it draws", () => {
   it("has one page story for every catalog page", () => {
     const covered = pageStories.map((story) => story.parameters.settingsPage);
@@ -98,6 +139,12 @@ describe("each settings page's sections are the names it draws", () => {
       );
       if (Story === undefined) {
         throw new Error(`no story in settings.stories.tsx renders ${page}`);
+      }
+      if (page === "system-health") {
+        expect(await healthNames(Story)).toEqual(
+          new Set(settingsPageSections(page, t, { seesCompanyContext: true })),
+        );
+        return;
       }
       const view = render(<Story />);
       await waitFor(() => {

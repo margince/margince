@@ -34,6 +34,7 @@ const (
 	ReasonDurationOutOfRange           ReasonCode = "duration_out_of_range"
 	ReasonMeetingStatusUnknown         ReasonCode = "meeting_status_unknown"
 	ReasonMeetingStatusNotForKind      ReasonCode = "meeting_status_not_valid_for_kind"
+	ReasonMeetingNotTakenPlace         ReasonCode = "meeting_not_taken_place"
 	ReasonDirectionUnknown             ReasonCode = "direction_unknown"
 	ReasonActivityUnlinked             ReasonCode = "activity_unlinked"
 	ReasonLinkMalformed                ReasonCode = "link_malformed"
@@ -120,6 +121,11 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "Only a meeting has a meeting status. Remove it from this row.",
 		textlang.German:     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
 		textlang.Vietnamese: "Chỉ cuộc họp mới có trạng thái cuộc họp. Hãy bỏ giá trị này khỏi hàng.",
+	}},
+	ReasonMeetingNotTakenPlace: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
+		textlang.German:     "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
+		textlang.Vietnamese: "Theo ngày hoặc giờ trong hàng này, cuộc họp chưa bắt đầu nên không thể là “held” hoặc “no_show”. Để trống trạng thái hoặc dùng “booked” hay “canceled”. Nếu cuộc họp đã bắt đầu hôm nay, thêm giờ bắt đầu.",
 	}},
 	ReasonDirectionUnknown: {params: []string{paramValue, paramAllowed}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a direction. The directions are: {allowed}.",

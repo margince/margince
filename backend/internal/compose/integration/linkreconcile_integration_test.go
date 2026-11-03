@@ -32,7 +32,7 @@ import (
 
 // sweepContactPerms may create the contact this fixture strands mail under.
 var sweepContactPerms = principal.Permissions{
-	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 	RowScope: principal.RowScopeAll,
 }
 

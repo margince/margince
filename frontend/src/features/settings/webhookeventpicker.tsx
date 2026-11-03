@@ -1,9 +1,9 @@
-import { Info, Plus } from "lucide-react";
+import { Info } from "lucide-react";
 import { useState } from "react";
 import { Button, Checkbox, SearchField } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Popover } from "../../design-system/popover";
-import { TokenList } from "../../design-system/tokeninput";
+import { SetPickerFrame } from "../../design-system/setpicker";
 import { holdsEveryWord, searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -258,43 +258,28 @@ export function WebhookEventPicker({
           </span>
         )}
       </div>
-      <div
-        className={`webhook-events-frame${error ? " webhook-events-invalid" : ""}`}
+      <SetPickerFrame
+        chosen={value.map((type) => ({
+          id: type,
+          label: t(eventLabelKey(type)),
+        }))}
+        removeLabel={(item) =>
+          t("webhooks.events.remove", { event: item.label })
+        }
+        onRemove={(type) => onChange(value.filter((v) => v !== type))}
+        none={t("webhooks.events.none")}
+        addLabel={t("webhooks.events.add")}
+        invalid={!!error}
+        wide
+        open={open}
+        onOpenChange={setOpen}
       >
-        {value.length === 0 ? (
-          <span className="t-caption">{t("webhooks.events.none")}</span>
-        ) : (
-          <TokenList
-            items={value.map((type) => ({
-              id: type,
-              label: t(eventLabelKey(type)),
-            }))}
-            removeLabel={(item) =>
-              t("webhooks.events.remove", { event: item.label })
-            }
-            onRemove={(type) => onChange(value.filter((v) => v !== type))}
-          />
-        )}
-        <Popover
-          dialog
-          variant="ghost"
-          className="webhook-events-add"
-          open={open}
-          onOpenChange={setOpen}
-          panelClassName="webhook-picker-panel"
-          label={
-            <>
-              <Plus aria-hidden /> {t("webhooks.events.add")}
-            </>
-          }
-        >
-          <PickerPanel
-            value={value}
-            onChange={onChange}
-            onDone={() => setOpen(false)}
-          />
-        </Popover>
-      </div>
+        <PickerPanel
+          value={value}
+          onChange={onChange}
+          onDone={() => setOpen(false)}
+        />
+      </SetPickerFrame>
       {error && <ErrorLine>{error}</ErrorLine>}
       <p className="t-caption">{t("webhooks.events.visibility")}</p>
     </div>

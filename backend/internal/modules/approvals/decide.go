@@ -284,6 +284,11 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if err := landEditedPayload(ctx, tx, id, edited, a, auditEvidence, &decidedPayload); err != nil {
 		return row{}, err
 	}
+	if approve {
+		if err := s.pinDecidedContext(ctx, tx, id, edited != nil); err != nil {
+			return row{}, err
+		}
+	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
 		        decided_by_system = $5

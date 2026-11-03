@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components, operations } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, EmptyState, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Heading } from "../../design-system/heading";
@@ -207,12 +208,12 @@ export function TierSwitchedLine({
       {linked && (
         <>
           {" "}
-          <a
+          <AppLink
             className="link-button"
             href={callsHrefFor({ tier, served_model: row.switched_to })}
           >
             {t("aiTasks.viewCalls")}
-          </a>
+          </AppLink>
         </>
       )}
     </p>
@@ -320,9 +321,9 @@ export function TierRecentCalls({
         </Heading>
         <span className="t-caption">
           {t("aiFigures.lastWeek")} ·{" "}
-          <a className="link-button" href={callsHrefFor({ tier })}>
+          <AppLink className="link-button" href={callsHrefFor({ tier })}>
             {t("aiTasks.viewCalls")}
-          </a>
+          </AppLink>
         </span>
       </div>
       <TierSwitchedLine tier={tier} linked />
@@ -376,7 +377,7 @@ function FiguresTable({
           // is a lane, embeddings among them, whose broker names no host.
           render: (row) =>
             row.key ? (
-              <a href={hrefFor(row)}>{row.key}</a>
+              <AppLink href={hrefFor(row)}>{row.key}</AppLink>
             ) : row.failed === row.calls ? (
               t("aiFigures.noHost")
             ) : (

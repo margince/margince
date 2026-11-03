@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -174,6 +175,54 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 		t.Errorf("the signal reads %q after the accept, want acknowledged — a page that "+
 			"moved the account while still shouting the signal that moved it contradicts itself",
 			status)
+	}
+}
+
+// An account in set-up or live is one we deliver for, so a mail ending its
+// contract asks the same question a customer's would.
+func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
+	for _, stage := range []string{"onboarding", "live"} {
+		t.Run(stage, func(t *testing.T) {
+			e := integration.Setup(t)
+			company := seedAccountAtStage(t, e, stage)
+			seedOpenContractEnded(t, e, company)
+
+			if staged := proposePass(t, e); staged != 1 {
+				t.Fatalf("the pass staged %d offers on a %s account, want 1", staged, stage)
+			}
+			if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+				e.As(e.Rep1, nil, integration.AdminWithSignals),
+				ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
+				t.Fatalf("accepting the offer: %v", err)
+			}
+			if got := accountStage(t, e, company); got != "former_customer" {
+				t.Errorf("the account reads %q after the accept, want former_customer", got)
+			}
+		})
+	}
+}
+
+// A decider who edits the offer to live still cannot set it. The effect runs as
+// the system, and only a signed-in user may say the first scope is in use.
+func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "onboarding")
+	seedOpenContractEnded(t, e, company)
+	proposePass(t, e)
+	offer := stagedOffer(t, e, company)
+	edited := e.WsScalar(t, `
+		SELECT jsonb_set(proposed_change, '{proposed_lifecycle}', '"live"')::text
+		  FROM approval WHERE id = $1`, offer)
+
+	_, err := approvalsServiceWithEffects(e.Pool).DecideEdited(
+		e.As(e.Rep1, nil, integration.AdminWithSignals),
+		ids.From[ids.ApprovalKind](offer), []byte(edited))
+	var refusal *httperr.DetailedError
+	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "lifecycle_live_needs_a_human" {
+		t.Fatalf("an offer edited to live: want the live refusal, got %v", err)
+	}
+	if got := accountStage(t, e, company); got != "onboarding" {
+		t.Errorf("the account reads %q after the edited accept, want onboarding", got)
 	}
 }
 

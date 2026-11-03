@@ -8,7 +8,6 @@
 // them grew a verb.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -17,6 +16,7 @@ import {
   hasEmployerFacts,
   useEmployerSummary,
 } from "../../components/contactemployersummary";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import {
@@ -149,7 +149,7 @@ function ProjectCompanyCard({
           logoUrl={summary?.logo_url}
         />
       }
-      title={<a href={company.href}>{company.name}</a>}
+      title={<AppLink href={company.href}>{company.name}</AppLink>}
       badges={company.phase}
       facts={
         summary && hasEmployerFacts(summary)

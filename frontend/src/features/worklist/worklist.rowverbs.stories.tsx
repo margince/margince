@@ -7,12 +7,12 @@ import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { en, type MessageKey } from "../../i18n/en";
+import { rowHref } from "../../lib/worklistcopy";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { rowHref } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { WaitingReply } from "./worklist.reply";
 import { RowActs } from "./worklist.rowverbs";
@@ -147,7 +147,7 @@ function meetingOutcomeRow(): WorklistItem {
     title: "Quarterly review with Turbinenbau",
     occurred_at: "2026-09-02T09:00:00Z",
     because: [],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     version: 4,
   };
 }
@@ -182,6 +182,14 @@ export const ATasksMenu: Story = {
         name: en["worklist.rowMenu"].replace("{title}", taskRow().title ?? ""),
       }),
     );
+  },
+};
+
+/** A task nobody holds that the reader may change: Take it stands before Done. */
+export const AnUnheldTask: Story = {
+  args: {
+    ...ATaskAnsweredLast.args,
+    item: { ...taskRow(), actions: ["complete", "snooze", "take"] },
   },
 };
 
@@ -310,11 +318,9 @@ export const AMeetingFollowUpWithNoAttendee: Story = {
  * A LANE WHOSE VERBS ARE EQUAL has no answer, and nothing on the line is
  * filled.
  *
- * Saying what came of a meeting and recording that it was called off are two
- * answers of equal standing, and promoting either would be the product claiming
- * an expectation it has not got about a meeting it knows nothing about. They
- * arrive as `equals` rather than as `primary`, which is the whole difference:
- * no fill, and no claim on the end of the line.
+ * Held, notes and called off are answers of equal standing about a meeting
+ * the product knows nothing about. They arrive as `equals`, not `primary`, so
+ * nothing is filled and nothing claims the end of the line.
  */
 export const EqualVerbsHaveNoAnswer: Story = {
   args: {
@@ -325,7 +331,8 @@ export const EqualVerbsHaveNoAnswer: Story = {
     titled: true,
     equals: (
       <>
-        <Verb message="worklist.verb.meetingUpdate" />
+        <Verb message="worklist.verb.meetingHeld" />
+        <Verb message="worklist.verb.meetingAddNotes" />
         <Verb message="worklist.verb.meetingCanceled" />
       </>
     ),

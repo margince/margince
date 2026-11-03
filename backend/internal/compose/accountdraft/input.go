@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -165,9 +166,11 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	At      string `json:"at"`
-	// Inbound says who spoke. A draft that answers what THEY said reads very
-	// differently from one that follows up on what we said, and the direction
-	// is the only thing that tells them apart.
+	// Inbound says the other side wrote it, from the row's voice where that
+	// names a side and from the transport otherwise.
+	//
+	// A draft answering them reads differently from one following up on us.
+	// Read as the wrong side's word, a row writes the wrong message.
 	Inbound bool `json:"inbound"`
 	// Snippet is the opening of what this message says.
 	//
@@ -372,7 +375,7 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 			ID:      act.Id.String(),
 			Kind:    string(act.Kind),
 			At:      activitywhen.Text(act),
-			Inbound: act.Direction != nil && *act.Direction == crmcontracts.ActivityDirectionInbound,
+			Inbound: theirWord(act),
 		}
 		if act.Subject != nil {
 			item.Subject = *act.Subject
@@ -450,3 +453,13 @@ func (Input) ThreadSubject() (string, bool) { return "", false }
 // Booked is false: an account draft folds no meeting, so nothing here can
 // support a day. A surface that gains one answers from it rather than here.
 func (Input) Booked() bool { return false }
+
+// theirWord says the other side wrote this row, which is what the draft reads
+// to tell answering them from following up on ourselves.
+//
+// A row whose author names no side reads the transport. One that neither can
+// answer is not theirs, so a draft that cannot tell treats it as context.
+func theirWord(act crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(act)
+	return known && !ours
+}

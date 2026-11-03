@@ -128,7 +128,6 @@ function ContactRecordKeepingStack({ view }: Readonly<{ view: Contact360 }>) {
       <ContactDetails
         contact={view.contact}
         profiles={view.provider_profiles}
-        createdBy={view.created_by}
       />
       <ContactHoldSection view={view} />
       <RecordListsPanel entityType="contact" entityId={view.contact.id} />

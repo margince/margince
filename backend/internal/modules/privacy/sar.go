@@ -34,9 +34,11 @@ type SARPackage struct {
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
 	ReportingQuestionAnswers []map[string]any `json:"reporting_question_answers"`
-	Subject                  map[string]any   `json:"subject"`
-	Emails                   []map[string]any `json:"emails"`
-	Phones                   []map[string]any `json:"phones"`
+	// ReportingQuestionBindings are kept report card filters naming the subject.
+	ReportingQuestionBindings []map[string]any `json:"reporting_question_bindings"`
+	Subject                   map[string]any   `json:"subject"`
+	Emails                    []map[string]any `json:"emails"`
+	Phones                    []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.
@@ -116,6 +118,7 @@ type SARPackage struct {
 	// as the tombstone it becomes.
 	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
 	RawCapture              []map[string]any `json:"raw_capture"`
+	CapturePartySources     []map[string]any `json:"capture_party_sources"`
 	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
@@ -331,12 +334,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 type sarSection struct {
 	dest  *[]map[string]any
 	query string
-	// args overrides the default single contact-id argument. Only the staged
-	// approvals section needs it: it reaches rows by the subject's addresses
-	// and lead twins as well as by their contact id, through the SAME predicate
-	// erasure uses — and that predicate takes those as bound parameters rather
-	// than rebuilding them in SQL, so the export and the erasure cannot come to
-	// different conclusions about which rows are the subject's.
+	// args replaces the default single contact-id argument.
 	args []any
 }
 

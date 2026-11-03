@@ -56,7 +56,9 @@ it("links the record a message row is about", async () => {
   await screen.findAllByRole("link", { name: "Sonya Beck" });
   expect(
     document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
+  ).toBe(
+    "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
+  );
 });
 
 // The server names the contact behind a thread even when the thread is filed
@@ -107,11 +109,15 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   await screen.findAllByRole("link", { name: "Sonya Beck" });
   expect(
     document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
+  ).toBe(
+    "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
+  );
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this contact");
   expect(touch?.textContent).toContain("03/09/2026");
-  expect(touch?.textContent).toContain("Last to this contact Never");
+  expect(touch?.textContent).toContain(
+    "Last to this contact None you can open",
+  );
 });
 
 // A message logged with only its date was not sent at any hour, so its last
@@ -252,7 +258,7 @@ it("prefers the contact's moments to the account's on a row naming both", async 
   await screen.findByText(/Send the renewal terms/);
   const touch = document.querySelector(".worklist-row-touch")?.textContent;
   expect(touch).toContain("03/09/2026");
-  expect(touch).toContain("Last to this contact Never");
+  expect(touch).toContain("Last to this contact None you can open");
   expect(touch).not.toContain("this company");
   expect(touch).not.toContain("14/07/2026");
   expect(touch).not.toContain("28/08/2026");

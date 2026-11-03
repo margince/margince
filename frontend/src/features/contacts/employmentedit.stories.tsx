@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { EmploymentEdit } from "./employmentedit";
 
@@ -30,7 +31,21 @@ const meta: Meta<typeof EmploymentEdit> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const UnknownDates: Story = {};
+export const UnknownDates: Story = {
+  play: async () => {
+    expect(await screen.findByRole("button", { name: "Save" })).toBeDisabled();
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("combobox", { name: "Employment status" }),
+    );
+    expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+  },
+};
+export const UnknownDatesDark: Story = {
+  ...UnknownDates,
+  globals: { theme: "dark" },
+};
 export const Former: Story = {
   args: {
     employment: {

@@ -42,14 +42,6 @@ func stageMailedRequest(t *testing.T) (*integration.Env, crmcontracts.Approval) 
 	return e, wire
 }
 
-func factsText(facts approvalMailFacts) string {
-	var out []string
-	for _, line := range facts.Lines {
-		out = append(out, line.Label+": "+line.Value)
-	}
-	return facts.Heading + "\n" + strings.Join(out, "\n")
-}
-
 // The email names the company, the source mail, the promiser, the promise and
 // why the reader is asked, in the card's own words.
 func TestACommitmentEmailNamesWhatTheCardShowsItsPromiser(t *testing.T) {

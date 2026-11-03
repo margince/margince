@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Disclosure, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FactList } from "../../design-system/factlist";
@@ -271,7 +272,7 @@ function UnitCard({
             // page, and "Open" five times names nothing out of context. The
             // hash comes from routeHash and the exported screen token, so
             // link and router cannot drift apart.
-            <a
+            <AppLink
               className="ext-unit-link"
               href={routeHash({ screen: EXTENSION_SCREEN, id: page.name })}
             >
@@ -279,7 +280,7 @@ function UnitCard({
               <span className="ext-unit-link-text">
                 {t("extAccess.openUnit", { name: title })}
               </span>
-            </a>
+            </AppLink>
           ) : null}
         </div>
       }

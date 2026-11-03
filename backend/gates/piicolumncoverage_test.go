@@ -58,6 +58,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Provider is connector provenance from the installed adapter, never subject-authored text.
+	"capture_party_source": {"provider"},
 	// The hash identifies the promise; the version and actor identify its reader.
 	// Retained work needs this provenance after the summary and quotation are cleared.
 	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
@@ -65,6 +67,11 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
+	// A revision's selection is the report's public structure: metrics, period,
+	// scope and card shapes. Filters stay in question_bindings, which the
+	// redaction rewrites, so no subject value reaches the selection. The metric
+	// versions map metric ids to definition version numbers.
+	"report_definition_revision": {"selection", "metric_versions"},
 	// The evidence ledger's closed vocabularies: source kind, author side,
 	// commitment and writer. The snippet is the column that quotes the subject,
 	// and the redaction clears it.
@@ -189,6 +196,9 @@ var erasureColumnBaseline = map[string][]string{
 		"co_target_entity_type",
 		// Which staging rule named the decider: one of four fixed words.
 		"requested_decider_source",
+		// A hex hash of the facts a kind's approval was staged on; it holds
+		// nothing a subject wrote and cannot be read back into them.
+		"context_digest",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker
@@ -214,6 +224,9 @@ var erasureColumnBaseline = map[string][]string{
 		// which put the address back on the one table whose whole point is that
 		// the address copy is scrubbed.
 		"from_name",
+		// The installation's own relay address a controller delivery was
+		// staged with, the same on every one of them.
+		"from_address",
 		// The storage key of the workspace's own logo the markup embeds. It
 		// names the workspace's mark and is the same on every delivery.
 		"inline_logo_key",
@@ -228,9 +241,14 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A code of the closed industry list, which names no one.
+		"industry",
 		// A key of the closed lead_origin list, which names no one. The note
 		// beside it, origin_detail, is free text and the redaction clears it.
 		"origin",
+		// The seat that accepted the lead for its partner, spelled as
+		// captured_by is: a colleague, never the lead's subject.
+		"partner_accepted_by",
 		"source",
 		"source_id",
 		"source_system",

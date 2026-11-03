@@ -48,24 +48,32 @@ const (
 	filterDomain           = "domain"
 	filterMinScore         = "min_score"
 	filterPartnerRole      = "partner_role"
-	filterCertStatus       = "cert_status"
-	filterCompanyID        = "company_id"
-	filterOwnerTeamID      = "owner_team_id"
-	filterUnassigned       = "unassigned"
-	filterIncludeArchived  = "include_archived"
-	filterSort             = "sort"
-	filterCapturedByKind   = "captured_by_kind"
-	filterAiWritten        = "ai_written"
-	filterIndustry         = "industry"
-	filterSizeBand         = "size_band"
-	filterSource           = "source"
-	filterOrigin           = "origin"
-	filterSLAState         = "sla_state"
-	filterListID           = "list_id"
-	filterIncludeAnchor    = "include_anchor"
-	filterSourceSystem     = "source_system"
-	filterSourceID         = "source_id"
-	filterRelationshipMark = "relationship_mark"
+	filterPartnerKind      = "partner_kind"
+	filterPartnerStage     = "partner_stage"
+	filterStageMeaning     = "stage_meaning"
+	// filterPartnerStageMeaning is the company list's spelling: on a company
+	// the stage is the partner programme's, so the word says so.
+	filterPartnerStageMeaning = "partner_stage_meaning"
+	filterCertStatus          = "cert_status"
+	filterCompanyID           = "company_id"
+	filterOwnerTeamID         = "owner_team_id"
+	filterUnassigned          = "unassigned"
+	filterSharedWithMe        = "shared_with_me"
+	filterIncludeArchived     = "include_archived"
+	filterSort                = "sort"
+	filterCapturedByKind      = "captured_by_kind"
+	filterAiWritten           = "ai_written"
+	filterIndustry            = "industry"
+	filterSizeBand            = "size_band"
+	filterSource              = "source"
+	filterOrigin              = "origin"
+	filterSLAState            = "sla_state"
+	filterListID              = "list_id"
+	filterIncludeAnchor       = "include_anchor"
+	filterSourceSystem        = "source_system"
+	filterSourceID            = "source_id"
+	filterRelationshipMark    = "relationship_mark"
+	filterPartnerAccepted     = "partner_accepted"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -76,6 +84,7 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 	filterOwnerID:          storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterOwnerTeamID:      storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
 	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
+	filterSharedWithMe:     storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.SharedWithMe = v }),
 	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
@@ -113,15 +122,25 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterTagMode: storekit.FilterWord(func(in *ListCompaniesInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
+	filterPartnerKind:         storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Kind = v }),
+	filterPartnerStage:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Stage = v }),
+	filterPartnerStageMeaning: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Meaning = v }),
 }
 
-// Partner lists by role and certification, the two dials GET /partners already
-// publishes. There is no text index behind a partner, so these are the whole
-// vocabulary rather than a narrowing of a broader search.
+// Partner lists by kind, stage, stage meaning and certification, the dials GET
+// /partners publishes. There is no text index behind a partner, so these are
+// the whole vocabulary rather than a narrowing of a broader search.
 var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
-	filterPartnerRole: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.PartnerRole = v }),
-	filterCertStatus:  storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.CertStatus = v }),
-	filterSort:        storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.Sort = v }),
+	filterPartnerKind: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.PartnerKind = v }),
+	filterPartnerRole: storekit.FilterWord(func(in *ListPartnersInput, v *string) {
+		if in.PartnerKind == nil {
+			in.PartnerKind = v
+		}
+	}),
+	partnerFieldStage:  storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.RelationshipStage = v }),
+	filterStageMeaning: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.StageMeaning = v }),
+	filterCertStatus:   storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.CertStatus = v }),
+	filterSort:         storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.Sort = v }),
 }
 
 var leadListFilters = storekit.FilterSet[ListLeadsInput]{
@@ -148,7 +167,12 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterTagMode: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
-	filterFromContact: storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterFromContact:     storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterIndustry:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
+	filterCountry:         storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
+	filterSizeBand:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
+	leadPartnerField:      storekit.FilterID(func(in *ListLeadsInput, id *ids.CompanyID) { in.Partner.CompanyID = id }),
+	filterPartnerAccepted: storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.Partner.Accepted = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

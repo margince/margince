@@ -90,19 +90,17 @@ func ClientOptions(addr, password string) (*redis.Options, error) {
 	if err != nil || db < 0 || db > maxRedisDB {
 		return nil, fmt.Errorf(
 			"bus: redis address %q names logical database %q, which is not an integer in 0..%d",
-			addr, index, maxRedisDB)
+			addr, index, maxRedisDB,
+		)
 	}
 	return &redis.Options{Addr: host, DB: db, Password: password}, nil
 }
 
-// maxRedisDB bounds the index this parser will accept. Redis's own default is
-// `databases 16`; the dev compose raises it to 80 so the integration lane and
-// the DEV_SLUG stacks each get a block. The ceiling here is deliberately the
-// higher one: an index this parser refused but the instance serves would be a
-// working configuration rejected at the door, and one it accepts that the
-// instance does not connects and then fails on the first command — which reads
-// as an unreachable bus, the error an operator can act on.
-const maxRedisDB = 79
+// maxRedisDB is the highest index the dev compose's `databases 81` serves, and
+// the most this parser accepts. It tracks that count, not Redis's default of
+// 16: an index the parser refuses but the instance serves is a working
+// configuration rejected at the door.
+const maxRedisDB = 80
 
 // publishedTotal counts rows shipped since process start — process-wide,
 // not per-Relay, so the metrics endpoint reads it without holding the

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CalendarDays, Mail, Send } from "lucide-react";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Checklist, ChecklistStep } from "../../design-system/checklist";
 import { ProviderMark } from "../../design-system/provider-mark";
@@ -133,12 +134,12 @@ function UnwiredFoot({
   return (
     <p className="connection-tile-note">
       {t("connectors.tile.registerApp", { vendor })}{" "}
-      <a
+      <AppLink
         className="link-button"
         href={routeHash(settingsHref("authentication"))}
       >
         {t("connectors.tile.openPage", { page })}
-      </a>
+      </AppLink>
     </p>
   );
 }

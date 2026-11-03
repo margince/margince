@@ -1,7 +1,7 @@
 version: 1
 
 # Read once, when the api first boots on an empty database: replace the demo values before that.
-# Settings -> General changes them later. Add country (such as de or vn) to choose the
+# Settings -> Company profile changes them later. Add country (such as de or vn) to choose the
 # jurisdiction pack now instead of under Settings -> Jurisdiction.
 workspace:
   name: Demo Workspace

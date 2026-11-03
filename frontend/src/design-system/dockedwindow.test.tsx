@@ -7,7 +7,10 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { Modal } from "./atoms";
+import { coveredByDialog } from "./dialogfocus";
 import { DockedWindow, type DockState } from "./dockedwindow";
+import { Heading } from "./heading";
 
 afterEach(cleanup);
 
@@ -208,5 +211,87 @@ describe("a window docked beside the page", () => {
     fireEvent(window, new Event("resize"));
 
     expect(dialog.style.marginInlineEnd).toBe("150px");
+  });
+});
+
+// A verb inside a drawer opens the window: the Worklist's "Draft follow-up".
+function OverADrawer({
+  onCloseDrawer = vi.fn(),
+}: Readonly<{ onCloseDrawer?: () => void }>) {
+  const [writing, setWriting] = useState(false);
+  const [state, setState] = useState<DockState>("open");
+  return (
+    <LocaleProvider initial="en">
+      <Modal open onClose={onCloseDrawer} labelledBy="queue" intent="drawer">
+        <Heading size="large" id="queue">
+          Worklist
+        </Heading>
+        <button type="button" onClick={() => setWriting(true)}>
+          Draft follow-up
+        </button>
+        {writing && (
+          <DockedWindow
+            title="Re: Budget"
+            state={state}
+            onStateChange={setState}
+            onClose={() => setWriting(false)}
+          >
+            <input aria-label="Words" />
+            <button type="button">Send</button>
+          </DockedWindow>
+        )}
+      </Modal>
+    </LocaleProvider>
+  );
+}
+
+describe("a window opened from inside a dialog", () => {
+  // It shares the overlays' level, so document order is what stacks it. Inside
+  // the drawer, the drawer's clip and transform held it under the rows.
+  it("is drawn after the dialog's overlay, outside it", async () => {
+    const user = userEvent.setup();
+    render(<OverADrawer />);
+    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+
+    const docked = screen.getByRole("dialog", { name: "Re: Budget" });
+    const overlay = document.querySelector(".overlay");
+    expect(overlay?.contains(docked)).toBe(false);
+    expect(docked.parentElement).toBe(document.body);
+    expect(overlay?.compareDocumentPosition(docked) ?? 0).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("keeps Tab in the window while the reader is writing in it", async () => {
+    const user = userEvent.setup();
+    render(<OverADrawer />);
+    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+
+    const docked = screen.getByRole("dialog", { name: "Re: Budget" });
+    screen.getByRole("button", { name: "Send" }).focus();
+    await user.tab();
+    expect(docked.contains(document.activeElement)).toBe(true);
+  });
+
+  // A menu in the window answers its own Escape only when nothing covers it.
+  it("is not covered by the dialog it was opened from", async () => {
+    const user = userEvent.setup();
+    render(<OverADrawer />);
+    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+
+    expect(coveredByDialog(screen.getByRole("button", { name: "Send" }))).toBe(
+      false,
+    );
+  });
+
+  it("folds on Escape and leaves the dialog under it open", async () => {
+    const onCloseDrawer = vi.fn();
+    const user = userEvent.setup();
+    render(<OverADrawer onCloseDrawer={onCloseDrawer} />);
+    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Re: Budget" })).toBeNull();
+    expect(onCloseDrawer).not.toHaveBeenCalled();
   });
 });

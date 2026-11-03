@@ -24,10 +24,10 @@ import (
 // no part of these tests reads the wall clock.
 var laneDay = time.Date(2026, time.March, 10, 6, 0, 0, 0, time.UTC)
 
-func todaySubjectsAtLimit(t *testing.T, e *integration.Env, now time.Time, limit int) []string {
+func todaySubjectsAtLimit(t *testing.T, e *integration.Env, now time.Time, limit int) (subjects []string, full bool) {
 	t.Helper()
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
-	rows, err := lane.Today(e.Admin(), attention.MeetingWindow{From: now, Until: now.Truncate(24 * time.Hour).Add(24 * time.Hour)}, limit, attention.TasksVisible, ids.UUID{})
+	rows, full, err := lane.Today(e.Admin(), attention.MeetingWindow{From: now, Until: now.Truncate(24 * time.Hour).Add(24 * time.Hour)}, limit, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
@@ -35,7 +35,7 @@ func todaySubjectsAtLimit(t *testing.T, e *integration.Env, now time.Time, limit
 	for _, row := range rows {
 		out = append(out, row.Subject)
 	}
-	return out
+	return out, full
 }
 
 func TestCanceledMeetingsBeyondThePageDoNotHideTheNextBookedOne(t *testing.T) {
@@ -46,9 +46,12 @@ func TestCanceledMeetingsBeyondThePageDoNotHideTheNextBookedOne(t *testing.T) {
 		bookMeeting(t, e, fmt.Sprintf("Canceled %d", i), now.Add(time.Duration(i)*time.Hour), "canceled")
 	}
 
-	got := todaySubjectsAtLimit(t, e, now, 3)
+	got, full := todaySubjectsAtLimit(t, e, now, 3)
 	if len(got) != 1 || got[0] != "Next booked" {
 		t.Fatalf("the lane = %v, want the booked meeting behind eight canceled ones", got)
+	}
+	if full {
+		t.Error("the lane says it filled its limit with one open meeting")
 	}
 }
 
@@ -59,10 +62,25 @@ func TestABusyDayAtThePageLimitKeepsTheSoonestMeetings(t *testing.T) {
 		bookMeeting(t, e, fmt.Sprintf("At %02d:00", hour), now.Truncate(24*time.Hour).Add(time.Duration(hour)*time.Hour), "")
 	}
 
-	got := todaySubjectsAtLimit(t, e, now, 3)
+	got, full := todaySubjectsAtLimit(t, e, now, 3)
 	want := []string{"At 07:00", "At 08:00", "At 09:00"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("the lane = %v, want the three soonest %v", got, want)
+	}
+	if !full {
+		t.Error("the lane cut six meetings and says it did not fill its limit")
+	}
+}
+
+func TestADayExactlyAtThePageLimitLeavesNothingOut(t *testing.T) {
+	e := integration.Setup(t)
+	now := laneDay
+	for hour := 7; hour <= 9; hour++ {
+		bookMeeting(t, e, fmt.Sprintf("At %02d:00", hour), now.Truncate(24*time.Hour).Add(time.Duration(hour)*time.Hour), "")
+	}
+
+	if got, full := todaySubjectsAtLimit(t, e, now, 3); len(got) != 3 || full {
+		t.Fatalf("the lane = %v, full %v; want all three and nothing left out", got, full)
 	}
 }
 

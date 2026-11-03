@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,20 +60,14 @@ func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mod
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
 
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
+	terms, err := rowVisibleTerms(ctx, table, arg, mode == probeLive)
 	if err != nil {
 		return err
 	}
-	if clause == "" && mode == probeScoped {
+	if len(terms) == 0 && mode == probeScoped {
 		return nil
 	}
-	where := fmt.Sprintf("id = $%d", idPos)
-	if mode == probeLive {
-		where += " AND archived_at IS NULL"
-	}
-	if clause != "" {
-		where += " AND " + clause
-	}
+	where := strings.Join(append([]string{fmt.Sprintf("id = $%d", idPos)}, terms...), " AND ")
 
 	var visible bool
 	err = tx.QueryRow(ctx,
@@ -85,4 +80,21 @@ func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mod
 		return apperrors.ErrNotFound
 	}
 	return nil
+}
+
+// rowVisibleTerms is the row half of a visibility probe, shared by the
+// single-row probe above and PassingSubset: the live filter, then the scope.
+func rowVisibleTerms(ctx context.Context, table string, arg func(any) int, live bool) ([]string, error) {
+	clause, err := ScopeClauseFor(ctx, table, "", arg)
+	if err != nil {
+		return nil, err
+	}
+	var terms []string
+	if live {
+		terms = append(terms, "archived_at IS NULL")
+	}
+	if clause != "" {
+		terms = append(terms, clause)
+	}
+	return terms, nil
 }

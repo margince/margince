@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // promoteLeadCommand decodes POST /v1/leads/{id}/promote. The trigger is read
@@ -30,14 +31,16 @@ func promoteLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 		return nil, err
 	}
 	in, err := commandBody[struct {
+		datasource.PromotionDealChoice
 		Trigger string `json:"trigger"`
 	}](body)
 	if err != nil {
 		return nil, err
 	}
 	return agents.NewPromoteLeadCall(deps.records, deps.language, agents.PromoteLeadCommand{
-		LeadID:  id,
-		Trigger: in.Trigger,
+		LeadID:     id,
+		Trigger:    in.Trigger,
+		DealChoice: in.PromotionDealChoice,
 	}), nil
 }
 

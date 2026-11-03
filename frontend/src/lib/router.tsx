@@ -1,33 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-
 import { noteHistoryEntry } from "./historydepth";
+import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
 import { hashWithParams, type UrlParams } from "./urlstate";
-
-// Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
-// Routes live behind '#', so a static host serves index.html for every one.
-
-// Every address this product answers, spelled ONCE. The other places that
-// enumerate destinations — the nav table and RAIL_LESS_SCREENS in app/nav.ts,
-// the dispatch in App.tsx — are typed against `Screen` rather than repeating the
-// names, so a destination cannot exist in one of them and be missing from the
-// rest, and `navigate({ screen: "dealz" })` fails to compile instead of
-// rendering a surface that reads as unbuilt.
-//
-// Four members are also spelled as a named constant elsewhere, because the
-// module that owns the route owns the name. `ext` is lib/extensions.ts's
-// EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
-// features/sign-in/auth.tsx's RESET_ROUTE, and `scheduled` is
-// features/mail/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
-// used where a `Screen` is expected, so a rename there stops compiling here
-// rather than drifting.
-//
-// `x` is this union's WIDENING POINT, and it is one member rather than a
-// template literal on purpose. A fork adds destinations under `#/x/<key>`
-// (app/custom.ts), so the set of addresses this build answers grows without
-// this list growing — while the list stays FINITE, which is what lets App.tsx's
-// dispatch be an exhaustive Record. A `Screen` admitting `x-${string}` could
-// not be exhausted, and that exhaustiveness is the thing stopping a destination
-// existing in the router and being missing from the dispatch.
+// The screen union binds navigation and dispatch to the same route names.
 export const SCREENS = [
   "home",
   "contacts",
@@ -399,15 +374,11 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
   }
 }
 
-// Everything watching the address. Kept here rather than one `hashchange`
-// listener per reader, because the app also has to be told about a move it made
-// ITSELF: `hashchange` is delivered asynchronously, so between a write and the
-// browser's event the screen still renders the address it has just left. That
-// gap is invisible for a whole-page move — the screen re-renders either way —
-// and not for a dial, where the list would fetch the previous query first.
+// Notify subscribers synchronously so an app navigation cannot fetch the previous route.
 const watchers = new Set<() => void>();
 
 function announce(): void {
+  publishRecordAddress();
   // A replace keeps the entry, and the address noted for it must follow. With
   // nobody watching, no entry is being counted.
   if (watchers.size > 0) {
@@ -432,6 +403,7 @@ function addressChanged(): void {
 
 function subscribe(onChange: () => void): () => void {
   if (watchers.size === 0) {
+    publishRecordAddress();
     // The entry the app starts on, so the first move is counted from it.
     noteHistoryEntry("start");
     globalThis.addEventListener("hashchange", addressChanged);
@@ -476,7 +448,10 @@ export function useHash(): string {
   // It lives here rather than in useRoute because the query half has its own
   // reader (lib/urlstate.ts). A scrub done by only one of the two would depend
   // on which of them a screen called first.
-  useState(takeFromHash);
+  useState(() => {
+    restoreRecordAddress();
+    takeFromHash();
+  });
   return useSyncExternalStore(
     subscribe,
     () => globalThis.location.hash,

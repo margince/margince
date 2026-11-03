@@ -40,6 +40,8 @@ func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.C
 		"industry":                 {Column: "industry", Current: current.Industry},
 		"size_band":                {Column: "size_band", Current: current.SizeBand},
 		"linkedin_url":             {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"phone":                    {Column: columnCompanyPhone, Current: current.Phone},
+		"email":                    {Column: columnCompanyEmail, Current: current.Email},
 		"owner_id":                 {Column: ownerIDColumn, Current: current.OwnerId},
 		"parent_company_id":        {Column: "parent_company_id", Current: current.ParentCompanyId},
 		"assess_against_entity_id": {Column: "assess_against_entity_id", Current: current.AssessAgainstEntityId},
@@ -59,10 +61,12 @@ func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearab
 		"phone":                 {Column: leadPhoneColumn, Current: current.Phone},
 		"title":                 {Column: "title", Current: current.Title},
 		"company_name":          {Column: leadCompanyColumn, Current: current.CompanyName},
+		"industry":              {Column: leadIndustryField, Current: current.Industry},
 		"candidate_company_key": {Column: "candidate_company_key", Current: current.CandidateCompanyKey},
 		"project_id":            {Column: "project_id", Current: current.ProjectId},
 		"owner_id":              {Column: ownerIDColumn, Current: current.OwnerId},
 		"origin":                {Column: leadOriginField, Current: current.Origin},
 		"origin_detail":         {Column: leadOriginDetailField, Current: current.OriginDetail},
+		"partner_company_id":    {Column: leadPartnerField, Current: current.PartnerCompanyId},
 	}
 }

@@ -4,14 +4,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import {
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "../../components/entityref";
+import { useRoster, useRosterPartial } from "../../components/roster";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
-import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { QueryStates } from "../../design-system/querystates";
@@ -27,6 +22,7 @@ import {
   type User,
   useMemberRefresh,
 } from "./users-members";
+import { MemberTeamsField } from "./users-teams";
 
 export function EditMember({
   member,
@@ -171,18 +167,12 @@ export function EditMember({
             />
           )}
         </Field>
-        <QueryStates query={teams} pendingLabel={t("users.teamsLabel")}>
-          {null}
-        </QueryStates>
-        <ChoiceList
-          multiple
-          legend={t("users.teamsLabel")}
-          choices={memberTeamChoices(teams.data, baseline)}
+        <MemberTeamsField
           value={teamIds}
           onChange={setTeamIds}
-          disabled={!teams.isSuccess || partial || !managesTeams}
+          canManage={managesTeams}
+          joinable={inactiveJoinable(baseline)}
         />
-        <RosterPartialNote partial={partial} />
         {!managesTeams && <p>{t("users.teamAdminOnly")}</p>}
         <MergedAccounts member={baseline} />
         {save.error && <ErrorLine error={save.error} />}
@@ -224,23 +214,12 @@ function memberRole(member: User): string {
   return member.roles?.length === 1 ? (member.roles[0] ?? "") : "";
 }
 
-function memberTeamChoices(
-  teams: ReturnType<typeof useRoster>["data"],
-  member: User,
-) {
+// A deactivated or suspended member may leave a team but join no new one.
+function inactiveJoinable(member: User) {
   const inactive =
     member.status === "deactivated" || member.status === "suspended";
-  return (teams ?? []).flatMap((entry) =>
-    "name" in entry
-      ? [
-          {
-            value: entry.id,
-            label: entry.name,
-            disabled: inactive && !(member.team_ids ?? []).includes(entry.id),
-          },
-        ]
-      : [],
-  );
+  const current = member.team_ids ?? [];
+  return inactive ? (teamId: string) => current.includes(teamId) : undefined;
 }
 
 function MergedAccounts({ member }: Readonly<{ member: User }>) {

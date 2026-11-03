@@ -6,7 +6,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 ## signal
 
-29 columns · primary key `(id)` · referenced by 3 foreign keys
+30 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,14 +24,15 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | `kind` | `text` | yes | The first six are what a human files by hand. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `raw_ref` | `text` |  | Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention. |
-| `resolution_confidence` | `numeric` |  |  |
+| `resolution_confidence` | `numeric(4,3)` |  |  |
 | `resolution_state` | `text`, default `'resolved'::text` | yes | The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`. |
 | `resolved_company_id` | `uuid` |  | The company the raw signal resolved to (the only required attribution level). |
 | `resolved_contact_id` | `uuid` |  | Optional contact resolution, set only under a recorded consent grant and never inferred. |
 | `severity` | `text`, default `'info'::text` | yes | One of `info`, `warn`, `urgent`. |
 | `source_channel` | `text`, default `'derived'::text` | yes | Where the raw signal came from. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `acknowledged`, `resolved`, `dismissed`. |
-| `summary` | `text` | yes |  |
+| `summary` | `text` | yes | The signal's one sentence. |
+| `summary_params` | `jsonb` |  |  |
 | `visibility` | `text`, default `'workspace'::text` | yes | One of `workspace`, `owner`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
@@ -99,7 +100,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `match_confidence` | `numeric` |  |  |
+| `match_confidence` | `numeric(4,3)` |  |  |
 | `match_detail` | `jsonb` |  |  |
 | `matched_company_id` | `uuid` |  | Points at `company.id`. |
 | `matched_on` | `text` |  | One of `domain`, `name`, `prior_interaction`, `manual`, `none`. |

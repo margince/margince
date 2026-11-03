@@ -120,6 +120,8 @@ func toContractDedupeCandidate(row DedupeCandidateRow) (crmcontracts.DedupeCandi
 		CreatedAt:  row.CreatedAt,
 		DisposedAt: row.DisposedAt,
 		CanDecide:  row.CanDecide,
+		CanMerge:   row.CanMerge,
+		KeepId:     (*openapi_types.UUID)(row.KeepID),
 	}
 	if row.DisposedBy != nil {
 		u := openapi_types.UUID(*row.DisposedBy)

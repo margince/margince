@@ -16,7 +16,6 @@ package compose
 // for the same reason they do.
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -52,7 +51,7 @@ func TestAnOmittedScopeResolvesToTheCallersOwnLens(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := principal.WithActor(context.Background(), tc.actor)
+			ctx := principal.WithActor(individualPerformanceShown(), tc.actor)
 			// The decision reads nothing — labelling does, and happens after —
 			// so a nil tx proves the policy never depended on a database.
 			got, err := resolveAnalyticsScope(ctx, nil, tc.actor, RequestedScope{})
@@ -74,7 +73,7 @@ func TestAnOmittedScopeResolvesToTheCallersOwnLens(t *testing.T) {
 // it as a tier would hand somebody managing no team the whole installation.
 func TestATeamLensWithNoTeamsDoesNotWiden(t *testing.T) {
 	actor := actorWithScope(principal.RowScopeTeam)
-	ctx := principal.WithActor(context.Background(), actor)
+	ctx := principal.WithActor(individualPerformanceShown(), actor)
 
 	got, err := resolveAnalyticsScope(ctx, nil, actor, RequestedScope{})
 	if err != nil {
@@ -132,7 +131,7 @@ func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := principal.WithActor(context.Background(), tc.actor)
+			ctx := principal.WithActor(individualPerformanceShown(), tc.actor)
 			_, err := resolveAnalyticsScope(ctx, nil, tc.actor, tc.requested)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("refusal was %v, want %v", err, tc.wantErr)
@@ -147,7 +146,7 @@ func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {
 	other := ids.NewV7()
 	actor := actorWithScope(principal.RowScopeOwn)
-	ctx := principal.WithActor(context.Background(), actor)
+	ctx := principal.WithActor(individualPerformanceShown(), actor)
 
 	for _, requested := range []RequestedScope{
 		{Kind: ScopeKindOwner, ID: &other},
@@ -166,7 +165,7 @@ func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {
 // must not cost a membership read that would refuse it.
 func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 	actor := actorWithScope(principal.RowScopeOwn)
-	ctx := principal.WithActor(context.Background(), actor)
+	ctx := principal.WithActor(individualPerformanceShown(), actor)
 	me := actor.UserID
 
 	got, err := resolveAnalyticsScope(ctx, nil, actor, RequestedScope{Kind: ScopeKindOwner, ID: &me})
@@ -190,7 +189,7 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	team := ids.NewV7()
 	actor := actorWithScope(principal.RowScopeTeam, team)
-	ctx := principal.WithActor(context.Background(), actor)
+	ctx := principal.WithActor(individualPerformanceShown(), actor)
 
 	n := 0
 	arg := func(any) int { n++; return n }
@@ -237,7 +236,7 @@ func TestEverySeatMayMeasureTotalsForTheWorkspaceAndAnyTeam(t *testing.T) {
 	team := ids.NewV7()
 	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
 		actor := actorWithScope(scope, ids.NewV7())
-		ctx := principal.WithActor(context.Background(), actor)
+		ctx := principal.WithActor(individualPerformanceShown(), actor)
 		for _, requested := range []RequestedScope{
 			{Kind: ScopeKindWorkspace},
 			{Kind: ScopeKindTeam, ID: &team},

@@ -2,19 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { type Fact, FactList } from "../../design-system/factlist";
-import { PanelBody } from "../../design-system/panel";
+import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 import { HomeRepairControls } from "./homerepair";
@@ -79,9 +82,11 @@ function validProgress(row: Progress): boolean {
 
 function useDataTasks() {
   const canSee = useCan("data_task", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey,
-    enabled: canSee,
+    queryKey: [...queryKey, scope],
+    enabled: canSee && visible && scope !== undefined,
     queryFn: async ({ signal }) => {
       const result = unwrap(await api.GET("/admin/data-tasks", { signal }));
       if (!Array.isArray(result?.data) || !result.data.every(validProgress)) {
@@ -174,6 +179,7 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
   if (
     canChange &&
     row.version > 0 &&
+    row.status !== "done" &&
     knownState &&
     row.blocked_reason !== "newer_release_required" &&
     row.blocked_reason !== "review_required"
@@ -187,6 +193,19 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
   return actions;
 }
 
+function taskTone(row: Progress) {
+  if (row.status === "failed") return "danger";
+  if (row.status === "done") return "success";
+  if (
+    row.blocked_reason &&
+    row.blocked_reason !== "retry_wait" &&
+    row.blocked_reason !== "waiting_for_worker" &&
+    row.blocked_reason !== "earlier_step"
+  )
+    return "warning";
+  return "default";
+}
+
 function TaskRow({ row }: Readonly<{ row: Progress }>) {
   const t = useT();
   const plural = usePlural();
@@ -196,24 +215,28 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
   const mutation = useMutation({
     mutationFn: async (body: Control) =>
       unwrap(await api.POST("/admin/data-tasks/control", { body })),
-    onSettled: () => client.invalidateQueries({ queryKey }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: ["system-health"] });
+      return client.invalidateQueries({ queryKey });
+    },
   });
   const actions = taskActions(row, canChange);
   return (
     <SettingRow
-      label={row.title}
+      label={
+        <>
+          {t("dataTasks.step", { step: row.step })}{" "}
+          <Badge tone={taskTone(row)}>
+            {t(
+              Object.hasOwn(statusLabels, row.status)
+                ? statusLabels[row.status]
+                : "dataTasks.unknownState",
+            )}
+          </Badge>
+        </>
+      }
       description={
         <>
-          <p>
-            {t("dataTasks.step", { step: row.step })}{" "}
-            <Badge tone={row.status === "failed" ? "danger" : undefined}>
-              {t(
-                Object.hasOwn(statusLabels, row.status)
-                  ? statusLabels[row.status]
-                  : "dataTasks.unknownState",
-              )}
-            </Badge>
-          </p>
           {row.blocked_reason && (
             <p>
               {t(
@@ -294,6 +317,27 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
   );
 }
 
+function TaskGroups({
+  rows,
+  onFocusTask,
+}: Readonly<{ rows: Progress[]; onFocusTask?: (task: string) => void }>) {
+  return Array.from(new Set(rows.map((row) => row.task_id))).map((task) => {
+    const steps = rows.filter((row) => row.task_id === task);
+    return (
+      <div key={task} onFocusCapture={() => onFocusTask?.(task)}>
+        <PanelGroupHead title={steps[0]?.title ?? task} level="h3" />
+        <PanelBody>
+          <SettingList>
+            {steps.map((row) => (
+              <TaskRow key={`${row.task_id}/${row.step}`} row={row} />
+            ))}
+          </SettingList>
+        </PanelBody>
+      </div>
+    );
+  });
+}
+
 export function DataTasksHealthCard() {
   const t = useT();
   const { canSee, query } = useDataTasks();
@@ -305,19 +349,81 @@ export function DataTasksHealthCard() {
       canSee={canSee}
       query={query}
     >
-      {(rows) =>
-        rows.length === 0 ? (
-          <PanelBody>
-            <EmptyState>{t("dataTasks.empty")}</EmptyState>
-          </PanelBody>
-        ) : (
-          <SettingList bleed="settings">
-            {rows.map((row) => (
-              <TaskRow key={`${row.task_id}/${row.step}`} row={row} />
-            ))}
-          </SettingList>
-        )
-      }
+      {(rows) => <TaskSections rows={rows} />}
     </HealthCard>
+  );
+}
+
+// Go owns whether work needs intervention; this display mirror only separates
+// unrequested manual work from required progress, using its registration state.
+function optional(row: Progress) {
+  return (
+    row.version === 0 &&
+    row.status !== "done" &&
+    row.blocked_reason === "review_required"
+  );
+}
+
+function taskStepKey(row: Progress) {
+  return JSON.stringify([row.task_id, row.step]);
+}
+
+function TaskSections({ rows }: Readonly<{ rows: Progress[] }>) {
+  const t = useT();
+  const [kept, setKept] = useState(
+    () =>
+      new Set(
+        rows
+          .filter((row) => row.status !== "done" && !optional(row))
+          .map(taskStepKey),
+      ),
+  );
+  const keep = (task: string) =>
+    setKept(
+      (previous) =>
+        new Set([
+          ...previous,
+          ...rows
+            .filter((row) => row.task_id === task && row.status !== "done")
+            .map(taskStepKey),
+        ]),
+    );
+
+  const active = rows.filter(
+    (row) =>
+      (row.status !== "done" || kept.has(taskStepKey(row))) && !optional(row),
+  );
+  const finished = rows.filter(
+    (row) => row.status === "done" && !kept.has(taskStepKey(row)),
+  );
+  const manual = rows.filter(optional);
+  return rows.length === 0 ? (
+    <PanelBody>
+      <EmptyState>{t("dataTasks.empty")}</EmptyState>
+    </PanelBody>
+  ) : (
+    <>
+      {active.length ? (
+        <TaskGroups rows={active} onFocusTask={keep} />
+      ) : (
+        <PanelBody>
+          <p>{t("health.noPendingUpdates")}</p>
+        </PanelBody>
+      )}
+      {manual.length > 0 && (
+        <PanelBody>
+          <Disclosure summary={t("health.optionalMaintenance")}>
+            <TaskGroups rows={manual} />
+          </Disclosure>
+        </PanelBody>
+      )}
+      {finished.length > 0 && (
+        <PanelBody>
+          <Disclosure summary={t("health.completedUpdates")}>
+            <TaskGroups rows={finished} />
+          </Disclosure>
+        </PanelBody>
+      )}
+    </>
   );
 }

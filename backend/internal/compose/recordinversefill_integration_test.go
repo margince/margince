@@ -311,7 +311,7 @@ func TestAPromotionWhoseContactAColleagueChangedIsNotUndone(t *testing.T) {
 		t.Fatal(err)
 	}
 	leadID := ids.UUID(lead.Id)
-	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatal(err)
 	}

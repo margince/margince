@@ -32,7 +32,7 @@ func (s *Service) WithTagSuggestions(t TagSuggestions) *Service {
 func (s *Service) openTagSuggestionItems(
 	ctx context.Context, depth int,
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
-	if s.tagSuggestions == nil {
+	if s.tagSuggestions == nil || !s.unassignedDecisions() {
 		return nil, nil, nil
 	}
 	return readSuggestionLane(ctx, s, sourceTagSuggestion,

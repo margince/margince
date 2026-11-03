@@ -13,22 +13,17 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 const (
-	replyContextTurns = 6
 	// replyEvidenceRows is how many thread rows the language evidence orders
 	// before it cuts. Newer outbound mail must not push an older inbound
 	// message out of the window.
 	replyEvidenceRows = 60
 )
 
-// replyThread is what a reply reads. The prompt shows a few turns. The
-// language is decided from the wider set and the answered message.
+// The selected message and wider language evidence have separate roles.
 type replyThread struct {
-	prompt   []draftcore.Turn
 	evidence []draftcore.Turn
 	anchor   []draftcore.Turn
 }
@@ -47,7 +42,6 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 		if err != nil {
 			return replyThread{}, err
 		}
-		thread.prompt = draftcore.Conversation(rows, &anchor, now, zone, replyContextTurns)
 		thread.evidence = draftcore.Conversation(rows, &anchor, now, zone, len(rows))
 	}
 	marked := append(slices.Clone(thread.anchor), thread.evidence...)
@@ -120,24 +114,4 @@ func (d replyDrafter) markSenders(ctx context.Context, turns []draftcore.Turn) {
 			}
 		}
 	}
-}
-
-// replyConversationText renders the turns the way the reply prompt describes
-// them. Each shows where it stands against the selected message, its date,
-// direction and subject, then its text.
-func replyConversationText(turns []draftcore.Turn) string {
-	rendered := make([]string, 0, len(turns))
-	for _, turn := range turns {
-		direction := turn.Direction
-		if direction == "" {
-			direction = "unknown" //nolint:goconst // the prompt's word for a turn without direction, unrelated to preview lifecycles
-		}
-		relation := "at or before the selected message"
-		if turn.AfterAnchor {
-			relation = "later than the selected message"
-		}
-		rendered = append(rendered, fmt.Sprintf("%s | %s | %s | %s\n%s", relation,
-			occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}), direction, textcut.Runes(turn.Subject, 200), turn.Text))
-	}
-	return textcut.Runes(strings.Join(rendered, "\n\n"), replyActivityMaxRunes)
 }

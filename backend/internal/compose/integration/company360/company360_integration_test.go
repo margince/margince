@@ -153,11 +153,15 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 		VALUES ($1, 'dana@acme.test', true, 'manual', 'human:x')`, contact)
 
 	// Two qualifying interactions inside the §4 window, one each way, so
-	// the score is non-zero and reciprocity is balanced.
+	// the score is non-zero and reciprocity is balanced. The inbound one names
+	// the contact as its sender, as capture does.
 	for _, direction := range []string{"inbound", "outbound"} {
 		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', '`+direction+`', 'manual', 'human:x')`)
 		integration.LinkActivity(t, owner, activity, "contact", contact)
+		if direction == "inbound" {
+			integration.LinkActivitySender(t, owner, activity, contact)
+		}
 	}
 
 	purpose := seedConsentPurpose(t, owner, "marketing_email", "Marketing email")
@@ -768,5 +772,65 @@ func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T
 	}
 	if strip.Commercial.NextCloseOn == nil {
 		t.Fatal("no expected close date, though the deal names one")
+	}
+}
+
+// A task's own words reach the Next bar only with the task. A follow-up filed
+// from a message is listed with its words while the message is readable. It
+// drops off the list once the reader may no longer open the message.
+func TestCompany360NextStepsCarryTheTaskOwnWordsOnlyWithTheirSource(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
+
+	typed := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, is_done, source, captured_by)
+		VALUES ($1, 'task', 'Call back', 'second try', now(), false, 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, typed, "contact", contact)
+
+	mail := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, direction, source, captured_by, audience)
+		VALUES ($1, 'email', 'Pricing', 'Please hold the price until Friday.', now(), 'inbound', 'manual', 'human:x', 'workspace')`)
+	integration.LinkActivity(t, owner, mail, "contact", contact)
+	request := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, is_done, source, captured_by, source_activity_id)
+		VALUES ($1, 'task', 'Answer the pricing ask', 'Hold the price until Friday', now(), false, 'manual', 'human:x', $2)`, mail)
+	integration.LinkActivity(t, owner, request, "contact", contact)
+
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	bodies := func() map[string]string {
+		view, err := svc.Assemble(reader, ids.From[ids.CompanyKind](company))
+		if err != nil {
+			t.Fatalf("assemble: %v", err)
+		}
+		got := map[string]string{}
+		for _, step := range view.NextSteps.Data {
+			got[step.Subject] = ""
+			if step.Body != nil {
+				got[step.Subject] = *step.Body
+			}
+		}
+		return got
+	}
+
+	got := bodies()
+	if got["Call back"] != "second try" {
+		t.Errorf("the typed task's words = %q, want %q", got["Call back"], "second try")
+	}
+	if got["Answer the pricing ask"] != "Hold the price until Friday" {
+		t.Errorf("the follow-up of a readable message = %q, want its words", got["Answer the pricing ask"])
+	}
+
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, mail); err != nil {
+		t.Fatalf("narrowing the message audience: %v", err)
+	}
+	got = bodies()
+	if words, listed := got["Answer the pricing ask"]; listed {
+		t.Errorf("a follow-up whose message the reader may not open was listed with %q", words)
+	}
+	if got["Call back"] != "second try" {
+		t.Errorf("the typed task lost its words when an unrelated message narrowed: %q", got["Call back"])
 	}
 }

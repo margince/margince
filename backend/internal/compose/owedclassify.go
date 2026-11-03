@@ -233,8 +233,8 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 // judgeBatch judges one batch with ONE model call and commits each verdict.
 //
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
-// on its own — which escalates the routing ladder by being its own structured
-// call — and one still below it afterwards is left unjudged rather than guessed.
+// on its own, as a different request from its batch, so the model answers it
+// afresh. One still below the floor afterwards is left unjudged rather than guessed.
 // A batch the models decline is asked message by message, so the one message
 // they will not judge is recorded declined and the rest of the batch proceeds.
 type owedPredictionSink struct {

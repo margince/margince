@@ -59,18 +59,22 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
-	// Answered inline, like an approval: `decide` reaches MeetingOutcome, which
-	// writes meeting_status through PATCH /activities/{id}.
-	"meeting_outcome": {"decide"},
+	// Answered inline, like an approval: `decide` and `cancel` reach
+	// MeetingOutcome, which writes meeting_status through PATCH /activities/{id}.
+	"meeting_outcome": {"decide", "cancel"},
 	// The task's own verbs. `complete` acts in place through TaskComplete;
-	// `snooze` opens the record, where the due date lives.
-	"task": {"complete", "snooze", "open"},
+	// `snooze` opens the record, where the due date lives. `take` assigns the
+	// task to the reader through TakeVerb.
+	"task": {"complete", "snooze", "open", "take"},
 	// Answered inline: the decision card is on the row itself.
 	"approval": {"decide", "open"},
 	// Both answered by PairDecision in worklist.pair.tsx, and each on its own
 	// guard: the Keep buttons ask for `merge`, and the "Not the same" line asks
 	// for `dismiss`. A pair no merge would accept still carries the second.
 	"dedupe_candidate": {"merge", "dismiss", "open"},
+	// Reviewed in the case modal the row's own button opens (worklist.contactcase.tsx),
+	// which reads the case and not the row's verbs.
+	"contact_case": {},
 	// Answered by SuggestionDecision in worklist.suggestion.tsx: `decide` opens
 	// the deal it proposes, `dismiss` records that it is not one, and `open`
 	// reaches the company through the routing table.
@@ -330,7 +334,8 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// just as easy to leave out of a fixture.
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
 			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
-		}}})).
+		}}}),
+		WithContactCases(&stubContactCases{cases: []ContactCase{aContactCase(ids.NewV7())}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,

@@ -90,6 +90,8 @@ func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
 	if _, err := e.decider().DismissSuggestion(e.signalReader(), suggestion.ID); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
+	// Dismissed an hour back, so the held meeting logged after it has taken place.
+	e.WsExec(t, `UPDATE deal_suggestion SET decided_at = decided_at - interval '1 hour' WHERE id = $1`, suggestion.ID)
 	dismissedAt, err := time.Parse(time.RFC3339Nano,
 		e.WsScalar(t, `SELECT to_char(decided_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') FROM deal_suggestion WHERE id = $1`, suggestion.ID))
 	if err != nil {

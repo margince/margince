@@ -319,11 +319,9 @@ type Extension struct {
 	// Ingress are the providers this unit brings records IN from, and the
 	// record kinds it lands through the core's own capture pipeline.
 	//
-	// Like a Tool's tier this is a request an operator can see before anything
-	// runs — and unlike a tier it is also load-bearing while it runs: the core
-	// stamps a landed record's provenance from the System declared here, so a
-	// unit never spells its own, and an ingest naming an undeclared source is
-	// refused rather than admitted under an invented namespace.
+	// The core enforces this declaration while the unit runs. It stamps a
+	// landed record's provenance from the System declared here, so a unit never
+	// spells its own. An ingest naming an undeclared source is refused.
 	//
 	// Presence is the enablement, as everywhere in this tier. A unit declaring
 	// none cannot reach capture at all, which is the state every unit was in

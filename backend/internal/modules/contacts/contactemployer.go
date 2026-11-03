@@ -79,21 +79,24 @@ func currentEmployerFrom(
 // joined to its company as `company`, is this caller's to see. Shared by every
 // read that names an employer, so the three gates are asked in one place.
 func employerScope(ctx context.Context, relAlias string, arg func(any) int) (clause string, visible bool, err error) {
-	edgeBound, err := auth.EdgeReadScope(ctx, relAlias, arg)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return "", false, nil
+	// Both object gates are asked before any clause binds an argument: a
+	// refusal after one would leave a placeholder no statement uses.
+	for _, gate := range []func() error{
+		func() error { return auth.EdgeReadAdmitted(ctx) },
+		func() error { return auth.Require(ctx, companyEntity, principal.ActionRead) },
+	} {
+		if err := gate(); errors.Is(err, apperrors.ErrPermissionDenied) {
+			return "", false, nil
+		} else if err != nil {
+			return "", false, err
+		}
 	}
+	edgeBound, err := auth.EdgeReadScope(ctx, relAlias, arg)
 	if err != nil {
 		return "", false, err
 	}
 	if edgeBound == "" {
 		edgeBound = scopeAllRows
-	}
-	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return "", false, nil
-		}
-		return "", false, err
 	}
 	companyScope, err := auth.ScopeClauseFor(ctx, companyEntity, "company", arg)
 	if err != nil {

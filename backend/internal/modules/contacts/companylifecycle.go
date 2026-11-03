@@ -28,8 +28,28 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// checkLifecycleWriter refuses a value outside the vocabulary, and live from
+// anyone but a signed-in user. Live states that the agreed first scope is in
+// use, which no agent, automation, approval or import can observe.
+func checkLifecycleWriter(ctx context.Context, to string) error {
+	if err := checkLifecycle(to); err != nil {
+		return err
+	}
+	if to != values.LifecycleLive {
+		return nil
+	}
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman {
+		return nil
+	}
+	return httperr.Validation("lifecycle", "lifecycle_live_needs_a_human",
+		"only a signed-in user can set an account live; ask the colleague who knows the first scope is in use")
+}
 
 // SetCompanyLifecycleTx moves the account's stage inside the caller's
 // transaction, and reports whether it wrote.
@@ -41,7 +61,7 @@ import (
 func (s *Store) SetCompanyLifecycleTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, from, to string,
 ) (bool, error) {
-	if err := checkLifecycle(to); err != nil {
+	if err := checkLifecycleWriter(ctx, to); err != nil {
 		return false, err
 	}
 	// The approval executor that drives this is a system principal, for whom the

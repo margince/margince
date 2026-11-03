@@ -23,8 +23,8 @@ import (
 var companyArms = `FROM activity_link l
 		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id
+		      AND ` + employment.CurrentMembershipSQL("r") + `
 		      AND ` + employment.InPlaceForSQL("r", "la") + `
 		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
@@ -39,8 +39,8 @@ var companyArms = `FROM activity_link l
 // that deliberately stops at three arms (activities.CompanyReachSet says why).
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
-		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id
+		        AND ` + employment.CurrentMembershipSQL("emp") + `
 		        AND ` + employment.InPlaceForSQL("emp", "a") + `
 		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
