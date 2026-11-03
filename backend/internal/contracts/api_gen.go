@@ -11124,6 +11124,7 @@ const (
 	FilterVocabularyFieldReferencesAppUser  FilterVocabularyFieldReferences = "app_user"
 	FilterVocabularyFieldReferencesCompany  FilterVocabularyFieldReferences = "company"
 	FilterVocabularyFieldReferencesPipeline FilterVocabularyFieldReferences = "pipeline"
+	FilterVocabularyFieldReferencesProduct  FilterVocabularyFieldReferences = "product"
 	FilterVocabularyFieldReferencesProject  FilterVocabularyFieldReferences = "project"
 	FilterVocabularyFieldReferencesStage    FilterVocabularyFieldReferences = "stage"
 	FilterVocabularyFieldReferencesTag      FilterVocabularyFieldReferences = "tag"
@@ -11138,6 +11139,8 @@ func (e FilterVocabularyFieldReferences) Valid() bool {
 	case FilterVocabularyFieldReferencesCompany:
 		return true
 	case FilterVocabularyFieldReferencesPipeline:
+		return true
+	case FilterVocabularyFieldReferencesProduct:
 		return true
 	case FilterVocabularyFieldReferencesProject:
 		return true

@@ -28,8 +28,9 @@ type Membership struct {
 	Leads, Deals []ids.UUID
 	// Reasons names why each included record belongs: rule, picked or carried.
 	Reasons map[ids.UUID]string
-	// Excluded are the records a hand took out, over a rule match or a pick.
-	Excluded  map[ids.UUID]bool
+	// Excluded are the records a hand took out, over a rule match or a pick,
+	// keyed by record type.
+	Excluded  map[string]map[ids.UUID]bool
 	Truncated bool
 	Launch    time.Time
 }
@@ -49,7 +50,7 @@ func (s *Store) MembershipOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (Membe
 }
 
 func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontracts.SalesInitiative) (Membership, error) {
-	out := Membership{Reasons: map[ids.UUID]string{}, Excluded: map[ids.UUID]bool{}}
+	out := Membership{Reasons: map[ids.UUID]string{}, Excluded: map[string]map[ids.UUID]bool{recordLead: {}, recordDeal: {}}}
 	if initiative.LaunchAt != nil {
 		out.Launch = *initiative.LaunchAt
 	}
@@ -67,7 +68,7 @@ func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontract
 			return out, err
 		}
 		if reason == "excluded" {
-			out.Excluded[recordID] = true
+			out.Excluded[recordType][recordID] = true
 		} else {
 			picked[recordType] = append(picked[recordType], recordID)
 		}
@@ -86,14 +87,18 @@ func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontract
 	}
 	out.Leads = s.include(ctx, tx, &out, leads, picked[recordLead], recordLead)
 	// A deal promoted from a member lead carries the lead's membership, the
-	// one downstream link a promotion records (lead.qualified_deal_id).
+	// one downstream link a promotion records (lead.qualified_deal_id). The
+	// reader sees it only when their row scope reaches the deal.
 	carried, err := carriedDeals(ctx, tx, out.Leads)
 	if err != nil {
 		return out, err
 	}
+	if carried, err = visibleRecords(ctx, tx, recordDeal, carried); err != nil {
+		return out, err
+	}
 	out.Deals = s.include(ctx, tx, &out, deals, picked[recordDeal], recordDeal)
 	for _, deal := range carried {
-		if out.Excluded[deal] || slices.Contains(out.Deals, deal) {
+		if out.Excluded[recordDeal][deal] || slices.Contains(out.Deals, deal) {
 			continue
 		}
 		out.Deals = append(out.Deals, deal)
@@ -132,7 +137,7 @@ func (s *Store) ruleMatches(ctx context.Context, tx pgx.Tx, recordType string, r
 func (s *Store) include(ctx context.Context, tx pgx.Tx, out *Membership, matched, picked []ids.UUID, recordType string) []ids.UUID {
 	included := make([]ids.UUID, 0, len(matched)+len(picked))
 	for _, id := range matched {
-		if out.Excluded[id] {
+		if out.Excluded[recordType][id] {
 			continue
 		}
 		included = append(included, id)
@@ -143,7 +148,7 @@ func (s *Store) include(ctx context.Context, tx pgx.Tx, out *Membership, matched
 		return included
 	}
 	for _, id := range visible {
-		if out.Excluded[id] || slices.Contains(included, id) {
+		if out.Excluded[recordType][id] || slices.Contains(included, id) {
 			continue
 		}
 		included = append(included, id)
@@ -219,13 +224,42 @@ func (s *Store) Members(ctx context.Context, id ids.UUID, recordType *string) (c
 	return out, err
 }
 
+// memberRead is the clause every member row read carries: the wanted ids,
+// live rows only, and the reader's row scope on the record type. A company
+// name is read only through the company grant and its own row scope.
+func memberRead(ctx context.Context, recordType, alias string, wanted []ids.UUID) (where, companyLabel string, args []any, err error) {
+	args = []any{wanted}
+	arg := func(value any) int {
+		args = append(args, value)
+		return len(args)
+	}
+	scope, err := auth.ScopeClauseFor(ctx, recordType, alias, arg)
+	if err != nil {
+		return "", "", nil, err
+	}
+	if scope == "" {
+		scope = "TRUE"
+	}
+	companyLabel = "NULL::text"
+	if auth.ReadGranted(ctx, "company") {
+		if companyLabel, err = storekit.LinkedCompanyColumn(ctx, alias+".company_id", "display_name", arg); err != nil {
+			return "", "", nil, err
+		}
+	}
+	return alias + ".id = ANY($1) AND " + alias + ".archived_at IS NULL AND " + scope, companyLabel, args, nil
+}
+
 func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
-	wanted := append(slices.Clone(membership.Leads), excludedOf(membership)...)
+	wanted := append(slices.Clone(membership.Leads), excludedOf(membership, recordLead)...)
 	if len(wanted) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT l.id, COALESCE(NULLIF(l.full_name,''), NULLIF(l.company_name,''), ''), l.company_id, c.display_name, l.status, l.created_at
-		FROM lead l LEFT JOIN company c ON c.id = l.company_id WHERE l.id = ANY($1) ORDER BY l.created_at DESC`, wanted)
+	where, companyLabel, args, err := memberRead(ctx, recordLead, "l", wanted)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT l.id, COALESCE(NULLIF(l.full_name,''), NULLIF(l.company_name,''), ''), l.company_id, `+companyLabel+`, l.status, l.created_at
+		FROM lead l WHERE `+where+` ORDER BY l.created_at DESC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read member leads: %w", err)
 	}
@@ -238,7 +272,7 @@ func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies m
 			return member, err
 		}
 		member.RecordType, member.RecordId, member.Status = recordLead, openapi_types.UUID(id), &status
-		memberReason(&member, id, membership)
+		memberReason(&member, recordLead, id, membership)
 		if member.Included && company != nil {
 			companies[*company] = true
 		}
@@ -247,12 +281,16 @@ func leadRows(ctx context.Context, tx pgx.Tx, membership Membership, companies m
 }
 
 func dealRows(ctx context.Context, tx pgx.Tx, membership Membership, companies map[ids.UUID]bool) ([]crmcontracts.SalesInitiativeMember, error) {
-	wanted := append(slices.Clone(membership.Deals), excludedOf(membership)...)
+	wanted := append(slices.Clone(membership.Deals), excludedOf(membership, recordDeal)...)
 	if len(wanted) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT d.id, d.name, d.company_id, c.display_name, d.status, d.amount_minor_base, d.created_at
-		FROM deal d LEFT JOIN company c ON c.id = d.company_id WHERE d.id = ANY($1) ORDER BY d.created_at DESC`, wanted)
+	where, companyLabel, args, err := memberRead(ctx, recordDeal, "d", wanted)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT d.id, d.name, d.company_id, `+companyLabel+`, d.status, d.amount_minor_base, d.created_at
+		FROM deal d WHERE `+where+` ORDER BY d.created_at DESC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read member deals: %w", err)
 	}
@@ -265,7 +303,7 @@ func dealRows(ctx context.Context, tx pgx.Tx, membership Membership, companies m
 			return member, err
 		}
 		member.RecordType, member.RecordId, member.Status = recordDeal, openapi_types.UUID(id), &status
-		memberReason(&member, id, membership)
+		memberReason(&member, recordDeal, id, membership)
 		if member.Included && company != nil {
 			companies[*company] = true
 		}
@@ -273,17 +311,17 @@ func dealRows(ctx context.Context, tx pgx.Tx, membership Membership, companies m
 	})
 }
 
-func memberReason(member *crmcontracts.SalesInitiativeMember, id ids.UUID, membership Membership) {
-	if membership.Excluded[id] {
+func memberReason(member *crmcontracts.SalesInitiativeMember, recordType string, id ids.UUID, membership Membership) {
+	if membership.Excluded[recordType][id] {
 		member.Reason, member.Included = crmcontracts.SalesInitiativeMemberReasonExcluded, false
 		return
 	}
 	member.Reason, member.Included = crmcontracts.SalesInitiativeMemberReason(membership.Reasons[id]), true
 }
 
-func excludedOf(membership Membership) []ids.UUID {
-	out := make([]ids.UUID, 0, len(membership.Excluded))
-	for id := range membership.Excluded {
+func excludedOf(membership Membership, recordType string) []ids.UUID {
+	out := make([]ids.UUID, 0, len(membership.Excluded[recordType]))
+	for id := range membership.Excluded[recordType] {
 		out = append(out, id)
 	}
 	return out

@@ -174,6 +174,12 @@ func projectCompanyField() storekit.Field {
 	}
 }
 
+// productLinkField matches a record through the products it names: the
+// template is the EXISTS that reaches the deal_product row.
+func productLinkField(link string) storekit.Field {
+	return storekit.Field{Expr: "dp.product_id", Type: storekit.FieldID, References: storekit.RefProduct, Link: link, ReadsLink: true}
+}
+
 // customerField types one company column as a deal-side filter leaf. The
 // operators it advertises narrow themselves — OperatorsFor reads Link — so an
 // industry reached this way offers everything text does except `contains`.
@@ -309,6 +315,9 @@ var segmentEngines = map[string]storekit.Query{
 			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
 			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_country":   customerField("address_country", storekit.FieldText),
+			// The products a deal sells, from its accepted offer or set by hand.
+			"product_id": productLinkField("EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id = t.id AND %s)"),
 		}),
 	},
 	"lead": {
@@ -320,6 +329,12 @@ var segmentEngines = map[string]storekit.Query{
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
 			tagFilterField:          tagLinkFor("lead"),
+			// The industry a rep typed on the lead, and the linked company's own
+			// facts, so one rule names a market on leads and deals alike.
+			"industry":         {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
+			"company_industry": customerField("industry", storekit.FieldPicklist, industryValues...),
+			"company_country":  customerField("address_country", storekit.FieldText),
+			"product_id":       {Expr: "t.product_id", Type: storekit.FieldID, References: storekit.RefProduct},
 		}),
 	},
 	projectEntity: {

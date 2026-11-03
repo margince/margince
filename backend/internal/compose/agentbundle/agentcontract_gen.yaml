@@ -18715,7 +18715,7 @@ components:
             reads as a settled answer instead of a mistake.
         references:
           type: string
-          enum: [tag, app_user, team, company, pipeline, stage, project]
+          enum: [tag, app_user, team, company, pipeline, stage, project, product]
           description: |-
             The record type this field's ids point at — present for every `id`
             field, absent for every other type. Offer the record rather than a

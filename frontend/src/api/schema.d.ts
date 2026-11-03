@@ -4513,6 +4513,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/initiatives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The sales initiatives a reader may open, drafts and live ones. */
+        get: operations["listSalesInitiatives"];
+        put?: never;
+        /** Define a sales initiative as a draft. Nothing is enrolled until it is launched. */
+        post: operations["createSalesInitiative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/initiatives/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** One sales initiative. */
+        get: operations["getSalesInitiative"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change an initiative's definition. A live initiative keeps its baseline. */
+        patch: operations["updateSalesInitiative"];
+        trace?: never;
+    };
+    "/analytics/initiatives/{id}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Launch a draft. The member deals of this moment become the frozen baseline. */
+        post: operations["launchSalesInitiative"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/initiatives/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The leads and deals that belong, each with why, under the reader's own row scope. */
+        get: operations["listSalesInitiativeMembers"];
+        /** Set the picked and the excluded records. An exclusion stands over a rule match. */
+        put: operations["replaceSalesInitiativeMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -34967,6 +35047,100 @@ export interface components {
             groups_omitted: ("contacts" | "deals" | "signal_route" | "our_side")[];
             signal_route?: components["schemas"]["CompanyGraphSignalRoute"];
         };
+        /** @enum {string} */
+        SalesInitiativeStatus: "draft" | "live" | "ended";
+        /** @description A predicate tree in the record type's list vocabulary, the same tree a dynamic list's definition carries. Untyped here for the reason that definition is: the predicate engine is the grammar's authority and answers a precise 422. */
+        SalesInitiativeRule: {
+            [key: string]: unknown;
+        };
+        SalesInitiative: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string | null;
+            /** Format: uuid */
+            owner_id: string;
+            objective_metric: components["schemas"]["ReportingMetricID"];
+            /**
+             * Format: int64
+             * @description The objective, in the metric's unit; null is tracking only.
+             */
+            target_value?: number | null;
+            /** Format: date */
+            deadline: string;
+            status: components["schemas"]["SalesInitiativeStatus"];
+            /** Format: date-time */
+            launch_at?: string | null;
+            lead_rule?: components["schemas"]["SalesInitiativeRule"];
+            deal_rule?: components["schemas"]["SalesInitiativeRule"];
+            /** @description Whether records that match a rule later join on their own. */
+            include_future: boolean;
+            version: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        SalesInitiativeListResponse: {
+            data: components["schemas"]["SalesInitiative"][];
+        };
+        SalesInitiativeInput: {
+            name: string;
+            description?: string | null;
+            /**
+             * Format: uuid
+             * @description Defaults to the caller.
+             */
+            owner_id?: string | null;
+            objective_metric: components["schemas"]["ReportingMetricID"];
+            /** Format: int64 */
+            target_value?: number | null;
+            /** Format: date */
+            deadline: string;
+            lead_rule?: components["schemas"]["SalesInitiativeRule"];
+            deal_rule?: components["schemas"]["SalesInitiativeRule"];
+            include_future?: boolean;
+            /** @description Why a live initiative's definition changed. */
+            reason?: string | null;
+        };
+        SalesInitiativeMemberRef: {
+            /** @enum {string} */
+            record_type: "lead" | "deal";
+            /** Format: uuid */
+            record_id: string;
+        };
+        SalesInitiativeMember: {
+            /** @enum {string} */
+            record_type: "lead" | "deal";
+            /** Format: uuid */
+            record_id: string;
+            label: string;
+            company_label?: string | null;
+            /**
+             * @description `carried` is a deal promoted from a member lead.
+             * @enum {string}
+             */
+            reason: "rule" | "picked" | "carried" | "excluded";
+            included: boolean;
+            status?: string | null;
+            /** Format: int64 */
+            amount_minor_base?: number | null;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        SalesInitiativeMembers: {
+            data: components["schemas"]["SalesInitiativeMember"][];
+            leads: number;
+            deals: number;
+            /** @description Distinct companies behind the included records. */
+            companies: number;
+            /** @description A rule matched more records than one read lists. */
+            truncated: boolean;
+        };
+        SalesInitiativeMembersInput: {
+            picked: components["schemas"]["SalesInitiativeMemberRef"][];
+            excluded: components["schemas"]["SalesInitiativeMemberRef"][];
+        };
         DealProduct: {
             /** Format: uuid */
             product_id: string;
@@ -41198,7 +41372,7 @@ export interface components {
              *     `id`, so only a core field can carry a reference.
              * @enum {string}
              */
-            references?: "tag" | "app_user" | "team" | "company" | "pipeline" | "stage" | "project";
+            references?: "tag" | "app_user" | "team" | "company" | "pipeline" | "stage" | "project" | "product";
             /**
              * @description For a `currency` field, the ISO 4217 code its values are counted in: the
              *     installation's base currency for a deal's `amount`, the field's own currency
@@ -41437,7 +41611,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -41724,6 +41898,8 @@ export interface components {
         };
         /** Format: uuid */
         ReportingProductId: string;
+        /** Format: uuid */
+        ReportingInitiativeId: string;
         ReportingCountry: string;
         ReportingIndustry: string;
         /** @enum {string} */
@@ -41746,6 +41922,7 @@ export interface components {
             /** @enum {string} */
             close_window: "fiscal_quarter" | "all_open";
             product_id?: components["schemas"]["ReportingProductId"];
+            initiative_id?: components["schemas"]["ReportingInitiativeId"];
             country?: components["schemas"]["ReportingCountry"];
             industry?: components["schemas"]["ReportingIndustry"];
             value_basis?: components["schemas"]["ReportingValueBasis"];
@@ -41859,6 +42036,10 @@ export interface components {
             close_interval?: components["schemas"]["ReportingWindow"];
             product_id?: components["schemas"]["ReportingProductId"];
             product_label?: string;
+            initiative_id?: components["schemas"]["ReportingInitiativeId"];
+            initiative_label?: string;
+            /** Format: date-time */
+            initiative_launch_at?: string;
             country?: components["schemas"]["ReportingCountry"];
             industry?: components["schemas"]["ReportingIndustry"];
             value_basis?: components["schemas"]["ReportingValueBasis"];
@@ -44058,7 +44239,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -61703,6 +61884,215 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listSalesInitiatives: {
+        parameters: {
+            query?: {
+                status?: "draft" | "live" | "ended";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The initiatives. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiativeListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createSalesInitiative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesInitiativeInput"];
+            };
+        };
+        responses: {
+            /** @description The draft. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiative"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getSalesInitiative: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The initiative. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiative"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateSalesInitiative: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesInitiativeInput"];
+            };
+        };
+        responses: {
+            /** @description The initiative after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiative"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    launchSalesInitiative: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live initiative. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiative"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSalesInitiativeMembers: {
+        parameters: {
+            query?: {
+                record_type?: "lead" | "deal";
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiativeMembers"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceSalesInitiativeMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesInitiativeMembersInput"];
+            };
+        };
+        responses: {
+            /** @description The members after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesInitiativeMembers"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjects: {
         parameters: {
             query?: {
@@ -70366,6 +70756,7 @@ export interface operations {
                 country?: components["schemas"]["ReportingCountry"];
                 industry?: components["schemas"]["ReportingIndustry"];
                 value_basis?: components["schemas"]["ReportingValueBasis"];
+                initiative_id?: string;
             };
             header?: never;
             path?: never;
@@ -70409,6 +70800,7 @@ export interface operations {
                 country?: components["schemas"]["ReportingCountry"];
                 industry?: components["schemas"]["ReportingIndustry"];
                 value_basis?: components["schemas"]["ReportingValueBasis"];
+                initiative_id?: string;
                 metric: components["schemas"]["ReportingMetricID"];
                 group_key?: string;
                 through?: string;
