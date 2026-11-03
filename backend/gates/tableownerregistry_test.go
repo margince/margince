@@ -185,14 +185,18 @@ var tableOwners = map[string]string{
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
 	// TestEveryPackageOnlyWritesTablesItOwns.
-	"project":               "internal/modules/projects",
-	"project_phase_history": "internal/modules/projects",
-	"fx_rate":               "internal/modules/deals",
-	"product":               "internal/modules/deals",
-	"offer":                 "internal/modules/deals",
-	"offer_line_item":       "internal/modules/deals",
-	"deal_product":          "internal/modules/deals",
-	"offer_template":        "internal/modules/deals",
+	"project":                   "internal/modules/projects",
+	"project_phase_history":     "internal/modules/projects",
+	"fx_rate":                   "internal/modules/deals",
+	"product":                   "internal/modules/deals",
+	"offer":                     "internal/modules/deals",
+	"offer_line_item":           "internal/modules/deals",
+	"deal_product":              "internal/modules/deals",
+	"sales_initiative":          "internal/modules/initiatives",
+	"sales_initiative_revision": "internal/modules/initiatives",
+	"sales_initiative_member":   "internal/modules/initiatives",
+	"sales_initiative_baseline": "internal/modules/initiatives",
+	"offer_template":            "internal/modules/deals",
 	// activities
 	"activity":              "internal/modules/activities",
 	"transcript_read":       "internal/modules/activities",

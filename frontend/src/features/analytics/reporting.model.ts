@@ -33,6 +33,7 @@ export function reportingQuery(selection: ReportingSelection) {
     target_basis: selection.target_basis,
     close_window: selection.close_window,
     product_id: selection.product_id,
+    initiative_id: selection.initiative_id,
     country: selection.country,
     industry: selection.industry,
     value_basis: selection.value_basis,
