@@ -21,6 +21,7 @@ import {
   useReviewActions,
 } from "../../lib/reviewactions";
 import { replaceDial } from "../../lib/urlstate";
+import { AccountCoverageView } from "./analytics.accounts";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -126,6 +127,7 @@ export function AnalyticsScreen({
           conversion: t(VIEW_SHAPE.conversion.label),
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
+          accounts: t("analytics.sectionAccounts"),
           delivery: t("analytics.sectionDelivery"),
           questions: t("analytics.sectionQuestions"),
         }}
@@ -253,6 +255,40 @@ function TabVerbs({
 
 // One section's body, chosen in its own component so the screen's own render
 // stays a header plus a choice rather than a ladder of ternaries.
+// The sections that need the frame alone: the zone for a date, the seat's
+// default population, or the chosen scope.
+function FramedSection({
+  section,
+  context,
+  selection,
+  scopeControl,
+  locale,
+}: Readonly<{
+  section: "coverage" | "accounts" | "outcomes";
+  context: components["schemas"]["AnalyticsContext"];
+  selection: AnalyticsSelection | null;
+  scopeControl: ReactNode;
+  locale: Locale;
+}>) {
+  switch (section) {
+    case "coverage":
+      return <DataCoverageView locale={locale} timezone={context.timezone} />;
+    case "accounts":
+      return selection ? (
+        <AccountCoverageView
+          scope={selection.scope}
+          scopeControl={scopeControl}
+          locale={locale}
+          timezone={context.timezone}
+        />
+      ) : null;
+    case "outcomes":
+      return (
+        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+      );
+  }
+}
+
 function SectionBody({
   section,
   locale,
@@ -332,13 +368,17 @@ function SectionBody({
         </>
       ) : null;
     case "coverage":
+    case "accounts":
+    case "outcomes":
       // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
-        <DataCoverageView locale={locale} timezone={context.timezone} />
-      ) : null;
-    case "outcomes":
-      return context ? (
-        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+        <FramedSection
+          section={section}
+          context={context}
+          selection={selection}
+          scopeControl={scopeControl}
+          locale={locale}
+        />
       ) : null;
     case "forecast":
       return selection && context ? (

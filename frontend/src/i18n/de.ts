@@ -1218,6 +1218,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für Zeitraum und Kennzahlen dieses Berichts gibt es noch nichts zu zeichnen. Das Diagramm trotzdem hinzufügen oder den Zeitraum unter Bericht anpassen ändern.",
   "reporting.chooseChart": "Diagramm zum Hinzufügen",
   "reporting.exportCsv": "CSV exportieren",
+  "reporting.coverageThresholds": "Grenzen der Unternehmensabdeckung",
+  "reporting.coverageThresholdsHelp":
+    "Was der Abschnitt Abdeckung der Unternehmen als gefährdet zählt. Die Grenzen gelten ab dem nächsten Lesen.",
+  "reporting.maxEngagedSeats": "Höchstens engagierte Kontakte",
+  "reporting.untouchedDays": "Tage ohne Austausch in der Pipeline",
+  "reporting.silentDays": "Tage ohne Austausch nach einem Gewinn",
+  "reporting.wonWithinDays": "Tage, die ein Gewinn zählt",
   "reporting.captureContexts": "Täglichen Pipeline-Verlauf speichern",
   "reporting.captureHelp":
     "Wähle feste Teams und Pipelines aus, um einen Verlauf der Veränderungen aufzubauen. Dafür sind zwei vergleichbare tägliche Aufnahmen nötig.",
@@ -7683,6 +7690,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
   "analytics.sectionDelivery": "Umsetzung",
+  "analytics.sectionAccounts": "Abdeckung der Unternehmen",
+  "analytics.accounts.views": "Risikoansichten",
+  "analytics.accounts.singleThreaded": "Deals mit einem Kontakt",
+  "analytics.accounts.untouched": "Unberührt in der Pipeline",
+  "analytics.accounts.silent": "Gewonnen, aber still",
+  "analytics.accounts.pending": "Unternehmen werden geprüft",
+  "analytics.accounts.thresholds":
+    "Gefährdet heißt: höchstens {seats} engagierter Kontakt am Deal, kein Austausch seit {untouched} Tagen in der Pipeline, kein Austausch seit {silent} Tagen nach einem Gewinn innerhalb von {won} Tagen.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Offene Deals, bei denen zuletzt höchstens {seats} Kontakt im Unternehmen mit dir Mail ausgetauscht oder sich getroffen hat.",
+  "analytics.accounts.untouchedPurpose":
+    "Unternehmen mit einem offenen Deal und ohne Austausch in beide Richtungen in den letzten {days} Tagen.",
+  "analytics.accounts.silentPurpose":
+    "Unternehmen mit einem in den letzten {won} Tagen gewonnenen Deal, ohne offenen Deal und ohne Austausch in beide Richtungen in den letzten {days} Tagen.",
+  "analytics.accounts.noActivityGrant":
+    "Diese Ansicht braucht die Berechtigung, Aktivitäten zu lesen. Die Ansicht der Deals mit einem Kontakt geht weiterhin.",
+  "analytics.accounts.none": "Hier ist nichts gefährdet.",
+  "analytics.accounts.withheld_one":
+    "{count} weiterer Deal hat Kontakte, die du nicht sehen darfst, und wird darum nicht beurteilt.",
+  "analytics.accounts.withheld_other":
+    "{count} weitere Deals haben Kontakte, die du nicht sehen darfst, und werden darum nicht beurteilt.",
+  "analytics.accounts.account": "Unternehmen",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Verantwortlich",
+  "analytics.accounts.engagedSeats": "Engagierte Kontakte",
+  "analytics.accounts.seatsOf": "{engaged} von {named}",
+  "analytics.accounts.openDeals": "Offene Deals",
+  "analytics.accounts.wonDeal": "Gewonnener Deal",
+  "analytics.accounts.lastExchange": "Letzter Austausch",
+  "analytics.accounts.never": "Nie",
+  "analytics.accounts.daysAgo": "{date}, vor {days} Tagen",
+  "analytics.accounts.evidencePurpose": "Worauf dieses Ergebnis beruht.",
+  "analytics.accounts.factSeats":
+    "{engaged} von {named} am Deal genannten Kontakten haben in den letzten 90 Tagen mit dir Mail ausgetauscht oder sich getroffen.",
+  "analytics.accounts.factStage": "Der Deal steht in Phase {stage}.",
+  "analytics.accounts.factOpen_one":
+    "{count} offener Deal bei diesem Unternehmen.",
+  "analytics.accounts.factOpen_other":
+    "{count} offene Deals bei diesem Unternehmen.",
+  "analytics.accounts.factWon": "{deal} wurde am {date} gewonnen.",
+  "analytics.accounts.factInbound": "Zuletzt von dort geschrieben: {date}.",
+  "analytics.accounts.factOutbound": "Zuletzt von dir geschrieben: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.

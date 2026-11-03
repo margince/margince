@@ -4677,6 +4677,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/account-coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The accounts at risk in one population: single-threaded deals, accounts in pipeline
+         *     nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+         *     facts behind its verdict. Counts for every view come with each answer; rows come for
+         *     the view asked for. The thresholds are the framework's, and the answer prints them.
+         */
+        get: operations["getAccountCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -35385,6 +35407,71 @@ export interface components {
             code: "not_expressible" | "unknown_value" | "not_offered";
             reason: string;
         };
+        AccountCoverage: {
+            scope: components["schemas"]["AnalyticsScope"];
+            /** Format: date-time */
+            as_of: string;
+            thresholds: components["schemas"]["AccountCoverageThresholds"];
+            /** Format: int64 */
+            framework_revision: number;
+            counts: components["schemas"]["AccountCoverageCounts"];
+            /** @description False when the reader may not read activity: the two account views are then empty and uncounted. */
+            activity_readable: boolean;
+            /** @enum {string} */
+            view: "single_threaded" | "untouched" | "silent";
+            rows: components["schemas"]["AccountCoverageRow"][];
+            /** @description Deals of the view whose committee the reader could not read whole, left out rather than judged. */
+            withheld?: number;
+        };
+        AccountCoverageCounts: {
+            single_threaded: number;
+            untouched?: number;
+            silent?: number;
+        };
+        AccountCoverageRow: {
+            deal?: components["schemas"]["AccountCoverageDeal"];
+            company: components["schemas"]["AccountCoverageAccount"];
+            /** @description People inside the account engaged on the deal, for a single-threaded row. */
+            engaged_seats?: number;
+            /** @description People named on the deal, engaged or not. */
+            named_seats?: number;
+            /** @description Open deals on the account, for an untouched row. */
+            open_deals?: number;
+            /**
+             * Format: int64
+             * @description Their amounts, in the installation currency, when every one carries a rate.
+             */
+            open_amount_minor?: number;
+            won_deal?: components["schemas"]["AccountCoverageDeal"];
+            /** Format: date-time */
+            last_inbound?: string;
+            /** Format: date-time */
+            last_outbound?: string;
+            /** @description Days since the newest exchange either way, or since the won deal closed when there was none. */
+            days_silent?: number;
+        };
+        AccountCoverageDeal: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            amount_minor?: number;
+            currency?: string;
+            stage?: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** Format: date */
+            expected_close_date?: string;
+            /** Format: date-time */
+            closed_at?: string;
+        };
+        AccountCoverageAccount: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            owner_id?: string;
+        };
         SalesInitiativeMemberRef: {
             /** @enum {string} */
             record_type: "lead" | "deal";
@@ -42795,6 +42882,18 @@ export interface components {
             /** @enum {string} */
             template: "sales" | "sdr";
             reason: string;
+            account_coverage?: components["schemas"]["AccountCoverageThresholds"];
+        };
+        /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
+        AccountCoverageThresholds: {
+            /** @description A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1. */
+            max_engaged_seats?: number;
+            /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
+            untouched_days?: number;
+            /** @description A won account with no exchange within this many days is silent. Default 30. */
+            silent_days?: number;
+            /** @description How far back a won deal still makes an account a won account. Default 180. */
+            won_within_days?: number;
         };
         ReportingFramework: {
             definition: components["schemas"]["ReportingFrameworkInput"];
@@ -62561,6 +62660,31 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getAccountCoverage: {
+        parameters: {
+            query?: {
+                scope_kind?: "owner" | "team" | "workspace";
+                scope_id?: string;
+                view?: "single_threaded" | "untouched" | "silent";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counts, the thresholds and the rows of one view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCoverage"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
