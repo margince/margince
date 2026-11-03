@@ -51,6 +51,18 @@ func (w attendeeWorld) contact(t *testing.T, owner ids.UUID, address, state stri
 	return id
 }
 
+// queued is the appointment as the engine stores it. The invitee comes first,
+// then each further address with the roster entry it resolved to when booked.
+func (w attendeeWorld) queued(t *testing.T, invitee ids.UUID, attendees ...string) connector.CalendarAppointment {
+	t.Helper()
+	further, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, attendees[1:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	roster := append([]connector.CalendarAttendee{{Address: attendees[0], Basis: connector.AttendeeContact, ID: invitee, AskConsent: true}}, further...)
+	return connector.CalendarAppointment{ContactID: invitee, Attendees: attendees, Roster: roster}
+}
+
 func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 	w := newAttendeeWorld(t)
 	visible := w.contact(t, w.e.Rep1, "visible@buyer.test", "")
@@ -88,7 +100,7 @@ func TestOnlyColleaguesAndUnknownAddressesSkipTheConsentGate(t *testing.T) {
 	w.contact(t, w.e.Rep1, "withdrawn@buyer.test", "withdrawn")
 	colleague := w.e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, w.e.Rep2)
 	appointment := func(attendees ...string) connector.CalendarAppointment {
-		return connector.CalendarAppointment{ContactID: invitee, Attendees: attendees, Roster: make([]connector.CalendarAttendee, len(attendees))}
+		return w.queued(t, invitee, attendees...)
 	}
 	gate := consentGateFor(w.e.Pool)
 
@@ -109,5 +121,38 @@ func TestOnlyColleaguesAndUnknownAddressesSkipTheConsentGate(t *testing.T) {
 	}
 	if err := gate.RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Errorf("a withdrawn contact beside a host-named address answered %v, want the consent refusal", err)
+	}
+}
+
+// A further attendee who was a contact when the booking was queued stays
+// under the consent gate at send time. That holds even once the contact no
+// longer has the address. Re-resolved alone it would read as host-named and go out
+// unchecked. The gate instead refuses an address it ties to no subject.
+func TestAQueuedContactThatLosesItsAddressIsNotSentUnchecked(t *testing.T) {
+	for name, lose := range map[string]string{
+		"address removed":  `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`,
+		"contact archived": `UPDATE contact SET archived_at = now() WHERE id = $1`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := newAttendeeWorld(t)
+			invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+			further := w.contact(t, w.e.Rep1, "further@buyer.test", "granted")
+			queued := w.queued(t, invitee, "invitee@buyer.test", "further@buyer.test")
+			if !queued.Roster[1].AskConsent {
+				t.Fatalf("the further contact was queued without a consent check: %+v", queued.Roster[1])
+			}
+			w.e.WsExec(t, lose, further)
+
+			gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, queued)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Contains(gated, "further@buyer.test") {
+				t.Fatalf("gated = %v: the address left the consent gate once its contact lost it", gated)
+			}
+			if err := consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+				t.Errorf("the gate answered %v for an address no subject holds any more, want the consent refusal", err)
+			}
+		})
 	}
 }

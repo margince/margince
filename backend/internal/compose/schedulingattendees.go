@@ -137,7 +137,9 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 // consentAddresses checks every attendee once more before the provider sends,
 // and answers the addresses the consent gate must clear. The primary invitee
 // is checked against its own contact or lead. A further attendee is resolved
-// afresh, so a record created or hidden since the booking decides today.
+// afresh, and the stricter of its queued and its current answer wins. An
+// address gated when it was queued stays gated after its contact or lead lost
+// it. The gate then refuses it as a subject it cannot find.
 func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserID, in connector.CalendarAppointment) ([]string, error) {
 	gated := make([]string, 0, len(in.Attendees))
 	for i, address := range in.Attendees {
@@ -152,7 +154,8 @@ func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserI
 		if err != nil {
 			return nil, err
 		}
-		if resolved[0].AskConsent {
+		queued := in.Roster[i]
+		if queued.AskConsent || !strings.EqualFold(queued.Address, address) || resolved[0].AskConsent {
 			gated = append(gated, address)
 		}
 	}
