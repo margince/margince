@@ -20384,6 +20384,26 @@ components:
       properties:
         to_user_id: {type: string, format: uuid}
         preview_token: {type: string, minLength: 1}
+    InviteEmailHandoff:
+      type: object
+      description: |-
+        What became of an invitation email at the time of the answer, as on the Deal Room invite.
+      required: [sendable, queued]
+      properties:
+        sendable:
+          type: boolean
+          description: |-
+            Whether this installation has an outbound relay and a link origin configured, so the
+            set-password link can be mailed at all. False means the admin passes the link on by
+            hand (`issueUserPasswordLink`).
+        queued:
+          type: boolean
+          description: |-
+            Whether the invitation email was handed to the sender. The send runs after the answer,
+            so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+            refuses the address is reported a moment later as the member's
+            `invite_email_state` on the roster, where `resend_invite` is offered.
+      additionalProperties: false
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -20431,6 +20451,14 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        invite_email_state:
+          type: [string, 'null']
+          enum: [sending, sent, failed, null]
+          description: >-
+            What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+        invite_email:
+          allOf: [{$ref: '#/components/schemas/InviteEmailHandoff'}]
+          description: Present only on the answers of `inviteUser` and `resendUserInvite`.
         merged_from:
           type: array
           items: {$ref: '#/components/schemas/SeatName'}
@@ -20439,9 +20467,9 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
+            enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
-            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:
           type: [string, 'null']
           format: date-time

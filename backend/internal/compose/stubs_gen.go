@@ -3751,6 +3751,10 @@ func (stubs) RemoveMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 	httperr.NotImplemented(w, r, "RemoveMember")
 }
 
+func (stubs) ResendUserInvite(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ResendUserInvite")
+}
+
 func (stubs) PreviewMemberRetirement(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewMemberRetirementParams) {
 	httperr.NotImplemented(w, r, "PreviewMemberRetirement")
 }

@@ -13742,6 +13742,7 @@ export const en = {
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
   "users.status.invited": "Invited",
+  "users.status.inviteMailFailed": "Invitation email failed",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.handover.action": "Hand over work",
@@ -13777,6 +13778,8 @@ export const en = {
     "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
   "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
+  "users.resendInvite": "Resend invitation",
+  "users.inviteResent": "Invitation sent again to {name}",
   "users.link.title": "Set-password link for {name}",
   "users.link.pending": "Creating link…",
   // Two sentences, no dash (VOICE-RULE-5).

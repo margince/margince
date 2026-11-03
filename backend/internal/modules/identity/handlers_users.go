@@ -99,6 +99,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		GreetingName: req.GreetingName,
 		Role:         string(req.Role),
 		TeamIDs:      teams,
+		Mailed:       h.canSendPasswordLink(),
 	})
 	if err != nil {
 		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
@@ -108,8 +109,8 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	h.sendInvite(r, email.String(), rawToken, actor)
-	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
+	queued := h.sendInvite(r, email.String(), rawToken, actor)
+	h.writeInvitedUser(w, r, actor, userID, http.StatusCreated, queued)
 }
 
 // ChangeUserRole (PATCH /users/{id}/role).
@@ -370,19 +371,17 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 	httperr.WriteJSON(w, status, wireUserWithRoles(row))
 }
 
-// sendInvite mails the single-use set-password link when a mailer is wired.
-// It runs off the request. The member and token already committed.
-// A slow relay must not hold the admin's Invite action.
-//
-// A goroutine and not a queued job because the link holds the raw token.
-// A job table stores its arguments verbatim, so the token must not enter it.
-// A refusal is logged.
-func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) {
+// sendInvite mails the set-password link off the request, so a slow relay does
+// not hold the admin's Invite. It reports whether it handed the mail over.
+// A goroutine and not a queued job: a job table stores its arguments verbatim,
+// and the raw token must not enter it. The relay's answer is stamped on the
+// link, where the roster reads it.
+func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) bool {
 	if !h.canSendPasswordLink() || rawToken == "" {
-		return
+		return false
 	}
 	// releaseSend runs in the goroutine, which outlives this handler.
-	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), inviteSendTimeout)
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
 	done := h.resetSendStarted // test seam; nil in production
 	go func() {
 		defer releaseSend()
@@ -394,11 +393,18 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		words := h.mailCopy(workCtx, email)
 		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
 		sendErr := mailer.SendProduct(workCtx, h.resetMailer, email, words.InviteSubject, body)
-		if sendErr == nil {
-			return
+		if sendErr != nil {
+			slog.Error("invite email failed", "err", sendErr)
 		}
-		slog.Error("invite email failed", "err", sendErr)
+		// Its own budget: a send that ran out of time has spent workCtx, and the
+		// refusal must still land on the link.
+		outcomeCtx, releaseOutcome := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
+		defer releaseOutcome()
+		if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
+			slog.Error("recording an invite email outcome failed", "err", err)
+		}
 	}()
+	return true
 }
 
 // CreateFormerMember (POST /users/former): record a colleague who already left,
