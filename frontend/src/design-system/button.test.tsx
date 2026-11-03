@@ -585,7 +585,7 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
       ...misspelled.map(where),
     ]).toEqual([]);
     // Pinned, so a pair deleted on both sides fails rather than shrinking.
-    expect(paired).toHaveLength(26);
+    expect(paired).toHaveLength(28);
   });
 
   it.each([

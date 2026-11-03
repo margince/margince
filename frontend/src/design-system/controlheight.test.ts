@@ -230,8 +230,9 @@ const ACCEPTED = new Map<string, string>([
   // rise in the shared height passes straight through.
   [
     ".topbar-trail .iconbtn, .topbar-trail .btn.btn-bare",
-    "the top bar's glyphs take a 44px box under a coarse pointer and clip their " +
-      "fill to the --controlHeight square inside it (app/topbar.css)",
+    "the top bar's glyphs take a 44px-tall box under a coarse pointer, as wide " +
+      "as half the gap to each neighbour allows, and clip their fill to the " +
+      "--controlHeight square inside it (app/topbar.css)",
   ],
   [
     ".segmented button",

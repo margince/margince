@@ -22,6 +22,8 @@
   container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
+  /* The gap between the bar's glyphs, which a thumb's targets split (below). */
+  --topbarGlyphGap: var(--space-2);
   flex: none;
   /* One number for the strip's height, read by the sidebar too: the head that
      carries the logomark is sized against it so the first destination's row
@@ -61,7 +63,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--topbarGlyphGap);
   min-width: 0;
 }
 
@@ -191,7 +193,7 @@
     /* One gap for the whole strip: the three glyphs at the end sit the same
        distance apart as the collapse control and the trail at the start, so the
        row reads as one rhythm rather than two. */
-    gap: var(--space-2);
+    gap: var(--topbarGlyphGap);
   }
   .topbar-lead {
     flex: 1;
@@ -260,9 +262,8 @@
    and no control for it. What stays is what a phone reader cannot get any other
    way: where they are, how to search, and who they are. */
 @media (max-width: 700px) {
-  .topbar,
-  .topbar-trail {
-    gap: var(--space-1);
+  .topbar {
+    --topbarGlyphGap: var(--space-1);
   }
   .topbar-toggle {
     display: none;
@@ -286,24 +287,30 @@
   outline-offset: 2px;
 }
 
-/* A thumb gets 44px targets (WCAG 2.5.5, AAA; 2.5.8 AA asks 24px). Under
+/* A thumb gets 44px-tall targets (WCAG 2.5.8 AA asks 24px). Under
    `pointer: coarse`, not a width, because a narrow desktop window is a mouse. */
 @media (pointer: coarse) {
   .topbar {
     --topbarTarget: max(var(--controlHeight), 44px);
     --topbarTargetInset: calc((var(--topbarTarget) - var(--controlHeight)) / 2);
+    /* Sideways a target takes half the gap, so neighbours touch and never
+       overlap: a tap on a drawn square always reaches that square's button. */
+    --topbarReach: calc(var(--topbarGlyphGap) / 2);
   }
   /* The eye keeps the 32px square: every state's fill is clipped to the content
      box, and the negative margins keep the bar's layout and gaps as drawn. */
   .topbar-trail .iconbtn,
   .topbar-trail .btn.btn-bare {
-    inline-size: var(--topbarTarget);
+    position: relative;
+    inline-size: calc(var(--controlHeight) + 2 * var(--topbarReach));
     max-inline-size: none;
     block-size: var(--topbarTarget);
-    margin: calc(-1 * var(--topbarTargetInset));
-    padding: var(--topbarTargetInset);
+    margin: calc(-1 * var(--topbarTargetInset)) calc(-1 * var(--topbarReach));
+    padding: var(--topbarTargetInset) var(--topbarReach);
     background-clip: content-box;
-    border-radius: calc(var(--r-sm) + var(--topbarTargetInset));
+    border-radius:
+      calc(var(--r-sm) + var(--topbarReach)) /
+      calc(var(--r-sm) + var(--topbarTargetInset));
   }
   /* Each state paints with the `background` shorthand, which resets the clip. */
   .topbar .topbar-trail .iconbtn:is(:hover, :active),
@@ -312,10 +319,25 @@
   .topbar .topbar-trail .btn.btn-bare[aria-expanded="true"] {
     background-clip: content-box;
   }
-  /* The ring around the square, inside the box and so inside the bar. */
+  /* An outline follows the box, which is wider than tall, so the ring is drawn
+     on a layer the size of the square. */
   .topbar-trail .iconbtn:focus-visible,
   .topbar-trail .btn.btn-bare:focus-visible {
-    outline-offset: calc(2px - var(--topbarTargetInset));
+    outline: none;
+  }
+  .topbar-trail .iconbtn:focus-visible::after,
+  .topbar-trail .btn.btn-bare:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: var(--topbarTargetInset) var(--topbarReach);
+    border-radius: var(--r-sm);
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+    pointer-events: none;
+  }
+  /* A count is placed against its button, which now stands round the square. */
+  .topbar-trail :is(.notifbell-count, .outbox-count) {
+    translate: calc(-1 * var(--topbarReach)) var(--topbarTargetInset);
   }
   /* The field takes the floor as its own height. */
   .topbar .topbar-search {
@@ -342,19 +364,31 @@
 /* Drawn as a glyph, the search takes the glyphs' target and square. */
 @media (pointer: coarse) and (max-width: 1100px) {
   .topbar .topbar-search {
-    inline-size: var(--topbarTarget);
+    position: relative;
+    inline-size: calc(var(--controlHeight) + 2 * var(--topbarReach));
     min-block-size: var(--topbarTarget);
-    margin: calc(-1 * var(--topbarTargetInset));
-    padding: var(--topbarTargetInset);
+    margin: calc(-1 * var(--topbarTargetInset)) calc(-1 * var(--topbarReach));
+    padding: var(--topbarTargetInset) var(--topbarReach);
     border-width: 0;
     background-clip: content-box;
-    border-radius: calc(var(--r-sm) + var(--topbarTargetInset));
+    border-radius:
+      calc(var(--r-sm) + var(--topbarReach)) /
+      calc(var(--r-sm) + var(--topbarTargetInset));
   }
   .topbar .topbar-search:is(:hover, :active) {
     background-clip: content-box;
   }
   .topbar .topbar-search:focus-visible {
-    outline-offset: calc(2px - var(--topbarTargetInset));
+    outline: none;
+  }
+  .topbar .topbar-search:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: var(--topbarTargetInset) var(--topbarReach);
+    border-radius: var(--r-sm);
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+    pointer-events: none;
   }
 }
 

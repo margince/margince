@@ -218,10 +218,11 @@ function readsTheLadder(value: string, rungs: Set<string>): boolean {
       return `${CALC}${calls.length - 1}`;
     },
   );
+  // The `/` of an elliptical corner separates the across radii from the down.
   return masked
     .trim()
     .split(/\s+/)
-    .filter(Boolean)
+    .filter((corner) => corner !== "" && corner !== "/")
     .every((corner) => {
       const call = new RegExp(`^${CALC}(\\d+)$`).exec(corner);
       if (call) {
@@ -516,6 +517,16 @@ describe("the corner detector sees what it claims to", () => {
       name: "a token nested by a calc",
       css: ".a { border-radius: calc(var(--r-sm) - 2px); }",
       strays: 0,
+    },
+    {
+      name: "an elliptical corner whose two radii adjust a rung",
+      css: ".a { border-radius: calc(var(--r-sm) + 2px) / calc(var(--r-sm) + 6px); }",
+      strays: 0,
+    },
+    {
+      name: "an elliptical corner with a raw down radius",
+      css: ".a { border-radius: var(--r-sm) / 6px; }",
+      strays: 1,
     },
     {
       name: "a mixed shorthand with one raw corner",
