@@ -13,9 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The blocker is read from the connection row, not from the provider: a
-// read-only grant says so before any call, and a missing connection reads as
-// unavailable rather than as a page that works.
+// The blocker is read from the connection row, not from the provider. A
+// read-only grant says so before any call. A missing connection reads as
+// unavailable, not as a page that works.
 func TestABookingCalendarsBlockerComesFromItsConnection(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")

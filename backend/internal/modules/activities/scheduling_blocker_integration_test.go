@@ -14,7 +14,7 @@ import (
 )
 
 // A page saved before the profile existed names no calendar. The host reads
-// it as blocked for want of one, and a guest reads it as paused: the same
+// it as blocked for want of one, and a guest reads it as paused. That is the
 // answer the availability and booking calls give by refusing.
 func TestAPageWithNoCalendarIsBlockedForTheHostAndPausedForTheGuest(t *testing.T) {
 	f := setupBooking(t)

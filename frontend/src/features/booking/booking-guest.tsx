@@ -82,7 +82,7 @@ export function BookingGuestScreen({
       company_name: value.company_name ?? "",
       proposal: "proposal" in value ? value.proposal : null,
       video_app: videoAppOf(value, preview),
-      // The server's own answer for a guest page; the host's preview reads
+      // The server's own answer for a guest page. The host's preview reads
       // only the switch, since it may show a page that is not live yet.
       paused: "paused" in value ? value.paused : !value.enabled,
     }),
