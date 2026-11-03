@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -31,18 +32,24 @@ import (
 // re-grant of a mailbox with no import yet.
 type chainWire struct {
 	*backfillWireEnv
-	h connectorHandlers
+	h      connectorHandlers
+	google *recordingOAuth
 }
 
+// setupChainWire registers the real calendar connector over the same Google
+// token stub as the mailbox, so a shared consent seals both from one exchange.
 func setupChainWire(t *testing.T) chainWire {
 	t.Helper()
 	b := setupBackfillWire(t)
-	return chainWire{backfillWireEnv: b, h: connectorHandlers{
+	google := &recordingOAuth{granted: gmailScopes}
+	b.registry.Register(gcal.New(google, stubGcalAPI{}))
+	return chainWire{backfillWireEnv: b, google: google, h: connectorHandlers{
 		registry:      b.registry,
 		authority:     backfillAuthority{},
-		oauth:         &recordingOAuth{},
+		oauth:         google,
 		gmailAPI:      stubGmailAPI{},
-		gcalOAuth:     gcal.NewOAuth(gcal.OAuthConfig{ClientID: "cid", ClientSecret: "sec"}),
+		gcalOAuth:     google,
+		gcalAPI:       stubGcalAPI{},
 		signer:        newStateSigner([]byte(testStateKey)),
 		publicBaseURL: "https://app.test",
 		apiBaseURL:    "https://api.test",
@@ -196,28 +203,44 @@ func TestAConnectImportThatCannotStartStillLandsConnected(t *testing.T) {
 	}
 }
 
-// One click asks for mail, its calendar and an import. Declining the calendar
-// costs only the calendar: the mailbox stays connected and its import queued.
-func TestADeclinedCalendarAfterAGrantedMailboxKeepsTheMailboxAndItsImport(t *testing.T) {
+// One screen asks for mail, its calendar and an import. Unticking the calendar
+// there costs only the calendar: the mailbox stays connected and its import
+// queued, and no second consent opens.
+func TestAnUntickedCalendarOnTheSharedScreenKeepsTheMailboxAndItsImport(t *testing.T) {
 	c := setupChainWire(t)
 	jar := browserJar{}
 
 	state := c.connect(t, jar, `{"return_to":"settings","also_connect":"gcal","import_window":"6m"}`)
-	toCalendar := c.callback(t, jar, "gmail", state, granted())
-	calendar, u := consentState(t, c.h, toCalendar.Header().Get("Location"))
-	if calendar.Provider != "gcal" || calendar.WindowMonths != 0 {
-		t.Fatalf("calendar consent state = %+v, want gcal carrying no held window", calendar)
-	}
-
-	denied := "access_denied"
-	back := c.callback(t, jar, "gcal", u.Query().Get("state"), crmcontracts.ConnectorOAuthCallbackParams{Error: &denied})
-	requireLocation(t, back, "https://app.test/#/settings/connections/denied/gcal")
+	requireLocation(t, c.callback(t, jar, "gmail", state, granted()), "https://app.test/#/settings/connections/denied/gcal")
 
 	connID := c.gmailConnection(t)
 	if n := c.env.WsCount(t, `SELECT count(*) FROM capture_connection WHERE id = $1 AND status = 'connected'`, connID); n != 1 {
-		t.Errorf("the granted mailbox is not connected after its calendar was declined")
+		t.Errorf("the granted mailbox is not connected after its calendar was unticked")
 	}
 	if runs, audits, pagers := c.importOpened(t, connID, c.gmail.messages); runs != 1 || audits != 1 || pagers != 1 {
 		t.Errorf("queued runs, audit rows, pagers = %d, %d, %d; want the mail leg's one import", runs, audits, pagers)
+	}
+	if n := c.env.WsCount(t, `SELECT count(*) FROM capture_connection WHERE user_id = $1 AND provider = 'gcal'`, c.env.Rep1); n != 0 {
+		t.Errorf("%d calendar connection(s) from a grant without the calendar scope, want none", n)
+	}
+}
+
+// With both ticked, the one callback connects the calendar from the mail leg's
+// grant: one exchange, and the calendar row records what Google granted.
+func TestOneSharedConsentConnectsTheMailboxAndItsCalendar(t *testing.T) {
+	c := setupChainWire(t)
+	c.google.granted = append(slices.Clone(gmailScopes), gcal.ConsentScopes()...)
+	jar := browserJar{}
+
+	state := c.connect(t, jar, `{"return_to":"onboarding","also_connect":"gcal"}`)
+	requireLocation(t, c.callback(t, jar, "gmail", state, granted()), "https://app.test/#/onboarding/connect/ok/gcal")
+
+	if c.google.exchanges != 1 {
+		t.Errorf("the code was exchanged %d times, want once for both connections", c.google.exchanges)
+	}
+	if n := c.env.WsCount(t, `SELECT count(*) FROM capture_connection
+		WHERE user_id = $1 AND provider = 'gcal' AND status = 'connected'
+		  AND account_label = 'owner@example.com' AND $2 = ANY(provider_scopes)`, c.env.Rep1, gcal.ReadScope); n != 1 {
+		t.Errorf("connected calendar rows holding the calendar grant = %d, want 1", n)
 	}
 }

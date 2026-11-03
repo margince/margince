@@ -26797,13 +26797,14 @@ export interface components {
              */
             return_to?: "onboarding" | "settings" | "meetings";
             /**
-             * @description The paired calendar to ask for straight after this mail grant, in one round trip:
-             *     the mail callback stores its grant, then redirects to the calendar's own consent
-             *     instead of landing, and the landing names the calendar's outcome. Only `gcal` after
-             *     `gmail` and `graphcal` after `graph`; any other pairing is refused with
-             *     `422 also_connect_mismatch`. The calendar must be connectable right now, or the
-             *     request answers exactly as a direct connect to it would. A declined or failed
-             *     calendar consent leaves the mail grant in place.
+             * @description The paired calendar to connect with this mail grant, in one round trip, and the
+             *     landing names the calendar's outcome. `gcal` joins the Gmail consent screen: the
+             *     one grant connects both, and a calendar the user unticks there lands as declined.
+             *     `graphcal` gets its own consent straight after the `graph` callback stores its
+             *     grant. Only `gcal` after `gmail` and `graphcal` after `graph`; any other pairing is
+             *     refused with `422 also_connect_mismatch`. The calendar must be connectable right
+             *     now, or the request answers exactly as a direct connect to it would. A declined or
+             *     failed calendar leaves the mail grant in place.
              * @enum {string}
              */
             also_connect?: "gcal" | "graphcal";

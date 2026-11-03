@@ -143,7 +143,7 @@ func TestChainAfterConnectAsksForTheCalendarInsteadOfLanding(t *testing.T) {
 
 	h.chainAfterConnect(context.Background(), rec, req, connectState{
 		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal",
-	})
+	}, nil)
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want 302", rec.Code)
@@ -171,7 +171,7 @@ func TestChainAfterConnectWithNothingToChainLandsAsBefore(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil),
-		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings})
+		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
@@ -186,7 +186,7 @@ func TestChainAfterConnectLandsTheCalendarsFailureWhenItsAppIsGone(t *testing.T)
 	rec := httptest.NewRecorder()
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil),
-		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal"})
+		connectState{Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal"}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/error/gcal"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
@@ -244,7 +244,7 @@ func TestTheImportAskedForAtConnectStartsOnlyUnderTheCap(t *testing.T) {
 
 			h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
 				Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
-			})
+			}, nil)
 
 			if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"+tc.query; got != want {
 				t.Errorf("Location = %q, want %q", got, want)
@@ -267,7 +267,7 @@ func TestTheImportWithNoEngineLandsPlain(t *testing.T) {
 
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
 		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, WindowMonths: 6,
-	})
+	}, nil)
 
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/settings/connections/ok/gmail"; got != want {
 		t.Errorf("Location = %q, want %q", got, want)
@@ -283,7 +283,7 @@ func TestAHeldImportRidesTheChainToTheCalendarsLanding(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.chainAfterConnect(context.Background(), rec, httptest.NewRequest(http.MethodGet, "/", nil), connectState{
 		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", ReturnTo: returnToSettings, Then: "gcal", WindowMonths: 6,
-	})
+	}, nil)
 	calendar, u := consentState(t, h, rec.Header().Get("Location"))
 	if calendar.WindowMonths != 6 {
 		t.Fatalf("calendar state window = %d, want the held 6", calendar.WindowMonths)

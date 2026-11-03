@@ -76,7 +76,7 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: csrfCookieName(providerGmail), Value: nonce})
 	h.ConnectorOAuthCallback(rec, req, "gmail", crmcontracts.ConnectorOAuthCallbackParams{State: state, Code: &code})
 
-	if oauth.exchanged {
+	if oauth.exchanges != 0 {
 		t.Error("the code was exchanged for a credential the granting human can no longer hold")
 	}
 	// A Location on anything but a redirect status navigates no browser, so the

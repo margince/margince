@@ -49,7 +49,7 @@ To connect your calendar to Margince, tick **Calendar** when you connect your Go
 1. Open **Settings**, then **Connections**.
 2. For a new account, choose **Connect Google** or **Connect Microsoft 365** and keep **Calendar** ticked.
 3. For an account already connected with mail only, choose **Connect calendar** in its **Calendar** row. Or choose **Change what it brings in** in the account's menu.
-4. Approve access on the provider's screen. With Mail and Calendar both ticked, the provider asks twice: once for mail, then once for your calendar.
+4. Approve access on the provider's screen. Google asks once for mail and calendar, and Microsoft 365 asks once for each.
 If the calendar is refused, mail still connects and the note says so, with **Connect calendar** to try again.
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.

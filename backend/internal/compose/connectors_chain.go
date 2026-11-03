@@ -86,8 +86,9 @@ func heldOnLeg(st connectState) int {
 }
 
 // chainAfterConnect runs what the consent asked for once its grant is stored:
-// the import, then the paired calendar's consent instead of the landing.
-func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.ResponseWriter, r *http.Request, st connectState) {
+// the import, then the paired calendar instead of the landing. A shared consent
+// connects the calendar from the same grant; otherwise it opens its own consent.
+func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.ResponseWriter, r *http.Request, st connectState, consent *consentCode) {
 	held := heldOnLeg(st)
 	if IsMailProvider(st.Provider) && st.WindowMonths > 0 {
 		started, err := h.importer.start(ctx, st)
@@ -110,6 +111,10 @@ func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.Respons
 	}
 	if st.Then == "" {
 		http.Redirect(w, r, h.landingURL(outcomeOK, st.ReturnTo, st.Provider, held), http.StatusFound)
+		return
+	}
+	if st.SharedConsent {
+		h.connectSharedCalendar(ctx, w, r, st, held, consent)
 		return
 	}
 	// Resolved again rather than trusted from the connect: a stored app is read

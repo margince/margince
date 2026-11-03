@@ -233,8 +233,9 @@ refresh token (see below).
 ## The connectors
 
 Every connection is standing, and syncs in the background. Mail and calendar are always separate
-connections, on both Google and Microsoft. There is one consent each, so a seat can bring one without
-the other, and disconnect either.
+connections, on both Google and Microsoft, so a seat can bring one without the other, and disconnect
+either. Each has its own consent, with one exception: a Gmail connect with `also_connect: gcal` asks
+for both on one Google screen, and the callback seals that one grant into both connections.
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
 |---|---|---|---|---|---|---|
@@ -369,9 +370,17 @@ connection** footer. The roster manages an existing connection.
 
 ### Google Calendar (gcal): standing OAuth, poll only
 
-OAuth2 to Google with `calendar.readonly`. It **uses the same Google OAuth app as Gmail**, but as its
-*own* authorization that asks for the calendar scope alone. It sets no `include_granted_scopes`, so the
-grant to read mail never leaks into this credential.
+OAuth2 to Google with `calendar.readonly`. It **uses the same Google OAuth app as Gmail**. Connected
+alone, it is its *own* authorization that asks for the calendar scopes only. It sets no
+`include_granted_scopes`, so an earlier grant to read mail never leaks into this credential.
+
+Connected together with Gmail, it shares the mail consent instead
+(`internal/compose/connectors_sharedconsent.go`). The Gmail consent adds the calendar's scopes, so the user
+sees one screen. Google's code is single use, so the callback exchanges it once and seals that grant
+into both rows. The calendar row then holds a refresh token that also carries the mail scopes, and its
+`provider_scopes` says so. Google lets the user untick the calendar on that screen. A grant without
+`calendar.readonly` connects the mailbox alone and lands as a declined calendar. Disconnecting one row
+deletes only its own vault copy.
 
 The sync of new mail uses a `syncToken`. A stale token
 (`ErrSyncTokenGone`) starts it again. No push, and no `Backfiller`. The first sync takes a full list
