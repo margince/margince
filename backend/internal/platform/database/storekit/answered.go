@@ -24,39 +24,25 @@ type answerArm struct {
 // Answers follow the source strictly in event time. Capture order cannot break timestamp ties.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
-	return answerArmsWithAvailability(inbound, until, false)
-}
-
-func answerArmsWithAvailability(inbound, until string, deferred bool) []answerArm {
-	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until, deferred))}, offThreadAnswerArms(inbound, until, deferred)...)
-}
-
-func answerAvailability(alias string, deferred bool) string {
-	clause := "activity_thread_available(" + alias + ".thread_key)"
-	if deferred {
-		return "NOT " + clause
-	}
-	return clause
+	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
+		offThreadAnswerArms(inbound, until)...)
 }
 
 // answerLater is a row that is live and happened strictly after the inbound
 // row and no later than until.
-func answerLater(row, inbound, until string, deferred bool) string {
-	return fmt.Sprintf(`%[1]s.archived_at IS NULL AND %[4]s
+func answerLater(row, inbound, until string) string {
+	return fmt.Sprintf(`%[1]s.archived_at IS NULL
 	    AND %[3]s
 	    AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: strictly after the inbound row, an ordering of rows
-	`, row, inbound, occurredday.BegunSQL(row, until), answerAvailability(row, deferred))
+	`, row, inbound, occurredday.BegunSQL(row, until))
 }
 
 // Off-thread mail must be attested and name the sender; Bcc never proves delivery.
 // Sender-first lateral probes preserve bounded index plans.
 // Predicates must retain idx_activity_answer_mail_subject and idx_activity_answer_touch conditions.
-func offThreadAnswerArms(inbound, until string, deferred bool) []answerArm {
-	later := func(row string) string { return answerLater(row, inbound, until, deferred) }
+func offThreadAnswerArms(inbound, until string) []answerArm {
+	later := func(row string) string { return answerLater(row, inbound, until) }
 	everyoneReads := func(row string) string {
-		if deferred {
-			return row + `.restricted_at IS NULL AND ` + row + `.audience='workspace'`
-		}
 		return row + `.restricted_at IS NULL` + auth.AudienceWorkspaceOnly(row)
 	}
 	sameSubject := NormalisedSubjectSQL(inbound+".subject") + ` <> ''
@@ -115,7 +101,7 @@ func offThreadAnswerArms(inbound, until string, deferred bool) []answerArm {
 const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
 	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
 	answer_mail.audience, answer_mail.source_activity_id, answer_mail.source_system, answer_mail.source_id, answer_mail.archived_at,
-	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject, answer_mail.thread_key`
+	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject`
 
 // Contact-first probes keep the planner from scanning all later calls and meetings.
 // OFFSET 0 preserves that join order.
@@ -181,14 +167,14 @@ func AnsweredReadableSQL(inbound, until, readable string) string {
 	exists := make([]string, 0, len(arms))
 	for _, arm := range arms {
 		exists = append(exists, "EXISTS (SELECT 1 FROM (SELECT "+arm.id+" AS id "+arm.from+") answer_found"+
-			" JOIN activity readable_answer ON readable_answer.id = answer_found.id WHERE (readable_answer.restricted_at IS NULL AND activity_thread_available(readable_answer.thread_key)) AND "+readable+")")
+			" JOIN activity readable_answer ON readable_answer.id = answer_found.id WHERE readable_answer.restricted_at IS NULL AND "+readable+")")
 	}
 	return "(" + strings.Join(exists, " OR ") + ")"
 }
 
 // OffThreadAnswersSQL supplies the existing settlement engine with off-thread evidence.
 func OffThreadAnswersSQL(inbound, until string) string {
-	arms := offThreadAnswerArms(inbound, until, false)
+	arms := offThreadAnswerArms(inbound, until)
 	selects := make([]string, 0, len(arms))
 	for _, arm := range arms {
 		selects = append(selects, "SELECT "+arm.id+" AS id, "+arm.at+" AS occurred_at "+arm.from)
@@ -205,19 +191,4 @@ func FirstAnswerAtSQL(inbound, until string) string {
 		firsts = append(firsts, "(SELECT min("+arm.at+") "+arm.from+")")
 	}
 	return "LEAST(" + strings.Join(firsts, ",\n\t ") + ")"
-}
-
-// UnansweredSQL withholds work while a matching answer is temporarily unavailable.
-func UnansweredSQL(inbound, until string) string {
-	return "(activity_thread_available(" + inbound + ".thread_key) AND NOT " + AnsweredSQL(inbound, until) + " AND NOT " + UnavailableAnswersSQL(inbound, until) + ")"
-}
-
-// UnavailableAnswersSQL withholds conclusions while matching answer evidence is being repaired.
-func UnavailableAnswersSQL(inbound, until string) string {
-	arms := answerArmsWithAvailability(inbound, until, true)
-	unknown := make([]string, 0, len(arms))
-	for _, arm := range arms {
-		unknown = append(unknown, "EXISTS(SELECT 1 "+arm.from+")")
-	}
-	return "(" + strings.Join(unknown, " OR ") + ")"
 }

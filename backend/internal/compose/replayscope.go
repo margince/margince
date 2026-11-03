@@ -168,6 +168,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/users/{id}/merge":       {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
 	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/analytics/decisions":    {object: tableActivity, table: tableActivity, idPath: "id"},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},

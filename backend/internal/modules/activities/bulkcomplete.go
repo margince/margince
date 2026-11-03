@@ -43,7 +43,7 @@ func (s *Store) LockTaskForBulkTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	var task BulkTask
 	err := tx.QueryRow(ctx, `
 		SELECT coalesce(subject, ''), version, is_done, source_system, source_id, source_activity_id FROM activity
-		 WHERE activity_thread_available(thread_key) AND id = $1 AND kind = 'task' AND (archived_at IS NULL AND activity_thread_available(thread_key))
+		 WHERE id = $1 AND kind = 'task' AND archived_at IS NULL
 		   FOR UPDATE`, id.UUID).Scan(&task.Subject, &task.Version, &task.Done, &task.SourceSystem, &task.SourceID, &task.SourceActivityID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BulkTask{}, apperrors.ErrNotFound
@@ -116,7 +116,7 @@ func VisibleTasks(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UUI
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND a.kind = 'task' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND (%s)`,
+		 WHERE a.id = ANY($%d) AND a.kind = 'task' AND a.archived_at IS NULL AND (%s)`,
 		idsPos, content), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading which tasks the caller may see: %w", err)

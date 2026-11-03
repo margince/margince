@@ -217,9 +217,9 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		          (SELECT min(h.changed_at) FROM deal_stage_history h WHERE h.deal_id = d.id)))
 		     FROM deal d WHERE d.owner_id = %[1]s AND (%[2]s)),
 		  (SELECT min(a.created_at) FROM activity a
-		    WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.assignee_id = %[1]s AND (%[3]s) AND (a.is_done OR %[7]s)),
+		    WHERE a.kind = 'task' AND a.archived_at IS NULL AND a.assignee_id = %[1]s AND (%[3]s) AND (a.is_done OR %[7]s)),
 		  (SELECT min(LEAST(m.created_at, m.occurred_at)) FROM activity m
-		    WHERE activity_thread_available(m.thread_key) AND m.kind = 'meeting' AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key)) AND %[4]s AND (%[5]s)),
+		    WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s AND (%[5]s)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
 		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+NonImportedLeadSQL+` AND (%[6]s))`,
 		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned), meetingScope,

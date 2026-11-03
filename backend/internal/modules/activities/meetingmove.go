@@ -75,8 +75,8 @@ func moveCapturedMeetingTx(
 	err := tx.QueryRow(ctx, `
 		SELECT a.occurred_at, a.duration_seconds, a.occurred_precision, a.meeting_status, COALESCE(a.agenda_fingerprint, ''),
 		       `+occupiesHostSlotSQL+` FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = $1
-		   AND a.kind = 'meeting' AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND a.archived_at IS NULL
+		 WHERE a.id = $1
+		   AND a.kind = 'meeting' AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &stored.agenda, &holdsSlot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

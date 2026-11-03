@@ -53,7 +53,6 @@ func Groups() []Group {
 		// signals must not be able to stall the edge projection, and vice
 		// versa.
 		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
-		{Name: "cg:thread-repair", Streams: forEntities(activityStreamEntity)},
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
 		// module and this call belongs to contacts, and a module never reaches

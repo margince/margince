@@ -1200,7 +1200,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-47 columns · primary key `(id)` · referenced by 18 foreign keys
+48 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1227,6 +1227,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_accepted_by` | `text` |  | Who accepted the lead for its partner. |
 | `partner_company_id` | `uuid` |  | The partner company that referred this lead. |
 | `phone` | `text` |  | E.164, as a contact's number is. |
+| `product_id` | `uuid` |  | Points at `product.id`. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
@@ -1263,6 +1264,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `origin` | `lead_origin` | the parent cannot be deleted while this row points at it |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
+| `product_id` | `product` | the parent cannot be deleted while this row points at it |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `promoted_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `qualified_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
@@ -1306,6 +1308,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_sla_open`: `btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL))`
 - `idx_lead_status_live`: `btree (status) WHERE (archived_at IS NULL)`
 - `lead_pkey`: `unique, btree (id)`
+- `lead_product_idx`: `btree (product_id) WHERE (product_id IS NOT NULL)`
 - `uq_lead_email_dedupe`: `unique, btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))`
 - `uq_lead_from_contact_live`: `unique, btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))`
 - `uq_lead_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`

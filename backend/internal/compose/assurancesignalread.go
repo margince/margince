@@ -155,7 +155,7 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	// or its suggestion's evidence cites. Each copy is planned separately, and
 	// the planner's memory stays with the pooled connection.
 	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE activity_thread_available(ra.thread_key) AND (ra.archived_at IS NULL AND activity_thread_available(ra.thread_key)) AND ra.id IN (
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
    SELECT `+storekit.CitedActivityID("cite")+` FROM signal os, jsonb_array_elements(os.evidence) cite
     WHERE cite->>'source_type' = 'activity' AND os.id IN (`+fmt.Sprintf(open, "oe.subject_id")+`)
    UNION ALL `+deals.SuggestionEvidenceActivitiesSQL(fmt.Sprintf(open, "oe.observed->>'suggestion_id'"))+`)`, arg)

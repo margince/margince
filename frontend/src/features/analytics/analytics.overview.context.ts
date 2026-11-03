@@ -28,6 +28,11 @@ export const CONTEXT_DIALS = [
   "from",
   "through",
   "close",
+  "product",
+  "initiative",
+  "country",
+  "industry",
+  "basis",
 ] as const;
 type ContextDial = (typeof CONTEXT_DIALS)[number];
 

@@ -144,18 +144,18 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
   (SELECT min(ci.source_occurred_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   (SELECT min(ci.provider_received_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
-   WHERE activity_thread_available(later.thread_key) AND later.kind = a.kind AND later.thread_key = a.thread_key
-    AND (later.archived_at IS NULL AND activity_thread_available(later.thread_key)) AND `+AutomaticMailContent+`
+   WHERE later.kind = a.kind AND later.thread_key = a.thread_key
+    AND later.archived_at IS NULL AND `+AutomaticMailContent+`
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
     -- A later message read only in part is later context not read.
     AND (NOT coalesce(later.id = ANY($%[1]d::uuid[]), false) OR NOT `+provenance.MailBodyCompleteSQL("later")+`)),
   a.kind = 'email' AND a.body_completeness NOT IN ('complete', 'unassessed'),
   a.kind = 'email' AND a.body_completeness = 'unassessed',
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
-   WHERE activity_thread_available(later.thread_key) AND later.kind = a.kind AND later.thread_key = a.thread_key AND (later.archived_at IS NULL AND activity_thread_available(later.thread_key))
+   WHERE later.kind = a.kind AND later.thread_key = a.thread_key AND later.archived_at IS NULL
     AND `+AutomaticMailContent+` AND later.body_completeness = 'unassessed'
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
- FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%[2]d`, arg(in.ReadMessages), arg(in.SourceID))
+ FROM activity a WHERE a.id = $%[2]d`, arg(in.ReadMessages), arg(in.SourceID))
 	if !in.Preview {
 		query += " FOR UPDATE OF a"
 	}

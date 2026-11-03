@@ -72,14 +72,14 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
      AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
-     AND NOT EXISTS (SELECT 1 FROM activity task WHERE activity_thread_available(task.thread_key) AND task.source_system = 'email_request' AND task.source_activity_id = a.id)
+     AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
      AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)
 		if err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`) FROM activity a
-    WHERE activity_thread_available(a.thread_key) AND `+eligible+` ORDER BY a.occurred_at DESC, a.id LIMIT 64 FOR UPDATE OF a SKIP LOCKED`, args...)
+    WHERE `+eligible+` ORDER BY a.occurred_at DESC, a.id LIMIT 64 FOR UPDATE OF a SKIP LOCKED`, args...)
 		if err != nil {
 			return fmt.Errorf("activities: reading email requests: %w", err)
 		}

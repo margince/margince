@@ -46,7 +46,6 @@ type Step struct {
 	Audit    AuditPolicy
 	Estimate func(context.Context, Querier, int64) (int64, bool, error)
 	Batch    func(context.Context, pgx.Tx, BatchIn) (BatchOut, error)
-	Retry    func(context.Context, pgx.Tx) error
 	// EmptyWhenDone marks an estimate that counts only rows still to correct,
 	// so a finished step that still estimates rows left some uncorrected.
 	EmptyWhenDone bool

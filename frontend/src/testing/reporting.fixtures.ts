@@ -32,6 +32,9 @@ export const reportingMetricNames: Record<
   partner_activity: "Active partners",
   stage_conversion: "Stage conversion",
   lead_cohort_outcomes: "What became of new leads",
+  bookings_mix: "Commercial mix",
+  qualified_opportunities_created: "Qualified opportunities",
+  initiative_pipeline: "Initiative pipeline by origin",
 };
 
 export const reportingStoryScope = {

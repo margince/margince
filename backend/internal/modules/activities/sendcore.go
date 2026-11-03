@@ -13,14 +13,12 @@ package activities
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // SendEmail runs the governed send: origin resolution → the guard sequence
@@ -229,9 +227,6 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 	}
 	sent, _, err := logActivityInTx(ctx, tx, p.message.activity(chain))
 	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := RecordMailReferencesTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(sent.Id)), connector.OrderedMailReferences(strings.Join(chain.references, " "), chain.inReplyTo, p.messageID)); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := stager.StageTx(ctx, tx, p.message.delivery(ids.UUID(sent.Id), chain, origin)); err != nil {

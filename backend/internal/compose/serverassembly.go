@@ -451,6 +451,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.wireContact360(pool)
 	s.wireReversal(pool)
 	s.wireProject360(pool)
+	s.wireSalesReview(pool)
 }
 
 // newConsentHandlers binds the consent surface to the four edges it cannot

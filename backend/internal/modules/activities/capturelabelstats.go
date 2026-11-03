@@ -27,7 +27,7 @@ func (s *Store) LabeledCaptureCountSince(ctx context.Context, since time.Time) (
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM activity
-			 WHERE activity_thread_available(thread_key) AND capture_labeled_at >= $1
+			 WHERE capture_labeled_at >= $1
 			   AND `+auth.ActivityAvailableClause("activity"), since,
 		).Scan(&count)
 	})

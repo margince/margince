@@ -212,8 +212,10 @@ var (
 	_ connector.MessageRemover   = (*Sink)(nil)
 )
 
-// Upsert commits original evidence, domain state and its audit/event together.
-// A replay resolves the same natural identity and reconciles newly learned evidence.
+// Upsert lands one normalized record: raw original + domain row +
+// audit + captured event, one transaction, idempotent on the natural
+// key. Replays return the existing row and write nothing new, so an
+// at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
@@ -261,18 +263,24 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
+			// First of everything that touches an activity row in this transaction,
+			// alias adoption included. Adoption recomputes the audience of every message
+			// it adopts, which locks those rows. A transaction holding one before it asks
+			// for the merge lock is the cycle takeMergeLockFirst exists to break.
+			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+				return err
+			}
 			var err error
-			if rec, fields, err = s.prepareCapturedActivityTx(ctx, tx, actor.UserID, rec, fields); err != nil {
+			if rec, fields, err = s.readMailForTheSeatTx(ctx, tx, actor.UserID, rec, fields); err != nil {
+				return err
+			}
+			// Stored only now, so the original's privacy question sees the record
+			// staging sees, after it was read against the seat's own addresses.
+			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
 				return err
 			}
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
-			if err != nil {
-				return err
-			}
-			if ref.Type == datasource.EntityActivity {
-				return s.finishCapturedThreadTx(ctx, tx, ids.From[ids.ActivityKind](ref.ID), rec)
-			}
-			return nil
+			return err
 		case LeadFields:
 			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
 				return err

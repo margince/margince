@@ -34,7 +34,7 @@ var signatureCandidateSQL = `
 				SELECT a.id, a.body, a.occurred_at
 				FROM activity_link al
 				JOIN activity a ON a.id = al.activity_id
-				WHERE activity_thread_available(a.thread_key) AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2") + `
+				WHERE ` + signatureSourceSQL("$2") + `
 				ORDER BY a.occurred_at DESC, a.id DESC
 				LIMIT 1
 			) a ON true
@@ -61,7 +61,7 @@ var olderSignatureSourcesSQL = `
 			JOIN activity_link al ON al.contact_id = p.id
 			JOIN activity a ON a.id = al.activity_id
 			WHERE p.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2") + `
+			  AND ` + signatureSourceSQL("$2") + `
 			  AND (a.occurred_at, a.id) < (newest.occurred_at, newest.id)
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $1`
@@ -75,7 +75,7 @@ var readableSignatureSourceSQL = `
 			JOIN activity_link al ON al.contact_id = p.id
 			JOIN activity a ON a.id = al.activity_id
 			WHERE p.id = $1 AND a.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2")
+			  AND ` + signatureSourceSQL("$2")
 
 // signatureSourceSQL holds the tests one mail must pass before this pass reads
 // it for the contact's signature. The caller joins `activity_link al` and
@@ -98,7 +98,7 @@ func signatureSourceSQL(defaultEnabled string) string {
 // A bare connector:<name> stamp matches no connection and follows the workspace
 // default.
 func signatureMailSQL(defaultEnabled string) string {
-	return `a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
+	return `a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
 				  -- A row held under a statutory obligation is out of reach of
 				  -- the model call this feeds, which is processing.
 				  AND a.restricted_at IS NULL
@@ -162,7 +162,7 @@ func capturingMailboxSQL(activity string) string {
 // audience='selected' is deliberately absent: it admits named users and teams
 // beyond the participants, so it is not bounded by "the owner was there".
 func SignatureSourceEligible(contact, activity string) string {
-	return fmt.Sprintf(`(activity_thread_available(%[2]s.thread_key) AND (
+	return fmt.Sprintf(`(
 		    %[2]s.audience = 'workspace'
 		    OR (%[1]s.visibility = 'owner' AND %[2]s.audience = 'participants'
 		        AND (EXISTS (SELECT 1 FROM capture_import ci
@@ -172,7 +172,7 @@ func SignatureSourceEligible(contact, activity string) string {
 		        AND NOT EXISTS (SELECT 1 FROM record_grant rg
 		                         WHERE rg.record_type = 'contact' AND rg.record_id = %[1]s.id
 		                           AND (rg.expires_at IS NULL OR rg.expires_at > now())))
-		  ))`, contact, activity, auth.ParticipantStandsSQL("ap", activity))
+		  )`, contact, activity, auth.ParticipantStandsSQL("ap", activity))
 }
 
 // SignatureCandidates lists the contacts whose newest readable mail this pass

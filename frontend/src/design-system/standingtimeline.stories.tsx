@@ -236,16 +236,16 @@ const mark = (
   when: string,
   kind: TimelineMark["kind"],
   title: string,
-  direction?: TimelineMark["direction"],
+  side?: TimelineMark["side"],
 ): TimelineMark => ({
   key,
   at,
   precision: "instant",
   kind,
-  direction,
+  side,
   what: kind === "email" ? "Email" : kind === "call" ? "Call" : "Note",
   title,
-  detail: direction === "inbound" ? "From Dana Reyes" : undefined,
+  detail: side === "theirs" ? "From Dana Reyes" : undefined,
   when,
 });
 
@@ -257,12 +257,12 @@ export const WithMarks: Story = {
     asOf: "2026-08-13T09:00:00Z",
     events: company,
     marks: [
-      mark("1", "2026-06-10", "10 Jun", "email", "Scope question", "inbound"),
-      mark("2", "2026-06-24", "24 Jun", "call", "Pricing call", "outbound"),
+      mark("1", "2026-06-10", "10 Jun", "email", "Scope question", "theirs"),
+      mark("2", "2026-06-24", "24 Jun", "call", "Pricing call", "ours"),
       mark("3", "2026-07-08", "8 Jul", "note", "Site visit notes"),
-      mark("4", "2026-07-09", "9 Jul", "email", "Revised offer", "outbound"),
-      mark("5", "2026-08-11", "11 Aug", "email", "Re: walkthrough", "inbound"),
-      mark("6", "2026-08-12", "12 Aug", "email", "Re: walkthrough", "outbound"),
+      mark("4", "2026-07-09", "9 Jul", "email", "Revised offer", "ours"),
+      mark("5", "2026-08-11", "11 Aug", "email", "Re: walkthrough", "theirs"),
+      mark("6", "2026-08-12", "12 Aug", "email", "Re: walkthrough", "ours"),
     ],
   },
   play: async ({ canvasElement }) => {

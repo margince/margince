@@ -27,6 +27,7 @@ const SALES_BOARD_BLOCKS: ReadonlySet<ReportingBlockKind> = new Set([
   "bookings_trend",
   "stage_distribution",
   "owner_attainment",
+  "breakdown",
 ]);
 
 /** The charts of the sales preset that the opening page asks for. */
@@ -229,6 +230,11 @@ export function StockCharts({
           <BoardChart
             evaluation={read}
             kind="owner_attainment"
+            onEvidence={(reference) => onEvidence(reference, read)}
+          />
+          <BoardChart
+            evaluation={read}
+            kind="breakdown"
             onEvidence={(reference) => onEvidence(reference, read)}
           />
         </div>

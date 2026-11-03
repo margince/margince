@@ -377,7 +377,7 @@ func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThrea
 	var open int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM activity
-		 WHERE activity_thread_available(thread_key) AND id = ANY($1::uuid[]) AND (archived_at IS NULL AND activity_thread_available(thread_key))
+		 WHERE id = ANY($1::uuid[]) AND archived_at IS NULL
 		   AND `+activities.AutomaticMailContent,
 		shown).Scan(&open); err != nil {
 		return false, fmt.Errorf("signal extract: re-checking the messages read: %w", err)
