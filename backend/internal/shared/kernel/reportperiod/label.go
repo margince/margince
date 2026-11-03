@@ -108,3 +108,31 @@ func Span(grain Grain, label string, zone *time.Location, fiscalStart int) (from
 	from = time.Date(read.Year, time.Month(month), 1, 0, 0, 0, 0, zone)
 	return from, from.AddDate(0, months, 0), true
 }
+
+// Containing answers the half-open period of grain that holds at, in one
+// calendar: the zone and the month its fiscal year begins. It is Span for an
+// instant rather than a label, so the two cannot disagree on a period's bounds.
+//
+// Held by: TestContainingAgreesWithSpanUnderEveryFiscalStart (backend/internal/shared/kernel/reportperiod/containing_test.go)
+func Containing(grain Grain, at time.Time, zone *time.Location, fiscalStart int) (from, to time.Time, ok bool) {
+	if zone == nil || fiscalStart < 1 || fiscalStart > 12 {
+		return from, to, false
+	}
+	local := at.In(zone)
+	// Months since the fiscal year opened. The +12 keeps it positive for a
+	// month before this calendar year's opening month.
+	elapsed := (int(local.Month()) - fiscalStart + 12) % 12
+	back, months := 0, 1
+	switch grain {
+	case GrainYear:
+		back, months = elapsed, 12
+	case GrainQuarter:
+		back, months = elapsed%3, 3
+	case GrainMonth:
+	default:
+		return from, to, false
+	}
+	// Walked back from the first of the month, so no day overflows a shorter month.
+	from = time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, zone).AddDate(0, -back, 0)
+	return from, from.AddDate(0, months, 0), true
+}

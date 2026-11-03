@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 // Period is one forecasting window, resolved in the installation's own zone and
@@ -87,10 +89,14 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 		return Period{}, errors.New("forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
 			"not from the financial year")
 	}
-	local := at.In(zone)
-	startYear, startMonth := periodStart(kind, local, fiscalStartMonth)
-	start := time.Date(startYear, startMonth, 1, 0, 0, 0, 0, zone)
-	end := start.AddDate(0, monthsIn(kind), 0)
+	grain := reportperiod.GrainQuarter
+	if kind == PeriodMonth {
+		grain = reportperiod.GrainMonth
+	}
+	start, end, ok := reportperiod.Containing(grain, at, zone, fiscalStartMonth)
+	if !ok {
+		return Period{}, fmt.Errorf("forecasting: no %s period holds %s", kind, at)
+	}
 	return Period{
 		Start:     start,
 		End:       end,
@@ -213,30 +219,6 @@ func daysInOrder(earlier, later time.Time) bool {
 // how the two come to disagree the day somebody edits one of them.
 func (p Period) ContainsInstant(at time.Time) bool {
 	return p.ContainsDay(p.LocalDay(at))
-}
-
-func monthsIn(kind PeriodKind) int {
-	if kind == PeriodMonth {
-		return 1
-	}
-	return 3
-}
-
-// periodStart answers the year and month a window opens in.
-func periodStart(kind PeriodKind, local time.Time, fiscalStartMonth int) (int, time.Month) {
-	if kind == PeriodMonth {
-		return local.Year(), local.Month()
-	}
-	// Months elapsed since the financial year opened, which is what decides
-	// which quarter of THAT year we are in. The +12 keeps the modulo positive
-	// for a date before the current calendar year's opening month.
-	elapsed := (int(local.Month()) - fiscalStartMonth + 12) % 12
-	// Walk back from the first of this month by the months into the quarter,
-	// rather than doing month arithmetic that can land on a day the target
-	// month does not have (the 31st of a 30-day month rolls forward).
-	firstOfMonth := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, local.Location())
-	opening := firstOfMonth.AddDate(0, -(elapsed % 3), 0)
-	return opening.Year(), opening.Month()
 }
 
 // ComparablePeriodsNeeded is how many completed periods a historical median
