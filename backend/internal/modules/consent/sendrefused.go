@@ -99,7 +99,7 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 	out := make([]map[string]any, 0, len(refusals))
 	for _, r := range refusals {
 		entry := map[string]any{
-			"address": r.Address, "reason_code": r.ReasonCode,
+			fieldAddress: r.Address, "reason_code": r.ReasonCode,
 			"can_be_overruled": r.CanBeOverruled,
 		}
 		if r.Category != "" {
@@ -114,3 +114,6 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 // the status. It is the wrapped cause rather than this value, or classification
 // would come straight back here.
 func (e *SendRefusedError) Unreferenced() error { return e.Cause }
+
+// fieldAddress is the wire and validation name of a recipient's address.
+const fieldAddress = "address"
