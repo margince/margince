@@ -16,10 +16,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -269,6 +271,9 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 			Evidence: map[string]any{undidAuditLogID: row.ID.String()},
 		},
 	})
+	if moved, ok := errors.AsType[*contacts.ProfileFieldMovedError](err); ok {
+		return RefusedRestore{Reason: ReasonSuperseded, Detail: strings.Join(moved.Fields, ", ")}
+	}
 	return err
 }
 

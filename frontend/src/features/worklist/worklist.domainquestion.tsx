@@ -10,8 +10,11 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { confirmEffect } from "./worklist.domaincopy";
 import { DomainReview } from "./worklist.domainreview";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
@@ -106,39 +109,112 @@ export function useDomainQuestionKeepVendor(
   });
 }
 
-// TWO VERBS OF EQUAL WEIGHT, so neither is the row's primary. The machine could
-// not tell whether this domain is a company, and two colleagues sharing an
-// installation may answer it opposite ways — so drawing one of them as the
-// expected press would be the same guess that left the question open.
+/**
+ * Confirming a suggested company: the same keep the review's match sends, with
+ * the suggestion's id, so the domain and its contacts join that company.
+ */
+export function useDomainQuestionConfirm(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      domain,
+      companyId,
+    }: Readonly<{ domain: string; companyId: string }>) => {
+      return unwrap(
+        await api.POST("/capture/domain-questions/{domain}/keep", {
+          params: { path: { domain } },
+          body: { company_id: companyId },
+        }),
+        t,
+      );
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
+// No verb is drawn as the expected press: the machine could not tell which
+// company this is, and a filled button would repeat its guess. A suggestion
+// is confirmed by a person, never linked on its own.
 //
 // The DOMAIN is the row's id: an open question is identified by the domain
 // itself.
 //
-// EACH BUTTON ASKS WHETHER THE ROW OFFERS IT, rather than the pair being drawn
-// because the source is this one. The verbs travel together today, but they are
-// answered by different stores under different gates, so a reader who may do one
-// and not the other is a real case — and a control drawn past the server's offer
-// is a button that 403s.
+// Each button asks whether the row offers it. The verbs are answered by
+// different stores under different gates, and a control drawn past the
+// server's offer is a button that 403s. Confirm and Choose need the company
+// grant, because both link the domain to a company.
 export function DomainQuestionAnswer({
   item,
 }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const [review, setReview] = useState(false);
   const toast = useToast();
+  const canLink = useCanWrite("company", "update");
   const keep = useDomainQuestionKeep([worklistKey]);
+  const confirm = useDomainQuestionConfirm([worklistKey]);
   const discard = useDomainQuestionDiscard([worklistKey]);
   const keepVendor = useDomainQuestionKeepVendor([worklistKey]);
-  const busy = keep.isPending || discard.isPending || keepVendor.isPending;
+  const busy =
+    keep.isPending ||
+    confirm.isPending ||
+    discard.isPending ||
+    keepVendor.isPending;
   const domain = item.id;
   const { actions } = item;
+  const context = item.domain_context;
+  const suggestion = context?.suggested_company;
+  const failed = (key: MessageKey) => () =>
+    toast.show(t(key), { tone: "danger" });
   return (
     <>
-      {actions.includes("reopen") && (
-        <Button onClick={() => setReview(true)}>
-          {t("worklist.domainReview.title")}
+      {suggestion && canLink && (
+        <span className="t-caption">
+          {t("worklist.domainQuestion.suggested", { name: suggestion.name })}{" "}
+          {confirmEffect(
+            { t, plural, locale },
+            domain,
+            suggestion.name,
+            context,
+          )}
+        </span>
+      )}
+      {suggestion && canLink && (
+        <Button
+          pending={confirm.isPending}
+          disabled={busy}
+          onClick={() =>
+            confirm.mutate(
+              { domain, companyId: suggestion.id },
+              {
+                onSuccess: () =>
+                  toast.show(t("worklist.domainQuestion.confirmed")),
+                onError: failed("worklist.domainQuestion.confirmFailed"),
+              },
+            )
+          }
+        >
+          {t("worklist.domainQuestion.confirm")}
         </Button>
       )}
-      {review && <DomainReview onClose={() => setReview(false)} />}
+      {canLink && (
+        <Button disabled={busy} onClick={() => setReview(true)}>
+          {t(
+            suggestion
+              ? "worklist.domainQuestion.chooseAnother"
+              : "worklist.domainQuestion.choose",
+          )}
+        </Button>
+      )}
+      {review && (
+        <DomainReview domain={domain} onClose={() => setReview(false)} />
+      )}
       {actions.includes("keep") &&
       item.domain_reason_code !== "forwarded_identity" ? (
         <Button
@@ -147,10 +223,7 @@ export function DomainQuestionAnswer({
           onClick={() =>
             keep.mutate(domain, {
               onSuccess: () => toast.show(t("worklist.verb.domainKept")),
-              onError: () =>
-                toast.show(t("worklist.verb.domainKeepFailed"), {
-                  tone: "danger",
-                }),
+              onError: failed("worklist.verb.domainKeepFailed"),
             })
           }
         >
@@ -165,10 +238,7 @@ export function DomainQuestionAnswer({
             keepVendor.mutate(domain, {
               onSuccess: () =>
                 toast.show(t("worklist.verb.domainKeptAsVendor")),
-              onError: () =>
-                toast.show(t("worklist.verb.domainKeepAsVendorFailed"), {
-                  tone: "danger",
-                }),
+              onError: failed("worklist.verb.domainKeepAsVendorFailed"),
             })
           }
         >
@@ -177,15 +247,14 @@ export function DomainQuestionAnswer({
       ) : null}
       {actions.includes("discard") ? (
         <Button
+          variant="ghost"
           pending={discard.isPending}
           disabled={busy}
+          title={t("worklist.domainQuestion.stopCapturingEffect", { domain })}
           onClick={() =>
             discard.mutate(domain, {
               onSuccess: () => toast.show(t("worklist.verb.domainDiscarded")),
-              onError: () =>
-                toast.show(t("worklist.verb.domainDiscardFailed"), {
-                  tone: "danger",
-                }),
+              onError: failed("worklist.verb.domainDiscardFailed"),
             })
           }
         >
