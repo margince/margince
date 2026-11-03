@@ -1,7 +1,7 @@
 # Worklist: a stronger base
 
 A proposal for discussion: no issue and no PR yet. The baseline is `main`
-(`600651ab`, 3 November 2026); the work is on branch `poc/worklist-feed`, which
+(`8f5671cf`, 3 November 2026); the work is on branch `poc/worklist-feed`, which
 carries `main` plus the changes measured here. Every figure comes from the
 daily bench data on test servers described in 1.2. The figures show direction,
 not the speed of any running install.
@@ -29,15 +29,15 @@ The answer, from the tests in Part 1 and the benchmarks in Part 3:
   reads at a time, halves a burst's p50 against a pool of 8 and stops the
   memory kills of a pool of 16 (3.4).
 - The new base is `main` with nine rules a test can hold (2.3). The fixes
-  measured so far take the worst-case p90 from 19.2 s to 7.9 s (3.3).
+  measured so far take the worst-case p90 from 18.2 s to 8.9 s (3.3).
 
 ```
  Home read, 8 years of mail, 3 ms         normal day (2 CPUs, warm)   worst case (credits spent, cold)
  p50 / worst                              main        new base        main          new base
- rep opens Home                           3.5 / 7.7   2.6 / 3.0       6.4 / 10.7    3.5 / 4.3
- rep with many open cases                10.6 / 11.2  2.1 / 2.9      14.1 / 14.9    3.7 / 4.9
- manager's team view                     13.0 / 13.4  4.0 / 4.3      19.9 / 24.0    9.0 / 11.5
- reads over 10 s                          9 of 30     0 of 30        12 of 30       2 of 30
+ rep opens Home                           3.7 / 7.9   2.7 / 3.0       6.1 / 10.6    4.0 / 4.8
+ rep with many open cases                10.8 / 12.3  2.6 / 3.7      14.0 / 18.2    4.6 / 8.9
+ manager's team view                     12.2 / 14.3  3.7 / 4.3      18.5 / 22.9    8.5 / 11.5
+ reads over 10 s                         10 of 30     0 of 30        12 of 30       1 of 30
 ```
 
 What to do first (4.12): one connection per read with a Worklist gate (B8),
@@ -52,7 +52,7 @@ morning burst is one test; synthetic history copies one year of mail.
 
 ### 1.1 The baseline is `main`
 
-Every comparison is against `main` at `600651ab`, measured on the same data,
+Every comparison is against `main` at `8f5671cf`, measured on the same data,
 server and settings as the new base. The new base is that `main` plus the
 changes in 2.4, switched on in a test build. The ground-truth check (4.11)
 proves each change gives `main`'s answers before any speed is counted.
@@ -272,25 +272,25 @@ Three builds run on the same data with a 3 ms round trip:
 ```
  use case                                      main          main + #9950              new base
                                         p50 / worst           p50 / worst           p50 / worst
- rep opens Home                       3.53 /   7.7         3.34 /   4.1         2.55 /   3.0
- rep scrolls (page 2)                 2.56 /   6.5         2.42 /   2.8         1.67 /   2.5
- rep with many open cases            10.58 /  11.2         3.19 /   3.9         2.09 /   2.9
- manager's team view                 13.03 /  13.4         5.22 /   6.5         3.97 /   4.3
- admin's team view                    8.20 /   8.2         2.33 /   2.3         1.78 /   1.8
+ rep opens Home                       3.74 /   7.9         3.55 /   3.9         2.67 /   3.0
+ rep scrolls (page 2)                 2.81 /   6.4         2.48 /   3.0         1.81 /   2.3
+ rep with many open cases            10.82 /  12.3         3.57 /   4.9         2.63 /   3.7
+ manager's team view                 12.18 /  14.3         4.63 /   6.0         3.67 /   4.3
+ admin's team view                    8.62 /   8.6         2.17 /   2.2         1.76 /   1.8
 
- all reads p50                               4.08 s                2.92 s                2.10 s
- all reads p90                              12.76 s                5.10 s                3.87 s
- worst read                                 13.39 s                6.53 s                4.32 s
- reads over 10 s                             9 of 30                0 of 30                0 of 30
- round trips, median                            544                   300                   303
+ all reads p50                               4.37 s                3.09 s                2.36 s
+ all reads p90                              12.31 s                4.64 s                3.71 s
+ worst read                                 14.31 s                6.01 s                4.33 s
+ reads over 10 s                            10 of 30                0 of 30                0 of 30
+ round trips, median                            548                   304                   307
 ```
 
 - On `main`, every reader whose view holds open cases passes 10 s even with
   credits left: the reps with many cases, both managers' team views and the
   admin's team view.
-- #9950 alone brings every read under 10 s on a normal day and halves the
-  round trips (544 → 300 at the median).
-- The rest of the new base takes another 24 to 34% off each use case: kept
+- #9950 alone brings every read under 10 s on a normal day and nearly halves
+  the round trips (548 → 304 at the median).
+- The rest of the new base takes another 19 to 27% off each use case: kept
   plans and whole-read reuse remove planning, and the seat's mail no longer
   reads its history.
 
@@ -299,24 +299,25 @@ Three builds run on the same data with a 3 ms round trip:
 ```
  use case                                      main          main + #9950              new base
                                         p50 / worst           p50 / worst           p50 / worst
- rep opens Home                       6.42 /  10.7         5.95 /   7.8         3.48 /   4.3
- rep scrolls (page 2)                 5.21 /   8.5         4.51 /   5.9         2.57 /   3.1
- rep with many open cases            14.05 /  14.9         6.33 /   7.3         3.69 /   4.9
- manager's team view                 19.91 /  24.0        12.54 /  16.8         9.00 /  11.5
- admin's team view                   11.39 /  11.4         5.23 /   5.2         4.81 /   4.8
+ rep opens Home                       6.07 /  10.6         5.82 /   7.1         4.01 /   4.8
+ rep scrolls (page 2)                 4.83 /   7.9         4.27 /   5.1         2.55 /   3.5
+ rep with many open cases            14.03 /  18.2         6.86 /  11.0         4.58 /   8.9
+ manager's team view                 18.46 /  22.9        11.30 /  15.6         8.46 /  11.5
+ admin's team view                   11.30 /  11.3         5.25 /   5.3         4.95 /   4.9
 
- all reads p50                               6.69 s                5.80 s                3.37 s
- all reads p90                              19.19 s               11.80 s                7.88 s
- worst read                                 23.96 s               16.85 s               11.54 s
- reads over 10 s                            12 of 30                3 of 30                2 of 30
- round trips, median                            544                   300                   303
+ all reads p50                               6.69 s                5.39 s                3.86 s
+ all reads p90                              18.20 s               10.98 s                8.90 s
+ worst read                                 22.88 s               15.60 s               11.50 s
+ reads over 10 s                            12 of 30                4 of 30                1 of 30
+ round trips, median                            548                   304                   307
 ```
 
 - The worst case is where the gap between `main` and the new base is largest:
-  p90 19.2 → 7.9 s, the worst read 24.0 → 11.5 s.
-- #9950 alone leaves 3 reads over 10 s, all managers' team views. The new base
-  leaves 2: the manager's team view, cold, with the CPU at its floor.
-- A rep's own Home stays near 3.5 s at p50 on the new base, against 6.4 s on
+  p90 18.2 → 8.9 s, the worst read 22.9 → 11.5 s.
+- #9950 alone leaves 4 reads over 10 s: managers' team views and a rep with
+  many open cases. The new base leaves 1: the manager's team view, cold, with
+  the CPU at its floor.
+- A rep's own Home stays near 4 s at p50 on the new base, against 6.1 s on
   `main`, with the same server and data.
 
 ### 3.4 The morning burst
@@ -365,9 +366,9 @@ read by design.
 
 ```
                        normal day             worst case
- main                  9 of 30 over 10 s      12 of 30
- main + #9950          0                       3   (managers' team views)
- new base              0                       2   (manager's team view, cold, CPU at its floor)
+ main                  10 of 30 over 10 s     12 of 30
+ main + #9950          0                       4   (managers' team views, a rep with many cases)
+ new base              0                       1   (manager's team view, cold, CPU at its floor)
 ```
 
 On `main` the line is crossed now, by open duplicate cases, on any server and
@@ -382,7 +383,7 @@ credits. Three things move it, and the signals of 1.5 show which:
 - the CPU balance: k in 1.3; a server that keeps its credits stays in the
   normal-day column.
 
-The next levers for that read are the round-trip budget (B3: 303 round trips
+The next levers for that read are the round-trip budget (B3: 307 round trips
 are about 0.9 s at 3 ms) and the last-touch lanes by contact and time (B2).
 ---
 
@@ -933,7 +934,7 @@ independent reviews (A.6).
     bench's home_worklist row,     the bench then tell the truth; a round-trip counter
     a round-trip counter           makes B3 measurable
  5  seat mail by address + time    with the rest of the new base, worst-case p50
-                                   5.8 → 3.4 s after #9950 (3.3);
+                                   5.4 → 3.9 s after #9950 (3.3);
     + kept waiting plans (B2, B4)  one change, both sides of one wire; column, index,
                                    data task, drift gate
  6  Home cache: trigger census,    guards code already shipped; then the capture link
@@ -961,6 +962,12 @@ The ground-truth check runs before each step lands.
 
 These ran on the bench's own server with all data in memory and no added round
 trip, before the 4 GB setup of 1.2.
+
+The benchmark matrix of Part 3 ran first against `main` at `600651ab`, which
+still had the per-row thread check #10074 removed. Against `main` at
+`8f5671cf` the figures moved within noise: worst-case p90 19.2 → 18.2 s on
+`main`, 7.9 → 8.9 s on the new base; reads over 10 s in the worst case 12 → 12
+and 2 → 1.
 
 How it was measured: the ground-truth check made the screens' own calls for
 every member of the bench data (15 members, 3 of them managers), in every view
@@ -1275,6 +1282,10 @@ each one fits with the system above.
 | #9909 (merged) | Home reads the day on change and every 5 minutes, not every minute | Less load from open tabs | Fewer reads; each read still costs what the engine costs |
 | #9910 (merged) | The receipt reads change images only where its sentence needs them | One receipt arm 130 → 30 ms (`EXPLAIN ANALYZE`) | The receipt, not the Worklist |
 | #9891, #9868, #9852 (merged) | One Worklist statement each made cheaper | Per statement | Plan reuse and the identity change do this for every statement at once |
+| #10008 (merged) | Each Home fence trigger fires only on a change that can narrow reach; an answer served in its last minute is read again behind it | Capture's participant updates no longer end every copy | Takes in most of B6's fence work; the first link of a captured mail still ends every copy (4.7) |
+| #10032 (merged) | Home starts its reads with the session probe instead of waiting for four reads first | Two round trips fewer before Home asks | The page's wait, beside the engine's |
+| #10074 (merged) | Drops a per-row thread check from every activity read, which made a plain scan of activity about 20 times slower | Back to the scan's own cost | On this bench data the matrix moved within noise (A.1) |
+| #10092 (merged) | The team board narrows the waiting scan to its team before the scan's bound | Right counts for a team's waits | The manager's team view, the read left near 10 s (3.6) |
 
 ### A.6 Reviews
 
@@ -1341,8 +1352,10 @@ findings, all taken in:
  4d4edefb  the worst case, the projection model, one connection per read
  d5c3b401  the morning burst and memory per connection
  9ee7aa64  main merged in at 600651ab (#10008's fence among it)
- later     this document reorganized around main as the baseline (Part 3)
- later     this proposal
+ 4d97925a  this document reorganized around main as the baseline (Part 3)
+ c5ab854a  one connection per read, and a gate in front of the Worklist
+ 63b6a24e  main merged in at 8f5671cf (#10074, #10092 among it)
+ later     the benchmarks re-run against main at 8f5671cf
 ```
 
 Files that matter:
