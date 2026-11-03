@@ -18589,6 +18589,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Tạo một liên kết để chia sẻ trang cho khách chọn giờ.",
   "scheduling.replaceAddress": "Thay địa chỉ",
+  "scheduling.alias.label": "Địa chỉ ngắn",
+  "scheduling.alias.help":
+    "Không bắt buộc. Địa chỉ ngắn như /book/alex dễ chia sẻ và cũng dễ đoán. Ai đoán được sẽ thấy trang đặt lịch và các giờ trống của bạn. Địa chỉ dài của bạn vẫn hoạt động.",
+  "scheduling.alias.preview": "Liên kết của bạn sẽ kết thúc bằng {path}",
+  "scheduling.alias.save": "Lưu địa chỉ",
+  "scheduling.alias.clear": "Gỡ địa chỉ ngắn",
+  "scheduling.alias.changeTitle": "Đổi địa chỉ ngắn?",
+  "scheduling.alias.clearTitle": "Gỡ địa chỉ ngắn?",
+  "scheduling.alias.changeHelp":
+    "{old} sẽ ngừng hoạt động ngay. Khách có địa chỉ này sẽ thấy trang không còn khả dụng. Không ai khác có thể lấy địa chỉ này, và bạn có thể lấy lại bất cứ lúc nào.",
+  "scheduling.alias.error.too_short": "Dùng ít nhất 3 ký tự.",
+  "scheduling.alias.error.too_long": "Dùng tối đa 30 ký tự.",
+  "scheduling.alias.error.invalid":
+    "Dùng chữ cái, chữ số và dấu gạch ngang. Bắt đầu và kết thúc bằng chữ cái hoặc chữ số.",
+  "scheduling.alias.error.reserved":
+    "Địa chỉ này đã được dành riêng. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.taken":
+    "Một trang đặt lịch khác đang hoặc đã từng dùng địa chỉ này. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.no_booking_link": "Hãy tạo liên kết đặt lịch trước.",
+  "scheduling.replaceAliasHelp":
+    "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
@@ -19370,6 +19391,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
   "analytics.hero.noPrior": "Chưa có kỳ trước để so sánh.",
   "analytics.overview.more": "Thêm",
+  "analytics.decisions.title": "Quyết định từ lần xem xét trước",
+  "analytics.decisions.purpose":
+    "Mỗi quyết định là một việc cần làm trên deal, do một thành viên chịu trách nhiệm, với ngày xem lại. Hoàn thành ghi nhận công việc, không phải một deal đã thắng.",
+  "analytics.decisions.record": "Ghi quyết định",
+  "analytics.decisions.review": "Xem lại các quyết định",
+  "analytics.decisions.none": "Chưa ghi quyết định nào.",
+  "analytics.decisions.decision": "Quyết định",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Chịu trách nhiệm",
+  "analytics.decisions.reviewOn": "Xem lại vào",
+  "analytics.decisions.status": "Trạng thái",
+  "analytics.decisions.done": "Đã xong",
+  "analytics.decisions.open": "Đang mở",
+  "analytics.decisions.recordOutcome": "Ghi kết quả",
+  "analytics.decisions.resultLine": "Kết quả: {result}",
+  "analytics.decisions.chooseDeal": "Chọn deal",
+  "analytics.decisions.chooseOwner": "Chọn thành viên chịu trách nhiệm",
+  "analytics.decisions.expected": "Kết quả mong đợi",
+  "analytics.decisions.recordNote":
+    "Ghi lại cùng một quyết định đang mở trên cùng deal sẽ trả về việc cần làm đó.",
+  "analytics.decisions.confirm": "Ghi lại",
+  "analytics.decisions.whatWasDone": "Công việc nào đã hoàn thành?",
+  "analytics.decisions.outcomeNote":
+    "Hoàn thành công việc không làm deal đủ điều kiện hay thắng.",
+  "analytics.decisions.saveOutcome": "Lưu kết quả",
   "analytics.overview.filtersToggle": "Bộ lọc",
   "analytics.overview.chipPipeline": "Pipeline đang chọn: {name}",
   "analytics.overview.chipClose": "Chốt: {window}",

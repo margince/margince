@@ -17,6 +17,7 @@ import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { DecisionsPanel } from "./analytics.decisions";
 import {
   SalesHero,
   StockCharts,
@@ -197,6 +198,7 @@ function SalesReviewBody({
                   onEvidence={openEvidence}
                 />
               )}
+              <DecisionsPanel />
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}

@@ -19100,6 +19100,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
   "scheduling.replaceAddress": "Adresse ersetzen",
+  "scheduling.alias.label": "Kurzadresse",
+  "scheduling.alias.help":
+    "Optional. Eine Kurzadresse wie /book/alex lässt sich leicht teilen und leicht erraten. Wer sie errät, sieht deine Buchungsseite und deine freien Zeiten. Deine lange Adresse funktioniert weiter.",
+  "scheduling.alias.preview": "Dein Link endet dann auf {path}",
+  "scheduling.alias.save": "Adresse speichern",
+  "scheduling.alias.clear": "Kurzadresse entfernen",
+  "scheduling.alias.changeTitle": "Kurzadresse ändern?",
+  "scheduling.alias.clearTitle": "Kurzadresse entfernen?",
+  "scheduling.alias.changeHelp":
+    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. Niemand sonst kann sie je übernehmen, und du kannst sie jederzeit zurückholen.",
+  "scheduling.alias.error.too_short": "Verwende mindestens 3 Zeichen.",
+  "scheduling.alias.error.too_long": "Verwende höchstens 30 Zeichen.",
+  "scheduling.alias.error.invalid":
+    "Verwende Buchstaben, Ziffern und Bindestriche. Beginne und ende mit einem Buchstaben oder einer Ziffer.",
+  "scheduling.alias.error.reserved":
+    "Diese Adresse ist reserviert. Wähle eine andere.",
+  "scheduling.alias.error.taken":
+    "Eine andere Buchungsseite nutzt diese Adresse oder hat sie genutzt. Wähle eine andere.",
+  "scheduling.alias.error.no_booking_link":
+    "Erstelle zuerst deinen Buchungslink.",
+  "scheduling.replaceAliasHelp":
+    "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
@@ -19903,6 +19925,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
   "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
+  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.purpose":
+    "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
+  "analytics.decisions.record": "Entscheidung festhalten",
+  "analytics.decisions.review": "Entscheidungen prüfen",
+  "analytics.decisions.none": "Noch keine Entscheidung festgehalten.",
+  "analytics.decisions.decision": "Entscheidung",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Verantwortlich",
+  "analytics.decisions.reviewOn": "Prüfen am",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Erledigt",
+  "analytics.decisions.open": "Offen",
+  "analytics.decisions.recordOutcome": "Ergebnis festhalten",
+  "analytics.decisions.resultLine": "Ergebnis: {result}",
+  "analytics.decisions.chooseDeal": "Deal wählen",
+  "analytics.decisions.chooseOwner": "Verantwortlichen wählen",
+  "analytics.decisions.expected": "Erwartetes Ergebnis",
+  "analytics.decisions.recordNote":
+    "Dieselbe offene Entscheidung am selben Deal ein zweites Mal festzuhalten gibt diese Aufgabe zurück.",
+  "analytics.decisions.confirm": "Festhalten",
+  "analytics.decisions.whatWasDone": "Welche Arbeit wurde erledigt?",
+  "analytics.decisions.outcomeNote":
+    "Erledigte Arbeit qualifiziert oder gewinnt den Deal nicht.",
+  "analytics.decisions.saveOutcome": "Ergebnis speichern",
   "analytics.overview.filtersToggle": "Filter",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Abschluss: {window}",

@@ -64,6 +64,10 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 	if profile.LogoUrl != nil && h.store.publicOriginUsable() == nil {
 		out.LogoURL = *profile.LogoUrl
 	}
-	out.PageURL, _ = h.store.publicBookingURL(slug)
+	// The host's shared address, the alias when there is one, whichever
+	// address this fetch came in on.
+	if profile.PublicUrl != nil {
+		out.PageURL = *profile.PublicUrl
+	}
 	return out, nil
 }

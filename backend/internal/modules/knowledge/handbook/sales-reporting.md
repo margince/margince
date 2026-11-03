@@ -137,6 +137,12 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
+## How do I record a decision from a review?
+
+Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
+
+When the work is done, choose **Record outcome** and say what was completed. The task closes with that note. The deal does not change: completed work is not a sale.
+
 ## How do I keep a weekly or monthly edition?
 
 Open a saved report and choose **Save snapshot**, or set up a weekly or monthly schedule with a time zone, day and time. **Activate schedule** starts it; **Save paused** keeps it stopped. A scheduled snapshot covers the last full time span and shows in the report; it is not sent by email.
