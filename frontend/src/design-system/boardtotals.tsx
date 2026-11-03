@@ -101,16 +101,26 @@ export function ColumnTotals({
         </span>
       </div>
       {/* The bar repeats the two figures beside it, so it stays out of the
-          accessible tree; read aloud it would be two numbers in cents. */}
+          accessible tree. A missing weighted figure draws no part, not a zero. */}
       {bar && (
         <div aria-hidden="true">
-          <Meter
-            dense
-            value={money.rawMinor ?? 0}
-            max={scaleMinor}
-            part={money.weightedMinor ?? 0}
-            label={t("board.weightedLabel")}
-          />
+          {money.weightedMinor == null ? (
+            <Meter
+              dense
+              flat
+              value={money.rawMinor ?? 0}
+              max={scaleMinor}
+              label={t("board.weightedLabel")}
+            />
+          ) : (
+            <Meter
+              dense
+              value={money.rawMinor ?? 0}
+              max={scaleMinor}
+              part={money.weightedMinor}
+              label={t("board.weightedLabel")}
+            />
+          )}
         </div>
       )}
       {(unpriced > 0 || rates) && (

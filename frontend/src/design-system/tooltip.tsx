@@ -308,7 +308,16 @@ function useTip<T extends HTMLElement>(
   const revealForFocus = useCallback(() => reveal("focus"), [reveal]);
   // Pointer reveal waits for intent; focus does not. A reader who tabbed here
   // has said what they want outright, and there is no pointer to measure.
-  const hover = useHoverIntent(revealForPointer, close, { ownsState: true });
+  // A tip the anchor's focus still asks for outlasts the pointer leaving it;
+  // blur or Escape closes it instead.
+  const closeForPointer = useCallback(() => {
+    if (anchor.current !== document.activeElement) {
+      setOpen(false);
+    }
+  }, []);
+  const hover = useHoverIntent(revealForPointer, closeForPointer, {
+    ownsState: true,
+  });
   useEscapeDismisses(open, anchor, raisedBy, close);
 
   return {

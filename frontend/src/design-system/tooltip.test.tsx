@@ -102,6 +102,26 @@ describe("a string too long for its row", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent(LONG);
   });
 
+  it("stays up while the row keeps focus, after the pointer has left", () => {
+    takeHoverClock();
+    armHoverIntent();
+    stubWidths({ scroll: 480, client: 220 });
+    render(<Row text={LONG} />);
+    const row = screen.getByText(LONG);
+    act(() => row.focus());
+
+    fireEvent.pointerEnter(row);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    fireEvent.pointerLeave(row);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent(LONG);
+  });
+
   it("dismisses on Escape without waiting for focus to move", async () => {
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
