@@ -122,22 +122,16 @@
   background: var(--borderSubtle);
 }
 
-/* Who is signed in, at the top of the panel. In the top bar the trigger carries
-   no name, so this is the only place the reader confirms the account before
-   acting on it. It takes the rows' own inset so the block stands on the same left
-   edge as they do, and it is deliberately outside the row rule — no hover and no
-   pointer, because it is a statement about who you are, not a row that goes
-   anywhere. */
+/* Who is signed in, at the top of the panel. The trigger carries no name, so
+   this is where the reader confirms the account, and the row opens its page. */
 .acctmenuwho {
-  display: flex;
-  align-items: center;
   gap: var(--space-2);
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
 /* The build, at the foot of the help flyout. It takes the rows' inset so it
-   stands on their left edge, and like the identity block it sits outside the
-   row rule — no hover and no pointer, because it goes nowhere. */
+   stands on their left edge, and it sits outside the row rule — no hover and
+   no pointer, because it goes nowhere. */
 .acctversion {
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
   color: var(--textSecondary);

@@ -122,8 +122,7 @@ export const TopBarThemeFlyoutDark: Story = {
 };
 
 /**
- * On a phone, open. The glyph's edge meets the gutter as far as its target can
- * reach without leaving the bar. The menu hangs at the gutter.
+ * On a phone, open. The trigger's box and the menu both end at the gutter.
  */
 export const TopBarMenuPhone: Story = {
   name: "Top bar menu (phone)",
@@ -132,20 +131,13 @@ export const TopBarMenuPhone: Story = {
   play: async (context) => {
     await openMenu(context);
     const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
-    const trigger = bar?.querySelector(".account .user");
-    const glyph = trigger?.querySelector("svg");
+    if (!bar) throw new Error("the top bar is missing");
+    const trigger = within(bar).getByRole("button", { name: /Account$/ });
     const menu = await within(document.body).findByRole("menu");
-    if (!bar || !trigger || !glyph) {
-      throw new Error("the top bar or its account glyph is missing");
-    }
-    const edge = bar.getBoundingClientRect().right;
-    const inner = edge - Number.parseFloat(getComputedStyle(bar).paddingRight);
-    const box = trigger.getBoundingClientRect();
-    const inset = (box.width - glyph.getBoundingClientRect().width) / 2;
-    await expect(box.right).toBeLessThanOrEqual(edge);
-    await expect(glyph.getBoundingClientRect().right).toBe(
-      Math.min(inner, edge - inset),
-    );
+    const inner =
+      bar.getBoundingClientRect().right -
+      Number.parseFloat(getComputedStyle(bar).paddingRight);
+    await expect(trigger.getBoundingClientRect().right).toBe(inner);
     await expect(menu.getBoundingClientRect().right).toBe(inner);
   },
   render: () => {

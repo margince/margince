@@ -82,6 +82,10 @@ const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
 };
 
 const row = (name: string) => screen.getByRole("menuitem", { name });
+const head = () =>
+  screen.getByRole("menuitem", {
+    name: "Test User — test@example.test: account settings",
+  });
 const choice = (name: string) => screen.getByRole("radio", { name });
 
 describe("AccountMenu", () => {
@@ -140,6 +144,19 @@ describe("AccountMenu", () => {
     ).toHaveLength(1);
   });
 
+  // The head opens the seat's own page, not the settings level. Its name says
+  // whose account it is and where it leads, and the menu goes with the click.
+  it("opens the seat's own account page from its head", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+
+    expect(head().getAttribute("href")).toBe("/#/settings/account");
+    expect(head().classList).toContain("acctrow");
+    await user.click(head());
+    expect(container.querySelector(".accountmenu")).toBeNull();
+  });
+
   // The appearance choice IS a destination now: it lives where the reader can
   // see the document repaint under the open panel, rather than on a form two
   // navigations away that they then have to navigate back out of.
@@ -181,7 +198,7 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
 
-    await user.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
 
     await user.keyboard("{ArrowRight}");
@@ -252,9 +269,11 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
     // The menu takes focus when it opens, or a keyboard reader has to walk into
-    // it with a key nothing told them about.
-    expect(document.activeElement).toBe(row("Settings"));
+    // it with a key nothing told them about. The head is its first row.
+    expect(document.activeElement).toBe(head());
 
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Settings"));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
     await user.keyboard("{ArrowDown}");
@@ -265,12 +284,12 @@ describe("AccountMenu", () => {
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
     await user.keyboard("{ArrowDown}");
-    expect(document.activeElement).toBe(row("Settings"));
+    expect(document.activeElement).toBe(head());
 
     await user.keyboard("{ArrowUp}");
     expect(document.activeElement).toBe(row("Sign out"));
     await user.keyboard("{Home}");
-    expect(document.activeElement).toBe(row("Settings"));
+    expect(document.activeElement).toBe(head());
     await user.keyboard("{End}");
     expect(document.activeElement).toBe(row("Sign out"));
   });
@@ -286,10 +305,10 @@ describe("AccountMenu", () => {
       screen
         .getAllByRole("menuitem")
         .filter((item) => item.getAttribute("tabindex") === "0");
-    expect(stops()).toEqual([row("Settings")]);
+    expect(stops()).toEqual([head()]);
 
     await user.keyboard("{ArrowDown}");
-    expect(stops()).toEqual([row("Theme")]);
+    expect(stops()).toEqual([row("Settings")]);
   });
 
   // A dialog raised over the open menu owns Escape: one press closes the

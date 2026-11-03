@@ -55,19 +55,24 @@ type SessionUser = components["schemas"]["MeResponse"]["user"];
  */
 const SETTINGS_HREF = routeHash({ screen: SETTINGS_SCREEN });
 
+/** The seat's own page, which the menu's head opens. */
+const ACCOUNT_HREF = routeHash({ screen: SETTINGS_SCREEN, id: "account" });
+
 /**
  * Where each row of the menu sits in the roving walk. A flyout row's seat is
  * read twice, by its tabstop and by the flyout that hands focus back to it.
  */
-const SETTINGS_SEAT = 0;
+const WHO_SEAT = 0;
 
-const THEME_SEAT = 1;
+const SETTINGS_SEAT = 1;
 
-const BOOKING_SEAT = 2;
+const THEME_SEAT = 2;
 
-const HELP_SEAT = 3;
+const BOOKING_SEAT = 3;
 
-const SETUP_SEAT = 4;
+const HELP_SEAT = 4;
+
+const SETUP_SEAT = 5;
 
 /**
  * Who is signed in, in the shapes the block prints them in.
@@ -115,18 +120,23 @@ function LinkRow({
   href,
   seat,
   onActivate,
+  className,
+  label,
   children,
 }: Readonly<{
   href: string;
   seat: RowSeat;
   onActivate: () => void;
+  className?: string;
+  label?: string;
   children: ReactNode;
 }>) {
   return (
     <AppLink
-      className="acctrow"
+      className={className ? `acctrow ${className}` : "acctrow"}
       href={href}
       role="menuitem"
+      aria-label={label}
       {...seat}
       onClick={onActivate}
     >
@@ -136,9 +146,9 @@ function LinkRow({
 }
 
 /**
- * A real `role="menu"`, so a keyboard reader can reach both submenus. The
- * identity block carries no role, since it is a statement. It also names the
- * menu, so a reader in menu mode hears whose account they act on.
+ * A real `role="menu"`, so a keyboard reader can reach both submenus. Its head
+ * is the identity, a row into the seat's own account page. The identity also
+ * names the menu, so a reader in menu mode hears whose account they act on.
  */
 function AccountPanel({
   identity,
@@ -164,9 +174,10 @@ function AccountPanel({
   // The menu takes focus when it opens. A panel that leaves focus on the trigger
   // is one the keyboard reader has to walk into with a key nothing told them
   // about, and it is what makes the Escape return below mean anything.
+  const hasHead = Boolean(identity.label);
   useEffect(() => {
-    move(SETTINGS_SEAT);
-  }, [move]);
+    move(hasHead ? WHO_SEAT : SETTINGS_SEAT);
+  }, [move, hasHead]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Tab leaves the menu, so the menu goes with it (the APG menu-button
@@ -197,14 +208,21 @@ function AccountPanel({
     >
       {/* Nothing at all rather than an empty line while /me is in flight or
           carries neither a name nor an address. */}
-      {identity.label && (
+      {hasHead && (
         <>
-          <div className="acctmenuwho">
+          <LinkRow
+            href={ACCOUNT_HREF}
+            seat={seat(WHO_SEAT)}
+            onActivate={onDismiss}
+            className="acctmenuwho"
+            // The printed name and address lead, so a voice user can say them.
+            label={t("shell.accountSettingsAria", { who: identity.spoken })}
+          >
             {/* The one chip, keyed on the seat's user id like every other chip
                 drawn for this colleague. */}
             <Avatar identity={identity.id} name={identity.label} />
             <IdentityLines identity={identity} />
-          </div>
+          </LinkRow>
           <hr />
         </>
       )}
@@ -314,7 +332,6 @@ export function AccountMenu() {
       <Button
         variant="bare"
         iconOnly
-        className="user"
         ref={trigger}
         // WCAG 2.5.3 (Label in Name) binds only printed text, and this glyph
         // prints none. So it is named by what it does, and the contact is its

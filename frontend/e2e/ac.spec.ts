@@ -441,12 +441,20 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
-    menu.getByRole("menuitem", { name: "Einstellungen" }),
+    menu.getByRole("menuitem", { name: "Einstellungen", exact: true }),
   ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
   ).toHaveAttribute("href", "/#/settings/meetings");
-  await expect(menu.locator("a[href]")).toHaveCount(2);
+  // The head is the third link: the seat's own page, named by who it is for.
+  await expect(
+    menu.getByRole("menuitem", {
+      name: new RegExp(
+        `^${de["shell.accountSettingsAria"].replace("{who}", ".+")}$`,
+      ),
+    }),
+  ).toHaveAttribute("href", "/#/settings/account");
+  await expect(menu.locator("a[href]")).toHaveCount(3);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three

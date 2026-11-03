@@ -541,13 +541,23 @@ export const Phone: Story = {
     });
     await expect(home).toHaveAttribute("href", "/#/home");
     await expect(bar.querySelector(".crumbs")).toBeNull();
-    // Each glyph stands square, and inside the bar, at a thumb's floor too.
+    // Each glyph is one control square inside the bar, a --space-1 from the next.
     const edge = bar.getBoundingClientRect();
-    for (const control of bar.querySelectorAll(".topbar-trail button")) {
-      const box = control.getBoundingClientRect();
-      await expect(box.width).toBe(box.height);
+    const token = (name: string) =>
+      Number.parseFloat(getComputedStyle(bar).getPropertyValue(name));
+    const boxes = [
+      ...bar.querySelectorAll(".topbar-search, .topbar-trail button"),
+    ].map((control) => control.getBoundingClientRect());
+    await expect(boxes.length).toBeGreaterThan(1);
+    for (const [at, box] of boxes.entries()) {
+      await expect(box.width).toBe(token("--controlHeight"));
+      await expect(box.height).toBe(token("--controlHeight"));
       await expect(box.top).toBeGreaterThanOrEqual(edge.top);
       await expect(box.bottom).toBeLessThanOrEqual(edge.bottom);
+      const before = boxes[at - 1];
+      if (before) {
+        await expect(box.left - before.right).toBe(token("--space-1"));
+      }
     }
   },
 };

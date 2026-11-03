@@ -181,12 +181,6 @@
   color: var(--textPrimary);
 }
 
-/* The last glyph's own edge meets the gutter; its box keeps its size and
-   reaches past it. */
-.topbar .account .user {
-  margin-inline-end: calc((var(--controlIcon) - var(--controlHeight)) / 2);
-}
-
 /* Below this width a centred field and the trail beside it are competing for
    the same pixels, and the trail is the half that cannot be recovered from a
    keyboard shortcut. The search keeps its place in the row and drops to its
@@ -216,6 +210,7 @@
      left one of three icons in a box. */
   .topbar-search {
     width: var(--controlHeight);
+    min-block-size: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;
@@ -265,8 +260,9 @@
    and no control for it. What stays is what a phone reader cannot get any other
    way: where they are, how to search, and who they are. */
 @media (max-width: 700px) {
-  .topbar {
-    gap: var(--space-2);
+  .topbar,
+  .topbar-trail {
+    gap: var(--space-1);
   }
   .topbar-toggle {
     display: none;
@@ -290,32 +286,17 @@
   outline-offset: 2px;
 }
 
-/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
-   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
-   shared control height must not be capped by this floor. Declared under
-   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
-   still a mouse — the floor is about what a thumb can hit, not about how much
-   room there is. */
+/* The company chip's coarse-pointer floor (WCAG 2.2 AA). Declared under
+   `pointer: coarse` and not at a width, because a narrow window on a desktop is
+   still a mouse. The glyph buttons keep --controlHeight, above the 24px that
+   WCAG 2.5.8 asks. */
 @media (pointer: coarse) {
-  /* The trail's triggers by STRUCTURE, not by name: they are icon-sized by
-     default and one of them wears no class at all, so a list here would be a
-     list somebody has to remember to extend. Grandchildren only — an open
-     menu's own rows are not the strip's targets.
-     The `.topbar` prefix outranks the two-class bare button. */
-  .topbar-search,
-  .topbar .topbar-trail > button,
-  .topbar .topbar-trail > * > button {
-    min-height: max(var(--controlHeight), 44px);
-    /* The icon buttons are drawn --controlHeight wide; a floor on the height
-       alone stood them as tall, narrow boxes. */
-    min-inline-size: max(var(--controlHeight), 44px);
-  }
   .topbar-home {
     min-block-size: 44px;
     min-inline-size: 44px;
   }
-  /* The ends of the bar meet the gutter with what a reader sees, the chip and
-     the account glyph, while their targets reach past it. */
+  /* The bar's start meets the gutter with what a reader sees, the chip, while
+     its target reaches past it. */
   .topbar-home {
     margin-inline-start: calc(
       (var(--controlHeight) - max(var(--controlHeight), 44px)) /
@@ -325,21 +306,9 @@
   .icon-action ~ .topbar-home {
     margin-inline-start: 0;
   }
-  /* Never past the bar's edge: a box beyond it scrolls the column sideways
-     when it takes focus. */
-  .topbar .account .user {
-    --accountReach: calc(
-      (max(var(--controlHeight), 44px) - var(--controlIcon)) /
-      2
-    );
-    margin-inline-end: calc(-1 * min(var(--accountReach), var(--pageGutter)));
-  }
   /* A 44px box leaves 3px either side in the bar, so the ring is drawn inside
      the box rather than over the bar's rule. */
-  .topbar-search:focus-visible,
-  .topbar-home:focus-visible,
-  .topbar .topbar-trail > button:focus-visible,
-  .topbar .topbar-trail > * > button:focus-visible {
+  .topbar-home:focus-visible {
     outline-offset: -2px;
   }
 }

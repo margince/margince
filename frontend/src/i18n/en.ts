@@ -2666,6 +2666,7 @@ export const en = {
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
+  "shell.accountSettingsAria": "{who}: account settings",
   "shell.theme": "Theme",
   "shell.helpMenu": "Help and feedback",
   "shell.help.report": "Report a problem",

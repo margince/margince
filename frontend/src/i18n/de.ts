@@ -2772,6 +2772,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
+  "shell.accountSettingsAria": "{who}: Kontoeinstellungen",
   "shell.theme": "Design",
   "shell.helpMenu": "Hilfe und Feedback",
   "shell.help.report": "Problem melden",

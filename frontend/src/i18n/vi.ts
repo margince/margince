@@ -2687,6 +2687,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
+  "shell.accountSettingsAria": "{who}: cài đặt tài khoản",
   "shell.theme": "Giao diện",
   "shell.helpMenu": "Trợ giúp và phản hồi",
   "shell.help.report": "Báo cáo sự cố",
