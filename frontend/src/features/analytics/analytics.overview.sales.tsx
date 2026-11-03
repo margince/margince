@@ -198,7 +198,6 @@ function SalesReviewBody({
                   onEvidence={openEvidence}
                 />
               )}
-              <DecisionsPanel />
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}
@@ -266,6 +265,8 @@ function SalesReviewBody({
           onCloseEvidence={closeEvidence}
         />
       )}
+      {/* Decisions sit with the last review, under the first screen. */}
+      <DecisionsPanel />
       <SinceLastReview
         catalog={catalog}
         scope={selection.scope}
