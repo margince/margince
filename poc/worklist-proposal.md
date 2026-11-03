@@ -25,7 +25,9 @@ The answer, from the tests in Part 1 and the benchmarks in Part 3:
   about twice as slow; cold reads (a first open, data past memory) are slower
   again. A bigger server helps the cold reads, not the case cost.
 - Everyone opening Home at once is bound by CPU seconds per read and memory
-  per connection; a read must also hold one connection at a time (B8).
+  per connection. A Worklist read on one connection, behind a gate of 3 to 4
+  reads at a time, halves a burst's p50 against a pool of 8 and stops the
+  memory kills of a pool of 16 (3.4).
 - The new base is `main` with nine rules a test can hold (2.3). The fixes
   measured so far take the worst-case p90 from 19.2 s to 7.9 s (3.3).
 
@@ -38,8 +40,8 @@ The answer, from the tests in Part 1 and the benchmarks in Part 3:
  reads over 10 s                          9 of 30     0 of 30        12 of 30       2 of 30
 ```
 
-What to do first (4.12): one connection per read (B8), #9950 (B1), then the
-seat's mail by address and time with kept plans (B2, B4).
+What to do first (4.12): one connection per read with a Worklist gate (B8),
+#9950 (B1), then the seat's mail by address and time with kept plans (B2, B4).
 
 Not proven yet: the round-trip budget (B3) is designed, not measured; the
 morning burst is one test; synthetic history copies one year of mail.
@@ -89,6 +91,10 @@ What the measurements fit, per Home read:
  a burst of n reads at once finishes no sooner than
      n × CPU-seconds per read / CPUs      (+ round trips, + cache misses)
 
+ reads let in at once, for the shortest burst (a gate in front of the Worklist):
+     about CPUs × (a read's time alone ÷ its CPU-seconds)
+     2 CPUs: 2 × 2.1 / 0.9 ≈ 4.7 by the rule, 3 to 4 measured; credits spent: 2
+
  T     the Home read, seconds
  W     database work with no open cases, 2 CPUs, 8 years: p50 1.7 s, p90 3.4 s
        warm; the manager's team view is the largest; cold adds most past memory
@@ -116,6 +122,12 @@ A reviewer checked the files' timestamps against the logs.
  4 a smaller pool makes a burst faster    pool of 4: p50 ~8 s   missed: 23.7 s; a burst is bound by CPU
  5 a bigger server fixes the worst case   8 GB: under 10 s      missed with open cases (11 of 30 over 10 s);
                                                                 helps after #9950 (1 of 30)
+ 6 a read on one connection changes        answers identical,    held: 268/268, p50 2.14 s both ways,
+   nothing alone, and a gate of 2–4        p50 ~9–10 s at        1 round trip fewer; gate of 3–4 best:
+   helps a burst                           pool 2–4              p50 12.3 s; pool 2 missed (16.4 s)
+ 7 the best gate ≈ CPUs × (time alone ÷    4–5 on 2 CPUs;        3–4 on 2 CPUs (close, a little high);
+   CPU-seconds)                            2 beats 4 when        held at 0.4 CPU: 2 beats 4 (52.7 against
+                                           credits are spent     58.8 s); last read 68 s, predicted 40–45
 ```
 
 History growth (shape B, 2 CPUs, no open cases):
@@ -205,7 +217,8 @@ test holds, for every kind of work at once.
  B6  a cached answer ends only for      a fence per reader, or captured mail linked at once
      whom it changed
  B7  growth is tested                   the bench loop of 1.2–1.4 runs and predicts
- B8  a read holds one connection        a whole read passes on a pool of one connection
+ B8  a read holds one connection,       a whole read passes on a pool of one connection;
+     behind a gate                      at most CPUs × (time ÷ CPU-seconds) reads at once
  B9  budgets a single read cannot       CPU per read, memory per connection, cold p90,
      show                               cache hit rate
 ```
@@ -214,7 +227,8 @@ test holds, for every kind of work at once.
 
 ```
  fix                                   rule   status                         effect (3.2, 3.3)
- one connection per read               B8     tested in a temporary patch    reads stop waiting on each other
+ one connection per read + a gate      B8     tested in a temporary patch    burst p50 20 → 12 s (pool 8 →
+   of 3–4 Worklist reads                                                       gate 4); no memory kill
  #9950: read the page, count the rest  B1     simulated (cases archived);   removes the case cost
                                               owner assigned
  identity check once per statement     —      built on the branch            large histories
@@ -307,19 +321,35 @@ Three builds run on the same data with a 3 ms round trip:
 
 ### 3.4 The morning burst
 
-Every member opening Home at once: 18 reads, 2 CPUs, 3 ms, on a test build
-that holds one connection per read (B8).
+Every member opening Home at once: 18 reads, the new base on a test build
+where a Worklist read holds one connection (4.1), 3 ms round trip. The pool
+size is how many Worklist reads run at once; the rest wait their turn.
 
 ```
-                                         p50      p90      worst    notes
- pool of 16                              39.1 s   45.9 s   46.3 s   a backend killed for memory
-                                                                    in 2 of 4 bursts
- pool of 4                               23.7 s   32.3 s   42.8 s   no kill
+ 2 CPUs                       p50      p90      worst    peak private memory   notes
+ 16 at once                   15.4 s   19.9 s   19.9 s   3.4 GB                a backend killed,
+                                                                               14 of 18 failed
+  8 at once                   20.3 s   27.3 s   30.6 s   2.5 GB
+  6 at once                   14.9 s   19.7 s   21.4 s
+  5 at once                   15.1 s   18.2 s   18.2 s
+  4 at once (two runs)        11.8–12.3 s  17.0 s  18.3–18.4 s  1.4 GB
+  3 at once                   12.3 s   17.9 s   18.0 s
+  2 at once                   16.4 s   22.5 s   23.3 s   0.9 GB
+  1 at once                   20.2 s   37.7 s   39.4 s   0.6 GB
+
+ credits spent (0.4 CPU)
+  4 at once                   58.8 s   85.9 s   86.9 s
+  2 at once                   52.7 s   67.0 s   68.5 s
 ```
 
-A burst is bound by CPU: 18 reads at 1.7 CPU-seconds each on 2 CPUs take at
-least 15 s for the last one. The new base's 0.9 CPU-seconds per read halves
-that floor; the Home cache removes reads altogether.
+- Too many at once and the server runs out of memory: each connection holds
+  about 210 MB during a read, so 16 of them and the shared cache overflow
+  4 GB. Too few and the CPUs wait while each read waits on its round trips.
+- The best gate on 2 CPUs is 3 to 4 reads: half the p50 of 8 at once, and no
+  memory kill. When the CPU credits are spent it drops to about 2 (1.3).
+- The last read still takes 18 s on 2 CPUs, and over a minute with the credits
+  spent: a gate shares the work out, it does not shrink it. Less CPU per read
+  (Part 4) and fewer reads (the Home cache, 3.5) shrink it.
 
 ### 3.5 Repeat opens and the Home cache
 
@@ -373,6 +403,25 @@ read today does not hold it on every path.
   the snapshot ends. Joining it to the snapshot was tried and refused: two
   reads by one reader then fail with "could not serialize access".
 - The paths found and the measurements are with the owners.
+
+Tested in a temporary patch: the walk freeze runs inside the snapshot under
+its own savepoint (`degradable`), so a failed freeze still costs only the next
+page, and the installation lookup joins the snapshot. Then:
+
+```
+ every Home read, mine and team, pages 1 and 2, on a pool of one connection   all pass
+ the ground-truth check, new base with and without it                         268/268 identical
+ one read alone, 2 CPUs, 3 ms                                                 p50 2.14 s both ways,
+                                                                              1 round trip fewer
+```
+
+One connection per read is what makes a gate in front of the Worklist
+possible. With it, a read that has its connection always finishes. At most N
+reads at once is then a fair queue, not a wait on a second connection that
+may never come. The gate is a counter (a semaphore, or the Worklist's own small pool)
+sized by the rule in 1.3; 3.4 has the measurements. A gate that adapts to the
+measured time and CPU per read, as concurrency limiters do, would follow the
+credit balance by itself.
 
 ### 4.2 A read costs what it shows (B1, #9950)
 
@@ -875,8 +924,9 @@ Ordered by what Parts 1 and 3 measured, worst case first, and by the
 independent reviews (A.6).
 
 ```
- 1  a read holds one connection    B8: the one-connection test, then the fix;
-                                   availability before speed
+ 1  a read holds one connection,   B8: the one-connection test, then the fix (the
+    behind a Worklist gate         freeze in its own savepoint); then a gate of 3–4
+                                   reads; availability before speed
  2  #9950 contact cases (B1)       crosses 10 s on any server size; owner assigned
  3  identity check once            small, answers proven identical; ship alone
  4  tail stage metrics, the        three lines each; the production stage metrics and

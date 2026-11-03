@@ -186,9 +186,18 @@ func TestWorklistConcurrentOpenPoC(t *testing.T) {
 			go func() {
 				<-start
 				began := time.Now()
-				ctx, cancel := context.WithTimeout(principal.WithCorrelationID(m.ctx, ids.UUID(uuid.Must(uuid.NewV7()))), time.Minute)
+				ctx, cancel := context.WithTimeout(principal.WithCorrelationID(m.ctx, ids.UUID(uuid.Must(uuid.NewV7()))), 2*time.Minute)
 				defer cancel()
-				_, err := service.WorklistView(ctx, "today", scope, "", ids.Nil, 100, "")
+				err := database.WithWorkspaceSnapshot(ctx, app, func(ctx context.Context) error {
+					page := func(ctx context.Context) error {
+						_, err := service.WorklistView(ctx, "today", scope, "", ids.Nil, 100, "")
+						return err
+					}
+					if os.Getenv("POC_PLANS") == "generic" {
+						return database.ReuseGenericPlans(ctx, page)
+					}
+					return page(ctx)
+				})
 				results <- opened{fmt.Sprintf("member=%d scope=%s", i, scope), time.Since(began), err}
 			}()
 		}
