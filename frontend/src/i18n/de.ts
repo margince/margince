@@ -19500,6 +19500,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.owed_verdict": "Prüfung unbeantworteter Nachrichten",
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
+  "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
+  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",

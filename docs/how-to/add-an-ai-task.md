@@ -78,9 +78,9 @@ one certification run can cover:
 ## Steps
 
 1. **Declare the task in the contract**, `backend/api/ai-tasks.yaml`.
-   This file is the authority for the AI task list; no other document comes before it.
-   Someone outside the team who wants a new task can open an issue with the YAML block below, plus a
-   sentence on what calls it.
+   This file rules the AI task list; no other document comes before it.
+   To ask for a new task, open an issue with the YAML block below.
+   Add a sentence on what calls it.
 
    The declaration has this shape:
 

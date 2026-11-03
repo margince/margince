@@ -884,6 +884,8 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
+	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
@@ -942,6 +944,10 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReportInterpret:
+		return true
+	case AiActivityKindReportSetup:
 		return true
 	case AiActivityKindRequestSettlement:
 		return true
@@ -1462,6 +1468,8 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReportInterpret               AiTask = "report_interpret"
+	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
 	AiTaskSignalExtract                 AiTask = "signal_extract"
 	AiTaskSiteExtract                   AiTask = "site_extract"
@@ -1517,6 +1525,10 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReportInterpret:
+		return true
+	case AiTaskReportSetup:
 		return true
 	case AiTaskRequestSettlement:
 		return true
