@@ -27919,6 +27919,10 @@ paths:
           in: query
           schema: { type: string }
           description: Case-insensitive name/SKU substring match.
+        - name: tax_category
+          in: query
+          schema: { type: string, enum: [standard, reduced, exempt, unclassified] }
+          description: Only products in this tax category; `unclassified` lists those nobody has classified yet.
       responses:
         '200':
           description: A page of products.
@@ -34321,6 +34325,65 @@ paths:
               schema: { $ref: '#/components/schemas/FxRate' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /tax-rates:
+    get:
+      tags: [Rates]
+      operationId: listTaxRates
+      security: [ { cookieAuth: [] } ]   # human session only — the sheet is an admin view, not an agent surface
+      x-agent-access: human-only
+      summary: The tax rate sheet, every recorded rate, newest first within each country and category.
+      description: |
+        Needs `tax_rate:read`, which admin and ops hold. With `country`, only that country's
+        rates. A rate is in force from its `valid_from` until the next rate of the same country
+        and category starts.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[A-Za-z]{2}$' }
+          description: ISO 3166-1 alpha-2.
+      responses:
+        '200':
+          description: The rates.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Rates]
+      operationId: recordTaxRate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Record a standard or reduced tax rate for a country from a day on.
+      description: |
+        Needs `tax_rate:create`. A rate is added and never changed or removed: to change a
+        rate, record a new one from a later day. `valid_from` is today or later in the
+        installation's zone, or a day before the earliest rate of that country and category,
+        which extends the history back (422 `tax_rate_past` otherwise). A second rate for the
+        same country, category and day is refused as 409.
+
+        The first rate recorded for a category of the installation's own country classifies
+        the rate card: every unclassified live product whose `default_tax_rate` equals the
+        rate is put in that category, in the same transaction. A product with any other rate,
+        a typed 0% included, stays unclassified for the admin to decide.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordTaxRateRequest' }
+      responses:
+        '201':
+          description: The recorded rate, and how many products it classified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateRecorded' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai-model-rates:
@@ -61734,7 +61797,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate]
 
     RbacAction:
       type: string
@@ -68244,6 +68307,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.' }
         active: { type: boolean }
@@ -68256,6 +68320,40 @@ components:
       additionalProperties: true
       x-extension: true
 
+    TaxRate:
+      type: object
+      required: [id, country, category, rate, valid_from, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2.' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, description: 'Percent with two decimals, for example "19.00".' }
+        valid_from: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+    TaxRateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TaxRate' }
+    RecordTaxRateRequest:
+      type: object
+      required: [country, category, rate, valid_from]
+      additionalProperties: false
+      properties:
+        country: { type: string, pattern: '^[A-Za-z]{2}$' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, pattern: '^[0-9]{1,2}(\.[0-9]{1,2})?$', description: 'Percent, for example "19" or "7.70".' }
+        valid_from: { type: string, format: date }
+    TaxRateRecorded:
+      type: object
+      required: [rate, classified_products]
+      properties:
+        rate: { $ref: '#/components/schemas/TaxRate' }
+        classified_products:
+          type: integer
+          description: How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
     ProductListResponse:
       type: object
       required: [data, page]
@@ -68275,6 +68373,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit or send null to leave it unclassified.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
@@ -68293,6 +68392,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }

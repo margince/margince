@@ -189,6 +189,7 @@ var tableOwners = map[string]string{
 	"project_phase_history":     "internal/modules/projects",
 	"fx_rate":                   "internal/modules/deals",
 	"product":                   "internal/modules/deals",
+	"tax_rate":                  "internal/modules/deals",
 	"product_translation":       "internal/modules/deals",
 	"offer":                     "internal/modules/deals",
 	"offer_line_item":           "internal/modules/deals",

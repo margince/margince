@@ -243,6 +243,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/privacy/notice-cases": {
 		{Name: "state", Values: []string{"open", "assigned", "queued", "delivery_failed", "completed", "provided_elsewhere", "exempt_with_reason", "blocked", "not_required"}, Array: true, Explode: true},
 	},
+	"GET /v1/products": {
+		{Name: "tax_category", Values: []string{"standard", "reduced", "exempt", "unclassified"}, Array: false, Explode: true},
+	},
 	"GET /v1/projects": {
 		{Name: "phase", Values: []string{"initiative", "pursuing", "delivering", "closed"}, Array: false, Explode: true},
 	},

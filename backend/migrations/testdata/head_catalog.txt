@@ -6774,12 +6774,14 @@ public.product.product_billing_shape CHECK ((((billing_model IS NULL) AND (billi
 public.product.product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
+public.product.product_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text]))))
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
 public.product.product_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))
 public.product.product_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.product.search_tsv tsvector gen=s def=((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))
 public.product.sku text gen=- def=-
 public.product.source text NOT NULL gen=- def=-
+public.product.tax_category text gen=- def=-
 public.product.trg_product_updated CREATE TRIGGER trg_product_updated BEFORE UPDATE ON public.product FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.product.unit text NOT NULL gen=- def='unit'::text
 public.product.unit_price_minor bigint NOT NULL gen=- def=-
@@ -8296,6 +8298,28 @@ public.taggable.taggable_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES tag(id) ON 
 public.taggable.taggable_unique UNIQUE (tag_id, entity_type, entity_id)
 public.taggable_pkey CREATE UNIQUE INDEX taggable_pkey ON public.taggable USING btree (id)
 public.taggable_unique CREATE UNIQUE INDEX taggable_unique ON public.taggable USING btree (tag_id, entity_type, entity_id)
+public.tax_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.tax_rate.captured_by text NOT NULL gen=- def=-
+public.tax_rate.category text NOT NULL gen=- def=-
+public.tax_rate.country text NOT NULL gen=- def=-
+public.tax_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.tax_rate.id uuid NOT NULL gen=- def=uuidv7()
+public.tax_rate.rate numeric(5,2) NOT NULL gen=- def=-
+public.tax_rate.tax_rate_category_check CHECK ((category = ANY (ARRAY['standard'::text, 'reduced'::text])))
+public.tax_rate.tax_rate_country_shape CHECK ((country ~ '^[a-z]{2}$'::text))
+public.tax_rate.tax_rate_once_per_day UNIQUE (country, category, valid_from)
+public.tax_rate.tax_rate_pkey PRIMARY KEY (id)
+public.tax_rate.tax_rate_rate_range CHECK (((rate >= (0)::numeric) AND (rate < (100)::numeric)))
+public.tax_rate.trg_tax_rate_append_only CREATE TRIGGER trg_tax_rate_append_only BEFORE DELETE OR UPDATE ON public.tax_rate FOR EACH ROW EXECUTE FUNCTION tax_rate_refuse_change()
+public.tax_rate.valid_from date NOT NULL gen=- def=-
+public.tax_rate_once_per_day CREATE UNIQUE INDEX tax_rate_once_per_day ON public.tax_rate USING btree (country, category, valid_from)
+public.tax_rate_pkey CREATE UNIQUE INDEX tax_rate_pkey ON public.tax_rate USING btree (id)
+public.tax_rate_refuse_change() secdef=false cfg=- acl=- 
+BEGIN
+    RAISE EXCEPTION 'a tax rate is added and never changed or removed; record a new rate from a later day'
+        USING ERRCODE = 'check_violation';
+END;
+
 public.team acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team.archived_at timestamp with time zone gen=- def=-
 public.team.created_at timestamp with time zone NOT NULL gen=- def=now()
