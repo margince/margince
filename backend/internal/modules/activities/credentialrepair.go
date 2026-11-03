@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -42,10 +43,11 @@ func MaskStoredMailTextTx(
 	for _, id := range ids.Ascending(want) {
 		var kind crmcontracts.ActivityKind
 		var subject, body *string
+		var archived *time.Time
 		err := tx.QueryRow(ctx, `
-			SELECT kind, subject, body FROM activity
+			SELECT kind, subject, body, archived_at FROM activity
 			 WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`,
-			id).Scan(&kind, &subject, &body)
+			id).Scan(&kind, &subject, &body, &archived)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}
@@ -59,8 +61,23 @@ func MaskStoredMailTextTx(
 		if err != nil {
 			return nil, err
 		}
-		if wrote {
-			changed = append(changed, id.UUID)
+		if !wrote {
+			continue
+		}
+		changed = append(changed, id.UUID)
+		if archived == nil {
+			continue
+		}
+		// An archived row is not embeddable, so the update this mask emits
+		// rebuilds no vector. The one built while the row was live holds the
+		// unmasked subject and body, and would outlive the text itself.
+		//
+		// Dropped the way a narrowed row's vector is dropped, in the same
+		// transaction as the mask.
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`,
+			id); err != nil {
+			return nil, fmt.Errorf("activities: dropping the masked activity's embedding: %w", err)
 		}
 	}
 	return changed, nil
