@@ -19,9 +19,8 @@ package gates
 // something else stays invisible. The reader test below plants each shape it
 // must see, rather than trusting the pattern to be complete.
 //
-// A sum stays outside. `lead_score_history.rounded_sum` holds the value from
-// before the clamp, so a raw 100.6 stores 101 and the cap acts after that. Its
-// range is open, and `leadscore.go` states that where the two steps are named.
+// `_sum` is in the corpus and waived, not left out of it. Anchored on the
+// underscore, because a bare `sum` also matches `import_run.resume_count`.
 
 import (
 	"os"
@@ -37,7 +36,8 @@ import (
 // A bounded quantity is stored as a whole number here; a numeric column states
 // its range through precision and scale instead.
 var boundedQuantityColumn = regexp.MustCompile(
-	`^public\.(\w+)\.(\w*(?:score|probability|percent|points|_rate|rate_bps)\w*) (smallint|integer|bigint)\b`)
+	`^public\.(\w+)\.(\w*(?:score|probability|percent|points|_rate|rate_bps|_sum)\w*) (smallint|integer|bigint)\b`,
+)
 
 // unboundedOnPurpose records each bounded-sounding column that carries no range,
 // with why. It is what makes a new column fail: an unlisted one has neither a
@@ -45,6 +45,10 @@ var boundedQuantityColumn = regexp.MustCompile(
 var unboundedOnPurpose = gatekit.Waive(map[string]string{
 	"lead_manual_signal.points": "a rep's own signal, which can subtract. The scorer's own " +
 		"fitLowIntentSourcePenalty is -5, so a lower bound of zero would refuse a penalty.",
+	"lead_score_history.rounded_sum": "the value from before the clamp, so a raw 100.6 " +
+		"stores 101 and the cap acts after it. Its range is open by construction, and " +
+		"leadscore.go names the two steps. Listed rather than left outside the corpus: " +
+		"a waiver says so if it ever gains a bound, and prose does not.",
 })
 
 // checksByTable groups every CHECK definition in the catalog by its table.
@@ -192,7 +196,10 @@ func TestTheBoundedQuantityReaderSeesEachShape(t *testing.T) {
 	}{
 		{"public.lead.score smallint NOT NULL gen=- def=-", true},
 		{"public.commission_entry.rate_bps integer NOT NULL gen=- def=0", true},
-		{"public.lead_score_history.rounded_sum smallint NOT NULL gen=- def=-", false},
+		{"public.lead_score_history.rounded_sum smallint NOT NULL gen=- def=-", true},
+		// The anchor earns its underscore: a bare `sum` matches this too, and a
+		// resume count is no quantity to bound.
+		{"public.import_run.resume_count integer NOT NULL gen=- def=0", false},
 		{"public.stage.win_probability smallint NOT NULL gen=- def=-", true},
 		{"public.lead.score_override_reason text gen=- def=-", false},
 		{"public.deal.fx_rate_to_base numeric(20,10) gen=- def=-", false},
