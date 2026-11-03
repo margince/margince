@@ -140,6 +140,7 @@ var catalog = map[string]struct {
 	"contract.status_changed": {dealStreamEntity, 1},
 	"contract.archived":       {dealStreamEntity, 1},
 	"offer.created":           {dealStreamEntity, 1},
+	"offer.updated":           {dealStreamEntity, 1},
 	"offer.sent":              {dealStreamEntity, 1},
 	"offer.accepted":          {dealStreamEntity, 1},
 	"offer.rejected":          {dealStreamEntity, 1},

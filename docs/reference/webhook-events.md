@@ -144,6 +144,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`offer.rejected`](#offerrejected) | offer | 1 |
 | [`offer.sent`](#offersent) | offer | 1 |
 | [`offer.superseded`](#offersuperseded) | offer | 1 |
+| [`offer.updated`](#offerupdated) | offer | 1 |
 | [`onboarding.state_changed`](#onboardingstate_changed) | onboarding_wizard_state | 1 |
 | [`passport.revoked`](#passportrevoked) | passport | 1 |
 | [`pipeline.archived`](#pipelinearchived) | pipeline | 1 |
@@ -1403,6 +1404,18 @@ Payload for offer.superseded, a sent offer was regenerated into a fresh draft re
 | `data.from_revision` | integer | no | The superseded revision number. |
 | `data.offer_id` | string (uuid) | yes | The superseded (prior) offer revision. |
 | `data.to_revision` | integer | yes | The new revision number minted by the regenerate. |
+
+### `offer.updated`
+
+Record: `offer` · version 1
+
+Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.changed_fields` | array of string | yes | The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved. |
+| `data.deal_id` | string (uuid) | yes | The deal this offer belongs to. |
+| `data.offer_id` | string (uuid) | yes | The edited draft offer. |
 
 ### `onboarding.state_changed`
 

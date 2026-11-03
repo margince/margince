@@ -663,6 +663,7 @@ const (
 	OfferRejected                         SubscribableEventType = "offer.rejected"
 	OfferSent                             SubscribableEventType = "offer.sent"
 	OfferSuperseded                       SubscribableEventType = "offer.superseded"
+	OfferUpdated                          SubscribableEventType = "offer.updated"
 	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
 	PassportRevoked                       SubscribableEventType = "passport.revoked"
 	PipelineArchived                      SubscribableEventType = "pipeline.archived"
@@ -914,6 +915,8 @@ func (e SubscribableEventType) Valid() bool {
 	case OfferSent:
 		return true
 	case OfferSuperseded:
+		return true
+	case OfferUpdated:
 		return true
 	case OnboardingStateChanged:
 		return true
@@ -2328,6 +2331,18 @@ type PublicEventOfferSuperseded struct {
 	ToRevision int `json:"to_revision"`
 }
 
+// PublicEventOfferUpdated Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+type PublicEventOfferUpdated struct {
+	// ChangedFields The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved.
+	ChangedFields []string `json:"changed_fields"`
+
+	// DealId The deal this offer belongs to.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OfferId The edited draft offer.
+	OfferId openapi_types.UUID `json:"offer_id"`
+}
+
 // PublicEventOnboardingStateChanged Payload for onboarding.state_changed — the admitted human's wizard checkpoint was created or advanced (identity/onboarding.go's auditOnboardingState).
 type PublicEventOnboardingStateChanged struct {
 	// Completed Whether the wizard was completed as of this checkpoint.
@@ -3305,6 +3320,10 @@ func (PublicEventOfferSuperseded) EventType() string { return "offer.superseded"
 
 func (PublicEventOfferSuperseded) EntityType() string { return "offer" }
 
+func (PublicEventOfferUpdated) EventType() string { return "offer.updated" }
+
+func (PublicEventOfferUpdated) EntityType() string { return "offer" }
+
 func (PublicEventOnboardingStateChanged) EventType() string { return "onboarding.state_changed" }
 
 func (PublicEventOnboardingStateChanged) EntityType() string { return "onboarding_wizard_state" }
@@ -3578,6 +3597,7 @@ var PublicEventVersions = map[string]int{
 	"offer.rejected":                            1,
 	"offer.sent":                                1,
 	"offer.superseded":                          1,
+	"offer.updated":                             1,
 	"onboarding.state_changed":                  1,
 	"passport.revoked":                          1,
 	"pipeline.archived":                         1,
@@ -3727,6 +3747,7 @@ var PublicEventSamples = map[string]string{
 	"offer.rejected":                            "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"revision\":1}",
 	"offer.sent":                                "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
 	"offer.superseded":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_revision\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_revision\":1}",
+	"offer.updated":                             "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"onboarding.state_changed":                  "{\"completed\":true,\"connect_skipped\":true,\"path\":\"Sample path\",\"step\":\"Sample step\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"version\":1,\"voice_skipped\":true}",
 	"passport.revoked":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"passport_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"pipeline.archived":                         "{}",

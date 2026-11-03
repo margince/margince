@@ -17,6 +17,8 @@ package deals
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -443,8 +445,12 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply offer patch: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After()); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After())
+		if err != nil {
 			return fmt.Errorf("audit offer update: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, slices.Collect(maps.Keys(p.Moved()))); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read updated offer: %w", err)

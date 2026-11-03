@@ -17,6 +17,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -470,5 +472,56 @@ func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 	// rejected outright on accept, whatever its scopes.
 	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/accept", nil, bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("agent accept → %d, want 403 (human-only)", status)
+	}
+}
+
+// Every draft edit announces itself once, header and lines alike, naming what
+// it changed. A subscriber hears each change the audit trail records.
+func TestEachDraftEditStagesOneOfferUpdated(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Offer Edits", "edits@fable.test", "Admin")
+	dealID := offerFixture(t, e)
+	var offer offerBody
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
+		"currency": "EUR", "source": "manual",
+		"line_items": []AnyMap{{"description": "Licence", "quantity": 1, "unit_price_minor": 50000, "tax_rate": 19.0}},
+	}, nil, &offer); status != http.StatusCreated {
+		t.Fatalf("create offer → %d", status)
+	}
+	announced := func() [][]string {
+		t.Helper()
+		rows, err := e.Owner.Query(context.Background(), `
+			SELECT envelope->'payload'->'changed_fields' FROM event_outbox
+			 WHERE envelope->>'type' = 'offer.updated' AND envelope->'payload'->>'offer_id' = $1
+			 ORDER BY id`, offer.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := pgx.CollectRows(rows, pgx.RowTo[[]string])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+
+	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID, AnyMap{"intro_text": "For the fleet renewal"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("edit the intro → %d", status)
+	}
+	var withLine offerBody
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/line-items", AnyMap{
+		"description": "Support", "quantity": 1, "unit_price_minor": 20000, "tax_rate": 19.0,
+	}, nil, &withLine); status != http.StatusCreated {
+		t.Fatalf("add a line → %d", status)
+	}
+
+	got := announced()
+	if len(got) != 2 {
+		t.Fatalf("two draft edits staged %d offer.updated events: %v", len(got), got)
+	}
+	if strings.Join(got[0], ",") != "intro_text" {
+		t.Errorf("the intro edit names %v, want intro_text", got[0])
+	}
+	if strings.Join(got[1], ",") != "gross_minor,line_items,net_minor,tax_minor" {
+		t.Errorf("the line add names %v, want the lines and the three totals it moved", got[1])
 	}
 }

@@ -125,10 +125,14 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 		// leaves standing — that equality is the claim worth recording. How
 		// many lines were staged is context about the mutation, so it lands in
 		// evidence rather than as a field the offer never had.
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			map[string]any{"staged_lines_added": len(lines)}); err != nil {
+			map[string]any{"staged_lines_added": len(lines)})
+		if err != nil {
 			return fmt.Errorf("audit staged lines add: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+			return err
 		}
 		out = inserted
 		return nil
