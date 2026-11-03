@@ -271,7 +271,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 				return err
 			}
 			var err error
-			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
+			if rec, fields, err = s.readMailForTheSeatTx(ctx, tx, actor.UserID, rec, fields); err != nil {
 				return err
 			}
 			// Stored only now, so the original's privacy question sees the record

@@ -26,7 +26,7 @@ const mark = (
 ): TimelineMark => ({
   precision: "instant",
   kind: "email",
-  direction: "inbound",
+  side: "theirs",
   what: "Email",
   title: "Scope question",
   detail: "From Dana Reyes",
@@ -79,7 +79,7 @@ describe("marks on the line", () => {
         at: "2026-07-11",
         when: "11 Jul",
         title: "Re: scope",
-        direction: "outbound",
+        side: "ours",
       }),
     ]);
 
@@ -152,7 +152,7 @@ describe("marks on the line", () => {
           at: "2026-07-10",
           title: `Note ${index}`,
           kind: "note",
-          direction: undefined,
+          side: undefined,
         }),
       ),
     );
