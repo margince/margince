@@ -105,6 +105,7 @@ Its list and count take the same owner set as the deal risk read, so each view r
 The row names the company's current owner as its requested decider, read at request time.
 A change of company owner moves the suggestion with no write to it.
 A suggestion for a company with no owner shows under **Unassigned** and in team views.
+`GET /attention` answers for the acting reader, so its suggestion lane and count hold only the reader's own companies.
 An owner who may not read all of a suggestion's evidence does not get the row, and no other reader gets it in their place.
 The suggestion ranks as a possible opportunity, at the level of a held customer send: above routine cleanup, below customer replies, promises, deal risk and agreed tasks.
 

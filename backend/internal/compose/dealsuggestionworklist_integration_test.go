@@ -11,8 +11,11 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -167,6 +170,49 @@ func TestAnOwnerWhoCannotSeeTheEvidenceIsNotShownTheSuggestion(t *testing.T) {
 		scope := map[string]string{"Sam's own": "mine", "unassigned": "unassigned"}[name]
 		if got, decisions := e.suggestedCompanies(views[name], t, scope, ids.Nil); len(got) != 0 || decisions != 0 {
 			t.Errorf("%s view holds %v (%d decisions) though Sam may not read the evidence", name, got, decisions)
+		}
+	}
+}
+
+// GET /attention answers for the acting rep, so each owner's lane feed holds
+// and counts their own suggestion. Both read every row, so the cut is the
+// owner's and not the row scope's.
+func TestTheAttentionFeedShowsEachOwnerOnlyTheirOwnSuggestion(t *testing.T) {
+	e := setupScout(t)
+	alexs := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
+	sams := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)
+	e.raiseFor(t, alexs, sams)
+	handlers := attention.NewHandlers(e.scoutWorklist())
+
+	for name, owner := range map[string]struct {
+		ctx  context.Context
+		want ids.UUID
+	}{
+		"Alex": {e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminWithSignals), alexs},
+		"Sam":  {e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminWithSignals), sams},
+	} {
+		response := httptest.NewRecorder()
+		handlers.GetAttention(response, httptest.NewRequest(http.MethodGet, "/v1/attention", nil).WithContext(owner.ctx))
+		if response.Code != http.StatusOK {
+			t.Fatalf("%s's attention: HTTP %d: %s", name, response.Code, response.Body.String())
+		}
+		var day crmcontracts.Attention
+		if err := json.Unmarshal(response.Body.Bytes(), &day); err != nil {
+			t.Fatal(err)
+		}
+		var companies []ids.UUID
+		for _, row := range day.NeedsYou {
+			if row.Source == "deal_suggestion" && row.Subject != nil {
+				companies = append(companies, ids.UUID(row.Subject.Id))
+			}
+		}
+		if !slices.Equal(companies, []ids.UUID{owner.want}) {
+			t.Errorf("%s's attention lists suggestions for %v, want only %v", name, companies, owner.want)
+		}
+		if open := day.Counts.DealSuggestionsOpen; open == nil {
+			t.Errorf("%s's attention has no open-suggestion count, want 1", name)
+		} else if *open != 1 {
+			t.Errorf("%s's attention counts %d open suggestions, want 1", name, *open)
 		}
 	}
 }
