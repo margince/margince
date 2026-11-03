@@ -196,6 +196,27 @@ describe("Top bar at phone width", () => {
     ).toBe(TWO_MARKS.logo_icon_url);
   });
 
+  it("reads no record name for the trail it does not draw", async () => {
+    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) =>
+        String(request instanceof Request ? request.url : request).includes(
+          "/deals/d-1",
+        ),
+      );
+    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", wideFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
+    cleanup();
+
+    stubPhoneViewport();
+    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", phoneFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
+    expect(recordReads(phoneFetch)).toEqual([]);
+  });
+
   it("keeps the trail and no mark on a wide screen", () => {
     renderTopBar({ screen: "deals" });
     expect(trail()).toBeTruthy();

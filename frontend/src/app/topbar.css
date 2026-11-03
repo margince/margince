@@ -335,6 +335,17 @@
     outline-offset: 2px;
     pointer-events: none;
   }
+  /* A worded trigger keeps its edge and fill, so a layer round it takes the
+     taps: the same 44px down and half the gap across, past its 1px border. */
+  .topbar-trail .setup-reminder {
+    position: relative;
+  }
+  .topbar-trail .setup-reminder::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--topbarTargetInset) - 1px)
+      calc(-1 * var(--topbarReach) - 1px);
+  }
   /* A count is placed against its button, which now stands round the square. */
   .topbar-trail :is(.notifbell-count, .outbox-count) {
     translate: calc(-1 * var(--topbarReach)) var(--topbarTargetInset);

@@ -158,6 +158,16 @@ export function TopBarSearch({
   );
 }
 
+/** The trail, mounted only where it is drawn, so a phone reads no names for it. */
+function TopBarTrail({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  const t = useT();
+  const crumbs = useCrumbs(route, section);
+  return <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />;
+}
+
 /** The company's mark leading home, where a phone has no room for the trail. */
 function TopBarHome() {
   const label = useHomeLinkLabel();
@@ -182,7 +192,6 @@ export function TopBar({
   onOpenSearch: () => void;
 }>) {
   const t = useT();
-  const crumbs = useCrumbs(route, section);
   const hash = useHash();
   // Every list the bar stands over is noted, so a record opened from it can
   // lead back to it with the same filter.
@@ -226,7 +235,7 @@ export function TopBar({
         {phone ? (
           <TopBarHome />
         ) : (
-          <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />
+          <TopBarTrail route={route} section={section} />
         )}
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
