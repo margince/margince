@@ -25,7 +25,7 @@ func settleDisposition(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInp
 		       -- The question is answered, so it is no longer waiting on
 		       -- evidence. Leaving the marker would keep a settled domain in
 		       -- the "needs a human" list for ever.
-		       pending_reason = NULL,
+		       pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1 AND status = 'pending'`,
 		in.Domain, in.Status, in.Source, in.Evidence, companyID, readID); err != nil {

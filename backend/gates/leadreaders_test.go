@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/consent/gateaddress.go:AddressHasSubject":              "whether any contact or lead holds a calendar guest's address. A boolean that only ever sends the address to the consent gate; nothing of the lead is selected",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx": "An exact-address existence predicate only removes already held identities from a content-gated conversation suggestion. No lead id or column leaves the query, and a missing lead read grant must not suggest a duplicate contact.",
 	"internal/modules/contacts/leadorigin.go:DeleteLeadOrigin":               "`SELECT EXISTS (SELECT 1 FROM lead WHERE origin = $1)`: whether a lead still uses the origin being deleted, after the lead-vocabulary delete grant. One boolean that only refuses the delete as a conflict; nothing of a lead leaves",
 	"internal/modules/contacts/leadnoticehold.go:websiteLeadNoticePending":   "the notice hold asks, inside EXISTS, whether a lead the caller is about to promote, claim, assign, route or merge is a website lead whose notice is not yet known to be delivered. One boolean leaves it and only ever refuses; every caller has already taken its own lead gate",
@@ -130,6 +131,7 @@ var lifecycleLeadReads = gatekit.Waive(map[string]string{
 // Store.X would then vouch for an ungated Handlers.X. rbacgate_test.go's header
 // records being bitten by exactly that.
 var calleeGatedLeadReads = gatekit.Waive(map[string]string{
+	"internal/compose/schedulingattendees.go:attendeeCandidates":               "the lead ids that hold one invited address, before the host's row scope is asked. resolveAttendee hands each id to contacts.GetLead under the host's principal, which asks the lead object gate and row scope; an id the host may not read never leaves, and only says the consent gate must clear that address",
 	"internal/modules/activities/emailtarget.go:leadCandidatesSQL":             "the record an email about a written-about row goes to (activities.emailTargets). linkedCandidates asks auth.ReadGranted for the object it reads and renders that object's row scope, so a caller with no lead grant is told about none; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/modules/contacts/leadcompany.go:leadLinkedCompany":               "the company a lead row is linked to, read for LinkLeadCompany, QualifyLead and MergeLead (each asking auth.Require(lead, update)), for UpdateLead's unlink (lead update) and for GetLead's match offer (lead read); one uuid column, and every wire read of a lead withholds it through withholdUnreadableCompanies",
 	"internal/modules/contacts/leadidentity.go:workedFromContact":              "the contact a lead row was worked from, read for ReopenLead, DemoteLead and the lead merge, each of which asks auth.Require on lead first; one uuid column, never handed to a caller",

@@ -205,7 +205,9 @@ export function ComposeFoot({
           </Button>
           {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
         </span>
-        {!isChannelReply && <SendMark {...send.permission} />}
+        {!isChannelReply && (
+          <SendMark {...send.permission} blocked={send.blocked} />
+        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
@@ -246,24 +248,18 @@ export function ComposeOutcome({
   bodyKey,
   sendUnavailable,
   send,
-  contactId,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
   send: ComposeSend;
-  contactId: string | undefined;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal
-        refusal={send.refusal}
-        contactId={contactId}
-        review={send.sendReview}
-      />
+      <SendRefusal refusal={send.refusal} />
     </>
   );
 }

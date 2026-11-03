@@ -1348,6 +1348,7 @@ public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
+public.assurance_exception.assurance_exception_delivery_state_check CHECK ((delivery_state = ANY (ARRAY['pending'::text, 'failed'::text, 'delivered'::text])))
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
@@ -1359,6 +1360,9 @@ public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency currency_code gen=- def=-
+public.assurance_exception.delivered_assignee_id uuid gen=- def=-
+public.assurance_exception.delivery_attempts integer NOT NULL gen=- def=0
+public.assurance_exception.delivery_state text gen=- def=-
 public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2747,9 +2751,11 @@ public.company_domain_disposition.admission_reason_coded_at timestamp with time 
 public.company_domain_disposition.admission_sender_kind text gen=- def=-
 public.company_domain_disposition.admission_source text gen=- def=-
 public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
+public.company_domain_disposition.candidate_company_id uuid gen=- def=-
 public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
 public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
 public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_candidate_company_fkey FOREIGN KEY (candidate_company_id) REFERENCES company(id) ON DELETE SET NULL
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -2771,6 +2777,7 @@ public.company_domain_disposition.next_attempt_at timestamp with time zone gen=-
 public.company_domain_disposition.owner_id uuid gen=- def=-
 public.company_domain_disposition.pending_reason text gen=- def=-
 public.company_domain_disposition.site_read_id uuid gen=- def=-
+public.company_domain_disposition.site_unreadable boolean NOT NULL gen=- def=false
 public.company_domain_disposition.source text gen=- def=-
 public.company_domain_disposition.status text NOT NULL gen=- def='pending'::text
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5098,6 +5105,7 @@ public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON pub
 public.idx_company_dedupe_scan CREATE INDEX idx_company_dedupe_scan ON public.company USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id)
 public.idx_company_domain_dedupe_scan CREATE INDEX idx_company_domain_dedupe_scan ON public.company_domain USING btree (updated_at, id)
+public.idx_company_domain_disposition_candidate CREATE INDEX idx_company_domain_disposition_candidate ON public.company_domain_disposition USING btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)
 public.idx_company_domain_disposition_company CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
@@ -5897,18 +5905,21 @@ public.legal_entity.legal_entity_country_shape CHECK (((country IS NULL) OR (cou
 public.legal_entity.legal_entity_default_has_no_offering CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))
 public.legal_entity.legal_entity_default_is_permanent CHECK (((NOT is_default) OR (archived_at IS NULL)))
 public.legal_entity.legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))
+public.legal_entity.legal_entity_default_signs_with_the_installation CHECK (((NOT is_default) OR (signature_template IS NULL)))
 public.legal_entity.legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text)))
 public.legal_entity.legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))
 public.legal_entity.legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text)))
 public.legal_entity.legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL))))
 public.legal_entity.legal_entity_offering_bounded CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))
 public.legal_entity.legal_entity_pkey PRIMARY KEY (id)
+public.legal_entity.legal_entity_signature_template_bounded CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000)))
 public.legal_entity.legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.legal_entity.legal_name text gen=- def=-
 public.legal_entity.logo_object_key text gen=- def=-
 public.legal_entity.offer_summary text gen=- def=-
 public.legal_entity.register_court text gen=- def=-
 public.legal_entity.register_number text gen=- def=-
+public.legal_entity.signature_template text gen=- def=-
 public.legal_entity.trg_legal_entity_default_is_permanent CREATE TRIGGER trg_legal_entity_default_is_permanent BEFORE DELETE OR UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()
 public.legal_entity.trg_legal_entity_updated CREATE TRIGGER trg_legal_entity_updated BEFORE UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.legal_entity.updated_at timestamp with time zone NOT NULL gen=- def=now()

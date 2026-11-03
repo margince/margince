@@ -34,6 +34,7 @@ import {
   useAssignableRoles,
 } from "../../lib/roles.queries";
 import { usePageReadOnly } from "./settingsnav";
+import { useEntityColumn } from "./users-entitycell";
 import { InviteUserForm } from "./users-invite-form";
 import {
   matchingMembers,
@@ -177,6 +178,7 @@ function MembersCard({
             allMembers={read.data.list}
             roles={read.data.roles}
             management={management}
+            canChangeRole={canChangeRole}
             refusalOf={(member, list, roles) =>
               roleRefusal(member, {
                 roster: list,
@@ -200,12 +202,14 @@ function MembersTable({
   allMembers,
   roles,
   management,
+  canChangeRole,
   refusalOf,
 }: Readonly<{
   list: User[];
   allMembers: User[];
   roles: readonly AssignableRole[];
   management: boolean;
+  canChangeRole: boolean;
   refusalOf: (
     member: User,
     list: readonly User[],
@@ -214,6 +218,7 @@ function MembersTable({
 }>) {
   const t = useT();
   const teamNames = useTeamNames(management);
+  const entity = useEntityColumn(management, canChangeRole);
   const member: DataTableColumn<User> = {
     key: "member",
     header: t("users.col.member"),
@@ -245,6 +250,7 @@ function MembersTable({
           header: t("users.teamsLabel"),
           render: (u) => <MemberTeams ids={u.team_ids} names={teamNames} />,
         },
+        ...(entity ? [entity] : []),
         activity,
         {
           key: "verbs",
