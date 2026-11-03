@@ -102,10 +102,10 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, filter domainQues
 			where += ` AND (d.created_at, d.id) > (` + arg(after.CreatedAt) + `, ` + arg(after.ID) + `)`
 		}
 		query := `SELECT d.id, d.domain, ` + domainPendingReason + `, d.pending_reason,
-	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `, d.site_unread, d.candidate_company_id
+	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `, d.site_unread, d.candidate_company_id, d.candidate_name
 	  FROM company_domain_disposition d WHERE ` + where + `
 	  ORDER BY d.created_at, d.id LIMIT ` + arg(limit+1)
-		var candidates map[string]ids.UUID
+		var candidates map[string]storedTwin
 		if out, candidates, err = scanDomainQuestions(ctx, tx, query, args); err != nil {
 			return err
 		}
@@ -125,20 +125,21 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, filter domainQues
 
 // scanDomainQuestions reads the page and the name-twin candidate of each
 // near_duplicate question. A column left by an earlier reason is ignored.
-func scanDomainQuestions(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DomainQuestion, map[string]ids.UUID, error) {
+func scanDomainQuestions(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DomainQuestion, map[string]storedTwin, error) {
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
 	var out []DomainQuestion
-	candidates := map[string]ids.UUID{}
+	candidates := map[string]storedTwin{}
 	for rows.Next() {
 		var q DomainQuestion
 		var evidence string
 		var siteUnread bool
 		var candidate *ids.UUID
-		if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred, &siteUnread, &candidate); err != nil {
+		var candidateName *string
+		if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred, &siteUnread, &candidate, &candidateName); err != nil {
 			return nil, nil, err
 		}
 		switch q.ReasonCode {
@@ -153,8 +154,8 @@ func scanDomainQuestions(ctx context.Context, tx pgx.Tx, query string, args []an
 		case PendingUnevidenced:
 			q.Context.SiteUnread = siteUnread
 		case PendingNearDuplicate:
-			if candidate != nil {
-				candidates[q.Domain] = *candidate
+			if candidate != nil && candidateName != nil {
+				candidates[q.Domain] = storedTwin{company: *candidate, name: *candidateName}
 			}
 		}
 		out = append(out, q)

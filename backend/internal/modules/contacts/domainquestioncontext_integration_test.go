@@ -147,3 +147,45 @@ func TestSeveralNameTwinsSuggestNone(t *testing.T) {
 		t.Fatalf("suggestion = %+v, want none between two twins", got)
 	}
 }
+
+// heldOnATwin opens a question held on a sole exact-name twin and returns it.
+func (e *dedupeEnv) heldOnATwin(ctx context.Context, t *testing.T, home, alias, name string) ids.CompanyID {
+	t.Helper()
+	first := e.resolveSiteVerdict(ctx, t, "alice@"+home, home, name)
+	e.openTriageFirst(ctx, t, "bob@"+alias, "Bob Brand", alias)
+	if held := e.answerSiteVerdict(ctx, t, alias, name, e.startTriageRead(ctx, t, alias)); held.CompanyID != nil {
+		t.Fatal("a name twin linked the domain without a reader")
+	}
+	if got := e.questionAbout(ctx, t, alias).Context.Suggestion; got == nil || got.CompanyID != first.CompanyID.UUID {
+		t.Fatalf("suggestion = %+v, want the twin before anything changed", got)
+	}
+	return *first.CompanyID
+}
+
+func TestARenamedTwinIsNoLongerSuggested(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	twin := e.heldOnATwin(ctx, t, "renamed-home.test", "renamed-alias.test", "Renamed Works GmbH")
+	other := "Other Works GmbH"
+	if _, err := e.store.UpdateCompany(ctx, twin, UpdateCompanyInput{DisplayName: &other}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.questionAbout(ctx, t, "renamed-alias.test").Context.Suggestion; got != nil {
+		t.Fatalf("suggestion = %+v, want none once the twin is renamed", got)
+	}
+}
+
+func TestASecondCompanyOfTheNameEndsTheSuggestion(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.heldOnATwin(ctx, t, "second-home.test", "second-alias.test", "Second Works GmbH")
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Second Works GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "second-other.test", IsPrimary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.questionAbout(ctx, t, "second-alias.test").Context.Suggestion; got != nil {
+		t.Fatalf("suggestion = %+v, want none with two companies of the name", got)
+	}
+}

@@ -565,3 +565,43 @@ it.each([
     expect(writes[0].endsWith(path)).toBe(true);
   },
 );
+
+it("says in the review who wrote and which company the evidence suggests", async () => {
+  const user = userEvent.setup();
+  transport(() =>
+    response({
+      data: [
+        {
+          ...forwarded,
+          domain_context: {
+            contacts: [
+              {
+                id: "00000000-0000-4000-8000-0000000000a1",
+                name: "Alex Example",
+              },
+            ],
+            contact_count: 1,
+            hidden_senders: false,
+            site_unread: false,
+            suggested_company: {
+              id: "00000000-0000-4000-8000-000000000001",
+              name: "Example Company",
+              basis: "redirect_target",
+            },
+          },
+        },
+      ],
+      page: { has_more: false },
+    }),
+  );
+  mount();
+  await user.click(screen.getByRole("button", { name: "Domain review" }));
+  expect(
+    await screen.findByText("Which company does Alex Example work for?"),
+  ).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Alex Example" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Example Company" })).toBeTruthy();
+  expect(
+    screen.getByText("Its website redirects to a domain of this company."),
+  ).toBeTruthy();
+});

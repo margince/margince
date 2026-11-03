@@ -108,6 +108,10 @@ func withholdForStaleEvidence(
 func withholdForNearDuplicate(
 	ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, rival CompanyCandidateScore, sole *ids.CompanyID,
 ) error {
+	var soleName *string
+	if sole != nil {
+		soleName = &rival.CandidateValue
+	}
 	evidence := fmt.Sprintf("%s resolved to %q, a name already used by a company here (%q). "+
 		"Same company as one of them: add the domain to it. Different company: create this one.",
 		in.Domain, rival.CandidateValue, rival.IncumbentValue)
@@ -115,7 +119,7 @@ func withholdForNearDuplicate(
 		UPDATE company_domain_disposition
 		   SET pending_reason = $2,
 		       evidence = $3,
-		       candidate_company_id = $4,
+		       candidate_company_id = $4, candidate_name = $5,
 		       -- Cleared for the reason 'unevidenced' clears it: re-crawling
 		       -- reads the same site and reaches the same rival, so the sweep
 		       -- must stop offering this domain until a human answers it or new
@@ -124,7 +128,7 @@ func withholdForNearDuplicate(
 		       updated_at = now()
 		 WHERE domain = $1 AND status = 'pending'
 		   AND (pending_reason IS DISTINCT FROM $2 OR evidence IS DISTINCT FROM $3 OR candidate_company_id IS DISTINCT FROM $4)`,
-		in.Domain, PendingNearDuplicate, evidence, sole); err != nil {
+		in.Domain, PendingNearDuplicate, evidence, sole, soleName); err != nil {
 		return fmt.Errorf("contacts: withholding %s for a name twin: %w", in.Domain, err)
 	}
 	return nil

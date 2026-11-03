@@ -59,4 +59,5 @@
 1793670405_a_sales_initiative_names_its_effort.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
 1793670405_a_sales_initiative_names_its_effort.down.sql | role | removes that one grant from the same fixed set of system roles
 1793670406_a_deal_base_amount_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793721188_a_company_question_keeps_its_candidate.up.sql | company_domain_disposition | only open unevidenced questions whose evidence is the no-read sentence are touched, one row per domain waiting on a reader, so the set is a reader queue's worth of rows
+1793721188_a_company_question_keeps_its_candidate.up.sql | company_domain_disposition | the UPDATE reaches its rows through the partial index idx_domain_disposition_unevidenced, so it reads only the open unevidenced questions, one row per domain waiting on a reader, and rewrites those whose evidence is a no-read sentence; the ALTERs add a defaulted column, a nullable one and a NOT VALID key, none of which scans the table
+1793724243_a_company_question_candidate_key_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

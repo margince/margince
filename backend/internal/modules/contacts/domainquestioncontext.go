@@ -75,7 +75,7 @@ type domainSuggestionCandidate struct {
 
 // attachDomainQuestionContextTx fills Context on every question in one read
 // per kind of evidence, so a page of questions costs a fixed number of queries.
-func attachDomainQuestionContextTx(ctx context.Context, tx pgx.Tx, questions []DomainQuestion, candidates map[string]ids.UUID, asOf time.Time) error {
+func attachDomainQuestionContextTx(ctx context.Context, tx pgx.Tx, questions []DomainQuestion, candidates map[string]storedTwin, asOf time.Time) error {
 	if len(questions) == 0 {
 		return nil
 	}
@@ -98,8 +98,8 @@ func attachDomainQuestionContextTx(ctx context.Context, tx pgx.Tx, questions []D
 	if err := employerCandidatesTx(ctx, tx, senders, offered); err != nil {
 		return err
 	}
-	for domain, company := range candidates {
-		offered[domain] = append(offered[domain], domainSuggestionCandidate{company: company, basis: SuggestionNameTwin})
+	if err := currentTwinCandidatesTx(ctx, tx, candidates, offered); err != nil {
+		return err
 	}
 	names, err := visibleCompanyNamesTx(ctx, tx, offered)
 	if err != nil {
@@ -114,23 +114,25 @@ func attachDomainQuestionContextTx(ctx context.Context, tx pgx.Tx, questions []D
 	return nil
 }
 
-// soleSuggestion names a company only when every source agrees on one and the
-// reader may see it. Two candidates are a choice for the reader, never a guess.
+// soleSuggestion names a company only when the candidates the reader may see
+// agree on one. Hidden candidates are dropped first, so a row out of the
+// reader's scope neither shows nor suppresses a suggestion.
 func soleSuggestion(offered []domainSuggestionCandidate, names map[ids.UUID]string) *DomainCompanySuggestion {
-	if len(offered) == 0 {
-		return nil
-	}
-	first := offered[0]
-	for _, c := range offered[1:] {
-		if c.company != first.company {
+	var first *domainSuggestionCandidate
+	for i, c := range offered {
+		if _, visible := names[c.company]; !visible {
+			continue
+		}
+		if first == nil {
+			first = &offered[i]
+		} else if c.company != first.company {
 			return nil
 		}
 	}
-	name, visible := names[first.company]
-	if !visible {
+	if first == nil {
 		return nil
 	}
-	return &DomainCompanySuggestion{CompanyID: first.company, Name: name, Basis: first.basis}
+	return &DomainCompanySuggestion{CompanyID: first.company, Name: names[first.company], Basis: first.basis}
 }
 
 type domainSender struct {
@@ -397,4 +399,48 @@ func (c DomainQuestionContext) Contract() crmcontracts.DomainQuestionContext {
 		}
 	}
 	return out
+}
+
+// storedTwin is the sole exact-name company a near_duplicate question found,
+// with the name the site stated.
+type storedTwin struct {
+	company ids.UUID
+	name    string
+}
+
+// currentTwinCandidatesTx offers a stored twin only while it is still the one
+// live company carrying the stated name. A rename or a second company of that
+// name since the question was asked makes it a choice for the reader again.
+// The count is over every live company, as the hold was decided.
+func currentTwinCandidatesTx(ctx context.Context, tx pgx.Tx, candidates map[string]storedTwin, offered map[string][]domainSuggestionCandidate) error {
+	if len(candidates) == 0 {
+		return nil
+	}
+	domains := make([]string, 0, len(candidates))
+	names := make([]string, 0, len(candidates))
+	for domain, twin := range candidates {
+		domains, names = append(domains, domain), append(names, twin.name)
+	}
+	stated := exactNameKeySQL("q.name")
+	rows, err := tx.Query(ctx, `SELECT q.domain, (array_agg(c.id))[1], count(*)
+ FROM unnest($1::text[], $2::text[]) AS q(domain, name)
+ JOIN company c ON c.archived_at IS NULL AND c.merged_into_id IS NULL AND NOT c.is_anchor
+  AND (`+exactNameKeySQL("c."+fieldDisplayName)+` = `+stated+` OR `+exactNameKeySQL("c."+fieldLegalName)+` = `+stated+`)
+ GROUP BY q.domain`, domains, names)
+	if err != nil {
+		return fmt.Errorf("contacts: rechecking the name twins of the domain questions: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var domain string
+		var company ids.UUID
+		var count int
+		if err := rows.Scan(&domain, &company, &count); err != nil {
+			return fmt.Errorf("contacts: rechecking the name twins of the domain questions: %w", err)
+		}
+		if count == 1 && company == candidates[domain].company {
+			offered[domain] = append(offered[domain], domainSuggestionCandidate{company: company, basis: SuggestionNameTwin})
+		}
+	}
+	return rows.Err()
 }

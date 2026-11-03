@@ -9,23 +9,14 @@ import {
 import { useState } from "react";
 import { api } from "../../api/client";
 import { ActionRow } from "../../design-system/actionrow";
-import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
-import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
 import { usePlural, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { recordRoute } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { routeHash } from "../../lib/router";
-import {
-  confirmEffect,
-  type DomainQuestionView,
-  domainQuestionHeading,
-  domainQuestionReasonKey,
-  SUGGESTION_BASIS,
-} from "./worklist.domaincopy";
+import { confirmEffect, type DomainQuestionView } from "./worklist.domaincopy";
 import { DomainReview } from "./worklist.domainreview";
+import { DomainQuestionSummary } from "./worklist.domainsummary";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // Answering an undecided domain, from the row that asked.
@@ -159,25 +150,7 @@ export function DomainQuestionAnswer({
     item.domain_reason_code !== "forwarded_identity";
   return (
     <div className="form-stack">
-      <Heading size="small" as="h3">
-        {domainQuestionHeading(view, t, plural)}
-      </Heading>
-      <DomainQuestionOrigin view={view} />
-      <p>{t(domainQuestionReasonKey(view), { domain })}</p>
-      {suggestion ? (
-        <p>
-          {t("worklist.domainQuestion.suggested")}{" "}
-          <AppLink href={recordHref("company", suggestion.id)}>
-            {suggestion.name}
-          </AppLink>
-          <br />
-          <span className="t-caption">
-            {t(SUGGESTION_BASIS[suggestion.basis])}
-          </span>
-        </p>
-      ) : (
-        <p className="t-caption">{t("worklist.domainQuestion.noSuggestion")}</p>
-      )}
+      <DomainQuestionSummary view={view} />
       <ActionRow
         primary={
           suggestion &&
@@ -291,43 +264,4 @@ export function DomainQuestionAnswer({
       )}
     </div>
   );
-}
-
-// Where the question came from: the contacts the reader may open, or a plain
-// statement that the sender is not one of them.
-function DomainQuestionOrigin({
-  view,
-}: Readonly<{ view: DomainQuestionView }>) {
-  const t = useT();
-  const contacts = view.context?.contacts ?? [];
-  if (contacts.length === 0) {
-    return (
-      <p className="t-caption">
-        {t(
-          view.context?.hidden_senders
-            ? "worklist.domainQuestion.originHidden"
-            : "worklist.domainQuestion.origin",
-          { domain: view.domain },
-        )}
-      </p>
-    );
-  }
-  return (
-    <p className="t-caption">
-      {t("worklist.domainQuestion.originContacts", { domain: view.domain })}{" "}
-      {contacts.map((contact, index) => (
-        <span key={contact.id}>
-          {index > 0 && ", "}
-          <AppLink href={recordHref("contact", contact.id)}>
-            {contact.name}
-          </AppLink>
-        </span>
-      ))}
-    </p>
-  );
-}
-
-function recordHref(kind: "company" | "contact", id: string) {
-  const route = recordRoute(kind, id);
-  return route && routeHash(route);
 }

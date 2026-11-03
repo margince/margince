@@ -31,10 +31,8 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { searchByEntity } from "../../lib/relationshipcandidates";
-import {
-  type DomainQuestionView,
-  domainQuestionReasonKey,
-} from "./worklist.domaincopy";
+import type { DomainQuestionView } from "./worklist.domaincopy";
+import { DomainQuestionSummary } from "./worklist.domainsummary";
 import { useMarkRowsDone } from "./worklist.donequeries";
 import { worklistKey } from "./worklist.queries";
 
@@ -182,7 +180,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
   return (
     <Panel title={row.domain}>
       <PanelBody>
-        <p>{t(domainQuestionReasonKey(view), { domain: row.domain })}</p>
+        <DomainQuestionSummary view={view} />
         <Disclosure summary={t("worklist.domainReview.details")}>
           {row.note && <p className="t-caption">{row.note}</p>}
           {row.effective_url && (

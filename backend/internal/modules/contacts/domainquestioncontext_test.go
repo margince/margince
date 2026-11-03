@@ -74,6 +74,12 @@ func TestASuggestionNeedsOneVisibleCompany(t *testing.T) {
 			names:   names,
 		},
 		{
+			name:    "a hidden twin does not hide a visible employer",
+			offered: []domainSuggestionCandidate{{company: acme, basis: SuggestionContactEmployer}, {company: ids.NewV7(), basis: SuggestionNameTwin}},
+			names:   names,
+			want:    &DomainCompanySuggestion{CompanyID: acme, Name: "Acme GmbH", Basis: SuggestionContactEmployer},
+		},
+		{
 			name:    "the one company is hidden",
 			offered: []domainSuggestionCandidate{{company: acme, basis: SuggestionNameTwin}},
 			names:   map[ids.UUID]string{},

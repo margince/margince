@@ -2731,6 +2731,7 @@ public.company_domain_disposition.admission_sender_kind text gen=- def=-
 public.company_domain_disposition.admission_source text gen=- def=-
 public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
 public.company_domain_disposition.candidate_company_id uuid gen=- def=-
+public.company_domain_disposition.candidate_name text gen=- def=-
 public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
 public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
 public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
