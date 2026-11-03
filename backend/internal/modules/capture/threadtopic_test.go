@@ -15,6 +15,10 @@ var threadTopicCases = []struct{ subject, topic string }{
 	{"[ERP 27] kickoff", "[erp 27] kickoff"},
 	{"[2026] budget", "[2026] budget"},
 	{"Product materials", "product materials"},
+	{"[ERP] Re: kickoff", "kickoff"},
+	{"[ ERP-27 ] kickoff", "kickoff"},
+	{"[[erp]] kickoff", "[[erp]] kickoff"},
+	{"kick\u00a0off", "kick\u00a0off"},
 	{"", ""},
 }
 

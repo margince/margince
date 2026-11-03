@@ -122,21 +122,23 @@ func sameTopicSQL(alias, other string) string {
 	return "(" + topic + " = '' OR " + otherTopic + " IN ('', " + topic + "))"
 }
 
-// projectKeyTag is a bracketed project key in a normalised subject, the shape
-// projectKeyShaped admits. A reply that keeps or drops one is the same topic.
-const projectKeyTag = `\[[a-z][a-z0-9_-]{1,23}\]`
+// projectKeyTag is a bracketed project key, the shape projectKeyShaped admits
+// with the spaces projectKeyCandidates trims. Its opening bracket is not inside
+// another one, as the tokenizer reads groups. The prefix it keeps is group 1.
+const projectKeyTag = `(^|[^\[])\[ *[a-z][a-z0-9_-]{1,23} *\]`
 
-var projectKeyTags = regexp.MustCompile(projectKeyTag)
+var projectKeyTags = regexp.MustCompile(`(?i)` + projectKeyTag)
 
-// threadTopic is a subject as a conversation boundary compares it: normalised as
-// the answer check reads it, without its project-key tags. threadTopicSQL spells
-// the same steps.
+// threadTopic is a subject as a conversation boundary compares it: its
+// project-key tags taken out, then normalised as the answer check reads it.
+// Only plain spaces fold, as in SQL. threadTopicSQL spells the same steps.
 func threadTopic(subject string) string {
-	return strings.Join(strings.Fields(projectKeyTags.ReplaceAllString(mailsubject.Normalized(subject), " ")), " ")
+	topic := mailsubject.Normalized(projectKeyTags.ReplaceAllString(subject, "${1} "))
+	return strings.Join(strings.FieldsFunc(topic, func(r rune) bool { return r == ' ' }), " ")
 }
 
 // threadTopicSQL is threadTopic over a subject column.
 func threadTopicSQL(subject string) string {
-	return `btrim(regexp_replace(regexp_replace(` + storekit.NormalisedSubjectSQL(subject) +
-		`, '` + projectKeyTag + `', ' ', 'g'), ' +', ' ', 'g'))`
+	untagged := `regexp_replace(` + subject + `, '` + projectKeyTag + `', '\1 ', 'gi')`
+	return `btrim(regexp_replace(` + storekit.NormalisedSubjectSQL(untagged) + `, ' +', ' ', 'g'))`
 }
