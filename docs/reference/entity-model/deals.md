@@ -944,7 +944,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## product
 
-19 columns · primary key `(id)` · referenced by 3 foreign keys
+19 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

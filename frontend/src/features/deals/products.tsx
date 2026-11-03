@@ -77,17 +77,9 @@ async function fetchProductsPage(
   };
 }
 
-// Phase-3 line-item product picker reuses this list read, mapped to {id,name}.
-export async function searchProductCandidates(
-  q: string,
-): Promise<{ id: string; name: string }[]> {
-  const data = unwrap(
-    await api.GET("/products", {
-      params: { query: { q, limit: 10 } },
-    }),
-  );
-  return data.data.map((p) => ({ id: p.id, name: p.name }));
-}
+// The offer lines and the deal's products pick from the catalog through the
+// one search every surface shares.
+export { searchProductCandidates } from "../../components/productsearch";
 
 // Built per render: option labels are shown as given, so they arrive translated.
 function productFields(

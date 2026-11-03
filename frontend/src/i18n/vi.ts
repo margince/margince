@@ -5198,6 +5198,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có deal. Khi xác nhận lead này đủ điều kiện, có thể mở một deal.",
   "lead.rail.project.title": "Dự án",
   "lead.rail.project.empty": "Chưa có dự án.",
+  "lead.product": "Sản phẩm",
+  "lead.product.attach": "Chọn sản phẩm",
+  "lead.product.change": "Đổi sản phẩm",
+  "lead.product.clear": "Bỏ sản phẩm",
+  "lead.product.search": "Tìm sản phẩm",
+  "lead.product.loading": "Đang đọc sản phẩm…",
   "lead.rail.project.attach": "Gắn dự án",
   "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly": "Lead này đã đóng và không thể thay đổi.",
@@ -15076,6 +15082,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ https của chính sách quyền riêng tư. Thông báo liên kết tới đó.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/quyen-rieng-tu",
+  "webForms.field.product": "Sản phẩm",
+  "webForms.field.productHint":
+    "Mọi lead từ biểu mẫu này đều hỏi về sản phẩm này, và báo cáo sản phẩm tính lead ở đó. Để trống nếu biểu mẫu không thuộc về một sản phẩm.",
+  "webForms.field.productClear": "Ghi nhận lead không có sản phẩm",
+  "webForms.field.productLoading": "Đang đọc sản phẩm…",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",

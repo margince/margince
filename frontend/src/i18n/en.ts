@@ -5290,6 +5290,12 @@ export const en = {
   "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
   "lead.rail.project.title": "Project",
   "lead.rail.project.empty": "No project yet.",
+  "lead.product": "Product",
+  "lead.product.attach": "Name the product",
+  "lead.product.change": "Change product",
+  "lead.product.clear": "Clear the product",
+  "lead.product.search": "Search products",
+  "lead.product.loading": "Reading the product…",
   "lead.rail.project.attach": "Attach project",
   "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and cannot be changed.",
@@ -15397,6 +15403,11 @@ export const en = {
     "The https address of your privacy policy. The notice links to it.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/privacy",
+  "webForms.field.product": "Product",
+  "webForms.field.productHint":
+    "Every lead this form captures asks about this product, and product reports count it there. Leave it empty when the form is not about one product.",
+  "webForms.field.productClear": "Capture leads with no product",
+  "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",

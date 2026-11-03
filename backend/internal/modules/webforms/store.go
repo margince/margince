@@ -54,6 +54,7 @@ type CreateInput struct {
 	SenderSecret         *string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	FieldMap             map[string]string
 	ConsentRequired      bool
 	ConsentPolicyVersion *string
@@ -133,21 +134,21 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 	}
 	var out Form
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID); err != nil {
+		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
 			return err
 		}
 		if in.FieldMap == nil {
 			in.FieldMap = map[string]string{}
 		}
+		args := []any{in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.ProductID,
+			in.FieldMap, in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.PrivacyNotice,
+			in.PrivacyNoticeURL, in.RedirectURL, in.SuccessMessage, by}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO web_form (name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
-			  field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
+			  product_id, field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
 			  privacy_notice_url, redirect_url, success_message, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-			RETURNING `+formColumns,
-			in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.FieldMap,
-			in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.PrivacyNotice, in.PrivacyNoticeURL,
-			in.RedirectURL, in.SuccessMessage, by)
+			VALUES (`+storekit.Placeholders(args)+`)
+			RETURNING `+formColumns, args...)
 		if out, err = scanForm(row); err != nil {
 			return err
 		}
@@ -161,9 +162,10 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 	return out, minted, nil
 }
 
-// checkReferences refuses a lead origin or owner the lead writer would refuse.
-// A misconfigured form then fails when it is saved, not on a visitor's post.
-func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.UUID) error {
+// checkReferences refuses a lead origin, owner or product the lead writer
+// would refuse. A misconfigured form then fails when it is saved, not on a
+// visitor's post.
+func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner, product *ids.UUID) error {
 	if origin != nil {
 		var known bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM lead_origin WHERE key = $1 AND active)`, *origin).Scan(&known); err != nil {
@@ -171,6 +173,15 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 		}
 		if !known {
 			return badInput(colLeadOrigin, "%q is not an active lead origin; list them at /v1/lead-origins", *origin)
+		}
+	}
+	if product != nil {
+		var live bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM product WHERE id = $1 AND archived_at IS NULL)`, *product).Scan(&live); err != nil {
+			return err
+		}
+		if !live {
+			return badInput(colProductID, "%s is not a live product; list them at /v1/products", *product)
 		}
 	}
 	if owner != nil {
@@ -184,7 +195,7 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 func auditImage(f Form) map[string]any {
 	return map[string]any{
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
-		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, "field_map": f.FieldMap,
+		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, colProductID: f.ProductID, "field_map": f.FieldMap,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
 		colPrivacyNotice: f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
 		colRedirectURL: f.RedirectURL, "state": f.State,

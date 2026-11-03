@@ -9011,6 +9011,7 @@ public.web_form.name text NOT NULL gen=- def=-
 public.web_form.owner_id uuid gen=- def=-
 public.web_form.privacy_notice text gen=- def=-
 public.web_form.privacy_notice_url text gen=- def=-
+public.web_form.product_id uuid gen=- def=-
 public.web_form.redirect_url text gen=- def=-
 public.web_form.secret_ref text gen=- def=-
 public.web_form.sender text NOT NULL gen=- def=-
@@ -9031,6 +9032,7 @@ public.web_form.web_form_owner_id_retirement_guard CREATE TRIGGER web_form_owner
 public.web_form.web_form_pkey PRIMARY KEY (id)
 public.web_form.web_form_privacy_notice_bounded CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))
 public.web_form.web_form_privacy_notice_url_https CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)'::text) AND (length(privacy_notice_url) <= 2000))))
+public.web_form.web_form_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
 public.web_form.web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text)))
 public.web_form.web_form_sender_check CHECK ((sender = ANY (ARRAY['browser'::text, 'server'::text, 'webflow'::text, 'typeform'::text, 'tally'::text])))
 public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
@@ -9044,6 +9046,7 @@ public.web_form_last_post.web_form_last_post_form_id_fkey FOREIGN KEY (form_id) 
 public.web_form_last_post.web_form_last_post_pkey PRIMARY KEY (form_id)
 public.web_form_last_post_pkey CREATE UNIQUE INDEX web_form_last_post_pkey ON public.web_form_last_post USING btree (form_id)
 public.web_form_pkey CREATE UNIQUE INDEX web_form_pkey ON public.web_form USING btree (id)
+public.web_form_product_idx CREATE INDEX web_form_product_idx ON public.web_form USING btree (product_id) WHERE (product_id IS NOT NULL)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.claimed_until timestamp with time zone gen=- def=-

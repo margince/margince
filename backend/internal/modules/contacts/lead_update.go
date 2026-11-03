@@ -59,6 +59,8 @@ type UpdateLeadInput struct {
 	ClearScoreOverride bool
 	OwnerID            *ids.UserID
 	ProjectID          *ids.ProjectID
+	// ProductID is the product the lead is interested in (ensureLeadProduct).
+	ProductID *ids.UUID
 	// PartnerCompanyID names the partner that referred the lead (setLeadPartner).
 	PartnerCompanyID *ids.CompanyID
 	IfVersion        *int64
@@ -306,6 +308,9 @@ func admitLeadReferences(ctx context.Context, tx pgx.Tx, current crmcontracts.Le
 			return in, err
 		}
 	}
+	if err := ensureLeadProduct(ctx, tx, in.ProductID); err != nil {
+		return in, err
+	}
 	in, err := settleOriginHint(ctx, tx, current, in)
 	if err != nil {
 		return in, err
@@ -409,12 +414,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		}
 		p.Set(linkedinURLField, current.LinkedinUrl, normalized)
 	}
-	if in.CandidateCompanyKey != nil {
-		p.Set("candidate_company_key", current.CandidateCompanyKey, *in.CandidateCompanyKey)
-	}
-	if in.ProjectID != nil {
-		p.Set("project_id", current.ProjectId, *in.ProjectID)
-	}
+	setLeadReferences(p, current, in)
 	if in.Status != nil {
 		status, err := parseWritableLeadStatus(*in.Status)
 		if err != nil {

@@ -25,6 +25,7 @@ type UpdateInput struct {
 	SenderSecret         *string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	FieldMap             *map[string]string
 	ConsentRequired      *bool
 	ConsentPolicyVersion *string
@@ -43,6 +44,7 @@ type UpdateInput struct {
 const (
 	colLeadOrigin           = "lead_origin"
 	colOwnerID              = "owner_id"
+	colProductID            = "product_id"
 	colConsentPolicyVersion = "consent_policy_version"
 	colConsentWording       = "consent_wording"
 	colPrivacyNotice        = "privacy_notice"
@@ -55,6 +57,7 @@ func clearableColumns(f Form) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		colLeadOrigin:           {Column: colLeadOrigin, Current: f.LeadOrigin},
 		colOwnerID:              {Column: colOwnerID, Current: f.OwnerID},
+		colProductID:            {Column: colProductID, Current: f.ProductID},
 		colConsentPolicyVersion: {Column: colConsentPolicyVersion, Current: f.ConsentPolicyVersion},
 		colConsentWording:       {Column: colConsentWording, Current: f.ConsentWording},
 		colPrivacyNotice:        {Column: colPrivacyNotice, Current: f.PrivacyNotice},
@@ -83,6 +86,7 @@ func (in UpdateInput) merged(f Form) (Form, error) {
 	}
 	assign(&f.LeadOrigin, in.LeadOrigin)
 	assign(&f.OwnerID, in.OwnerID)
+	assign(&f.ProductID, in.ProductID)
 	assign(&f.ConsentPolicyVersion, in.ConsentPolicyVersion)
 	assign(&f.ConsentWording, in.ConsentWording)
 	assign(&f.PrivacyNotice, in.PrivacyNotice)
@@ -119,6 +123,8 @@ func clearField(f *Form, field string) {
 		f.LeadOrigin = nil
 	case colOwnerID:
 		f.OwnerID = nil
+	case colProductID:
+		f.ProductID = nil
 	case colConsentPolicyVersion:
 		f.ConsentPolicyVersion = nil
 	case colConsentWording:
@@ -180,7 +186,7 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 		if err != nil {
 			return err
 		}
-		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID); err != nil {
+		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
 			return err
 		}
 		p := patchFor(current, next)
@@ -253,6 +259,9 @@ func patchFor(current, next Form) *storekit.Patch {
 	}
 	if next.OwnerID != nil {
 		p.Set(colOwnerID, current.OwnerID, next.OwnerID)
+	}
+	if next.ProductID != nil {
+		p.Set(colProductID, current.ProductID, next.ProductID)
 	}
 	return p
 }

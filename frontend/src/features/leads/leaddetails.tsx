@@ -41,6 +41,7 @@ import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
+import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -309,6 +310,15 @@ function useAboutRows(
           writer={writer}
           reasonId={reasonId}
         />
+      ),
+    },
+    {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      block: !lead.product_id,
+      value: (
+        <LeadProductLine lead={lead} writer={writer} reasonId={reasonId} />
       ),
     },
     {

@@ -41059,7 +41059,10 @@ type CreateLeadRequest struct {
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
-	Phone     *string             `json:"phone,omitempty"`
+	Phone *string `json:"phone,omitempty"`
+
+	// ProductId The product the lead is interested in. Omit it when nobody knows yet.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
@@ -41562,7 +41565,10 @@ type CreateWebFormRequest struct {
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
-	RedirectUrl          *string             `json:"redirect_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.
+	ProductId   *openapi_types.UUID `json:"product_id,omitempty"`
+	RedirectUrl *string             `json:"redirect_url,omitempty"`
 
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
@@ -47599,6 +47605,9 @@ type Lead struct {
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
+
+	// ProductId The product the lead is interested in, set by hand or by the web form that captured it. Product reports count the lead under it.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
@@ -59914,6 +59923,9 @@ type UpdateLeadRequest struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
+	// ProductId The product the lead is interested in. Send null to clear it.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
+
 	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
@@ -60313,20 +60325,23 @@ type UpdateVoiceProfileRequest struct {
 
 // UpdateWebFormRequest defines model for UpdateWebFormRequest.
 type UpdateWebFormRequest struct {
-	AllowedOrigins       *[]string                  `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string                    `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool                      `json:"consent_required,omitempty"`
-	ConsentWording       *string                    `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string         `json:"field_map,omitempty"`
-	LeadOrigin           *string                    `json:"lead_origin,omitempty"`
-	Name                 *string                    `json:"name,omitempty"`
-	OwnerId              *openapi_types.UUID        `json:"owner_id,omitempty"`
-	PrivacyNotice        *string                    `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string                    `json:"privacy_notice_url,omitempty"`
-	RedirectUrl          *string                    `json:"redirect_url,omitempty"`
-	SenderSecret         *string                    `json:"sender_secret,omitempty"`
-	State                *UpdateWebFormRequestState `json:"state,omitempty"`
-	SuccessMessage       *string                    `json:"success_message,omitempty"`
+	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool               `json:"consent_required,omitempty"`
+	ConsentWording       *string             `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	LeadOrigin           *string             `json:"lead_origin,omitempty"`
+	Name                 *string             `json:"name,omitempty"`
+	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in. Send null to stop naming one.
+	ProductId      *openapi_types.UUID        `json:"product_id,omitempty"`
+	RedirectUrl    *string                    `json:"redirect_url,omitempty"`
+	SenderSecret   *string                    `json:"sender_secret,omitempty"`
+	State          *UpdateWebFormRequestState `json:"state,omitempty"`
+	SuccessMessage *string                    `json:"success_message,omitempty"`
 }
 
 // UpdateWebFormRequestState defines model for UpdateWebFormRequest.State.
@@ -60904,6 +60919,9 @@ type WebForm struct {
 	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
 	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
 
+	// ProductId The product every lead this form creates is interested in; null captures leads with no product.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
+
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
 	SecretConfigured bool    `json:"secret_configured"`
@@ -60980,6 +60998,9 @@ type WebFormCreated struct {
 
 	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
 	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in; null captures leads with no product.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
@@ -77395,6 +77416,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -77559,6 +77588,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 
@@ -79748,6 +79784,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -80195,6 +80239,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 
@@ -83298,6 +83349,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -83432,6 +83491,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 

@@ -249,6 +249,32 @@ describe("WebFormsCard", () => {
     expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
   });
 
+  it("names the product each new lead from the form asks about", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "GET /v1/products": () =>
+        jsonResponse({
+          data: [{ id: "p-suite", name: "Suite" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /v1/web-forms": () =>
+        jsonResponse({ ...contactForm, product_id: "p-suite" }, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.type(screen.getByLabelText(/^Product/), "Sui");
+    await user.click(await screen.findByRole("button", { name: /Suite/ }));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    // The product search is a GET the backend records too.
+    const posted = () => backend.sent.filter((call) => call.method === "POST");
+    await waitFor(() => expect(posted()).toHaveLength(1));
+    expect(posted()[0]?.body).toMatchObject({ product_id: "p-suite" });
+  });
+
   it("sends the privacy notice and the policy it links to", async () => {
     const backend = backendFor(OPERATOR, [], {
       "POST /v1/web-forms": () => jsonResponse(contactForm, 201),

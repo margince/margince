@@ -5336,6 +5336,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch kein Deal. Beim Qualifizieren dieses Leads kann einer entstehen.",
   "lead.rail.project.title": "Projekt",
   "lead.rail.project.empty": "Noch kein Projekt.",
+  "lead.product": "Produkt",
+  "lead.product.attach": "Produkt angeben",
+  "lead.product.change": "Produkt ändern",
+  "lead.product.clear": "Produkt entfernen",
+  "lead.product.search": "Produkte suchen",
+  "lead.product.loading": "Produkt wird gelesen…",
   "lead.rail.project.attach": "Projekt verknüpfen",
   "lead.rail.project.change": "Projekt ändern",
   "lead.terminalReadOnly":
@@ -15478,6 +15484,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die https-Adresse deiner Datenschutzerklärung. Der Hinweis verlinkt sie.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/datenschutz",
+  "webForms.field.product": "Produkt",
+  "webForms.field.productHint":
+    "Jeder Lead aus diesem Formular fragt nach diesem Produkt, und Produktberichte zählen ihn dort. Leer lassen, wenn das Formular nicht zu einem Produkt gehört.",
+  "webForms.field.productClear": "Leads ohne Produkt erfassen",
+  "webForms.field.productLoading": "Produkt wird gelesen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",

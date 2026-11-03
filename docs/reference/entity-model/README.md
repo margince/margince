@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4169 |
-| Foreign keys | 580 |
+| Columns | 4170 |
+| Foreign keys | 581 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -383,7 +383,7 @@ erDiagram
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 21 | 0 |
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
-| [`product`](deals.md#product) | deals | 19 | 3 |
+| [`product`](deals.md#product) | deals | 19 | 4 |
 | [`project`](projects.md#project) | projects | 24 | 12 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
 | [`project_phase_history`](projects.md#project_phase_history) | projects | 8 | 0 |
@@ -467,7 +467,7 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`web_form`](webforms.md#web_form) | webforms | 22 | 1 |
+| [`web_form`](webforms.md#web_form) | webforms | 23 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |

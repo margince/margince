@@ -45,6 +45,7 @@ type Landing struct {
 	SourceKey            string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	Enquiry              Enquiry
 	ConsentWording       *string
 	ConsentPolicyVersion *string
@@ -99,7 +100,7 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	}
 	err = in.lander.Land(ctx, Landing{
 		FormID: f.ID, FormName: f.Name, SourceKey: sourceKey(f.ID, key),
-		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, Enquiry: e,
+		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, ProductID: f.ProductID, Enquiry: e,
 		ConsentWording: f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
 	})
 	if err == nil {

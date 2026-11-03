@@ -6,7 +6,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 ## web_form
 
-22 columns · primary key `(id)` · referenced by 1 foreign key
+23 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 | `owner_id` | `uuid` |  | Who owns the leads this form creates; null leaves them in the unassigned queue. |
 | `privacy_notice` | `text` |  | The privacy notice the form shows under it at the point of collection, such as what the details are used for. |
 | `privacy_notice_url` | `text` |  | The https address of the privacy policy the notice links to. |
+| `product_id` | `uuid` |  | The product every lead this form creates is interested in; null captures leads with no product. |
 | `redirect_url` | `text` |  | Where a plain HTML post is sent after a submission. |
 | `secret_ref` | `text` |  |  |
 | `sender` | `text` | yes | One of `browser`, `server`, `webflow`, `typeform`, `tally`. |
@@ -39,6 +40,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 |---|---|---|
 | `lead_origin` | `lead_origin` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
+| `product_id` | `product` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
@@ -62,6 +64,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `idx_web_form_owner`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `web_form_form_key_key`: `unique, btree (form_key)`
 - `web_form_pkey`: `unique, btree (id)`
+- `web_form_product_idx`: `btree (product_id) WHERE (product_id IS NOT NULL)`
 
 **Triggers**
 

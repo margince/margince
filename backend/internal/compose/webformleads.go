@@ -117,6 +117,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		owner := ids.From[ids.UserKind](*landing.OwnerID)
 		in.OwnerID = &owner
 	}
+	in.ProductID = landing.ProductID
 	// A number without its country prefix is kept on the note rather than
 	// refusing the visitor's whole submission over it.
 	if _, err := values.ParsePhone(e.Phone); err == nil {

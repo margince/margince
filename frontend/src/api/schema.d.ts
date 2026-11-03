@@ -23924,6 +23924,11 @@ export interface components {
              * @description Who owns the leads this form creates; null leaves them in the unassigned queue.
              */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The product every lead this form creates is interested in; null captures leads with no product.
+             */
+            product_id?: string | null;
             /** @description The sender's field names mapped to lead fields, for names the defaults do not already read. */
             field_map: {
                 [key: string]: string;
@@ -23982,6 +23987,11 @@ export interface components {
             lead_origin?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.
+             */
+            product_id?: string | null;
             field_map?: {
                 [key: string]: string;
             };
@@ -24002,6 +24012,11 @@ export interface components {
             lead_origin?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The product every lead this form creates is interested in. Send null to stop naming one.
+             */
+            product_id?: string | null;
             field_map?: {
                 [key: string]: string;
             };
@@ -39864,6 +39879,11 @@ export interface components {
             readonly score_computed?: number | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The product the lead is interested in, set by hand or by the web form that captured it. Product reports count the lead under it.
+             */
+            product_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             source_system?: string | null;
@@ -40011,6 +40031,11 @@ export interface components {
             status: "new" | "contacted" | "engaged" | "promoted" | "disqualified";
             /** Format: uuid */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The product the lead is interested in. Omit it when nobody knows yet.
+             */
+            product_id?: string;
             source_system?: string | null;
             /**
              * Format: uuid
@@ -40075,6 +40100,11 @@ export interface components {
             score?: number | null;
             /** @description Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared. */
             score_override_reason?: string | null;
+            /**
+             * Format: uuid
+             * @description The product the lead is interested in. Send null to clear it.
+             */
+            product_id?: string | null;
             /**
              * Format: uuid
              * @description Who owns this lead. The destination must be a seat that can be handed work — an

@@ -1227,7 +1227,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_accepted_by` | `text` |  | Who accepted the lead for its partner. |
 | `partner_company_id` | `uuid` |  | The partner company that referred this lead. |
 | `phone` | `text` |  | E.164, as a contact's number is. |
-| `product_id` | `uuid` |  | Points at `product.id`. |
+| `product_id` | `uuid` |  | The product the lead is interested in, set by hand or by the web form that captured it. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |

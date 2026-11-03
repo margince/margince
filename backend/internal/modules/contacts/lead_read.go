@@ -90,7 +90,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 		return "", err
 	}
 	return `id, full_name, email, phone, title, company_name, candidate_company_key,
-	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
+	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, product_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
@@ -224,7 +224,7 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
+	var ownerID, projectID, productID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -239,7 +239,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
-		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
+		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &productID, &l.SourceSystem, &l.SourceId,
 		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
@@ -260,6 +260,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Id = openapi_types.UUID(id)
 	l.OwnerId = uuidPtr(ownerID)
 	l.ProjectId = uuidPtr(projectID)
+	l.ProductId = uuidPtr(productID)
 	l.PromotedContactId = uuidPtr(promotedContact)
 	// What separates a merged-away lead from a disqualified one. Both are
 	// archived and neither carries a promoted_contact_id, so without this the

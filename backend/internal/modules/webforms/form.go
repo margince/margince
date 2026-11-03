@@ -63,6 +63,7 @@ type Form struct {
 	SecretRef            *string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	FieldMap             map[string]string
 	ConsentRequired      bool
 	ConsentPolicyVersion *string
@@ -85,14 +86,14 @@ func (f Form) SecretConfigured() bool { return f.SecretRef != nil }
 // formColumns ends with the form's last post, read beside the row so every
 // answer that carries a form carries it, an edit's echo included.
 const formColumns = `id, name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
-	field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
+	product_id, field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
 	privacy_notice_url, redirect_url, success_message, state, version, created_at, updated_at, archived_at,
 	(SELECT last_post_at FROM web_form_last_post WHERE form_id = web_form.id)`
 
 func scanForm(r pgx.Row) (Form, error) {
 	var f Form
 	err := r.Scan(&f.ID, &f.Name, &f.Key, &f.Sender, &f.AllowedOrigins, &f.SecretRef, &f.LeadOrigin,
-		&f.OwnerID, &f.FieldMap, &f.ConsentRequired, &f.ConsentPolicyVersion, &f.ConsentWording,
+		&f.OwnerID, &f.ProductID, &f.FieldMap, &f.ConsentRequired, &f.ConsentPolicyVersion, &f.ConsentWording,
 		&f.PrivacyNotice, &f.PrivacyNoticeURL, &f.RedirectURL, &f.SuccessMessage, &f.State, &f.Version, &f.CreatedAt, &f.UpdatedAt, &f.ArchivedAt,
 		&f.LastPostAt)
 	return f, err
