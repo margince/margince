@@ -173,8 +173,28 @@ func lineCostMinor(line TaskUsage) (int, bool) {
 }
 
 // GetAiUsageSummary implements (GET /ai/usage/summary).
-func (h Handlers) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
-	spend, err := h.meter.MonthSpend(r.Context(), h.rates)
+//
+// The window is the report's, defaulted and refused the same way.
+//
+// So the figure a surface shows beside a named month totals that month.
+func (h Handlers) GetAiUsageSummary(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiUsageSummaryParams,
+) {
+	from, to := h.meter.UsageWindow()
+	if params.From != nil {
+		from = params.From.Time
+	}
+	if params.To != nil {
+		to = params.To.Time
+	}
+	if to.Before(from) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
+			Detail: "`from` must not be after `to`.",
+		})
+		return
+	}
+	spend, err := h.meter.SpendOver(r.Context(), h.rates, from, to)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

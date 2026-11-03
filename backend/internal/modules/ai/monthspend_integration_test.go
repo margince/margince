@@ -136,7 +136,11 @@ func reportLineSum(reader context.Context, t *testing.T, h Handlers) *int {
 func readSummary(reader context.Context, t *testing.T, h Handlers) crmcontracts.AiUsageSummary {
 	t.Helper()
 	var summary crmcontracts.AiUsageSummary
-	serveSpend(reader, t, h.GetAiUsageSummary, &summary)
+	// No window: the default is the installation's month, which is what every
+	// case here asserts. A reader's own month is covered by the rail's test.
+	serveSpend(reader, t, func(w http.ResponseWriter, r *http.Request) {
+		h.GetAiUsageSummary(w, r, crmcontracts.GetAiUsageSummaryParams{})
+	}, &summary)
 	return summary
 }
 
@@ -227,7 +231,10 @@ func TestMonthSpendRefusesAReaderWithoutTheDiagnosticsGrant(t *testing.T) {
 		t.Fatalf("MonthSpend without ai_diagnostics:read = %v, want ErrPermissionDenied", err)
 	}
 	rec := httptest.NewRecorder()
-	ledger.handlers().GetAiUsageSummary(rec, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(seat))
+	ledger.handlers().GetAiUsageSummary(
+		rec, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(seat),
+		crmcontracts.GetAiUsageSummaryParams{},
+	)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("GET /ai/usage/summary without ai_diagnostics:read → %d, want 403", rec.Code)
 	}
