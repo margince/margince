@@ -4,6 +4,7 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { AssessmentCard } from "./reporting.assessmentcard";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
 import {
@@ -169,6 +170,12 @@ function ChartSection({
               editionId={editionId}
               onEvidence={onEvidence}
             />
+          ) : "assessment" in item ? (
+            <AssessmentCard
+              key={itemKey(item)}
+              evaluation={evaluation}
+              wide={wide[index] === true}
+            />
           ) : (
             <QuestionCard
               key={itemKey(item)}
@@ -195,9 +202,9 @@ function questionMode(
 }
 
 function itemKey(item: LaidOutItem): string {
-  return "chart" in item
-    ? `${item.chart.kind}:${item.chart.metric}`
-    : `question:${item.question.id}`;
+  if ("chart" in item) return `${item.chart.kind}:${item.chart.metric}`;
+  if ("assessment" in item) return `assessment:${item.assessment.id}`;
+  return `question:${item.question.id}`;
 }
 
 // One chart in its panel. The head holds the title and one quiet door to what

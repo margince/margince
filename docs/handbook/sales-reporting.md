@@ -119,6 +119,10 @@ On **Analytics → Leads**, **What became of new leads** does the same for the l
 
 ## How do I save or share a report?
 
+To build a report of your own, open **Reports** and choose **New custom report**, or choose **Customize report** on a sales review to start from what you are reading. One drawer holds the report name, what you want to understand, **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** opens the report as an unsaved preview. There, **Customize report** returns to the drawer and **Save report** keeps it under **Reports**.
+
+The **Assessment** card writes the report's figures up in a few sentences. It names only figures the report measured.
+
 Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
 **Add question** places a saved custom report with no filters, answered for each reader. Pick one of yours from the list, or paste the link to anyone's. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.

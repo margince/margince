@@ -147,7 +147,32 @@ func TestTheCardKindsAreTheChartKindsAndQuestion(t *testing.T) {
 	if len(blocks) == 0 {
 		t.Fatal("the contract lists no chart kinds, so the comparison proved nothing")
 	}
-	if want := append(slices.Clone(blocks), string(questionKind)); !slices.Equal(cards, want) {
-		t.Errorf("card kinds %v, want the chart kinds and question %v", cards, want)
+	if want := append(slices.Clone(blocks), string(questionKind), string(assessmentKind)); !slices.Equal(cards, want) {
+		t.Errorf("card kinds %v, want the chart kinds, question and assessment %v", cards, want)
+	}
+}
+
+// An assessment card writes the figures up and reads nothing of its own, so
+// it adds no block, takes no metric, and a report places it once.
+func TestAnAssessmentCardAddsNoBlockAndIsPlacedOnce(t *testing.T) {
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
+		card("a", "stage_distribution", ""),
+		card("s", "assessment", ""),
+	}}}
+	selection := crmcontracts.ReportingSelection{Layout: &layout}
+	deriveLayoutBlocks(&selection)
+	if want := []crmcontracts.ReportingBlockKind{"stage_distribution"}; !slices.Equal(selection.Blocks, want) {
+		t.Errorf("blocks %v, want %v", selection.Blocks, want)
+	}
+	if err := validateLayout(layout, layoutMetrics); err != nil {
+		t.Errorf("a well-formed assessment card was refused: %v", err)
+	}
+	twice := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("s", "assessment", ""), card("u", "assessment", "")}}}
+	if err := validateLayout(twice, layoutMetrics); err == nil {
+		t.Error("two assessment cards were accepted")
+	}
+	withMetric := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card("s", "assessment", "bookings_won")}}}
+	if err := validateLayout(withMetric, layoutMetrics); err == nil {
+		t.Error("an assessment card naming a metric was accepted")
 	}
 }

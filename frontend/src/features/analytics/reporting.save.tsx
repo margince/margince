@@ -4,32 +4,16 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
-import {
-  Button,
-  Checkbox,
-  Disclosure,
-  Field,
-  Textarea,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { CardPreview } from "./reporting.cardpreview";
-import { ReportingFilters } from "./reporting.filters";
-import {
-  blocksOf,
-  cardChoices,
-  keptCards,
-  layoutOf,
-  type ReportingLayout,
-} from "./reporting.layout";
-import { LayoutEditor } from "./reporting.layouteditor";
+import { ReportComposition, useComposition } from "./reporting.composition";
+import { blocksOf } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
-import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { reportRevisionsKey } from "./reporting.versions";
 
 export function SaveReportingDialog({
@@ -47,8 +31,6 @@ export function SaveReportingDialog({
   onSaved: (report: ReportingReport) => void;
 }>) {
   const t = useT();
-  const metricName = useMetricNames();
-  const [selection, setSelection] = useState(initialSelection);
   const title = useId();
   const formId = useId();
   const queryClient = useQueryClient();
@@ -58,24 +40,8 @@ export function SaveReportingDialog({
   const [audience, setAudience] = useState<"private" | "team" | "workspace">(
     report?.audience ?? "private",
   );
-  const [metrics, setMetrics] = useState(selection.metrics);
-  const [layout, setLayout] = useState(layoutOf(selection));
-  const catalog = useReportingCatalog();
-  // Each selected metric's charts, from the catalog once it has loaded and from
-  // the report's own blocks until then.
-  const metricBlocks = new Map(
-    (catalog.data?.metrics ?? [])
-      .filter((metric) => metrics.includes(metric.id))
-      .map((metric) => [metric.id, metric.blocks] as const),
-  );
-  const drawable = (card: ReportingLayout[number]["cards"][number]) => {
-    const kind = card.kind;
-    if (kind === "question" || catalog.data === undefined) return true;
-    return card.metric
-      ? (metricBlocks.get(card.metric)?.includes(kind) ?? false)
-      : [...metricBlocks.values()].some((blocks) => blocks.includes(kind));
-  };
-  const kept = keptCards(layout, drawable);
+  const composition = useComposition(initialSelection);
+  const { metrics, kept } = composition;
   const write = useMutation({
     mutationFn: async ({
       body,
@@ -123,6 +89,7 @@ export function SaveReportingDialog({
   // An open draft takes every edit until it is published or discarded, so a
   // direct save is not offered beside it.
   const draftOpen = report?.draft_revision !== undefined;
+  const selection = composition.selection;
   const save = (asDraft: boolean) =>
     write.mutate({
       existing: report ? { id: report.id, version: report.version } : undefined,
@@ -134,7 +101,7 @@ export function SaveReportingDialog({
         audience_team_id: audience === "team" ? selection.scope.id : undefined,
         selection: {
           ...selection,
-          metrics,
+          metrics: [...metrics],
           layout: kept,
           blocks: blocksOf(kept),
         },
@@ -221,55 +188,10 @@ export function SaveReportingDialog({
           {t("reporting.customize")}
         </Button>
         {customizing && (
-          <div className="form-stack">
-            <ReportingFilters
-              selection={selection}
-              onChange={(next) => {
-                setSelection(next);
-                if (
-                  next.scope.kind !== selection.scope.kind ||
-                  next.scope.id !== selection.scope.id
-                )
-                  setAudience("private");
-              }}
-            />
-            <fieldset className="form-stack">
-              <legend>{t("reporting.metrics")}</legend>
-              {(
-                catalog.data?.metrics.map((metric) => metric.id) ??
-                selection.metrics
-              ).map((metric) => (
-                <Checkbox
-                  key={metric}
-                  label={metricName(metric)}
-                  // Which charts a metric brings is in the catalog, so the
-                  // choice waits for it rather than keep cards it cannot judge.
-                  disabled={catalog.data === undefined}
-                  checked={metrics.includes(metric)}
-                  onChange={(event) =>
-                    setMetrics(
-                      event.target.checked
-                        ? [...metrics, metric]
-                        : metrics.filter((candidate) => candidate !== metric),
-                    )
-                  }
-                />
-              ))}
-            </fieldset>
-            <Disclosure summary={t("reporting.blocks")}>
-              <LayoutEditor
-                layout={kept}
-                choices={cardChoices(kept, metricBlocks)}
-                onChange={setLayout}
-                preview={(choice) => (
-                  <CardPreview
-                    selection={{ ...selection, metrics }}
-                    choice={choice}
-                  />
-                )}
-              />
-            </Disclosure>
-          </div>
+          <ReportComposition
+            composition={composition}
+            onScopeChange={() => setAudience("private")}
+          />
         )}
         {metadataChanged && !draftOpen && (
           <p className="t-caption">{t("reporting.draftKeepsName")}</p>
@@ -311,7 +233,7 @@ function renamedOrReshared(
   );
 }
 
-function unsaveable(
+export function unsaveable(
   selection: ReportingSelection,
   metrics: readonly unknown[],
 ): boolean {
