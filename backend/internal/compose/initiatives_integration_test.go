@@ -24,10 +24,18 @@ import (
 // initiativeManager holds the grants a manager defining an initiative holds:
 // the initiative itself, the reporting it narrows, and the records it reads.
 func initiativeManager(e *forecastEnv) context.Context {
+	return initiativeEditor(e, "")
+}
+
+// initiativeEditor holds the manager's grants except withheld, an object the
+// editor's role may not read.
+func initiativeEditor(e *forecastEnv, withheld string) context.Context {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"sales_initiative", "report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "product", "activity"} {
-		grants[object] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+		if object != withheld {
+			grants[object] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+		}
 	}
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
 }
@@ -136,6 +144,72 @@ func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 	reader := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll, "sales_initiative")
 	if _, err := service.Evaluate(reader, selection); err == nil {
 		t.Fatal("a reader without the initiative grant narrowed a report to it")
+	}
+}
+
+// A save replaces the picks its editor can read and no others. A pick the
+// editor cannot read was never shown to them. Leaving it out of what they send
+// back does not remove it.
+func TestSavingMembersKeepsThePicksTheEditorCannotRead(t *testing.T) {
+	e := setupForecast(t)
+	start := clocktest.Now(t).UTC().Truncate(time.Second)
+	_, _, open := seedInitiativeDeals(t, e, start)
+	manager := initiativeManager(e)
+	store := newInitiativeStore(e.Pool)
+	draft, err := store.Create(manager, initiatives.Definition{Name: "Portal push", Objective: reportingQualifiedOpportunitiesCreated, Deadline: start.AddDate(0, 3, 0)})
+	if err != nil {
+		t.Fatalf("defining the initiative: %v", err)
+	}
+	id := ids.UUID(draft.Id)
+	pick := func(names ...string) []crmcontracts.SalesInitiativeMemberRef {
+		refs := []crmcontracts.SalesInitiativeMemberRef{}
+		for _, name := range names {
+			refs = append(refs, crmcontracts.SalesInitiativeMemberRef{RecordType: "deal", RecordId: openapi_types.UUID(open[name])})
+		}
+		return refs
+	}
+	picked := func() []string {
+		t.Helper()
+		members, err := store.Members(manager, id, nil)
+		if err != nil {
+			t.Fatalf("reading the members: %v", err)
+		}
+		labels := []string{}
+		for _, member := range members.Data {
+			if member.Reason == "picked" {
+				labels = append(labels, member.Label)
+			}
+		}
+		slices.Sort(labels)
+		return labels
+	}
+	if _, err := store.ReplaceMembers(manager, id, pick("Tern portal", "Linden press"), nil); err != nil {
+		t.Fatalf("picking two deals: %v", err)
+	}
+
+	// An editor whose role reads no deals saves the members step.
+	if _, err := store.ReplaceMembers(initiativeEditor(e, "deal"), id, nil, nil); err != nil {
+		t.Fatalf("saving as an editor who reads no deals: %v", err)
+	}
+	if got := picked(); !slices.Equal(got, []string{"Linden press", "Tern portal"}) {
+		t.Fatalf("the picks are %v after an editor who reads no deals saved, want both kept", got)
+	}
+
+	// A picked deal is archived, so the next save cannot see it; restored, it is
+	// picked again.
+	archive := func(at any) {
+		t.Helper()
+		if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at = $2 WHERE id = $1`, open["Linden press"], at); err != nil {
+			t.Fatalf("archiving or restoring the deal: %v", err)
+		}
+	}
+	archive(start)
+	if _, err := store.ReplaceMembers(manager, id, pick("Tern portal"), nil); err != nil {
+		t.Fatalf("saving with a picked deal archived: %v", err)
+	}
+	archive(nil)
+	if got := picked(); !slices.Equal(got, []string{"Linden press", "Tern portal"}) {
+		t.Fatalf("the picks are %v once the archived deal is restored, want it picked again", got)
 	}
 }
 

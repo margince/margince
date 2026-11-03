@@ -170,11 +170,10 @@ func (s *Store) include(ctx context.Context, tx pgx.Tx, out *Membership, matched
 
 // visibleRecords narrows picked ids to the rows the reader's row scope reaches.
 func visibleRecords(ctx context.Context, tx pgx.Tx, recordType string, picked []ids.UUID) ([]ids.UUID, error) {
-	if len(picked) == 0 {
+	// A type the reader's role cannot read holds no record they can see, so its
+	// picks stay out of their reading instead of failing it.
+	if len(picked) == 0 || !auth.ReadGranted(ctx, recordType) {
 		return nil, nil
-	}
-	if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
-		return nil, err
 	}
 	args := []any{picked}
 	scope, err := auth.ScopeClauseFor(ctx, recordType, "t", func(value any) int {
@@ -208,14 +207,8 @@ func createdBefore(ctx context.Context, tx pgx.Tx, recordType string, matched []
 }
 
 func carriedDeals(ctx context.Context, tx pgx.Tx, leads []ids.UUID) ([]ids.UUID, error) {
-	if len(leads) == 0 {
+	if len(leads) == 0 || !auth.ReadGranted(ctx, recordLead) || !auth.ReadGranted(ctx, recordDeal) {
 		return nil, nil
-	}
-	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return nil, err
 	}
 	args := []any{leads}
 	arg := func(value any) int {
@@ -410,8 +403,8 @@ func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, exclude
 		if err := ensureVisibleRefs(ctx, tx, picked, excluded); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM sales_initiative_member WHERE initiative_id = $1`, id); err != nil {
-			return fmt.Errorf("clear initiative members: %w", err)
+		if err := clearReadableMembers(ctx, tx, id); err != nil {
+			return err
 		}
 		for reason, refs := range map[string][]crmcontracts.SalesInitiativeMemberRef{"picked": picked, "excluded": excluded} {
 			for _, ref := range refs {
@@ -438,6 +431,30 @@ func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, exclude
 		return crmcontracts.SalesInitiativeMembers{}, err
 	}
 	return s.Members(ctx, id, nil)
+}
+
+// clearReadableMembers deletes the member rows the editor can read, which are
+// the only ones a save replaces. A row on a record outside their row scope was
+// never shown to them, so leaving it out of the save cannot mean removing it.
+func clearReadableMembers(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	for _, recordType := range []string{recordLead, recordDeal} {
+		rows, err := tx.Query(ctx, `SELECT record_id FROM sales_initiative_member WHERE initiative_id = $1 AND record_type = $2`, id, recordType)
+		if err != nil {
+			return fmt.Errorf("read initiative members: %w", err)
+		}
+		stored, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return fmt.Errorf("read initiative members: %w", err)
+		}
+		readable, err := visibleRecords(ctx, tx, recordType, stored)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM sales_initiative_member WHERE initiative_id = $1 AND record_type = $2 AND record_id = ANY($3)`, id, recordType, readable); err != nil {
+			return fmt.Errorf("clear initiative members: %w", err)
+		}
+	}
+	return nil
 }
 
 // ensureVisibleRefs refuses, as not found, a pick or exclusion of a record
