@@ -148,6 +148,35 @@ describe("Done on a waiting row", () => {
     });
   });
 
+  // A company question answers nothing when set aside: it waits for new mail.
+  it("calls it Not now on a company question and says the question returns", async () => {
+    const user = userEvent.setup();
+    const question: WorklistItem = {
+      ...colleaguesRow(),
+      id: "alias.example",
+      source: "domain_question",
+      category: "decisions",
+      dispositions: ["handled"],
+    };
+    const fetch = draw(question);
+
+    expect(
+      screen.queryByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.notNow"],
+      }),
+    );
+
+    expect(sentTo(fetch)).toBe("PUT /v1/worklist/done");
+    expect(
+      await screen.findByText(en["worklist.disposition.done.notNow"]),
+    ).toBeTruthy();
+  });
+
   it("leads the forward swipe", () => {
     const put = vi.fn();
     const offered: WorklistDisposition[] = ["handled", "snooze", "not_mine"];

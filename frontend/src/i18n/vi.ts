@@ -10886,7 +10886,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.domainReview.defer": "Để sau",
   "worklist.domainReview.restore": "Đưa lại vào mục xem xét",
   "worklist.domainReview.deferEffect":
-    "Để sau ẩn câu hỏi khỏi hàng đợi của bạn cho đến khi có bằng chứng mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
+    "Để sau ẩn câu hỏi khỏi danh sách của bạn cho đến khi có email mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
   "worklist.domainReview.title": "Xem xét tên miền",
   "worklist.domainReview.loading": "Đang tải tên miền…",
   "worklist.domainReview.empty": "Không có tên miền cần xem xét.",
@@ -10914,6 +10914,65 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
   "blockedDomains.source.vendorVerdict":
     "Có vẻ là nhà cung cấp email hoặc hosting",
+  "worklist.source.domain_question": "Câu hỏi về công ty",
+  "worklist.domainQuestion.heading": "{name} làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingMany_one":
+    "{name} và {count} liên hệ khác làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingMany_other":
+    "{name} và {count} liên hệ khác làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingAddress": "{address} thuộc công ty nào?",
+  "worklist.domainQuestion.headingDomain": "{domain} thuộc công ty nào?",
+  "worklist.domainQuestion.origin":
+    "Margince tìm thấy {domain} trong email bạn nhận được.",
+  "worklist.domainQuestion.originHidden":
+    "Margince tìm thấy {domain} trong email bạn nhận được, từ một liên hệ bạn không thể mở.",
+  "worklist.domainQuestion.originContacts":
+    "Margince tìm thấy {domain} trong email của bạn, từ:",
+  "worklist.domainQuestion.reason.unread":
+    "Margince không đọc được trang web của {domain}, nên không biết đây là công ty nào.",
+  "worklist.domainQuestion.reason.noCompany":
+    "Margince đã đọc trang web của {domain}, nhưng trang không cho biết các liên hệ này làm việc cho công ty nào.",
+  "worklist.domainQuestion.reason.forwarded":
+    "Trang web của {domain} chuyển hướng sang một trang khác, nên Margince không chắc đây là công ty nào.",
+  "worklist.domainQuestion.reason.nearDuplicate":
+    "Trang web của {domain} nêu tên một công ty đã có ở đây.",
+  "worklist.domainQuestion.reason.staleEvidence":
+    "Email gần nhất từ {domain} đã nhiều năm, nên trang web hiện tại có thể không đúng với các liên hệ này.",
+  "worklist.domainQuestion.reason.vendor":
+    "Trang web của {domain} có vẻ là nhà cung cấp email hoặc hosting, nơi nhân viên và khách hàng trông giống nhau.",
+  "worklist.domainQuestion.suggested": "Công ty được gợi ý:",
+  "worklist.domainQuestion.basis.redirectTarget":
+    "Trang web chuyển hướng đến một tên miền của công ty này.",
+  "worklist.domainQuestion.basis.contactEmployer":
+    "Một liên hệ đã viết email hiện làm việc cho công ty này.",
+  "worklist.domainQuestion.basis.nameTwin":
+    "Trang web nêu tên một công ty trùng đúng tên này.",
+  "worklist.domainQuestion.noSuggestion":
+    "Margince không có công ty nào để gợi ý. Hãy chọn một công ty hoặc tạo công ty mới.",
+  "worklist.domainQuestion.confirm": "Xác nhận công ty",
+  "worklist.domainQuestion.confirmEffect_one":
+    "Liên kết {domain} và {count} liên hệ của tên miền này với {company}.",
+  "worklist.domainQuestion.confirmEffect_other":
+    "Liên kết {domain} và {count} liên hệ của tên miền này với {company}.",
+  "worklist.domainQuestion.confirmEffectNone":
+    "Liên kết {domain} với {company}.",
+  "worklist.domainQuestion.confirmed":
+    "{domain} đã được liên kết với {company}.",
+  "worklist.domainQuestion.confirmFailed":
+    "Chưa liên kết được công ty. Hãy thử lại.",
+  "worklist.domainQuestion.chooseOther": "Chọn công ty khác",
+  "worklist.domainQuestion.choose": "Chọn công ty",
+  "worklist.domainQuestion.stop": "Ngừng thu thập tên miền này",
+  "worklist.domainQuestion.stopEffect":
+    "Ngừng thu thập email từ {domain} trong hộp thư của bạn. Đồng nghiệp vẫn giữ phần của họ. Không chọn công ty nào.",
+  "worklist.disposition.verb.notNow": "Để sau",
+  "worklist.disposition.hint.notNow":
+    "Câu hỏi vẫn mở. Email mới từ tên miền này sẽ đưa câu hỏi trở lại.",
+  "worklist.disposition.done.notNow":
+    "Đã để sau. Email mới từ tên miền này sẽ đưa câu hỏi trở lại.",
+  "worklist.domainReview.focusTitle": "Công ty cho {domain}",
+  "worklist.domainReview.details": "Chi tiết trang web",
+  "blockedDomains.source.unevidencedUnread": "Không đọc được trang web",
   "blockedDomains.rowAdmit": "Cho phép",
   "blockedDomains.rowRefuse": "Từ chối",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -17542,7 +17601,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.capture_health":
     "Một hộp thư đã ngừng thu thập thư. Kết nối lại để thư được thu thập trở lại.",
   "worklist.ask.domain_question":
-    "Margince không xác định được tên miền này thuộc về đâu. Tạo công ty cho tên miền, giữ làm nhà cung cấp, hoặc loại trừ.",
+    "Cho biết địa chỉ này thuộc công ty nào để các liên hệ được xếp đúng công ty.",
   "worklist.ask.ai_work_health":
     "Một tác vụ AI liên tục thất bại. Kiểm tra nhà cung cấp AI của tác vụ trong Cài đặt.",
   "worklist.ask.bounce":

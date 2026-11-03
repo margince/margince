@@ -14290,7 +14290,9 @@ export interface paths {
         };
         /**
          * Review the calling reader’s undecided domains.
-         * @description Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+         * @description Lists only the reader’s own domain questions, oldest first, with continuation, source
+         *     evidence and `domain_context`. `domain` narrows the page to that one question; a domain
+         *     the reader holds no open question about gives an empty page.
          */
         get: operations["listDomainQuestions"];
         put?: never;
@@ -25670,6 +25672,50 @@ export interface components {
             redirect_chain?: string[];
             /** @description The site triage's own sentence on a `vendor_verdict` question, in the workspace language. */
             note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
+        };
+        /**
+         * @description Who raised a company question and which company it may be about. Every contact and
+         *     company named here passes the reader's own row scope.
+         */
+        DomainQuestionContext: {
+            /** @description Senders of the newest question mail the reader may see, newest first. */
+            contacts: components["schemas"]["DomainQuestionContact"][];
+            /** @description Live contacts on the domain the reader may see. Confirming a company employs all of them. */
+            contact_count: number;
+            /** @description The mail came from contacts the reader may not see, and from none they may. */
+            hidden_senders: boolean;
+            /** @description The From address of the newest question mail, which the reader may read. */
+            sender_address?: string;
+            /**
+             * Format: uuid
+             * @description The newest question mail, which the reader may read.
+             */
+            origin_activity_id?: string;
+            suggested_company?: components["schemas"]["DomainCompanySuggestion"];
+            /** @description For an `unevidenced` question, no read of the site succeeded or was allowed. False when the site was read and named no company. */
+            site_unread: boolean;
+        };
+        DomainQuestionContact: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /**
+         * @description The one existing company the evidence points to. Absent when no source names one, or
+         *     when sources disagree. Nothing is linked until the reader confirms it.
+         */
+        DomainCompanySuggestion: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * @description `redirect_target` — the site redirects to a domain this company owns. `contact_employer` —
+             *     a sender already works for this company. `name_twin` — the site names a company with
+             *     exactly this company's name.
+             * @enum {string}
+             */
+            basis: "redirect_target" | "contact_employer" | "name_twin";
         };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
@@ -52542,6 +52588,7 @@ export interface components {
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -54158,6 +54205,7 @@ export interface components {
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -78090,6 +78138,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Return only the question about this domain. */
+                domain?: string;
             };
             header?: never;
             path?: never;

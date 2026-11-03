@@ -22,6 +22,14 @@ const questions: Question[] = [
     evidence_at: "2026-09-20T10:00:00Z",
     effective_url: "https://destination.example/",
     redirect_chain: ["https://alias.example/", "https://destination.example/"],
+    domain_context: {
+      contacts: [
+        { id: "00000000-0000-4000-8000-0000000000a1", name: "Alex Example" },
+      ],
+      contact_count: 1,
+      hidden_senders: false,
+      site_unread: false,
+    },
   },
   {
     domain: "unreadable.example",
@@ -38,7 +46,7 @@ const questions: Question[] = [
   },
 ];
 
-function review(initialRows: Question[]) {
+function review(initialRows: Question[], domain?: string) {
   return () => {
     let rows = initialRows;
     installFetchStub({
@@ -59,7 +67,7 @@ function review(initialRows: Question[]) {
     });
     return (
       <StoryProviders>
-        <DomainReview onClose={() => {}} />
+        <DomainReview domain={domain} onClose={() => {}} />
       </StoryProviders>
     );
   };
@@ -88,9 +96,9 @@ export const SingleUndated: Story = {
   play: async () => {
     const body = within(document.body);
     await waitFor(() =>
-      expect(body.getByRole("button", { name: "Set aside" })).toBeVisible(),
+      expect(body.getByRole("button", { name: "Not now" })).toBeVisible(),
     );
-    await userEvent.click(body.getByRole("button", { name: "Set aside" }));
+    await userEvent.click(body.getByRole("button", { name: "Not now" }));
     await waitFor(() =>
       expect(
         body.getByRole("button", { name: "Return to Review" }),
@@ -114,4 +122,25 @@ export const ForwardedIdentityNeedsAMatch: Story = {
       body.getByRole("button", { name: "Match company" }),
     ).toBeDisabled();
   },
+};
+
+/** Opened from a row: only that question, its website details folded away. */
+export const FocusedOnOneQuestion: Story = {
+  render: review(
+    questions.filter((row) => row.domain === "alias.example"),
+    "alias.example",
+  ),
+  play: async () => {
+    const body = within(document.body);
+    await waitFor(() =>
+      expect(body.getByText("Company for alias.example")).toBeVisible(),
+    );
+    await expect(
+      body.queryByText("unreadable.example"),
+    ).not.toBeInTheDocument();
+  },
+};
+export const FocusedOnOneQuestionDark: Story = {
+  ...FocusedOnOneQuestion,
+  globals: { theme: "dark" },
 };

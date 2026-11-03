@@ -8,8 +8,9 @@
 import { Button } from "../../design-system/atoms";
 import { useTooltip } from "../../design-system/tooltip";
 import type { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { SnoozeEvent, SnoozeSpan } from "./worklist.dispositions";
-import type { WorklistDisposition } from "./worklist.queries";
+import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
 
 // Which answer a press sent, as opposed to the fact that one is out.
 //
@@ -51,19 +52,48 @@ const VERB_HINTS: Partial<
   Record<WorklistDisposition, "worklist.disposition.hint.not_mine">
 > = { not_mine: "worklist.disposition.hint.not_mine" };
 
+// Done on a company question answers nothing: the question waits for new mail.
+// So it is called Not now there, and its hint says the question comes back.
+function deferredQuestion(
+  disposition: WorklistDisposition,
+  source: WorklistItem["source"] | undefined,
+): boolean {
+  return disposition === "handled" && source === "domain_question";
+}
+
+export function dispositionLabelKey(
+  disposition: WorklistDisposition,
+  source?: WorklistItem["source"],
+): MessageKey {
+  return deferredQuestion(disposition, source)
+    ? "worklist.disposition.verb.notNow"
+    : `worklist.disposition.verb.${disposition}`;
+}
+
+function dispositionHintKey(
+  disposition: WorklistDisposition,
+  source: WorklistItem["source"] | undefined,
+): MessageKey | undefined {
+  return deferredQuestion(disposition, source)
+    ? "worklist.disposition.hint.notNow"
+    : VERB_HINTS[disposition];
+}
+
 // One judgement as a button, with its hint on hover and focus where it has one.
 export function DispositionButton({
   disposition,
+  source,
   writing,
   onPress,
   t,
 }: Readonly<{
   disposition: WorklistDisposition;
+  source?: WorklistItem["source"];
   writing: PutDownAnswer | undefined;
   onPress: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  const hint = VERB_HINTS[disposition];
+  const hint = dispositionHintKey(disposition, source);
   const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(
     hint ? t(hint) : "",
   );
@@ -74,7 +104,7 @@ export function DispositionButton({
       {...(hint ? { ref, ...trigger } : {})}
       onClick={onPress}
     >
-      {t(`worklist.disposition.verb.${disposition}` as const)}
+      {t(dispositionLabelKey(disposition, source))}
       {hint && tip}
     </Button>
   );

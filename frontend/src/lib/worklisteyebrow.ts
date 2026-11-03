@@ -25,6 +25,8 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "failed_approval")
     return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
+  if (item.source === "domain_question")
+    return "worklist.source.domain_question";
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")
     return "worklist.source.weekly_commitment";

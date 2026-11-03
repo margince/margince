@@ -198,9 +198,10 @@ func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, da
 			continue
 		}
 		if _, err := w.contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{
-			Domain:   domain.Domain,
-			SeedURL:  contacts.TriageSeedURL(domain.Domain),
-			Evidence: said.Say(domainEvidence.Exhausted),
+			Domain:     domain.Domain,
+			SeedURL:    contacts.TriageSeedURL(domain.Domain),
+			Evidence:   said.Say(domainEvidence.Exhausted),
+			SiteUnread: true,
 		}); err != nil {
 			w.log.WarnContext(ctx, "domain triage: could not settle an exhausted domain",
 				"domain", domain.Domain, "err", err)

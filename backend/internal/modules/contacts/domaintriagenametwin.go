@@ -18,11 +18,17 @@ import (
 
 // A name match alone does not prove that another mail domain belongs to the company.
 func withholdForNameTwin(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, match CompanyMatch) (bool, error) {
-	candidate, ok := heldRival(exactNameRivals(match))
+	twins := exactNameRivals(match)
+	candidate, ok := heldRival(twins)
 	if !ok {
 		return false, nil
 	}
-	if err := withholdForNearDuplicate(ctx, tx, in, candidate); err != nil {
+	// Only a sole twin is a suggestion; several are the choice the reader makes.
+	var sole *ids.CompanyID
+	if len(twins) == 1 {
+		sole = &candidate.CompanyID
+	}
+	if err := withholdForNearDuplicate(ctx, tx, in, candidate, sole); err != nil {
 		return false, err
 	}
 	return true, nil

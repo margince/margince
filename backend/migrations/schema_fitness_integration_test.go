@@ -311,9 +311,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// same transaction that created it. There is no client-supplied reference
 	// to gate: nothing outside the triage resolve ever writes this column, and
 	// no human surface reads the row.
-	"company_domain_disposition.company_id": "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
-	"contact_email.contact_id":              "child row: written through the contact's own gated paths",
-	"contact_phone.contact_id":              "child row: written through the contact's own gated paths",
+	"company_domain_disposition.company_id":           "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
+	"company_domain_disposition.candidate_company_id": "server-derived: set only by withholdForNearDuplicate, to the sole exact-name twin the gated dedupe match found; the question read names it only through the reader's company row scope",
+	"contact_email.contact_id":                        "child row: written through the contact's own gated paths",
+	"contact_phone.contact_id":                        "child row: written through the contact's own gated paths",
 	// The licensed-data-provider platform (ADR-0101). A run names the subject
 	// it spends credits on, so admitting one IS a read of that contact: QueueRun
 	// takes auth.EnsureVisible inside the queueing transaction, before any

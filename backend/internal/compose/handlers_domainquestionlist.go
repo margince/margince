@@ -9,6 +9,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -17,18 +18,27 @@ func (h domainQuestionHandlers) ListDomainQuestions(w http.ResponseWriter, r *ht
 		httperr.Write(w, r, err)
 		return
 	}
-	cursor := ""
+	cursor, domain := "", ""
 	if params.Cursor != nil {
 		cursor = *params.Cursor
 	}
-	rows, page, err := h.contacts.DomainQuestionsForOwner(r.Context(), cursor, storekit.ClampLimit(params.Limit))
+	if params.Domain != nil {
+		base, ok := freemail.Hostname(*params.Domain)
+		if !ok {
+			httperr.Write(w, r, httperr.Validation("domain", "invalid", "expected a domain name like example.com"))
+			return
+		}
+		domain = base
+	}
+	rows, page, err := h.contacts.DomainQuestionsForOwner(r.Context(), cursor, storekit.ClampLimit(params.Limit), domain)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	data := make([]crmcontracts.DomainQuestion, 0, len(rows))
 	for _, q := range rows {
-		item := crmcontracts.DomainQuestion{Domain: q.Domain, ReasonCode: q.ReasonCode, AskedAt: q.AskedAt, EvidenceAt: q.EvidenceAt, Deferred: q.Deferred}
+		domainContext := q.Context.Contract()
+		item := crmcontracts.DomainQuestion{Domain: q.Domain, ReasonCode: q.ReasonCode, AskedAt: q.AskedAt, EvidenceAt: q.EvidenceAt, Deferred: q.Deferred, DomainContext: &domainContext}
 		if q.Note != "" {
 			item.Note = &q.Note
 		}

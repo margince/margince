@@ -33,20 +33,28 @@ type DomainQuestion struct {
 	Forward    *DomainForwardEvidence
 	// Note is the site triage's own sentence on a vendor question, so the
 	// reader sees why the machine called the domain a vendor.
-	Note string
+	Note    string
+	Context DomainQuestionContext
 }
 
 func (s *Store) OpenDomainQuestionsForOwner(ctx context.Context) ([]DomainQuestion, error) {
-	rows, _, err := s.listReaderDomainQuestions(ctx, "", DomainQuestionLimit, false)
+	rows, _, err := s.listReaderDomainQuestions(ctx, domainQuestionFilter{}, DomainQuestionLimit)
 	return rows, err
 }
 
-// DomainQuestionsForOwner includes deferred questions so readers can restore them.
-func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int) ([]DomainQuestion, storekit.Page, error) {
-	return s.listReaderDomainQuestions(ctx, cursor, limit, true)
+// DomainQuestionsForOwner includes deferred questions so readers can restore
+// them. A domain narrows the page to that one question.
+func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int, domain string) ([]DomainQuestion, storekit.Page, error) {
+	return s.listReaderDomainQuestions(ctx, domainQuestionFilter{cursor: cursor, domain: domain, includeDeferred: true}, limit)
 }
 
-func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, limit int, includeDeferred bool) ([]DomainQuestion, storekit.Page, error) {
+type domainQuestionFilter struct {
+	cursor          string
+	domain          string
+	includeDeferred bool
+}
+
+func (s *Store) listReaderDomainQuestions(ctx context.Context, filter domainQuestionFilter, limit int) ([]DomainQuestion, storekit.Page, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -80,44 +88,28 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `
 	  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
 	   AND (e.scope = 'workspace' OR e.user_id = ` + ownerArg + `))`
-		if !includeDeferred {
+		if !filter.includeDeferred {
 			where += ` AND NOT ` + deferred
 		}
-		if cursor != "" {
-			after, err := storekit.DecodeCursor(cursor)
+		if filter.domain != "" {
+			where += ` AND d.domain = ` + arg(filter.domain)
+		}
+		if filter.cursor != "" {
+			after, err := storekit.DecodeCursor(filter.cursor)
 			if err != nil {
 				return err
 			}
 			where += ` AND (d.created_at, d.id) > (` + arg(after.CreatedAt) + `, ` + arg(after.ID) + `)`
 		}
 		query := `SELECT d.id, d.domain, ` + domainPendingReason + `, d.pending_reason,
-	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `
+	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `, d.site_unread, d.candidate_company_id
 	  FROM company_domain_disposition d WHERE ` + where + `
 	  ORDER BY d.created_at, d.id LIMIT ` + arg(limit+1)
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
+		var candidates map[string]ids.UUID
+		if out, candidates, err = scanDomainQuestions(ctx, tx, query, args); err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var q DomainQuestion
-			var evidence string
-			if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred); err != nil {
-				return err
-			}
-			if q.ReasonCode == PendingVendorVerdict {
-				q.Note = evidence
-			}
-			if q.ReasonCode == PendingForwardedIdentity {
-				q.Forward = &DomainForwardEvidence{}
-				if err := json.Unmarshal([]byte(evidence), q.Forward); err != nil {
-					slog.WarnContext(ctx, "domain forwarding evidence could not be decoded", "domain", q.Domain, "err", err)
-					q.Forward = nil
-				}
-			}
-			out = append(out, q)
-		}
-		return rows.Err()
+		return attachDomainQuestionContextTx(ctx, tx, out, candidates, asOf)
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
@@ -129,4 +121,43 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		page.NextCursor, err = storekit.EncodeCursor(last.AskedAt, last.ID)
 	}
 	return out, page, err
+}
+
+// scanDomainQuestions reads the page and the name-twin candidate of each
+// near_duplicate question. A column left by an earlier reason is ignored.
+func scanDomainQuestions(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DomainQuestion, map[string]ids.UUID, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	var out []DomainQuestion
+	candidates := map[string]ids.UUID{}
+	for rows.Next() {
+		var q DomainQuestion
+		var evidence string
+		var siteUnread bool
+		var candidate *ids.UUID
+		if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred, &siteUnread, &candidate); err != nil {
+			return nil, nil, err
+		}
+		switch q.ReasonCode {
+		case PendingVendorVerdict:
+			q.Note = evidence
+		case PendingForwardedIdentity:
+			q.Forward = &DomainForwardEvidence{}
+			if err := json.Unmarshal([]byte(evidence), q.Forward); err != nil {
+				slog.WarnContext(ctx, "domain forwarding evidence could not be decoded", "domain", q.Domain, "err", err)
+				q.Forward = nil
+			}
+		case PendingUnevidenced:
+			q.Context.SiteUnread = siteUnread
+		case PendingNearDuplicate:
+			if candidate != nil {
+				candidates[q.Domain] = *candidate
+			}
+		}
+		out = append(out, q)
+	}
+	return out, candidates, rows.Err()
 }

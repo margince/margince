@@ -40,5 +40,6 @@ type DomainQuestion struct {
 	AskedAt    time.Time
 	EvidenceAt *time.Time
 	// The site triage's own sentence on a vendor question.
-	Note string
+	Note    string
+	Context contacts.DomainQuestionContext
 }

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -364,19 +364,15 @@ member. "Applies from the next message. Messages already captured stay."
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
-**Domain review** (Worklist → Review): domains waiting for a company match appear together. Open
-**Domain review** to see each question, the answering website, and the age of the evidence.
-**Set aside** hides your question until newer evidence arrives; it stays in Domain review, where
-**Return to Review** puts it back in your queue. A colleague's question stays as it was.
+**Company questions** (Worklist → Decisions): when Margince cannot tell which company an email address belongs to, it asks the colleague who received the mail. The row says who wrote, with a link to each contact you may open, and why Margince is asking. A website that could not be read and a website that was read but names no company are told apart. A contact you may not open is never named; the row shows the sender's address instead.
 
-**Match company** links the domain to the company you choose. **Create company** adds one where the
-evidence allows it. If another domain answered the website read, you must choose an existing company
-yourself. **Retry site read** leaves the company question open and asks again. **Exclude domain**
-stops capture for your mailboxes. You can use **Set aside** without making these decisions.
+Margince suggests a company only when one company you may see, and no other, fits the evidence. That is a company owning the domain the website redirects to, the company a sender already works for, or a company with the name the website states. Nothing is linked until you press **Confirm company**. Confirming links the domain and every contact on it to that company, and the caption under the button says so.
 
-If the website reads like a mail or hosting vendor, Margince creates no company. It asks the
-colleague whose mail came from the domain, and shows the reason. **Create company** adds it and links
-the contacts who write from it. **Keep as vendor** creates nothing, and later mail does not ask again.
+**Choose another** (or **Choose company**) opens only this question, where you pick any company you may see, or **Create company** where the evidence allows it. If the website redirects to another site, you must choose an existing company yourself. **Website details** holds the answering website, the redirect chain and the date of the newest mail. **Retry site read** asks again. **Stop capturing this domain** stops capture of mail from the domain in your mailboxes; colleagues keep theirs, and no company is chosen.
+
+**Not now** takes the question off your list until new mail from the domain arrives. **Domain review** (Worklist → Decisions) lists every question you hold, set aside or not; **Return to Review** puts one back on your list. A colleague's question stays as it was.
+
+If the website reads like a mail or hosting vendor, Margince creates no company. It asks the colleague whose mail came from the domain, with the same contact line, **Choose company** and website details as any other company question. **Create company** adds it and links the contacts who write from it. **Keep as vendor** creates nothing, and later mail does not ask again.
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an

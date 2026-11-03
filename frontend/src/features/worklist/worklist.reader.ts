@@ -64,7 +64,9 @@ export function noticeDetail(
     );
   }
   if (item.source === "domain_question" && item.domain_reason_code) {
-    const label = domainReasonLabels[item.domain_reason_code];
+    const label = item.domain_context?.site_unread
+      ? "blockedDomains.source.unevidencedUnread"
+      : domainReasonLabels[item.domain_reason_code];
     if (!label) return item.detail;
     // A vendor question also carries the site triage's own sentence.
     return [t(label), item.domain_note].filter(Boolean).join(" ");

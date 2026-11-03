@@ -231,3 +231,28 @@ func assertDomainMaintenanceGroup(t *testing.T, grouped []ranked, count int) {
 		t.Fatal("batch lost the member identities")
 	}
 }
+
+func TestARedirectedQuestionCarriesItsContextAndKeepsItsActions(t *testing.T) {
+	sender, company := ids.NewV7(), ids.NewV7()
+	row := classifyDomainQuestion(domainQuestionItem(DomainQuestion{
+		Domain: "alias.example", ReasonCode: contacts.PendingForwardedIdentity, AskedAt: readInstant,
+		Context: contacts.DomainQuestionContext{
+			Contacts:     []contacts.DomainQuestionContact{{ID: sender, Name: "Alex Example"}},
+			ContactCount: 2,
+			Suggestion:   &contacts.DomainCompanySuggestion{CompanyID: company, Name: "Example Company", Basis: contacts.SuggestionRedirectTarget},
+		},
+	}), readInstant).item
+
+	got := row.DomainContext
+	if got == nil || len(got.Contacts) != 1 || got.Contacts[0].Name != "Alex Example" || got.ContactCount != 2 {
+		t.Fatalf("worklist context = %+v, want Alex named and two contacts counted", got)
+	}
+	if got.SuggestedCompany == nil || got.SuggestedCompany.Name != "Example Company" ||
+		got.SuggestedCompany.Basis != crmcontracts.DomainCompanySuggestionBasisRedirectTarget {
+		t.Fatalf("suggestion = %+v, want Example Company from the redirect", got.SuggestedCompany)
+	}
+	want := []crmcontracts.WorklistItemActions{"discard", "reopen"}
+	if !slices.Equal(row.Actions, want) {
+		t.Fatalf("actions = %v, want %v: a redirect still offers no create", row.Actions, want)
+	}
+}

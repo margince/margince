@@ -46,7 +46,7 @@ func TestDomainQuestionDeferralPreservesTheReviewDestination(t *testing.T) {
 			t.Fatal("deferred question remains in Worklist")
 		}
 	}
-	review, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 100)
+	review, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 100, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,4 +101,21 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 			t.Fatalf("evidence delta %s: questions=%+v", delta, questions)
 		}
 	}
+	// The returned row says who wrote, so the reader is asked about a sender.
+	// Read after the newest mail, as a reader opening the Worklist then would.
+	later := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return deferredAt.Add(2 * time.Hour) })
+	day, err := later.Worklist(ctx, "mine", "", ids.UUID{}, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range day.Queue {
+		if row.Source == "domain_question" && row.Id == domain {
+			if row.DomainContext == nil || row.DomainContext.OriginActivityId == nil ||
+				row.DomainContext.SenderAddress == nil || *row.DomainContext.SenderAddress != "hello@"+domain {
+				t.Fatalf("returned question context = %+v, want the newest mail and its sender", row.DomainContext)
+			}
+			return
+		}
+	}
+	t.Fatal("the question did not return to the Worklist")
 }

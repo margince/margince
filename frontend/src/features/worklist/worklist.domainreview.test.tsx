@@ -21,6 +21,15 @@ import { meFixture } from "../../testing/mefixture";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { DomainReviewLauncher } from "./worklist.domainreview";
 import type { WorklistItem } from "./worklist.queries";
+import { rowAnswer } from "./worklist.row.answer";
+
+const briefAnswer = {
+  working: false,
+  offered: () => false,
+  answer: () => {
+    throw new Error("A company question must not answer a brief");
+  },
+};
 
 type Question = components["schemas"]["DomainQuestion"];
 const forwarded: Question = {
@@ -110,9 +119,12 @@ it("pages all questions and explains forwarded and undated evidence", async () =
   expect(
     screen.getByText("Answering site: https://destination.example/"),
   ).toBeTruthy();
-  expect(
-    screen.getByText("https://alias.example/ → https://destination.example/"),
-  ).toBeTruthy();
+  const chain = screen.getByText(
+    "https://alias.example/ → https://destination.example/",
+  );
+  expect(chain.closest("details")?.open).toBe(false);
+  await user.click(screen.getAllByText("Website details")[0]);
+  await waitFor(() => expect(chain.closest("details")?.open).toBe(true));
   expect(screen.getByText(/Latest evidence:/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Load more" }));
@@ -192,11 +204,11 @@ it("sends deferral and restoration for the selected question", async () => {
   });
   mount();
   await user.click(screen.getByRole("button", { name: "Domain review" }));
-  await user.click(await screen.findByRole("button", { name: "Set aside" }));
+  await user.click(await screen.findByRole("button", { name: "Not now" }));
   await user.click(
     await screen.findByRole("button", { name: "Return to Review" }),
   );
-  expect(await screen.findByRole("button", { name: "Set aside" })).toBeTruthy();
+  expect(await screen.findByRole("button", { name: "Not now" })).toBeTruthy();
   expect(
     writes.map(({ method, path }) => [method, path.split("/worklist")[1]]),
   ).toEqual([
@@ -289,13 +301,17 @@ it("allows personal deferral and exclusion without company-write permission", as
       .hasAttribute("disabled"),
   ).toBe(false);
   expect(
-    screen.getByRole("button", { name: "Set aside" }).hasAttribute("disabled"),
+    screen.getByRole("button", { name: "Not now" }).hasAttribute("disabled"),
   ).toBe(false);
 });
 
-it("opens review from a forwarded row without implicit company creation", async () => {
+it("draws a redirected question through the row with the server's forwarded actions", async () => {
   const user = userEvent.setup();
-  transport(() => response({ data: [forwarded], page: { has_more: false } }));
+  const reads: string[] = [];
+  transport((_request, url) => {
+    reads.push(url.searchParams.get("domain") ?? "");
+    return response({ data: [forwarded], page: { has_more: false } });
+  });
   const item: WorklistItem = {
     occurred_precision: "instant",
     id: forwarded.domain,
@@ -306,15 +322,107 @@ it("opens review from a forwarded row without implicit company creation", async 
     title: forwarded.domain,
     detail: "Review identity",
     because: [],
-    actions: ["keep", "discard", "reopen"],
+    actions: ["discard", "reopen"],
     domain_reason_code: "forwarded_identity",
   };
-  mount(<DomainQuestionAnswer item={item} />);
+  mount(rowAnswer(item, briefAnswer).below);
   expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Domain review" }));
+  expect(
+    screen.getByRole("button", { name: "Stop capturing this domain" }),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Choose company" }));
   expect(await screen.findByRole("dialog")).toBeTruthy();
+  expect(await screen.findByText("Company for alias.example")).toBeTruthy();
+  expect(reads).toEqual(["alias.example"]);
   await user.click(screen.getByRole("button", { name: "Close" }));
   expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+const suggested: WorklistItem = {
+  occurred_precision: "instant",
+  id: forwarded.domain,
+  source: "domain_question",
+  category: "decisions",
+  level: 6,
+  consequence: "data_drifts",
+  title: forwarded.domain,
+  detail: "Review identity",
+  because: [],
+  actions: ["discard", "reopen"],
+  domain_reason_code: "forwarded_identity",
+  domain_context: {
+    contacts: [
+      { id: "00000000-0000-4000-8000-0000000000a1", name: "Alex Example" },
+    ],
+    contact_count: 2,
+    hidden_senders: false,
+    site_unread: false,
+    suggested_company: {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Example Company",
+      basis: "redirect_target",
+    },
+  },
+};
+
+it("asks about the person and confirms the suggested company for the whole domain", async () => {
+  const user = userEvent.setup();
+  const writes: { path: string; body: unknown }[] = [];
+  transport(async (request, url) => {
+    writes.push({ path: url.pathname, body: await request.json() });
+    return response(null, 202);
+  });
+  mount(<DomainQuestionAnswer item={suggested} />);
+  expect(
+    screen.getByText(
+      "Which company do Alex Example and 1 other contact work for?",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Alex Example" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Example Company" })).toBeTruthy();
+  expect(
+    await screen.findByText(
+      "Links alias.example and its 2 contacts to Example Company.",
+    ),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Confirm company" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(
+    writes[0].path.endsWith("/capture/domain-questions/alias.example/keep"),
+  ).toBe(true);
+  expect(writes[0].body).toEqual({
+    company_id: "00000000-0000-4000-8000-000000000001",
+  });
+});
+
+it("offers no suggestion it does not have and says who wrote when it cannot name them", () => {
+  transport(() => response(null, 202));
+  mount(
+    <DomainQuestionAnswer
+      item={{
+        ...suggested,
+        id: undecided.domain,
+        actions: ["keep", "discard", "reopen"],
+        domain_reason_code: "unevidenced",
+        domain_context: {
+          contacts: [],
+          contact_count: 0,
+          hidden_senders: true,
+          sender_address: "someone@unreadable.example",
+          site_unread: true,
+        },
+      }}
+    />,
+  );
+  expect(
+    screen.getByText("Which company is someone@unreadable.example from?"),
+  ).toBeTruthy();
+  expect(screen.getByText(/from a contact you cannot open/)).toBeTruthy();
+  expect(screen.getByText(/could not read the website/)).toBeTruthy();
+  expect(screen.queryByText("Suggested company:")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Confirm company" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Choose company" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Create company" })).toBeTruthy();
 });
 
 it("keeps ordinary row decisions separate from forwarded review", async () => {
@@ -339,10 +447,11 @@ it("keeps ordinary row decisions separate from forwarded review", async () => {
     domain_reason_code: "unevidenced",
   };
   mount(<DomainQuestionAnswer item={item} />);
-  expect(screen.queryByRole("button", { name: "Domain review" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Create company" }));
   await waitFor(() => expect(writes).toHaveLength(1));
-  const discard = screen.getByRole("button", { name: "Exclude domain" });
+  const discard = screen.getByRole("button", {
+    name: "Stop capturing this domain",
+  });
   await waitFor(() => expect(discard.hasAttribute("disabled")).toBe(false));
   await user.click(discard);
   await waitFor(() => expect(writes).toHaveLength(2));
@@ -386,7 +495,7 @@ it("answers a vendor question from the row with create company or keep as vendor
     domain_reason_code: "vendor_verdict",
   };
   mount(<DomainQuestionAnswer item={item} />);
-  expect(screen.queryByRole("button", { name: "Domain review" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Choose company" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Keep as vendor" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   const create = screen.getByRole("button", { name: "Create company" });
@@ -442,7 +551,9 @@ it.each([
     mount();
     await user.click(screen.getByRole("button", { name: "Domain review" }));
     expect(await screen.findByText(vendor.note ?? "")).toBeTruthy();
-    expect(screen.getByText("Reads as a mail or hosting vendor")).toBeTruthy();
+    expect(
+      screen.getByText(/reads as a mail or hosting provider/),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: "Retry site read" }),
     ).toBeNull();

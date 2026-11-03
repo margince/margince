@@ -45,6 +45,12 @@ describe("the word above a queue row", () => {
     ).toBe("search.kind.deal");
   });
 
+  it("names a company question instead of calling it an approval", () => {
+    expect(
+      eyebrowKeyFor(row({ source: "domain_question", category: "decisions" })),
+    ).toBe("worklist.source.domain_question");
+  });
+
   it("falls back when the night named nothing", () => {
     expect(eyebrowKeyFor(row({ source: "brief_item" }))).toBe(
       "search.kind.deal",

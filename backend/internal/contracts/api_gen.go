@@ -10459,6 +10459,27 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DomainCompanySuggestionBasis.
+const (
+	DomainCompanySuggestionBasisContactEmployer DomainCompanySuggestionBasis = "contact_employer"
+	DomainCompanySuggestionBasisNameTwin        DomainCompanySuggestionBasis = "name_twin"
+	DomainCompanySuggestionBasisRedirectTarget  DomainCompanySuggestionBasis = "redirect_target"
+)
+
+// Valid indicates whether the value is a known member of the DomainCompanySuggestionBasis enum.
+func (e DomainCompanySuggestionBasis) Valid() bool {
+	switch e {
+	case DomainCompanySuggestionBasisContactEmployer:
+		return true
+	case DomainCompanySuggestionBasisNameTwin:
+		return true
+	case DomainCompanySuggestionBasisRedirectTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -32401,6 +32422,10 @@ type AttentionItem struct {
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
 
+	// DomainContext Who raised a company question and which company it may be about. Every contact and
+	// company named here passes the reader's own row scope.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -43116,18 +43141,70 @@ type DisqualifyLeadRequest struct {
 	ReasonId *openapi_types.UUID `json:"reason_id,omitempty"`
 }
 
+// DomainCompanySuggestion The one existing company the evidence points to. Absent when no source names one, or
+// when sources disagree. Nothing is linked until the reader confirms it.
+type DomainCompanySuggestion struct {
+	// Basis `redirect_target` — the site redirects to a domain this company owns. `contact_employer` —
+	// a sender already works for this company. `name_twin` — the site names a company with
+	// exactly this company's name.
+	Basis DomainCompanySuggestionBasis `json:"basis"`
+	Id    openapi_types.UUID           `json:"id"`
+	Name  string                       `json:"name"`
+}
+
+// DomainCompanySuggestionBasis `redirect_target` — the site redirects to a domain this company owns. `contact_employer` —
+// a sender already works for this company. `name_twin` — the site names a company with
+// exactly this company's name.
+type DomainCompanySuggestionBasis string
+
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt      time.Time  `json:"asked_at"`
-	Deferred     bool       `json:"deferred"`
-	Domain       string     `json:"domain"`
-	EffectiveUrl *string    `json:"effective_url,omitempty"`
-	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+	AskedAt  time.Time `json:"asked_at"`
+	Deferred bool      `json:"deferred"`
+	Domain   string    `json:"domain"`
+
+	// DomainContext Who raised a company question and which company it may be about. Every contact and
+	// company named here passes the reader's own row scope.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+	EffectiveUrl  *string                `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
 	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 	Note          *string   `json:"note,omitempty"`
 	ReasonCode    string    `json:"reason_code"`
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
+}
+
+// DomainQuestionContact defines model for DomainQuestionContact.
+type DomainQuestionContact struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// DomainQuestionContext Who raised a company question and which company it may be about. Every contact and
+// company named here passes the reader's own row scope.
+type DomainQuestionContext struct {
+	// ContactCount Live contacts on the domain the reader may see. Confirming a company employs all of them.
+	ContactCount int `json:"contact_count"`
+
+	// Contacts Senders of the newest question mail the reader may see, newest first.
+	Contacts []DomainQuestionContact `json:"contacts"`
+
+	// HiddenSenders The mail came from contacts the reader may not see, and from none they may.
+	HiddenSenders bool `json:"hidden_senders"`
+
+	// OriginActivityId The newest question mail, which the reader may read.
+	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
+
+	// SenderAddress The From address of the newest question mail, which the reader may read.
+	SenderAddress *string `json:"sender_address,omitempty"`
+
+	// SiteUnread For an `unevidenced` question, no read of the site succeeded or was allowed. False when the site was read and named no company.
+	SiteUnread bool `json:"site_unread"`
+
+	// SuggestedCompany The one existing company the evidence points to. Absent when no source names one, or
+	// when sources disagree. Nothing is linked until the reader confirms it.
+	SuggestedCompany *DomainCompanySuggestion `json:"suggested_company,omitempty"`
 }
 
 // DomainQuestionPage defines model for DomainQuestionPage.
@@ -62815,6 +62892,10 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainContext Who raised a company question and which company it may be about. Every contact and
+	// company named here passes the reader's own row scope.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -65174,6 +65255,9 @@ type ListDomainQuestionsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Domain Return only the question about this domain.
+	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 }
 
 // KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
@@ -102748,6 +102832,19 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "domain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "domain", r.URL.Query(), &params.Domain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "domain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
 		}
 		return
 	}

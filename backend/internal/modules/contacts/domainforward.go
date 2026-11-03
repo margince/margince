@@ -86,7 +86,7 @@ func withholdDomainTx(ctx context.Context, tx pgx.Tx, requestedDomain, pendingRe
 	source := arg(sourceRead)
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `UPDATE company_domain_disposition
-   SET pending_reason = `+reason+`, evidence = `+proof+`, site_read_id = COALESCE(`+source+`, site_read_id), next_attempt_at = NULL, updated_at = now()
+   SET pending_reason = `+reason+`, evidence = `+proof+`, site_unread = false, site_read_id = COALESCE(`+source+`, site_read_id), next_attempt_at = NULL, updated_at = now()
    WHERE domain = `+domain+` AND status = 'pending' AND (pending_reason IS DISTINCT FROM `+reason+` OR evidence IS DISTINCT FROM `+proof+`) RETURNING id`, args...).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil

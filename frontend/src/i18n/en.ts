@@ -11165,10 +11165,10 @@ export const en = {
     "Reserved domain: company identification paused",
   "blockedDomains.source.forwardedIdentity":
     "Different site answered. Confirm the company match.",
-  "worklist.domainReview.defer": "Set aside",
+  "worklist.domainReview.defer": "Not now",
   "worklist.domainReview.restore": "Return to Review",
   "worklist.domainReview.deferEffect":
-    "Set aside removes this question from your queue until new evidence arrives. You can still find it here.",
+    "Not now takes this question off your list until new mail arrives. You can still find it here.",
   "worklist.domainReview.title": "Domain review",
   "worklist.domainReview.loading": "Loading domains…",
   "worklist.domainReview.empty": "No domains need review.",
@@ -11195,6 +11195,63 @@ export const en = {
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
+  "worklist.source.domain_question": "Company question",
+  "worklist.domainQuestion.heading": "Which company does {name} work for?",
+  "worklist.domainQuestion.headingMany_one":
+    "Which company do {name} and {count} other contact work for?",
+  "worklist.domainQuestion.headingMany_other":
+    "Which company do {name} and {count} other contacts work for?",
+  "worklist.domainQuestion.headingAddress": "Which company is {address} from?",
+  "worklist.domainQuestion.headingDomain":
+    "Which company does {domain} belong to?",
+  "worklist.domainQuestion.origin":
+    "Margince found {domain} in mail you received.",
+  "worklist.domainQuestion.originHidden":
+    "Margince found {domain} in mail you received, from a contact you cannot open.",
+  "worklist.domainQuestion.originContacts":
+    "Margince found {domain} in your mail from:",
+  "worklist.domainQuestion.reason.unread":
+    "Margince could not read the website of {domain}, so it cannot tell which company this is.",
+  "worklist.domainQuestion.reason.noCompany":
+    "Margince read the website of {domain}, but it does not show which company these contacts work for.",
+  "worklist.domainQuestion.reason.forwarded":
+    "The website of {domain} redirects to another website, so Margince cannot be sure which company this is.",
+  "worklist.domainQuestion.reason.nearDuplicate":
+    "The website of {domain} names a company that already exists here.",
+  "worklist.domainQuestion.reason.staleEvidence":
+    "The last mail from {domain} is years old, so today’s website may not speak for these contacts.",
+  "worklist.domainQuestion.reason.vendor":
+    "The website of {domain} reads as a mail or hosting provider, whose staff and customers look alike.",
+  "worklist.domainQuestion.suggested": "Suggested company:",
+  "worklist.domainQuestion.basis.redirectTarget":
+    "Its website redirects to a domain of this company.",
+  "worklist.domainQuestion.basis.contactEmployer":
+    "A contact who wrote already works for this company.",
+  "worklist.domainQuestion.basis.nameTwin":
+    "Its website names a company of exactly this name.",
+  "worklist.domainQuestion.noSuggestion":
+    "Margince has no company to suggest. Choose one, or create a new one.",
+  "worklist.domainQuestion.confirm": "Confirm company",
+  "worklist.domainQuestion.confirmEffect_one":
+    "Links {domain} and its {count} contact to {company}.",
+  "worklist.domainQuestion.confirmEffect_other":
+    "Links {domain} and its {count} contacts to {company}.",
+  "worklist.domainQuestion.confirmEffectNone": "Links {domain} to {company}.",
+  "worklist.domainQuestion.confirmed": "{domain} is now linked to {company}.",
+  "worklist.domainQuestion.confirmFailed": "The company was not linked. Retry.",
+  "worklist.domainQuestion.chooseOther": "Choose another",
+  "worklist.domainQuestion.choose": "Choose company",
+  "worklist.domainQuestion.stop": "Stop capturing this domain",
+  "worklist.domainQuestion.stopEffect":
+    "Stops capturing mail from {domain} in your mailboxes. Colleagues keep theirs. No company is chosen.",
+  "worklist.disposition.verb.notNow": "Not now",
+  "worklist.disposition.hint.notNow":
+    "Leaves the question open. New mail from this domain brings it back.",
+  "worklist.disposition.done.notNow":
+    "Set aside for now. New mail from this domain brings the question back.",
+  "worklist.domainReview.focusTitle": "Company for {domain}",
+  "worklist.domainReview.details": "Website details",
+  "blockedDomains.source.unevidencedUnread": "Website could not be read",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
   "blockedDomains.rowReopen": "Ask again",
@@ -17842,7 +17899,7 @@ export const en = {
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
-    "Margince cannot tell what this domain belongs to. Create a company for it, keep it as a vendor, or exclude it.",
+    "Say which company this address belongs to, so its contacts are filed under it.",
   "worklist.ask.ai_work_health":
     "An AI task keeps failing. Check its AI provider in Settings.",
   "worklist.ask.bounce":

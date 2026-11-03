@@ -16,6 +16,7 @@ import {
   Modal,
   PendingBody,
 } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -30,7 +31,10 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { searchByEntity } from "../../lib/relationshipcandidates";
-import { domainReasonLabels } from "./worklist.domainreason";
+import {
+  type DomainQuestionView,
+  domainQuestionReasonKey,
+} from "./worklist.domaincopy";
 import { useMarkRowsDone } from "./worklist.donequeries";
 import { worklistKey } from "./worklist.queries";
 
@@ -53,16 +57,23 @@ export function DomainReviewLauncher() {
   );
 }
 
-export function DomainReview({ onClose }: Readonly<{ onClose: () => void }>) {
+// The review drawer. A row opens it on its own domain and shows only that
+// question. The batch launcher opens it without one, on the whole queue.
+export function DomainReview({
+  domain,
+  onClose,
+}: Readonly<{ domain?: string; onClose: () => void }>) {
   const t = useT();
   const titleId = useId();
   const query = useInfiniteQuery({
-    queryKey: domainReviewKey,
+    queryKey: [...domainReviewKey, domain ?? ""],
     initialPageParam: "",
     queryFn: async ({ pageParam }) =>
       unwrap(
         await api.GET("/capture/domain-questions", {
-          params: { query: { limit: 50, cursor: pageParam || undefined } },
+          params: {
+            query: { limit: 50, cursor: pageParam || undefined, domain },
+          },
         }),
       ),
     getNextPageParam: (page) => page.page.next_cursor ?? undefined,
@@ -72,7 +83,9 @@ export function DomainReview({ onClose }: Readonly<{ onClose: () => void }>) {
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId}>
-          {t("worklist.domainReview.title")}
+          {domain
+            ? t("worklist.domainReview.focusTitle", { domain })
+            : t("worklist.domainReview.title")}
         </Heading>
       </DrawerHead>
       <DrawerBody>
@@ -160,28 +173,36 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
       ]);
     },
   });
-  const reason = domainReasonLabels[row.reason_code];
+  const view: DomainQuestionView = {
+    domain: row.domain,
+    reasonCode: row.reason_code,
+    context: row.domain_context,
+  };
   const vendor = row.reason_code === "vendor_verdict";
   return (
     <Panel title={row.domain}>
       <PanelBody>
-        {reason && <p>{t(reason)}</p>}
-        {row.note && <p className="t-caption">{row.note}</p>}
-        {row.effective_url && (
-          <p>
-            {t("worklist.domainReview.forwarded", { url: row.effective_url })}
+        <p>{t(domainQuestionReasonKey(view), { domain: row.domain })}</p>
+        <Disclosure summary={t("worklist.domainReview.details")}>
+          {row.note && <p className="t-caption">{row.note}</p>}
+          {row.effective_url && (
+            <p>
+              {t("worklist.domainReview.forwarded", {
+                url: row.effective_url,
+              })}
+            </p>
+          )}
+          {row.redirect_chain && (
+            <p className="t-caption">{row.redirect_chain.join(" → ")}</p>
+          )}
+          <p className="t-caption">
+            {row.evidence_at
+              ? t("worklist.domainReview.evidenceAt", {
+                  date: formatDate(row.evidence_at, locale, viewerZone()),
+                })
+              : t("worklist.domainReview.noEvidenceDate")}
           </p>
-        )}
-        {row.redirect_chain && (
-          <p className="t-caption">{row.redirect_chain.join(" → ")}</p>
-        )}
-        <p className="t-caption">
-          {row.evidence_at
-            ? t("worklist.domainReview.evidenceAt", {
-                date: formatDate(row.evidence_at, locale, viewerZone()),
-              })
-            : t("worklist.domainReview.noEvidenceDate")}
-        </p>
+        </Disclosure>
         <RecordPicker
           label={t("worklist.domainReview.match")}
           searchTargets={searchCompanies}

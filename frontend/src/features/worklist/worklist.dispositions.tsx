@@ -31,6 +31,7 @@ import {
 } from "./worklist.queries";
 import {
   DispositionButton,
+  dispositionLabelKey,
   knownDispositions,
   type PutDownAnswer,
   SWIPE_SIDES,
@@ -198,6 +199,7 @@ export function usePutDown(item: WorklistItem) {
     // boolean: every control in the band reads the same value, and what each
     // one needs to know is whether the write out is ITS OWN.
     writing: set.isPending || done.isPending ? pressed : undefined,
+    source: item.source,
     t,
     locale,
   };
@@ -243,7 +245,7 @@ export function PutDownByThumb({
       onStage={(side) =>
         setWalked((seen) => ({ ...seen, [side]: seen[side] + 1 }))
       }
-      {...swipeActions(offered, t, put, walked)}
+      {...swipeActions(offered, t, put, walked, item.source)}
     >
       <PutDown value={write}>{children}</PutDown>
     </SwipeRow>
@@ -283,13 +285,14 @@ export function useRowPutDown(item: WorklistItem): PutDown {
 // design-system/swiperow.tsx's header.
 export function DoneVerb({ write }: Readonly<{ write: PutDown }>) {
   const folded = useFoldedViewport();
-  const { offered, put, writing, t } = write;
+  const { offered, put, writing, source, t } = write;
   if (folded || !offered.includes("handled")) {
     return null;
   }
   return (
     <DispositionButton
       disposition="handled"
+      source={source}
       writing={writing}
       onPress={() => put("handled")}
       t={t}
@@ -303,10 +306,11 @@ export function DoneVerb({ write }: Readonly<{ write: PutDown }>) {
 // or a screen reader takes, and they mount on the menu's first open.
 export function PutDownLines({ write }: Readonly<{ write: PutDown }>) {
   const folded = useFoldedViewport();
-  const { offered, put, writing, t, locale } = write;
+  const { offered, put, writing, source, t, locale } = write;
   const line = (disposition: WorklistDisposition) => (
     <DispositionButton
       disposition={disposition}
+      source={source}
       writing={writing}
       onPress={() => put(disposition)}
       t={t}
@@ -392,6 +396,7 @@ export function swipeActions(
   t: T,
   put: (disposition: WorklistDisposition) => void,
   walked: Readonly<{ start: number; end: number }>,
+  source?: WorklistItem["source"],
 ) {
   const side = (which: "start" | "end") => {
     const here = offered.filter((one) => SWIPE_SIDES[one] === which);
@@ -404,7 +409,7 @@ export function swipeActions(
       return undefined;
     }
     return {
-      label: t(`worklist.disposition.verb.${one}` as const),
+      label: t(dispositionLabelKey(one, source)),
       onAct: () => put(one),
     };
   };
@@ -431,6 +436,9 @@ function doneText(
 ): string {
   // Only a waiting message comes back when they write again. Any other row
   // comes back when something new happens on what it is about.
+  if (disposition === "handled" && source === "domain_question") {
+    return t("worklist.disposition.done.notNow");
+  }
   if (disposition === "handled" && source !== "customer_waiting") {
     return t("worklist.disposition.done.handledRow");
   }

@@ -12,25 +12,30 @@ import {
 } from "../../testing/story-utils";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import type { WorklistItem } from "./worklist.queries";
-// The row's own line. `.worklist-row-acts` carries the trailing alignment and
-// the interval between the two answers; without it they draw as a bare inline
-// run with no gap, which is a picture of markup rather than of the row.
-import "./worklist.row.css";
 
-// ANSWERING AN UNDECIDED DOMAIN, from the row that asked.
-//
-// TWO VERBS OF EQUAL WEIGHT, so neither is filled and neither takes the end of
-// the line: the machine could not tell whether this domain is a company, two
-// colleagues sharing an installation may answer it opposite ways, and drawing
-// one as the expected press would be the same guess that left the question open.
-// That is what these frames are for, and it is invisible to an assertion — both
-// buttons render either way.
-//
-// They are a fragment with no container of their own, so the host is the row's
-// line and nothing else, the frame `worklist.dispositions.stories.tsx` gives the
-// judgements they share it with. The DOMAIN is the row's id: an open question is
-// identified by the domain itself, the disposition row's own id never reaching a
-// client.
+// A company question, under the row that asked it. Each frame is one shape the
+// question takes on the wire. The suggestion shows only when the server names
+// one, and each button only when the row offers its verb.
+
+const ALEX = {
+  id: "00000000-0000-4000-8000-0000000000a1",
+  name: "Alex Example",
+};
+
+const UNREAD = {
+  contacts: [ALEX],
+  contact_count: 1,
+  hidden_senders: false,
+  sender_address: "alex@mckinsey.com",
+  site_unread: true,
+};
+
+const REDIRECTED = {
+  contacts: [ALEX],
+  contact_count: 2,
+  hidden_senders: false,
+  site_unread: false,
+};
 
 const UNDECIDED: WorklistItem = {
   occurred_precision: "instant",
@@ -43,7 +48,9 @@ const UNDECIDED: WorklistItem = {
   detail:
     "Nothing on the site named a company, and the sender's name did not explain the domain.",
   because: [],
-  actions: ["keep", "discard"],
+  actions: ["keep", "discard", "reopen"],
+  domain_reason_code: "unevidenced",
+  domain_context: UNREAD,
 };
 
 const KEEP = `POST /capture/domain-questions/${UNDECIDED.id}/keep`;
@@ -80,7 +87,7 @@ function refused() {
 }
 
 const meta: Meta<typeof DomainQuestionAnswer> = {
-  title: "Records/Worklist/Domain question verbs",
+  title: "Records/Worklist/Company question",
   component: DomainQuestionAnswer,
   parameters: { layout: "padded" },
 };
@@ -94,12 +101,10 @@ function line(item: WorklistItem, stub: () => void) {
     return (
       <StoryProviders>
         <ToastProvider>
-          <Panel title="Unreviewed domain">
+          <Panel title={item.title}>
             <PanelBody>
               <p className="t-caption">{item.detail}</p>
-              <div className="worklist-row-acts">
-                <DomainQuestionAnswer item={item} />
-              </div>
+              <DomainQuestionAnswer item={item} />
             </PanelBody>
           </Panel>
           <ToastRegion />
@@ -116,16 +121,60 @@ const pressKeep = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   );
 };
 
-/** Both answers, neither promoted: the pair a reader meets. */
-export const TwoAnswersOfEqualWeight: Story = {
+/** No company to suggest: the site could not be read. Choose or create. */
+export const NoSuggestionAfterAnUnreadSite: Story = {
   render: line(UNDECIDED, settleAtOnce),
 };
 
+/** A site read in vain says so, apart from one that could not be read. */
+export const NoSuggestionAfterASiteReadInVain: Story = {
+  render: line(
+    {
+      ...UNDECIDED,
+      domain_context: { ...UNREAD, site_unread: false },
+    },
+    settleAtOnce,
+  ),
+};
+
+/** Several senders: the first is named, the rest are counted. */
+export const SeveralContacts: Story = {
+  render: line(
+    {
+      ...UNDECIDED,
+      domain_context: {
+        ...UNREAD,
+        contacts: [
+          ALEX,
+          { id: "00000000-0000-4000-8000-0000000000a2", name: "Bea Example" },
+        ],
+        contact_count: 4,
+      },
+    },
+    settleAtOnce,
+  ),
+};
+
+/** The sender is a contact the reader may not open: the address stands in. */
+export const AHiddenSender: Story = {
+  render: line(
+    {
+      ...UNDECIDED,
+      domain_context: {
+        contacts: [],
+        contact_count: 0,
+        hidden_senders: true,
+        sender_address: "someone@mckinsey.com",
+        site_unread: true,
+      },
+    },
+    settleAtOnce,
+  ),
+};
+
 /**
- * EACH BUTTON ASKS WHETHER THE ROW OFFERS IT, rather than the pair being drawn
- * because the source is this one. A reader who may exclude the domain for
- * themselves and may not create a company is a real case, and a control drawn
- * past the server's offer is a button that 403s.
+ * A reader who may exclude the domain for themselves and may not answer it
+ * otherwise sees only that verb.
  */
 export const OnlyTheAnswerTheSeatMayGive: Story = {
   render: line({ ...UNDECIDED, actions: ["discard"] }, settleAtOnce),
@@ -186,27 +235,69 @@ export const AVendorQuestionOffersCreateOrKeepAsVendor: Story = {
       canvas.getByRole("button", { name: "Create company" }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Domain review" }),
-    ).not.toBeInTheDocument();
+      canvas.getByRole("button", { name: "Choose company" }),
+    ).toBeVisible();
   },
 };
 
-export const ForwardedDomainOpensReviewBeforeCreation: Story = {
-  render: line(
-    {
-      ...UNDECIDED,
-      domain_reason_code: "forwarded_identity",
-      actions: ["keep", "discard", "reopen"],
+const FORWARDED: WorklistItem = {
+  ...UNDECIDED,
+  id: "alias.example",
+  title: "alias.example",
+  domain_reason_code: "forwarded_identity",
+  actions: ["discard", "reopen"],
+  domain_context: {
+    ...REDIRECTED,
+    suggested_company: {
+      id: "00000000-0000-4000-8000-000000000001",
+      name: "Example Company",
+      basis: "redirect_target",
     },
-    settleAtOnce,
+  },
+};
+
+/**
+ * A redirected site whose target an existing company owns. The suggestion
+ * links nothing until the reader confirms, and the caption says Confirm moves
+ * the whole domain. A redirected site offers no Create.
+ */
+export const ARedirectSuggestsACompany: Story = {
+  render: line(FORWARDED, () =>
+    installFetchStub({
+      [`POST /capture/domain-questions/${FORWARDED.id}/keep`]: () =>
+        jsonResponse(null, 202),
+    }),
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("button", { name: "Domain review" }),
+      canvas.getByRole("button", { name: "Confirm company" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Choose another" }),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Create company" }),
     ).not.toBeInTheDocument();
   },
+};
+
+/** A redirected site with no company to suggest: choose, or stop capturing. */
+export const ARedirectWithoutASuggestion: Story = {
+  render: line(
+    {
+      ...FORWARDED,
+      domain_context: REDIRECTED,
+    },
+    settleAtOnce,
+  ),
+};
+
+export const ARedirectSuggestsACompanyDark: Story = {
+  ...ARedirectSuggestsACompany,
+  globals: { theme: "dark" },
+};
+export const NoSuggestionAfterAnUnreadSiteDark: Story = {
+  ...NoSuggestionAfterAnUnreadSite,
+  globals: { theme: "dark" },
 };

@@ -21365,10 +21365,17 @@ paths:
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       summary: Review the calling reader’s undecided domains.
-      description: Lists only the reader’s own domain questions, oldest first, with continuation and source evidence.
+      description: |
+        Lists only the reader’s own domain questions, oldest first, with continuation, source
+        evidence and `domain_context`. `domain` narrows the page to that one question; a domain
+        the reader holds no open question about gives an empty page.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: domain
+          in: query
+          description: Return only the question about this domain.
+          schema: { type: string, maxLength: 253 }
       responses:
         '200':
           description: One page of personal domain questions.
@@ -37893,6 +37900,60 @@ components:
         note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
+        domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
+
+    DomainQuestionContext:
+      type: object
+      description: |
+        Who raised a company question and which company it may be about. Every contact and
+        company named here passes the reader's own row scope.
+      required: [contacts, contact_count, hidden_senders, site_unread]
+      properties:
+        contacts:
+          type: array
+          maxItems: 3
+          description: Senders of the newest question mail the reader may see, newest first.
+          items: { $ref: '#/components/schemas/DomainQuestionContact' }
+        contact_count:
+          type: integer
+          minimum: 0
+          description: Live contacts on the domain the reader may see. Confirming a company employs all of them.
+        hidden_senders:
+          type: boolean
+          description: The mail came from contacts the reader may not see, and from none they may.
+        sender_address:
+          type: string
+          description: The From address of the newest question mail, which the reader may read.
+        origin_activity_id:
+          type: string
+          format: uuid
+          description: The newest question mail, which the reader may read.
+        suggested_company: { $ref: '#/components/schemas/DomainCompanySuggestion' }
+        site_unread:
+          type: boolean
+          description: For an `unevidenced` question, no read of the site succeeded or was allowed. False when the site was read and named no company.
+    DomainQuestionContact:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    DomainCompanySuggestion:
+      type: object
+      description: |
+        The one existing company the evidence points to. Absent when no source names one, or
+        when sources disagree. Nothing is linked until the reader confirms it.
+      required: [id, name, basis]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        basis:
+          type: string
+          enum: [redirect_target, contact_employer, name_twin]
+          description: |
+            `redirect_target` — the site redirects to a domain this company owns. `contact_employer` —
+            a sender already works for this company. `name_twin` — the site names a company with
+            exactly this company's name.
 
     BlockedDomain:
       type: object
@@ -70725,6 +70786,7 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -72458,6 +72520,7 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:

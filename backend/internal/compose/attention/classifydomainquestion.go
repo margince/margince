@@ -45,6 +45,7 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 	reasonCode := q.ReasonCode
 	actions := []crmcontracts.AttentionItemActions{verbKeep, verbDiscard, crmcontracts.AttentionItemActionsReopen}
 	var note *string
+	domainContext := q.Context.Contract()
 	switch q.ReasonCode {
 	case contacts.PendingForwardedIdentity:
 		actions = []crmcontracts.AttentionItemActions{verbDiscard, crmcontracts.AttentionItemActionsReopen}
@@ -60,6 +61,7 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 		Source:           sourceDomainQuestion,
 		DomainReasonCode: &reasonCode,
 		DomainNote:       note,
+		DomainContext:    &domainContext,
 		Title:            &domain,
 		Detail:           &reason,
 		OccurredAt:       &asked,

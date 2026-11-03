@@ -161,12 +161,10 @@ describe("a row claims no verb it cannot perform", () => {
       // in VERB_LABEL and in the prose, so a mention test stays green over a row
       // that draws nothing.
       //
-      // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
-      // source with the verb that unlocks it and `rowAnswer` asks
-      // `includes(keyed.verb)` once for all of them — so the guard is real and
-      // the verb's name is a `verb:` field rather than a literal argument. The
-      // pattern anchors on that field name, not on the bare word, so a verb
-      // mentioned in a comment beside the table still fails.
+      // The third spelling is the dispatch table's `verb:` field.
+      // ANSWER_BY_SOURCE pairs a source with the verbs that unlock it, and
+      // `rowAnswer` asks whether the row offers one. The pattern anchors on
+      // the field name, so a verb named only in a comment still fails.
       const source = readFileSync(join(SCREENS, where.file), "utf8");
       if ("guardedBy" in where) {
         // A verb the item's `actions` list does not carry. The receipt has no

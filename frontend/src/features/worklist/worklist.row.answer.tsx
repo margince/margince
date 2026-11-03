@@ -79,11 +79,14 @@ type RowPlacement = Readonly<{
 // `draw` takes the row, not its id. A task's completion is pinned to the version
 // the reader decided on, and every other verb here writes too. So an entry that
 // needs a second field stays in the table instead of becoming a branch.
+type Verb = WorklistItem["actions"][number];
+
 const ANSWER_BY_SOURCE: Partial<
   Record<
     WorklistItem["source"],
     {
-      verb: WorklistItem["actions"][number];
+      // One verb, or several of which any one unlocks the answer.
+      verb: Verb | readonly Verb[];
       draw: (item: WorklistItem) => RowPlacement;
     }
   >
@@ -100,12 +103,11 @@ const ANSWER_BY_SOURCE: Partial<
     verb: "retry",
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
-  // Keyed on `keep`, the server's signal that this row may be answered at all.
-  // The control then asks the row again for each button, so a seat offered one
-  // of the two draws only that one. Like meeting_outcome: one entry per source.
+  // Any verb the question offers draws it: a redirected site offers no `keep`
+  // and is still answered. The control asks the row again for each button.
   domain_question: {
-    verb: "keep",
-    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+    verb: ["keep", "keep_as_vendor", "discard", "reopen"],
+    draw: (item) => ({ below: <DomainQuestionAnswer item={item} /> }),
   },
   // Verbs of equal weight, so the row has no primary. Any answer is plausible
   // about a meeting the product knows nothing about. A filled verb would claim
@@ -166,7 +168,11 @@ export function rowAnswer(
   // Never a batch: a group row stands for a pile and names no single record.
   // Every id-keyed answer below would act on the wrong one.
   const keyed = ANSWER_BY_SOURCE[item.source];
-  if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
+  if (
+    keyed &&
+    !item.batch &&
+    [keyed.verb].flat().some((verb) => item.actions.includes(verb))
+  ) {
     return keyed.draw(item);
   }
   // Its own branch: this answer needs more than the row's id. The composer

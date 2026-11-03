@@ -88,6 +88,7 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		`UPDATE commission_entry SET partner_company_id = $2 WHERE partner_company_id = $1`,
 		`UPDATE lead SET partner_company_id = $2 WHERE partner_company_id = $1`,
 		`UPDATE company_domain_disposition SET company_id = $2 WHERE company_id = $1`,
+		`UPDATE company_domain_disposition SET candidate_company_id = $2 WHERE candidate_company_id = $1`,
 		`UPDATE sdr_handoff SET company_id = $2 WHERE company_id = $1`,
 		// The resolution caches. Each says "this outside thing turned out to be
 		// that company", and the answer is still true of the survivor — it is
