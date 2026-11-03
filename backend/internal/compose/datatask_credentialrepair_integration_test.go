@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -52,7 +53,8 @@ func TestTheRepairMasksAPasswordStoredBeforeTheRulesAndLeavesTypedTextAlone(t *t
 		var changed int
 		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := maskStoredCredentialsDataTask(e.Pool).Steps[0].Batch(
-				system, tx, datatask.BatchIn{Limit: 50})
+				system, tx, datatask.BatchIn{Limit: 50},
+			)
 			changed = out.Changed
 			return err
 		}); err != nil {
@@ -146,7 +148,8 @@ func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
 	var changed int
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		changed = out.Changed
 		return err
 	}); err != nil {
@@ -209,7 +212,8 @@ func TestTheRepairErasesTheStoredOriginalOfAMailItMasked(t *testing.T) {
 		var changed int
 		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := maskStoredCredentialsDataTask(e.Pool).Steps[step].Batch(
-				system, tx, datatask.BatchIn{Limit: 50})
+				system, tx, datatask.BatchIn{Limit: 50},
+			)
 			changed = out.Changed
 			return err
 		}); err != nil {
@@ -263,7 +267,8 @@ func TestTheRepairLeavesAMailUnderAStatutoryHoldAlone(t *testing.T) {
 	var changed int
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := maskStoredCredentialsDataTask(e.Pool).Steps[0].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		changed = out.Changed
 		return err
 	}); err != nil {
@@ -303,7 +308,8 @@ func TestTheRepairTakesTheMaskedPasswordOutOfSearch(t *testing.T) {
 	}
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[0].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		return err
 	}); err != nil {
 		t.Fatalf("the text step: %v", err)
@@ -359,9 +365,19 @@ func restoreTheStrictTrigger(t *testing.T) {
 // version to drift from the one that ships.
 func theRepairsOwnTrigger(t *testing.T) string {
 	t.Helper()
-	const migration = "../../migrations/core/" +
-		"1793039905_the_credential_repair_may_rewrite_an_audit_image.up.sql"
-	body, err := os.ReadFile(migration)
+	// Found by name, never by stamp. A branch waiting on a decision is
+	// re-stamped each time main gains a migration, and a stamp written here
+	// breaks this test instead of the thing it reads.
+	found, err := filepath.Glob(
+		"../../migrations/core/*_the_credential_repair_may_rewrite_an_audit_image.up.sql",
+	)
+	if err != nil {
+		t.Fatalf("looking for the trigger's own migration: %v", err)
+	}
+	if len(found) != 1 {
+		t.Fatalf("found %d credential-repair migrations, want 1: %v", len(found), found)
+	}
+	body, err := os.ReadFile(found[0])
 	if err != nil {
 		t.Fatalf("reading the trigger's own migration: %v", err)
 	}
@@ -384,7 +400,8 @@ func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
 	var changed int
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		changed = out.Changed
 		return err
 	}); err != nil {
@@ -400,7 +417,8 @@ func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
 	// refusing a rewrite is not a reason to leave the mail readable.
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[0].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		return err
 	}); err != nil {
 		t.Fatalf("the text step: %v", err)
@@ -522,7 +540,8 @@ func TestTheRepairLeavesTheAuditImagesOfAHeldMailAlone(t *testing.T) {
 	var changed int
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		out, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		changed = out.Changed
 		return err
 	}); err != nil {
@@ -599,7 +618,8 @@ func TestTheRepairMasksTheTrailOfAMailThatIsGone(t *testing.T) {
 
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
-			system, tx, datatask.BatchIn{Limit: 50})
+			system, tx, datatask.BatchIn{Limit: 50},
+		)
 		return err
 	}); err != nil {
 		t.Fatalf("the audit step: %v", err)
@@ -637,7 +657,8 @@ func TestTheRepairMasksEveryRecordTypeTheRulesReach(t *testing.T) {
 
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
-			system, tx, datatask.BatchIn{Limit: 100})
+			system, tx, datatask.BatchIn{Limit: 100},
+		)
 		return err
 	}); err != nil {
 		t.Fatalf("the audit step: %v", err)
