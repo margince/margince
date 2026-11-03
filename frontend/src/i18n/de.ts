@@ -7384,6 +7384,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.analytics_decision":
+    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
   "tasks.origin.commitment":

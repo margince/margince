@@ -7200,6 +7200,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo vì lead này đã gửi thư hoặc đặt lịch hẹn. Một câu trả lời không tự chuyển đổi ai: hãy xác nhận lead đủ điều kiện khi họ sẵn sàng.",
   "tasks.origin.assurance":
     "Bước kiểm tra dự báo hằng đêm đã tạo việc này: dữ liệu đầu vào của deal này cần xem lại. Trang deal liệt kê các dữ liệu đó.",
+  "tasks.origin.analytics_decision":
+    "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
     "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất và đã được duyệt.",
   "tasks.origin.commitment":
