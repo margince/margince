@@ -196,8 +196,8 @@ func stopsGreeting(word string, named []string) bool {
 	return word == "" || messageWords[FoldName(word)] || (len(named) > 0 && !unicode.IsUpper(initial))
 }
 
-// keepsGreetingOpen reports a dotted word the greeting reads past: one with a
-// dot inside it, or an abbreviation whose full stop does not end the line.
+// keepsGreetingOpen reports a dotted word the greeting reads past. That is one
+// with a dot inside it, or an abbreviation whose full stop does not end the line.
 func keepsGreetingOpen(word, field string, last bool) bool {
 	return strings.Contains(word, ".") || (strings.HasSuffix(field, ".") && !last && abbreviated(word))
 }
