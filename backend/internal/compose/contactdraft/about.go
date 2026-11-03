@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -53,6 +54,16 @@ func (s *Service) aboutActivity(ctx context.Context, id ids.ActivityID, envelope
 	return foldAbout(activity, envelope.At(), envelope.Zone()), nil
 }
 
+// theirWord answers Inbound the way that field is declared: the row's voice
+// where it names a side, and the transport where it does not.
+//
+// Reading the transport alone credits a colleague's inbound mail to the
+// contact, and Threaded then puts "Re:" on a reply to ourselves.
+func theirWord(activity crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(activity)
+	return known && !ours
+}
+
 // foldAbout is the activity as the writer reads it, with the deal it is filed
 // under so the follow-up knows which deal it continues.
 func foldAbout(activity crmcontracts.Activity, now time.Time, zone *time.Location) *ActIn {
@@ -60,7 +71,7 @@ func foldAbout(activity crmcontracts.Activity, now time.Time, zone *time.Locatio
 		ID:      activity.Id.String(),
 		Kind:    string(activity.Kind),
 		At:      activitywhen.Text(activity),
-		Inbound: activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound,
+		Inbound: theirWord(activity),
 	}
 	if activity.Subject != nil {
 		folded.Subject = *activity.Subject
