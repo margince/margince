@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -33,7 +34,9 @@ func RequestRemainderGrounded(body, remaining string) bool {
 	if len(words) < minRemainderWords {
 		return false
 	}
-	return values.Quoted(textlang.MessageOpening(body, utf8.RuneCountInString(body)), remaining)
+	// The greeting and the sign-off ask for nothing, so a quote of them alone
+	// grounds no remainder.
+	return values.Quoted(salutation.Strip(textlang.MessageOpening(body, utf8.RuneCountInString(body))), remaining)
 }
 
 // groundedRemainderTx is the remaining text a verdict may record, re-read

@@ -28,3 +28,18 @@ func TestARemainingAskIsNeverTakenFromTheHistoryQuotedBelowTheirWords(t *testing
 		t.Fatal("our own question, quoted below their reply, became an ask of theirs")
 	}
 }
+
+// A greeting or a thank-you asks for nothing. A remainder that quotes only one
+// of them names no ask, however many words it carries.
+func TestARemainingAskIsNotTheirGreetingOrTheirThanks(t *testing.T) {
+	t.Parallel()
+	body := "Good morning Anna,\n\nPlease send the signed contract.\n\nThanks again,\nBob"
+	for _, quote := range []string{"Good morning Anna", "Thanks again", "Good morning"} {
+		if RequestRemainderGrounded(body, quote) {
+			t.Errorf("%q is a salutation, not an ask, and was admitted", quote)
+		}
+	}
+	if !RequestRemainderGrounded(body, "send the signed contract") {
+		t.Fatal("their own ask was refused")
+	}
+}
