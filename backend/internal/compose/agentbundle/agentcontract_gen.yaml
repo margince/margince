@@ -3699,8 +3699,10 @@ paths:
       summary: The workspace's signature template.
       description: |-
         The layout every member's mail signs with when it is set, filled in with each member's
-        own name, title and phone. Read by a seat that may read installation settings; changed
-        by admin/ops. Governed by the `installation_settings` RBAC object.
+        own name, title and phone. A member assigned to a legal entity that has its own
+        `signature_template` signs with that one instead. Read by a seat that may read
+        installation settings; changed by admin/ops. Governed by the `installation_settings`
+        RBAC object.
       responses:
         '200':
           description: The template.
@@ -14349,8 +14351,10 @@ components:
           maxLength: 4000
           description: |-
             The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+            sender works for, sized for mail, in the message itself; the default entity's logo is
+            the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     CompanyGraphEdge:

@@ -1503,7 +1503,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-28 columns · primary key `(id)` · referenced by 2 foreign keys
+29 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1527,6 +1527,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `offer_summary` | `text` |  |  |
 | `register_court` | `text` |  | The court that keeps the entity's commercial register entry. |
 | `register_number` | `text` |  | The entity's commercial register number. |
+| `signature_template` | `text` |  | The mail signature layout of a sender assigned to this entity, with the placeholders of `EmailSignatureTemplate.template`, up to 4000 characters. |
 | `usp` | `text` |  |  |
 | `value_proposition` | `text` |  |  |
 | `vat_id` | `text` |  | The entity's VAT identification number. |
@@ -1543,11 +1544,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `legal_entity_default_has_no_offering`: `CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))`
 - `legal_entity_default_is_permanent`: `CHECK (((NOT is_default) OR (archived_at IS NULL)))`
 - `legal_entity_default_reads_the_anchor`: `CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))`
+- `legal_entity_default_signs_with_the_installation`: `CHECK (((NOT is_default) OR (signature_template IS NULL)))`
 - `legal_entity_iban_shape`: `CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$')))`
 - `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))`
 - `legal_entity_language_shape`: `CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$')))`
 - `legal_entity_names_itself`: `CHECK ((is_default OR ((btrim(COALESCE(display_name, '')) <> '') AND (btrim(COALESCE(legal_name, '')) <> '') AND (country IS NOT NULL))))`
 - `legal_entity_offering_bounded`: `CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))`
+- `legal_entity_signature_template_bounded`: `CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000)))`
 - `legal_entity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
