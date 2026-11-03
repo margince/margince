@@ -77,7 +77,7 @@ func dated(at *time.Time, precision string) *occurredday.Moment {
 
 // lastTouchSection reads the two directions separately, because which side
 // wrote last is what a reader acts on. It is LastTouchFor over a set of one,
-// so this page and a Worklist row naming the contact give one answer.
+// so an unscoped page and a Worklist row naming the contact give one answer.
 func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
 	if err != nil {
