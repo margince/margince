@@ -11,9 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -51,7 +49,7 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if stored {
 		return rec.ThreadKey, nil
 	}
-	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], mailsubject.Normalized(subject))
+	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], subject)
 	if err != nil || !found {
 		return rec.ThreadKey, err
 	}
@@ -67,7 +65,7 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 // whether their topics differ. The header is the sender's text, so only a parent this
 // seat holds or sent counts. Only the key and a boolean leave the query.
 func (s *Sink) heldParentTx(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, parentID, topic string,
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, parentID, subject string,
 ) (key string, differs, found bool, err error) {
 	candidates, err := s.threadJoin.Neighbours(ctx, tx, ids.ActivityID{}, "", []string{parentID})
 	if err != nil || len(candidates) == 0 {
@@ -79,15 +77,14 @@ func (s *Sink) heldParentTx(
 			return "", false, false, err
 		}
 	}
-	parentTopic := storekit.NormalisedSubjectSQL("a.subject")
 	err = tx.QueryRow(ctx, `
-		SELECT a.thread_key, `+parentTopic+` <> '' AND $4 <> '' AND `+parentTopic+` <> $4
+		SELECT a.thread_key, mail_topics_differ(a.subject, $4)
 		  FROM activity a
 		 WHERE a.id = ANY($1::uuid[]) AND a.archived_at IS NULL AND a.thread_key <> ''
 		   AND (a.id = ANY($2::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
 		                WHERE ci.activity_id = a.id AND ci.user_id = $3))
 		 ORDER BY a.occurred_at DESC, a.id
-		 LIMIT 1`, candidates, sent, seat, topic).Scan(&key, &differs)
+		 LIMIT 1`, candidates, sent, seat, subject).Scan(&key, &differs)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", false, false, nil
 	}
@@ -114,9 +111,6 @@ func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) erro
 	return nil
 }
 
-// sameTopicSQL is true unless both activities have a topic and the two differ, as the
-// answer check compares subjects. The thread join reads it to keep a split apart.
 func sameTopicSQL(alias, other string) string {
-	topic, otherTopic := storekit.NormalisedSubjectSQL(alias+".subject"), storekit.NormalisedSubjectSQL(other+".subject")
-	return "(" + topic + " = '' OR " + otherTopic + " IN ('', " + topic + "))"
+	return "NOT mail_topics_differ(" + alias + ".subject, " + other + ".subject)"
 }
