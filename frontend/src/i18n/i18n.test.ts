@@ -69,6 +69,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
   "explain.col.pipeline",
+  "reporting.recordType.lead",
+  "reporting.recordType.deal",
+  "analytics.decisions.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
@@ -101,13 +104,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // The release channel's own name on the rail head's stage marker. "Beta" is
-  // the word all three catalogs use for it — Vietnamese borrows it as a term of
-  // art the way it borrows "deal" and "pipeline" — and a marker four letters
-  // long is also the only spelling that fits the 56px rail it must survive.
-  // Temporary, with the badge that renders it: app/betabadge.tsx names this
-  // entry among the things its deletion takes.
-  "shell.beta",
   // "Core" is the product's name for the shared codebase, which every catalog
   // already uses as a term of art (ob.core.*).
   "shell.coreVersion",

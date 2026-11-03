@@ -77,7 +77,7 @@ it("loads only the compact overview and leaves detail reads lazy", async () => {
   render(<SystemHealthPage />);
   expect(
     await screen.findByRole("heading", {
-      name: "Health could not be fully checked",
+      name: "Some checks have no result",
     }),
   ).toBeInTheDocument();
   const paths = fetcher.mock.calls.map(([request]) =>
@@ -176,7 +176,7 @@ it("withholds source conditions and counts without permission", async () => {
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", {
-    name: "Health could not be fully checked",
+    name: "Some checks have no result",
   });
   await user.click(screen.getByText("All checks"));
   expect(screen.queryByText(/Permission required/)).toBeNull();
@@ -199,7 +199,7 @@ it("leaves automatic retries out of the action list", async () => {
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", {
-    name: "Health could not be fully checked",
+    name: "Some checks have no result",
   });
   expect(
     screen.queryByRole("heading", {
@@ -228,7 +228,7 @@ it("explains the installation effect of stopped mail sorting without claiming ma
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", {
-    name: "Mail sorting: failed runs need review",
+    name: "Mail sorting: failed runs",
   });
   expect(
     screen.getByText(
@@ -268,7 +268,7 @@ it("limits a partial capture check to the categories it actually read", async ()
   render(<SystemHealthPage />);
   await user.click(await screen.findByText("All checks"));
   expect(screen.getByText(/Mail capture/)).toHaveTextContent(
-    "No capture backlog detected in checked categories",
+    "No capture action needed in checked categories",
   );
   expect(screen.queryByText("Working normally")).toBeNull();
 });
@@ -330,7 +330,8 @@ it("does not assume rejected imports are still missing after a possible later su
   ).toBeVisible();
 });
 
-it("groups overlapping mail findings and shows one handoff", async () => {
+it("shows one actionable sender review instead of the duplicate mailbox summary", async () => {
+  const user = userEvent.setup();
   const report: Report = {
     ...attentionReport,
     action_count: 2,
@@ -350,16 +351,18 @@ it("groups overlapping mail findings and shows one handoff", async () => {
   };
   stub(report);
   render(<SystemHealthPage />);
-  const group = await screen.findByRole("region", { name: "Mail capture" });
-  expect(within(group).getAllByRole("heading", { level: 3 })).toHaveLength(2);
-  expect(
-    within(group).getAllByText(/Mailbox owners: open Connections/),
-  ).toHaveLength(1);
-  expect(within(group).getByText(/1 mailbox · Mailbox owner/)).toBeVisible();
+  const group = await screen.findByRole("region", {
+    name: "Review contact suggestions",
+  });
   expect(within(group).getByText(/2 records · Mailbox owner/)).toBeVisible();
+  expect(screen.queryByText(/1 mailbox · Mailbox owner/)).toBeNull();
+  expect(screen.getByText("Problem needing action: 1")).toBeVisible();
+  await user.click(
+    within(group).getByRole("button", { name: "Review mailbox decisions" }),
+  );
   expect(
-    within(group).getAllByRole("button", { name: "Copy technical report" }),
-  ).toHaveLength(1);
+    await screen.findByRole("dialog", { name: "Mailbox decisions" }),
+  ).toBeVisible();
 });
 
 it("records diagnostics category changes and clears the previous finding", async () => {
@@ -393,12 +396,10 @@ it("makes a focused diagnostics filter visible and removable", async () => {
     "#/settings/system-health/diagnostics?section=settings.jobs&finding=jobs%3Aqueue_overdue";
   render(<SystemHealthPage view="diagnostics" />);
   expect(await screen.findByText("Showing 1 of 2 problems")).toBeVisible();
-  expect(
-    screen.queryByRole("heading", { name: /failed runs need review/ }),
-  ).toBeNull();
+  expect(screen.queryByRole("heading", { name: /failed runs/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "Show all problems" }));
   expect(
-    await screen.findByRole("heading", { name: /failed runs need review/ }),
+    await screen.findByRole("heading", { name: /failed runs/ }),
   ).toBeVisible();
   expect(window.location.hash).not.toMatch(/finding=|kind=|state=/);
 });

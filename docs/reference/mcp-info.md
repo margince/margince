@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.2 KB |
+| Tool catalog | 158.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41821 |
+| Approx. wire tokens | 41918 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
-| Input schemas | 65.5 KB | 41% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
+| Input schemas | 66.0 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.5 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **100.8 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -69,8 +69,8 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1342 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -82,7 +82,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1066 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
@@ -92,9 +92,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1958 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
@@ -2000,6 +2000,16 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
         "close_window": {
           "type": "string"
         },
+        "country": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "interval": {
           "properties": {
             "end_at": {
@@ -2119,6 +2129,10 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
           "format": "uuid",
           "type": "string"
         },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "scope": {
           "properties": {
             "id": {
@@ -2138,6 +2152,9 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
           "type": "object"
         },
         "target_basis": {
+          "type": "string"
+        },
+        "value_basis": {
           "type": "string"
         }
       },
@@ -2219,6 +2236,36 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "format": "uuid",
       "type": "string"
     },
+    "create_company": {
+      "description": "promote only",
+      "type": "boolean"
+    },
+    "deal": {
+      "additionalProperties": false,
+      "description": "promote only",
+      "properties": {
+        "amount_minor": {
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "stage_id": {
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "deal_id": {
       "description": "move_deal only",
       "format": "uuid",
@@ -2226,6 +2273,11 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     },
     "evidence_note": {
       "description": "promote only",
+      "type": "string"
+    },
+    "existing_deal_id": {
+      "description": "promote only",
+      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
@@ -5254,6 +5306,16 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                         "close_window": {
                           "type": "string"
                         },
+                        "country": {
+                          "type": "string"
+                        },
+                        "industry": {
+                          "type": "string"
+                        },
+                        "initiative_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
                         "interval": {
                           "properties": {
                             "end_at": {
@@ -5273,93 +5335,6 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           ],
                           "type": "object"
                         },
-                        "layout": {
-                          "items": {
-                            "properties": {
-                              "cards": {
-                                "items": {
-                                  "properties": {
-                                    "id": {
-                                      "type": "string"
-                                    },
-                                    "kind": {
-                                      "type": "string"
-                                    },
-                                    "metric": {
-                                      "type": "string"
-                                    },
-                                    "question": {
-                                      "properties": {
-                                        "binding": {
-                                          "type": "string"
-                                        },
-                                        "entity": {
-                                          "type": "string"
-                                        },
-                                        "group_by": {
-                                          "items": {
-                                            "type": "string"
-                                          },
-                                          "type": "array"
-                                        },
-                                        "limit": {
-                                          "type": "integer"
-                                        },
-                                        "measures": {
-                                          "items": {
-                                            "properties": {
-                                              "as": {
-                                                "type": "string"
-                                              },
-                                              "field": {
-                                                "type": "string"
-                                              },
-                                              "fn": {
-                                                "type": "string"
-                                              }
-                                            },
-                                            "required": [
-                                              "fn"
-                                            ],
-                                            "type": "object"
-                                          },
-                                          "type": "array"
-                                        },
-                                        "saved_question_id": {
-                                          "format": "uuid",
-                                          "type": "string"
-                                        }
-                                      },
-                                      "required": [
-                                        "entity",
-                                        "measures"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "width": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "kind",
-                                    "width"
-                                  ],
-                                  "type": "object"
-                                },
-                                "type": "array"
-                              },
-                              "title": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "cards"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
                         "metrics": {
                           "items": {
                             "type": "string"
@@ -5370,6 +5345,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "string"
                         },
                         "pipeline_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "product_id": {
                           "format": "uuid",
                           "type": "string"
                         },
@@ -5392,6 +5371,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "target_basis": {
+                          "type": "string"
+                        },
+                        "value_basis": {
                           "type": "string"
                         }
                       },
@@ -8979,6 +8961,16 @@ search its evidence, and quote coverage with each number.
         "close_window": {
           "type": "string"
         },
+        "country": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "interval": {
           "properties": {
             "end_at": {
@@ -9098,6 +9090,10 @@ search its evidence, and quote coverage with each number.
           "format": "uuid",
           "type": "string"
         },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "scope": {
           "properties": {
             "id": {
@@ -9117,6 +9113,9 @@ search its evidence, and quote coverage with each number.
           "type": "object"
         },
         "target_basis": {
+          "type": "string"
+        },
+        "value_basis": {
           "type": "string"
         }
       },
@@ -9212,10 +9211,8 @@ which offers it without applying it.
 **Read a view**
 
 ```text
-Read what the record tools do not answer: a record's derived views (company_360,
-company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each view answers
-what its REST route answers. Name the view, its id and any of its filters. A view refuses an
-argument it does not take and names the ones it does.
+Read derived record views, workspace reference lists and reporting objects through their REST
+routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.
 ```
 
 <details><summary>Input schema</summary>
@@ -9434,6 +9431,7 @@ argument it does not take and names the ones it does.
         "contact_360",
         "contact_case",
         "contact_cases",
+        "contact_conversation_suggestions",
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
@@ -9458,6 +9456,7 @@ argument it does not take and names the ones it does.
         "latest_site_read",
         "latest_technical_enrich",
         "latest_transcript_read",
+        "lead_conversation_suggestions",
         "lead_disqualify_reasons",
         "lead_origins",
         "lead_settings",

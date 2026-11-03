@@ -57,7 +57,8 @@ type PromoteLeadInput struct {
 	EvidenceActivityID *ids.ActivityID
 	EvidenceNote       *string
 	// Deal, when set, opens a deal in the same transaction (qualify-to-deal).
-	Deal *QualifyDealInput
+	Deal           *QualifyDealInput
+	ExistingDealID *ids.UUID
 	// IfVersion refuses the promotion unless the lead is still at this
 	// version, asked under the row lock the write already takes.
 	//
@@ -118,6 +119,9 @@ func (s *Store) PromoteLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 // QualifyLead is PromoteLead with the whole outcome: the contact, whether it
 // merged, and the deal opened alongside when the call asked for one.
 func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadInput) (PromoteOutcome, error) {
+	if err := validatePromotionDeal(in); err != nil {
+		return PromoteOutcome{}, err
+	}
 	// Promotion mutates the lead AND writes the contact side, so it needs
 	// both grants — a rep who may work leads but not create contacts
 	// cannot mint contacts through this door.

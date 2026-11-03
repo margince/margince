@@ -6,7 +6,9 @@ import type {
   ReportingReport,
 } from "../features/analytics/reporting.model";
 
-// The English names the server's catalog gives each metric.
+// The English names the server's catalog gives each metric. A mirror of
+// reportingMetricNames in backend/internal/compose, held equal by
+// TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes.
 export const reportingMetricNames: Record<
   components["schemas"]["ReportingMetricID"],
   string
@@ -30,6 +32,9 @@ export const reportingMetricNames: Record<
   partner_activity: "Active partners",
   stage_conversion: "Stage conversion",
   lead_cohort_outcomes: "What became of new leads",
+  bookings_mix: "Commercial mix",
+  qualified_opportunities_created: "Qualified opportunities",
+  initiative_pipeline: "Initiative pipeline by origin",
 };
 
 export const reportingStoryScope = {

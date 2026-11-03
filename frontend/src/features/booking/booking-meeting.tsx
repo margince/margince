@@ -29,7 +29,7 @@ import {
 import { problemCodeOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
-import { BookingFooter } from "./booking-common";
+import { useBookingTitle } from "./booking-common";
 import { BookingReschedule } from "./booking-reschedule";
 import "./booking-meeting.css";
 
@@ -89,6 +89,7 @@ export function BookingMeetingScreen({
       <ErrorLine error={change.error} />
     );
   const host = !token;
+  useBookingTitle(host ? null : t("book.meetingTitle"));
   return (
     <div className={host ? "book-page" : "book-guest-page"}>
       <div className="book-guest-column">
@@ -186,7 +187,6 @@ export function BookingMeetingScreen({
             );
           }}
         </QueryGate>
-        {!host && <BookingFooter />}
         {host && id && brief && (
           <ContactMeetingBrief
             activityId={id}

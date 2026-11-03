@@ -374,6 +374,20 @@ function isCaptureHealth(data: Health | undefined): data is Health {
     typeof data.generated_at === "string" &&
     Array.isArray(data.mailboxes) &&
     Array.isArray(data.sweeps) &&
+    (data.owner_reviews === undefined ||
+      (Array.isArray(data.owner_reviews) &&
+        data.owner_reviews.every(
+          (owner) =>
+            owner !== null &&
+            typeof owner === "object" &&
+            typeof owner.user_id === "string" &&
+            Number.isSafeInteger(owner.sender_decisions) &&
+            owner.sender_decisions >= 0 &&
+            Number.isSafeInteger(owner.thread_decisions) &&
+            owner.thread_decisions >= 0 &&
+            (owner.display_name === undefined ||
+              typeof owner.display_name === "string"),
+        ))) &&
     typeof data.classifier === "object" &&
     data.classifier !== null &&
     typeof data.held_meetings === "object" &&

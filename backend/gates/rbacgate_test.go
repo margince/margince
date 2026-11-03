@@ -5,14 +5,7 @@
 
 package gates
 
-// Every exported method on a module's *Store or *Service (the seam both the
-// HTTP handlers and the MCP tool surface call through) references the platform
-// auth gate (object RBAC and/or the row-scope spellings), directly or through a
-// same-package helper. A store method without one
-// is an ungoverned door into tenant data: reachable by any transport
-// wired to it, invisible to review. Row-scope composition itself stays
-// a call-site obligation until it moves into the database (the ADR
-// direction); this gate pins the half that is statically checkable.
+// Store and Service entry points must reach an auth gate or carry a ratified reason.
 //
 // Gatedness is resolved transitively over same-package calls, matched
 // by name within the RECEIVER the entry point is declared on, plus the
@@ -69,9 +62,11 @@ import (
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",
 	"internal/modules/contacts:TellContactOwnerOfArrival": "the same follow-up for a door that found the contact itself: the capture sink after its lead create was gated by auth.Require(lead, create), and TellContactOwnerOfLead. It reads only the contact's owner, to address the task, and returns no record",
 	"internal/modules/contacts:AskHolderToShare":          "the follow-up to a refusal the caller's own gated write produced: it acts only on a ContactHeldByColleagueError that a create, replace or promotion behind auth.Require returned, and files a share request for the contact's owner to decide. It reads and returns no record; the caller learns only whether a request is open",
+	"internal/modules/activities:RetireMeetingCopyTx":     "archives one meeting row onto another live row holding the same meeting. It refuses any principal but a system job or a calendar sync, and both callers prove first that the copy's own seat stored it and that its calendar binds the event to the survivor. No human grant can cover it, because the copy may be a colleague's row. It returns no record",
 	"internal/modules/activities:DoneRows":                "answers which of the named Worklist rows the CALLER marked done, read by the caller's own user id and refused to any principal without a human behind it. It takes no object grant because it reads the reader's own choices and no record: a privacy officer without activity read still has a Worklist, and their Done must still hide their rows",
 	"internal/compose/attention:ReopenRows":               "the undo behind Done. It removes only the caller's own Done rows, keyed by their user id, and the store refuses a caller with no human behind it. A row on an activity keeps the activity grant and content gate in the store. Nothing it reaches is a record the caller could not already see",
 	"internal/modules/contacts:RecordLogoIntent":          "declares a mark's key provisional before its bytes are put. It writes one row naming a key the caller already holds, reads nothing, and discloses nothing — and what may then be DELETED is decided by the sweep's reference check against the mark columns, never by this row. Gating it on the company write grant would refuse the site-read worker, which calls it and is itself ungated for the reason RecordSiteReadLogo gives: the worker is not a human principal and the human's authority was checked when the read was started",
@@ -419,21 +414,13 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
 	"internal/modules/privacy:EvaluateInstallation":          "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 
-	// comms: delivery machinery, not the message. StageTx runs inside the
-	// caller's own transaction, alongside the activity write that already
-	// passed the gated activity:create check — the outbound send itself was
-	// admitted there. But activity:create alone would only prove the actor
-	// may create an activity, not that the delivery may send through THEIR
-	// mailbox — the security-relevant fact this store owns — so StageTx
-	// itself derives user_id from the authenticated principal on ctx
-	// (storekit.Actor) and fails closed when none resolves to an app_user;
-	// no caller input can name a different sender. Object-RBAC has nothing
-	// left to narrow once that derivation stands. Load/RecordSent/Park/
-	// ParkTransmitted/RecordFailure/RecordDeferral/MarkInFlight/ClearInFlight
-	// are the dispatcher's own state-machine steps, driven by the outbox/River worker
-	// under the system principal with no human principal in the call at all;
-	// nothing here discloses a record to anyone — the reason each of them
-	// writes is an operator-facing transport diagnosis, not tenant data.
+	// comms: delivery machinery, not the message. StageTx runs in the caller's
+	// transaction, beside an activity write that passed activity:create. That
+	// check does not prove the delivery may send through the actor's mailbox.
+	// So StageTx derives user_id from the principal on ctx (storekit.Actor) and
+	// fails closed when none resolves to an app_user. The other methods are the
+	// dispatcher's state-machine steps, run by the worker under the system
+	// principal; they write transport diagnosis, not tenant data.
 	"internal/modules/comms:StageTx":                      "derives user_id from the authenticated principal (storekit.Actor) and fails closed with no caller-suppliable override; the activity:create check on the shared transaction admits the send action itself, but the sending IDENTITY is enforced here, in the store, not inherited from that check",
 	"internal/modules/comms:StageChannelTx":               "the channel-shaped twin of StageTx and the same posture: it derives user_id from the authenticated principal (stagingUser, shared with StageTx so neither can grow a caller-suppliable override) and runs inside the caller's already-gated activity transaction",
 	"internal/modules/comms:StageControllerTx":            "the INSTALLATION sending in its own name, so there is no human identity to derive and no seat to check: the caller is a compose seam acting for the system principal, and what constrains the write instead is the registered template — an unregistered key, a placeholder that disagrees with the material, and an absent registry are all refused before any row is written. Admission for the underlying act happened where the timeline activity was logged, on the same transaction",

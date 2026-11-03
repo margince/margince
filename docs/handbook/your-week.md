@@ -11,10 +11,11 @@ The weekly review in Margince is on **Home → Weekly**, and reads as a report. 
 once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
 counts are what they were.
 
-Its title is the week it covers. Above it are the calendar week and when the report was frozen.
-Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
-a report. Under it, a card holds what Margince wrote about the week, in your own language, marked
-as written by AI. The report's parts are:
+Its title is the week it covers, under the calendar week. The line under the title says when the
+report was frozen. At the end of the calendar week's line, the two arrows **Earlier week** and
+**Later week** step through the weeks that have a report. When Margince wrote about the week, a
+card first in the report holds those words, in your own language, marked as written by AI. The
+report's parts are:
 - **At a glance**: four figures. Deals won shows what they were worth; the other three show their
   share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against

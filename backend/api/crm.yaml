@@ -6728,7 +6728,272 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/products:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealProducts
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The products a deal sells, with the value allocated to each.
+      description: |
+        `offer` rows are rewritten from the accepted offer's lines that name a product. One
+        `manual` set replaces every offer-derived row and the next accepted offer leaves it
+        alone. Product bookings and the commercial mix read these allocations.
+      responses:
+        '200':
+          description: The deal's product allocations.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealProductListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Deals]
+      operationId: replaceDealProducts
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Set a deal's products by hand, replacing every allocation it had.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceDealProductsRequest' }
+      responses:
+        '200':
+          description: The deal's product allocations after the write.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealProductListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives:
+    get:
+      tags: [Reports]
+      operationId: listSalesInitiatives
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The sales initiatives a reader may open, drafts and live ones.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, live, ended] }
+      responses:
+        '200':
+          description: The initiatives.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Reports]
+      operationId: createSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Define a sales initiative as a draft. Nothing is enrolled until it is launched.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeInput' }
+      responses:
+        '201':
+          description: The draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Reports]
+      operationId: getSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: One sales initiative.
+      responses:
+        '200':
+          description: The initiative.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Reports]
+      operationId: updateSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Change an initiative's definition. A live initiative keeps its baseline.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeInput' }
+      responses:
+        '200':
+          description: The initiative after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}/launch:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Reports]
+      operationId: launchSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Launch a draft. The member deals of this moment become the frozen baseline.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The live initiative.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Reports]
+      operationId: listSalesInitiativeMembers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The leads and deals that belong, each with why, under the reader's own row scope.
+      parameters:
+        - name: record_type
+          in: query
+          schema: { type: string, enum: [lead, deal] }
+      responses:
+        '200':
+          description: The members.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeMembers' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Reports]
+      operationId: replaceSalesInitiativeMembers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Set the picked and the excluded records. An exclusion stands over a rule match.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeMembersInput' }
+      responses:
+        '200':
+          description: The members after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeMembers' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---------------------------- /projects -----------------------------------
+  /analytics/decisions:
+    get:
+      tags: [Reports]
+      operationId: listSalesDecisions
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The decisions recorded from a sales review, newest first, as tasks the reader may see.
+      parameters:
+        - name: deal_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, done] }
+      responses:
+        '200':
+          description: The decisions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecisionListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Reports]
+      operationId: recordSalesDecision
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        Record a decision from a sales review as a task on its deal. An open decision with the
+        same text on the same deal is returned instead of a second one.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesDecisionInput' }
+      responses:
+        '201':
+          description: The decision, as the task it became.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '200':
+          description: The open decision that already held this text on this deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/decisions/{id}/outcome:
+    post:
+      tags: [Reports]
+      operationId: recordSalesDecisionOutcome
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Record what work was completed and close the decision. The deal does not change.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesDecisionOutcomeInput' }
+      responses:
+        '200':
+          description: The closed decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects:
     get:
       tags: [Projects]
@@ -9866,6 +10131,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PublicSchedulingProfile' }
+  /public/booking/{host_slug}/preview:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicBookingPreview
+      security: []
+      summary: Read the link-preview card for a host's public booking page.
+      description: |
+        The web tier redirects a non-browser fetch of `/book/{host_slug}` here, so a link
+        preview reads the page without running the app. The HTML carries the host's name,
+        company, meeting title and duration as escaped title, description, Open Graph and
+        Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
+        address on the configured public origin, and are omitted when no usable origin is
+        configured. The company logo is the card image when there is one; otherwise the card
+        has no image. A paused page answers generic metadata that names no host. A missing
+        or revoked page answers 404 with no host metadata. Responses are `no-store` and
+        `noindex`. HEAD is answered like GET without a body. The page links to the booking
+        app, and no guest details or tokens appear in it.
+      responses:
+        '200':
+          description: Booking page card, or generic metadata for a paused page.
+          content:
+            text/html:
+              schema: { type: string }
+        default:
+          description: The page is missing, revoked or unavailable; the HTML names no host.
+          content:
+            text/html:
+              schema: { type: string }
   /public/meeting/{token}:
     parameters:
       - { name: token, in: path, required: true, schema: { type: string } }
@@ -10167,6 +10462,43 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '200':
           description: Saved configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingProfile' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/profile/alias:
+    put:
+      tags: [Activities]
+      operationId: putSchedulingAlias
+      security:
+        - cookieAuth: []
+      summary: Choose, change or clear the caller's friendly booking address.
+      description: |
+        Sets the caller's own alias, so their booking page also answers at `/book/{alias}`.
+        The random address keeps working. The value is trimmed and lowercased. It must be 3 to
+        30 characters of letters, digits and inner hyphens. It must not be one of the app's
+        reserved booking words or prefixes, or a fixed segment of a `/public/booking/` route;
+        such a value answers `reserved`. An empty value clears the alias.
+
+        An alias is unique across the installation and never moves between hosts. A changed or
+        cleared alias is retired, not released: the same host may take it back at any time, and
+        no other host can ever claim it. **Replace address** retires the alias too. Refusals
+        answer 422 on `alias` with the codes `too_short`, `too_long`, `invalid`, `reserved`,
+        `taken` or `no_booking_link` (the caller has no booking link yet).
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingAliasRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The configuration with its new public address.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SchedulingProfile' }
@@ -11932,6 +12264,13 @@ paths:
     get:
       tags: [Leads]
       operationId: previewLeadPromotion
+      parameters:
+        - name: create_company
+          in: query
+          schema: { type: boolean, default: false }
+        - name: deals_cursor
+          in: query
+          schema: { type: string }
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only for now: this ships as the promote dialog's confirm step. The
       # governed read tool is a separate, additive decision (see the note on
@@ -13960,6 +14299,34 @@ paths:
           items:
             $ref: '#/components/schemas/ReportingBlockKind'
           maxItems: 20
+      - &dimProduct
+        name: product_id
+        in: query
+        required: false
+        schema: *id001
+      - &dimCountry
+        name: country
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReportingCountry'
+      - &dimIndustry
+        name: industry
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReportingIndustry'
+      - &dimValueBasis
+        name: value_basis
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/ReportingValueBasis'
+      - &dimInitiative
+        name: initiative_id
+        in: query
+        required: false
+        schema: *id001
   /analytics/evidence:
     get:
       tags:
@@ -14010,6 +14377,11 @@ paths:
       - *id010
       - *id011
       - *id012
+      - *dimProduct
+      - *dimCountry
+      - *dimIndustry
+      - *dimValueBasis
+      - *dimInitiative
       - name: metric
         in: query
         required: true
@@ -17809,6 +18181,56 @@ paths:
               schema: { $ref: '#/components/schemas/WorkspaceEmailDomain' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listContactConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the contact and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /leads/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listLeadConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the lead and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/exclusions:
@@ -32000,12 +32422,12 @@ paths:
       x-agent-access: human-only
       summary: Write or clear your own sign-off.
       description: |
-        An empty `body` CLEARS the signature — a member emptying the field means
-        "sign off with the plain closing", not "leave what was there".
+        An empty `body` clears the plain-text fallback. Personal HTML and the
+        workspace template retain their precedence until cleared separately.
 
-        Plain text only. The transport sends `text/plain` and the drafting
-        prompts forbid the model from writing a sign-off of its own, so what is
-        stored here is exactly what arrives under every message the caller sends.
+        `body` stores plain text. Optional `html` stores personal markup, sanitized
+        when rendered. Personal HTML takes precedence over the workspace template,
+        then plain text and the closing line. An agent sends without a sign-off.
       requestBody:
         required: true
         content:
@@ -34808,9 +35230,11 @@ components:
       description: |
         The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
         no times and a write changes nothing, because either would rest on a partial picture of the
-        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
-        calendar and the provider's reason are in the server log only. It clears once the host
-        repairs the calendar or the provider answers again.
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings. When
+        the host, signed in themselves, reads their own availability, `details.calendar` names the
+        calendar id that failed; an agent, any other reader and every public page get no calendar.
+        The provider's reason is in the server log only. It clears once the host repairs the calendar
+        or the provider answers again.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -38665,6 +39089,23 @@ components:
 
         It is its own word rather than `user` because a seat looking at an address they never typed
         is owed the difference — and, seeing it, may remove it like any other.
+    ConversationSuggestion:
+      type: object
+      required: [address, display_name, activity_id]
+      properties:
+        address: {type: string}
+        display_name: {type: string}
+        activity_id: {type: string, format: uuid}
+
+    ConversationSuggestionListResponse:
+      type: object
+      required: [data, scan_limited]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationSuggestion'}
+        scan_limited: {type: boolean}
+
     CaptureCounterpartyHold:
       type: object
       description: |
@@ -41325,6 +41766,13 @@ components:
           items: { $ref: '#/components/schemas/ActivityReference' }
         computed_at: { type: string, format: date-time, description: When this value was last recomputed (fixed-clock reproducible). }
         last_interaction: { type: [string, 'null'], format: date-time, description: Timestamp of the most recent qualifying interaction; null when there are none. }
+        last_engaged:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest interaction the contact took part in: a message they sent, or a meeting or
+            call that took place. Recency counts from it, so our own unanswered send does not
+            move it. Null when the contact never took part.
         inbound_90d: { type: integer, minimum: 0, description: Count of qualifying inbound interactions in the trailing 90-day window. }
         outbound_90d: { type: integer, minimum: 0, description: Count of qualifying outbound interactions in the trailing 90-day window. }
 
@@ -46958,7 +47406,8 @@ components:
         # correspondence from six unanswered sends — which is the distinction that
         # decides whether this colleague is a route in at all.
         inbound_90d:      { type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague. }
-        outbound_90d:     { type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them. }
+        outbound_90d:     { type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent." }
+        sent_90d:         { type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d." }
         last_inbound_at:  { type: [string, 'null'], format: date-time, description: When they last replied to this colleague. Null means they never have. }
         last_outbound_at: { type: [string, 'null'], format: date-time, description: When this colleague last wrote to them. }
 
@@ -48052,14 +48501,19 @@ components:
 
     EmailSignature:
       type: object
-      required: [body, title, phone, template_active]
+      required: [body, html, title, phone, template_active]
       properties:
         body:
           type: string
           description: |
-            The sign-off appended below every message this member sends, plain text.
-            Empty means none written; a send then closes with a plain greeting and
-            the member's display name when one is on file.
+            Plain-text fallback after personal HTML and the company template.
+            With none set, a send closes with a greeting and the member's name.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           description: The member's title, filled into the workspace template's `{title}`.
@@ -48070,7 +48524,7 @@ components:
           type: boolean
           description: |
             The workspace has a signature template. Every send this member makes then signs
-            with the template, filled in with their name, title and phone, instead of `body`.
+            with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
             An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
     EmailSignatureTemplate:
@@ -48086,7 +48540,7 @@ components:
             `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
             mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
-            none: each member signs with their own plain-text signature.
+            none: each member uses personal HTML, plain text or the closing line.
     EmailSignOffRequest:
       type: object
       required: [body]
@@ -48111,6 +48565,13 @@ components:
           type: string
           maxLength: 4000
           description: The workspace template as edited. Empty previews a workspace with none.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -48132,7 +48593,7 @@ components:
           type: string
           description: |
             The same block as the sanitized markup the HTML part carries. Present only when
-            `kind` is `template`.
+            `kind` is `template` or a personal HTML `signature`.
         kind:
           type: string
           enum: [signature, closing, template, none]
@@ -48152,6 +48613,13 @@ components:
             Plain text. Empty clears the signature. The cap is what a signature is
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -48868,6 +49336,173 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: { $ref: '#/components/schemas/CompanyGraphSignalRoute' }
+
+    # ---- Sales initiatives ----
+    SalesInitiativeStatus:
+      type: string
+      enum: [draft, live, ended]
+    SalesInitiativeRule:
+      type: object
+      additionalProperties: true
+      description: >-
+        A predicate tree in the record type's list vocabulary, the same tree a dynamic list's
+        definition carries. Untyped here for the reason that definition is: the predicate engine
+        is the grammar's authority and answers a precise 422.
+    SalesInitiative:
+      type: object
+      required: [id, name, owner_id, objective_metric, deadline, status, include_future, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        owner_id: { type: string, format: uuid }
+        objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: [integer, 'null'], format: int64, description: 'The objective, in the metric''s unit; null is tracking only.' }
+        deadline: { type: string, format: date }
+        status: { $ref: '#/components/schemas/SalesInitiativeStatus' }
+        launch_at: { type: [string, 'null'], format: date-time }
+        lead_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        deal_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        include_future: { type: boolean, description: Whether records that match a rule later join on their own. }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      additionalProperties: false
+    SalesInitiativeListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SalesInitiative' } }
+      additionalProperties: false
+    SalesInitiativeInput:
+      type: object
+      required: [name, objective_metric, deadline]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        owner_id: { type: [string, 'null'], format: uuid, description: Defaults to the caller. }
+        objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: [integer, 'null'], format: int64, minimum: 1 }
+        deadline: { type: string, format: date }
+        lead_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        deal_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        include_future: { type: boolean }
+        reason: { type: [string, 'null'], maxLength: 500, description: Why a live initiative's definition changed. }
+      additionalProperties: false
+    SalesDecision:
+      type: object
+      required: [id, decision, deal_id, status, created_at]
+      description: A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
+      properties:
+        id: { type: string, format: uuid, description: The task's id. }
+        decision: { type: string }
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: [string, 'null'], format: uuid, description: "The accountable owner, the task's assignee." }
+        review_on: { type: [string, 'null'], format: date, description: "The review date, the task's due day in the installation's calendar." }
+        expected_result: { type: [string, 'null'] }
+        status: { type: string, enum: [open, done] }
+        done_at: { type: [string, 'null'], format: date-time }
+        result: { type: [string, 'null'], description: "What work was completed, once the outcome was recorded." }
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+    SalesDecisionInput:
+      type: object
+      required: [decision, deal_id, owner_id, review_on]
+      properties:
+        decision: { type: string, minLength: 1, maxLength: 500 }
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        review_on: { type: string, format: date }
+        expected_result: { type: string, maxLength: 2000, description: The observable result the owner expects by the review date. }
+      additionalProperties: false
+    SalesDecisionOutcomeInput:
+      type: object
+      required: [result]
+      properties:
+        result: { type: string, minLength: 1, maxLength: 2000 }
+      additionalProperties: false
+    SalesDecisionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/SalesDecision' }
+      additionalProperties: false
+    SalesInitiativeMemberRef:
+      type: object
+      required: [record_type, record_id]
+      properties:
+        record_type: { type: string, enum: [lead, deal] }
+        record_id: { type: string, format: uuid }
+      additionalProperties: false
+    SalesInitiativeMember:
+      type: object
+      required: [record_type, record_id, label, reason, included]
+      properties:
+        record_type: { type: string, enum: [lead, deal] }
+        record_id: { type: string, format: uuid }
+        label: { type: string }
+        company_label: { type: [string, 'null'] }
+        reason: { type: string, enum: [rule, picked, carried, excluded], description: '`carried` is a deal promoted from a member lead.' }
+        included: { type: boolean }
+        status: { type: [string, 'null'] }
+        amount_minor_base: { type: [integer, 'null'], format: int64 }
+        created_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: false
+    SalesInitiativeMembers:
+      type: object
+      required: [data, leads, deals, companies, truncated]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SalesInitiativeMember' } }
+        leads: { type: integer }
+        deals: { type: integer }
+        companies: { type: integer, description: Distinct companies behind the included records. }
+        truncated: { type: boolean, description: A rule matched more records than one read lists. }
+      additionalProperties: false
+    SalesInitiativeMembersInput:
+      type: object
+      required: [picked, excluded]
+      properties:
+        picked: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesInitiativeMemberRef' } }
+        excluded: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesInitiativeMemberRef' } }
+      additionalProperties: false
+
+    # ---- Deal products ----
+    DealProduct:
+      type: object
+      required: [product_id, product_name, source, updated_at]
+      properties:
+        product_id: { type: string, format: uuid }
+        product_name: { type: string }
+        source: { type: string, enum: [offer, manual], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal.' }
+        amount_minor: { type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.' }
+        currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'The classification of the product when the allocation was written.' }
+        updated_at: { type: string, format: date-time }
+      additionalProperties: false
+    DealProductListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealProduct' } }
+      additionalProperties: false
+    DealProductInput:
+      type: object
+      required: [product_id]
+      properties:
+        product_id: { type: string, format: uuid }
+        amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The value allocated to the product in the currency of the deal. Omit to name the product without an amount.' }
+      additionalProperties: false
+    ReplaceDealProductsRequest:
+      type: object
+      required: [products]
+      properties:
+        products:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/DealProductInput' }
+      additionalProperties: false
 
     # ---- Relationship ----
     Relationship:
@@ -51033,6 +51668,28 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Activity + link ----
+    ActivityEmailTarget:
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      description: >-
+        The record an email about this call, meeting, note or task goes to. It is the
+        row's one linked contact. A task with no single contact goes on to its one live
+        linked lead, and then to its one linked company; two live leads name nobody. A task
+        whose only lead is closed and that names no company gets that lead, refused. Absent
+        where the row names no target, on the same rows `offers_email` is always false for,
+        and for a record this caller may not read. A client offers Write email or Draft
+        email when this is present without `refusal`, and says the refusal otherwise.
+      properties:
+        entity_type: { type: string, enum: [contact, lead, company] }
+        entity_id: { type: string, format: uuid }
+        refusal:
+          type: string
+          enum: [archived, no_address, lead_closed]
+          description: >-
+            Why no email goes to the target: `archived` for an archived contact,
+            `no_address` for a contact or lead with no address an email may use, and
+            `lead_closed` for a lead that was promoted or disqualified.
     ActivityLink:
       type: object
       required: [entity_type, entity_id]
@@ -51207,10 +51864,16 @@ components:
         company_name: { type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         logo_url: { type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }
-        public_url: { type: string, readOnly: true }
+        alias: { type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`." }
+        public_url: { type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.' }
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
         video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
+    SchedulingAliasRequest:
+      type: object
+      required: [alias]
+      properties:
+        alias: { type: string, maxLength: 200, description: 'The friendly address to claim; empty clears it. Validated and normalized by the server.' }
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]
@@ -51664,11 +52327,14 @@ components:
           description: >-
             Whether Write email on this row opens with a recipient filled in: true exactly when
             `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call,
-            meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`.
-            Always false for an email or a message, which are answered with Reply instead, for
-            an archived row, for a task the product filed itself (`automatic_kind` product),
-            and for a row whose content is withheld from the caller. A client offers Write email
-            only when this is true, and reads the address from reply-recipient.
+            meeting, note or task. Both are computed by one rule, the one `email_target`
+            states. Always false for an email or a message, which are answered with Reply
+            instead, for an archived row, for a task the product filed itself (`automatic_kind`
+            product), and for a row whose content is withheld from the caller. False for a
+            company target too, which has no single address: the composer asks which of the
+            company's contacts the mail is for.
+        email_target:
+          $ref: '#/components/schemas/ActivityEmailTarget'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         imported_from:
@@ -53899,7 +54565,7 @@ components:
           x-enum-varnames: [LeadStatusSetByHuman, LeadStatusSetBySystem]
           readOnly: true
           description: 'Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.'
-        qualified_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal opened by the qualify call that promoted this lead, when one was asked for.' }
+        qualified_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal joined or opened by the qualify call that promoted this lead, when one was asked for.' }
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -54093,6 +54759,10 @@ components:
             note: { type: [string, 'null'] }
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        existing_deal_id:
+          type: string
+          format: uuid
+          description: Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
         create_company:
           type: boolean
           default: false
@@ -54111,7 +54781,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset, also for a lead linked to a company. The deal's id lands
+        and its company is the contact's resolved employer when one exists. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: { type: [string, 'null'], format: uuid }
@@ -54153,7 +54823,7 @@ components:
           type: boolean
           description: True if promotion merged into an existing contact (no duplicate); false if a new contact was created.
         lead_id: { type: string, format: uuid }
-        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal opened alongside, when the request asked for one.' }
+        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal opened or linked alongside, when the request asked for one.' }
 
     PromoteLeadPreview:
       type: object
@@ -54161,6 +54831,12 @@ components:
         What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
       required: [outcome]
       properties:
+        company_id: { type: string, format: uuid, description: The visible employer this promotion resolves. }
+        existing_deals:
+          type: array
+          description: Open deals of the resolved employer the caller may read and change. Continue with existing_deals_cursor.
+          items: { $ref: '#/components/schemas/Deal' }
+        existing_deals_cursor: { type: string, description: Cursor for the next page of eligible deals; absent on the last page. }
         outcome:
           type: string
           enum: [create, merge]
@@ -54866,6 +55542,15 @@ components:
           type: array
           items: { type: string, format: uuid }
           description: 'The activities behind a behavioral factor, re-read through the CALLER''s scope (ADR-0105 §3).'
+        source_activities:
+          type: array
+          readOnly: true
+          description: >-
+            The same receipts, named. In the order they were counted, and omitting an id this
+            reader cannot discover at all — so the list can be SHORTER than
+            `source_activity_ids`, which stays the count. A number that shrank to what one
+            reader may open would tell two readers different things about one score.
+          items: { $ref: '#/components/schemas/ActivityReference' }
         set_by: { type: [string, 'null'], format: uuid, description: 'The human who supplied a manual factor. Null for machine factors.' }
         # Optional rather than nullable: a machine factor OMITS it. A null
         # would claim the field applies here and happens to be empty, which
@@ -55831,7 +56516,7 @@ components:
             column's nullability, and `exists` is how a filter asks about that.
         references:
           type: string
-          enum: [tag, app_user, team, company, pipeline, stage, project]
+          enum: [tag, app_user, team, company, pipeline, stage, project, product]
           description: |
             The record type this field's ids point at — present for every `id`
             field, absent for every other type. Offer the record rather than a
@@ -56150,6 +56835,9 @@ components:
       - partner_activity
       - stage_conversion
       - lead_cohort_outcomes
+      - bookings_mix
+      - qualified_opportunities_created
+      - initiative_pipeline
     ReportingBlockKind:
       type: string
       description: |
@@ -56455,6 +57143,21 @@ components:
           type: string
           format: date-time
         end_at: *id001
+    ReportingProductId:
+      type: string
+      format: uuid
+    ReportingInitiativeId:
+      type: string
+      format: uuid
+    ReportingCountry:
+      type: string
+      pattern: '^[A-Z]{2}$'
+    ReportingIndustry:
+      type: string
+      maxLength: 120
+    ReportingValueBasis:
+      type: string
+      enum: [all, software, implementation]
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -56495,6 +57198,16 @@ components:
           enum:
           - fiscal_quarter
           - all_open
+        product_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
+        initiative_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingInitiativeId' }]
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         metrics:
           type: array
           items:
@@ -56535,7 +57248,9 @@ components:
             $ref: '#/components/schemas/ReportingCard'
     ReportingCardKind:
       type: string
-      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      description: |
+        A chart kind, `question`, a custom analytics question the card asks for each reader, or
+        `assessment`, the report's figures written up in a few sentences.
       enum:
       - bookings_trend
       - stage_distribution
@@ -56550,6 +57265,7 @@ components:
       - stage_cohort
       - lead_cohort
       - question
+      - assessment
     ReportingCardQuestion:
       type: object
       additionalProperties: false
@@ -56696,6 +57412,21 @@ components:
             actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        product_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
+        product_label:
+          type: string
+        initiative_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingInitiativeId' }]
+        initiative_label:
+          type: string
+        initiative_launch_at: *id001
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         timezone:
           type: string
         currency:
@@ -60285,7 +61016,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative]
 
     RbacAction:
       type: string
@@ -60728,6 +61459,10 @@ components:
         what is waiting inside it is not named at all.
       required: [generated_at, mailboxes, classifier, held_meetings, sweeps, connection_concerns]
       properties:
+        owner_reviews:
+          type: array
+          description: Mailbox owners with decisions ready for human review. Counts and names only.
+          items: { $ref: '#/components/schemas/CaptureOwnerReview' }
         categories:
           $ref: '#/components/schemas/CaptureHealthCategories'
         connection_concerns:
@@ -60835,6 +61570,16 @@ components:
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
+
+    CaptureOwnerReview:
+      type: object
+      additionalProperties: false
+      required: [user_id, sender_decisions, thread_decisions]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        sender_decisions: { type: integer, minimum: 0 }
+        thread_decisions: { type: integer, minimum: 0 }
 
     CaptureMailboxHealth:
       type: object
@@ -62124,6 +62869,11 @@ components:
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
         score: { type: [number, 'null'], description: Relevance score. }
+        identifier_match:
+          type: string
+          enum: [exact, prefix]
+          readOnly: true
+          description: The record's own email or domain matches the complete query; absent for text and employer matches.
         carried_by:
           type: [integer, 'null']
           minimum: 0
@@ -66731,6 +67481,7 @@ components:
         unit_price_minor: { type: integer, format: int64, description: Integer minor units (P11); no float money. }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.' }
         active: { type: boolean }
@@ -66761,6 +67512,7 @@ components:
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
@@ -66778,6 +67530,7 @@ components:
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
+        component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }
@@ -71484,11 +72237,14 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorklistOwner'
           description: |
-            Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
-            seat whose calendar it came off. `kind` is always `user`.
+            Who hosted the meeting a `meeting` or `meeting_outcome` row is about. That
+            is the colleague who organized it, where exactly one seat is bound to the
+            organizer. Otherwise it is the seat whose calendar the meeting came off.
+            `kind` is always `user`.
 
             A fact about the meeting, kept apart from `owner`, which says who answers
-            for the row. Absent where no calendar claims the meeting. `label` follows
+            for the row and stays the calendar's seat. Absent where no calendar claims
+            the meeting and no colleague organized it. `label` follows
             `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }

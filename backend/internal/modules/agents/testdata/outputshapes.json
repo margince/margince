@@ -5131,6 +5131,16 @@
               "close_window": {
                 "type": "string"
               },
+              "country": {
+                "type": "string"
+              },
+              "industry": {
+                "type": "string"
+              },
+              "initiative_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "interval": {
                 "type": "object",
                 "properties": {
@@ -5248,6 +5258,10 @@
                 "type": "string",
                 "format": "uuid"
               },
+              "product_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "scope": {
                 "type": "object",
                 "properties": {
@@ -5267,6 +5281,9 @@
                 ]
               },
               "target_basis": {
+                "type": "string"
+              },
+              "value_basis": {
                 "type": "string"
               }
             },
@@ -16289,6 +16306,9 @@
                 "match": {
                   "type": "object",
                   "properties": {
+                    "identifier_match": {
+                      "type": "string"
+                    },
                     "snippet": {
                       "type": "string"
                     },

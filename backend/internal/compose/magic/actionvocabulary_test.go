@@ -83,12 +83,12 @@ func TestWhatCannotBeTakenBackSaysSo(t *testing.T) {
 // and handing a contact their own change back as machinery is a lie about who
 // did it.
 func TestAHumansOwnChangeIsNeverReportedAsMachinery(t *testing.T) {
-	for _, actor := range machineActors() {
+	for _, actor := range MachineActors() {
 		if actor == "human" {
 			t.Fatal("the human actor type is reported as machinery")
 		}
 	}
-	if len(machineActors()) != 3 {
-		t.Errorf("machine actors = %v, want agent, system and connector", machineActors())
+	if len(MachineActors()) != 3 {
+		t.Errorf("machine actors = %v, want agent, system and connector", MachineActors())
 	}
 }

@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -41,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -198,9 +201,10 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 	staged := approvalsServiceWithEffects(pool)
-	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.homeCache = homecache.New(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
-	s.magicHandlers = magic.NewHandlers(s.magicService)
+	s.magicHandlers = magic.NewHandlers(s.magicService).WithHomeCache(s.homeCache)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture
@@ -382,6 +386,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
+		return suggestionSink().ConversationSuggestions(ctx, anchor)
+	}}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
 		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
 		recompute: activities.RecomputeAudienceTx,
@@ -443,6 +451,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.wireContact360(pool)
 	s.wireReversal(pool)
 	s.wireProject360(pool)
+	s.wireSalesReview(pool)
 }
 
 // newConsentHandlers binds the consent surface to the four edges it cannot

@@ -328,11 +328,15 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 
 // newSendDispatcher builds the dispatcher for one pace.
 func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
+	var admitParties func(context.Context, ids.ActivityID) error
+	if registry != nil {
+		admitParties = registry.AdmitActivityParties
+	}
 	return controllerLaneOn(comms.NewDispatcher(
 		// The reconcile seam is the cross-module edge comms must not hold
 		// itself: activities owns the timeline row, comms owns the delivery,
 		// and the two meet here.
-		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))),
+		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)), comms.WithPartyAdmission(admitParties)),
 		commsResolver{registry: registry, channels: registry},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),

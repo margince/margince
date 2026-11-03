@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { bookingSlugFromPath, isShareableBookingSlug } from "./bookingaddress";
 import { opensElsewhere } from "./linkclick";
 
 const IDENTIFIER =
@@ -21,9 +22,26 @@ export function appHref(href: string | undefined): string | undefined {
   return `${recordPath(hash)}${hash}`;
 }
 
+const BOOKING = /^#\/book\/([^/?]+)(?:[/?]|$)/;
+
+// The server-visible path an address mirrors: a record card, a host's public
+// booking page, or the root. Any other booking id maps to the root. A guest's
+// token so never leaves the fragment.
 function recordPath(hash: string): string {
   const record = RECORD.exec(hash);
-  return record ? `/r/${record[1]}/${record[2]}` : "/";
+  if (record) return `/r/${record[1]}/${record[2]}`;
+  const booking = BOOKING.exec(hash);
+  if (booking && isShareableBookingSlug(booking[1]))
+    return `/book/${booking[1]}`;
+  return "/";
+}
+
+function isMirroredPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    RECORD_PATH.test(pathname) ||
+    bookingSlugFromPath(pathname) !== null
+  );
 }
 
 type LinkPress = Readonly<{
@@ -50,7 +68,7 @@ export function followAppLink(event: LinkPress): void {
   if (
     link.origin !== location.origin ||
     !link.hash.startsWith("#/") ||
-    (link.pathname !== "/" && !RECORD_PATH.test(link.pathname))
+    !isMirroredPath(link.pathname)
   )
     return;
   event.preventDefault();
@@ -61,18 +79,32 @@ export function followAppLink(event: LinkPress): void {
 export function restoreRecordAddress(): void {
   if (location.hash) return;
   const record = RECORD_PATH.exec(location.pathname);
-  if (record)
+  if (record) {
     history.replaceState(
       history.state,
       "",
       `${location.pathname}${location.search}#/${record[1]}/${record[2]}`,
+    );
+    return;
+  }
+  const slug = bookingSlugFromPath(location.pathname);
+  if (slug)
+    history.replaceState(
+      history.state,
+      "",
+      `/book/${slug}${location.search}#/book/${slug}`,
     );
 }
 
 // Keep the hash router while making the record identity visible to preview fetchers.
 export function publishRecordAddress(): void {
   const { pathname, search, hash } = globalThis.location;
-  if (pathname !== "/" && !pathname.startsWith("/r/")) return;
+  if (
+    pathname !== "/" &&
+    !pathname.startsWith("/r/") &&
+    !pathname.startsWith("/book/")
+  )
+    return;
   const next = recordPath(hash);
   if (pathname !== next)
     history.replaceState(history.state, "", `${next}${search}${hash}`);

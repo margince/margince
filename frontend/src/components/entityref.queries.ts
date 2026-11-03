@@ -39,7 +39,12 @@ const COMPANY_IDS_PER_READ = 100;
 // so every company named within one tick shares one list read. It asks for
 // what `GET /companies/{id}` answers, archived rows and our own company too.
 // A company the reader may not see is left out, which reads as a 404 did.
-const companyNameOf = idBatcher<string | null>(
+export type EntityReference = {
+  name: string | null;
+  archived: boolean;
+  logo?: string | null;
+};
+const companyNameOf = idBatcher<EntityReference>(
   COMPANY_IDS_PER_READ,
   async (page) => {
     const { data, error } = await api.GET("/companies", {
@@ -56,51 +61,81 @@ const companyNameOf = idBatcher<string | null>(
       throw new ProblemError(error);
     }
     return new Map(
-      data.data.map((company) => [company.id, company.display_name ?? null]),
+      data.data.map((company) => [
+        company.id,
+        {
+          name: company.display_name ?? null,
+          archived: Boolean(company.archived_at),
+          logo: company.logo_url,
+        },
+      ]),
     );
   },
 );
 
 // Each entity endpoint names its display field differently. Missing names
 // resolve to null because React Query rejects undefined query results.
-const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
-  {
-    contact: async (id) => {
-      const { data, error, response } = await api.GET("/contacts/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.full_name ?? null;
-    },
-    company: (id) => companyNameOf(id),
-    lead: async (id) => {
-      const { data, error, response } = await api.GET("/leads/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return leadIdentityName(data) || null;
-    },
-    project: async (id) => {
-      const { data, error, response } = await api.GET("/projects/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.name ?? null;
-    },
-    deal: async (id) => {
-      const { data, error, response } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.name ?? null;
-    },
-  };
+const NAME_READERS: Record<
+  EntityKind,
+  (id: string, signal?: AbortSignal) => Promise<EntityReference | null>
+> = {
+  contact: async (id, signal) => {
+    const { data, error, response } = await api.GET("/contacts/{id}", {
+      params: { path: { id } },
+      signal,
+    });
+    if (error) return unnamedOrThrow(error, response);
+    return {
+      name: data.full_name ?? null,
+      archived: Boolean(data.archived_at),
+    };
+  },
+  company: (id) => companyNameOf(id),
+  lead: async (id, signal) => {
+    const { data, error, response } = await api.GET("/leads/{id}", {
+      params: { path: { id } },
+      signal,
+    });
+    if (error) return unnamedOrThrow(error, response);
+    return {
+      name: leadIdentityName(data) || null,
+      archived: Boolean(data.archived_at),
+    };
+  },
+  project: async (id, signal) => {
+    const { data, error, response } = await api.GET("/projects/{id}", {
+      params: { path: { id } },
+      signal,
+    });
+    if (error) return unnamedOrThrow(error, response);
+    return { name: data.name ?? null, archived: Boolean(data.archived_at) };
+  },
+  deal: async (id, signal) => {
+    const { data, error, response } = await api.GET("/deals/{id}", {
+      params: { path: { id } },
+      signal,
+    });
+    if (error) return unnamedOrThrow(error, response);
+    return { name: data.name ?? null, archived: Boolean(data.archived_at) };
+  },
+};
 
 export function fetchEntityName(
   kind: EntityKind,
   id: string,
 ): Promise<string | null> {
-  return NAME_READERS[kind](id);
+  return NAME_READERS[kind](id).then((reference) => reference?.name ?? null);
+}
+
+export async function fetchEntityReference(
+  kind: EntityKind,
+  id: string,
+  signal: AbortSignal,
+): Promise<EntityReference | null> {
+  signal.throwIfAborted();
+  const reference = await NAME_READERS[kind](id, signal);
+  signal.throwIfAborted();
+  return reference;
 }
 
 /**

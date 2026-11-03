@@ -142,6 +142,32 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 	if value := q.Get("close_window"); value != "" {
 		selection.CloseWindow = crmcontracts.ReportingSelectionCloseWindow(value)
 	}
+	if value := q.Get("product_id"); value != "" {
+		id, err := ids.Parse(value)
+		if err != nil {
+			return selection, invalid("choose a valid product")
+		}
+		wire := openapi_types.UUID(id)
+		selection.ProductId = &wire
+	}
+	if value := q.Get("initiative_id"); value != "" {
+		id, err := ids.Parse(value)
+		if err != nil {
+			return selection, invalid("choose a valid sales initiative")
+		}
+		wire := openapi_types.UUID(id)
+		selection.InitiativeId = &wire
+	}
+	if value := q.Get("country"); value != "" {
+		selection.Country = &value
+	}
+	if value := q.Get("industry"); value != "" {
+		selection.Industry = &value
+	}
+	if value := q.Get("value_basis"); value != "" {
+		basis := crmcontracts.ReportingValueBasis(value)
+		selection.ValueBasis = &basis
+	}
 	if q.Has("start_at") || q.Has("end_at") {
 		start, err := time.Parse(time.RFC3339Nano, q.Get("start_at"))
 		if err != nil {

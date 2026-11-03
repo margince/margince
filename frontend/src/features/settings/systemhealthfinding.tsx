@@ -21,6 +21,7 @@ import { healthScope, useHealthScope } from "../../lib/healthscope";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { jobKindNameKey } from "./jobkinds";
+import { MailReviewRequests } from "./mailreviewrequests";
 import {
   healthCodes,
   healthMeasures,
@@ -39,13 +40,26 @@ export function FindingPanel({
   finding,
   related,
   detail = false,
-}: Readonly<{ finding: Finding; related?: Finding[]; detail?: boolean }>) {
+  lead = false,
+}: Readonly<{
+  finding: Finding;
+  related?: Finding[];
+  detail?: boolean;
+  lead?: boolean;
+}>) {
   const t = useT();
   const findings = related ?? [finding];
   const leading =
     findings.find((entry) => healthTone(entry) === "danger") ?? finding;
   return (
     <Panel
+      tone={
+        lead
+          ? healthTone(leading) === "danger"
+            ? "danger"
+            : "warning"
+          : undefined
+      }
       title={
         related
           ? t(healthSourceLabels[finding.source] ?? "health.unknown")
@@ -69,24 +83,33 @@ export function FindingPanel({
             .some(
               (previous) =>
                 findingEffectKey(previous) === findingEffectKey(entry),
-            ) && (
-            <p>
-              <strong>{t("health.effectUntilFixed")}</strong>{" "}
-              {t(findingEffectKey(entry))}
-            </p>
-          )}
-          {detail ? (
-            <FindingFacts finding={entry} />
-          ) : (
-            <Disclosure summary={t("health.evidenceDetails")}>
-              <FindingFacts finding={entry} />
-            </Disclosure>
-          )}
+            ) && <p>{t(findingEffectKey(entry))}</p>}
         </PanelBody>
       ))}
       <PanelBody>
-        <p>{t(findingNextStepKey(finding))}</p>
+        {![
+          "capture_uncertain",
+          "capture_owner_review",
+          "capture_thread_uncertain",
+        ].includes(finding.code) && <p>{t(findingNextStepKey(finding))}</p>}
         <FindingActions finding={finding} detail={detail} grouped={!!related} />
+        {detail ? (
+          findings.map((entry) => (
+            <div key={entry.id}>
+              <FindingFacts finding={entry} />
+              <FindingReport finding={entry} />
+            </div>
+          ))
+        ) : (
+          <Disclosure summary={t("health.evidenceDetails")}>
+            {findings.map((entry) => (
+              <div key={entry.id}>
+                <FindingFacts finding={entry} />
+                <FindingReport finding={entry} />
+              </div>
+            ))}
+          </Disclosure>
+        )}
       </PanelBody>
     </Panel>
   );
@@ -112,7 +135,7 @@ function FindingStatus({ finding }: Readonly<{ finding: Finding }>) {
   const t = useT();
   const tone = healthTone(finding);
   return (
-    <Badge tone={tone}>
+    <Badge tone={tone} variant="primary">
       {t(
         finding.code === "queue_unverified"
           ? "health.failedRunsReview"
@@ -129,6 +152,65 @@ function FindingActions({
   detail,
   grouped,
 }: Readonly<{ finding: Finding; detail: boolean; grouped: boolean }>) {
+  const t = useT();
+  const client = useQueryClient();
+  const destination = finding.action.destination;
+  const params = new Map([
+    ["section", healthSectionForSource(finding.source) ?? ""],
+    ["finding", grouped ? "" : finding.id],
+    ["state", finding.code === "queue_unverified" ? "discarded" : ""],
+    [
+      "kind",
+      finding.job_kinds?.length === 1 ? (finding.job_kinds[0] ?? "") : "",
+    ],
+  ]);
+  const go = () => {
+    client.invalidateQueries({ queryKey: ["system-health"] });
+    if (destination === "models" || destination === "connections")
+      navigate(settingsHref(destination));
+    else
+      navigate(
+        {
+          ...settingsHref("system-health"),
+          id2:
+            destination === "configuration" ? "configuration" : "diagnostics",
+        },
+        params,
+      );
+  };
+  if (detail) return null;
+  if (
+    [
+      "capture_uncertain",
+      "capture_owner_review",
+      "capture_thread_uncertain",
+    ].includes(finding.code)
+  ) {
+    return (
+      <ActionRow>
+        <MailReviewRequests
+          primary
+          review={
+            finding.code === "capture_thread_uncertain" ? "held" : "senders"
+          }
+        />
+      </ActionRow>
+    );
+  }
+  return (
+    <ActionRow>
+      <Button
+        variant="primary"
+        onClick={go}
+        disabled={!finding.action.available}
+      >
+        {t(findingActionLabel(finding))}
+      </Button>
+    </ActionRow>
+  );
+}
+
+function FindingReport({ finding }: Readonly<{ finding: Finding }>) {
   const t = useT();
   const client = useQueryClient();
   const scope = useHealthScope();
@@ -154,42 +236,11 @@ function FindingActions({
       failureTitle: t("health.reportCopyFailed"),
     },
   );
-  const destination = finding.action.destination;
-  const params = new Map([
-    ["section", healthSectionForSource(finding.source) ?? ""],
-    ["finding", grouped ? "" : finding.id],
-    ["state", finding.code === "queue_unverified" ? "discarded" : ""],
-    [
-      "kind",
-      finding.job_kinds?.length === 1 ? (finding.job_kinds[0] ?? "") : "",
-    ],
-  ]);
-  const go = () => {
-    client.invalidateQueries({ queryKey: ["system-health"] });
-    if (destination === "models" || destination === "connections")
-      navigate(settingsHref(destination));
-    else
-      navigate(
-        {
-          ...settingsHref("system-health"),
-          id2:
-            destination === "configuration" ? "configuration" : "diagnostics",
-        },
-        params,
-      );
-  };
   return (
     <>
-      <ActionRow>
-        {!detail && (
-          <Button onClick={go} disabled={!finding.action.available}>
-            {t(destinationLabels[destination] ?? findingActionLabel(finding))}
-          </Button>
-        )}
-        <Button pending={copy.pending} onClick={copy.copy}>
-          {copy.label}
-        </Button>
-      </ActionRow>
+      <Button variant="link" pending={copy.pending} onClick={copy.copy}>
+        {copy.label}
+      </Button>
       {copy.notice}
       {copy.notice && copy.preparedText && (
         <CopyableText text={copy.preparedText} label={t("health.copy")} />
@@ -199,6 +250,9 @@ function FindingActions({
 }
 
 function findingActionLabel(finding: Finding): MessageKey {
+  if (finding.action.destination === "models") return "health.openModels";
+  if (finding.action.destination === "connections")
+    return "health.openConnections";
   if (finding.source === "jobs")
     return finding.code === "queue_unverified"
       ? "health.inspectRuns"
@@ -208,12 +262,6 @@ function findingActionLabel(finding: Finding): MessageKey {
   return "health.inspect";
 }
 
-const destinationLabels: Readonly<
-  Record<string, "health.openModels" | "health.openConnections">
-> = {
-  models: "health.openModels",
-  connections: "health.openConnections",
-};
 function findingTitle(finding: Finding, t: Translator) {
   const kindKey =
     finding.job_kinds?.length === 1

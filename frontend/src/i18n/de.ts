@@ -812,6 +812,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt einen Kontakt mit den angezeigten Angaben.",
   "approval.preview.promotionFill":
     "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
+  "approval.preview.promotionExistingDeal": "Bestehender Deal",
+  "approval.preview.promotionExistingDealEffect":
+    "Fügt den Kontakt als Beteiligten zum angezeigten bestehenden Deal hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionDeal":
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionFillIndustry":
@@ -924,7 +927,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.closedOn": "Abgeschlossen am",
   "reporting.meetingOn": "Termindatum",
   "reporting.acceptedOn": "Angenommen am",
-  "reporting.record": "Eintrag",
+  "reporting.memberRecord": "Eintrag",
   "reporting.dealValue": "Deal-Wert",
   "reporting.createdOn": "Erstellt am",
   "reporting.movedOn": "Status geändert am",
@@ -1057,6 +1060,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Snapshot ist geplant und wird hier angezeigt, sobald er fertig ist.",
   "reporting.createReport": "Aus Performance erstellen",
   "reporting.newCustomReport": "Neuer eigener Bericht",
+  "reporting.previewReport": "Vorschau anzeigen",
+  "reporting.unsavedPreview": "Nicht gespeicherte Vorschau",
+  "reporting.assessmentCard": "Einschätzung",
+  "reporting.assessmentDeterministic":
+    "Aus den Zahlen dieses Berichts geschrieben. Nur gemessene Zahlen werden genannt.",
+  "reporting.useExample": "Beispiel verwenden",
+  "reporting.exampleQuestion":
+    "Margince-Umsatz in Deutschland in diesem Quartal: Buchungen, Lead-Konversion und offene Pipeline nach Land.",
+  "reporting.whatToUnderstand": "Was möchtest du verstehen?",
+  "reporting.customBuilderPurpose":
+    "Ein Bericht: die Auswahl, die Diagramme in ihrer Reihenfolge und eine eigene Frage. Nichts wird gespeichert, bis du die Vorschau speicherst.",
+  "reporting.reportingSelection": "Berichtsauswahl",
+  "reporting.includeAssessment": "Einschätzung aufnehmen",
+  "reporting.customQuestion": "Eigene Frage",
+  "reporting.customQuestionHint":
+    "Eine gruppierte Tabelle der offenen Deals unter derselben Auswahl.",
+  "reporting.measure": "Messgröße",
+  "reporting.groupBy": "Gruppieren nach",
+  "reporting.dealCount": "Anzahl offener Deals",
+  "reporting.openValueBase": "Offener Wert, umgerechnet",
+  "reporting.addQuestionCard": "Diese Frage hinzufügen",
+  "reporting.askQuestion": "Frage stellen",
+  "reporting.noPreview":
+    "Es wird gerade keine Vorschau angezeigt. Beginne einen Bericht unter Berichte.",
+  "reporting.backToReports": "Zurück zu Berichte",
   "reporting.stageAmountDeals_one": "{amount} · {count} bepreister Deal",
   "reporting.stageAmountDeals_other": "{amount} · {count} bepreiste Deals",
   "reporting.stageDeals": "Bepreiste Deals",
@@ -1253,6 +1281,114 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
+  "reporting.pickDone": "Fertig",
+  "analytics.overview.chipInitiative": "Initiative: {name}",
+  "analytics.overview.profileInitiative": "Vertriebsinitiative",
+  "reporting.initiative": "Vertriebsinitiative",
+  "reporting.allInitiatives": "Alle Initiativen",
+  "reporting.initiativeUnnamed": "Gewählte Initiative",
+  "reporting.initiatives": "Vertriebsinitiativen",
+  "reporting.initiativesPurpose":
+    "Eine Initiative ergänzt denselben Bericht um ein Ziel, zugehörige Datensätze und eine Ausgangsbasis beim Start.",
+  "reporting.newInitiative": "Neue Vertriebsinitiative",
+  "reporting.noInitiatives":
+    "Noch keine Vertriebsinitiativen. Beschreibe ein Vorhaben und wähle, welche Datensätze dazugehören.",
+  "reporting.initiativeStatus.draft": "Entwurf",
+  "reporting.initiativeStatus.live": "Gestartet",
+  "reporting.initiativeStatus.ended": "Beendet",
+  "reporting.trackingOnly": "Nur Beobachtung",
+  "reporting.initiativeTarget": "Ziel {target}",
+  "reporting.initiativeSummary": "{objective} · Frist {deadline}",
+  "reporting.initiativeDrawerPurpose":
+    "Lege zuerst das Ziel fest. Wähle dann, welche Datensätze dazugehören. Bis zum Start wird nichts aufgenommen.",
+  "reporting.initiativeSteps": "Schritte der Einrichtung",
+  "reporting.stepGoal": "Ziel",
+  "reporting.stepMembers": "Zugehörige Datensätze",
+  "reporting.stepReview": "Prüfen und starten",
+  "reporting.initiativeName": "Name der Initiative",
+  "reporting.initiativeNamePlaceholder": "Zum Beispiel: Expansion Fertigung Q4",
+  "reporting.objective": "Hauptziel",
+  "reporting.targetValue": "Zielwert",
+  "reporting.targetHint": "Leer lassen für reine Beobachtung.",
+  "reporting.deadline": "Frist",
+  "reporting.nameDoesNotDecide":
+    "Der Name entscheidet nicht über die Zugehörigkeit. Der nächste Schritt legt die Regel oder die Datensätze fest.",
+  "reporting.chooseIncludedRecords": "Zugehörige Datensätze wählen",
+  "reporting.backToGoal": "Zurück zum Ziel",
+  "reporting.reviewIncludedRecords": "Zugehörige Datensätze prüfen",
+  "reporting.saveMembership": "Zugehörigkeit speichern",
+  "reporting.backToIncludedRecords": "Zurück zu den Datensätzen",
+  "reporting.launchInitiative": "Vertriebsinitiative starten",
+  "reporting.membersPurpose":
+    "Nimm Datensätze auf, die alle gewählten Bedingungen erfüllen, oder wähle sie von Hand. Die Liste unten zeigt, was dazugehört.",
+  "reporting.anyProduct": "Beliebiges Produkt",
+  "reporting.anyIndustry": "Beliebige Branche",
+  "reporting.anyCountry": "Beliebiges Land",
+  "reporting.ruleAnd": "Alle gewählten Bedingungen gelten zugleich.",
+  "reporting.noConditions":
+    "Keine Bedingungen gewählt. Nur von Hand gewählte Datensätze gehören dazu.",
+  "reporting.includeFuture":
+    "Künftig passende Datensätze kommen automatisch dazu",
+  "reporting.pickDeals": "Deals wählen",
+  "reporting.pickLeads": "Leads wählen",
+  "reporting.removePick": "{name} entfernen",
+  "reporting.nonePicked": "Nichts gewählt",
+  "reporting.addRecord": "Hinzufügen",
+  "reporting.searchRecords": "Datensätze suchen",
+  "reporting.noMatchingRecords": "Keine passenden Datensätze",
+  "reporting.pickExplains":
+    "Ein gewählter Deal nimmt nicht jeden Kontakt seines Unternehmens auf. Ein Lead behält seine Umwandlungshistorie.",
+  "reporting.memberCounts":
+    "{leads} Leads · {deals} Deals · {companies} zugehörige Unternehmen",
+  "reporting.membersTruncated":
+    "Die Regel trifft mehr Datensätze, als eine Abfrage auflistet.",
+  "reporting.membersPending": "Die passenden Datensätze werden gelesen.",
+  "reporting.saveGoalFirst":
+    "Speichere das Ziel, um die passenden Datensätze zu sehen.",
+  "reporting.include": "Aufnehmen",
+  "reporting.includeRecord": "{name} aufnehmen",
+  "reporting.record": "Datensatz",
+  "reporting.recordType.lead": "Lead",
+  "reporting.recordType.deal": "Deal",
+  "reporting.whyIncluded": "Warum dazugehörig",
+  "reporting.memberReason.rule": "Erfüllt die Regel",
+  "reporting.memberReason.picked": "Von Hand gewählt",
+  "reporting.memberReason.carried": "Aus einem zugehörigen Lead umgewandelt",
+  "reporting.memberReason.excluded": "Ausgeschlossen",
+  "reporting.trackingOnlyVerdict": "Nur Beobachtung · keine Zielbewertung",
+  "reporting.targetBy": "{target} bis {deadline}",
+  "reporting.knownDealValue": "{value} bekannter Dealwert, alle Status",
+  "reporting.baselineNote":
+    "Deals, die beim Start bestehen, bilden die Ausgangsbasis. Dass sie dabei sind, macht sie nicht zu neu gewonnener Pipeline.",
+  "reporting.futureJoins":
+    "Neue Datensätze, die die Regel erfüllen, kommen automatisch dazu.",
+  "reporting.futureStays":
+    "Die Zugehörigkeit ist ausdrücklich gewählt. Aus zugehörigen Leads umgewandelte Deals gehen trotzdem mit.",
+  "reporting.reviewAfterLaunch": "Nach dem Start öffnet sich die Übersicht für",
+  "reporting.includedRecords": "Zugehörige Datensätze",
+  "reporting.initiativeSince": "Seit dem Start am {launch} · Frist {deadline}",
+  "reporting.initiativeDraftNotice":
+    "Diese Initiative ist ein Entwurf. Starte sie unter Berichte, um ihre Ausgangsbasis einzufrieren.",
+  "reporting.objectiveOfTarget": "{value} von {target}",
+  "reporting.objectiveProgress": "{share} des Ziels",
+  "reporting.noTargetForSlice":
+    "Kein Ziel für diesen Ausschnitt. Die Ergebnisse bleiben, die Zielerreichung wird nicht verglichen.",
+  "reporting.product": "Produkt",
+  "reporting.allProducts": "Alle Produkte",
+  "reporting.productUnnamed": "Gewähltes Produkt",
+  "reporting.country": "Land · Unternehmensadresse",
+  "reporting.allCountries": "Alle Länder",
+  "reporting.industry": "Branche",
+  "reporting.allIndustries": "Alle Branchen",
+  "reporting.valueBasis": "Wertbasis",
+  "reporting.basis.all": "Gesamter Wert",
+  "reporting.basis.software": "Nur Software",
+  "reporting.basis.implementation": "Nur Umsetzung",
+  "reporting.productReports": "Produktumsatz",
+  "reporting.productReportsPurpose":
+    "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
+  "reporting.noProducts":
+    "Noch keine aktiven Produkte. Lege Produkte in den Einstellungen an, um darüber zu berichten.",
   "reporting.actualsThrough": "Ist-Werte bis {at}",
   "reporting.periodNotStarted":
     "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
@@ -1671,6 +1807,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der gespeicherte Kalender ist nicht verfügbar. Wähle einen anderen Kalender, bevor du Buchungen aktivierst.",
   "scheduling.providerChanged":
     "Dein gespeicherter Kalenderanbieter ist nicht verfügbar. Beim Speichern wird der hier angezeigte verbundene Kalender verwendet.",
+  "scheduling.savedCalendarUnreadable":
+    "Ein gespeicherter Kalender konnte nicht gelesen werden, deshalb werden keine Zeiten angeboten. Wähle deine Kalender hier neu.",
+  "scheduling.calendarUnreadable":
+    "Dein Kalender „{name}“ konnte nicht gelesen werden, deshalb werden keine Zeiten angeboten. Behebe das in deiner Kalender-App oder entferne ihn hier.",
   "scheduling.calendarUnavailable":
     "Der Kalender der organisierenden Person konnte nicht gelesen werden, deshalb wurde nichts angeboten oder geändert. Die organisierende Person kann den in den Termineinstellungen gewählten Kalender prüfen.",
   "scheduling.windowHorizon":
@@ -1812,6 +1952,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
   "scheduling.noTimesMonth":
     "In diesem Monat sind keine Zeiten frei. Wähle den nächsten Monat.",
+  "conversationSuggestions.title":
+    "In dieser Unterhaltung, noch nicht in Margince",
+  "conversationSuggestions.add": "Als Kontakt hinzufügen",
+  "conversationSuggestions.limited":
+    "Ältere Nachrichten können weitere E-Mail-Adressen enthalten.",
   "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
   "contact.meetings.join": "Mit {app} teilnehmen",
   "contact.meetings.joinCall": "Am Videoanruf teilnehmen",
@@ -2614,7 +2759,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
-  "shell.beta": "Beta",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.back": "Zurück",
@@ -2629,6 +2773,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
   "shell.theme": "Design",
+  "shell.helpMenu": "Hilfe und Feedback",
+  "shell.help.report": "Problem melden",
+  "shell.help.request": "Funktion vorschlagen",
+  "shell.help.resources": "Hilfe und Ressourcen",
+  "shell.help.shortcuts": "Tastenkürzel",
+  "shell.help.releaseNotes": "Versionshinweise",
+  "shell.help.devBuild": "Entwicklungs-Build",
+  "shell.shortcuts.anywhere": "Überall",
+  "shell.shortcuts.search": "Suche öffnen",
+  "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",
+  "shell.shortcuts.dismiss": "Dialog oder Menü schließen",
+  "shell.shortcuts.editing": "Bearbeiten",
+  "shell.shortcuts.paragraphSave": "Mehrzeiliges Feld speichern",
+  "shell.shortcuts.deckHint":
+    "Auf Home merken die Pfeiltasten eine Entscheidung vor. Enter sendet, was vorgemerkt ist.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
@@ -2653,6 +2812,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
 
+  "search.bestMatch": "Bester Treffer",
   "search.placeholder":
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
@@ -2695,6 +2855,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.aria": "Befehlspalette",
   "palette.placeholder": "Suchen oder Margince fragen",
   "palette.empty": "Keine Treffer.",
+  "palette.recent": "Zuletzt verwendet",
+  "palette.clearRecent": "Leeren",
   "palette.typeScreen": "Ansicht",
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
@@ -2716,6 +2878,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
+  "common.opensNewTab": "(Wird in einem neuen Tab geöffnet)",
   "common.expand": "Vergrößern",
   "common.collapse": "Verkleinern",
   "common.minimize": "Minimieren",
@@ -5219,6 +5382,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Score-Faktoren werden geladen…",
   "lead.scoreNoFactors": "Bisher fließen keine Faktoren in diesen Score ein.",
   "lead.scoreSources": "Aktivitäten: {count}",
+  "lead.scoreSourcesHead": "Aktivitäten hinter diesem Faktor",
+  "lead.scoreSourceNoSubject": "Kein Betreff",
   "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
   "lead.factor.reply": "Lead hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
@@ -5305,7 +5470,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.ladder.byHand": "{label} · manuell",
   "lead.qualify.title": "{name} qualifizieren",
   "lead.qualify.contact": "Kontakt",
-  "lead.qualify.alsoDeal": "Auch einen Deal erstellen",
+  "lead.qualify.withoutDeal": "Ohne Deal qualifizieren",
+  "lead.qualify.dealChoice": "Deal",
+  "lead.qualify.newDeal": "Neuen Deal eröffnen",
+  "lead.qualify.existingDealPicker": "Bestehender Deal",
+  "lead.qualify.unnamedDeal": "Deal ohne Namen",
+  "lead.qualify.existingDeal": "Zu einem bestehenden Deal hinzufügen",
+  "lead.qualify.confirmExisting": "Qualifizieren und zum Deal hinzufügen",
+  "lead.qualify.moreDeals": "Weitere Deals anzeigen",
+  "lead.qualify.dealUnavailable":
+    "Dieser Deal ist nicht mehr verfügbar. Wähle einen anderen Deal oder qualifiziere ohne Deal.",
   "lead.qualify.company": "Unternehmen",
   "lead.qualify.companyUnresolved":
     "Die E-Mail dieses Leads zeigt nicht, welches Unternehmen {company} ist. Darum wird kein Unternehmen von selbst hinzugefügt.",
@@ -6197,14 +6371,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.act": "Als bearbeitet markieren",
   "brief.dismiss": "Ausblenden",
 
-  "brief.glance.morning": "Guten Morgen, {name}.",
-  "brief.glance.morningAnon": "Guten Morgen.",
-  "brief.glance.afternoon": "Guten Tag, {name}.",
-  "brief.glance.afternoonAnon": "Guten Tag.",
-  "brief.glance.evening": "Guten Abend, {name}.",
-  "brief.glance.eveningAnon": "Guten Abend.",
-  "brief.glance.night": "Noch bei der Arbeit, {name}.",
-  "brief.glance.nightAnon": "Noch bei der Arbeit.",
+  "brief.glance.morning": "Guten Morgen, {name}",
+  "brief.glance.morningAnon": "Guten Morgen",
+  "brief.glance.afternoon": "Guten Tag, {name}",
+  "brief.glance.afternoonAnon": "Guten Tag",
+  "brief.glance.evening": "Guten Abend, {name}",
+  "brief.glance.eveningAnon": "Guten Abend",
+  "brief.glance.night": "Noch bei der Arbeit, {name}",
+  "brief.glance.nightAnon": "Noch bei der Arbeit",
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",
@@ -6515,6 +6689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.draftEmail": "E-Mail entwerfen",
   "task.next.draftIntent": "zu dieser Aufgabe schreiben",
   "task.next.noAddress": "Dieser Kontakt hat keine E-Mail-Adresse.",
+  "task.next.noLeadAddress": "Dieser Lead hat keine E-Mail-Adresse.",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -6699,6 +6874,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus deinem Videokonferenz-Tool einfügen, etwa Teams, Zoom oder Meet. Vorhandene Sprecherangaben bleiben erhalten.",
+  "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
+  "log.recordOfMeetingUntitled": "dem Termin",
+  "log.recordOfMeetingYes":
+    "Ja, beim Termin speichern und als stattgefunden markieren",
+  "log.recordOfMeetingNo": "Nein, einen eigenen Termin erfassen",
+  "log.recordOfMeetingRecorded":
+    "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
+  "log.recordOfMeetingManaged":
+    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
@@ -7200,6 +7384,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.analytics_decision":
+    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
   "tasks.origin.commitment":
@@ -8061,6 +8247,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Nutze {name}, {title}, {phone} und {logo}, das in die E-Mail eingebettete Unternehmenslogo. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
+  "settings.signatureFormat": "Format",
+  "settings.signatureFormatText": "Nur Text",
+  "settings.signatureFormatHtml": "HTML",
+  "settings.signatureHtmlLabel": "HTML-Signatur",
+  "settings.signatureHtmlHintTemplate":
+    "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Externe Bilder und Skripte werden entfernt.",
+  "settings.signatureHtmlHintPlain":
+    "Leere das Feld, um wieder deinen Text zu verwenden. Externe Bilder und Skripte werden entfernt.",
+  "settings.signatureOwnHtml": "Deine HTML-Signatur",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
@@ -11631,6 +11826,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "client.isolation": "Nur mit deinem Unternehmen verbunden",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
 
+  "book.pageTitle": "Termin mit {host} buchen",
+  "book.pageTitleGeneric": "Termin buchen",
+  "book.meetingTitle": "Dein Termin",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",
@@ -13165,6 +13363,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.report_schedule": "Berichtszeitpläne",
   "roles.object.report_edition": "Berichts-Snapshots",
   "roles.object.sales_target": "Vertriebsziele",
+  "roles.object.sales_initiative": "Vertriebsinitiativen",
   "roles.object.reporting_framework": "Berichtseinstellungen",
   "roles.object.reporting_credit": "SDR-Ergebnisse",
   "roles.object.capture_settings": "Capture-Regeln",
@@ -13550,6 +13749,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "product.billingOneTime": "Einmalig",
   "product.billingRecurring": "Wiederkehrend",
   "product.billingInterval": "Abrechnungszeitraum",
+  "product.componentKind": "Art",
+  "product.componentUnset": "Nicht eingeordnet",
+  "product.componentSoftware": "Software",
+  "product.componentImplementation": "Umsetzung",
+  "product.componentOther": "Sonstiges",
   "product.billingNoInterval": "Nicht angegeben",
   "product.billingMonthly": "Monatlich",
   "product.billingQuarterly": "Vierteljährlich",
@@ -14241,13 +14445,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.accountSettings": "Wer E-Mails von {account} sieht",
   "connectors.heldPointer.label": "Zurückgehaltene Threads und Absendeadressen",
   "connectors.heldPointer.some_one":
-    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.some_other":
-    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.none":
-    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.unknown":
-    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.review": "Prüfen",
   "connectors.advanced": "Erweitert",
   "connectors.advancedCount_one": "{count} Einstellung",
@@ -15733,6 +15937,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Hilfe zu einer Zusage angefragt",
   "webhooks.event.weekly_plan.help_requested.when":
     "Ein Teammitglied bittet die Teamleitung um Hilfe bei einer Zusage.",
+  "webhooks.event.sales_initiative.updated.label":
+    "Vertriebsinitiative geändert",
+  "webhooks.event.sales_initiative.updated.when":
+    "Eine Vertriebsinitiative wurde angelegt, bearbeitet, gestartet oder ihre enthaltenen Datensätze wurden geändert.",
   "webhooks.eventGroup.notices_notifications":
     "Hinweise und Benachrichtigungen",
   "webhooks.event.notice.created.label": "Hinweis erfasst",
@@ -16227,7 +16435,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.band.strong": "stark",
   "contact.strength.detail": "Letzter Kontakt {last}",
   "contact.strength.sentence.weakStale":
-    "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
+    "Schwach: es ist schon eine Weile her. Zuletzt hat dein Kontakt dir am {last} geschrieben oder dich getroffen.",
   "contact.strength.sentence.weakFew":
     "Schwach: es gab kürzlich Kontakt, aber in den letzten 90 Tagen wenige Interaktionen.",
   "contact.strength.sentence.weakLopsided":
@@ -16434,6 +16642,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dim.window": "Letzte 90 Tage",
   "contact.standing.dim.reach": "Reichweite",
   "contact.standing.dim.reachNone": "Kein Teammitglied in Kontakt",
+  "contact.standing.dim.reachOneWay": "Kein Kontakt in beide Richtungen",
+  "contact.standing.dim.wroteNoReply": "{names} schrieb, noch keine Antwort",
+  "contact.standing.dim.alsoWrote": "schrieb ebenfalls: {names}",
   "contact.standing.dim.inTouch_one": "{count} Teammitglied in Kontakt",
   "contact.standing.dim.inTouch_other": "{count} Teammitglieder in Kontakt",
   "contact.standing.daysAgo_one": "vor {count} Tag",
@@ -16780,7 +16991,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.amount": "Umgerechneter Betrag",
   "filters.field.city": "Stadt",
   "filters.field.classification": "Klassifizierung",
+  "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
+  "filters.field.product_id": "Produkt",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
   "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",
@@ -16864,6 +17077,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für Filter trägt kein Datensatz ein archiviertes Tag.",
   "filters.sentence.ref.project_one": "{count} Projekt",
   "filters.sentence.ref.project_other": "{count} Projekte",
+  "filters.sentence.ref.product_one": "{count} Produkt",
+  "filters.sentence.ref.product_other": "{count} Produkte",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
@@ -18067,7 +18282,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
-  "worklist.verb.meetingUpdate": "Aktualisieren",
+  "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Terminnotizen",
@@ -18081,7 +18296,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
-  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
+  "worklist.verb.meetingHeldFor": "Stattgefunden: {subject}",
   "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
@@ -18387,7 +18603,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.inactive": "Nicht aktiv",
   "aiProviders.colUsedBy": "Verwendet von",
   "aiProviders.colStatus": "Status",
-  "aiProviders.opensNewTab": "(Wird in einem neuen Tab geöffnet)",
   "aiProviders.inUse": "In Verwendung",
   "aiProviders.unpriced": "{model} ist in Verwendung und hat keinen Preis.",
   "aiProviders.setPrice": "Preis festlegen",
@@ -18887,6 +19102,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
   "scheduling.replaceAddress": "Adresse ersetzen",
+  "scheduling.alias.label": "Kurzadresse",
+  "scheduling.alias.help":
+    "Optional. Eine Kurzadresse wie /book/alex lässt sich leicht teilen und leicht erraten. Wer sie errät, sieht deine Buchungsseite und deine freien Zeiten. Deine lange Adresse funktioniert weiter.",
+  "scheduling.alias.preview": "Dein Link endet dann auf {path}",
+  "scheduling.alias.save": "Adresse speichern",
+  "scheduling.alias.clear": "Kurzadresse entfernen",
+  "scheduling.alias.changeTitle": "Kurzadresse ändern?",
+  "scheduling.alias.clearTitle": "Kurzadresse entfernen?",
+  "scheduling.alias.changeHelp":
+    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. Niemand sonst kann sie je übernehmen, und du kannst sie jederzeit zurückholen.",
+  "scheduling.alias.error.too_short": "Verwende mindestens 3 Zeichen.",
+  "scheduling.alias.error.too_long": "Verwende höchstens 30 Zeichen.",
+  "scheduling.alias.error.invalid":
+    "Verwende Buchstaben, Ziffern und Bindestriche. Beginne und ende mit einem Buchstaben oder einer Ziffer.",
+  "scheduling.alias.error.reserved":
+    "Diese Adresse ist reserviert. Wähle eine andere.",
+  "scheduling.alias.error.taken":
+    "Eine andere Buchungsseite nutzt diese Adresse oder hat sie genutzt. Wähle eine andere.",
+  "scheduling.alias.error.no_booking_link":
+    "Erstelle zuerst deinen Buchungslink.",
+  "scheduling.replaceAliasHelp":
+    "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
@@ -19690,9 +19927,41 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
   "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
+  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.purpose":
+    "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
+  "analytics.decisions.record": "Entscheidung festhalten",
+  "analytics.decisions.review": "Entscheidungen prüfen",
+  "analytics.decisions.none": "Noch keine Entscheidung festgehalten.",
+  "analytics.decisions.decision": "Entscheidung",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Verantwortlich",
+  "analytics.decisions.reviewOn": "Prüfen am",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Erledigt",
+  "analytics.decisions.open": "Offen",
+  "analytics.decisions.recordOutcome": "Ergebnis festhalten",
+  "analytics.decisions.resultLine": "Ergebnis: {result}",
+  "analytics.decisions.chooseDeal": "Deal wählen",
+  "analytics.decisions.chooseOwner": "Verantwortlichen wählen",
+  "analytics.decisions.expected": "Erwartetes Ergebnis",
+  "analytics.decisions.recordNote":
+    "Dieselbe offene Entscheidung am selben Deal ein zweites Mal festzuhalten gibt diese Aufgabe zurück.",
+  "analytics.decisions.confirm": "Festhalten",
+  "analytics.decisions.whatWasDone": "Welche Arbeit wurde erledigt?",
+  "analytics.decisions.outcomeNote":
+    "Erledigte Arbeit qualifiziert oder gewinnt den Deal nicht.",
+  "analytics.decisions.saveOutcome": "Ergebnis speichern",
   "analytics.overview.filtersToggle": "Filter",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Abschluss: {window}",
+  "analytics.overview.chipProduct": "Produkt: {name}",
+  "analytics.overview.chipCountry": "Land: {name}",
+  "analytics.overview.chipIndustry": "Branche: {name}",
+  "analytics.overview.chipBasis": "Wert: {basis}",
+  "analytics.overview.profileCompany": "Unternehmensumsatz",
+  "analytics.overview.profileProduct": "Produktumsatz",
+  "analytics.overview.removeFilter": "{filter} entfernen",
   "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
   "analytics.overview.coverageNotCompared":
     "Der Hinweis unter dem gewonnenen Umsatz sagt, warum",
@@ -19764,6 +20033,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "1 von {count} Problemen angezeigt",
   "health.showAllFindings": "Alle Probleme anzeigen",
   "health.jobDelayed": "{kind}: verzögert",
+  "health.checkNumbers": "Prüfzahlen anzeigen",
+  "health.checkResults": "Prüfergebnisse",
+  "health.checksFailed": "Fehlgeschlagene Prüfungen",
+  "health.checksReview": "Entscheidung nötig",
+  "health.checksPassing": "Erfolgreiche Prüfungen",
+  "health.checksPending": "Ergebnis ausstehend",
+  "health.askOwner": "Postfachinhaber fragen",
+  "health.mailReviewOwners": "Postfachentscheidungen",
+  "health.reviewOwnersIntro":
+    "Prüfe deine Auswahl oder kopiere eine Prüfbitte für ein anderes Postfach.",
+  "health.ownerReviewEmpty": "Keine Postfachentscheidungen stehen aus.",
+  "health.copyReviewRequest": "Prüfbitte kopieren",
+  "health.copyReviewRequestFor": "Prüfbitte für {name} kopieren",
+  "health.reviewSenderRequest":
+    "{name}, öffne Worklist → Entscheidungen und nimm die vorgeschlagenen Kontakte an oder lehne sie ab: {url}",
+  "health.reviewThreadRequest":
+    "{name}, prüfe die zurückgehaltenen Gespräche deines Postfachs: {url}",
+  "health.ownerNameUnknown": "Postfachinhaber",
+  "health.ownerReviewUnavailable":
+    "Prüfe deine E-Mails oder kopiere eine Prüfbitte für das betroffene Postfach.",
+  "health.openMyReviews": "Meine Auswahl prüfen",
+  "health.copyRequestRemedy": "Markiere und kopiere die Prüfbitte unten.",
+  "health.senderReviewCount_one": "{count} Absenderentscheidung offen",
+  "health.senderReviewCount_other": "{count} Absenderentscheidungen offen",
+  "health.threadReviewCount_one": "{count} Gespräch wartet",
+  "health.threadReviewCount_other": "{count} Gespräche warten",
   "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",
   "health.diagnostics": "Diagnose",
@@ -19776,16 +20071,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sende den Fehlerbericht an den Systembetreiber. Er soll den Abschluss prüfen, die Ursache beheben und nur offene Arbeit neu starten; diese fehlgeschlagenen Läufe starten nicht automatisch neu.",
   "health.readFailedNext":
     "Aktualisiere diese Prüfung. Falls sie weiter fehlschlägt, sende den technischen Bericht an den Systembetreiber.",
-  "health.jobStopped": "{kind}: fehlgeschlagene Läufe prüfen",
-  "health.effectUntilFixed": "Bis zur Behebung:",
+  "health.jobStopped": "{kind}: fehlgeschlagene Läufe",
   "health.effect.mailSorting":
     "In der Worklist können E-Mails fehlen oder falsch eingeordnet sein, die eine Antwort oder eine Terminabsprache brauchen. Prüfe deinen Posteingang selbst, bis die Sortierung aufgeholt hat. Du kannst weiterhin E-Mails empfangen und lesen.",
   "health.effect.jobs":
     "Die aufgeführten Hintergrundaufgaben können unvollständig bleiben. Die Zahl fehlgeschlagener Läufe zählt weder fehlende Datensätze noch betroffene Teammitglieder; der Betreiber muss die Aufgaben prüfen.",
   "health.effect.senderReview":
-    "Neue Geschäftskontakte werden möglicherweise nicht angelegt und zugehörige E-Mails bleiben für Teammitglieder unzugänglich, bis die Absenderentscheidung geklärt ist.",
+    "Neue Kontakte und ihre E-Mails fehlen möglicherweise unter Kontakte.",
   "health.effect.heldMail":
-    "Die betroffenen Gespräche bleiben für Teammitglieder verborgen, die nicht an der E-Mail beteiligt waren, bis die Vertraulichkeitsprüfung geklärt ist.",
+    "Diese Gespräche sind im Team erst nach der Freigabe sichtbar.",
   "health.effect.unreadMail":
     "E-Mails aus dem gemeldeten Zeitraum fehlen möglicherweise im CRM. Spätere E-Mails können weiter ankommen; stelle den Zeitraum wieder her, bevor du dem Verlauf vertraust.",
   "health.effect.captureRepair":
@@ -19821,7 +20115,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.measure.items_one": "{count} Element",
   "health.measure.items_other": "{count} Elemente",
   "health.checked": "Keine Aktion nötig",
-  "health.incomplete": "Systemzustand konnte nicht vollständig geprüft werden",
+  "health.refreshNeeded": "Aktualisierung nötig",
+  "health.unreadNext":
+    "Öffne Verbindungen, prüfe dieses Postfach und verbinde es bei Bedarf erneut.",
+  "health.incomplete": "Für einige Prüfungen fehlt ein Ergebnis",
   "health.refresh": "Aktualisieren",
   "health.prioritiesChanged":
     "Die Prioritäten haben sich geändert. Aktualisieren, um die neue Reihenfolge zu übernehmen.",
@@ -19880,7 +20177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
   "health.ownerHandoff":
-    "Eigene Mail-Entscheidungen unter Verbindungen prüfen. Bei anderen Postfächern die Zuständigen bitten; private Nachrichten sind nur für sie sichtbar.",
+    "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Capture-Aktivität geprüft.",
   "health.operatorHandoff":
     "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
   "health.copy": "Technischen Bericht kopieren",
@@ -19915,14 +20212,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.queue_expectation_unknown":
     "Arbeit ist ausführbar; eine erwartete Wartezeit ist nicht festgelegt",
   "health.code.capture_checked":
-    "Kein Erfassungsrückstand in den geprüften Kategorien erkannt",
+    "In den geprüften Kategorien ist keine Aktion zur Erfassung nötig",
   "health.code.capture_processing": "Absendeadressen werden eingeordnet",
-  "health.code.capture_uncertain":
-    "Festlegen, wessen Nachrichten ins CRM gehören",
+  "health.code.capture_uncertain": "Kontaktvorschläge prüfen",
   "health.code.capture_exhausted":
     "Automatische Versuche der Absendereinordnung sind ausgeschöpft",
-  "health.code.capture_owner_review":
-    "Für das Postfach steht eine Mail-Entscheidung aus",
+  "health.code.capture_owner_review": "Postfachentscheidungen prüfen",
   "health.code.capture_unread":
     "Ungelesene Postfachzeiträume brauchen einen Wiederherstellungsnachweis",
   "health.code.capture_held":
@@ -19962,8 +20257,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
-  "health.code.capture_thread_uncertain":
-    "Festlegen, welche Gespräche für das Team sichtbar sind",
+  "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
     "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
 

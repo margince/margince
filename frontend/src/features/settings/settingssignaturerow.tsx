@@ -7,6 +7,7 @@ import {
   Button,
   Field,
   Modal,
+  SegmentedControl,
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
@@ -19,14 +20,17 @@ import { unwrap } from "../../lib/problem";
 import { useSignOff } from "../mail/composesignoff";
 import { useSaveSignature } from "./settingssignature";
 
-type Draft = { body: string; title: string; phone: string };
+type Format = "text" | "html";
+const FORMATS: readonly Format[] = ["text", "html"];
+type Draft = {
+  body: string;
+  title: string;
+  phone: string;
+  html: string;
+  format: Format;
+};
 
-// The sign-off appended below every message this member sends, as one row.
-//
-// It lives beside identity rather than under the composer: it describes the
-// sender, not one mail. When the workspace has a
-// signature template, the member fills in their title and phone and the
-// template signs their mail. Otherwise they write their own plain text.
+// Personal HTML takes precedence over the company template and plain text.
 export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const titleId = useId();
@@ -44,7 +48,13 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
     // Hand the edit back to the server's answer: it trims what it stores.
     setDraft(
       saved
-        ? { body: saved.body, title: saved.title, phone: saved.phone }
+        ? {
+            body: saved.body,
+            title: saved.title,
+            phone: saved.phone,
+            html: saved.html,
+            format: saved.html ? "html" : "text",
+          }
         : null,
     );
     setOpen(false);
@@ -55,28 +65,35 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
     body: signature.data?.body ?? "",
     title: signature.data?.title ?? "",
     phone: signature.data?.phone ?? "",
+    html: signature.data?.html ?? "",
+    format: signature.data?.html ? "html" : "text",
   };
   // The saved value until the member types; theirs from then on.
   const shown = draft ?? stored;
   const dirty =
     shown.body !== stored.body ||
     shown.title !== stored.title ||
-    shown.phone !== stored.phone;
+    shown.phone !== stored.phone ||
+    (shown.format === "html" ? shown.html : "") !== stored.html;
   useUnsavedGuard(open && dirty);
-  // The preview shows the title and phone as typed, before they are saved.
-  const rendered = useSignOff(
-    "",
-    "",
-    draft === null ? undefined : { title: draft.title, phone: draft.phone },
-  ).signOff;
-  const change = (field: keyof Draft, value: string) =>
+  // Preview uses the same draft fields the save submits.
+  const rendered = useSignOff("", "", {
+    title: shown.title,
+    phone: shown.phone,
+    html: shown.format === "html" ? shown.html : "",
+  }).signOff;
+  const change = (field: Exclude<keyof Draft, "format">, value: string) =>
     setDraft({ ...shown, [field]: value });
 
   const answer = signature.isPending
     ? undefined
-    : rowAnswer(t, templated, stored.body);
+    : stored.html
+      ? t("settings.signatureOwnHtml")
+      : rowAnswer(t, templated, stored.body);
 
-  const close = () => setOpen(false);
+  const close = () => {
+    if (!save.isPending) setOpen(false);
+  };
   const edit = () => {
     setDraft(null);
     save.reset();
@@ -90,7 +107,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         description={t("settings.signatureSub")}
         value={answer}
         control={
-          <Button variant="ghost" onClick={edit}>
+          <Button variant="ghost" onClick={edit} disabled={save.isPending}>
             {t("settings.signatureEdit")}
           </Button>
         }
@@ -100,7 +117,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         onClose={close}
         labelledBy={titleId}
         intent="form"
-        unsaved={dirty}
+        unsaved={dirty && !save.isPending}
       >
         <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("settings.signature")}
@@ -111,57 +128,38 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (dirty && !save.isPending) save.mutate(shown);
+            if (dirty && !save.isPending)
+              save.mutate({
+                body: shown.body,
+                title: shown.title,
+                phone: shown.phone,
+                html: shown.format === "html" ? shown.html : "",
+              });
           }}
         >
           <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          {templated ? (
-            <>
-              <p className="t-caption">{t("settings.signatureTemplateHint")}</p>
-              <Field label={t("settings.signatureTitle")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={shown.title}
-                    onChange={(event) => change("title", event.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={t("settings.signaturePhone")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    value={shown.phone}
-                    onChange={(event) => change("phone", event.target.value)}
-                  />
-                )}
-              </Field>
-              {rendered?.html ? (
-                <SignatureHtml
-                  html={rendered.html}
-                  title={t("settings.signaturePreview")}
-                />
-              ) : null}
-            </>
-          ) : (
-            <>
-              <Field label={t("settings.signatureLabel")}>
-                {(control) => (
-                  <Textarea
-                    {...control}
-                    rows={5}
-                    value={shown.body}
-                    placeholder={t("settings.signaturePlaceholder")}
-                    onChange={(event) => change("body", event.target.value)}
-                  />
-                )}
-              </Field>
-              <p className="t-caption">{t("settings.signatureHint")}</p>
-            </>
-          )}
+          <SegmentedControl
+            options={FORMATS}
+            value={shown.format}
+            onChange={(format) => {
+              if (!save.isPending) setDraft({ ...shown, format });
+            }}
+            labels={{
+              text: t("settings.signatureFormatText"),
+              html: t("settings.signatureFormatHtml"),
+            }}
+            label={t("settings.signatureFormat")}
+          />
+          <SignatureFields
+            shown={shown}
+            templated={templated}
+            rendered={rendered}
+            disabled={save.isPending}
+            change={change}
+          />
         </form>
         <div className="actions">
-          <Button variant="ghost" onClick={close}>
+          <Button variant="ghost" onClick={close} disabled={save.isPending}>
             {t("settings.signatureCancel")}
           </Button>
           <Button
@@ -176,6 +174,100 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           </Button>
         </div>
       </Modal>
+    </>
+  );
+}
+
+function SignatureFields({
+  shown,
+  templated,
+  rendered,
+  change,
+  disabled,
+}: Readonly<{
+  shown: Draft;
+  templated: boolean;
+  disabled: boolean;
+  rendered: ReturnType<typeof useSignOff>["signOff"];
+  change: (field: Exclude<keyof Draft, "format">, value: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {shown.format === "html" ? (
+        <>
+          <Field label={t("settings.signatureHtmlLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                disabled={disabled}
+                rows={8}
+                value={shown.html}
+                onChange={(event) => change("html", event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption">
+            {t(
+              templated
+                ? "settings.signatureHtmlHintTemplate"
+                : "settings.signatureHtmlHintPlain",
+            )}
+          </p>
+          {rendered?.html ? (
+            <SignatureHtml
+              html={rendered.html}
+              title={t("settings.signaturePreview")}
+            />
+          ) : null}
+        </>
+      ) : templated ? (
+        <>
+          <p className="t-caption">{t("settings.signatureTemplateHint")}</p>
+          <Field label={t("settings.signatureTitle")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                disabled={disabled}
+                value={shown.title}
+                onChange={(event) => change("title", event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("settings.signaturePhone")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                disabled={disabled}
+                value={shown.phone}
+                onChange={(event) => change("phone", event.target.value)}
+              />
+            )}
+          </Field>
+          {rendered?.html ? (
+            <SignatureHtml
+              html={rendered.html}
+              title={t("settings.signaturePreview")}
+            />
+          ) : null}
+        </>
+      ) : (
+        <>
+          <Field label={t("settings.signatureLabel")}>
+            {(control) => (
+              <Textarea
+                {...control}
+                disabled={disabled}
+                rows={5}
+                value={shown.body}
+                placeholder={t("settings.signaturePlaceholder")}
+                onChange={(event) => change("body", event.target.value)}
+              />
+            )}
+          </Field>
+          <p className="t-caption">{t("settings.signatureHint")}</p>
+        </>
+      )}
     </>
   );
 }

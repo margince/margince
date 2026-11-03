@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings:
@@ -130,13 +130,11 @@ Also called: my name, profile name, rename myself.
 
 ### How do I add an email signature?
 <!-- opens: settings/account -->
-To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
-1. Type your sign-off in **Sign-off**, in plain text.
-2. Choose **Save**.
+Open **Settings → Account → Edit signature**, choose **Plain text** or **HTML**,
+check the preview and choose **Save**. Your own HTML comes before the company
+template. See [Your email signature](email-signatures.md) for clearing it, the
+sign-off order and what HTML a send keeps.
 
-Margince adds the signature under every email you send yourself, above the unsubscribe footer. Leave it empty and your emails end with a short greeting and your name instead, in the message's language. When the message is too short to tell, that is the installation's language, then English. The row then says **No sign-off set**.
-
-An email an agent sends carries no sign-off. AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
@@ -231,7 +229,8 @@ The **Calendar** card appears once a calendar is connected. It shows the
 connected calendar as a row: it reads busy times, sends invitations, and shows
 its last sync. Then comes **Add booked meetings to**, the calendar each booking
 lands in. Last is **Also count as busy**, other calendars that hide time from
-guests. Event names stay private.
+guests. Event names stay private. A calendar Margince cannot read is named under
+its row and in the preview, while guests see only that no times are offered.
 
 With both Google and Microsoft calendars
 connected, a **Calendar provider** choice comes first. **Save calendar** appears

@@ -25,6 +25,7 @@ export function cardLabel(
   t: Translator,
   metricName: MetricNames,
 ): string {
+  if (card.kind === "assessment") return t("reporting.assessmentCard");
   if (card.kind === "question")
     return t("reporting.questionCard", {
       population: entityLabel(

@@ -1,25 +1,19 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go -->
 # Capture: how conversations get into Margince
 
-Nobody should have to copy an email into a CRM by hand. **Capture** is the part
-of Margince that connects to your mailbox, your calendar and your chat. It files
-what arrives against the right contacts, their companies and projects.
-Connecting a mailbox or calendar, and importing your older mail, is its own
-page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
+Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
 There is no address to forward to and no step to copy and paste. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
 For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Capture activity**.
-Also called: email logging, sync email to CRM, auto-log emails.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too. A connected Gmail or Outlook mailbox is read in your inbox and your sent mail. So each sent message lands on the contact timelines of its recipients, marked **Sent**.
 1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with the **Past email** import.
 2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
 Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
-Also called: sent items, outgoing mail, outbox, log sent emails.
 
 ## What happens to one message
 
@@ -88,6 +82,8 @@ sorted them.
 Capture creates the contact but not their company. A step of its own reads the
 domain's website and proposes the company. So a personal domain such as
 `sebastian@kestner.example` does not become a company called "Kestner".
+
+Other recipients and meeting guests follow [the rules for other recipients on a conversation](recipients-on-conversations.md).
 
 ### A contact you added without an email
 
@@ -177,9 +173,7 @@ To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-
 If you use projects, a captured message is filed against one by three fixed
 rules, and the first match wins. No AI model is used in any of them.
 
-**1. The conversation.** A reply to a thread already filed goes under the same
-project. Matching stays within one channel, so an email cannot be filed under a
-chat conversation.
+**1. The conversation.** A reply to a thread already filed goes under the same project. Matching stays within one channel, so an email cannot be filed under a chat conversation.
 
 **2. The deal.** A message already linked to a deal is filed under that deal's
 project.
@@ -237,6 +231,12 @@ To see every email with a contact in Margince, open the contact and choose its *
 2. Or set **Activity kind** to **Email**, and use **Search this timeline** to find one message.
 You see only the messages whose audience includes you; a held message stays with those who were on it. See [Who can see an email](who-can-see-an-email.md).
 Also called: email history, correspondence, all mails with a customer.
+
+### What counts as one email thread?
+A reply whose subject changes starts a new conversation. "Re:" and "AW:" do not count as a change, and neither do capital letters. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
+
+Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
+Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?
 To read a whole thread in Margince, press an email on the **History** tab. The thread opens beside the record, oldest message first.

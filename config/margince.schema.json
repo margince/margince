@@ -815,7 +815,7 @@
           "default": false
         },
         "signature_template": {
-          "description": "The email signature of the workspace, used in place of the own signature of each sender; empty means none.",
+          "description": "Workspace email signature template, used when the sender has no personal HTML; empty means none.",
           "type": [
             "string",
             "null"

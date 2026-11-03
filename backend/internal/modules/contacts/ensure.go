@@ -67,6 +67,7 @@ var ErrCounterpartySuppressed = errors.New("contacts: counterparty address is on
 
 // EnsureCounterpartyInput is one captured message's counterparty.
 type EnsureCounterpartyInput struct {
+	Admission func(context.Context, pgx.Tx, bool) error
 	// Replied says this counterparty wrote to US, rather than merely having
 	// been written to. It decides which acquisition the created record
 	// carries, and the two are different facts about the contact.
@@ -160,7 +161,7 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
 	}
 	var res EnsureCounterpartyResult
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		res, err = s.EnsureCounterpartyTx(ctx, tx, in)
 		return err
@@ -181,6 +182,19 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 // The caller is responsible for the workspace GUC; it is already set by the
 // WithWorkspaceTx that produced tx.
 func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
+	res, err := s.ensureCapturedCounterparty(ctx, tx, in)
+	if err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
+	if in.Admission != nil {
+		if err := in.Admission(ctx, tx, res.ContactCreated); err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+	}
+	return res, nil
+}
+
+func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
 	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
@@ -204,26 +218,9 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 		return EnsureCounterpartyResult{}, err
 	}
 	if !res.LeadID.IsZero() {
-		allowed, err := mayReadLead(ctx)
-		if err != nil || !allowed {
-			return res, err
-		}
-		if err := linkActivityToLead(ctx, tx, in.ActivityID, res.LeadID); err != nil {
-			return EnsureCounterpartyResult{}, err
-		}
-		inbound, err := activityIsInbound(ctx, tx, in.ActivityID)
-		if err != nil {
-			return EnsureCounterpartyResult{}, err
-		}
-		if inbound {
-			if s.leadQualifyTasks != nil {
-				if err := s.leadQualifyTasks.FileLeadReplyTx(ctx, tx, res.LeadID, in.ActivityID.UUID); err != nil {
-					return EnsureCounterpartyResult{}, err
-				}
-			}
-		}
-		return res, nil
+		return res, s.linkCapturedLead(ctx, tx, in, res.LeadID)
 	}
+
 	if !res.ContactCreated {
 		if err := s.resolveDomainEmployer(ctx, tx, in, &res); err != nil {
 			return EnsureCounterpartyResult{}, err
@@ -233,6 +230,28 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 		return EnsureCounterpartyResult{}, err
 	}
 	return res, nil
+}
+
+func (s *Store) linkCapturedLead(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, lead ids.LeadID) error {
+	allowed, err := mayReadLead(ctx)
+	if err != nil || !allowed {
+		return err
+	}
+	if err := linkActivityToLead(ctx, tx, in.ActivityID, lead); err != nil {
+		return err
+	}
+	inbound, err := activityIsInbound(ctx, tx, in.ActivityID)
+	if err != nil {
+		return err
+	}
+	if inbound {
+		if s.leadQualifyTasks != nil {
+			if err := s.leadQualifyTasks.FileLeadReplyTx(ctx, tx, lead, in.ActivityID.UUID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // CounterpartyLeadTx is the live lead an address names when no live contact
@@ -292,21 +311,13 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		FullName: name, Emails: []string{in.Email}, ConsumerMail: consumerMail,
 		QueueNameCollisions: true,
 	}
-	match, err := DedupeContact(ctx, tx, candidate)
+	match, lead, err := resolveCapturedContact(ctx, tx, candidate, in.Email)
 	if err != nil {
 		return err
 	}
-	if match.Decision != DecisionExactCollision {
-		if res.LeadID, err = CounterpartyLeadTx(ctx, tx, in.Email); err != nil || !res.LeadID.IsZero() {
-			return err
-		}
-		// The lane locks come only now, on the path that creates. The exact path
-		// goes on to lock the incumbent's row, and a writer holding a lane lock
-		// never waits on an existing contact (lockorder.go). The review lanes are
-		// read again under the lock, so a concurrent create is seen.
-		if match, err = lockLanesAndReview(ctx, tx, candidate); err != nil {
-			return err
-		}
+	if !lead.IsZero() {
+		res.LeadID = lead
+		return nil
 	}
 	if match.Decision == DecisionExactCollision {
 		res.ContactID = match.ContactID
@@ -424,4 +435,25 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 		return fmt.Errorf("contacts: linking activity to contact: %w", err)
 	}
 	return nameContactAmongParticipants(ctx, tx, activityID, contactID)
+}
+
+func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate, email string) (ContactResolution, ids.LeadID, error) {
+	// Identity locks precede the exact read so a concurrent ensure cannot create from a stale miss.
+	lead, err := CounterpartyLeadTx(ctx, tx, email)
+	if err != nil {
+		return ContactResolution{}, ids.LeadID{}, err
+	}
+	match, err := DedupeContact(ctx, tx, candidate)
+	if err != nil {
+		return ContactResolution{}, ids.LeadID{}, err
+	}
+	if match.Decision == DecisionExactCollision {
+		return match, ids.LeadID{}, nil
+	}
+	if !lead.IsZero() {
+		return match, lead, nil
+	}
+	// Review locks are taken only for creation; exact adoption holds the incumbent instead.
+	match, err = lockLanesAndReview(ctx, tx, candidate)
+	return match, ids.LeadID{}, err
 }

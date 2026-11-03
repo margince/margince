@@ -117,6 +117,10 @@ type ListActivitiesInput struct {
 	// its own scope, like UnassignedQueue: somebody picks unowned work up by
 	// choice, and it does not arrive in everybody's day.
 	UnhostedMeetings bool
+	// WithOutsideParty keeps the meetings with somebody from outside on them
+	// (outsidePartySQL), in SQL before the page is cut.
+	WithOutsideParty bool
+	outsideParty     func(arg func(any) int) (string, error)
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
 	// BEFORE the page is cut.

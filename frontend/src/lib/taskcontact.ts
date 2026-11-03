@@ -17,21 +17,21 @@ export type TaskContact = Readonly<{
   pending: boolean;
 }>;
 
-// The page's contact when the task links it, else its one contact link. Links
-// come sorted by id, so of several none is "the" contact.
+// The page's contact when the task links it, else the contact the server named
+// as the task's email target (`email_target`).
 function taskContactId(
   task: Activity | undefined,
   pageContact?: Contact,
 ): string | undefined {
-  const linked = new Set(
-    (task?.links ?? [])
-      .filter((link) => link.entity_type === "contact")
-      .map((link) => link.entity_id),
-  );
   if (pageContact) {
-    return linked.has(pageContact.id) ? pageContact.id : undefined;
+    const linked = (task?.links ?? []).some(
+      (link) =>
+        link.entity_type === "contact" && link.entity_id === pageContact.id,
+    );
+    return linked ? pageContact.id : undefined;
   }
-  return linked.size === 1 ? [...linked][0] : undefined;
+  const target = task?.email_target;
+  return target?.entity_type === "contact" ? target.entity_id : undefined;
 }
 
 export function useTaskContact(

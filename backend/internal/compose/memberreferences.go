@@ -62,6 +62,7 @@ var memberReferences = map[string]memberReference{
 	"auth_token.user_id":                       {disposition: referenceRetain},
 	"automation.owner_id":                      {disposition: referenceResolve, live: `enabled AND archived_at IS NULL`, remedy: "automations"},
 	"booking_page.host_user_id":                {disposition: referenceResolve, live: jsonTrue, remedy: "booking_pages"},
+	"booking_alias.host_user_id":               {disposition: referenceRetain},
 	"brief_run.user_id":                        {disposition: referenceRetain},
 	"capture_alias_refused.user_id":            {disposition: referenceRetain},
 	"capture_alias_sighting.user_id":           {disposition: referenceRetain},
@@ -70,6 +71,7 @@ var memberReferences = map[string]memberReference{
 	"capture_digest.user_id":                   {disposition: referenceRetain},
 	"capture_exclusion.user_id":                {disposition: referenceRetain},
 	"capture_freemail_domain.created_by":       {disposition: referenceRetain},
+	"capture_party_source.user_id":             {disposition: referenceRetain},
 	"capture_import.user_id":                   {disposition: referenceRetain},
 	"capture_owner_identity.user_id":           {disposition: referenceRetain},
 	"capture_owner_identity_withdrawn.user_id": {disposition: referenceRetain},
@@ -156,6 +158,7 @@ var memberReferences = map[string]memberReference{
 	"report_schedule.owner_id":                 {disposition: referenceResolve, live: `enabled`, remedy: "report_schedules"},
 	"reporting_framework_revision.created_by":  {disposition: referenceRetain},
 	"role_assignment.user_id":                  {disposition: referenceRetain},
+	"sales_initiative.owner_id":                {disposition: referenceResolve, live: memberLiveRows, remedy: "reports"},
 	"sales_target_revision.created_by":         {disposition: referenceRetain},
 	"saved_view.owner_id":                      {disposition: referenceResolve, live: memberLiveRows, remedy: "saved_views"},
 	"scheduled_send.agent_on_behalf_of":        {disposition: referenceRetain},
@@ -183,6 +186,8 @@ var memberReferences = map[string]memberReference{
 	"worklist_done.reader_id":                  {disposition: referenceRetain},
 	"worklist_pin.reader_id":                   {disposition: referenceRetain},
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
+	"home_read_cache.reader_id":                {disposition: referenceRetain},
+	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
 }
 
 func memberRetirementBlockers(ctx context.Context, tx pgx.Tx, source ids.UUID) ([]crmcontracts.MemberRetirementBlocker, error) {

@@ -107,9 +107,9 @@ const ANSWER_BY_SOURCE: Partial<
     verb: "keep",
     draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
-  // Two verbs of equal weight, so the row has no primary. Cancelling and saying
-  // what came of it are equally likely about a meeting the product knows nothing
-  // about. Leading with either would read as an expectation it has not got.
+  // Verbs of equal weight, so the row has no primary. Any answer is plausible
+  // about a meeting the product knows nothing about. A filled verb would claim
+  // an expectation it has not got.
   meeting_outcome: {
     verb: "decide",
     draw: (item) => ({

@@ -65,6 +65,7 @@ internal/compose/dealscoutsql_test.go 2
 internal/compose/dealsuggestiontotals_integration_test.go 1
 internal/compose/deferral_test.go 3
 internal/compose/edgeerasureboundary_integration_test.go 4
+internal/compose/edgelastmet_integration_test.go 1
 internal/compose/emailrequestcapture_integration_test.go 1
 internal/compose/erasurebriefcache_integration_test.go 3
 internal/compose/erasurecollateral_integration_test.go 2
@@ -244,6 +245,7 @@ internal/compose/magiccountfloor_integration_test.go 2
 internal/compose/magicneedsyou_integration_test.go 2
 internal/compose/maybedone_integration_test.go 1
 internal/compose/meetingattendeerepair_integration_test.go 4
+internal/compose/meetinghostseat_integration_test.go 1
 internal/compose/meetinglane_integration_test.go 1
 internal/compose/meetingparties_integration_test.go 3
 internal/compose/meetingpastcap_integration_test.go 5

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import {
   attentionReport,
   HEALTH_AT,
   stoppedMailReport,
 } from "../features/settings/systemhealth.fixtures";
+import { decisionRow, proposal, wholeDecisions } from "./brief.fixtures";
 import { defaultOperations } from "./operationsettings.fixtures";
 import { jsonResponse, meRoute, type RouteMap } from "./story-utils";
 
@@ -194,4 +196,74 @@ export function healthSessionRoutes(access: HealthSessionAccess): RouteMap {
     }
   }
   return routes;
+}
+
+export function healthSenderReviewRoutes(): {
+  routes: RouteMap;
+  remaining: () => number;
+} {
+  let verdict: components["schemas"]["Approval"]["status"] = "pending";
+  const subject = proposal("health-sender", "Add Alex Buyer to Contacts", {
+    kind: "capture_counterparty",
+    requested_decider_id: "00000000-0000-4000-8000-000000000001",
+    proposed_change: {
+      display_name: "Alex Buyer",
+      email: "buyer@example.test",
+      domain: "example.test",
+    },
+    evidence: [],
+  });
+  const decide = () => {
+    verdict = "approved";
+    return jsonResponse({ ...subject, status: "approved" });
+  };
+  return {
+    remaining: () => (verdict === "pending" ? 1 : 0),
+    routes: {
+      "GET /worklist/handled": () =>
+        jsonResponse({ as_of: HEALTH_AT, receipts: [], truncated: false }),
+      "GET /worklist": () => {
+        const count = verdict === "pending" ? 1 : 0;
+        const day: components["schemas"]["Worklist"] = {
+          as_of: HEALTH_AT,
+          scope: "mine",
+          scope_options: ["mine"],
+          view: "decisions",
+          summary: { urgent: 0, due: 0, lower_priority: count, total: count },
+          queue:
+            verdict !== "pending"
+              ? []
+              : [
+                  {
+                    ...decisionRow(subject.id, false),
+                    title: subject.summary ?? undefined,
+                  },
+                ],
+          counts: [wholeDecisions(count)],
+          sources_unavailable: [],
+          reach: [],
+          readings: {
+            changed_since_brief: 0,
+            revenue_at_risk_minor: null,
+            buyer_replies: 0,
+            prospecting: 0,
+            review: count,
+            more_available: false,
+          },
+        };
+        return jsonResponse(day);
+      },
+      "GET /approvals/health-sender": () =>
+        jsonResponse({ ...subject, status: verdict }),
+      "POST /approvals/health-sender/approve": decide,
+      "POST /approvals/health-sender/reject": () => {
+        verdict = "rejected";
+        return jsonResponse({ ...subject, status: "rejected" });
+      },
+      "GET /users/names": () =>
+        jsonResponse({
+          data: [{ id: subject.requested_decider_id, display_name: "Alex" }],
+        }),
+    },
+  };
 }

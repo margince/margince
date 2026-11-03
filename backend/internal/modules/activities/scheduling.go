@@ -150,8 +150,8 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		return nil, false, errAvailabilityDurationOutOfRange
 	}
 
-	// The busy read is a read of the host's meetings and carries the
-	// activity row scope: a caller sees only the busy blocks whose
+	// The busy read is a read of the host's meetings: hosted, on their own
+	// calendar, or attended as a seat. It carries the activity row scope: a caller sees only the busy blocks whose
 	// linked records their timeline would show. A hidden meeting can
 	// still surface as slot_taken at booking time — that reveals one
 	// bit at one attempted slot, not another rep's calendar.
@@ -173,12 +173,16 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
-			  AND a.host_user_id = $%d
-			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%d -- meeting end: this read takes instants alone, the rows that hold a host hour
-			  AND a.occurred_at < $%d -- occurred_at raw: the range's upper edge, read for instants alone
+			  AND (a.host_user_id = $%[1]d
+			       OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id = a.id AND held.user_id = $%[1]d)
+			       OR EXISTS (SELECT 1 FROM activity_participant seat
+			                   WHERE seat.activity_id = a.id AND seat.user_id = $%[1]d AND seat.role IN ('organizer', 'attendee')
+			                     AND seat.response IS DISTINCT FROM 'declined' AND %[4]s))
+			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%[2]d -- meeting end: this read takes instants alone, the rows that hold a host hour
+			  AND a.occurred_at < $%[3]d -- occurred_at raw: the range's upper edge, read for instants alone
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
-			  AND %s
-			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, scope), args...)
+			  AND %[5]s
+			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, auth.ParticipantStandsSQL("seat", "a"), scope), args...)
 		if err != nil {
 			return err
 		}
@@ -294,7 +298,7 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 	}
 	slots, truncated, err := availability(r.Context(), host, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeStoreErr(w, r, calendarNamedToItsHost(err, actor, host))
 		return
 	}
 	backing, err := h.calendars.BackingFor(r.Context(), actor.UserID, host)
