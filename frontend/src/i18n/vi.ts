@@ -6035,6 +6035,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.legalEntity": "Pháp nhân phát hành",
   "offer.legalEntityHint":
     "Pháp nhân có tên, địa chỉ, mã số thuế, tài khoản ngân hàng và logo được in trên báo giá.",
+  "offer.language": "Ngôn ngữ",
+  "offer.languageHint":
+    "Hai chữ cái, ví dụ de. Các dòng thêm từ bây giờ lấy tên sản phẩm bằng ngôn ngữ này.",
   "offer.validUntil": "Có hiệu lực đến",
   "offer.introText": "Lời mở đầu",
   "offer.termsText": "Điều khoản",
@@ -13554,6 +13557,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "product.settingsSub": "Các mục bảng giá để sao chép vào dòng báo giá.",
   "product.new": "Sản phẩm mới",
   "product.edit": "Sửa sản phẩm",
+  "product.translations": "Bản dịch",
+  "product.translationsTitle": "{name} bằng ngôn ngữ khác",
+  "product.translationsHint":
+    "Báo giá bằng một trong các ngôn ngữ này gọi sản phẩm theo tên ở đây. Dòng đã có trên báo giá giữ nguyên tên lúc được thêm.",
+  "product.translationsEmpty": "Chưa có ngôn ngữ nào khác.",
+  "product.translationRemove": "Gỡ {language}",
+  "product.translationLanguage": "Ngôn ngữ",
+  "product.translationLanguageHint":
+    "Hai chữ cái, ví dụ de. Lưu một ngôn ngữ đã có trong danh sách sẽ thay thế nó.",
+  "product.translationSave": "Lưu ngôn ngữ",
   "product.archive": "Chuyển sản phẩm vào kho lưu trữ",
   "product.archiveConfirm":
     "Chuyển sản phẩm này vào kho lưu trữ? Các dòng báo giá hiện có vẫn giữ ảnh chụp giá.",

@@ -22879,6 +22879,13 @@ components:
             `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
             `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
             the entity has no value for is absent.
+        language:
+          type: [string, 'null']
+          description: |-
+            The language the offer's new lines take product names in (ISO 639-1). It defaults to
+            the issuing legal entity's `default_language`, else the language of the offer's
+            template. Null on an offer created before offers had one: its lines take
+            `Product.name`. The template's own fixed labels follow the template, not this.
         legal_entity_id:
           type: [string, 'null']
           format: uuid
@@ -22982,6 +22989,10 @@ components:
           description: |-
             The legal entity that issues the offer. Defaults to the entity the author works for;
             for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language new lines take product names in. Unset is the entity's, else the template's.
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
@@ -23010,6 +23021,10 @@ components:
           type: string
           format: uuid
           description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language lines added from now on take product names in. Lines already on the offer keep theirs.
       additionalProperties: false
     MorningBrief:
       type: object

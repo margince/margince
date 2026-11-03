@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -11,7 +12,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { OverflowMenu } from "../../design-system/atoms";
+import { Button, OverflowMenu } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
 import { sortState } from "../../design-system/listtable.query";
@@ -34,6 +35,7 @@ import {
   ProductStatus,
   productStatus,
 } from "./products.display";
+import { ProductTranslationsDialog } from "./products.translations";
 import "../lists/listsection.css";
 import {
   currencyOptions,
@@ -236,6 +238,7 @@ export function ProductsAdmin() {
   });
   const leading = useLeadingCurrencies();
   const fields = productFields(t, leading);
+  const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
     return unwrap(
@@ -334,6 +337,11 @@ export function ProductsAdmin() {
               update={updateProduct(p)}
               fields={fields}
             />
+          )}
+          {canUpdate && (
+            <Button onClick={() => setTranslating(p)}>
+              {t("product.translations")}
+            </Button>
           )}
           {canArchive && (
             <ArchiveAction
@@ -443,6 +451,12 @@ export function ProductsAdmin() {
           },
         ]}
       />
+      {translating && (
+        <ProductTranslationsDialog
+          product={translating}
+          onClose={() => setTranslating(null)}
+        />
+      )}
     </Panel>
   );
 }

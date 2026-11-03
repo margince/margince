@@ -30,13 +30,13 @@ type OfferCreationPreview struct {
 	Recurring RecurringFigures
 }
 
-func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency string, inputs []OfferLineInputRow) ([]OfferCreationLine, OfferFigures, error) {
+func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency, language string, inputs []OfferLineInputRow) ([]OfferCreationLine, OfferFigures, error) {
 	var lines []OfferCreationLine
 	var amounts []OfferLineInput
 	positions := map[int]bool{}
 	highest := 0
 	for i, in := range inputs {
-		line, err := resolveOfferLine(ctx, tx, currency, in)
+		line, err := resolveOfferLine(ctx, tx, currency, language, in)
 		if err != nil {
 			return nil, OfferFigures{}, fmt.Errorf("line %d: %w", i+1, err)
 		}
@@ -95,7 +95,16 @@ func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in 
 				}
 			}
 		}
-		lines, totals, err := planNewOfferLines(ctx, tx, in.Currency, in.LineItems)
+		entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
+		if err != nil {
+			return err
+		}
+		language, err := s.offerLanguage(ctx, tx, entity, in.TemplateID, in.Language)
+		if err != nil {
+			return err
+		}
+		in.Language = &language
+		lines, totals, err := planNewOfferLines(ctx, tx, in.Currency, language, in.LineItems)
 		if err != nil {
 			return err
 		}

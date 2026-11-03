@@ -68,8 +68,11 @@ type CreateOfferInput struct {
 	TemplateID *ids.OfferTemplateID
 	// LegalEntityID names the issuing entity; unset is the author's.
 	LegalEntityID *ids.LegalEntityID
-	LineItems     []OfferLineInputRow
-	Source        string
+	// Language is the language new lines take product text in; unset is the
+	// issuing entity's, else the template's.
+	Language  *string
+	LineItems []OfferLineInputRow
+	Source    string
 }
 
 func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOfferInput) (crmcontracts.Offer, error) {
@@ -87,6 +90,11 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 		if err != nil {
 			return err
 		}
+		language, err := s.offerLanguage(ctx, tx, entity, in.TemplateID, in.Language)
+		if err != nil {
+			return err
+		}
+		in.Language = &language
 		out, err = createOfferTx(ctx, tx, dealID, in, entity, by)
 		return err
 	})
@@ -113,13 +121,13 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by,
-		                    legal_entity_id)
-		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		                    legal_entity_id, language)
+		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
-		in.TemplateID, in.Source, by, entity); err != nil {
+		in.TemplateID, in.Source, by, entity, in.Language); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
-	if err := insertOfferLines(ctx, tx, id, in.Currency, in.LineItems); err != nil {
+	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), in.LineItems); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	if _, err := recomputeOfferTotals(ctx, tx, id); err != nil {
@@ -385,6 +393,7 @@ type UpdateOfferInput struct {
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
 	LegalEntityID  *ids.LegalEntityID
+	Language       *string
 	// Clear are the fields the caller sent as an explicit null, which is a
 	// request to empty them rather than to leave them alone.
 	Clear     []string
@@ -419,19 +428,8 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err != nil {
 			return err
 		}
-		if in.LegalEntityID != nil {
-			entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
-			if err != nil {
-				return err
-			}
-			// Naming the entity the draft already names is no edit. Another
-			// issuer retires the rendering, which prints the old one.
-			if current.LegalEntityId == nil || ids.UUID(*current.LegalEntityId) != entity.UUID {
-				p.Set("legal_entity_id", current.LegalEntityId, entity)
-				if dropped == nil {
-					dropped = retireRendering(p, current)
-				}
-			}
+		if dropped, err = s.issuerPatch(ctx, tx, p, current, in, dropped); err != nil {
+			return err
 		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {

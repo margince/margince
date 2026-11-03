@@ -6159,6 +6159,9 @@ export const en = {
   "offer.legalEntity": "Issued by",
   "offer.legalEntityHint":
     "The legal entity whose name, address, VAT ID, bank details and logo the offer prints.",
+  "offer.language": "Language",
+  "offer.languageHint":
+    "Two letters, for example de. Lines added from now on take product names in this language.",
   "offer.validUntil": "Valid until",
   "offer.introText": "Intro text",
   "offer.termsText": "Terms text",
@@ -13883,6 +13886,16 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.translations": "Translations",
+  "product.translationsTitle": "{name} in other languages",
+  "product.translationsHint":
+    "An offer in one of these languages names the product this way. A line already on an offer keeps the name it was added with.",
+  "product.translationsEmpty": "No other languages yet.",
+  "product.translationRemove": "Remove {language}",
+  "product.translationLanguage": "Language",
+  "product.translationLanguageHint":
+    "Two letters, for example de. Saving a language that is already listed replaces it.",
+  "product.translationSave": "Save language",
   "product.archive": "Archive product",
   "product.archiveConfirm":
     "Archive this product? Existing offer lines keep their snapshot.",

@@ -27964,6 +27964,75 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /products/{id}/translations:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Offers]
+      operationId: listProductTranslations
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: The product's name and description in further languages.
+      description: |
+        An offer in one of these languages takes the product's name from here when a line is
+        added; an offer in any other language takes `Product.name`. Needs `product:read`.
+      responses:
+        '200':
+          description: The translations, by language.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductTranslationListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /products/{id}/translations/{language}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: language
+        in: path
+        required: true
+        description: 'ISO 639-1, lower case, for example `de`.'
+        schema: { type: string, pattern: '^[a-z]{2}$' }
+    put:
+      tags: [Offers]
+      operationId: putProductTranslation
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Set the product's name and description in one language.
+      description: |
+        Needs `product:update`. A later change here reaches only lines added afterwards: a
+        line already on an offer keeps the text it was added with.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PutProductTranslationRequest' }
+      responses:
+        '200':
+          description: The translation as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductTranslation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Offers]
+      operationId: deleteProductTranslation
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Remove the product's text in one language.
+      description: Needs `product:update`. Removing a language the product has no text in is not an error.
+      responses:
+        '204': { description: The product has no text in that language now. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---------------------------- deal rooms ------------------------------
   # The buyer-facing Deal Room: one room per deal. This is the SELLER's
   # surface — the buyer reads a separate public edge, on a room session, and
@@ -64250,6 +64319,32 @@ components:
       required: [user_id]
       properties:
         user_id: { type: string, format: uuid }
+    ProductTranslation:
+      type: object
+      required: [language, name, version, updated_at]
+      properties:
+        language: { type: string, description: 'ISO 639-1, lower case.' }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        version: { type: integer, format: int64 }
+        updated_at: { type: string, format: date-time }
+    ProductTranslationListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ProductTranslation' }
+    PutProductTranslationRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 500 }
+        description:
+          type: string
+          maxLength: 4000
+          description: Left out or empty, the language has a name and no description.
     CompanyProfile:
       type: object
       description: |
@@ -68808,6 +68903,13 @@ components:
             `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
             `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
             the entity has no value for is absent.
+        language:
+          type: [string, 'null']
+          description: |
+            The language the offer's new lines take product names in (ISO 639-1). It defaults to
+            the issuing legal entity's `default_language`, else the language of the offer's
+            template. Null on an offer created before offers had one: its lines take
+            `Product.name`. The template's own fixed labels follow the template, not this.
         legal_entity_id:
           type: [string, 'null']
           format: uuid
@@ -68916,6 +69018,10 @@ components:
           description: |
             The legal entity that issues the offer. Defaults to the entity the author works for;
             for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language new lines take product names in. Unset is the entity's, else the template's.
         line_items:
           type: [array, 'null']
           items: { $ref: '#/components/schemas/OfferLineItemInput' }
@@ -68945,6 +69051,10 @@ components:
           type: string
           format: uuid
           description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language lines added from now on take product names in. Lines already on the offer keep theirs.
       additionalProperties: false
 
     RejectOfferRequest:

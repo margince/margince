@@ -18830,6 +18830,60 @@ export interface paths {
         patch: operations["updateProduct"];
         trace?: never;
     };
+    "/products/{id}/translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The product's name and description in further languages.
+         * @description An offer in one of these languages takes the product's name from here when a line is
+         *     added; an offer in any other language takes `Product.name`. Needs `product:read`.
+         */
+        get: operations["listProductTranslations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/{id}/translations/{language}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description ISO 639-1, lower case, for example `de`. */
+                language: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the product's name and description in one language.
+         * @description Needs `product:update`. A later change here reaches only lines added afterwards: a
+         *     line already on an offer keeps the text it was added with.
+         */
+        put: operations["putProductTranslation"];
+        post?: never;
+        /**
+         * Remove the product's text in one language.
+         * @description Needs `product:update`. Removing a language the product has no text in is not an error.
+         */
+        delete: operations["deleteProductTranslation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deal-rooms": {
         parameters: {
             query?: never;
@@ -46697,6 +46751,24 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         };
+        ProductTranslation: {
+            /** @description ISO 639-1, lower case. */
+            language: string;
+            name: string;
+            description?: string | null;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ProductTranslationListResponse: {
+            data: components["schemas"]["ProductTranslation"][];
+        };
+        PutProductTranslationRequest: {
+            name: string;
+            /** @description Left out or empty, the language has a name and no description. */
+            description?: string;
+        };
         /**
          * @description The installation's own company. The flat properties remain compatibility aliases for the
          *     existing form; `fields` and `facts` are the provenance-bearing source records used by new
@@ -50807,6 +50879,13 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /**
+             * @description The language the offer's new lines take product names in (ISO 639-1). It defaults to
+             *     the issuing legal entity's `default_language`, else the language of the offer's
+             *     template. Null on an offer created before offers had one: its lines take
+             *     `Product.name`. The template's own fixed labels follow the template, not this.
+             */
+            language?: string | null;
+            /**
              * Format: uuid
              * @description The legal entity that issues the offer: its name, address, VAT ID, bank details and
              *     logo are printed on the PDF. Null on an offer created before offers named one, which
@@ -50974,6 +51053,8 @@ export interface components {
              *     for an agent, the human it acts for. An unknown or archived entity is refused as 422.
              */
             legal_entity_id?: string;
+            /** @description The language new lines take product names in. Unset is the entity's, else the template's. */
+            language?: string;
             line_items?: components["schemas"]["OfferLineItemInput"][] | null;
             source: string;
         };
@@ -51001,6 +51082,8 @@ export interface components {
              * @description The legal entity that issues the offer. An unknown or archived entity is refused as 422.
              */
             legal_entity_id?: string;
+            /** @description The language lines added from now on take product names in. Lines already on the offer keep theirs. */
+            language?: string;
         };
         RejectOfferRequest: {
             /** @description Optional buyer-given decline reason (rides offer.rejected). */
@@ -85033,6 +85116,93 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listProductTranslations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The translations, by language. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductTranslationListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    putProductTranslation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description ISO 639-1, lower case, for example `de`. */
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutProductTranslationRequest"];
+            };
+        };
+        responses: {
+            /** @description The translation as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductTranslation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteProductTranslation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description ISO 639-1, lower case, for example `de`. */
+                language: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The product has no text in that language now. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

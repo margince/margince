@@ -6183,6 +6183,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.legalEntity": "Ausgestellt von",
   "offer.legalEntityHint":
     "Der Rechtsträger, dessen Name, Adresse, USt-IdNr., Bankverbindung und Logo das Angebot druckt.",
+  "offer.language": "Sprache",
+  "offer.languageHint":
+    "Zwei Buchstaben, zum Beispiel de. Neue Positionen übernehmen Produktnamen in dieser Sprache.",
   "offer.validUntil": "Gültig bis",
   "offer.introText": "Einleitungstext",
   "offer.termsText": "Bedingungstext",
@@ -13922,6 +13925,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.translations": "Übersetzungen",
+  "product.translationsTitle": "{name} in anderen Sprachen",
+  "product.translationsHint":
+    "Ein Angebot in einer dieser Sprachen nennt das Produkt so. Eine Position, die schon auf einem Angebot steht, behält ihren Namen.",
+  "product.translationsEmpty": "Noch keine anderen Sprachen.",
+  "product.translationRemove": "{language} entfernen",
+  "product.translationLanguage": "Sprache",
+  "product.translationLanguageHint":
+    "Zwei Buchstaben, zum Beispiel de. Eine Sprache, die schon in der Liste steht, wird ersetzt.",
+  "product.translationSave": "Sprache speichern",
   "product.archive": "Produkt archivieren",
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",

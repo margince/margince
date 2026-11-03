@@ -32,6 +32,7 @@ const OFFER: Offer = {
   gross_minor: 0,
   template_id: null,
   legal_entity_id: "le-default",
+  language: "de",
   line_items: [],
   source: "manual",
   ai_generated: false,
@@ -117,4 +118,22 @@ it("saves the entity the reader picked", async () => {
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]?.body).toMatchObject({ legal_entity_id: "le-vienna" });
+});
+
+it("saves a changed language in lower case, and sends none when it is unchanged", async () => {
+  const writes = stubApi([entity("le-default", "Acme", true)]);
+  renderModal();
+  const user = userEvent.setup();
+  const language = await screen.findByRole("textbox", {
+    name: en["offer.language"],
+  });
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]?.body).not.toHaveProperty("language");
+
+  await user.clear(language);
+  await user.type(language, "EN");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(writes[1]?.body).toMatchObject({ language: "en" });
 });

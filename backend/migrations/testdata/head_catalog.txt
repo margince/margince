@@ -6432,6 +6432,7 @@ public.offer.gross_minor bigint NOT NULL gen=- def=0
 public.offer.id uuid NOT NULL gen=- def=uuidv7()
 public.offer.intro_text text gen=- def=-
 public.offer.issuer_snapshot jsonb gen=- def=-
+public.offer.language text gen=- def=-
 public.offer.legal_entity_id uuid gen=- def=-
 public.offer.net_minor bigint NOT NULL gen=- def=0
 public.offer.offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted_at IS NOT NULL)))
@@ -6440,6 +6441,7 @@ public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
 public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.offer.offer_language_shape CHECK (((language IS NULL) OR (language ~ '^[a-z]{2}$'::text)))
 public.offer.offer_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
@@ -6776,6 +6778,23 @@ public.product.unit_price_minor bigint NOT NULL gen=- def=-
 public.product.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.version bigint NOT NULL gen=- def=1
 public.product_pkey CREATE UNIQUE INDEX product_pkey ON public.product USING btree (id)
+public.product_translation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.product_translation.captured_by text NOT NULL gen=- def=-
+public.product_translation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.product_translation.description text gen=- def=-
+public.product_translation.language text NOT NULL gen=- def=-
+public.product_translation.name text NOT NULL gen=- def=-
+public.product_translation.product_id uuid NOT NULL gen=- def=-
+public.product_translation.product_translation_bounded CHECK (((length(name) <= 500) AND ((description IS NULL) OR (length(description) <= 4000))))
+public.product_translation.product_translation_language_shape CHECK ((language ~ '^[a-z]{2}$'::text))
+public.product_translation.product_translation_name_present CHECK ((btrim(name) <> ''::text))
+public.product_translation.product_translation_pkey PRIMARY KEY (product_id, language)
+public.product_translation.product_translation_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+public.product_translation.product_translation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.product_translation.trg_product_translation_updated CREATE TRIGGER trg_product_translation_updated BEFORE UPDATE ON public.product_translation FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.product_translation.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.product_translation.version bigint NOT NULL gen=- def=1
+public.product_translation_pkey CREATE UNIQUE INDEX product_translation_pkey ON public.product_translation USING btree (product_id, language)
 public.project acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project.archived_at timestamp with time zone gen=- def=-
 public.project.captured_by text NOT NULL gen=- def=-
