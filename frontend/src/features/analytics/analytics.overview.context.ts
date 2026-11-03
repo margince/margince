@@ -29,6 +29,7 @@ export const CONTEXT_DIALS = [
   "through",
   "close",
   "product",
+  "initiative",
   "country",
   "industry",
   "basis",

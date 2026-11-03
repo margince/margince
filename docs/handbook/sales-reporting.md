@@ -119,6 +119,10 @@ On **Analytics → Leads**, **What became of new leads** does the same for the l
 
 ## How do I save or share a report?
 
+To build a report of your own, open **Reports** and choose **New custom report**. **Customize report** on a sales review opens the same window with what you are reading. The window holds the report name and the question it answers. Below come **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** shows the report before it is saved. There, **Customize report** returns to the window and **Save report** keeps the report under **Reports**.
+
+The **Assessment** card writes the report's figures up in a few sentences. It names only figures the report measured.
+
 Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
 **Add question** places a saved custom report with no filters, answered for each reader. Pick one of yours from the list, or paste the link to anyone's. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.
@@ -132,6 +136,12 @@ Under **History and schedules**, **Versions** lists who saved each version and w
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
+
+## How do I record a decision from a review?
+
+Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
+
+When the work is done, choose **Record outcome** and say what was completed. The task closes with that note. The deal does not change: completed work is not a sale.
 
 ## How do I keep a weekly or monthly edition?
 

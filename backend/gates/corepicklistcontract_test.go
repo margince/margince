@@ -72,6 +72,8 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	"deal.company_lifecycle": {"Company", "lifecycle"},
 	"deal.company_size_band": {"Company", "size_band"},
 	"deal.company_industry":  {"Company", "industry"},
+	"lead.company_industry":  {"Company", "industry"},
+	"lead.industry":          {"Company", "industry"},
 	// The technical leaves read `company_fact.value_key`, which is a bare
 	// string on the fact schema and cannot carry three different enums. Each
 	// names the dedicated schema that publishes ITS set instead — which is what

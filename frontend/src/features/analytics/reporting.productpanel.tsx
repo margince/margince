@@ -61,7 +61,7 @@ function productDials(
   productId: string,
 ): Map<string, string> {
   const next = new Map(params);
-  for (const dial of ["country", "industry", "basis", "view"])
+  for (const dial of ["initiative", "country", "industry", "basis", "view"])
     next.delete(dial);
   next.set("product", productId);
   next.set(OVERVIEW_DIAL, "sales");

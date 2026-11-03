@@ -9,6 +9,7 @@ import { TokenList } from "../../design-system/tokeninput";
 import { countryOptions } from "../../format/assignedcountries";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
+import { useSalesInitiatives } from "./reporting.initiatives";
 import type { ReportingSelection } from "./reporting.model";
 
 /**
@@ -28,6 +29,7 @@ export const VALUE_BASES: readonly ValueBasis[] = [
 
 const DIMENSION_KEYS = [
   "product_id",
+  "initiative_id",
   "country",
   "industry",
   "value_basis",
@@ -57,6 +59,7 @@ export function useProductOptions(enabled = true) {
 export function dimensioned(selection: ReportingSelection): boolean {
   return (
     !!selection.product_id ||
+    !!selection.initiative_id ||
     !!selection.country ||
     !!selection.industry ||
     (!!selection.value_basis && selection.value_basis !== "all")
@@ -86,8 +89,29 @@ export function DimensionFilters({
   const t = useT();
   const { locale } = useLocale();
   const products = useProductOptions();
+  const initiatives = useSalesInitiatives();
   return (
     <>
+      <Field label={t("reporting.initiative")}>
+        {(field) => (
+          <Select
+            {...field}
+            value={selection.initiative_id ?? ""}
+            options={[
+              { value: "", label: t("reporting.allInitiatives") },
+              ...(initiatives.data ?? [])
+                .filter((initiative) => initiative.status !== "draft")
+                .map((initiative) => ({
+                  value: initiative.id,
+                  label: initiative.name,
+                })),
+            ]}
+            onChange={(value) =>
+              onChange({ ...selection, initiative_id: value || undefined })
+            }
+          />
+        )}
+      </Field>
       <Field label={t("reporting.product")}>
         {(field) => (
           <Select
@@ -172,16 +196,32 @@ function industryName(code: string, t: Translator): string {
 export function DimensionChips({
   selection,
   productLabel,
+  initiativeLabel,
   onChange,
 }: Readonly<{
   selection: ReportingSelection;
   productLabel?: string;
+  initiativeLabel?: string;
   onChange: (selection: ReportingSelection) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const products = useProductOptions(!!selection.product_id && !productLabel);
+  const initiatives = useSalesInitiatives(
+    !!selection.initiative_id && !initiativeLabel,
+  );
   const items: { id: DimensionKey; label: string }[] = [];
+  if (selection.initiative_id) {
+    const name =
+      initiativeLabel ??
+      initiatives.data?.find((row) => row.id === selection.initiative_id)
+        ?.name ??
+      t("reporting.initiativeUnnamed");
+    items.push({
+      id: "initiative_id",
+      label: t("analytics.overview.chipInitiative", { name }),
+    });
+  }
   if (selection.product_id) {
     const name =
       productLabel ??
@@ -222,9 +262,11 @@ export function DimensionChips({
   return (
     <>
       <Badge>
-        {selection.product_id
-          ? t("analytics.overview.profileProduct")
-          : t("analytics.overview.profileCompany")}
+        {selection.initiative_id
+          ? t("analytics.overview.profileInitiative")
+          : selection.product_id
+            ? t("analytics.overview.profileProduct")
+            : t("analytics.overview.profileCompany")}
       </Badge>
       {items.length > 0 && (
         <TokenList

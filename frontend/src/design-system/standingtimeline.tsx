@@ -70,8 +70,9 @@ export type TimelineMark = Readonly<{
   at: string;
   precision: OccurredPrecision;
   kind: keyof typeof TIMELINE_ICON;
-  // Which way a message or call went; drawn as an arrow on the glyph.
-  direction?: "inbound" | "outbound";
+  // Which side wrote a message or made a call, by correspondenceSide
+  // (lib/messagevoice.ts), not the transport direction; drawn as an arrow.
+  side?: "ours" | "theirs";
   // The kind in words ("Email"), the card's head for a lone mark.
   what: string;
   // The subject, or the kind when it has none.

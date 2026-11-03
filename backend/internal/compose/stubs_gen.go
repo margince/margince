@@ -375,6 +375,18 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) ListSalesDecisions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesDecisionsParams) {
+	httperr.NotImplemented(w, r, "ListSalesDecisions")
+}
+
+func (stubs) RecordSalesDecision(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RecordSalesDecisionParams) {
+	httperr.NotImplemented(w, r, "RecordSalesDecision")
+}
+
+func (stubs) RecordSalesDecisionOutcome(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordSalesDecisionOutcome")
+}
+
 func (stubs) CompareReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CompareReportingEditionsParams) {
 	httperr.NotImplemented(w, r, "CompareReportingEditions")
 }
@@ -421,6 +433,34 @@ func (stubs) GetReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request)
 
 func (stubs) PublishReportingFramework(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PublishReportingFrameworkParams) {
 	httperr.NotImplemented(w, r, "PublishReportingFramework")
+}
+
+func (stubs) ListSalesInitiatives(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesInitiativesParams) {
+	httperr.NotImplemented(w, r, "ListSalesInitiatives")
+}
+
+func (stubs) CreateSalesInitiative(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateSalesInitiative")
+}
+
+func (stubs) GetSalesInitiative(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetSalesInitiative")
+}
+
+func (stubs) UpdateSalesInitiative(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateSalesInitiativeParams) {
+	httperr.NotImplemented(w, r, "UpdateSalesInitiative")
+}
+
+func (stubs) LaunchSalesInitiative(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LaunchSalesInitiativeParams) {
+	httperr.NotImplemented(w, r, "LaunchSalesInitiative")
+}
+
+func (stubs) ListSalesInitiativeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListSalesInitiativeMembersParams) {
+	httperr.NotImplemented(w, r, "ListSalesInitiativeMembers")
+}
+
+func (stubs) ReplaceSalesInitiativeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReplaceSalesInitiativeMembers")
 }
 
 func (stubs) GetReportingMetrics(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -3095,6 +3135,10 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
+func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+	httperr.NotImplemented(w, r, "GetPublicBookingPreview")
+}
+
 func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
 	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
 }
@@ -3425,6 +3469,10 @@ func (stubs) GetSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) PutSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PutSchedulingProfile")
+}
+
+func (stubs) PutSchedulingAlias(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PutSchedulingAlias")
 }
 
 func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMeetingProposalsParams) {

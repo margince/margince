@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.5 KB |
+| Tool catalog | 158.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41881 |
+| Approx. wire tokens | 41918 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
-| Input schemas | 65.9 KB | 41% | Yes, every step |
+| Input schemas | 66.0 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.7 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **100.8 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -69,7 +69,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 698 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
@@ -82,7 +82,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 915 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1946 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1958 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
@@ -2004,6 +2004,10 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
           "type": "string"
         },
         "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
           "type": "string"
         },
         "interval": {
@@ -5306,6 +5310,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "string"
                         },
                         "industry": {
+                          "type": "string"
+                        },
+                        "initiative_id": {
+                          "format": "uuid",
                           "type": "string"
                         },
                         "interval": {
@@ -8957,6 +8965,10 @@ search its evidence, and quote coverage with each number.
           "type": "string"
         },
         "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
           "type": "string"
         },
         "interval": {
