@@ -13,8 +13,7 @@ tree, with no add-ons of its own, ships three units:
 | `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
-Read this page for the whole tier first and then each part. To *build* a unit, go to
-[how-to/add-an-extension.md](../how-to/add-an-extension.md).
+Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
 
 ## The whole tier in one map
 
@@ -123,6 +122,7 @@ already exists:
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
+| `Instrumentation` | Watches the whole process: the root log handler, every request, each job and extension delivery, and each panic the core catches. In the browser it sees errors and screen changes. It may serve an edge with no sign-in at `/v1/public/instrument/<unit>/`. It names no vendor. The core guards every call, so it can never stop boot or fail a request |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.
@@ -196,9 +196,8 @@ fields of the tool (id, operation, scopes, tier) and its digest. Declaring a too
 the manifest. Whether the tool is also *served* depends on whether the declaration carries a handler (see
 below). Policy that an extension only supplies asks for no risk tier and does not show.
 
-A jurisdiction pack exposes no governed operation (the core reads its policy at boot; the pack never does
-anything) and asks for no tier. So a unit with only a jurisdiction pack, such as `de`, carries an empty
-list of risk tiers, with nothing to approve.
+A jurisdiction pack exposes no governed operation. The core reads its policy at boot, and the pack never
+does anything. So a unit with only a pack, such as `de`, carries no risk tier and has nothing to approve.
 
 Beyond the risk tiers, the manifest records what a unit **reaches**. An operator can then read how far
 the harm could go before turning the unit on:
@@ -213,6 +212,7 @@ the harm could go before turning the unit on:
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
+| `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.

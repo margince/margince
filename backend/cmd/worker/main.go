@@ -67,10 +67,14 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	boot, err := configureWorker(workerFlags(args), stdout)
+	boot, err := configureWorker(ctx, workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
+	// Registered before the pool, the bus, the observer, the lanes and the job
+	// runner, so it runs after every one of them has stopped. The last events a
+	// draining job or lane logs are still flushed.
+	defer compose.FlushInstrumentation(ctx)
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
@@ -181,7 +185,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
 	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
-	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
 		logger, cfg, modelPath, lanes, weeklyMail, stdout)
@@ -253,17 +256,19 @@ type workerBoot struct {
 	log        *slog.Logger
 }
 
-// configureWorker runs the phases that can fail on configuration alone, in the
-// order they depend on each other: flags, then extensions (a failing
-// registration aborts the boot before anything is opened), then the deployment
-// file, then the logger — and the capture posture last, because it carries the
-// logger into the Sink's post-commit steps, where a fault is reported rather
-// than returned.
+// configureWorker runs the phases that can fail on configuration alone. They
+// run in the order they depend on each other: flags, then extensions, then the
+// deployment file, then the unit instrumentation, then the logger. A failing
+// extension registration aborts the boot before anything is opened. The
+// instrumentation starts here, which is why this takes ctx, and the logger
+// wraps what it returns. The capture posture comes last, because it carries
+// the logger into the Sink's post-commit steps, where a fault is reported
+// rather than returned.
 //
 // Grouped because they share one property the phases after them do not: none
 // of them opens a connection, so a deployment misconfigured in any of these
 // ways fails before a pool, a bus client or a listener exists to clean up.
-func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
+func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
 	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
@@ -275,6 +280,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
+		return workerBoot{}, err
+	}
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
 		return workerBoot{}, err
 	}
 	log, err := newWorkerLogger(cfg, stdout)

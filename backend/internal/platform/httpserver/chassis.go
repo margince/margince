@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -191,9 +192,11 @@ func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 				if aborted, isErr := rec.(error); isErr && errors.Is(aborted, http.ErrAbortHandler) {
 					panic(rec)
 				}
+				stack := debug.Stack()
 				log.ErrorContext(r.Context(), "handler panic",
 					"panic", rec, "method", r.Method, "path", capabilitypath.Redact(r.URL.Path),
-					"stack", string(debug.Stack()))
+					"stack", string(stack))
+				instrument.Panic(r.Context(), rec, stack)
 				httperr.Write(w, r, &httperr.DetailedError{
 					Status: http.StatusInternalServerError, Code: "internal",
 				})

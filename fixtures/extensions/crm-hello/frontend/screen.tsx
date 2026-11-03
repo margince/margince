@@ -1,9 +1,14 @@
-import { type ExtensionPanelProps, useT } from "@margince/frontend/app";
+import {
+  type BrowserInstrument,
+  type ExtensionPanelProps,
+  useT,
+} from "@margince/frontend/app";
 import { Card, Panel, PanelBody } from "@margince/frontend/design-system";
 
 // The smallest frontend layer: the screen every unit package's main exports,
 // and one panel on the deal page. The panel gives the composed panel path a
-// declarer.
+// declarer. The `instrument` export is the unit's browser instrument, which
+// the Instrumentation declaration names.
 
 export default function CrmHelloScreen() {
   const t = useT();
@@ -24,3 +29,6 @@ export function DealHello({ record }: ExtensionPanelProps) {
     </Panel>
   );
 }
+
+/** The smoke fixture's browser instrument: starts, observes nothing. */
+export const instrument: BrowserInstrument = () => ({});

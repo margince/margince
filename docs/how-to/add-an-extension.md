@@ -730,6 +730,103 @@ page looks as it does without the tier.
 The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
 or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
+## Watch the process: `Instrumentation`
+
+A unit can watch the process it runs in. It may count errors, time requests or send logs to a service.
+The core names no vendor. It gives the unit places to hook in, and what the unit does there is its own
+business. Declare one `extension.Instrumentation`:
+
+```go
+Instrumentation: &extension.Instrumentation{
+	Start:   start,
+	Browser: "instrument",
+	Edge:    edge(),
+},
+```
+
+Each part is optional, but a declaration with none of them is refused.
+
+- **`Start`** runs once per process, for the api and for the worker, before it serves or runs work. It is
+  handed an `extension.Process` and returns `extension.Instruments`.
+- **`Browser`** is the name of an export of your frontend (see below).
+- **`Edge`** is an `http.Handler` that the browser part can reach with no sign-in.
+
+`Process` tells `Start` where it runs. `Role` is `"api"` or `"worker"`. `Version` is the release, or `"dev"`
+when unknown. `Logger` is the base logger, which no unit has wrapped yet. `Process` also carries `RedactPath`.
+
+**Redact every path.** A capability URL holds a credential in its path. Anything you take from a request
+path, such as a name, a tag or a log field, must go through `Process.RedactPath` first. A gate refuses a
+full request path in a log call. It cannot see what you send to other places.
+
+`Start` returns the hooks. Every one is optional:
+
+| Hook | The core calls it |
+|---|---|
+| `LogHandler` | Once, to wrap the root log handler. Every record from every package goes through it |
+| `HTTP` | Once, to wrap every request. It wraps the whole router, inside the panic catch. No request id or `principal` is on the context yet, `r.RemoteAddr` is still the proxy (the real client address is settled later), and the body is not yet capped |
+| `Work` | Around every job (core, extension and scheduler) and every extension delivery. It gets a `Work` (`Kind` is `"job"` or `"subscription"`, then `Name`, the River kind or the subscription's name, and `Unit`) and the `run` to call. `Unit` is set only for a subscription delivery. It is empty for every job, even one your unit owns, whose `Name` is its River kind |
+| `Panic` | When the core catches a panic, at four places: a request or the worker's event handler, any job that panics out of its work, an extension job tick and an extension delivery |
+| `Shutdown` | When the process exits, so the unit can send what it still holds |
+
+A log record that carries a `panic` field describes a panic already handed to `Panic`, so do not report it
+twice. River's own job-panic line carries `panic_val` instead. It follows a panic already handed to `Panic`,
+so do not report it either. A panic that other code recovers by itself does not reach `Panic`. It reaches
+your `LogHandler` at `Error` level, and in no other way.
+
+A `Work` hook must call `run` in the call itself, not from another thread, and return what it returns. The work runs once even if the hook never calls
+`run`, or panics before it does. If the work panics, the panic reaches its caller as it was, so a job fails
+as it would without the unit.
+
+**The core guards every call.** A `Start` that fails or panics is logged, and the process boots without
+that unit's hooks. A hook that panics is logged and skipped, and the work it wrapped goes on. So
+it never stops the product and never fails a request. With several units, the first in the
+composed registry comes first.
+
+### Serve an edge
+
+The page's content security policy lets it reach only its own origin, so a browser cannot send to a vendor
+directly. A unit that needs to carry something out of the browser serves an `Edge`. The core mounts it at
+`/v1/public/instrument/<unit>/` and strips that prefix, so your handler sees paths that start at `/`.
+
+- No session is needed. Any caller can reach it, so do not trust the sender.
+- It takes `GET` and `POST`. Any other method gets 405.
+- A body is at most 1 MiB.
+- Each client address has a limit. Past it, the request is refused.
+- A unit with no `Edge` gets a 404 at its path.
+
+### Hook into the browser
+
+Set `Browser` to a named export of your frontend package's `main` module, as a panel's `Export` is. It may
+not be `default`. A unit with a `Browser` must ship `frontend/package.json`, and a unit without it is refused.
+
+```ts
+import type { BrowserInstrument } from "@margince/frontend/app";
+
+export const instrument: BrowserInstrument = ({ version, edge }) => ({
+  onError(error, info) {
+    // info is { componentStack?, caught }. Send it to `edge`.
+  },
+  onNavigate(route) {
+    // route is a pattern such as "deals/:id", never the real address
+  },
+});
+```
+
+The page calls it once, before the first screen shows. `version` is the page's release. `edge` is the
+path above. It may return nothing, or either hook.
+
+- **`onError`** gets React errors from drawing a screen: one that nothing handled, and one that a screen's error card shows.
+  `info.caught` tells them apart. A window `error` or an `unhandledrejection` is not wired. A unit that
+  wants them adds its own handlers. Reporting an error changes nothing on screen.
+- **`onNavigate`** gets each change of screen once. It gets the route with ids replaced, such as
+  `deals/:id`. It never gets the address or the query.
+
+The browser side is guarded too. An export that fails is logged in the browser's log, and the page goes on.
+
+`make gen` checks the declaration. Write `Start`, `Browser` and `Edge` out in full in the declaration, as in
+every other declaration. The manifest then shows them as `instrumentation`. For a small example that uses all
+three, see `fixtures/extensions/crm-hello/instrumentation.go` and its `frontend/screen.tsx`.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

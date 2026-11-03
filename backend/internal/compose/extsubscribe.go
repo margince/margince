@@ -16,10 +16,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"slices"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -93,7 +96,12 @@ func (c ComposedSubscription) Group() (kevents.Group, error) {
 // itself becomes the causation, so a fact, the reaction to it, and whatever the
 // reaction publishes read as one story rather than three unrelated ones.
 func (c ComposedSubscription) Handler(pool *pgxpool.Pool, log *slog.Logger) func(context.Context, kevents.Envelope) error {
-	db := InstallationDB(pool)
+	return c.handlerOver(InstallationDB(pool), log)
+}
+
+// handlerOver is Handler over an already-resolved handle: the seam a suite
+// uses to run a delivery with no pool behind it.
+func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) func(context.Context, kevents.Envelope) error {
 	return func(ctx context.Context, env kevents.Envelope) (err error) {
 		// Installed FIRST, so it covers the whole delivery rather than the
 		// handler alone: a panic anywhere under this frame — the unit's code,
@@ -110,8 +118,14 @@ func (c ComposedSubscription) Handler(pool *pgxpool.Pool, log *slog.Logger) func
 		// and merely repetitive for one it cannot. Acking would silently drop a
 		// fact somebody's unit was written to react to. The log names the unit
 		// and the subscription, which the bus entry cannot.
+		reported := false
 		defer func() {
 			if r := recover(); r != nil {
+				if !reported {
+					// A panic outside the work (before it, or in the
+					// instruments' own frames) has not been reported yet.
+					instrument.Panic(ctx, r, debug.Stack())
+				}
 				log.Error("extension subscription delivery panicked",
 					"unit", string(c.Unit), "subscription", c.Sub.Name,
 					"event", env.EventID.String(), "type", env.Type, "panic", r)
@@ -139,7 +153,20 @@ func (c ComposedSubscription) Handler(pool *pgxpool.Pool, log *slog.Logger) func
 		rt := deliveryRuntimeFor(ctx, string(c.Unit), string(c.Version),
 			"subscription/"+c.Sub.Name, boundExtensionRuntime())
 		defer rt.release()
-		return c.Sub.Handle(ctx, rt, deliveryOf(env))
+		return instrument.Work(ctx, extension.Work{Kind: extension.WorkSubscription, Name: c.Sub.Name, Unit: string(c.Unit)},
+			func(ctx context.Context) error {
+				// Reported inside the Work hooks, so a unit's Work context
+				// reaches Panic. Then re-raised for the recovery above. That
+				// converts it to an error and logs it once.
+				defer func() {
+					if r := recover(); r != nil {
+						reported = true
+						instrument.Panic(ctx, r, debug.Stack())
+						panic(r)
+					}
+				}()
+				return c.Sub.Handle(ctx, rt, deliveryOf(env))
+			})
 	}
 }
 

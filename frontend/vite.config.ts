@@ -30,6 +30,7 @@ for (const artifact of [
   "extensions.gen.ts",
   "extscreens.gen.ts",
   "extlocales.gen.ts",
+  "extinstruments.gen.ts",
 ]) {
   if (composedComposition && !existsSync(join(compositionDir, artifact))) {
     throw new Error(
@@ -116,6 +117,12 @@ export default defineConfig({
       {
         find: "@composition/screens",
         replacement: join(compositionDir, "extscreens.gen.ts"),
+      },
+      // The browser instruments, selected by the same switch: an empty object
+      // on a vanilla tree, so nothing starts and no unit enters the graph.
+      {
+        find: "@composition/instruments",
+        replacement: join(compositionDir, "extinstruments.gen.ts"),
       },
       // A unit's own copy, merged into the catalogue. On a vanilla tree it is
       // an empty object, so `useT` resolves exactly the core keys it always did.

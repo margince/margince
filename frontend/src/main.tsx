@@ -1,3 +1,4 @@
+import { extensionInstruments } from "@composition/instruments";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -10,7 +11,13 @@ import { BulkUndoProvider } from "./components/bulkchange";
 import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
+import {
+  type BrowserInstrument,
+  reportError,
+  startInstruments,
+} from "./lib/instruments";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { sessionRefusalWatch } from "./lib/session";
 import { reloadOnStaleBuild } from "./lib/stalebuild";
@@ -42,11 +49,37 @@ reloadOnStaleBuild();
 
 api.use(sessionRefusalWatch(queryClient));
 
+// Extension instruments start before the first render, so an error in it is
+// theirs to see. The generated registry is untyped; it is annotated here.
+const composedInstruments: Readonly<Record<string, BrowserInstrument>> =
+  extensionInstruments;
+startInstruments(composedInstruments, SPA_RELEASE);
+
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("index.html must provide #root");
 }
-createRoot(root).render(
+createRoot(root, {
+  // These keep React's production behaviour (a caught error goes to
+  // console.error, an uncaught one to reportError) and also tell the
+  // instruments. React's extra development-only hints are not kept. A
+  // boundary-caught error is still the boundary's to draw, and reporting it
+  // changes nothing on screen.
+  onCaughtError: (error, info) => {
+    console.error(error);
+    reportError(error, {
+      componentStack: info.componentStack ?? undefined,
+      caught: true,
+    });
+  },
+  onUncaughtError: (error, info) => {
+    reportError(error, {
+      componentStack: info.componentStack ?? undefined,
+      caught: false,
+    });
+    globalThis.reportError(error);
+  },
+}).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       {/* Inside the query provider so it can follow the signed-in person's own

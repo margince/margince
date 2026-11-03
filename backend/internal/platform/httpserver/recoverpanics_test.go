@@ -4,12 +4,16 @@
 package httpserver
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/instrument"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // A handler that aborts a body it has begun streaming must leave the client
@@ -64,4 +68,40 @@ func fetch(t *testing.T, handler http.Handler) (status int, readErr error) {
 	}()
 	_, readErr = io.ReadAll(resp.Body)
 	return resp.StatusCode, readErr
+}
+
+func TestRecoverPanicsReportsThePanicToTheInstruments(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	var got []any
+	var stack []byte
+	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
+		Panic: func(_ context.Context, v any, s []byte) { got, stack = append(got, v), s },
+	}}}, slog.New(slog.DiscardHandler))
+	h := RecoverPanics(slog.New(slog.DiscardHandler), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("kaboom")
+	}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/x", nil))
+	if rec.Code != http.StatusInternalServerError || len(got) != 1 || got[0] != "kaboom" || len(stack) == 0 {
+		t.Fatalf("code=%d got=%v stack=%d", rec.Code, got, len(stack))
+	}
+}
+
+func TestRecoverPanicsDoesNotReportAnAbortedStream(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	reports := 0
+	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
+		Panic: func(context.Context, any, []byte) { reports++ },
+	}}}, slog.New(slog.DiscardHandler))
+	h := RecoverPanics(slog.New(slog.DiscardHandler), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	}))
+	func() {
+		//craft:ignore swallowed-errors recover() returns the panic value, not an error; the handler's abort is the expected outcome
+		defer func() { _ = recover() }()
+		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+	}()
+	if reports != 0 {
+		t.Fatal("an aborted stream is not a fault and must not be reported")
+	}
 }

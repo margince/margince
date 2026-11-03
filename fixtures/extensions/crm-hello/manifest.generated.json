@@ -43,6 +43,11 @@
       "object": "ext_crm_hello_ping"
     }
   ],
+  "instrumentation": {
+    "start": true,
+    "browser": "instrument",
+    "edge": true
+  },
   "system_reads": [
     "deals"
   ]
