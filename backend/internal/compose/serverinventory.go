@@ -200,6 +200,7 @@ type Server struct {
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
 	salesDecisionHandlers
+	salesAssessmentHandlers
 	analyticsContextHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
@@ -210,7 +211,6 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
-	// The sales initiative transport; the reporting engine reads its membership too.
 	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
