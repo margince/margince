@@ -97,17 +97,33 @@ function balanced(text: string, from: number): string | undefined {
   return undefined;
 }
 
-// Each `query: { … }` object inside one of the fetcher's `api.GET(…)` calls.
-function wireQueries(body: string): string[] {
-  return [...body.matchAll(/api\.GET\(/g)].flatMap((call) => {
-    const args = balanced(body, call.index + "api.GET".length);
-    const query = args?.indexOf("query: {") ?? -1;
-    const wire =
-      args && query !== -1
-        ? balanced(args, args.indexOf("{", query))
-        : undefined;
-    return wire ? [wire] : [];
-  });
+// The arguments of the fetcher's list read: the `api.GET(…)` it returns, or the
+// one bound to the name whose `.data` it returns as its rows.
+function listReadArgs(body: string): string | undefined {
+  const direct = /return (?:unwrap\()?(?:await )?api\.GET\(/.exec(body);
+  if (direct) return balanced(body, direct.index + direct[0].length - 1);
+  const rows = [...body.matchAll(/\bdata: (\w+)\.data\b/g)].at(-1)?.[1];
+  const binding = rows
+    ? new RegExp(`const (?:${rows}|\\{[^}]*\\b${rows}\\b[^}]*\\}) =`).exec(body)
+    : null;
+  const call = binding ? body.indexOf("api.GET(", binding.index) : -1;
+  if (
+    !binding ||
+    call === -1 ||
+    body.slice(binding.index, call).includes(";")
+  ) {
+    return undefined;
+  }
+  return balanced(body, call + "api.GET".length);
+}
+
+// The `query: { … }` object of the fetcher's list read.
+function wireQuery(body: string): string | undefined {
+  const args = listReadArgs(body);
+  const query = args?.indexOf("query: {") ?? -1;
+  return args && query !== -1
+    ? balanced(args, args.indexOf("{", query))
+    : undefined;
 }
 
 // The function a screen hands `useListQuery` as `fetchPage`: a named one, or
@@ -130,28 +146,46 @@ function readSibling(fromFile: string, specifier: string): string | undefined {
   return path ? readFileSync(path, "utf8") : undefined;
 }
 
-// The bodies of the builders the screen's `fetchPage` spreads into its wire
-// query (`query: { ...leadsQueryParams(query) }`), each read alone from the
-// sibling module it is imported from.
+// One builder's body, read alone from the sibling module the screen imports it
+// from.
+function builderBody(
+  file: string,
+  source: string,
+  name: string,
+  readModule: ReadModule,
+): string | undefined {
+  const from = new RegExp(
+    `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
+  ).exec(source)?.[1];
+  const module = from ? readModule(file, from) : undefined;
+  return module ? functionBody(module, name) : undefined;
+}
+
+// A `sort:` key that does not read the query, which unsets or replaces it.
+const OVERRIDING_SORT = /\bsort:(?!\s*\(?query\.sort\b)/;
+
+// The bodies of the builders the fetcher spreads into its wire query
+// (`query: { ...leadsQueryParams(query) }`) that no later key or spread overrides.
 function spreadBuilders(
   file: string,
   source: string,
   wire: string,
   readModule: ReadModule,
 ): string[] {
-  return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap((spread) => {
-    const name = spread[1];
-    // A later `sort:` key that does not read the query overrides the builder's.
-    const after = wire.slice(spread.index + spread[0].length);
-    if (name === undefined || /\bsort:(?!\s*\(?query\.sort\b)/.test(after)) {
-      return [];
-    }
-    const from = new RegExp(
-      `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
-    ).exec(source)?.[1];
-    const module = from ? readModule(file, from) : undefined;
-    const builder = module ? functionBody(module, name) : undefined;
-    return builder ? [builder] : [];
+  const spreads = [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].map((spread) => ({
+    end: spread.index + spread[0].length,
+    body: builderBody(file, source, spread[1] ?? "", readModule),
+  }));
+  return spreads.flatMap((spread, index) => {
+    const overridden =
+      OVERRIDING_SORT.test(wire.slice(spread.end)) ||
+      spreads
+        .slice(index + 1)
+        .some(
+          (later) =>
+            later.body !== undefined && OVERRIDING_SORT.test(later.body),
+        );
+    return spread.body !== undefined && !overridden ? [spread.body] : [];
   });
 }
 
@@ -161,10 +195,11 @@ function screenSendsSort(
   readModule: ReadModule = readSibling,
 ): boolean {
   const body = fetcherBody(source);
-  return (body === undefined ? [] : wireQueries(body)).some(
-    (wire) =>
-      sendsSort(wire) ||
-      spreadBuilders(file, source, wire, readModule).some(sendsSort),
+  const wire = body === undefined ? undefined : wireQuery(body);
+  return (
+    wire !== undefined &&
+    (sendsSort(wire) ||
+      spreadBuilders(file, source, wire, readModule).some(sendsSort))
   );
 }
 
@@ -204,9 +239,7 @@ describe("a list claims no ordering its endpoint cannot give", () => {
     const file = "features/companies/companycontacts/contacts.tsx";
     const body = fetcherBody(readFileSync(resolve(SRC_ROOT, file), "utf8"));
     expect(body?.trimEnd().endsWith("[companyId],\n  )")).toBe(true);
-    expect(wireQueries(body ?? "").some((wire) => wire.includes("sort:"))).toBe(
-      true,
-    );
+    expect(wireQuery(body ?? "")).toContain("sort:");
   });
 
   it.each(listScreens())("%s", (file) => {
@@ -237,10 +270,14 @@ describe("a fetcher's spread builder", () => {
     "  return { q: query.q || undefined };",
     "}",
     "",
+    "export function unsortingParams(query: ListQuery) {",
+    "  return { sort: undefined };",
+    "}",
+    "",
   ].join("\n");
   const fetcherOf = (...body: string[]) =>
     [
-      'import { sortedParams, unsortedParams } from "./things.queries";',
+      'import { sortedParams, unsortedParams, unsortingParams } from "./things.queries";',
       "",
       "export async function fetchThingsPage(query: ListQuery) {",
       ...body,
@@ -290,7 +327,7 @@ describe("a fetcher's spread builder", () => {
     const fetcher = fetcherOf(
       '  const page = await api.GET("/things", { params: { query: { limit: 50 } } });',
       "  const echo = { query: { ...sortedParams(query) } };",
-      "  return page;",
+      "  return { data: page.data };",
     );
     expect(sends(fetcher)).toBe(false);
   });
@@ -303,6 +340,34 @@ describe("a fetcher's spread builder", () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  it("does not, when a later spread unsets the builder's sort", () => {
+    expect(
+      sends(
+        fetcherOf(
+          wireCall("...sortedParams(query), ...unsortingParams(query)"),
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  it("does not, when only a supporting read beside the list read sends it", () => {
+    const fetcher = fetcherOf(
+      '  const meta = await api.GET("/meta", { params: { query: { ...sortedParams(query) } } });',
+      '  const page = unwrap(await api.GET("/things", { params: { query: { limit: 50 } } }));',
+      "  return { data: page.data, meta };",
+    );
+    expect(sends(fetcher)).toBe(false);
+  });
+
+  it("does, when the list read sends it beside a supporting read that does not", () => {
+    const fetcher = fetcherOf(
+      '  const page = unwrap(await api.GET("/things", { params: { query: { ...sortedParams(query) } } }));',
+      '  const meta = await api.GET("/meta", { params: { query: { limit: 1 } } });',
+      "  return { data: page.data, meta };",
+    );
+    expect(sends(fetcher)).toBe(true);
   });
 
   it("reads past a brace inside a quoted value", () => {
