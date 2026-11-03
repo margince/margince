@@ -27,7 +27,7 @@ type taskSource struct {
 }
 
 // askTasksDone marks each promise task on the page with the question the
-// Worklist asks of it, so a promise kept by mail reads the same on both.
+// Worklist asks of it. A promise kept by mail then reads the same on both.
 func (s *Service) askTasksDone(
 	ctx context.Context, tx pgx.Tx, steps []crmcontracts.Company360NextStep, sources []taskSource, now time.Time,
 ) error {

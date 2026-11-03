@@ -192,8 +192,8 @@ func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
 	}
 }
 
-// The company page asks about a promise task kept by mail as the Worklist does:
-// same contact, same mail, same key and fingerprint, so one Not yet holds on both.
+// The company page asks about a promise task kept by mail as the Worklist does.
+// It names the same contact, mail, key and fingerprint, so one Not yet holds on both.
 func TestTheCompanyPageAsksDoneAsTheWorklistDoes(t *testing.T) {
 	e := integration.Setup(t)
 	p := seedPromiseThread(t, e)

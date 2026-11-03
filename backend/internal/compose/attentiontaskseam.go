@@ -339,7 +339,7 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 }
 
 // withMayBeDone asks of each promise task whether our later mail on its thread
-// to a recipient kept it, through the question the company page asks too
+// to a recipient kept it. The company page asks the same question
 // (momentaction.AskTasksDone).
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	// Only a human answers the question, so an agent reading the queue sees
