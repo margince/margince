@@ -21,9 +21,9 @@ import (
 const dealProductTable = "deal_product"
 
 // syncDealProductsFromOffer rewrites the deal's `offer` allocations from the
-// accepted offer's lines that name a product, one row per product with the
-// lines' net value in the offer's currency. A `manual` row set by hand stays,
-// because it is the human's answer and the offer never overrides it.
+// accepted offer's lines that name a product. Each product gets one row with
+// the lines' net value in the offer's currency. A `manual` row set by hand
+// stays, because it is the human's answer and the offer never overrides it.
 func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) error {
 	var manual bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_product WHERE deal_id = $1 AND source = 'manual')`, dealID).Scan(&manual); err != nil {

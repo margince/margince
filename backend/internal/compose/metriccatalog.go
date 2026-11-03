@@ -169,11 +169,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			return out, err
 		}
 		// A team too small to hide one colleague's work shows none of its totals.
-		if thinTeam {
-			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, thinTeamCoverage(frame)))
-			continue
-		}
-		if gap, unsupported := reportingDimensionGap(frame, spec.definition.Id); unsupported {
+		if gap, unread := unreadMetric(frame, spec.definition.Id, thinTeam); unread {
 			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, gap))
 			continue
 		}
@@ -234,4 +230,13 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		out.Facts = append(out.Facts, facts...)
 	}
 	return out, nil
+}
+
+// unreadMetric is the coverage of a metric the evaluation does not read: a
+// thin team's, or one that cannot follow the selection's dimensions.
+func unreadMetric(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, thinTeam bool) (crmcontracts.ReportingCoverage, bool) {
+	if thinTeam {
+		return thinTeamCoverage(frame), true
+	}
+	return reportingDimensionGap(frame, metric)
 }

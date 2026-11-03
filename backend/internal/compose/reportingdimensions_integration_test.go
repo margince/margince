@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// dimensionFixture is two customers in two markets, two products of two
-// kinds, and three won deals: one split over both products, one of the suite
-// alone, and one with no allocation at all.
+// dimensionFixture is two customers in two markets and two products of two
+// kinds. Its three won deals are one split over both products, one of the
+// suite alone, and one with no allocation at all.
 type dimensionFixture struct {
 	suite, onboarding       ids.UUID
 	manufacturing, software ids.UUID

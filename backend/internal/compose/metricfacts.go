@@ -225,10 +225,10 @@ func reportingFactFilters(frame crmcontracts.ReportingContext, metric crmcontrac
 	return where
 }
 
-// readReportingBookingsMix reads one row per allocation of a won deal: each
-// product's value under its component kind, and the deal's unallocated
-// remainder as a group of its own. A product selection keeps that product's
-// allocations alone and drops the remainder, which is not that product's.
+// readReportingBookingsMix reads one row per allocation of a won deal, each
+// under its component kind. The deal's unallocated remainder is a group of
+// its own. A product selection keeps that product's allocations alone and
+// drops the remainder, which is not that product's.
 func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	binds := map[string]any{"currency": frame.Currency}
 	parts := "SELECT dp.product_id::text AS part, COALESCE(dp.component_kind,'unclassified') AS kind, dp.amount_minor AS amount, dp.currency FROM deal_product dp WHERE dp.deal_id=t.id AND dp.amount_minor IS NOT NULL"
