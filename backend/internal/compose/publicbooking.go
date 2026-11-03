@@ -7,9 +7,8 @@ package compose
 // neither session nor workspace header, so this middleware — composed
 // between the session middleware and the contract router — resolves the
 // slug to its tenant, throttles the unauthenticated surface, and binds
-// the workspace plus a system principal confined to the public booking
-// endpoints (whose responses are free/busy slots, {start,end} and the
-// page's link-preview card, publicbookingpreview.go).
+// the workspace plus a system principal confined to the two public
+// endpoints (whose responses are free/busy slots and {start,end} only).
 // Everything downstream (idempotency claims, RBAC-gated stores, audit
 // attribution as actor_type=system) then works unchanged.
 

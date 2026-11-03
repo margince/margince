@@ -25,9 +25,8 @@ export function appHref(href: string | undefined): string | undefined {
 const BOOKING = /^#\/book\/([^/?]+)(?:[/?]|$)/;
 
 // The server-visible path an address mirrors: a record card, a host's public
-// booking page, or the root. A booking id that is not a shareable slug (a
-// guest's proposal or management token, a host control) always maps to the
-// root, so it never leaves the fragment.
+// booking page, or the root. Any other booking id maps to the root. A guest's
+// token so never leaves the fragment.
 function recordPath(hash: string): string {
   const record = RECORD.exec(hash);
   if (record) return `/r/${record[1]}/${record[2]}`;

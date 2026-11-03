@@ -3,16 +3,11 @@
 
 package compose
 
-// The link-preview card of a host's public booking page. The web tier sends a
-// non-browser fetch of /book/<slug> to /v1/public/booking/<slug>/preview
-// (frontend/nginx.conf), and the booking edge (publicbooking.go) answers it
-// here: the same rate limits, the same slug resolution that refuses a missing
-// or revoked page, and the same system:public_booking principal as the rest of
-// the booking edge. The record-card principal is not involved.
-//
-// The card says what the public profile already shows a guest: host, company,
-// meeting title and duration, and the company logo. It never names Margince,
-// and it never carries guest details or a proposal or management token.
+// The link-preview card of a host's public booking page. nginx sends a
+// non-browser fetch of /book/<slug> here. The booking edge (publicbooking.go)
+// applies its rate limits, refuses a missing or revoked slug, and binds the
+// system:public_booking principal before this file renders anything.
+// The card never names Margince, guest details or a token.
 
 import (
 	"fmt"
@@ -51,10 +46,9 @@ func (s Server) writeBookingPreviewUnavailable(w http.ResponseWriter, r *http.Re
 	s.writePreviewCard(w, r, previewCard{Title: "Booking page unavailable", Href: bookingAppHref(hostSlug), LinkText: "Open booking page"}, "booking", cause)
 }
 
-// bookingAppHref is where the card sends a browser: the app's legacy fragment
-// address, never /book/<slug> itself, which would send a browser that sends
-// no Sec-Fetch-Dest straight back to this card. The app then shows the
-// /book/<slug> path in the address bar (frontend/src/lib/recordaddress.ts).
+// bookingAppHref is where the card sends a browser: the fragment address.
+// /book/<slug> itself would loop a browser that sends no Sec-Fetch-Dest back
+// to this card. The app then shows the /book/<slug> path itself.
 func bookingAppHref(hostSlug string) string {
 	return "/#/book/" + hostSlug
 }

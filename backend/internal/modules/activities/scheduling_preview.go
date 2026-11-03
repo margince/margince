@@ -10,14 +10,9 @@ import (
 )
 
 // publicBookingURL is the address a host shares: /book/<slug> on the
-// validated public origin. The web tier serves the app there to a browser and
-// the booking preview to any other fetch (frontend/nginx.conf), so the path is
-// what a link-preview fetcher sees. With no usable origin there is no address
-// to give, and ok is false rather than a relative or invented URL.
-//
-// Only a host's reusable page lives on a path. Proposal and management links
-// keep their token in the # fragment (scheduling_proposal.go,
-// scheduling_secrets.go), which no request carries to a server.
+// validated public origin, which nginx answers with the app or the preview.
+// With no usable origin it answers false, never a relative or invented URL.
+// Proposal and management tokens stay in the # fragment, never on a path.
 func (s *Store) publicBookingURL(slug string) (string, bool) {
 	if slug == "" || s.publicOriginUsable() != nil {
 		return "", false
@@ -25,10 +20,9 @@ func (s *Store) publicBookingURL(slug string) (string, bool) {
 	return strings.TrimRight(s.publicBaseURL, "/") + "/book/" + url.PathEscape(slug), true
 }
 
-// BookingPreview is what a shared booking link's card may say about the page:
-// the host's public identity and meeting title, the same facts the public
-// profile already shows a guest. It never carries calendar contents, guest
-// details or a token.
+// BookingPreview is what a shared booking link's card may say. It holds the
+// facts the public profile already shows a guest. It never holds calendar
+// contents, guest details or a token.
 type BookingPreview struct {
 	// Available is false for a paused page. The card then names no host.
 	Available       bool
@@ -42,10 +36,9 @@ type BookingPreview struct {
 	PageURL string
 }
 
-// PublicBookingPreview reads a booking page's card through the same path the
-// public profile endpoint uses: a missing or revoked slug is
-// apperrors.ErrNotFound, and the host's identity comes from the account and
-// legal-entity branding, never from the request.
+// PublicBookingPreview reads the card the way the public profile is read.
+// A missing or revoked slug is apperrors.ErrNotFound. The host's identity
+// comes from the account and legal-entity branding, never from the request.
 func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (BookingPreview, error) {
 	page, err := h.store.ResolveBookingPage(ctx, slug)
 	if err != nil {
