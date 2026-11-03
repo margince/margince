@@ -703,6 +703,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/ai/provider-keys/{provider}/test":                             {Op: "testAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/routing/preview":                                           {Op: "previewAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/ai/task-overrides/preview":                                    {Op: "previewAiTaskOverrides", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/analytics/assessment":                                         {Op: "assessSalesReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/decisions":                                          {Op: "recordSalesDecision", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/decisions/{id}/outcome":                             {Op: "recordSalesDecisionOutcome", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/analytics/executions/{id}/retry":                              {Op: "retryReportingExecution", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

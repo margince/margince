@@ -326,14 +326,15 @@ tasks:
 
   report_interpret:
     display_name: "Assessing a sales report"
-    summary: "Writes an assessment beside a report's leading chart, citing the figures it rests on. Not in use yet."
+    summary: "Writes an assessment beside a report's leading chart, citing the figures it rests on."
     ladder: [premium, cheap_cloud]
     execution_mode: interactive
     on_budget_exhausted: degrade
-    status: planned
+    status: shipped
+    sites: [sales_assessment]
     company_context: none
     no_payload: true
-    doc: "Read a confirmed report evaluation's measured cells and open decisions and write an observation, why it matters and a next decision, each tied to a cited cell. Its site, sales_assessment, is listed under sites when it is built, because a planned task declares none."
+    doc: "Read a report evaluation's measured cells, the deals behind its open pipeline and the decisions recorded at earlier reviews, and write a few cited sentences and one next decision on a candidate deal. A sentence quoting a number no cited cell carries is dropped, and so is a decision naming a deal outside the candidates. With no model the panel shows the page's deterministic summary."
 
   corpus_ask:
     display_name: "Document corpus question"

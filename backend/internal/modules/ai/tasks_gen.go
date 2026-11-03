@@ -43,7 +43,7 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
-	// TaskReportInterpret is Read a confirmed report evaluation's measured cells and open decisions and write an observation, why it matters and a next decision, each tied to a cited cell. Its site, sales_assessment, is listed under sites when it is built, because a planned task declares none.
+	// TaskReportInterpret is Read a report evaluation's measured cells, the deals behind its open pipeline and the decisions recorded at earlier reviews, and write a few cited sentences and one next decision on a candidate deal. A sentence quoting a number no cited cell carries is dropped, and so is a decision naming a deal outside the candidates. With no model the panel shows the page's deterministic summary.
 	TaskReportInterpret Task = "report_interpret"
 	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Its sites, initiative_setup and custom_report_setup, are named here and listed under sites when they are built, because a planned task declares none.
 	TaskReportSetup Task = "report_setup"
@@ -145,7 +145,7 @@ var taskSummaries = map[Task]string{
 	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
 	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
-	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on. Not in use yet.",
+	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
 	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving. Not in use yet.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
@@ -190,7 +190,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "ae007cfddec88009603cd197cda5c765405a952dbbd8b9bd96a3693663d7c88f"
+const TaskContractHash = "db235b44674aff48fd938333bf1c5a53a81a77268ee90ef96091c3f2aba74df7"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -373,7 +373,7 @@ var taskStatus = map[Task]string{
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
-	TaskReportInterpret:               "planned",
+	TaskReportInterpret:               "shipped",
 	TaskReportSetup:                   "planned",
 	TaskRequestSettlement:             "shipped",
 	TaskSignalExtract:                 "shipped",
@@ -478,6 +478,9 @@ var taskSites = map[Task][]Site{
 	},
 	TaskRateExtract: {
 		{Name: "fx", Kind: "one_shot"},
+	},
+	TaskReportInterpret: {
+		{Name: "sales_assessment", Kind: "one_shot"},
 	},
 	TaskRequestSettlement: {
 		{Name: "request_settle", Kind: "one_shot"},

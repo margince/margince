@@ -4631,6 +4631,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The Sales review's assessment of one selection: a few sentences on what the measured
+         *     figures show, each citing the cells it rests on, and one next decision on a deal the
+         *     reader may see. Written by the model and kept per reader until the figures or the
+         *     recorded decisions move; without a model, or when the model's reply cannot be grounded,
+         *     it answers no sentences and `generated_by` says so, and the page shows its own summary.
+         */
+        post: operations["assessSalesReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -35218,6 +35241,47 @@ export interface components {
         SalesDecisionListResponse: {
             data: components["schemas"]["SalesDecision"][];
         };
+        SalesAssessmentRequest: {
+            selection: components["schemas"]["ReportingSelection"];
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
+        SalesAssessment: {
+            /** @description The evaluation the assessment read. */
+            evaluation_key: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+            /** @enum {string} */
+            confidence?: "low" | "medium" | "high";
+            sentences: components["schemas"]["SalesAssessmentSentence"][];
+            next_decision?: components["schemas"]["SalesAssessmentDecision"];
+            /** @description The figures the sentences may cite, as the model read them. */
+            cells: components["schemas"]["SalesAssessmentCell"][];
+            /** @description How many recorded decisions the model read. */
+            decisions: number;
+        };
+        SalesAssessmentSentence: {
+            text: string;
+            /** @enum {string} */
+            kind: "observation" | "claim" | "hypothesis";
+            /** @description The cell ids the sentence rests on. */
+            cells: string[];
+        };
+        SalesAssessmentDecision: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            text: string;
+        };
+        SalesAssessmentCell: {
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            id: string;
+            label: string;
+            value: string;
+        };
         SalesInitiativeMemberRef: {
             /** @enum {string} */
             record_type: "lead" | "deal";
@@ -62332,6 +62396,33 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assessSalesReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesAssessmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The assessment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

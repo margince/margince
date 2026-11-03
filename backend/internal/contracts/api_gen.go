@@ -18979,6 +18979,48 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	}
 }
 
+// Defines values for SalesAssessmentConfidence.
+const (
+	SalesAssessmentConfidenceHigh   SalesAssessmentConfidence = "high"
+	SalesAssessmentConfidenceLow    SalesAssessmentConfidence = "low"
+	SalesAssessmentConfidenceMedium SalesAssessmentConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentConfidence enum.
+func (e SalesAssessmentConfidence) Valid() bool {
+	switch e {
+	case SalesAssessmentConfidenceHigh:
+		return true
+	case SalesAssessmentConfidenceLow:
+		return true
+	case SalesAssessmentConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentSentenceKind.
+const (
+	SalesAssessmentSentenceKindClaim       SalesAssessmentSentenceKind = "claim"
+	SalesAssessmentSentenceKindHypothesis  SalesAssessmentSentenceKind = "hypothesis"
+	SalesAssessmentSentenceKindObservation SalesAssessmentSentenceKind = "observation"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentSentenceKind enum.
+func (e SalesAssessmentSentenceKind) Valid() bool {
+	switch e {
+	case SalesAssessmentSentenceKindClaim:
+		return true
+	case SalesAssessmentSentenceKindHypothesis:
+		return true
+	case SalesAssessmentSentenceKindObservation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesDecisionStatus.
 const (
 	SalesDecisionStatusDone SalesDecisionStatus = "done"
@@ -55208,6 +55250,65 @@ type RunReportRequest struct {
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
+// SalesAssessment defines model for SalesAssessment.
+type SalesAssessment struct {
+	// Cells The figures the sentences may cite, as the model read them.
+	Cells      []SalesAssessmentCell      `json:"cells"`
+	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
+
+	// Decisions How many recorded decisions the model read.
+	Decisions int `json:"decisions"`
+
+	// EvaluationKey The evaluation the assessment read.
+	EvaluationKey string    `json:"evaluation_key"`
+	GeneratedAt   time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy  WrittenBy                 `json:"generated_by"`
+	ModelUsed    *string                   `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision  `json:"next_decision,omitempty"`
+	Sentences    []SalesAssessmentSentence `json:"sentences"`
+}
+
+// SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
+type SalesAssessmentConfidence string
+
+// SalesAssessmentCell defines model for SalesAssessmentCell.
+type SalesAssessmentCell struct {
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	Id    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SalesAssessmentDecision defines model for SalesAssessmentDecision.
+type SalesAssessmentDecision struct {
+	DealId  openapi_types.UUID `json:"deal_id"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+	Text    string             `json:"text"`
+}
+
+// SalesAssessmentRequest defines model for SalesAssessmentRequest.
+type SalesAssessmentRequest struct {
+	// Refresh Ask the model again, whatever is kept.
+	Refresh   *bool              `json:"refresh,omitempty"`
+	Selection ReportingSelection `json:"selection"`
+}
+
+// SalesAssessmentSentence defines model for SalesAssessmentSentence.
+type SalesAssessmentSentence struct {
+	// Cells The cell ids the sentence rests on.
+	Cells []string                    `json:"cells"`
+	Kind  SalesAssessmentSentenceKind `json:"kind"`
+	Text  string                      `json:"text"`
+}
+
+// SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
+type SalesAssessmentSentenceKind string
+
 // SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
 type SalesDecision struct {
 	CreatedAt      time.Time          `json:"created_at"`
@@ -71165,6 +71266,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
+type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
+
 // RecordSalesDecisionJSONRequestBody defines body for RecordSalesDecision for application/json ContentType.
 type RecordSalesDecisionJSONRequestBody = SalesDecisionInput
 
@@ -83984,6 +84088,13 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The Sales review's assessment of one selection: a few sentences on what the measured
+	// figures show, each citing the cells it rests on, and one next decision on a deal the
+	// reader may see. Written by the model and kept per reader until the figures or the
+	// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+	// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+	// (POST /analytics/assessment)
+	AssessSalesReview(w http.ResponseWriter, r *http.Request)
 	// Which population this caller measures by default, and which they may choose.
 	// (GET /analytics/context)
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
@@ -87237,6 +87348,16 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // What AI cost this month so far, as one figure.
 // (GET /ai/usage/summary)
 func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The Sales review's assessment of one selection: a few sentences on what the measured
+// figures show, each citing the cells it rests on, and one next decision on a deal the
+// reader may see. Written by the model and kept per reader until the figures or the
+// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+// (POST /analytics/assessment)
+func (_ Unimplemented) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96026,6 +96147,26 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsageSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssessSalesReview operation middleware
+func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssessSalesReview(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135591,6 +135732,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)

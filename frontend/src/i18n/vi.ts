@@ -19395,6 +19395,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
   "analytics.hero.noPrior": "Chưa có kỳ trước để so sánh.",
   "analytics.overview.more": "Thêm",
+  "analytics.assessment.title": "Đánh giá",
+  "analytics.assessment.pending": "Đang đọc các con số",
+  "analytics.assessment.refresh": "Làm mới đánh giá",
+  "analytics.assessment.retry": "Thử lại",
+  "analytics.assessment.noSales":
+    "Không có doanh số đo được trong lựa chọn này.",
+  "analytics.assessment.deterministic":
+    "Được viết chỉ từ các con số. Một mô hình AI sẽ thêm cách đọc của nó ở đây khi được thiết lập.",
+  "analytics.assessment.nextDecision": "Quyết định tiếp theo",
+  "analytics.assessment.noDecision": "Không có quyết định được hỗ trợ.",
+  "analytics.assessment.viewEvidence": "Xem bằng chứng",
+  "analytics.assessment.evidenceTitle": "Đánh giá dựa trên điều gì",
+  "analytics.assessment.evidencePurpose":
+    "Mỗi câu nêu các con số mà nó đọc. Mở một con số để xem các bản ghi của nó.",
+  "analytics.assessment.confidence": "Độ tin cậy: {level}",
+  "analytics.assessment.kind.observation": "Quan sát",
+  "analytics.assessment.kind.claim": "Được báo cáo",
+  "analytics.assessment.kind.hypothesis": "Giả thuyết",
+  "analytics.assessment.level.low": "thấp",
+  "analytics.assessment.level.medium": "trung bình",
+  "analytics.assessment.level.high": "cao",
   "analytics.decisions.title": "Quyết định từ lần xem xét trước",
   "analytics.decisions.purpose":
     "Mỗi quyết định là một việc cần làm trên deal, do một thành viên chịu trách nhiệm, với ngày xem lại. Hoàn thành ghi nhận công việc, không phải một deal đã thắng.",

@@ -16,6 +16,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
+import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { DecisionsPanel } from "./analytics.decisions";
 import {
@@ -215,12 +216,19 @@ function SalesReviewBody({
                   charts={charts}
                   onEvidence={openEvidence}
                   aside={
-                    <HeroAside
-                      evaluation={evaluation}
-                      charts={charts?.data}
-                      onApply={apply}
-                      targetSetup={targetSetup}
-                    />
+                    <>
+                      <AssessmentPanel
+                        selection={selection}
+                        evaluation={evaluation}
+                        onEvidence={openEvidence}
+                      />
+                      <HeroAside
+                        evaluation={evaluation}
+                        charts={charts?.data}
+                        onApply={apply}
+                        targetSetup={targetSetup}
+                      />
+                    </>
                   }
                 />
                 <SalesReadings

@@ -211,7 +211,14 @@ type Draft = Readonly<{
  * a retry under the same key, or the same open decision on the same deal,
  * answers that task again.
  */
-function RecordDecisionDialog({ onClose }: Readonly<{ onClose: () => void }>) {
+export function RecordDecisionDialog({
+  initial,
+  onClose,
+}: Readonly<{
+  // What the assessment proposed, for the reader to confirm or change.
+  initial?: Partial<Draft>;
+  onClose: () => void;
+}>) {
   const t = useT();
   const titleId = useId();
   const formId = useId();
@@ -223,6 +230,7 @@ function RecordDecisionDialog({ onClose }: Readonly<{ onClose: () => void }>) {
     ownerId: "",
     reviewOn: "",
     expected: "",
+    ...initial,
   });
   const owners = useAssignableUserOptions();
   const deals = useQuery({
