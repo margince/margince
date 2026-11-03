@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -157,6 +157,7 @@ function renderGrid(company: Company) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 // Settles the grid on the grant read: until /me lands every row is read-only,
@@ -346,6 +347,29 @@ describe("the legal identity a contact can state", () => {
 
     // Two contacts correcting the same number: unpinned, the second silently
     // replaces a change its author never saw.
+    const written = await waitFor(() => {
+      const call = calls.find((one) => one.method === "PATCH");
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(written?.ifMatch).toBe("4");
+  });
+
+  it("pins the version the dialog opened on, not one a refetch brought in", async () => {
+    const user = userEvent.setup();
+    const served = [profileField("register_vat", "DE111111111")];
+    const calls = stub(served);
+    const client = renderGrid(COMPANY);
+    await user.click(
+      await screen.findByRole("button", { name: /^Change VAT ID/ }),
+    );
+
+    served[0] = { ...served[0], version: 5 };
+    await act(() => client.refetchQueries());
+    await user.clear(vatBox());
+    await user.type(vatBox(), "DE811907980");
+    await user.keyboard("{Enter}");
+
     const written = await waitFor(() => {
       const call = calls.find((one) => one.method === "PATCH");
       expect(call).toBeDefined();

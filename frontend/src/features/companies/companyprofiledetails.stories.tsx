@@ -129,7 +129,8 @@ export const ReadOnly: Story = {
 export const RelationshipTypesDialog: Story = {
   render: () => <Details />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       await within(canvasElement).findByRole("button", {
         name: /^Change Relationship type/,
       }),

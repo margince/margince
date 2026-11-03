@@ -136,8 +136,6 @@ export function RepeatableRowsField({
             : "repeatablerowsfield-detail"
         }
         label={t(subField.label)}
-        // The first row's labels head every column, as a table header would.
-        labelHidden={index > 0}
         required={subField.required}
       >
         {(control) =>

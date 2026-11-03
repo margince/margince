@@ -55,8 +55,9 @@ export const FormattedReading: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("button", { name: "Change Budget €48,000.00" }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Budget" });
@@ -83,10 +84,11 @@ export const RefusedSave: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button"));
+    await user.click(await canvas.findByRole("button"));
     const dialog = await screen.findByRole("dialog", { name: "Website" });
-    await userEvent.type(within(dialog).getByRole("textbox"), "s{Enter}");
+    await user.type(within(dialog).getByRole("textbox"), "s{Enter}");
     const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
@@ -111,19 +113,20 @@ function DayExample() {
 export const Day: Story = {
   render: () => <DayExample />,
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("button", { name: /^Change Expected close/ }),
     );
     const page = within(canvasElement.ownerDocument.body);
     const dialog = await page.findByRole("dialog", { name: "Expected close" });
-    await userEvent.click(
+    await user.click(
       within(dialog).getByRole("button", { name: /^Choose date/ }),
     );
-    await userEvent.click(
+    await user.click(
       await page.findByRole("button", { name: "Tuesday, 10 March 2026" }),
     );
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
     await expect(
       await canvas.findByRole("button", {
         name: "Change Expected close 2026-03-10",
@@ -197,11 +200,12 @@ function GridExample({ canEdit }: Readonly<{ canEdit: boolean }>) {
 export const InGrid: Story = {
   render: () => <GridExample canEdit />,
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
     await expect(
       canvas.getByRole("link", { name: "ana@example.com" }),
     ).toHaveAttribute("href", "mailto:ana@example.com");
-    await userEvent.click(canvas.getByRole("button", { name: "Change Email" }));
+    await user.click(canvas.getByRole("button", { name: "Change Email" }));
     const dialog = await screen.findByRole("dialog", { name: "Email" });
     // The dialog fades in from transparent, so visible is a state it reaches.
     await waitFor(() => expect(dialog).toBeVisible());

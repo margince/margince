@@ -623,9 +623,42 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 
     const owner = await screen.findByText("Unassigned");
     expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
-    // The plain value still says why, as every refused control here does.
-    const reason = translate("en", "lead.notYoursToChange");
-    expect(owner).toHaveAttribute("title", reason);
+    // The plain value says why, in the seat's words: a role change would not lift it.
+    const reason = translate("en", "settings.seatRefused");
+    await waitFor(() => expect(owner).toHaveAttribute("title", reason));
+    expect(owner).toHaveAccessibleDescription(reason);
+  });
+
+  it("names the missing grant when a full seat may not assign leads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (request.url.endsWith("/v1/connectors")) {
+          return jsonResponse({ data: [] });
+        }
+        if (request.url.endsWith("/v1/me")) {
+          return jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["rep"],
+            teams: [],
+            authorization: meFixture({ allow: { lead: ["read"] } })
+              .authorization,
+          });
+        }
+        if (request.url.includes("/leads/l-1")) {
+          return jsonResponse({ ...lead, owner_id: null, writable: false });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    const owner = await screen.findByText("Unassigned");
+    const reason = translate("en", "record.actionRefused");
+    await waitFor(() => expect(owner).toHaveAttribute("title", reason));
     expect(owner).toHaveAccessibleDescription(reason);
   });
 

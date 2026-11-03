@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -93,6 +93,15 @@ export function SidecarFieldValue({
   useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
   const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
+  // The row the editor opened on: a refetch while it is open must not move the
+  // precondition, or the save overwrites a concurrent change.
+  const [opened, setOpened] = useState(current);
+  const onEditingChange = useCallback(
+    (editing: boolean) => {
+      if (editing) setOpened(current);
+    },
+    [current],
+  );
   const save = async (next: string) => {
     unwrap(
       await api.PATCH("/companies/{id}/profile-fields/{field}", {
@@ -102,7 +111,7 @@ export function SidecarFieldValue({
           // the write CREATES it, and there is no earlier state to lose. Once
           // one exists the precondition is what stops two contacts correcting the
           // same claim and the second silently replacing the first.
-          ...(current ? ifMatch(requireVersion(current.version)) : {}),
+          ...(opened ? ifMatch(requireVersion(opened.version)) : {}),
         },
         body: { value: next.trim() },
       }),
@@ -130,6 +139,7 @@ export function SidecarFieldValue({
         multiline={multiline}
         canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}
+        onEditingChange={onEditingChange}
         onDirtyChange={setDirty}
         onSave={save}
       />

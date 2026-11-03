@@ -239,7 +239,7 @@ export function RecordFormBody({
   );
   const actions = (
     <>
-      <Button type="button" onClick={onClose}>
+      <Button type="button" onClick={onClose} disabled={pending}>
         {t("create.cancel")}
       </Button>
       <Button

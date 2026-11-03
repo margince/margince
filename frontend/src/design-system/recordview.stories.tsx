@@ -182,8 +182,9 @@ export const Renamable: Story = {
     },
   },
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const heading = within(canvasElement).getByRole("heading", { level: 1 });
-    await userEvent.click(
+    await user.click(
       within(heading).getByRole("button", { name: /^Change Company name/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Company name" });

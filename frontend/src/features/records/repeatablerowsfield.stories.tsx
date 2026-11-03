@@ -143,7 +143,10 @@ export const DomainsOneSubfield: Story = {
   ),
 };
 
-/** A phone-wide column: each row folds to the value over its details. */
+/**
+ * A phone-wide column: each row folds to the value over its details. Every row
+ * shows its own labels, since no first row heads a column here.
+ */
 export const NarrowColumn: Story = {
   decorators: [
     (Story) => (

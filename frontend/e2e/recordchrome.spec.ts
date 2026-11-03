@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { RECORDS } from "./records";
 import { type MockApiOptions, mockApi } from "./seed";
 import { pageOverflow } from "./waits";
@@ -197,12 +198,25 @@ test.describe("a refused rename of the record's name", () => {
     test(`reads in body type on a ${record.name}`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await openRecord(page, record.route);
+      await page.route(/\/v1\//, (route) =>
+        route.request().method() === "PATCH"
+          ? route.fulfill({
+              status: 422,
+              contentType: "application/problem+json",
+              body: JSON.stringify({
+                type: "about:blank",
+                title: "Unprocessable Entity",
+                status: 422,
+                detail: "This name cannot be saved.",
+              }),
+            })
+          : route.fallback(),
+      );
 
       await page.locator(".record-split-rename .editable-value").click();
       const dialog = page.getByRole("dialog");
-      const field = dialog.getByRole("textbox");
-      await field.fill("");
-      await dialog.locator("button[type=submit]").click();
+      await dialog.getByRole("textbox").fill("A refused name");
+      await dialog.getByRole("button", { name: de["record.save"] }).click();
       const refusal = dialog.getByRole("alert");
       await expect(refusal).toBeVisible();
 

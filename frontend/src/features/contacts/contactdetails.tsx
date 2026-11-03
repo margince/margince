@@ -256,8 +256,8 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
 
 /**
  * Every field of the contact, each editing from its value, with its tags, when it
- * was created and who wrote it. The Research tab draws it: the left column
- * reads the same fields, and this is where they change.
+ * was created and who wrote it. The Research tab draws it; the left column edits
+ * its own rows the same way.
  */
 export function ContactDetails({
   contact,

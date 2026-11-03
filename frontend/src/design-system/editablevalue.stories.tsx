@@ -62,11 +62,12 @@ function Rows(props: Readonly<{ onEdit: () => void }>) {
 export const Editable: Story = {
   args: { children: "Software" },
   play: async ({ canvasElement, args }) => {
+    const user = userEvent.setup();
     const pill = within(canvasElement).getByRole("button", {
       name: "Change Industry Software",
     });
-    await userEvent.hover(pill);
-    await userEvent.click(pill);
+    await user.hover(pill);
+    await user.click(pill);
     await expect(args.onEdit).toHaveBeenCalledTimes(1);
   },
 };
@@ -76,7 +77,8 @@ export const FocusedDark: Story = {
   args: { children: "Software" },
   globals: { theme: "dark" },
   play: async ({ canvasElement }) => {
-    await userEvent.tab();
+    const user = userEvent.setup();
+    await user.tab();
     await expect(within(canvasElement).getByRole("button")).toHaveFocus();
   },
 };
@@ -107,7 +109,8 @@ export const LinkValue: Story = {
     ),
   },
   play: async ({ canvasElement, args }) => {
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       within(canvasElement).getByRole("button", { name: "Change Email" }),
     );
     await expect(args.onEdit).toHaveBeenCalledTimes(1);
@@ -163,8 +166,8 @@ export const InFieldGridDark: Story = {
   globals: { theme: "dark" },
 };
 
-// Storybook cannot emulate `hover: none`; a touch device, or a browser run
-// with touch emulation, shows the bubble at rest here.
+// The grid at phone width. The harness emulates no touch, so the bubble a
+// `hover: none` device shows at rest stays hidden here.
 export const Phone: Story = {
   ...InFieldGrid,
   globals: { viewport: { value: "phone" } },

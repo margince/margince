@@ -129,14 +129,21 @@ export const ReadOnly: Story = {
 export const ChoiceDialog: Story = {
   render: () => <Rail />,
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("button", { name: /^Change Stage/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Stage" });
     await waitFor(() => expect(dialog).toBeVisible());
+    await user.click(within(dialog).getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Won" }));
     await expect(
-      within(dialog).getByRole("button", { name: "Save" }),
+      canvas.getByRole("button", { name: "Change Stage Proposal" }),
+    ).toBeVisible();
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    await expect(
+      await canvas.findByRole("button", { name: "Change Stage Won" }),
     ).toBeVisible();
   },
 };
@@ -145,8 +152,9 @@ export const ChoiceDialog: Story = {
 export const LinkFormDialog: Story = {
   render: () => <Rail />,
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("button", { name: /^Change Website/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Website" });

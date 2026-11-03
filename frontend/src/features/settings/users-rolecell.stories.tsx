@@ -40,13 +40,14 @@ function cell(roles: string[], refusal: RoleRefusal | null = null) {
 
 // The pill opens the role dialog; its chooser lists the options.
 async function openChooser(canvasElement: HTMLElement) {
+  const user = userEvent.setup();
   const roleOf = /Dana Kessler’s role/;
-  await userEvent.click(
+  await user.click(
     await within(canvasElement).findByRole("button", { name: roleOf }),
   );
   const body = within(canvasElement.ownerDocument.body);
   const dialog = await body.findByRole("dialog", { name: roleOf });
-  await userEvent.click(within(dialog).getByRole("combobox", { name: roleOf }));
+  await user.click(within(dialog).getByRole("combobox", { name: roleOf }));
   return body;
 }
 

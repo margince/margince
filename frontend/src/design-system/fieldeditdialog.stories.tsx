@@ -148,11 +148,10 @@ export const Choice: Story = { render: () => <Example kind="choice" /> };
 export const Pending: Story = {
   render: () => <Example kind="text" onSave={() => new Promise(() => {})} />,
   play: async () => {
+    const user = userEvent.setup();
     const box = await screen.findByRole("textbox", { name: "Legal name" });
-    await userEvent.type(box, " AG");
-    await userEvent.click(
-      screen.getByRole("button", { name: en["record.save"] }),
-    );
+    await user.type(box, " AG");
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: en["record.save"] }),
@@ -174,11 +173,10 @@ export const Refused: Story = {
     />
   ),
   play: async () => {
+    const user = userEvent.setup();
     const box = await screen.findByRole("textbox", { name: "Legal name" });
-    await userEvent.type(box, " AG");
-    await userEvent.click(
-      screen.getByRole("button", { name: en["record.save"] }),
-    );
+    await user.type(box, " AG");
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
     await waitFor(() =>
       expect(box).toHaveAccessibleDescription(en["common.versionSkew"]),
     );

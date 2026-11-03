@@ -84,16 +84,15 @@ export const RefusedSave: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
+    await user.click(
       await canvas.findByRole("button", { name: /^Change Lifecycle/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Lifecycle" });
-    await userEvent.click(within(dialog).getByRole("combobox"));
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Customer" }),
-    );
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await user.click(within(dialog).getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Customer" }));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
     const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");

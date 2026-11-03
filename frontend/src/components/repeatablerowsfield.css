@@ -55,4 +55,14 @@
     flex: none;
     inline-size: 8rem;
   }
+  /* One line per row: the first row's labels head every column, and later
+     rows keep theirs for screen readers only. */
+  .repeatablerowsfield-row + .repeatablerowsfield-row .field > label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

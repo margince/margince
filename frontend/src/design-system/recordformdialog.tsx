@@ -27,7 +27,7 @@ export function RecordFormDialog({
   actions: ReactNode;
   /** The caller's form holds an edit, so a close that is not a save asks first. */
   unsaved?: boolean;
-  /** Holds the corner X while the caller's save is out. */
+  /** Holds the X, Escape and the backdrop while the caller's save is out. */
   closeDisabled?: boolean;
 }>) {
   const headingId = useId();

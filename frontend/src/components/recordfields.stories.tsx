@@ -75,7 +75,8 @@ export const Editable: Story = { render: () => <Example /> };
 export const GroupInDialog: Story = {
   render: () => <Example />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       await within(canvasElement).findByRole("button", {
         name: /^Change Email addresses/,
       }),

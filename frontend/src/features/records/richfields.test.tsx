@@ -150,11 +150,12 @@ describe("repeatable-row fields", () => {
   });
 
   it("removes a row", async () => {
+    const user = userEvent.setup();
     render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
-    await userEvent.click(screen.getByText("Add email"));
-    await userEvent.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
     expect(screen.getAllByLabelText("Email *")).toHaveLength(2);
-    await userEvent.click(screen.getByRole("button", { name: "Remove row 1" }));
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
     expect(screen.getAllByLabelText("Email *")).toHaveLength(1);
   });
 

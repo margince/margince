@@ -140,7 +140,8 @@ export const ReadOnly: Story = {
 export const AddressDialog: Story = {
   render: () => <Row which="address" label="Address" reading="Munich, DE" />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       await within(canvasElement).findByRole("button", {
         name: "Change Address Munich, DE",
       }),

@@ -132,7 +132,8 @@ export const CompanyFactsPhone: Story = {
 export const OwnerDialog: Story = {
   render: page(base),
   play: async () => {
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       await screen.findByRole("button", { name: /^Change Owner/ }),
     );
     await screen.findByRole("combobox", { name: "Owner" });

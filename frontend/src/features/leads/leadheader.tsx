@@ -27,7 +27,7 @@ import {
 import { IdentityLine } from "../../design-system/identityline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { LeadCompany } from "./leadcompany";
@@ -297,6 +297,7 @@ export function LeadOwnerControl({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
+  const t = useT();
   const me = useMe();
   // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
   // half of the editor's answer and keeps the rest. `writable` is false on a
@@ -309,15 +310,22 @@ export function LeadOwnerControl({
   // fails is worse than none. An archived lead is refused too: a terminal
   // record is nobody's to hand on.
   const mayAssign = useCanWrite("lead", "update");
+  const assignRefusal = useWriteRefusal("lead", "update", {
+    seat: t("settings.seatRefused"),
+    grant: t("record.actionRefused"),
+  });
   const refused = Boolean(lead.archived_at) || !mayAssign;
+  const refusal = lead.archived_at
+    ? writer.readOnlyReason
+    : me.data && assignRefusal;
   const meId = me.data?.user?.id;
   return (
     <LeadOwner
       lead={lead}
       meId={meId}
       editable={!refused && !writer.patch.isPending && !writer.assigning}
-      readOnlyReason={refused ? writer.readOnlyReason : undefined}
-      refusedReasonId={refused ? terminalReasonId : undefined}
+      readOnlyReason={refusal}
+      refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
       onAssign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
     />
   );

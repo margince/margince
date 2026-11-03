@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
@@ -48,8 +48,8 @@ function serve(served: Record<string, unknown>) {
   return patches;
 }
 
-async function showEmptyFields() {
-  await userEvent.click(
+async function showEmptyFields(user: UserEvent) {
+  await user.click(
     await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
   );
 }
@@ -107,13 +107,10 @@ describe("a lead's company facts", () => {
 
   it("lets a rep type an industry on an unlinked lead", async () => {
     const patches = serve(lead);
+    const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
-    await showEmptyFields();
-    await changeChoice(
-      userEvent.setup(),
-      "Industry",
-      "Logistics and Transport",
-    );
+    await showEmptyFields(user);
+    await changeChoice(user, "Industry", "Logistics and Transport");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "logistics_transport" }),

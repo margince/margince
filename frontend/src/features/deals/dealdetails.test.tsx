@@ -113,9 +113,14 @@ it("locks offer-derived ARR and currency while permitting an amount correction",
   await user.click(await screen.findByRole("button", { name: CHANGE_VALUE }));
   const dialog = await valueDialog();
   const input = within(dialog).getByRole("spinbutton", { name: "Value" });
+  const save = within(dialog).getByRole("button", { name: "Save" });
+  // Enter in the field saves in a browser, since Save submits the field's own
+  // form; happy-dom has no implicit submission to press it with.
+  expect(save.getAttribute("type")).toBe("submit");
+  expect(save.getAttribute("form")).toBe(input.closest("form")?.id ?? "none");
   await user.clear(input);
   await user.type(input, "49000");
-  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await user.click(save);
   await waitFor(() => expect(sent).toEqual([{ amount_minor: 4900000 }]));
   expect(
     screen.queryByRole("button", { name: /^Change Expected ARR/ }),

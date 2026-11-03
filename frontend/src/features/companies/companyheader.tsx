@@ -151,7 +151,10 @@ export function CompanyOwnerControl({
   const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
-  const claim = useClaimRecord("company", company.id);
+  const claim = useMutation({
+    mutationKey: ["company-claim", company.id],
+    mutationFn: useClaimRecord("company", company.id),
+  });
   const viewerId = useViewerId();
   const { options: owners, roster } = useRecordOwnerOptions();
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
@@ -219,7 +222,7 @@ export function CompanyOwnerControl({
       // who can write the row (`nameable`).
       onSave={(next) =>
         !company.owner_id && next === viewerId
-          ? claim(company.version)
+          ? claim.mutateAsync(company.version)
           : patch({ owner_id: next })
       }
     />
