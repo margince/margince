@@ -210,7 +210,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 	)
 	query := storekit.SQLf(`
 		SELECT a.kind, a.occurred_at, a.occurred_precision, COALESCE(a.agenda_fingerprint, ''), %s, %s
-		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND `+activityLive+`
+		  FROM activity a WHERE a.id = $1 AND `+activityLive+`
 		   FOR SHARE OF a`, participantsSQL, storekit.MeetingResponsibilitySQL("a", "$2"))
 	if err := tx.QueryRow(ctx, query, id, attendee).Scan(
 		&kind, &startsAt, &precision, &agenda, &guests, &attends); err != nil {
@@ -294,7 +294,7 @@ const preparationsQuery = `
 	       r.revision, r.starts_at, r.starts_on_day, r.agenda_fingerprint, r.participants_fingerprint
 	  FROM activity a
 	  LEFT JOIN meeting_readiness r ON r.activity_id = a.id AND r.attendee_id = %s
-	 WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND a.kind = 'meeting' AND ` + activityLive + ` AND %s AND %s`
+	 WHERE a.id = ANY($%d) AND a.kind = 'meeting' AND ` + activityLive + ` AND %s AND %s`
 
 // participantsSQL names each participant by its most stable identity. A
 // calendar's address stays when capture later resolves it to a contact. So

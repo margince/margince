@@ -9124,6 +9124,27 @@ func (e CreateProductRequestBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for CreateProductRequestComponentKind.
+const (
+	CreateProductRequestComponentKindImplementation CreateProductRequestComponentKind = "implementation"
+	CreateProductRequestComponentKindOther          CreateProductRequestComponentKind = "other"
+	CreateProductRequestComponentKindSoftware       CreateProductRequestComponentKind = "software"
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestComponentKind enum.
+func (e CreateProductRequestComponentKind) Valid() bool {
+	switch e {
+	case CreateProductRequestComponentKindImplementation:
+		return true
+	case CreateProductRequestComponentKindOther:
+		return true
+	case CreateProductRequestComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -9988,6 +10009,45 @@ func (e DealLastEmailDirection) Valid() bool {
 	case DealLastEmailDirectionInbound:
 		return true
 	case DealLastEmailDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealProductComponentKind.
+const (
+	DealProductComponentKindImplementation DealProductComponentKind = "implementation"
+	DealProductComponentKindOther          DealProductComponentKind = "other"
+	DealProductComponentKindSoftware       DealProductComponentKind = "software"
+)
+
+// Valid indicates whether the value is a known member of the DealProductComponentKind enum.
+func (e DealProductComponentKind) Valid() bool {
+	switch e {
+	case DealProductComponentKindImplementation:
+		return true
+	case DealProductComponentKindOther:
+		return true
+	case DealProductComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealProductSource.
+const (
+	DealProductSourceManual DealProductSource = "manual"
+	DealProductSourceOffer  DealProductSource = "offer"
+)
+
+// Valid indicates whether the value is a known member of the DealProductSource enum.
+func (e DealProductSource) Valid() bool {
+	switch e {
+	case DealProductSourceManual:
+		return true
+	case DealProductSourceOffer:
 		return true
 	default:
 		return false
@@ -16648,6 +16708,27 @@ func (e ProductBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for ProductComponentKind.
+const (
+	ProductComponentKindImplementation ProductComponentKind = "implementation"
+	ProductComponentKindOther          ProductComponentKind = "other"
+	ProductComponentKindSoftware       ProductComponentKind = "software"
+)
+
+// Valid indicates whether the value is a known member of the ProductComponentKind enum.
+func (e ProductComponentKind) Valid() bool {
+	switch e {
+	case ProductComponentKindImplementation:
+		return true
+	case ProductComponentKindOther:
+		return true
+	case ProductComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProgressDealRequestWonWithoutContractReason.
 const (
 	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
@@ -18148,6 +18229,7 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities    ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDBookingsMix              ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
@@ -18172,6 +18254,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDBookingsMix:
 		return true
 	case ReportingMetricIDBookingsWon:
 		return true
@@ -18577,6 +18661,27 @@ func (e ReportingTargetInputPeriodKind) Valid() bool {
 	case ReportingTargetInputPeriodKindFiscalQuarter:
 		return true
 	case ReportingTargetInputPeriodKindMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingValueBasis.
+const (
+	ReportingValueBasisAll            ReportingValueBasis = "all"
+	ReportingValueBasisImplementation ReportingValueBasis = "implementation"
+	ReportingValueBasisSoftware       ReportingValueBasis = "software"
+)
+
+// Valid indicates whether the value is a known member of the ReportingValueBasis enum.
+func (e ReportingValueBasis) Valid() bool {
+	switch e {
+	case ReportingValueBasisAll:
+		return true
+	case ReportingValueBasisImplementation:
+		return true
+	case ReportingValueBasisSoftware:
 		return true
 	default:
 		return false
@@ -21751,6 +21856,27 @@ func (e UpdateProductRequestBillingModel) Valid() bool {
 	case UpdateProductRequestBillingModelOneTime:
 		return true
 	case UpdateProductRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestComponentKind.
+const (
+	UpdateProductRequestComponentKindImplementation UpdateProductRequestComponentKind = "implementation"
+	UpdateProductRequestComponentKindOther          UpdateProductRequestComponentKind = "other"
+	UpdateProductRequestComponentKindSoftware       UpdateProductRequestComponentKind = "software"
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestComponentKind enum.
+func (e UpdateProductRequestComponentKind) Valid() bool {
+	switch e {
+	case UpdateProductRequestComponentKindImplementation:
+		return true
+	case UpdateProductRequestComponentKindOther:
+		return true
+	case UpdateProductRequestComponentKindSoftware:
 		return true
 	default:
 		return false
@@ -40604,7 +40730,10 @@ type CreateProductRequest struct {
 
 	// BillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 	BillingModel *CreateProductRequestBillingModel `json:"billing_model,omitempty"`
-	Currency     string                            `json:"currency"`
+
+	// ComponentKind What kind of value the product is. Omit or send null to leave it unclassified.
+	ComponentKind *CreateProductRequestComponentKind `json:"component_kind,omitempty"`
+	Currency      string                             `json:"currency"`
 
 	// DefaultTaxRate Percent; defaults to 0.
 	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty"`
@@ -40623,6 +40752,9 @@ type CreateProductRequestBillingIntervalMonths int
 
 // CreateProductRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type CreateProductRequestBillingModel string
+
+// CreateProductRequestComponentKind What kind of value the product is. Omit or send null to leave it unclassified.
+type CreateProductRequestComponentKind string
 
 // CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
 type CreateProjectHealthAssessmentRequest struct {
@@ -41534,6 +41666,40 @@ type DealNextBestActionEvidence struct {
 	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 	Text              string            `json:"text"`
+}
+
+// DealProduct defines model for DealProduct.
+type DealProduct struct {
+	// AmountMinor The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// ComponentKind The classification of the product when the allocation was written.
+	ComponentKind *DealProductComponentKind `json:"component_kind,omitempty"`
+	Currency      *string                   `json:"currency,omitempty"`
+	ProductId     openapi_types.UUID        `json:"product_id"`
+	ProductName   string                    `json:"product_name"`
+
+	// Source `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+	Source    DealProductSource `json:"source"`
+	UpdatedAt time.Time         `json:"updated_at"`
+}
+
+// DealProductComponentKind The classification of the product when the allocation was written.
+type DealProductComponentKind string
+
+// DealProductSource `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+type DealProductSource string
+
+// DealProductInput defines model for DealProductInput.
+type DealProductInput struct {
+	// AmountMinor The value allocated to the product in the currency of the deal. Omit to name the product without an amount.
+	AmountMinor *int64             `json:"amount_minor,omitempty"`
+	ProductId   openapi_types.UUID `json:"product_id"`
+}
+
+// DealProductListResponse defines model for DealProductListResponse.
+type DealProductListResponse struct {
+	Data []DealProduct `json:"data"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.
@@ -51257,9 +51423,12 @@ type Product struct {
 	BillingModel *ProductBillingModel `json:"billing_model,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
-	CapturedBy *string   `json:"captured_by,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	Currency   string    `json:"currency"`
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// ComponentKind What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
+	ComponentKind *ProductComponentKind `json:"component_kind,omitempty"`
+	CreatedAt     time.Time             `json:"created_at"`
+	Currency      string                `json:"currency"`
 
 	// DefaultTaxRate Percent, e.g. 19.00 (DE USt.); per-line override allowed.
 	DefaultTaxRate float64            `json:"default_tax_rate"`
@@ -51291,6 +51460,9 @@ type ProductBillingIntervalMonths int
 
 // ProductBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type ProductBillingModel string
+
+// ProductComponentKind What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
+type ProductComponentKind string
 
 // ProductListResponse defines model for ProductListResponse.
 type ProductListResponse struct {
@@ -53269,6 +53441,11 @@ type ReplaceChannelTokenRequest struct {
 	BotToken string `json:"botToken"`
 }
 
+// ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
+type ReplaceDealProductsRequest struct {
+	Products []DealProductInput `json:"products"`
+}
+
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the
 // message's participants by role.
 //
@@ -53713,10 +53890,11 @@ type ReportingComparisonOperands struct {
 
 // ReportingContext defines model for ReportingContext.
 type ReportingContext struct {
-	CloseInterval     *ReportingWindow `json:"close_interval,omitempty"`
-	Currency          string           `json:"currency"`
-	DefinitionVersion string           `json:"definition_version"`
-	EvaluatedAt       time.Time        `json:"evaluated_at"`
+	CloseInterval     *ReportingWindow  `json:"close_interval,omitempty"`
+	Country           *ReportingCountry `json:"country,omitempty"`
+	Currency          string            `json:"currency"`
+	DefinitionVersion string            `json:"definition_version"`
+	EvaluatedAt       time.Time         `json:"evaluated_at"`
 
 	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
 	FiscalYearStartMonth *int  `json:"fiscal_year_start_month,omitempty"`
@@ -53724,22 +53902,29 @@ type ReportingContext struct {
 
 	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
 	Horizon               *ReportingWindow     `json:"horizon,omitempty"`
+	Industry              *ReportingIndustry   `json:"industry,omitempty"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
 	PeriodKind            string               `json:"period_kind"`
 	PipelineId            *openapi_types.UUID  `json:"pipeline_id,omitempty"`
 	PopulationFingerprint string               `json:"population_fingerprint"`
+	ProductId             *ReportingProductId  `json:"product_id,omitempty"`
+	ProductLabel          *string              `json:"product_label,omitempty"`
 
 	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
 	ProseLanguage *string        `json:"prose_language,omitempty"`
 	Scope         ReportingScope `json:"scope"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
-	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
-	StateAt         time.Time        `json:"state_at"`
-	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
-	Timezone        string           `json:"timezone"`
+	ScopeHoldsDeals *bool                `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time            `json:"state_at"`
+	TargetInterval  *ReportingWindow     `json:"target_interval,omitempty"`
+	Timezone        string               `json:"timezone"`
+	ValueBasis      *ReportingValueBasis `json:"value_basis,omitempty"`
 }
+
+// ReportingCountry defines model for ReportingCountry.
+type ReportingCountry = string
 
 // ReportingCoverage defines model for ReportingCoverage.
 type ReportingCoverage struct {
@@ -53922,6 +54107,9 @@ type ReportingFrameworkInput struct {
 // ReportingFrameworkInputTemplate defines model for ReportingFrameworkInput.Template.
 type ReportingFrameworkInputTemplate string
 
+// ReportingIndustry defines model for ReportingIndustry.
+type ReportingIndustry = string
+
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
 	Attainment  *float64             `json:"attainment,omitempty"`
@@ -54048,6 +54236,9 @@ type ReportingPreset struct {
 
 // ReportingPresetId defines model for ReportingPreset.Id.
 type ReportingPresetId string
+
+// ReportingProductId defines model for ReportingProductId.
+type ReportingProductId = openapi_types.UUID
 
 // ReportingQualification defines model for ReportingQualification.
 type ReportingQualification struct {
@@ -54228,6 +54419,8 @@ type ReportingSelection struct {
 	// and ignores what was sent, so a client that reads only `blocks` keeps working.
 	Blocks      []ReportingBlockKind          `json:"blocks"`
 	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
+	Country     *ReportingCountry             `json:"country,omitempty"`
+	Industry    *ReportingIndustry            `json:"industry,omitempty"`
 	Interval    *ReportingWindow              `json:"interval,omitempty"`
 
 	// Layout Sections of cards, in reading order. Absent means one untitled section of
@@ -54242,8 +54435,10 @@ type ReportingSelection struct {
 	// beside it still counts the whole month up to the evaluation time.
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
+	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
 	Scope       ReportingScope                `json:"scope"`
 	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
+	ValueBasis  *ReportingValueBasis          `json:"value_basis,omitempty"`
 }
 
 // ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
@@ -54403,6 +54598,9 @@ type ReportingTargetList struct {
 	Data       []ReportingTarget `json:"data"`
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
+
+// ReportingValueBasis defines model for ReportingValueBasis.
+type ReportingValueBasis string
 
 // ReportingWindow defines model for ReportingWindow.
 type ReportingWindow struct {
@@ -59059,14 +59257,17 @@ type UpdateProductRequest struct {
 	BillingIntervalMonths *UpdateProductRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
 
 	// BillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
-	BillingModel   *UpdateProductRequestBillingModel `json:"billing_model,omitempty"`
-	Currency       *string                           `json:"currency,omitempty"`
-	DefaultTaxRate *float64                          `json:"default_tax_rate,omitempty"`
-	Description    *string                           `json:"description,omitempty"`
-	Name           *string                           `json:"name,omitempty"`
-	Sku            *string                           `json:"sku,omitempty"`
-	Unit           *string                           `json:"unit,omitempty"`
-	UnitPriceMinor *int64                            `json:"unit_price_minor,omitempty"`
+	BillingModel *UpdateProductRequestBillingModel `json:"billing_model,omitempty"`
+
+	// ComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
+	ComponentKind  *UpdateProductRequestComponentKind `json:"component_kind,omitempty"`
+	Currency       *string                            `json:"currency,omitempty"`
+	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty"`
+	Description    *string                            `json:"description,omitempty"`
+	Name           *string                            `json:"name,omitempty"`
+	Sku            *string                            `json:"sku,omitempty"`
+	Unit           *string                            `json:"unit,omitempty"`
+	UnitPriceMinor *int64                             `json:"unit_price_minor,omitempty"`
 }
 
 // UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -59074,6 +59275,9 @@ type UpdateProductRequestBillingIntervalMonths int
 
 // UpdateProductRequestBillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
 type UpdateProductRequestBillingModel string
+
+// UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
+type UpdateProductRequestComponentKind string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
 // `key` is absent for a different reason: the server mints it from the name and
@@ -63296,6 +63500,10 @@ type EvaluateReportingParams struct {
 	CloseWindow *EvaluateReportingParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
 	Metrics     *[]ReportingMetricID                `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks      *[]ReportingBlockKind               `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId   *openapi_types.UUID                 `form:"product_id,omitempty" json:"product_id,omitempty"`
+	Country     *ReportingCountry                   `form:"country,omitempty" json:"country,omitempty"`
+	Industry    *ReportingIndustry                  `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis  *ReportingValueBasis                `form:"value_basis,omitempty" json:"value_basis,omitempty"`
 }
 
 // EvaluateReportingParamsScopeKind defines parameters for EvaluateReporting.
@@ -63355,6 +63563,10 @@ type GetReportingEvidenceParams struct {
 	CloseWindow       *GetReportingEvidenceParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
 	Metrics           *[]ReportingMetricID                   `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks            *[]ReportingBlockKind                  `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId         *openapi_types.UUID                    `form:"product_id,omitempty" json:"product_id,omitempty"`
+	Country           *ReportingCountry                      `form:"country,omitempty" json:"country,omitempty"`
+	Industry          *ReportingIndustry                     `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis        *ReportingValueBasis                   `form:"value_basis,omitempty" json:"value_basis,omitempty"`
 	Metric            ReportingMetricID                      `form:"metric" json:"metric"`
 	GroupKey          *string                                `form:"group_key,omitempty" json:"group_key,omitempty"`
 	Through           *time.Time                             `form:"through,omitempty" json:"through,omitempty"`
@@ -70967,6 +71179,9 @@ type CreateOfferJSONRequestBody = CreateOfferRequest
 
 // CreateDealOutcomeReviewJSONRequestBody defines body for CreateDealOutcomeReview for application/json ContentType.
 type CreateDealOutcomeReviewJSONRequestBody = CreateOutcomeReviewRequest
+
+// ReplaceDealProductsJSONRequestBody defines body for ReplaceDealProducts for application/json ContentType.
+type ReplaceDealProductsJSONRequestBody = ReplaceDealProductsRequest
 
 // ProgressDealJSONRequestBody defines body for ProgressDeal for application/json ContentType.
 type ProgressDealJSONRequestBody = ProgressDealRequest
@@ -79748,6 +79963,14 @@ func (a *Product) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
+	if raw, found := object["component_kind"]; found {
+		err = json.Unmarshal(raw, &a.ComponentKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'component_kind': %w", err)
+		}
+		delete(object, "component_kind")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -79892,6 +80115,13 @@ func (a Product) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.ComponentKind != nil {
+		object["component_kind"], err = json.Marshal(a.ComponentKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'component_kind': %w", err)
+		}
 	}
 
 	object["created_at"], err = json.Marshal(a.CreatedAt)
@@ -84447,6 +84677,12 @@ type ServerInterface interface {
 	// Write a review of how this deal's current closing went.
 	// (POST /deals/{id}/outcome-reviews)
 	CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The products a deal sells, with the value allocated to each.
+	// (GET /deals/{id}/products)
+	ListDealProducts(w http.ResponseWriter, r *http.Request, id Id)
+	// Set a deal's products by hand, replacing every allocation it had.
+	// (PUT /deals/{id}/products)
+	ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id Id)
 	// Move a deal to a stage and note why, in one call.
 	// (POST /deals/{id}/progress)
 	ProgressDeal(w http.ResponseWriter, r *http.Request, id Id, params ProgressDealParams)
@@ -88788,6 +89024,18 @@ func (_ Unimplemented) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Req
 // Write a review of how this deal's current closing went.
 // (POST /deals/{id}/outcome-reviews)
 func (_ Unimplemented) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The products a deal sells, with the value allocated to each.
+// (GET /deals/{id}/products)
+func (_ Unimplemented) ListDealProducts(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set a deal's products by hand, replacing every allocation it had.
+// (PUT /deals/{id}/products)
+func (_ Unimplemented) ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95665,6 +95913,58 @@ func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_basis", r.URL.Query(), &params.ValueBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_basis", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.EvaluateReporting(w, r, params)
 	}))
@@ -96068,6 +96368,58 @@ func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_basis", r.URL.Query(), &params.ValueBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_basis", Err: err})
 		}
 		return
 	}
@@ -112543,6 +112895,70 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateDealOutcomeReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDealProducts operation middleware
+func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealProducts(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceDealProducts operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceDealProducts(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135272,6 +135688,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/outcome-reviews", wrapper.CreateDealOutcomeReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/products", wrapper.ListDealProducts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/deals/{id}/products", wrapper.ReplaceDealProducts)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/progress", wrapper.ProgressDeal)

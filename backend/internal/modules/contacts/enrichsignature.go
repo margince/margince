@@ -456,7 +456,7 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, history_depth)
 			SELECT $1, a.id, a.occurred_at, $3 FROM activity a
-			 WHERE activity_thread_available(a.thread_key) AND a.id = $2 AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+			 WHERE a.id = $2 AND a.restricted_at IS NULL
 			ON CONFLICT (contact_id) DO UPDATE
 			SET activity_id = EXCLUDED.activity_id,
 			    last_activity_at = GREATEST(contact_signature_enrich_state.last_activity_at,

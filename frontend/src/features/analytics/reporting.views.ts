@@ -42,6 +42,7 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   partner_activity: "partners",
   stage_conversion: "conversion",
   lead_cohort_outcomes: "leads",
+  bookings_mix: "sales",
 };
 
 // What each view is called, the tab that opens it, what it asks, and whether

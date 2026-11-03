@@ -138,6 +138,8 @@ A product holds a name, a SKU if you want one, a description, a unit, a unit pri
 
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 
+**Kind** says what a product is: **Software**, **Implementation** or **Other**. The commercial mix on Analytics groups won value by it. You can leave it empty, and the mix then shows the product's value as **Unclassified product**.
+
 ### Snapshots, and why a line does not move
 
 An offer line **copies from the product once**, when you add it: the description, unit, price and tax rate. Editing the product later never changes an offer. Archiving one says so: "Archive this product? Existing offer lines keep their snapshot."

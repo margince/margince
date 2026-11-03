@@ -14,7 +14,7 @@ import (
 func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 	fields := []string{reportingName, fieldOwnerID, "pipeline_id", "stage_id", reportingStatusField}
 	switch metric {
-	case reportingBookingsWon:
+	case reportingBookingsWon, reportingBookingsMix:
 		fields = append(fields, "closed_at", "amount_minor", reportingCurrency)
 	case reportingClosedWinRate:
 		fields = append(fields, "closed_at")

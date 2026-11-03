@@ -72,7 +72,7 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
   JOIN activity src ON src.id = basis.source_id AND src.thread_key IS NOT NULL
   CROSS JOIN LATERAL (
     SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, '') AS subject FROM activity a
-     WHERE activity_thread_available(a.thread_key) AND %[2]s
+     WHERE %[2]s
        AND %[3]s
        AND %[4]s
      ORDER BY a.occurred_at DESC, a.id DESC

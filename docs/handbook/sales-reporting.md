@@ -26,6 +26,22 @@ Targets use the month or fiscal quarter that holds the real cutoff, even when th
 
 Every chart can also be read as numbers. The round **i** button beside a chart's title opens its reporting details. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
 
+## How do I read one product's sales?
+
+Open **Analytics → Reports** and pick the product under **Product sales**. Sales review opens for that product alone, with a **Product sales** chip above the figures. Nothing is set up and nothing is written. A product report is the company report read for one product.
+
+On Sales review or Performance, open **Filters** and pick a **Product**, a **Country · company address**, an **Industry** and a **Value basis**. Each choice shows as a chip. The **×** on a chip removes that one filter. Every figure, chart, record list and export follows the same chips.
+
+A deal counts for a product when the accepted offer has a line for it, or when someone set the deal's products by hand. **Sales won** for a product is the value of that product's lines on the accepted offers of the deals won in the period. It is converted the way the deal's own amount is. A won deal with no priced link to the product stays in the count and adds nothing to the value. Open pipeline for a product is the whole open deal, because an open deal has no accepted offer to split.
+
+**Country · company address** reads the checked address of the deal's company. **Industry** reads the company's industry. A lead with no company keeps the industry a rep typed.
+
+**Commercial mix** splits the value of the deals won in the period by what each product is. The kinds are **Software**, **Implementation** and **Other**, set on the product under **Settings → Products and offers**. The part of a deal that no product line carries is **Unallocated**. A product with no kind shows as **Unclassified product**.
+
+The split keeps the kind a product had when the deal was priced. A later change on the rate card does not rewrite a closed deal. **Value basis** narrows sales won to one kind. Open value has no such split and says so.
+
+A figure that cannot follow a product, an address or an industry, such as meetings held, says so instead of answering for everything. With any of these filters chosen, no target is compared. A target is set for a whole scope.
+
 ## How far is this quarter from its target?
 
 With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:

@@ -100,7 +100,7 @@ const historyQuery = `
 	         WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL AND %[10]s
 	       ), '[]'::json) AS filed
 	FROM activity a
-	WHERE a.archived_at IS NULL AND activity_thread_available(a.thread_key)
+	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
 	  AND %[5]s

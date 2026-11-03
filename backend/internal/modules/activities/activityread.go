@@ -290,9 +290,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
-	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`
+	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
-		q += ` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
+		q += ` AND a.archived_at IS NULL`
 	}
 	a, err := scanActivity(tx.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -470,7 +470,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
-				` FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 	})
 	return total, err
 }

@@ -89,8 +89,8 @@ func ensureSignalAnswerable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	query := fmt.Sprintf(`SELECT NOT EXISTS (
   SELECT 1 FROM signal s CROSS JOIN LATERAL jsonb_array_elements(s.evidence) cite
   WHERE s.id = $%d AND cite->>'source_type' = 'activity'
-  AND NOT EXISTS (SELECT 1 FROM activity ca WHERE activity_thread_available(ca.thread_key) AND ca.id = `+storekit.CitedActivityID("cite")+`
-   AND (ca.archived_at IS NULL AND activity_thread_available(ca.thread_key)) AND `+content+`))`, arg(id))
+  AND NOT EXISTS (SELECT 1 FROM activity ca WHERE ca.id = `+storekit.CitedActivityID("cite")+`
+   AND ca.archived_at IS NULL AND `+content+`))`, arg(id))
 	var visible bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&visible); err != nil {
 		return err

@@ -133,7 +133,7 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
-			  AND a.is_done = false AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			  AND a.is_done = false AND a.archived_at IS NULL
 			  AND a.assignee_id IS DISTINCT FROM $6
 			ORDER BY a.id`,
 			leadID, string(crmcontracts.ActivityKindTask), systemSource,

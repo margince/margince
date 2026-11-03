@@ -78,6 +78,9 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
 		return out, err
 	}
+	if err := reportingDimensionContext(ctx, tx, selection, &out); err != nil {
+		return out, err
+	}
 	out.Interval, err = reporting.Interval(selection, calendar, at)
 	if err != nil {
 		return out, err

@@ -173,16 +173,16 @@ func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) 
 	// The body of work, on the same terms as every other activity read on this
 	// page: a page narrowed to one project must not rate its health from
 	// another project's meeting.
-	where := fmt.Sprintf(`a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND %s`,
+	where := fmt.Sprintf(`a.kind = 'meeting' AND a.archived_at IS NULL AND %s AND %s`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos)) + a.opts.projectScope(arg)
 	now := fmt.Sprintf("$%d", nowPos)
 	rows, err := a.tx.Query(a.ctx, fmt.Sprintf(`
 		(SELECT 'last' AS side, a.occurred_at, a.occurred_precision FROM activity a
-		  WHERE activity_thread_available(a.thread_key) AND %[1]s AND %[2]s
+		  WHERE %[1]s AND %[2]s
 		  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
 		UNION ALL
 		(SELECT 'next', a.occurred_at, a.occurred_precision FROM activity a
-		  WHERE activity_thread_available(a.thread_key) AND %[1]s AND %[3]s
+		  WHERE %[1]s AND %[3]s
 		  ORDER BY %[4]s, a.id LIMIT 1)`,
 		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {

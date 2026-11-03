@@ -50,13 +50,14 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingStageConversion, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingStageConversion].En}, string(recordTypeDeal), readReportingStageConversion},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadCohortOutcomes, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingLeadCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadCohortOutcomes].En}, string(recordTypeLead), readReportingLeadCohort},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingBookingsMix, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingBookingsMix].En}, string(recordTypeDeal), readReportingBookingsMix},
 }
 
 // reportingPresets are the selections the Analytics screen opens on. A preset
 // names metrics and charts only: each metric's meaning and read grant stay in
 // reportingMetrics.
 var reportingPresets = []crmcontracts.ReportingPreset{
-	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge}},
+	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated, reportingBookingsMix}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge, reportingBreakdown}},
 	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 	// A team's prospecting, counted once for the team: the handoff feedback
 	// beside it comes from GET /analytics/sdr-team.
@@ -168,8 +169,8 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			return out, err
 		}
 		// A team too small to hide one colleague's work shows none of its totals.
-		if thinTeam {
-			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, thinTeamCoverage(frame)))
+		if gap, unread := unreadMetric(frame, spec.definition.Id, thinTeam); unread {
+			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, gap))
 			continue
 		}
 		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
@@ -229,4 +230,13 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		out.Facts = append(out.Facts, facts...)
 	}
 	return out, nil
+}
+
+// unreadMetric is the coverage of a metric the evaluation does not read: a
+// thin team's, or one that cannot follow the selection's dimensions.
+func unreadMetric(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, thinTeam bool) (crmcontracts.ReportingCoverage, bool) {
+	if thinTeam {
+		return thinTeamCoverage(frame), true
+	}
+	return reportingDimensionGap(frame, metric)
 }

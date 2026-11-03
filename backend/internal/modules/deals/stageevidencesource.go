@@ -53,7 +53,7 @@ func (s *Store) sourceMissingSQL(ctx context.Context, arg func(any) int) (string
 		contractRows = sqlTrue
 	}
 	return storekit.SQLf(`NOT (CASE ev.source_type
-	WHEN 'activity' THEN %s AND EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ev.source_id AND %s)
+	WHEN 'activity' THEN %s AND EXISTS (SELECT 1 FROM activity a WHERE a.id = ev.source_id AND %s)
 	WHEN 'contract' THEN %s AND EXISTS (SELECT 1 FROM contract k WHERE k.id = ev.source_id AND %s)
 	ELSE false END)`,
 		sqlAllows(ctx, "activity"), activityRows, sqlAllows(ctx, "contract"), contractRows), nil

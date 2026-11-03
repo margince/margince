@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/platform/auth"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -192,12 +191,6 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 	files, err := json.Marshal(orEmptyFiles(in.Attachments))
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
-	}
-	if err := auth.EnsureActivityThreadAvailable(ctx, tx, in.ActivityID.UUID); err != nil {
-		return ids.Nil, err
-	}
-	if err := auth.EnsureThreadAvailable(ctx, tx, in.ThreadKey); err != nil {
-		return ids.Nil, err
 	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx, `

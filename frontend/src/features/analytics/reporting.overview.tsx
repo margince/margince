@@ -12,11 +12,17 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  currentParams,
+  replaceDial,
+  replaceParams,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
+import { valueBasisOf } from "./reporting.dimensions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
@@ -114,6 +120,29 @@ export function useOverviewFilters(
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
   const setCloseWindow = (value: string) => replaceDial("close", value);
+  const dimensions: Dimensions = {
+    product_id: params.get("product") || undefined,
+    country: params.get("country") || undefined,
+    industry: params.get("industry") || undefined,
+    value_basis:
+      params.get("basis") && params.get("basis") !== "all"
+        ? valueBasisOf(params.get("basis") ?? "")
+        : undefined,
+  };
+  const setDimensions = (next: Dimensions) => {
+    const dials = new Map(currentParams());
+    const pairs: [string, string | undefined][] = [
+      ["product", next.product_id],
+      ["country", next.country],
+      ["industry", next.industry],
+      ["basis", next.value_basis === "all" ? undefined : next.value_basis],
+    ];
+    for (const [dial, value] of pairs) {
+      if (value) dials.set(dial, value);
+      else dials.delete(dial);
+    }
+    replaceParams(dials);
+  };
   return {
     start,
     end,
@@ -127,7 +156,46 @@ export function useOverviewFilters(
     setTargetBasis,
     closeWindow,
     setCloseWindow,
+    dimensions,
+    setDimensions,
   };
+}
+
+/** The dials that narrow a report to a product or a market. */
+export type Dimensions = Pick<
+  ReportingSelection,
+  "product_id" | "country" | "industry" | "value_basis"
+>;
+
+export function dimensionsOf(selection: ReportingSelection): Dimensions {
+  return {
+    product_id: selection.product_id,
+    country: selection.country,
+    industry: selection.industry,
+    value_basis: selection.value_basis,
+  };
+}
+
+function sameDimensions(a: Dimensions, b: Dimensions): boolean {
+  return (
+    a.product_id === b.product_id &&
+    a.country === b.country &&
+    a.industry === b.industry &&
+    (a.value_basis ?? "all") === (b.value_basis ?? "all")
+  );
+}
+
+/** Moves the dimension dials to `next` when the selection changed them. */
+export function applyDimensions(
+  filters: Pick<
+    ReturnType<typeof useOverviewFilters>,
+    "dimensions" | "setDimensions"
+  >,
+  next: ReportingSelection,
+): void {
+  const wanted = dimensionsOf(next);
+  if (!sameDimensions(filters.dimensions, wanted))
+    filters.setDimensions(wanted);
 }
 
 function OverviewBody({
@@ -161,6 +229,8 @@ function OverviewBody({
     setTargetBasis,
     closeWindow,
     setCloseWindow,
+    dimensions,
+    setDimensions,
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
@@ -175,6 +245,7 @@ function OverviewBody({
     // The contract asks for a close window on every selection. Only deal
     // figures read it, so other views keep the default and never the address's.
     close_window: shape.closeWindow ? closeWindow : "all_open",
+    ...(shape.dealFilters ? dimensions : {}),
     metrics,
     blocks,
   };
@@ -216,6 +287,7 @@ function OverviewBody({
           showScope={false}
           showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
+          showDimensions={shape.dealFilters}
           showTargets={false}
           dates={{
             from: start,
@@ -238,6 +310,8 @@ function OverviewBody({
               setTargetBasis(next.target_basis);
             if (next.close_window !== closeWindow)
               setCloseWindow(next.close_window);
+            if (shape.dealFilters)
+              applyDimensions({ dimensions, setDimensions }, next);
           }}
         />
       </FilterBar>

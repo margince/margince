@@ -36,7 +36,7 @@ func (s *Store) ConsolidateMemberTasksTx(ctx context.Context, tx pgx.Tx, from, t
 	if err := auth.EnsureAssignee(ctx, tx, to.UUID); err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id,version FROM activity WHERE activity_thread_available(thread_key) AND assignee_id=@from AND kind='task' AND NOT is_done AND (archived_at IS NULL AND activity_thread_available(thread_key)) ORDER BY id FOR UPDATE`, pgx.StrictNamedArgs{memberTaskSource: from})
+	rows, err := tx.Query(ctx, `SELECT id,version FROM activity WHERE assignee_id=@from AND kind='task' AND NOT is_done AND archived_at IS NULL ORDER BY id FOR UPDATE`, pgx.StrictNamedArgs{memberTaskSource: from})
 	if err != nil {
 		return 0, err
 	}

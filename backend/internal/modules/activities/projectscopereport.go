@@ -107,7 +107,7 @@ func ReadProjectScope(
 	if err := tx.QueryRow(ctx, sprintf(`
 		SELECT count(*) FILTER (WHERE %s), count(*)
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND (%s)`, within, anchored, scope), args...).
+		WHERE a.archived_at IS NULL AND %s AND (%s)`, within, anchored, scope), args...).
 		Scan(&inScope, &total); err != nil {
 		return ProjectScopeReport{}, fmt.Errorf("count the activities the project scope kept: %w", err)
 	}

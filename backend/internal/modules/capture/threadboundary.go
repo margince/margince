@@ -4,112 +4,119 @@
 package capture
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
+	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-type threadBoundaryState struct {
-	Key              string
-	OwnTopic         string
-	AncestorTopic    string
-	AncestorDistance int
-	FrontierKey      string
-	FrontierTopic    string
-	RootKey          string
-	RootProven       bool
+// readMailForTheSeatTx settles what the seat's own addresses decide, then the thread the
+// subject files the mail under, so every later step reads the same record.
+func (s *Sink) readMailForTheSeatTx(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, rec connector.NormalizedRecord, fields ActivityFields,
+) (connector.NormalizedRecord, ActivityFields, error) {
+	rec, fields, err := s.readAgainstTheSeatsAddressesTx(ctx, tx, seat, rec, fields)
+	if err != nil {
+		return rec, fields, err
+	}
+	rec.ThreadKey, err = s.subjectThreadKeyTx(ctx, tx, rec, fields.Subject)
+	return rec, fields, err
 }
 
-// threadBoundaryTopic removes only tags for which the caller holds durable project evidence.
-func threadBoundaryTopic(subject string, projectKeys []string) string {
-	recognized := make(map[string]bool, len(projectKeys))
-	for _, key := range projectKeys {
-		recognized[strings.ToLower(strings.TrimSpace(key))] = true
+// subjectThreadKeyTx is the thread a new email files under. A reply whose topic differs
+// from its parent's opens a conversation keyed by its own Message-ID. Any other reply
+// joins its parent's conversation. A message already stored keeps the key it has.
+func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, subject string) (string, error) {
+	seat := actorUserID(ctx)
+	if !s.threadJoin.complete() || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem ||
+		rec.ThreadKey == "" || len(rec.ReplyTo) == 0 || seat == ids.Nil {
+		return rec.ThreadKey, nil
 	}
-	var plain strings.Builder
-	for {
-		start := strings.IndexByte(subject, '[')
-		if start < 0 {
-			plain.WriteString(subject)
-			break
+	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
+	var stored, taken bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)
+		    OR EXISTS (SELECT 1 FROM activity_identity WHERE identity_kind = $3 AND identity_key = $4),
+		       EXISTS (SELECT 1 FROM activity WHERE thread_key = $4)`,
+		connector.EmailSourceSystem, rec.NaturalKey.SourceID, s.mailIdentityKind, own).Scan(&stored, &taken); err != nil {
+		return "", fmt.Errorf("capture: reading whether a reply is already stored: %w", err)
+	}
+	if stored {
+		return rec.ThreadKey, nil
+	}
+	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], mailsubject.Normalized(subject))
+	if err != nil || !found {
+		return rec.ThreadKey, err
+	}
+	// The sender chose that Message-ID, so a key another message already carries
+	// would file this reply into a conversation it never belonged to.
+	if !differs || taken {
+		return parentKey, nil
+	}
+	return own, carryThreadVerdictsTx(ctx, tx, parentKey, own)
+}
+
+// heldParentTx answers the conversation of the message a reply names as its parent, and
+// whether their topics differ. The header is the sender's text, so only a parent this
+// seat holds or sent counts. Only the key and a boolean leave the query.
+func (s *Sink) heldParentTx(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, parentID, topic string,
+) (key string, differs, found bool, err error) {
+	candidates, err := s.threadJoin.Neighbours(ctx, tx, ids.ActivityID{}, "", []string{parentID})
+	if err != nil || len(candidates) == 0 {
+		return "", false, false, err
+	}
+	var sent []ids.ActivityID
+	if s.threadJoin.SentBySeat != nil {
+		if sent, err = s.threadJoin.SentBySeat(ctx, tx, seat, candidates); err != nil {
+			return "", false, false, err
 		}
-		end := strings.IndexByte(subject[start+1:], ']')
-		if end < 0 {
-			plain.WriteString(subject)
-			break
-		}
-		end += start + 1
-		plain.WriteString(subject[:start])
-		key := strings.ToLower(strings.TrimSpace(subject[start+1 : end]))
-		if recognized[key] {
-			plain.WriteByte(' ')
-		} else {
-			plain.WriteString(subject[start : end+1])
-		}
-		subject = subject[end+1:]
 	}
-	canonical := mailsubject.ThreadNormalized(plain.String())
-	if canonical == "" {
-		return ""
+	parentTopic := storekit.NormalisedSubjectSQL("a.subject")
+	err = tx.QueryRow(ctx, `
+		SELECT a.thread_key, `+parentTopic+` <> '' AND $4 <> '' AND `+parentTopic+` <> $4
+		  FROM activity a
+		 WHERE a.id = ANY($1::uuid[]) AND a.archived_at IS NULL AND a.thread_key <> ''
+		   AND (a.id = ANY($2::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
+		                WHERE ci.activity_id = a.id AND ci.user_id = $3))
+		 ORDER BY a.occurred_at DESC, a.id
+		 LIMIT 1`, candidates, sent, seat, topic).Scan(&key, &differs)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, false, nil
 	}
-	digest := sha256.Sum256([]byte(canonical))
-	return hex.EncodeToString(digest[:])
+	if err != nil {
+		return "", false, false, fmt.Errorf("capture: reading the message a reply answers: %w", err)
+	}
+	return key, differs, true, nil
 }
 
-func newThreadBoundaryState(key, topic string) threadBoundaryState {
-	state := threadBoundaryState{Key: key, OwnTopic: topic, AncestorDistance: -1, RootKey: key}
-	if topic != "" {
-		state.AncestorTopic, state.AncestorDistance = topic, 0
-		state.FrontierKey, state.FrontierTopic = key, topic
+// carryThreadVerdictsTx gives a split conversation every seat's settled verdict on the
+// one it left, before the reply's audience is decided. A pending question is not
+// carried: it names the old conversation's message, and the new one opens its own.
+func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO capture_thread_verdict
+		       (thread_key, user_id, status, kind, confidence, disposition_reason, seen_addresses,
+		        first_activity_id, resolved_at)
+		SELECT $2, user_id, status, kind, confidence, disposition_reason, seen_addresses,
+		       first_activity_id, resolved_at
+		  FROM capture_thread_verdict WHERE thread_key = $1 AND status <> 'pending'
+		    ON CONFLICT (thread_key, user_id) DO NOTHING`, from, to); err != nil {
+		return fmt.Errorf("capture: carrying thread verdicts to a split conversation: %w", err)
 	}
-	return state
+	return nil
 }
 
-// advanceThreadAncestor is one bounded edge step toward the nearest named ancestor.
-func advanceThreadAncestor(child, parent threadBoundaryState) threadBoundaryState {
-	if child.OwnTopic != "" || parent.AncestorDistance < 0 {
-		return child
-	}
-	distance := parent.AncestorDistance + 1
-	if child.AncestorDistance < 0 || distance < child.AncestorDistance {
-		child.AncestorTopic, child.AncestorDistance = parent.AncestorTopic, distance
-	}
-	return child
-}
-
-// advanceThreadFrontier gives an unnamed root one stable topic without joining its other branches.
-func advanceThreadFrontier(parent, child threadBoundaryState) threadBoundaryState {
-	if parent.OwnTopic == "" && child.FrontierKey != "" && (parent.FrontierKey == "" || child.FrontierKey < parent.FrontierKey) {
-		parent.FrontierKey, parent.FrontierTopic = child.FrontierKey, child.FrontierTopic
-	}
-	return parent
-}
-
-func (s threadBoundaryState) topic() string {
-	if s.AncestorDistance >= 0 {
-		return s.AncestorTopic
-	}
-	return s.FrontierTopic
-}
-
-func (s threadBoundaryState) rooted(parent *threadBoundaryState) threadBoundaryState {
-	s.RootKey = s.Key
-	s.RootProven = parent == nil || s.topic() != parent.topic()
-	return s
-}
-
-// advanceThreadRoots shares the proven root, or a stable identity for a component containing a cycle.
-func advanceThreadRoots(child, parent threadBoundaryState) (threadBoundaryState, threadBoundaryState) {
-	if child.topic() != parent.topic() {
-		return child, parent
-	}
-	best := child
-	if parent.RootProven && !best.RootProven || parent.RootProven == best.RootProven && parent.RootKey < best.RootKey {
-		best = parent
-	}
-	child.RootKey, child.RootProven = best.RootKey, best.RootProven
-	parent.RootKey, parent.RootProven = best.RootKey, best.RootProven
-	return child, parent
+// sameTopicSQL is true unless both activities have a topic and the two differ, as the
+// answer check compares subjects. The thread join reads it to keep a split apart.
+func sameTopicSQL(alias, other string) string {
+	topic, otherTopic := storekit.NormalisedSubjectSQL(alias+".subject"), storekit.NormalisedSubjectSQL(other+".subject")
+	return "(" + topic + " = '' OR " + otherTopic + " IN ('', " + topic + "))"
 }

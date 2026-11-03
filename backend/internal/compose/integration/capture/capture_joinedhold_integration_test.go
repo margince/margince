@@ -136,11 +136,10 @@ func TestAHeldReplyJoiningAnOpenThreadStaysHeld(t *testing.T) {
 	setPosture(t, env, e.Rep1, capturemod.PostureShared)
 
 	sync(t, email("partner@acme.example", "", captureOwner, "oh-opener@acme.example", ""))
-	setPosture(t, env, e.Rep1, capturemod.PostureHeld)
-	sync(t, threadedReply("oh-reply@acme.example", "oh-opener@acme.example"))
-	if got := threadKeyOf(t, e, "oh-reply@acme.example"); got != threadKeyOf(t, e, "oh-opener@acme.example") {
-		t.Fatal("the held reply did not join its real parent")
-	}
+	// This one's own thread is held, so it is born held; the thread it joins is not.
+	sync(t, email("partner@acme.example", "", captureOwner, "oh-stray@acme.example", ""))
+	holdThreadOf(t, e, e.Rep1, "oh-stray@acme.example")
+	sync(t, threadedReply("oh-reply@acme.example", "oh-stray@acme.example", "oh-opener@acme.example"))
 
 	if audience, _ := audienceOf(t, e, activityIDOf(t, e, "oh-reply@acme.example")); audience != "participants" {
 		t.Errorf("a reply born held reads %q after joining an open thread, want participants — "+

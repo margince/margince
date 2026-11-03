@@ -1875,6 +1875,14 @@ func (stubs) CreateDealOutcomeReview(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "CreateDealOutcomeReview")
 }
 
+func (stubs) ListDealProducts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListDealProducts")
+}
+
+func (stubs) ReplaceDealProducts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReplaceDealProducts")
+}
+
 func (stubs) ProgressDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ProgressDealParams) {
 	httperr.NotImplemented(w, r, "ProgressDeal")
 }

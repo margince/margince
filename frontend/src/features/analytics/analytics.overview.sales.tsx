@@ -49,6 +49,7 @@ import type {
   ReportingSelection,
 } from "./reporting.model";
 import {
+  applyDimensions,
   customInterval,
   useOverviewFilters,
   validDateRange,
@@ -112,6 +113,7 @@ function SalesReviewBody({
     interval: customInterval(filters.period, filters.start, filters.end, zone),
     target_basis: filters.targetBasis,
     close_window: filters.closeWindow,
+    ...filters.dimensions,
     metrics,
     blocks: [],
   };
@@ -332,6 +334,7 @@ function changeFilters(
     filters.setPipelineId(next.pipeline_id ?? "");
   if (next.close_window !== filters.closeWindow)
     filters.setCloseWindow(next.close_window);
+  applyDimensions(filters, next);
 }
 
 // The question Sales review answered, defaults spelled out: the default

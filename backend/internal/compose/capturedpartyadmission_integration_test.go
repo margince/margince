@@ -292,21 +292,16 @@ func TestCapturedPartiesCannotUseAnArchivedSendAsAdmissionProof(t *testing.T) {
 
 func partyOwnerContext(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
-	return partySeatContext(t, e, e.AdminUser)
-}
-
-func partySeatContext(t *testing.T, e *integration.Env, user ids.UUID) context.Context {
-	t.Helper()
 	authority := identity.NewService(e.Pool)
-	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, user)
+	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	seat, err := authority.SeatType(e.Admin(), e.WS, user)
+	seat, err := authority.SeatType(e.Admin(), e.WS, e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, OnBehalfOf: user, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs, SeatType: seat})
+	return principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser, OnBehalfOf: e.AdminUser, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs, SeatType: seat})
 }
 
 func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
