@@ -229,8 +229,10 @@ func (s *Sink) keepParts(
 	if err != nil {
 		return rec, err
 	}
+	// Only a message carrying something asks. copiedOnlyTx reads the owner
+	// identities, and a mail with no parts has nothing to withhold either way.
 	copied := false
-	if !private {
+	if !private && len(rec.Parts) > 0 {
 		if copied, err = copiedOnlyTx(ctx, tx, fields); err != nil {
 			return rec, err
 		}

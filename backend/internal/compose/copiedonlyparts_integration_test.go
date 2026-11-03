@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"io"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -35,7 +36,10 @@ func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 	declareOwnedAddress(ctx, t, db, captureSeatID, copied)
 
 	source := "msg-copied-" + tag
-	rec := withFiles(mailRecord(source), onePDF())
+	// withAttachedOriginal, so the stored original really carries the part's
+	// base64. Without it the assertion below passes whether withholding works
+	// or not, because mailRecord's Raw holds no attachment at all.
+	rec := withAttachedOriginal(withFiles(mailRecord(source), onePDF()))
 	fields := rec.Fields.(capture.ActivityFields)
 	fields.Envelope = &capture.MailEnvelope{
 		DirectRecipients: []string{addressed},
@@ -83,8 +87,19 @@ func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the adopted row points at bytes the object store does not have: %v", err)
 	}
-	if err := body.Close(); err != nil {
-		t.Fatalf("closing the adopted object: %v", err)
+	defer func() {
+		if err := body.Close(); err != nil {
+			t.Errorf("closing the adopted object: %v", err)
+		}
+	}()
+	// The file's own bytes, not merely an object at that key. A key pointing at
+	// something else would satisfy a presence check and still have lost the file.
+	got, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("reading the adopted object: %v", err)
+	}
+	if !bytes.Equal(got, onePDF().Body) {
+		t.Errorf("adopted %d bytes, want the part's own %d", len(got), len(onePDF().Body))
 	}
 }
 

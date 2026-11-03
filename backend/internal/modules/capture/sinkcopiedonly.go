@@ -32,6 +32,8 @@ const withheldCopiedParts = "capture_copied_parts_withheld"
 //     own address may be missing from what did
 //   - no open recipients at all, which is undisclosed delivery rather than
 //     evidence that this mailbox was merely copied
+//   - no known identity of ours, where no To line can be read as addressed to
+//     us, so every inbound message would look copied-only
 //
 // Each of those stores the bytes. Withholding costs a file; storing costs disk.
 func copiedOnlyTx(ctx context.Context, tx pgx.Tx, fields ActivityFields) (bool, error) {
@@ -49,7 +51,19 @@ func copiedOnlyTx(ctx context.Context, tx pgx.Tx, fields ActivityFields) (bool, 
 	if err != nil {
 		return false, err
 	}
-	return !slices.ContainsFunc(envelope.DirectRecipients, own.Covers), nil
+	// A fourth state that keeps the bytes, and the one that costs most when
+	// missed. An empty identity set knows no address of ours, so every To line
+	// reads as somebody else's and every inbound message as copied-only.
+	// strangermail.go guards the same set the same way.
+	if own.Empty() {
+		return false, nil
+	}
+	// namesSeat, not Covers: Covers admits a self-declared domain, and a seat
+	// declares one with no proof of control. A colleague at a claimed domain
+	// would then read as us being addressed, and the bytes would be kept for a
+	// message no seat here was on. addressedOpenly asks the same question the
+	// same way.
+	return !slices.ContainsFunc(envelope.DirectRecipients, own.namesSeat), nil
 }
 
 // copiedPartsWithheld records that a copied-only message's files were kept out,

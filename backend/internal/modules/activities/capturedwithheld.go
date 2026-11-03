@@ -5,9 +5,10 @@ package activities
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,9 +36,11 @@ type WithheldFile struct {
 	ContentType  string
 	DeclaredType string
 	ByteSize     int
-	// Checksum fingerprints the bytes that were not kept, so a later arrival
-	// can be proven to carry the same file. Empty for a private thread, whose
-	// row states nothing about its contents.
+	// Checksum fingerprints the bytes that were not kept. It serves two
+	// readers: the replay proof, which compares an arriving message's parts
+	// with the stored rows, and AdoptWithheldFiles, which refuses bytes whose
+	// fingerprint is not the one this row was named under. Empty for a private
+	// thread, whose row states nothing about its contents.
 	Checksum string
 }
 
@@ -124,11 +127,21 @@ func (s *Store) AdoptWithheldFiles(
 	if err != nil || len(waiting) == 0 {
 		return 0, err
 	}
+	// The fingerprint has to match the one the row was named under. Matching on
+	// the part id alone would let a later message with different bytes at the
+	// same ordinal replace the file this row names, and the row would still
+	// read as the original.
 	carried := make([]CapturedFile, 0, len(files))
 	for _, file := range files {
-		if slices.Contains(waiting, file.PartID) {
-			carried = append(carried, file)
+		named, waits := waiting[file.PartID]
+		if !waits {
+			continue
 		}
+		sum := sha256.Sum256(file.Body)
+		if named != hex.EncodeToString(sum[:]) {
+			continue
+		}
+		carried = append(carried, file)
 	}
 	staged, err := s.StageCapturedFiles(ctx, carried)
 	if err != nil {
@@ -137,12 +150,16 @@ func (s *Store) AdoptWithheldFiles(
 	return s.giveWithheldBytes(ctx, tx, activityID, from, staged)
 }
 
-// partsAwaitingBytes names this message's parts whose row has none yet.
+// partsAwaitingBytes names this message's parts whose row has none yet, each
+// with the fingerprint it was named under.
+//
+// The part id is derived from a part's ordinal, so it says where a file sat in
+// the message and not which file it was. The fingerprint is what says that.
 func (s *Store) partsAwaitingBytes(
 	ctx context.Context, tx pgx.Tx, from CapturedFileSource,
-) ([]string, error) {
+) (map[string]string, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT external_part_id
+		SELECT external_part_id, coalesce(checksum, '')
 		  FROM attachment
 		 WHERE external_source_id = $1 AND bytes_withheld`,
 		providerMessageKey(from))
@@ -150,15 +167,15 @@ func (s *Store) partsAwaitingBytes(
 		return nil, fmt.Errorf("read the files still awaiting bytes: %w", err)
 	}
 	defer rows.Close()
-	var parts []string
+	waiting := map[string]string{}
 	for rows.Next() {
-		var part string
-		if err := rows.Scan(&part); err != nil {
+		var part, sum string
+		if err := rows.Scan(&part, &sum); err != nil {
 			return nil, fmt.Errorf("read a file awaiting bytes: %w", err)
 		}
-		parts = append(parts, part)
+		waiting[part] = sum
 	}
-	return parts, rows.Err()
+	return waiting, rows.Err()
 }
 
 // giveWithheldBytes points each waiting row at the object now holding its file.

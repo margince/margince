@@ -3,7 +3,8 @@
 
 package capture
 
-// What a private thread's files are allowed to leave behind.
+// What a withholding message's files are allowed to leave behind: a private
+// thread's, and a copied-only message's.
 //
 // The read boundary already keeps a colleague out of personal mail, and
 // erasure reaches the bytes. This is minimisation rather than correctness: not
@@ -181,8 +182,8 @@ func withholdOriginalPartsTx(
 	return withholdRawParts(rec), nil
 }
 
-// withholdRawParts takes a private message's attachment bytes out of the
-// original raw_capture is about to store. The parts themselves stay on the
+// withholdRawParts takes a withholding message's attachment bytes out of the
+// original raw_capture is about to store. Both reasons reach it. The parts themselves stay on the
 // record until finishNewActivity strips them and leaves the breadcrumb.
 func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	if len(rec.Raw) == 0 || (len(rec.Parts) == 0 && len(rec.PartDrops) == 0) {
