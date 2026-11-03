@@ -110,7 +110,7 @@ func moveTo(t *testing.T, e *sendEnv, id ids.ActivityID, status crmcontracts.Act
 // other. This is the case the whole table exists for.
 func TestABookingAndAHoldingAreTwoEvents(t *testing.T) {
 	e := setupSend(t)
-	start := time.Now().Add(72 * time.Hour)
+	start := time.Now().Add(-72 * time.Hour)
 	id := bookMeeting(t, e, "Northgate kickoff", start)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 
@@ -154,7 +154,7 @@ func TestATransitionRecordsTheAuthenticatedActor(t *testing.T) {
 // built on the count would drift upward with every re-save.
 func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
 	e := setupSend(t)
-	id := bookMeeting(t, e, "Repeat save", time.Now().Add(48*time.Hour))
+	id := bookMeeting(t, e, "Repeat save", time.Now().Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
@@ -169,7 +169,7 @@ func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
 // outcome. The correction is part of the record, not a replacement of it.
 func TestACorrectedOutcomeKeepsBothEventsAndOneTerminalStatus(t *testing.T) {
 	e := setupSend(t)
-	id := bookMeeting(t, e, "They did turn up", time.Now().Add(24*time.Hour))
+	id := bookMeeting(t, e, "They did turn up", time.Now().Add(-24*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusNoShow)
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 
@@ -326,8 +326,8 @@ func TestTheSourceKeyRefusesASecondTransitionOnItsOwn(t *testing.T) {
 	insert := func() error {
 		_, err := e.owner.Exec(context.Background(), `
 			INSERT INTO activity_meeting_history
-			    (activity_id, status, effective_at, scheduled_start, actor, source_system, source_id)
-			VALUES ($1, 'held', now(), now(), 'system:connector', $2, $3)`,
+			    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, source_system, source_id)
+			VALUES ($1, 'held', now(), now(), 'instant', 'system:connector', $2, $3)`,
 			id.UUID, system, external)
 		return err
 	}
@@ -354,8 +354,8 @@ func TestOneCalendarEventCanRecordTwoDifferentTransitions(t *testing.T) {
 	record := func(status string) error {
 		_, err := e.owner.Exec(context.Background(), `
 			INSERT INTO activity_meeting_history
-			    (activity_id, status, effective_at, scheduled_start, actor, source_system, source_id)
-			VALUES ($1, $2, now(), now(), 'system:connector', $3, $4)`,
+			    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, source_system, source_id)
+			VALUES ($1, $2, now(), now(), 'instant', 'system:connector', $3, $4)`,
 			id.UUID, status, system, external)
 		return err
 	}
@@ -389,8 +389,8 @@ func TestABackfilledRowClaimsNoBookingMoment(t *testing.T) {
 	}
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO activity_meeting_history
-		    (activity_id, status, effective_at, scheduled_start, actor, partial_pre_history)
-		SELECT a.id, a.meeting_status, a.created_at, a.occurred_at, 'system:migration', true
+		    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, partial_pre_history)
+		SELECT a.id, a.meeting_status, a.created_at, a.occurred_at, 'instant', 'system:migration', true
 		FROM activity a WHERE a.id = $1`, id.UUID); err != nil {
 		t.Fatalf("seeding the baseline row: %v", err)
 	}

@@ -21,10 +21,10 @@ import (
 // meetingNoonStartsDataTask puts back the start of a meeting the old outcome
 // dialog moved to noon. Each restore is audited per record, and a restored
 // meeting leaves the selection. Version 2 also restores a meeting archived
-// after the damage.
+// after the damage; version 3 books an outcome whose restored start is ahead.
 func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792912000_meeting_noon_starts", Version: 2,
+		ID: "core/1792912000_meeting_noon_starts", Version: 3,
 		Title: "Restore meeting times an old outcome save moved to noon",
 		// The selection also reads occurred_precision, which core/1792983858 adds.
 		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792983858"},

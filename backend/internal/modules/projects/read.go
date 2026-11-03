@@ -189,7 +189,7 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where, err := appendProjectFilters(pre.Where(), in, pre.Arg)
+	where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -225,7 +225,7 @@ func scanProjectPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storek
 
 // appendProjectFilters translates the caller's list filters into WHERE
 // clauses (the cf_ filters and the keyset cursor stay in ListProjects).
-func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) int) ([]string, error) {
+func appendProjectFilters(ctx context.Context, where []string, in ListProjectsInput, arg func(any) int) ([]string, error) {
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -233,6 +233,11 @@ func appendProjectFilters(where []string, in ListProjectsInput, arg func(any) in
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
+		// A row masks company_id for a role without the company grant, and the
+		// narrowed page would name it.
+		if err := auth.RefuseUnreadableReferenceFilter(ctx, filterCompanyID, "company"); err != nil {
+			return nil, err
+		}
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.

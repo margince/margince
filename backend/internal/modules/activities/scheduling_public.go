@@ -15,10 +15,7 @@ package activities
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -32,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BookingPage is the slug's resolution: which workspace, whose calendar.
@@ -43,12 +41,18 @@ type BookingPage struct {
 // before it may do anything else. The slug names the HOST, and only the host:
 // the installation the request lands in is resolved from the installation
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
-// slug reads as absent.
+// slug reads as absent, and so does a host whose account is not live. Every
+// public booking read, the preview card included, resolves here.
+// A slug matches as typed and an alias lowercased; a slug's 32 characters
+// keep the two apart, since an alias has at most 30.
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT host_user_id FROM booking_page WHERE slug = $1 AND revoked_at IS NULL`,
+			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
+   WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
+   AND (p.slug = $1 OR p.id = (SELECT a.booking_page_id FROM booking_alias a
+     WHERE a.alias = lower($1) AND a.retired_at IS NULL AND a.host_user_id = p.host_user_id))`,
 			slug).Scan(&page.HostUserID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -59,25 +63,6 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 		return BookingPage{}, err
 	}
 	return page, nil
-}
-
-// SeedBookingPageTx mints a host's public page inside the caller's
-// transaction (the workspace bootstrap seeds one for the admin). The
-// slug is a public identifier, not a credential — unguessable so the
-// URL cannot be enumerated, stored plaintext because it IS the URL.
-func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (string, error) {
-	var buf [24]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", fmt.Errorf("activities: booking slug entropy: %w", err)
-	}
-	slug := base64.RawURLEncoding.EncodeToString(buf[:])
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO booking_page (host_user_id, slug)
-		VALUES ($1, $2)`,
-		hostUserID, slug); err != nil {
-		return "", fmt.Errorf("activities: seed booking page: %w", err)
-	}
-	return slug, nil
 }
 
 // ContactEnsurer is the contacts seam of the public capture path (compose

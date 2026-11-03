@@ -57,7 +57,7 @@ func NewHandlers(
 }
 
 func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontracts.SearchParams) {
-	in := Input{Query: params.Q}
+	in := Input{Query: params.Q, AddressCompanies: true}
 	if params.Types != nil {
 		for _, t := range *params.Types {
 			in.Types = append(in.Types, string(t))
@@ -124,6 +124,7 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 			// different and weaker statement than the one we can make.
 			TrustTier: new(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative),
 		}
+		result.IdentifierMatch = hit.IdentifierMatch
 		if hit.Title != "" {
 			result.Title = new(hit.Title)
 		}

@@ -21,6 +21,7 @@ import (
 // installation sent out about or to them.
 func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	sections := []sarSection{
+		sarPartySourceSection(pkg, emails),
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
 		   FROM capture_pending_counterparty p
 		   WHERE p.email IN (SELECT email FROM contact_email WHERE contact_id = $1)`, nil},
@@ -259,4 +260,12 @@ func sarMeetingSections(pkg *SARPackage, contact ids.ContactID) []sarSection {
 		{&pkg.MeetingProposals, fmt.Sprintf(`SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p JOIN activity_link l ON l.activity_id=p.activity_id WHERE l.contact_id=$%d`, len(args)), args},
 		{&pkg.MeetingInvitations, fmt.Sprintf(`SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i JOIN activity_link l ON l.activity_id=i.activity_id WHERE l.contact_id=$%d`, len(args)), args},
 	}
+}
+
+func sarPartySourceSection(pkg *SARPackage, emails []string) sarSection {
+	return sarSection{&pkg.CapturePartySources, `SELECT ps.activity_id,ps.provider,ps.sent_by_owner,
+ ARRAY(SELECT address FROM unnest(ps.recipients) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS recipients,
+ ARRAY(SELECT address FROM unnest(ps.policy_addresses) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS policy_addresses
+ FROM capture_party_source ps JOIN activity a ON a.id=ps.activity_id
+ WHERE (ps.recipients && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address) OR ps.policy_addresses && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address)) AND a.restricted_at IS NULL AND ` + sarContentDisclosed, []any{emails}}
 }

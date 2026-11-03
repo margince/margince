@@ -13,6 +13,7 @@ import { LocaleProvider } from "./i18n";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { sessionRefusalWatch } from "./lib/session";
+import { reloadOnStaleBuild } from "./lib/stalebuild";
 import { startTheme } from "./lib/theme";
 import "./app.css";
 
@@ -37,6 +38,7 @@ restoreReturnRoute();
 
 listenForInstall();
 registerServiceWorker();
+reloadOnStaleBuild();
 
 api.use(sessionRefusalWatch(queryClient));
 

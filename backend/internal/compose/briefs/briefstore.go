@@ -323,6 +323,36 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 	return run, nil
 }
 
+// LatestCutoff answers the as_of of the reader's run for today, under the
+// same gate, reader and local day as LatestRun. It reads no items and writes
+// nothing. A surface that only dates a window from the brief has not opened
+// it, so it must not record an open or resurface a snooze.
+func (e *BriefEngine) LatestCutoff(ctx context.Context, now time.Time) (time.Time, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return time.Time{}, err
+	}
+	userID, err := briefUser(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var asOf time.Time
+	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		day, err := localDay(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+		err = tx.QueryRow(ctx, `SELECT as_of FROM brief_run WHERE user_id = $1 AND local_day = $2`, userID, day).Scan(&asOf)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return asOf, nil
+}
+
 // runSelect is the run's own columns, in one place.
 //
 // Shared by the day read above and the mail claim's read of one run by id

@@ -106,14 +106,15 @@ func readGuestRows(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]guest
 		}
 		readable = orUnbounded(clause)
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT coalesce(ap.address, ''), coalesce(ap.display_name, ''), ap.response, ap.contact_id,
 		       CASE WHEN c.id IS NOT NULL AND (%s) THEN c.full_name END
 		  FROM activity_participant ap
 		  LEFT JOIN contact c ON c.id = ap.contact_id AND c.archived_at IS NULL
 		 WHERE ap.activity_id = $%d AND ap.user_id IS NULL AND ap.role IN ($%d, $%d)
 		 ORDER BY ap.contact_id NULLS LAST, ap.address, ap.id
-		 LIMIT $%d`, readable, meeting, organizer, attendee, arg(maxListedGuests)), args...)
+		 LIMIT $%d`, readable, meeting, organizer, attendee, arg(maxListedGuests))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the guests on a meeting: %w", err)
 	}

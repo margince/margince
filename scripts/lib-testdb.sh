@@ -523,3 +523,15 @@ resolve_it_timeout() {
     exit 1
   fi
 }
+
+# The census a lane's package processes write (MARGINCE_SQL_CENSUS_DIR) holds
+# every statement of 8 KB or more they sent. check_repeated_gates fails when one
+# carries the activity content gate twice from a sender the allowlist does not
+# name, and writes the senders it saw repeat to $2 for the staleness check.
+REPEATED_GATES_ALLOW="tools/sql-census/repeated-gates.txt"
+check_repeated_gates() { # census-dir seen-out
+  ( cd "$ROOT/backend" && go run ./tools/sql-census check -census "$1" -allow "$REPEATED_GATES_ALLOW" -seen "$2" )
+}
+stale_repeated_gates() { # seen-file...
+  ( cd "$ROOT/backend" && go run ./tools/sql-census stale -allow "$REPEATED_GATES_ALLOW" "$@" )
+}

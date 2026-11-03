@@ -44,8 +44,9 @@ reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
 Routing uses the **URL hash** (`#/deals/01J9ZK` → `{ screen: "deals", id: "01J9ZK" }`).
-So any plain file host serves `index.html` for every entry point, and the
-server needs no fallback for the web app. A hash may carry a query of its own.
+Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher can name the record.
+The web tier serves the app for a browser and sends other fetches to the public card endpoint.
+`AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 ## The layers
@@ -241,17 +242,21 @@ too.
 
 ## Colour
 
-The app shell is **glass over the light page**, as
+The app shell has a panel rail and a clear top bar over the theme ground, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
-`--overlayScrim`) is for the dark green field
-only. Its comment says it has no theme, `white-alpha` in both themes, which is
-correct for that field. That field is the tooltips the small rail shows, the bar
-of the client surface, and the surfaces for the web site and the deck. A new
-app panel styled from those tokens is styled, in error, as the public web site.
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
+`--overlayScrim`) is the one dark green field, the same in both themes. It is
+for what passes over the page, such as the tooltips the folded sidebar shows
+and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
+is styled in error.
+
+The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
+under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
+those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
+under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
@@ -368,7 +373,7 @@ even if the test tree breaks.
 | Type list | `frontend/scripts/check-font-lock.sh` | a `font-family` other than Outfit (titles), Geist (body text, numbers too) or Geist Mono (code only), plus the named fallbacks; and Mono in any place but `code`, `pre`, `samp` and `.code-block`, which `design-system/mono.test.ts` refuses too |
 | No emoji | `frontend/scripts/check-icon-glyph.sh` | an emoji in rendered code. Comments are removed first, since the 🟢/🟡 tier marks are our style and render through `AutonomyDot` |
 | Spacing | `frontend/scripts/check-ds-spacing.sh` | a **new** `margin`, `padding` or `gap` in `px`, written in place. It reads only lines changed against `origin/main`, and skips a line marked `// ds:ignore <reason>` |
-| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`. **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
+| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`, the `*-panes` `gap` or `column-gap` (`--gapPanes`), and the `*-pane` `padding` (`--padPane`). **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
 | Type source | `design-system/type-source.test.ts` | text type set by value in any file but `tokens.css`. In every `.css` under `frontend/src` and every style object outside tests, `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`. `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two values that place things are accepted, only inside the two UA style blocks. It refuses `uppercase` text by every route: `font-variant-caps`, the `font-variant` short form, the `small-caps` features, and a `.toUpperCase()` whose result is rendered. Fails closed: a set with no `app.css`, under 100 CSS files or under 100 component files fails and does not pass empty |
 | Action rows | `design-system/actionrow.test.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
@@ -385,8 +390,7 @@ even if the test tree breaks.
 
 `craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
-merge gate and needs Node and pnpm. Run `make check-fe` (or
-`make frontend-check`) before pushing a frontend change.
+merge gate and needs Node and pnpm.
 
 ## Where to look first
 

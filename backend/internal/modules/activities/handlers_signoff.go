@@ -30,7 +30,7 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 	}
 	var draft signatureDraft
 	if req.Draft != nil {
-		draft = signatureDraft{Template: req.Draft.Template, Title: req.Draft.Title, Phone: req.Draft.Phone}
+		draft = signatureDraft{Template: req.Draft.Template, Title: req.Draft.Title, Phone: req.Draft.Phone, HTML: req.Draft.Html}
 	}
 	sign, err := h.store.previewSignOff(r.Context(), req.Body, subject, draft)
 	if err != nil {

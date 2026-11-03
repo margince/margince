@@ -77,7 +77,7 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
 			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt, OpenedAt: duty.OpenedAt,
-			Acquisition: duty.Acquisition.Wire(),
+			Acquisition: duty.Acquisition.WireDeadline(duty.DeadlineIsUpperBound),
 		})
 	}
 	return out, nil
@@ -103,13 +103,13 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 	out := make([]attention.CaptureConcern, 0, len(concerns))
 	for _, concern := range concerns {
 		out = append(out, attention.CaptureConcern{
-			ConnectionID: concern.ConnectionID,
-			Kind:         concern.Kind,
-			Provider:     concern.Provider,
-			AccountLabel: concern.AccountLabel,
-			Calendar:     slices.Contains(calendarProviders, concern.Provider),
-			FailingSince: concern.FailingSince,
-			LastSyncedAt: concern.LastSyncedAt,
+			ConnectionID:   concern.ConnectionID,
+			Kind:           concern.Kind,
+			Provider:       concern.Provider,
+			AccountLabel:   concern.AccountLabel,
+			Calendar:       slices.Contains(calendarProviders, concern.Provider),
+			FailingSince:   concern.FailingSince,
+			SubjectMovedAt: concern.ChangedAt,
 		})
 	}
 	return out, nil

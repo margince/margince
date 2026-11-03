@@ -180,5 +180,5 @@ func readByFingerprint(ctx context.Context, tx pgx.Tx, fingerprint string) (crmc
 	if err != nil {
 		return crmcontracts.Signal{}, fmt.Errorf("read signal by fingerprint: %w", err)
 	}
-	return ReadSignalTx(ctx, tx, ids.From[ids.SignalKind](id), storekit.LiveOnly)
+	return ReadSignalTx(ctx, tx, ids.From[ids.SignalKind](id), storekit.LiveOnly, nil)
 }

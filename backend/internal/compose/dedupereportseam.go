@@ -43,10 +43,17 @@ func openDuplicatesFor(pool *pgxpool.Pool) agents.OpenDuplicatesFor {
 			if other == id {
 				other = r.LeftID
 			}
+			var keep *string
+			if r.KeepID != nil {
+				kept := r.KeepID.String()
+				keep = &kept
+			}
 			out = append(out, agents.DuplicateCandidate{
 				CandidateID:   r.ID.String(),
 				OtherRecordID: other.String(),
 				Confidence:    r.Confidence,
+				CanMerge:      r.CanMerge,
+				KeepID:        keep,
 				Evidence:      decodeEvidence(r.Evidence),
 			})
 		}

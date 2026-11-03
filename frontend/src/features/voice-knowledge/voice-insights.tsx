@@ -1,11 +1,21 @@
-import { FileText, Lightbulb, Quote } from "lucide-react";
+import { ArrowRight, Ban, FileText, Lightbulb } from "lucide-react";
+import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Badge, Card } from "../../design-system/atoms";
-import { formatNumber, identifierNumber } from "../../format/format";
+import { Voiceprint } from "../../components/voiceprint";
+import { Badge, Card, SegmentedControl } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
+import {
+  formatNumber,
+  formatPercent,
+  identifierNumber,
+} from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import "./voice-dna.css";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
+type VoiceLearningSummary = components["schemas"]["VoiceLearningSummary"];
 
 // The derived artifact's structured half (profile_json/stats_json) is
 // free-form JSON on the wire; these narrowing helpers keep the screen
@@ -149,139 +159,249 @@ function nextBestCopy(
   }
 }
 
-// VoiceInsights is the impress surface both the onboarding success card and
-// the Settings screen render: what the build learned, with the user's own
-// words as proof, plus the honest what-to-add-next nudge.
+// nextBestLine is the guidance nudge in the reader's language, or the server's
+// own prose when the key is one this client does not know.
+export function useNextBestLine(data: VoiceInsightsData | null): string | null {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!data) {
+    return null;
+  }
+  return nextBestCopy(t, data, locale) ?? data.nextBest;
+}
+
+// VoiceInsights is the whole impress surface in one column, for the place that
+// shows a build before anyone has accepted it: the candidate review. The
+// settings page lays the same parts out as sections of its own.
 export function VoiceInsights({
   data,
   profileVersion,
 }: Readonly<{ data: VoiceInsightsData; profileVersion: number }>) {
   const t = useT();
-  const { locale } = useLocale();
+  const next = useNextBestLine(data);
   return (
     <div className="vdna-insights">
-      <div className="t-caption">
-        {t("voice.insights.provenance", {
-          n: identifierNumber(profileVersion),
-        })}
-        {data.modelName && data.modelName !== "unrecorded"
-          ? ` · ${data.modelName}`
-          : ""}
-      </div>
-      {(data.words !== null ||
-        data.sources !== null ||
-        data.meanSentence !== null) && (
-        <div className="t-caption">
-          {/* All three counts through the same formatter. A number handed to
-              `t` straight is interpolated with `String`, which groups nothing
-              and puts a decimal POINT where a German reader writes a comma — so
-              a mean sentence length of 12.5 reads "12.5" to every reader on a
-              line whose other two figures are localized. The three sit in one
-              sentence; two spellings inside it is the drift this whole change
-              is about. Issue 2463 carries the same defect app-wide. */}
-          {data.words !== null &&
-            t("voice.insights.statWords", {
-              count: formatNumber(data.words, locale),
-            })}
-          {data.sources !== null &&
-            ` · ${t("voice.insights.statSources", { count: formatNumber(data.sources, locale) })}`}
-          {data.meanSentence !== null &&
-            ` · ${t("voice.insights.statSentence", { count: formatNumber(data.meanSentence, locale) })}`}
-        </div>
-      )}
-      {data.thinking && (
-        <div>
-          <div className="vdna-label">
-            <Lightbulb aria-hidden /> {t("voice.insights.thinkingLabel")}
-          </div>
-          <p>{data.thinking}</p>
-        </div>
-      )}
-      {data.identity && <p>{data.identity}</p>}
-      {data.obsessions.length > 0 && (
-        <div className="vdna-chips">
-          {data.obsessions.map((theme) => (
-            <Badge key={theme}>{theme}</Badge>
-          ))}
-        </div>
-      )}
-      <SignatureMoves moves={data.moves} />
-      {data.avoid.length > 0 && (
-        <div className="vdna-avoid">
-          <div className="vdna-label">{t("voice.insights.avoidLabel")}</div>
-          <ul>
-            {data.avoid.map((rule) => (
-              <li key={rule}>{rule}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <SampleDrafts drafts={data.sampleDrafts} />
-      {(data.nextBestKey || data.nextBest) && (
-        <div>
-          <b>{t("voice.insights.nextBestLabel")}</b>{" "}
-          {nextBestCopy(t, data, locale) ?? data.nextBest}
-        </div>
+      <VoicePortrait data={data} profileVersion={profileVersion} />
+      <VoiceFigures data={data} />
+      <VoiceTraits data={data} />
+      <DraftShowcase drafts={data.sampleDrafts} />
+      {next && (
+        <p className="vdna-next">
+          <ArrowRight aria-hidden />
+          <span>
+            <b>{t("voice.insights.nextBestLabel")}</b> {next}
+          </span>
+        </p>
       )}
     </div>
   );
 }
 
-function SignatureMoves({ moves }: Readonly<{ moves: VoiceSignatureMove[] }>) {
+// Who the writer is in one line, set as display type, with where it came from
+// above it and how they think under it.
+export function VoicePortrait({
+  data,
+  profileVersion,
+}: Readonly<{ data: VoiceInsightsData; profileVersion: number }>) {
   const t = useT();
-  if (moves.length === 0) {
-    return null;
-  }
   return (
-    <div className="vdna-moves">
-      <div className="vdna-label">
-        <Quote aria-hidden /> {t("voice.insights.movesLabel")}
-      </div>
-      <ul>
-        {moves.slice(0, 3).map((move) => (
-          <li key={move.move}>
-            <b>{move.move}</b>
-            <span className="vdna-quote">“{move.quote}”</span>
-          </li>
-        ))}
-      </ul>
+    <div className="vdna-portrait">
+      <p className="vdna-provenance">
+        <Badge tone="ai">
+          {t("voice.insights.provenance", {
+            n: identifierNumber(profileVersion),
+          })}
+        </Badge>
+        {data.modelName && data.modelName !== "unrecorded" && (
+          <span className="t-caption">{data.modelName}</span>
+        )}
+      </p>
+      {data.identity && <p className="vdna-identity">{data.identity}</p>}
+      {data.thinking && (
+        <p className="vdna-thinking">
+          <Lightbulb aria-hidden />
+          <span>
+            <b>{t("voice.insights.thinkingLabel")}</b> {data.thinking}
+          </span>
+        </p>
+      )}
     </div>
   );
 }
 
-function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
+// The counts the portrait rests on, each through the locale's own number
+// format: a figure handed to `t` straight would print 12.5 to a German reader.
+// The learning summary adds how many of its drafts the writer kept.
+export function VoiceFigures({
+  data,
+  learning,
+}: Readonly<{ data: VoiceInsightsData; learning?: VoiceLearningSummary }>) {
   const t = useT();
   const { locale } = useLocale();
-  if (drafts.length === 0) {
+  const figures = [
+    { key: "words", label: t("voice.insights.figWords"), value: data.words },
+    {
+      key: "sources",
+      label: t("voice.insights.figSources"),
+      value: data.sources,
+    },
+    {
+      key: "sentence",
+      label: t("voice.insights.figSentence"),
+      value: data.meanSentence,
+    },
+  ].filter((figure) => figure.value !== null);
+  // Nothing drafted yet is no reading of what was kept, not a zero.
+  const kept =
+    learning && learning.drafted > 0
+      ? learning.accepted + learning.edited_sent
+      : null;
+  if (figures.length === 0 && kept === null) {
     return null;
   }
   return (
-    <div className="vdna-samples">
-      <div className="vdna-label">
-        <FileText aria-hidden /> {t("voice.insights.samplesLabel")}
-      </div>
-      {drafts.map((draft) => (
-        // The design system's own inset card. `className="… card"` was a copy
-        // of the card surface, which the README forbids by name: a copy is a
-        // second card the moment one of its five chrome values moves.
-        <Card as="div" inset key={draft.body} className="vdna-sample">
-          <div className="vdna-sample-head">
-            <Badge>{t("voice.insights.draftOnly")}</Badge>
-            {draft.subject && <b>{draft.subject}</b>}
-            {draft.score !== null && (
-              <span className="t-caption">
-                {t("voice.insights.voiceScore", {
-                  pct: formatNumber(Math.round(draft.score * 100), locale),
-                })}
-              </span>
-            )}
-          </div>
-          <p>{draft.body}</p>
-        </Card>
+    <StatStrip density="compact">
+      {figures.map((figure) => (
+        <StatCard
+          key={figure.key}
+          label={figure.label}
+          value={formatNumber(figure.value ?? 0, locale)}
+        />
       ))}
-      <p className="t-caption vdna-disclosure">
-        {t("voice.insights.disclosure")}
-      </p>
+      {learning && kept !== null && (
+        <StatCard
+          label={t("voice.insights.figKept")}
+          value={t("voice.insights.figKeptValue", {
+            kept: formatNumber(kept, locale),
+            drafted: formatNumber(learning.drafted, locale),
+          })}
+          detail={t("voice.insights.figKeptDetail", {
+            accepted: formatNumber(learning.accepted, locale),
+            edited: formatNumber(learning.edited_sent, locale),
+          })}
+          meter={{ filled: kept, total: learning.drafted, tone: "ai" }}
+        />
+      )}
+    </StatStrip>
+  );
+}
+
+// What the build learned, in the writer's own words. Up to three quotes show a
+// move each, then come the themes and what they avoid.
+export function VoiceTraits({ data }: Readonly<{ data: VoiceInsightsData }>) {
+  const t = useT();
+  return (
+    <div className="vdna-traits">
+      {data.moves.length > 0 && (
+        <ul className="vdna-moves" aria-label={t("voice.insights.movesLabel")}>
+          {data.moves.slice(0, 3).map((move) => (
+            <li key={move.move}>
+              <figure className="vdna-move">
+                <blockquote className="vdna-quote">{move.quote}</blockquote>
+                <figcaption>
+                  <ArrowRight aria-hidden />
+                  {move.move}
+                </figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(data.obsessions.length > 0 || data.avoid.length > 0) && (
+        <div className="vdna-pair">
+          {data.obsessions.length > 0 && (
+            <section>
+              <Heading size="xsmall" as="h3" className="vdna-label">
+                {t("voice.insights.themesLabel")}
+              </Heading>
+              <div className="vdna-chips">
+                {data.obsessions.map((theme) => (
+                  <Badge key={theme}>{theme}</Badge>
+                ))}
+              </div>
+            </section>
+          )}
+          {data.avoid.length > 0 && (
+            <section>
+              <Heading size="xsmall" as="h3" className="vdna-label">
+                {t("voice.insights.avoidLabel")}
+              </Heading>
+              <div className="vdna-chips">
+                {data.avoid.map((rule) => (
+                  <Badge key={rule} icon={Ban}>
+                    {rule}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The build's sample drafts, one at a time behind a switch. Each shows as the
+// email it would be, with its voice match as a ring.
+export function DraftShowcase({
+  drafts,
+}: Readonly<{ drafts: VoiceSampleDraft[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const [picked, setPicked] = useState("0");
+  const options = drafts.map((_, index) => String(index));
+  const shown = drafts[Number(picked)] ?? drafts[0];
+  if (!shown) {
+    return null;
+  }
+  const labels = Object.fromEntries(
+    drafts.map((draft, index) => [
+      String(index),
+      draft.subject ||
+        t("voice.insights.draftUntitled", {
+          n: formatNumber(index + 1, locale),
+        }),
+    ]),
+  );
+  const pct = shown.score === null ? null : formatPercent(shown.score, locale);
+  return (
+    <div className="vdna-drafts">
+      {drafts.length > 1 && (
+        <SegmentedControl
+          options={options}
+          value={options.includes(picked) ? picked : "0"}
+          onChange={setPicked}
+          labels={labels}
+          label={t("voice.insights.samplesLabel")}
+        />
+      )}
+      <div className="vdna-draft">
+        <Card as="article" inset className="vdna-letter">
+          <div className="vdna-letter-head">
+            <FileText aria-hidden />
+            {shown.subject && <b>{shown.subject}</b>}
+            <Badge tone="ai">{t("voice.insights.draftOnly")}</Badge>
+          </div>
+          <p className="vdna-letter-body">{shown.body}</p>
+          <p className="t-caption vdna-disclosure">
+            {t("voice.insights.disclosure")}
+          </p>
+        </Card>
+        {pct !== null && shown.score !== null && (
+          <div className="vdna-match">
+            <Voiceprint
+              size="medium"
+              fraction={shown.score}
+              label={t("voice.insights.voiceScore", { pct })}
+            >
+              <span className="vdna-match-pct">{pct}</span>
+            </Voiceprint>
+            <span className="t-caption">
+              {t("voice.insights.matchCaption")}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -31,6 +31,9 @@ func exampleYAML(bootstrap string) string {
 
 const defaultsHeader = `# yaml-language-server: $schema=./margince.schema.json
 # Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+#
+# Copy only the lines you change: a stored setting set in a file is locked in the app. A secret
+# shows a file reference in place of a default, so point it at a file that holds the value.
 
 version: 1
 `
@@ -123,8 +126,9 @@ func yamlScalar(text string) (string, error) {
 const envHeader = `# Written by tools/gen-config; run ` + "`make config-gen`" + ` after a change.
 #
 # Every variable a Margince program or image entrypoint reads, commented out at its default. Copy
-# a line to .env.local (git-ignored) and remove its "# " to set it. A secret has no default. What
-# each variable does is in docs/reference/configuration.md.
+# a line to .env.local (git-ignored) and remove its "# " to set it. A secret has no default:
+# write its value here, not a ${file:...} reference, because the entrypoints and ` + "`make dev`" + ` read
+# this file as shell too. What each variable does is in docs/reference/configuration.md.
 `
 
 // envInputs are the variables .env.example lists beside the settings: those

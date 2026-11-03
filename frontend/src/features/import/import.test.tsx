@@ -455,7 +455,7 @@ describe("a run named by the address", () => {
 
     expect(
       await screen.findByRole("link", { name: "crm.zip" }),
-    ).toHaveAttribute("href", `${RUN_PAGE}?run=r2`);
+    ).toHaveAttribute("href", `/${RUN_PAGE}?run=r2`);
   });
 });
 
@@ -483,7 +483,7 @@ describe("the import page", () => {
     expect(await screen.findByLabelText("Upload your data")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Back to data import" }),
-    ).toHaveAttribute("href", "#/settings/import");
+    ).toHaveAttribute("href", "/#/settings/import");
     expect(screen.queryByText("New import")).toBeNull();
   });
 

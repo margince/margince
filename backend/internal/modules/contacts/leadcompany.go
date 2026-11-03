@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -93,13 +94,13 @@ func linkLeadCompanyTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, companyID 
 // locked lead reads now. A stale offer, a second company of the same name or
 // an id the offer never named are all refused by name.
 func ensureCurrentMatch(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, companyID ids.CompanyID) error {
-	match, err := uniqueCompanyMatch(ctx, tx, deref(lead.CompanyName))
+	match, err := leadCompanyMatch(ctx, tx, lead)
 	if err != nil {
 		return err
 	}
 	if match == nil || ids.UUID(match.Id) != companyID.UUID {
 		return httperr.Validation(leadCompanyIDColumn, "not_the_lead_match",
-			"company_id is not the one company the lead's company name names; reload the lead and confirm the company it offers")
+			"company_id is not the company the lead's domain or company name names; reload the lead and confirm the company it offers")
 	}
 	return nil
 }
@@ -175,26 +176,43 @@ func leadLinkedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID) (*ids.Comp
 	return company, nil
 }
 
-// carryLeadCompany gives the contact a lead was promoted into its employment at
-// the lead's linked company. A company the promoter cannot open or attach to adds
-// no edge and does not stop the promotion.
-func (s *Store) carryLeadCompany(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID, title string) error {
-	company, err := leadLinkedCompany(ctx, tx, leadID)
-	if err != nil || company == nil {
+// carryLeadIndustry writes the lead's typed industry to its linked company when that has
+// none. A company the promoter may not change keeps its value and does not stop the promotion.
+func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry) error {
+	code, err := leadIndustryCarry(ctx, tx, company, industry)
+	if err != nil || code == nil {
 		return err
 	}
-	if !auth.Allows(ctx, "relationship", principal.ActionCreate) || !auth.Allows(ctx, "contact", principal.ActionUpdate) {
-		return nil
+	_, err = s.updateCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
+	return err
+}
+
+// leadIndustryCarry is the code a promotion writes to the lead's linked company, or nil.
+// The promotion already holds that company's row lock (lockLeadForContact), taken before the lead's.
+func leadIndustryCarry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry,
+) (*string, error) {
+	if company == nil || industry == nil || !auth.ReadGranted(ctx, companyEntity) ||
+		!auth.Allows(ctx, companyEntity, principal.ActionUpdate) {
+		return nil, nil //nolint:nilnil // nothing to carry is an answer, not a failure
 	}
-	visible, err := auth.VisibleTo(ctx, tx, companyEntity, company.UUID)
-	if err != nil || !visible {
-		return err
+	err := auth.EnsureChangeable(ctx, tx, companyEntity, company.UUID)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return nil, nil //nolint:nilnil // a company the promoter may not change keeps its value
 	}
-	live, err := companyIsLive(ctx, tx, *company)
-	if err != nil || !live {
-		return err
+	if err != nil {
+		return nil, err
 	}
-	return s.ensureEmployment(ctx, tx, contactID, *company, title, manualSource)
+	var held *string
+	err = tx.QueryRow(ctx, `SELECT industry FROM company WHERE id = $1 AND archived_at IS NULL AND merged_into_id IS NULL`,
+		company).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) || held != nil {
+		return nil, nil //nolint:nilnil // a gone company, or one with an industry, takes none
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read the industry of the company a lead is promoted at: %w", err)
+	}
+	code := string(*industry)
+	return &code, nil
 }
 
 // readLeadOffered is the lead GET /leads/{id} answers: the lead, with the
@@ -218,18 +236,74 @@ func attachCompanyMatch(ctx context.Context, tx pgx.Tx, lead *crmcontracts.Lead)
 	if err != nil || linked != nil {
 		return err
 	}
-	lead.CompanyMatch, err = uniqueCompanyMatch(ctx, tx, deref(lead.CompanyName))
+	lead.CompanyMatch, err = leadCompanyMatch(ctx, tx, *lead)
 	return err
 }
 
-// uniqueCompanyMatch is the one live company the reader can open whose folded
-// name equals companyName, or nil when none or more than one does. The offer
-// and the link both ask it, so the link confirms what the offer showed.
-func uniqueCompanyMatch(ctx context.Context, tx pgx.Tx, companyName string) (*crmcontracts.LeadCompanyMatch, error) {
-	if strings.TrimSpace(companyName) == "" || !auth.ReadGranted(ctx, "company") {
-		return nil, nil //nolint:nilnil // no name, or no company read, means no match to offer, not a failure
+// leadCompanyMatch is the company claiming the lead's domain, else the one its name names.
+// The offer and the link both ask it, so the link confirms what the offer showed.
+func leadCompanyMatch(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (*crmcontracts.LeadCompanyMatch, error) {
+	match, err := domainCompanyMatch(ctx, tx, leadDomain(lead.CandidateCompanyKey))
+	if err != nil || match != nil {
+		return match, err
 	}
-	args := []any{companyName}
+	return uniqueCompanyMatch(ctx, tx, deref(lead.CompanyName))
+}
+
+// leadDomain is the registrable domain a lead's candidate_company_key holds,
+// or "" when the key is a slug of the company name.
+func leadDomain(key *string) string {
+	if key == nil {
+		return ""
+	}
+	domain, err := values.ParseDomain(*key)
+	if err != nil {
+		return ""
+	}
+	return domain.String()
+}
+
+// domainCompanyMatch is the live company the reader can open that claims domain, never the
+// installation's own. uq_company_domain lets one company at most hold a live domain.
+func domainCompanyMatch(ctx context.Context, tx pgx.Tx, domain string) (*crmcontracts.LeadCompanyMatch, error) {
+	if domain == "" {
+		return nil, nil //nolint:nilnil // a lead with no domain names no company by one
+	}
+	owners, err := exactCompanyByDomain(ctx, tx, []string{domain}, nil)
+	if err != nil || len(owners) == 0 {
+		return nil, err
+	}
+	matches, err := liveVisibleCompanies(ctx, tx, `id = $1 AND NOT is_anchor`, owners[0])
+	if err != nil || len(matches) == 0 {
+		return nil, err
+	}
+	matches[0].MatchedBy = crmcontracts.LeadCompanyMatchMatchedByDomain
+	return &matches[0], nil
+}
+
+// uniqueCompanyMatch is the one live company the reader can open whose folded
+// name equals companyName, or nil when none or more than one does.
+func uniqueCompanyMatch(ctx context.Context, tx pgx.Tx, companyName string) (*crmcontracts.LeadCompanyMatch, error) {
+	if strings.TrimSpace(companyName) == "" {
+		return nil, nil //nolint:nilnil // no name means no match to offer, not a failure
+	}
+	matches, err := liveVisibleCompanies(ctx, tx,
+		exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$1"), companyName)
+	if err != nil || len(matches) != 1 {
+		return nil, err
+	}
+	matches[0].MatchedBy = crmcontracts.LeadCompanyMatchMatchedByName
+	return &matches[0], nil
+}
+
+// liveVisibleCompanies is up to two live companies the reader can open that
+// meet where, whose one bind is operand. A reader without company read opens none.
+func liveVisibleCompanies[T ids.CompanyID | string](ctx context.Context, tx pgx.Tx, where string, operand T,
+) ([]crmcontracts.LeadCompanyMatch, error) {
+	if !auth.ReadGranted(ctx, companyEntity) {
+		return nil, nil
+	}
+	args := []any{operand}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	scope, err := auth.ScopeClauseFor(ctx, companyEntity, "", arg)
 	if err != nil {
@@ -241,7 +315,7 @@ func uniqueCompanyMatch(ctx context.Context, tx pgx.Tx, companyName string) (*cr
 	rows, err := tx.Query(ctx, `
 		SELECT id, display_name FROM company
 		 WHERE archived_at IS NULL AND merged_into_id IS NULL
-		   AND `+exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$1")+` AND `+scope+`
+		   AND `+where+` AND `+scope+`
 		 ORDER BY id LIMIT 2`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("look for the company a lead names: %w", err)
@@ -258,29 +332,29 @@ func uniqueCompanyMatch(ctx context.Context, tx pgx.Tx, companyName string) (*cr
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the companies a lead names: %w", err)
 	}
-	if len(matches) != 1 {
-		return nil, nil //nolint:nilnil // none or several companies is no unique match, which is a valid answer
-	}
-	return &matches[0], nil
+	return matches, nil
 }
 
-// unlinkRenamedCompany drops the company link when an edit of the lead's
-// company name stops naming the linked company. A name that still names it,
-// compared the way the match offer compares, keeps the link.
-func unlinkRenamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, p *storekit.Patch) error {
-	renamed, touched := p.Moved()[leadCompanyColumn]
-	if !touched {
+// unlinkUnnamedCompany drops the link when p moves the lead's company name or candidate key
+// so neither names the linked company. name and key are the lead's values before p.
+func unlinkUnnamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, name, key *string, p *storekit.Patch) error {
+	moved := p.Moved()
+	renamed, nameMoved := moved[leadCompanyColumn]
+	rekeyed, keyMoved := moved[candidateCompanyKey]
+	if !nameMoved && !keyMoved {
 		return nil
 	}
 	linked, err := leadLinkedCompany(ctx, tx, id)
 	if err != nil || linked == nil {
 		return err
 	}
-	var name *string
-	if typed, ok := renamed.(string); ok {
-		name = &typed
+	if nameMoved {
+		name = textOrNil(renamed)
 	}
-	stillNamed, err := namesCompany(ctx, tx, *linked, name)
+	if keyMoved {
+		key = textOrNil(rekeyed)
+	}
+	stillNamed, err := namesCompany(ctx, tx, *linked, name, key)
 	if err != nil {
 		return err
 	}
@@ -290,20 +364,32 @@ func unlinkRenamedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID, p *stor
 	return nil
 }
 
-// namesCompany reports whether a lead's company name names a company, compared
-// the way the match offer compares. A nil or blank name names none.
-func namesCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, name *string) (bool, error) {
+// textOrNil is a patched text column's new value, nil when it was cleared.
+//
+//craft:ignore naked-any storekit.Patch.Moved hands every column's value back as any
+func textOrNil(value any) *string {
+	if text, ok := value.(string); ok {
+		return &text
+	}
+	return nil
+}
+
+// namesCompany reports whether a lead's company name or candidate key names a company,
+// compared as the match offer compares. A blank name and a key that is no domain name none.
+func namesCompany(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, name, key *string) (bool, error) {
 	var named bool
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(`+exactNameKeySQL("display_name")+` = `+exactNameKeySQL("$2::text")+`, false)
-		  FROM company WHERE id = $1`, companyID, name).Scan(&named); err != nil {
-		return false, fmt.Errorf("compare a lead's company name with its linked company: %w", err)
+		       OR EXISTS (SELECT 1 FROM company_domain claim
+		                   WHERE claim.company_id = company.id AND claim.archived_at IS NULL AND claim.domain = $3)
+		  FROM company WHERE id = $1`, companyID, name, leadDomain(key)).Scan(&named); err != nil {
+		return false, fmt.Errorf("compare a lead's company name and domain with its linked company: %w", err)
 	}
 	return named, nil
 }
 
-// withholdUnreadableCompanies blanks company_id on every lead whose company the
-// caller cannot open, as withholdUnreadableSourceContacts does for the contact.
+// withholdUnreadableCompanies blanks company_id and company_facts on every lead whose
+// company the caller cannot open, as withholdUnreadableSourceContacts does for the contact.
 func withholdUnreadableCompanies(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
 	var companyIDs []ids.UUID
 	for _, l := range leads {
@@ -321,6 +407,7 @@ func withholdUnreadableCompanies(ctx context.Context, tx pgx.Tx, leads []crmcont
 	for i := range leads {
 		if leads[i].CompanyId != nil && !visible[ids.UUID(*leads[i].CompanyId)] {
 			leads[i].CompanyId = nil
+			leads[i].CompanyFacts = nil
 		}
 	}
 	return nil

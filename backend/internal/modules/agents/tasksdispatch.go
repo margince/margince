@@ -146,7 +146,7 @@ func (s *Dispatcher) answerTaskMethod(ctx context.Context, resp rpcResponse, met
 // context it never authenticated, which is this server's defect rather than the
 // caller's — reported as one, with the cause kept server-side.
 func (s *Dispatcher) bindTaskCall(ctx context.Context, method string) (context.Context, *rpcError) {
-	bound, err := s.bind(ctx)
+	bound, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		s.log.Error("mcp: task method reached dispatch on an unauthenticated context",
 			"method", method, "err", err)

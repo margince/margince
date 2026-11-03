@@ -210,6 +210,9 @@ function stubBackend(opts: {
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
       return jsonResponse(opts.single ?? opts.deals[0]);
     }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (url.includes("/deals")) {
       return jsonResponse({ data: opts.deals, page: { next_cursor: null } });
     }

@@ -105,7 +105,7 @@ func TestClosingADealWithCompleteAllCompletesOnlyTheDealsOwnTasks(t *testing.T) 
 	}
 
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance",
-		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "went with a competitor"}, nil, nil); status != http.StatusOK {
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "went with a competitor", "lost_reason_code": "competitor"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("losing the deal → %d", status)
 	}
 

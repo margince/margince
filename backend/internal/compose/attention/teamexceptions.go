@@ -34,7 +34,7 @@ func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptio
 		return crmcontracts.TeamExceptions{}, err
 	}
 	var out crmcontracts.TeamExceptions
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+	err := s.inSnapshot(ctx, ReadTeamExceptions, func(ctx context.Context) error {
 		var err error
 		out, err = s.teamExceptionsIn(ctx)
 		return err

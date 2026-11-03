@@ -33,6 +33,7 @@ export function ResolveSheet({
   returnFocusTo,
   outcomeFields,
   canSubmit,
+  asksExpiry,
 }: Readonly<{
   open: boolean;
   // What is being answered, shown above the choices. The sheet covers the list
@@ -40,6 +41,9 @@ export function ResolveSheet({
   context?: ReactNode;
   outcomeFields?: (outcome: ResolveOutcome | "") => ReactNode;
   canSubmit?: (outcome: ResolveOutcome) => boolean;
+  // Whether a hiding answer offers an end date. An answer that closes the
+  // record for good has nothing to end.
+  asksExpiry?: (outcome: ResolveOutcome) => boolean;
   labels: ResolveSheetLabels;
   onSubmit: (answer: ResolveAnswer) => void;
   onClose: () => void;
@@ -59,6 +63,8 @@ export function ResolveSheet({
   const titleID = useId();
 
   const needsReason = suppresses(outcome);
+  const needsExpiry =
+    needsReason && outcome !== "" && (asksExpiry?.(outcome) ?? true);
   const needsRemind = outcome === "remind_later";
   // Nothing chosen is not an answer. Submitting with no outcome would post a
   // body the server refuses, and the reader would read the refusal as a bug.
@@ -121,7 +127,7 @@ export function ResolveSheet({
 
           {/* Past the server's ceiling the date is refused, not shortened, so the
               hint states the limit. */}
-          {needsReason && (
+          {needsExpiry && (
             <Field label={labels.expiresAt} hint={labels.expiresHelp}>
               {(control) => (
                 <DateInput
@@ -152,7 +158,7 @@ export function ResolveSheet({
               reason: needsReason ? reason.trim() : undefined,
               remindAt: needsRemind ? remindAt : undefined,
               expiresAt:
-                needsReason && expiresAt !== "" ? expiresAt : undefined,
+                needsExpiry && expiresAt !== "" ? expiresAt : undefined,
             });
           }}
         >

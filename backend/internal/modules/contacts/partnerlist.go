@@ -30,10 +30,12 @@ import (
 
 // ListPartnersInput narrows and orders the partner list.
 type ListPartnersInput struct {
-	PartnerRole *string
-	CertStatus  *string
-	Limit       *int
-	Cursor      string
+	PartnerKind       *string
+	RelationshipStage *string
+	StageMeaning      *string
+	CertStatus        *string
+	Limit             *int
+	Cursor            string
 	// Sort is the caller's ordering, in the shared Sort component's spelling.
 	// Nil or the default spelling means the house order.
 	Sort *string
@@ -54,7 +56,6 @@ const columnCertifiedStaff = "certified_staff"
 
 var partnerSortFields = map[string]storekit.SortField{
 	filterCertStatus:      storekit.Column(fieldcatalog.TypeText),
-	filterPartnerRole:     storekit.Column(fieldcatalog.TypeText),
 	"margin_tier":         storekit.Column(fieldcatalog.TypeText),
 	"relationship_stage":  storekit.Column(fieldcatalog.TypeText),
 	columnCertifiedStaff:  storekit.Column(fieldcatalog.TypeNumber),
@@ -171,15 +172,16 @@ func scanPartnerPage(row pgx.Row, sorted *storekit.ListSort) (partnerRow, ids.UU
 	return out, id, key, err
 }
 
-// partnerListWhere builds the WHERE fragments for the partner list: the
-// role/cert-status filters, the keyset cursor, and the company's own row scope
-// (a partner row is a read of its company, so the company scope bounds
-// the list).
+// partnerListWhere builds the `WHERE` fragments for the partner list. They are
+// the kind, stage and cert-status filters, the keyset cursor, and the
+// company's row scope. A partner row is a read of its company.
 func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 	where := []string{livePartnerSQL("p")}
-	if in.PartnerRole != nil {
-		where = append(where, storekit.SQLf("p.partner_role = $%d", arg(*in.PartnerRole)))
+	program := partnerProgramFilter{Kind: in.PartnerKind, Stage: in.RelationshipStage, Meaning: in.StageMeaning}
+	if err := program.check(filterPartnerKind, filterStageMeaning); err != nil {
+		return nil, err
 	}
+	where = append(where, partnerProgramClauses("p", program, arg)...)
 	if in.CertStatus != nil {
 		where = append(where, storekit.SQLf("p.cert_status = $%d", arg(*in.CertStatus)))
 	}

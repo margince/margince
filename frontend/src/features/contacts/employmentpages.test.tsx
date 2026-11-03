@@ -33,9 +33,13 @@ it.each([true, false])(
             page: { has_more: false },
           });
         }
-        return visible
-          ? Response.json({ id: "company", display_name: "Earlier Company" })
-          : Response.json({ code: "not_found" }, { status: 404 });
+        // A company the reader may not see is left out of the name read.
+        return Response.json({
+          data: visible
+            ? [{ id: "company", display_name: "Earlier Company" }]
+            : [],
+          next_cursor: null,
+        });
       }),
     );
     const view: components["schemas"]["Contact360"] = {

@@ -133,10 +133,16 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
 
 const HEADLINE = ["won", "commitments", "leads", "meetings"];
 
-/** Only the figures a review of this age carries: an older one has no tasks. */
+/**
+ * Only the figures the review carries. An older one has no tasks. One read by
+ * a seat that may not read activities has its meetings withheld, and their
+ * zeros say nothing.
+ */
 function carried(review: WeeklyReview, t: Translator, locale: Locale) {
   return weekFigures(t, locale).filter(
-    (figure) => figure.count(review.counts) !== undefined,
+    (figure) =>
+      figure.count(review.counts) !== undefined &&
+      !(review.meetings_withheld && figure.figure === "meetings"),
   );
 }
 

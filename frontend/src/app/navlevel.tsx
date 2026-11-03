@@ -12,6 +12,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
@@ -246,7 +247,7 @@ function NavLevelRow({
     () => state.onTip(null),
   );
   return (
-    <a
+    <AppLink
       className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
@@ -280,7 +281,7 @@ function NavLevelRow({
           {label}
         </span>
       )}
-    </a>
+    </AppLink>
   );
 }
 

@@ -29,6 +29,10 @@ import { navigate } from "../../lib/router";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
 import "./meeting-cards.css";
+import {
+  UnreadableCalendarLine,
+  useUnreadableCalendar,
+} from "./unreadable-calendar";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -184,6 +188,7 @@ function CalendarFields({
         {provider !== "" && ready && (
           <CalendarChoices
             calendar={calendar}
+            saved={draft.baseline}
             onCalendar={(value) =>
               setForm({
                 ...form,
@@ -328,13 +333,24 @@ function CalendarChoices({
   calendar,
   onCalendar,
   onBlocking,
+  saved,
 }: Readonly<{
   calendar: ReturnType<typeof useMeetingCalendar>;
+  saved: Profile;
   onCalendar: (id: string) => void;
   onBlocking: (ids: string[]) => void;
 }>) {
   const t = useT();
   const { calendarID, blocking } = calendar;
+  const connection = calendar.providers.find(
+    (item) => item.provider === saved.provider,
+  );
+  const unreadable = useUnreadableCalendar(
+    saved,
+    calendar.ready && connection ? connection.status : "",
+  );
+  // The line sits under the row that holds the calendar it names.
+  const unreadableBlocks = unreadable !== null && blocking.includes(unreadable);
   return (
     <QueryGate query={calendar.calendars} pendingLabel={t("common.loading")}>
       {(calendars) =>
@@ -359,6 +375,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {!unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
             <SettingRow
               label={t("scheduling.blocking")}
               description={t("scheduling.blockingRowHelp")}
@@ -378,6 +400,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
           </>
         ) : (
           <p>{t("scheduling.noWritableCalendar")}</p>

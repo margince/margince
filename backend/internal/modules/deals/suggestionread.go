@@ -38,7 +38,10 @@ import (
 // superseding pass reads it: one spelling of "this suggestion still stands".
 //
 // Every caller names deal_suggestion "s" in its outer query.
-func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, error) {
+//
+// readable is empty, or names activity ids that already passed the content
+// gate, covering what SuggestionEvidenceActivitiesSQL selects for these rows.
+func suggestionVisibleClause(ctx context.Context, arg func(any) int, readable string) (string, error) {
 	if err := requireSuggestionRead(ctx); err != nil {
 		return "", err
 	}
@@ -55,9 +58,13 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, er
 	// on are gathered as need, and each must pass. Spelled once per kind, the
 	// gate was planned three times over, and the planner's memory stays with
 	// the connection after the query returns.
-	content, err := auth.ActivityContentClause(ctx, "ea", arg)
-	if err != nil {
-		return "", err
+	passes := "SELECT 1 FROM " + readable + " ea WHERE ea.id = need.id"
+	if readable == "" {
+		content, err := auth.ActivityContentClause(ctx, "ea", arg)
+		if err != nil {
+			return "", err
+		}
+		passes = "SELECT 1 FROM activity ea WHERE ea.id = need.id AND ea.archived_at IS NULL AND " + content
 	}
 	// A kind the reader holds no grant for admits no evidence of that kind.
 	activityGranted := grantedSQL(ctx, "activity")
@@ -78,9 +85,22 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int) (string, er
 	            WHERE e.kind = 'attachment' AND eat.id = e.attachment_id
 	           UNION ALL SELECT `+storekit.CitedActivityID("cite")+` FROM signal es, jsonb_array_elements(es.evidence) cite
 	            WHERE e.kind = 'signal' AND es.id = e.signal_id AND cite->>'source_type' = 'activity') need(id)
-	         WHERE NOT EXISTS (SELECT 1 FROM activity ea
-	           WHERE ea.id = need.id AND ea.archived_at IS NULL AND %[4]s)))))`,
-		"s", orTrue(company), orTrue(signal), content, activityGranted, signalGranted), nil
+	         WHERE NOT EXISTS (%[4]s)))))`,
+		"s", orTrue(company), orTrue(signal), passes, activityGranted, signalGranted), nil
+}
+
+// SuggestionEvidenceActivitiesSQL selects the activities the named suggestions
+// rest on: each meeting, the message each attachment came on, and each message
+// a signal cites. suggestions is a subquery of their ids as text. It is the
+// need set suggestionVisibleClause tests against readable.
+func SuggestionEvidenceActivitiesSQL(suggestions string) string {
+	return `SELECT ev.activity_id FROM deal_suggestion_evidence ev
+	   WHERE ev.kind = 'meeting' AND ev.suggestion_id::text IN (` + suggestions + `)
+	 UNION ALL SELECT eat.activity_id FROM deal_suggestion_evidence ev JOIN attachment eat ON eat.id = ev.attachment_id
+	   WHERE ev.kind = 'attachment' AND ev.suggestion_id::text IN (` + suggestions + `)
+	 UNION ALL SELECT ` + storekit.CitedActivityID("cite") + ` FROM deal_suggestion_evidence ev
+	   JOIN signal es ON es.id = ev.signal_id, jsonb_array_elements(es.evidence) cite
+	   WHERE ev.kind = 'signal' AND cite->>'source_type' = 'activity' AND ev.suggestion_id::text IN (` + suggestions + `)`
 }
 
 // grantedSQL is the reader's object grant to read one kind, as a literal the
@@ -190,7 +210,7 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := suggestionVisibleClause(ctx, arg)
+	visible, err := suggestionVisibleClause(ctx, arg, "")
 	if err != nil {
 		return nil, "", err
 	}
@@ -257,7 +277,7 @@ func (s *Store) CountOpenSuggestions(ctx context.Context) (int, error) {
 	}
 	var args []any
 	visible, err := suggestionVisibleClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) })
+		func(v any) int { args = append(args, v); return len(args) }, "")
 	if err != nil {
 		return 0, err
 	}
@@ -292,7 +312,7 @@ func (s *Store) GetSuggestion(ctx context.Context, id ids.UUID) (Suggestion, err
 func readVisibleSuggestionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (Suggestion, error) {
 	args := []any{id}
 	visible, err := suggestionVisibleClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) })
+		func(v any) int { args = append(args, v); return len(args) }, "")
 	if err != nil {
 		return Suggestion{}, err
 	}
@@ -331,7 +351,7 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 	}
 	args := []any{suggestionIDs}
 	visible, err := suggestionVisibleClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) })
+		func(v any) int { args = append(args, v); return len(args) }, "")
 	if err != nil {
 		return err
 	}
@@ -368,5 +388,14 @@ func ReadableSuggestionClause(ctx context.Context, arg func(any) int) (string, e
 	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
 		return "false", nil
 	}
-	return suggestionVisibleClause(ctx, arg)
+	return suggestionVisibleClause(ctx, arg, "")
+}
+
+// ReadableSuggestionClauseWithin is ReadableSuggestionClause for a statement
+// that already content-gated the evidence activities into readable.
+func ReadableSuggestionClauseWithin(ctx context.Context, arg func(any) int, readable string) (string, error) {
+	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
+		return "false", nil
+	}
+	return suggestionVisibleClause(ctx, arg, readable)
 }

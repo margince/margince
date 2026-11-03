@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
+import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
@@ -64,7 +65,9 @@ export function EconomyBanner() {
               : t("aibanner.unknown")
         }
         actions={
-          <a href={routeHash(settingsHref("usage"))}>{t("aibanner.link")}</a>
+          <AppLink href={routeHash(settingsHref("usage"))}>
+            {t("aibanner.link")}
+          </AppLink>
         }
         dismiss={{
           label: t("aibanner.dismiss"),

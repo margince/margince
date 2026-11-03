@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
@@ -164,7 +165,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 	// ended in three conversations is not three questions — staging once per
 	// signal made each pass supersede the last, leaving whichever row happened
 	// to be first standing and the rest never asked about at all.
-	args := []any{lifecyclereview.LiveStages()}
+	args := []any{values.EngagedLifecycles()}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
 		  FROM signal s
@@ -191,7 +192,7 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 	rows.Close()
 	kept := out[:0]
 	for _, account := range out {
-		if !lifecyclereview.LiveStage(account.Stage) {
+		if !values.EngagedLifecycle(account.Stage) {
 			continue
 		}
 		finding, err := lifecyclereview.Reconcile(ctx, tx, account.CompanyID, now)

@@ -117,11 +117,12 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		row := tx.QueryRow(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT `+mailDraftColumns+`
 			  FROM mail_draft
 			 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d`,
-			arg(author), arg(string(anchor.Type)), arg(anchor.ID)), args...)
+			arg(author), arg(string(anchor.Type)), arg(anchor.ID))
+		row := tx.QueryRow(ctx, query, args...)
 		if out, err = scanMailDraft(row); err != nil {
 			return err
 		}
@@ -174,7 +175,7 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) (MailDraft, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
 		                        bcc_addresses, subject, body, html_body)
 		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
@@ -182,7 +183,8 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody))), args...)
+		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)))
+	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The conflict target held: a draft is already here that this caller
@@ -201,7 +203,7 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		UPDATE mail_draft
 		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
 		       subject = $%d, body = $%d, html_body = $%d,
@@ -210,7 +212,8 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
 		RETURNING `+mailDraftColumns,
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected)), args...)
+		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected))
+	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Moved by another composer, or discarded: the draft this caller read

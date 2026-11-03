@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -59,10 +60,9 @@ type stubDuplicates struct {
 	// asked records every batch the lane requested, so a test can count the
 	// reads rather than assume them.
 	asked *[]string
-	// undecidable is a record this caller may READ but could not CHANGE — the
-	// case a rep meets on every pair a colleague owns. The pair is still named
-	// in full; only the verb is withheld.
-	undecidable ids.UUID
+	// undecidable are records this caller may read but not change, as a rep
+	// meets on a colleague's records. The pair is still named in full.
+	undecidable []ids.UUID
 	// decideErr is an authority read that BROKE rather than one that refused.
 	decideErr error
 }
@@ -119,7 +119,7 @@ func (s stubDuplicates) DecidableSubset(
 	}
 	writable := make(map[ids.UUID]bool, len(rowIDs))
 	for _, id := range rowIDs {
-		writable[id] = id != s.undecidable
+		writable[id] = !slices.Contains(s.undecidable, id)
 	}
 	return writable, nil
 }
@@ -154,7 +154,7 @@ type stubTasks struct {
 }
 
 func (s *stubTasks) CountOpenForViewer(
-	_ context.Context, _, _ time.Time, _ TaskScope, _ ids.UUID,
+	_ context.Context, _, _ time.Time, _ TaskScope, _ ids.UUID, _ []ids.UUID,
 ) (int, error) {
 	if s.countErr != nil {
 		return 0, s.countErr
@@ -166,7 +166,7 @@ func (s *stubTasks) CountOpenForViewer(
 }
 
 func (s *stubTasks) OpenForViewer(
-	_ context.Context, _, until time.Time, _ int, scope TaskScope, owner ids.UUID,
+	_ context.Context, _, until time.Time, _ int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
 ) ([]Task, error) {
 	s.until = &until
 	s.scope = scope
@@ -178,7 +178,7 @@ func (s *stubTasks) OpenForViewer(
 // OpenForViewer's window so a test can prove the two reads are bounded
 // independently rather than sharing one allocation.
 func (s *stubTasks) UpcomingForViewer(
-	_ context.Context, _, from, until time.Time, limit int, scope TaskScope, owner ids.UUID,
+	_ context.Context, _, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
 ) ([]Task, error) {
 	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &from, &until, limit
 	s.scope = scope

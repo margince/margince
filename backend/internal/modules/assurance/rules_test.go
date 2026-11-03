@@ -6,6 +6,8 @@ package assurance
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // testYear is the year every fixture below sits in — the rules are about
@@ -27,7 +29,7 @@ func healthy() Subject {
 		ExpectedClose:    new(at(time.June, 30)),
 		Category:         "commit",
 		StageName:        "Negotiation",
-		LastInboundAt:    new(at(time.May, 10)),
+		Viability:        &SubjectViability{Outcome: viability.OutcomeEligible},
 		HasNextStep:      true,
 		HasEconomicBuyer: true,
 	}
@@ -109,11 +111,13 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Category = false, "pipeline"; return s },
 		},
 		{
-			ruleType: TypeBuyerSilent,
-			fires:    func(s Subject) Subject { s.LastInboundAt = new(at(time.January, 5)); return s },
-			// Never heard from at all is a DIFFERENT finding, and not one this
-			// rule claims: a deal created today has no inbound either.
-			quiet: func(s Subject) Subject { s.LastInboundAt = nil; return s },
+			ruleType: TypeDealViability,
+			fires:    func(s Subject) Subject { s.Viability = reviewRequired(); return s },
+			// A wait the customer asked for is judged, and it is not a review.
+			quiet: func(s Subject) Subject {
+				s.Viability = &SubjectViability{Outcome: viability.OutcomeWaiting}
+				return s
+			},
 		},
 		{
 			ruleType: TypeCommitUnpriced,
@@ -194,7 +198,7 @@ func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
 	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.Viability = reviewRequired()
 	loaded.HasNextStep, loaded.HasEconomicBuyer = false, false
 	loaded.OfferTotalMinor = new(int64(123_456_789))
 	loaded.ContractTotalMinor = new(int64(234_567_891))
@@ -247,7 +251,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.Viability = reviewRequired()
 	loaded.HasEconomicBuyer = false
 	loaded.OfferTotalMinor = new(int64(100_000))
 	loaded.ContractTotalMinor = new(int64(90_000))
@@ -275,19 +279,11 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	}
 }
 
-func TestBuyerSilenceCountsDatesAcrossTheShortDay(t *testing.T) {
-	zone, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatal(err)
-	}
-	asOf := time.Date(2026, 3, 30, 0, 5, 0, 0, zone)
-	subject := healthy()
-	last := time.Date(2026, 3, 29, 0, 5, 0, 0, zone)
-	subject.LastInboundAt = &last
-	cfg := DefaultConfig()
-	cfg.SilentDays = 1
-	finding := ask(t, TypeBuyerSilent, asOf, subject, cfg)
-	if finding == nil || finding.Observed["silent_days"] != 1 {
-		t.Fatalf("finding = %+v, want one calendar day of silence", finding)
+// reviewRequired is the assessment of a deal whose customer went silent.
+func reviewRequired() *SubjectViability {
+	return &SubjectViability{
+		Outcome:    viability.OutcomeReviewRequired,
+		Reasons:    []viability.Reason{viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported},
+		SilentDays: 196,
 	}
 }

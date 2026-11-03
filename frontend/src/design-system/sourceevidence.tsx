@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { formatActivityWhen } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
+import type { SourceOpenerFor } from "../lib/opensource";
 import { ProblemError, problemCode } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { Button } from "./atoms";
@@ -27,11 +28,12 @@ type Activity = components["schemas"]["Activity"];
  */
 export function SourceEvidence({
   activityId,
-  onOpenTranscript,
+  openerFor,
 }: Readonly<{
   activityId: string;
-  /** Open the transcript reader, which the host owns along with its drawer. */
-  onOpenTranscript: (id: string) => void;
+  /** The host's opener for the whole source (`useSourceOpener`). A source it
+   *  cannot open gets no button. */
+  openerFor: SourceOpenerFor;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -68,6 +70,11 @@ export function SourceEvidence({
       </SurfaceState>
     );
   }
+  const open = openerFor({
+    id: source.id,
+    kind: source.kind,
+    contentState: source.content_state,
+  });
   if (source.kind === "email") {
     return (
       <SourceEmailPanel
@@ -75,6 +82,7 @@ export function SourceEvidence({
         formatWhen={(at, precision) =>
           formatActivityWhen(at, precision, locale, recordZone)
         }
+        onOpenThread={open}
       />
     );
   }
@@ -93,9 +101,11 @@ export function SourceEvidence({
           .filter(Boolean)
           .join(" · ")}
       </p>
-      <Button variant="ghost" onClick={() => onOpenTranscript(activityId)}>
-        {t("tasks.openSource")}
-      </Button>
+      {open && (
+        <Button variant="ghost" aria-haspopup="dialog" onClick={open}>
+          {t("tasks.openSource")}
+        </Button>
+      )}
     </div>
   );
 }

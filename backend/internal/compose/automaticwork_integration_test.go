@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -334,5 +335,65 @@ func TestAutomaticWorkHealthIsForAnAdminOnly(t *testing.T) {
 	}
 	if code := call(f.e.Admin(), new(31)); code != http.StatusUnprocessableEntity {
 		t.Errorf("a 31-day window got %d, want 422", code)
+	}
+}
+
+// A record's creator is its earliest create row, the one its source badge
+// names. A later machine create row over a colleague's own task is a replay,
+// not automatic work.
+func TestAutomaticWorkLeavesOutATaskAColleagueCreatedFirst(t *testing.T) {
+	f := newWorkFixture(t)
+	task := f.promiseTask(t, f.e.Rep1)
+	created := f.dbNow(t)
+	f.e.WsExec(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		VALUES ($1, 'human', $2, 'create', 'activity', $3, $4)`,
+		ids.NewV7(), "human:"+f.e.Rep1.String(), task.UUID, created.Add(-time.Hour))
+
+	health := f.report(t, created, 7)
+	for _, colleague := range health.Colleagues {
+		for _, tally := range colleague.Tallies {
+			if tally.Kind == crmcontracts.AutomaticWorkKindNamePromiseTask && tally.Counts.Created != 0 {
+				t.Errorf("a task a colleague created first counts as automatic work: %+v", tally.Counts)
+			}
+		}
+	}
+}
+
+// A machine create replayed later is still one automatic item.
+func TestAutomaticWorkCountsAReplayedMachineCreateOnce(t *testing.T) {
+	f := newWorkFixture(t)
+	task := f.promiseTask(t, f.e.Rep1)
+	created := f.dbNow(t)
+	f.e.WsExec(t, `
+		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		SELECT actor_type, actor_id, 'create', entity_type, entity_id, occurred_at + interval '1 hour'
+		  FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'create'`, task.UUID)
+
+	_, tally := tallyOf(t, f.report(t, created.Add(2*time.Hour), 7), f.e.Rep1, crmcontracts.AutomaticWorkKindNamePromiseTask)
+	if tally.Counts.Created != 1 {
+		t.Errorf("a task whose machine create was replayed counts %d times, want once", tally.Counts.Created)
+	}
+}
+
+func TestAutomaticWorkWindowStartsOnTheRequestedDayAcrossAMidnightDSTChange(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	zone := "America/Santiago"
+	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 6, 15, 0, 0, 0, time.UTC)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, from, last, err := automaticWorkWindow(ctx, tx, now, 1)
+		if err != nil {
+			return err
+		}
+		if from.Format(time.DateOnly) != "2026-09-06" || !from.Equal(last) || from.Hour() != 1 {
+			t.Fatalf("window starts %v, last day %v; want first valid instant on September 6", from, last)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

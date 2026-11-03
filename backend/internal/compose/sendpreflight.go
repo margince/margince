@@ -77,32 +77,39 @@ type mailboxAuthority struct {
 	// transmit, so a deployment whose worker sends perfectly well has no
 	// api-side gmail connector — and keying the refusal on the role's registry
 	// would refuse every Gmail send there.
-	mailAppConfigured func(provider string) bool
+	mailAppConfigured func(ctx context.Context, provider string) (bool, error)
 }
 
 var _ activities.SendAuthority = mailboxAuthority{}
 
-// mailAppConfigured is the Server's answer to that question. It reads the field
-// at CALL time rather than snapshotting it, so the two places that install the
-// pre-flight need no ordering rule against the option that records the fact.
+// mailAppConfigured is the Server's answer to that question. It reads the fields
+// at CALL time, not at install. So the two install sites need no ordering rule
+// against the options that record the facts.
 //
 // A provider with no arm is not configured, which is also the only honest
 // answer: comms.SendScopeFor gives a send scope to the mail providers alone, so
 // no other provider reaches this at all.
-func (s *Server) mailAppConfigured(provider string) bool {
+func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, error) {
 	switch provider {
 	case providerGmail:
-		return s.gmailAppConfigured
+		return envOrStoredApp(ctx, s.gmailAppConfigured, s.googleAppResolver)
 	case providerGraph:
-		return s.graphAppConfigured
+		return envOrStoredApp(ctx, s.graphAppConfigured, s.microsoftAppResolver)
 	case testmailbox.Name:
 		// No credential to check — the deployment flag itself IS the whole
 		// configuration question for this connector, already recorded on
 		// s.captureConfig by WithCaptureConfig (compose/capture.go).
-		return s.captureConfig.AllowTestMailbox
+		return s.captureConfig.AllowTestMailbox, nil
 	default:
-		return false
+		return false, nil
 	}
+}
+
+// envOrStoredApp answers by resolveApp's rule, the one the connect flow and the
+// worker resolve the app by. An app set in Settings then sends as an
+// environment one does.
+func envOrStoredApp(ctx context.Context, env bool, stored appResolver) (bool, error) {
+	return resolveApp(ctx, stored, env, func(capture.ConnectorApp) bool { return true }, nil)
 }
 
 // installSendPreflight installs the pre-flight over whichever capture registry
@@ -175,7 +182,11 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 		// workspace binding to find.
 		return m.grants.ChannelSendCapable(ctx, provider)
 	}
-	if !m.mailAppConfigured(provider) {
+	configured, err := m.mailAppConfigured(ctx, provider)
+	if err != nil {
+		return false, err
+	}
+	if !configured {
 		// No grant this user holds can transmit through an app the deployment
 		// does not have, so the grant is not even read: the answer is the same
 		// either way, and the refusal names the mailbox while the operator is
@@ -196,15 +207,15 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 
 // Worker roles register the transports they can actually transmit through.
 func workerMailAuthority(registry *capture.Registry) mailboxAuthority {
-	return mailboxAuthority{grants: registry, mailAppConfigured: func(provider string) bool {
+	return mailboxAuthority{grants: registry, mailAppConfigured: func(_ context.Context, provider string) (bool, error) {
 		if registry == nil {
-			return false
+			return false, nil
 		}
 		for _, descriptor := range registry.Connectors() {
 			if descriptor.Name == provider {
-				return true
+				return true, nil
 			}
 		}
-		return false
+		return false, nil
 	}}
 }

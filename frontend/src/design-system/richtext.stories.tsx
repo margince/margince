@@ -23,7 +23,10 @@ export default meta;
 type Story = StoryObj<typeof RichText>;
 
 /** Both renderings, side by side — because both go on the wire. */
-function Demo({ initial }: Readonly<{ initial: string }>) {
+function Demo({
+  initial,
+  thinking,
+}: Readonly<{ initial: string; thinking?: string }>) {
   const [value, setValue] = useState(initial);
   const [text, setText] = useState("");
   return (
@@ -45,6 +48,7 @@ function Demo({ initial }: Readonly<{ initial: string }>) {
         }}
         placeholder="Write your message…"
         rows={6}
+        thinking={thinking}
       />
       <div className="t-caption">
         The plain alternative a text client receives:
@@ -58,6 +62,11 @@ function Demo({ initial }: Readonly<{ initial: string }>) {
 
 /** Empty, showing the placeholder. */
 export const Empty: Story = { render: () => <Demo initial="" /> };
+
+/** A model writing the first draft: its speck rows stand where the words will land. */
+export const Thinking: Story = {
+  render: () => <Demo initial="" thinking="Writing the draft." />,
+};
 
 /** The formatting the toolbar produces, which is all the wire carries. */
 export const Formatted: Story = {

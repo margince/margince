@@ -74,8 +74,9 @@ func (a *httpAPI) eventBusy(ctx context.Context, token, calendar string, from, t
 			Next  string           `json:"nextPageToken"`
 			Items []occupancyEvent `json:"items"`
 		}
-		if _, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events?"+query.Encode(), nil, &result); err != nil {
-			return nil, err
+		status, err := calendarwire.Request(ctx, a.client, token, http.MethodGet, a.base+"/calendars/"+url.PathEscape(calendar)+"/events?"+query.Encode(), nil, &result)
+		if err != nil {
+			return nil, eventReadFailure(calendar, status, err)
 		}
 		zone, err := time.LoadLocation(result.Zone)
 		if err != nil {
@@ -92,6 +93,20 @@ func (a *httpAPI) eventBusy(ctx context.Context, token, calendar string, from, t
 		query.Set("pageToken", result.Next)
 	}
 	return nil, errors.New("calendar: incomplete availability")
+}
+
+// eventReadFailure classifies a failed events read of one selected calendar.
+// freeBusy has just accepted the token, so a 403 refuses this calendar and not
+// the credential. The cause stays nil: the wire error wraps ErrAuthRejected
+// for a 403, which activities would read as a lost connection.
+func eventReadFailure(calendar string, status int, err error) error {
+	switch status {
+	case http.StatusNotFound, http.StatusGone:
+		return connector.NewCalendarUnavailable(calendar, freeBusyNotFound, nil)
+	case http.StatusForbidden:
+		return connector.NewCalendarUnavailable(calendar, "forbidden", nil)
+	}
+	return err
 }
 
 func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (connector.CalendarState, error) {
@@ -132,8 +147,12 @@ func occupancyIntervals(events []occupancyEvent, zone *time.Location) ([]connect
 		if err != nil {
 			return nil, err
 		}
-		if !end.After(start) {
-			return nil, errors.New("calendar: invalid busy interval")
+		occupied, err := connector.CalendarOccupancy(start, end)
+		if err != nil {
+			return nil, err
+		}
+		if !occupied {
+			continue
 		}
 		busy = append(busy, connector.CalendarInterval{EventID: event.ID, Start: start, End: end})
 	}

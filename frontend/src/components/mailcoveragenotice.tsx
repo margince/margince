@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -27,9 +28,9 @@ export function MailCoverageNotice({
       title={t("mailCoverage.title")}
       actions={
         state === "withheld" ? undefined : (
-          <a className="link-button" href="#/settings/connections">
+          <AppLink className="link-button" href="#/settings/connections">
             {t("mailCoverage.connections")}
-          </a>
+          </AppLink>
         )
       }
     >

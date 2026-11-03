@@ -76,7 +76,7 @@ func ensureMeeting(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
 	}
 	if kind != KindMeeting {
 		return &values.ParseError{
-			Field: fieldRowID, Code: "not_a_meeting",
+			Field: fieldRowID, Code: codeNotAMeeting,
 			Message: "a meeting follow-up row names a meeting",
 		}
 	}

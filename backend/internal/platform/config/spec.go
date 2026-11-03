@@ -109,6 +109,9 @@ func (s *Setting[T]) Spec() Spec[T] { return s.spec }
 // Stored is true for a setting an administrator may change at run time.
 func (s *Setting[T]) Stored() bool { return s.store != nil }
 
+// KeptByDataReset is true for a stored setting whose saved row a data reset keeps.
+func (s *Setting[T]) KeptByDataReset() bool { return s.store != nil && s.store.SurvivesDataReset }
+
 // Key is the dotted name, also the YAML path.
 func (s *Setting[T]) Key() string { return s.spec.Key }
 

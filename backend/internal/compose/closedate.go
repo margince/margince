@@ -24,9 +24,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,6 +43,21 @@ import (
 type closeDatePolicy struct {
 	svc   *approvals.Service
 	owner dealOwnerAuthority
+}
+
+// LowersForecastCategory is false while the qualified forecast is enforced,
+// read fresh before each downgrade so a switch made mid-pass holds at once.
+func (p closeDatePolicy) LowersForecastCategory(ctx context.Context) (bool, error) {
+	var enforced bool
+	err := database.WithWorkspaceTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
+		var err error
+		enforced, err = config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
+	}
+	return !enforced, nil
 }
 
 // CorrectsWithoutAsking reports whether this owner has left close-date hygiene

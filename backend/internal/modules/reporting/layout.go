@@ -26,7 +26,7 @@ func deriveLayoutBlocks(selection *crmcontracts.ReportingSelection) {
 	for _, section := range *selection.Layout {
 		for _, card := range section.Cards {
 			kind := crmcontracts.ReportingBlockKind(card.Kind)
-			if card.Kind != questionKind && !slices.Contains(blocks, kind) {
+			if card.Kind != questionKind && card.Kind != assessmentKind && !slices.Contains(blocks, kind) {
 				blocks = append(blocks, kind)
 			}
 		}
@@ -46,6 +46,10 @@ const unplacedKind crmcontracts.ReportingBlockKind = "metric_reading"
 // questionKind is a card that asks a custom analytics question. It is not a
 // chart of the evaluation, so it adds no block.
 const questionKind crmcontracts.ReportingCardKind = "question"
+
+// assessmentKind is the card that writes the report's figures up. It reads
+// what the other cards already measure, so it adds no block either.
+const assessmentKind crmcontracts.ReportingCardKind = "assessment"
 
 // cardTarget is what one card draws. Two cards with one target draw the same
 // chart twice, which no reader asked for.
@@ -99,6 +103,9 @@ func validateCard(
 	}
 	if card.Kind == questionKind || card.Question != nil {
 		return validateQuestionCard(card)
+	}
+	if card.Kind == assessmentKind {
+		return validateAssessmentCard(card, targets)
 	}
 	target, err := cardTargetOf(card, metricBlocks)
 	if err != nil {
@@ -157,13 +164,27 @@ func overlaps(placed map[cardTarget]bool, target cardTarget) bool {
 }
 
 // maxQuestionRows bounds the rows a question card shows, below the engine's own
+// validateAssessmentCard checks the written summary's card. It names no
+// metric and asks no question, and a report places it once.
+func validateAssessmentCard(card crmcontracts.ReportingCard, targets map[cardTarget]bool) error {
+	if card.Question != nil || card.Metric != nil {
+		return refuse("selection.layout", "invalid", "an assessment card names no metric and asks no question")
+	}
+	target := cardTarget{kind: crmcontracts.ReportingBlockKind(assessmentKind)}
+	if overlaps(targets, target) {
+		return refuse("selection.layout", "duplicate", "place the assessment once")
+	}
+	targets[target] = true
+	return nil
+}
+
 // cap so the card's "first N rows" line is the true count.
 const maxQuestionRows = 1000
 
 // validateQuestionCard checks a card's analytics question. Its shape leaves out
 // filters, scope and save: every reader receives the question, and it is asked
-// afresh for each of them. Whether its fields exist is the analytics engine's to
-// answer when asked.
+// afresh for each of them. A bound card's filters stay on the server. Whether
+// its fields exist is the analytics engine's to answer when asked.
 func validateQuestionCard(card crmcontracts.ReportingCard) error {
 	question := card.Question
 	switch {
@@ -171,6 +192,8 @@ func validateQuestionCard(card crmcontracts.ReportingCard) error {
 		return refuse("selection.layout", "invalid", "a question card carries its question, and only a question card does")
 	case card.Metric != nil:
 		return refuse("selection.layout", "invalid", "a question card names no metric")
+	case question.SavedQuestionId != nil && question.Binding != nil:
+		return refuse("selection.layout", "invalid", "bind a card to a new saved question, or keep the one it has, not both")
 	case !values.HasVisibleText(question.Entity) || len(question.Measures) == 0 || len(question.Measures) > 8:
 		return refuse("selection.layout", "invalid", "a question names its population and one to eight measures")
 	case question.GroupBy != nil && len(*question.GroupBy) > 4:

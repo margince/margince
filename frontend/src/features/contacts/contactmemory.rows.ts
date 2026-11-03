@@ -18,6 +18,7 @@ import {
   writtenByPageContact,
   writtenByReader,
 } from "../../lib/messagevoice";
+import type { SourceRef } from "../../lib/opensource";
 import type { Activity, Contact360 } from "./contactmemory";
 import type { OverviewRow } from "./contactoverview.rows";
 
@@ -25,9 +26,9 @@ type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 type Entry = NonNullable<Contact360["conversation_memory"]>[number];
 type Status = Entry["status"];
 
-/** One conversation as a card row, with the email it opens, if any. */
+/** One conversation as a card row, with the source it opens, if any. */
 export type MemoryRow = OverviewRow &
-  Readonly<{ kind: Activity["kind"]; emailId: string | null }>;
+  Readonly<{ kind: Activity["kind"]; source: SourceRef | null }>;
 
 type Said = Readonly<{
   key: string;
@@ -39,7 +40,7 @@ type Said = Readonly<{
   occurredPrecision: OccurredPrecision;
   title: string;
   status: Status;
-  emailId: string | null;
+  source: SourceRef | null;
 }>;
 
 /**
@@ -56,7 +57,9 @@ export function memoryRows(
 ): MemoryRow[] {
   const entries = view.conversation_memory ?? [];
   const said =
-    entries.length > 0 ? entries.map(fromEntry) : folded(view, t, recordZone);
+    entries.length > 0
+      ? entries.map((entry) => fromEntry(entry, view))
+      : folded(view, t, recordZone);
   return said.map((row) => ({
     key: row.key,
     title: row.title || interactionLabel(row.kind, row.provider),
@@ -75,7 +78,7 @@ export function memoryRows(
       .join(" · "),
     pill: statusPill(row.status, t),
     kind: row.kind,
-    emailId: row.emailId,
+    source: row.source,
   }));
 }
 
@@ -89,7 +92,7 @@ export function callBackNumber(
   return primaryPhone(contact.phones)?.phone;
 }
 
-function fromEntry(entry: Entry): Said {
+function fromEntry(entry: Entry, view: Contact360): Said {
   return {
     key: entry.key,
     kind: entry.channel,
@@ -101,9 +104,19 @@ function fromEntry(entry: Entry): Said {
     // An entry carries no author or page role, so nothing here overrides the
     // duty the server stated for it.
     status: entry.status ?? null,
-    emailId:
-      entry.channel === "email" ? (entry.first_activity_id ?? null) : null,
+    source: entrySource(entry, view),
   };
+}
+
+// An entry carries no content state, so its first activity opens only when the
+// page read that activity and saw it readable. An email opens regardless,
+// because the message reader checks the audience itself.
+function entrySource(entry: Entry, view: Contact360): SourceRef | null {
+  const id = entry.first_activity_id;
+  if (!id) return null;
+  const row = view.activities?.data.find((activity) => activity.id === id);
+  if (row) return { id, kind: row.kind, contentState: row.content_state };
+  return entry.channel === "email" ? { id, kind: "email" } : null;
 }
 
 function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
@@ -131,7 +144,7 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
           ? t("email.withheldSubject")
           : (row.email_summary?.subject ?? row.subject ?? ""),
       status: statusOf(row, rows),
-      emailId: row.kind === "email" ? row.id : null,
+      source: { id: row.id, kind: row.kind, contentState: row.content_state },
     };
   });
 }

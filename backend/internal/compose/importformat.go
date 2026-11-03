@@ -121,6 +121,8 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 			Name: target, Description: spoken.Say(guide.Description), Example: spoken.Say(guide.Example),
 			RequiredOnNewRow: guide.RequiredOnNew,
 		}
+		fieldLabel := spoken.Say(guide.Label)
+		column.FieldLabel = &fieldLabel
 		if object == migration.ObjectLead && target == leadTargetStatus {
 			options := contacts.OpenLeadStatuses()
 			column.Options = &options

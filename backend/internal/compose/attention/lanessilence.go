@@ -16,6 +16,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -29,7 +30,7 @@ type AtRisk interface {
 	// so ten rows can be the survivors of a bounded fifty. Counting rows against
 	// the bound would read a truncated scan as a complete one — under-reporting,
 	// the one direction a work figure must never fail in.
-	Quiet(ctx context.Context) ([]RiskyDeal, bool, error)
+	Quiet(ctx context.Context, owners *storekit.OwnerSet) ([]RiskyDeal, bool, error)
 }
 
 // RiskyDeal is one deal the pipeline should worry about, and the ground it is

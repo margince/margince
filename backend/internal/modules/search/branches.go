@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -106,40 +107,70 @@ func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBi
 		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
 	}
 	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
-		alias, tsquery, b.identifier.MatchSQL(identifierPos(b.identifier == storekit.CompanyDomains), alias+".id"))
+		alias, tsquery, b.identifier.MatchSQL(identifierPos.position(b.identifier == storekit.CompanyDomains), alias+".id"))
 }
 
-// ownScore lifts a whole-identifier hit into the whole-word tier, so a pasted
-// address ranks its contact above every name that merely starts like it. A
-// fragment hit stays unlifted.
+// Identifier tiers exceed the bounded text rank; the cursor carries the complete score.
+const (
+	sqlFalse                = "false"
+	companyAssociationScore = 4
+	identifierPrefixScore   = 8
+	identifierExactScore    = 16
+)
+
+func (b searchBranch) identifierEvidence(alias string, identifierPos identifierBinder) string {
+	if b.identifier.Table == "" {
+		return "NULL::text"
+	}
+	whole := identifierPos.position(false)
+	exact := b.identifier.ExactSQL(whole, alias+".id")
+	prefix := b.identifier.PrefixSQL(whole, alias+".id")
+	if b.identifier != storekit.CompanyDomains {
+		if !identifierPos.addressPrefix {
+			prefix = sqlFalse
+		}
+	}
+	return fmt.Sprintf("CASE WHEN %s THEN 'exact' WHEN %s THEN 'prefix' ELSE NULL END", exact, prefix)
+}
+
 func (b searchBranch) ownScore(alias, score string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return score
 	}
-	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.ExactSQL(identifierPos(b.identifier == storekit.CompanyDomains), alias+".id"))
+	ranked := fmt.Sprintf("(%s + CASE (%s) WHEN 'exact' THEN %d WHEN 'prefix' THEN %d ELSE 0 END)",
+		score, b.identifierEvidence(alias, identifierPos), identifierExactScore, identifierPrefixScore)
+	if b.identifier != storekit.CompanyDomains {
+		return ranked
+	}
+	// A company may be discovered by an address's domain; identifier evidence describes the whole query.
+	return fmt.Sprintf("(%s + coalesce((SELECT max(similarity(f_fold_apostrophes(lower(domain)),f_fold_apostrophes(lower(btrim($%d))))) FROM company_domain WHERE company_id=%s.id AND archived_at IS NULL),0) / 10.0)", ranked, identifierPos.position(true), alias)
 }
 
 // identifierBinder yields the bind position of the query the identifier arms
 // match on. A company's identifier is its domain, so it asks for the part after
 // the "@" (storekit.DomainTerm), as the company list does.
-type identifierBinder func(domain bool) int
+type identifierBinder struct {
+	position      func(domain bool) int
+	addressPrefix bool
+}
 
-// bindIdentifier binds the query for the identifier arms on first use, once as
-// typed and once as a domain. A bound parameter no statement references fails
-// the whole search, and every identifier branch may be denied.
+// bindIdentifier defers each binding until an admitted branch needs it.
 func bindIdentifier(query string, arg func(any) int) identifierBinder {
 	var whole, domain int
-	return func(asDomain bool) int {
-		if asDomain {
-			if domain == 0 {
-				domain = arg(storekit.DomainTerm(query))
+	return identifierBinder{
+		addressPrefix: strings.IndexByte(query, '@') > 0,
+		position: func(asDomain bool) int {
+			if asDomain {
+				if domain == 0 {
+					domain = arg(storekit.DomainTerm(query))
+				}
+				return domain
 			}
-			return domain
-		}
-		if whole == 0 {
-			whole = arg(query)
-		}
-		return whole
+			if whole == 0 {
+				whole = arg(query)
+			}
+			return whole
+		},
 	}
 }
 

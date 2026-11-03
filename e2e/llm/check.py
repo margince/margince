@@ -677,6 +677,7 @@ def main():
             ("effort", "E2E_LLM_EFFORT"),
             ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
             ("search", "E2E_LLM_SEARCH"),
+            ("door", "E2E_LLM_DOOR"),
         ):
             if os.environ.get(variable):
                 record[field] = os.environ[variable]

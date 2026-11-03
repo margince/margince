@@ -3,22 +3,24 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { de } from "../../i18n/de";
 import { en } from "../../i18n/en";
 import { vi as viCatalog } from "../../i18n/vi";
 import {
   day,
-  panelNamed,
   renderWorklist,
   row,
   stub,
   stubWalk,
 } from "../../testing/worklist.testkit";
 
-const MORE = en["worklist.more"];
+// Without an IntersectionObserver the scroll sentinel offers its button; a
+// browser loads the same batch when the end of the list shows.
+const MORE = en["list.loadMore"];
+beforeEach(() => vi.stubGlobal("IntersectionObserver", undefined));
 
 // Reaching the whole backlog.
 //
@@ -128,18 +130,9 @@ describe("walking to the rest of the queue", () => {
     expect(screen.getByText("A task")).toBeTruthy();
   });
 
-  // The header describes the assembled DAY, the queue describes what is
-  // loaded. Reading the figures off the latest page instead would make the
-  // summary shrink as the reader pages further in.
-  //
-  // Every figure comes off the FIRST page's `summary`, which the server counts
-  // over the whole day rather than over the rows it cut. The fixture says so:
-  // its summary is far bigger than either page's row count, and it agrees with
-  // `counts[].considered` — which is what makes it one sentence about one
-  // population rather than four figures about the page beside a fifth about the
-  // day. A fixture whose bands could be a count of its own page would pass
-  // whichever the header meant, which is how this shipped.
-  it("AC-WORKLIST-SDR-04: keeps the day's figures still while the rows grow", async () => {
+  // The headline is the view's count from the first page, counted by the
+  // server over the whole view. A later page's own figures never reach it.
+  it("AC-WORKLIST-SDR-04: keeps the view's figure still while the rows grow", async () => {
     const counts = [
       {
         category: "tasks" as const,
@@ -151,59 +144,24 @@ describe("walking to the rest of the queue", () => {
     stubWalk([
       day({
         queue: [row({ id: "a", title: "First thing" })],
-        summary: {
-          urgent: 3,
-          due: 9,
-          in_play: 2,
-          lower_priority: 6,
-          total: 48,
-        },
+        summary: { urgent: 3, due: 9, lower_priority: 6, total: 48 },
         counts,
         next_cursor: "page-2",
       }),
       day({
         queue: [row({ id: "b", title: "Second thing" })],
-        // The later page's own figures, which must NOT reach the header.
-        summary: { urgent: 0, due: 0, in_play: 0, lower_priority: 0, total: 1 },
-        counts,
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1 },
+        counts: [{ ...counts[0], considered: 1 }],
       }),
     ]);
     renderWorklist();
 
-    await screen.findByText(/3 urgent/);
+    await screen.findByText("48 outstanding actions");
     await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     await screen.findByText("Second thing");
-    await waitFor(() => {
-      expect(screen.getByText(/3 urgent/)).toBeTruthy();
-    });
-    // One scope, stated: the total the sentence ends on is the same population
-    // the bands are counted over, and neither is this page's single row.
-    expect(screen.getByText(/· 48 total/)).toBeTruthy();
-    expect(screen.queryByText(/· 1 total/)).toBeNull();
-  });
-
-  // A server that does not send `in_play` has not said there is none of it.
-  // Printing 0 for silence is the under-reporting this line exists to prevent.
-  it("says nothing about a middle band the server did not count", async () => {
-    stub(
-      day({
-        queue: [row({ id: "a", title: "Only thing" })],
-        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
-        counts: [
-          {
-            category: "tasks" as const,
-            considered: 1,
-            shown: 1,
-            more_available: false,
-          },
-        ],
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText(/1 urgent/);
-    expect(screen.queryByText(/in play/)).toBeNull();
+    expect(screen.getByText("48 outstanding actions")).toBeTruthy();
+    expect(screen.queryByText("1 outstanding action")).toBeNull();
   });
 
   // A refused SECOND page is not a refused day. The rows already loaded are
@@ -249,194 +207,74 @@ describe("walking to the rest of the queue", () => {
     await userEvent.click(screen.getByRole("button", { name: MORE }));
 
     // The row survives, and the failure is stated where it happened.
-    await screen.findByText(/More items did not load/);
+    await screen.findByText(en["scrollSentinel.failed"]);
+    expect(
+      screen.getByRole("button", { name: en["common.retry"] }),
+    ).toBeTruthy();
     expect(screen.getByText("Already read")).toBeTruthy();
   });
 });
 
-// A next page's rows land in whichever panel their destination names, so the
-// control that asks for it belongs to neither.
-describe("the way to the rest of the day speaks for both panels", () => {
-  const judgement = row({
-    id: "pair-1",
-    source: "dedupe_candidate",
-    destination: "review",
-    title: "Two records for one company",
-  });
-
-  it("stands below To review, outside both panels", async () => {
-    stub(
-      day({
-        queue: [
-          row({ id: "t1", destination: "today", title: "A task" }),
-          judgement,
-        ],
-        next_cursor: "page-2",
-      }),
-    );
+describe("the end of a view", () => {
+  it("says the view is wholly loaded once no cursor is left", async () => {
+    stub(day({ queue: [row({ id: "a", title: "Only thing" })] }));
     renderWorklist();
 
-    const today = panelNamed(await screen.findByText(en["worklist.queue"]));
-    const review = panelNamed(screen.getByText(en["worklist.review"]));
-    const more = screen.getByRole("button", { name: MORE });
-    expect(within(today).queryByRole("button", { name: MORE })).toBeNull();
-    expect(within(review).queryByRole("button", { name: MORE })).toBeNull();
-    expect(
-      review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
-    expect(more).toHaveAccessibleDescription(
-      "More of the day: new items can land in “Today” or “To review”.",
-    );
-  });
-
-  it("lands a page of only review rows in To review and stays in reach", async () => {
-    stubWalk([
-      day({
-        queue: [row({ id: "t1", destination: "today", title: "A task" })],
-        next_cursor: "page-2",
-      }),
-      day({ queue: [judgement], next_cursor: "page-3" }),
-    ]);
-    renderWorklist();
-    const user = userEvent.setup();
-
-    await screen.findByText("A task");
-    await user.click(screen.getByRole("button", { name: MORE }));
-
-    const review = panelNamed(await screen.findByText(en["worklist.review"]));
-    expect(
-      within(review).getByText("Two records for one company"),
-    ).toBeTruthy();
-    const more = screen.getByRole("button", { name: MORE });
-    expect(
-      review.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
+    await screen.findByText("Only thing");
+    expect(screen.getByText(en["worklist.end.today"])).toBeTruthy();
   });
 });
 
-describe("the header states the split", () => {
-  it("names the two panels' halves, a zero half included", async () => {
-    stub(
-      day({
-        queue: [row({ id: "pair-1", destination: "review" })],
-        summary: {
-          urgent: 0,
-          due: 0,
-          lower_priority: 5,
-          total: 5,
-          buckets: { urgent: 0, due_today: 0, planned: 0, review: 5 },
-        },
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText("0 today · 5 to review");
-    // No bare total: it would count both panels as one.
-    expect(screen.queryByText(/\d total/)).toBeNull();
-  });
-
-  // Under a filter the pills carry the filtered counts. The sentence keeps
-  // the whole day's, and says so, rather than reading as the filtered count.
-  it("says the figures are the whole day's under a filter", async () => {
-    globalThis.location.hash = "#/worklist?filter=customer_waiting";
-    stub(
-      day({
-        queue: [row({ id: "pair-1", destination: "review" })],
-        summary: {
-          urgent: 0,
-          due: 0,
-          lower_priority: 5,
-          total: 5,
-          buckets: { urgent: 0, due_today: 0, planned: 0, review: 5 },
-        },
-      }),
-    );
-    renderWorklist();
-
-    await screen.findByText("Whole day: 0 today · 5 to review");
-    globalThis.location.hash = "";
-  });
-
-  it("keeps the five-figure sentence for a server without the partition", async () => {
+describe("the header states the view's own figure", () => {
+  it("counts only the view's categories, never upcoming work", async () => {
     stub(
       day({
         queue: [row({ id: "a" })],
-        summary: { urgent: 1, due: 2, in_play: 0, lower_priority: 3, total: 6 },
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 3 },
+        counts: [
+          { category: "tasks", considered: 3, shown: 1, more_available: false },
+          {
+            category: "decisions",
+            considered: 5,
+            shown: 0,
+            more_available: false,
+          },
+          {
+            category: "upcoming",
+            considered: 4,
+            shown: 0,
+            more_available: false,
+          },
+        ],
       }),
     );
     renderWorklist();
 
-    await screen.findByText(
-      "1 urgent · 2 due · 0 in play · 3 routine · 6 total",
-    );
-    expect(screen.queryByText(/to review/)).toBeNull();
+    await screen.findByText("3 outstanding actions");
   });
 
-  // Today is all three of its parts at once: the bands under it break it down.
-  it("counts every part of Today in its half", async () => {
+  it("marks a figure the server could not count whole as a floor", async () => {
     stub(
       day({
         queue: [row({ id: "a" })],
-        summary: {
-          urgent: 1,
-          due: 2,
-          lower_priority: 3,
-          total: 10,
-          buckets: { urgent: 1, due_today: 2, planned: 3, review: 4 },
-        },
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 12 },
+        counts: [
+          { category: "tasks", considered: 12, shown: 1, more_available: true },
+        ],
       }),
     );
     renderWorklist();
 
-    await screen.findByText("6 today · 4 to review");
+    await screen.findByText("12+ outstanding actions");
   });
 
-  // Like the five-figure sentence, the split is the DAY's and is read off page
-  // one: a later page's partition describes only its own slice.
-  it("keeps the split still while the rows grow", async () => {
-    stubWalk([
-      day({
-        queue: [row({ id: "a", title: "First thing" })],
-        summary: {
-          urgent: 1,
-          due: 2,
-          lower_priority: 6,
-          total: 14,
-          buckets: { urgent: 1, due_today: 2, planned: 6, review: 5 },
-        },
-        next_cursor: "page-2",
-      }),
-      day({
-        queue: [row({ id: "b", title: "Second thing" })],
-        summary: {
-          urgent: 0,
-          due: 0,
-          lower_priority: 1,
-          total: 1,
-          buckets: { urgent: 0, due_today: 0, planned: 1, review: 0 },
-        },
-      }),
-    ]);
-    renderWorklist();
-    const user = userEvent.setup();
-
-    await screen.findByText("9 today · 5 to review");
-    await user.click(screen.getByRole("button", { name: MORE }));
-
-    await screen.findByText("Second thing");
-    expect(screen.getByText("9 today · 5 to review")).toBeTruthy();
-    expect(screen.queryByText("1 today · 0 to review")).toBeNull();
-  });
-
-  // Two names for one panel is how a reader stops trusting the header, so each
-  // half is its panel's heading, in every locale.
   it.each([
     ["en", en],
     ["de", de],
     ["vi", viCatalog],
-  ])("names both halves with the %s panel headings", (_, catalog) => {
-    expect(catalog["worklist.summary.split"]).toBe(
-      `{today} ${catalog["worklist.queue"].toLowerCase()} · {review} ${catalog["worklist.review"].toLowerCase()}`,
-    );
+  ])("has a headline for every view in %s", (_, catalog) => {
+    for (const view of ["today", "decisions", "system"] as const) {
+      expect(catalog[`worklist.view.total.${view}_other`]).toContain("{count}");
+    }
   });
 });

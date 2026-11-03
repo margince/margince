@@ -211,8 +211,8 @@ func TestADayCallDatedBeforeADayMeetingIsNotItsFollowUp(t *testing.T) {
 	}
 }
 
-// On a busy day the meetings lane still opens with the day meeting: the read
-// takes the day meetings before the cap, not after.
+// On a busy day the meetings lane still opens with the day meeting. The day
+// meeting takes no timed meeting's place, because each is read to its own limit.
 func TestABusyDayKeepsTheDayMeetingOnTheLane(t *testing.T) {
 	e := integration.Setup(t)
 	for i := range 13 {
@@ -229,15 +229,15 @@ func TestABusyDayKeepsTheDayMeetingOnTheLane(t *testing.T) {
 		From: laneDay, Until: laneDay.Truncate(24 * time.Hour).Add(24 * time.Hour),
 		DaysFrom: occurredday.Anchor(laneDay), DaysUntil: occurredday.Anchor(laneDay).AddDate(0, 0, 1),
 	}
-	rows, err := lane.Today(e.Admin(), window, 12, attention.TasksVisible, ids.UUID{})
+	rows, _, err := lane.Today(e.Admin(), window, 12, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
-	if len(rows) != 12 || rows[0].Subject != subject || rows[1].Subject != "Slot 00" || rows[11].Subject != "Slot 10" {
+	if len(rows) != 13 || rows[0].Subject != subject || rows[1].Subject != "Slot 00" || rows[12].Subject != "Slot 11" {
 		subjects := make([]string, 0, len(rows))
 		for _, row := range rows {
 			subjects = append(subjects, row.Subject)
 		}
-		t.Errorf("the lane holds %v, want the trade fair and then the eleven soonest slots", subjects)
+		t.Errorf("the lane holds %v, want the trade fair and then the twelve soonest slots", subjects)
 	}
 }

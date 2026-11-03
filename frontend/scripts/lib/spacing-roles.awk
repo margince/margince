@@ -152,7 +152,9 @@ function without_roles(value,   rest) {
   rest = strip_literal(value, role_hint(roleActions))
   rest = strip_literal(rest, role_hint(roleCards))
   rest = strip_literal(rest, role_hint(padCard))
-  return strip_literal(rest, role_hint(padPanel))
+  rest = strip_literal(rest, role_hint(padPanel))
+  rest = strip_literal(rest, role_hint(gapPanes))
+  return strip_literal(rest, role_hint(padPane))
 }
 
 function report(tag, lineno, decl, message,   shown) {
@@ -218,6 +220,22 @@ function judge(sel, prop, value, lineno, decl,   subj, i, n, parts, bad) {
       if (measures(bad)) {
         report("role", lineno, decl,
                "a card's own inset is " role_hint(padCard) ", a panel's " role_hint(padPanel))
+        return
+      }
+    }
+
+    if (subj ~ /(^|-)panes$/ && (prop == "gap" || prop == "column-gap")) {
+      if (value != role_hint(gapPanes)) {
+        report("role", lineno, decl,
+               "sibling page panes take " role_hint(gapPanes))
+        return
+      }
+    }
+
+    if (subj ~ /(^|-)pane$/ && prop == "padding") {
+      if (measures(strip_literal(value, role_hint(padPane)))) {
+        report("role", lineno, decl,
+               "a page pane's own inset is " role_hint(padPane))
         return
       }
     }

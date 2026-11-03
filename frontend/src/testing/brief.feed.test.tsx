@@ -125,7 +125,7 @@ it("neither grows focus nor links the whole queue when more pages exist", () => 
     />,
   );
   expect(
-    screen.queryByRole("button", { name: en["worklist.more"] }),
+    screen.queryByRole("button", { name: en["list.loadMore"] }),
   ).toBeNull();
   // The page header's "Show Worklist" button is Home's one way into the queue.
   expect(container.querySelector('a[href*="filter=all"]')).toBeNull();
@@ -260,7 +260,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
   expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("/#/contacts/contact-sonya?from=worklist");
 });
 
 it("names the sender of a thread filed under a deal", () => {
@@ -273,7 +273,7 @@ it("names the sender of a thread filed under a deal", () => {
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("/#/contacts/contact-sonya?from=worklist");
 });
 
 it("claims no moments when the server withheld them", () => {
@@ -455,7 +455,7 @@ it.each(["stalled", "closing_soon", "opportunity"])(
       card
         .getByRole("link", { name: en["deal.openDeal"] })
         .getAttribute("href"),
-    ).toBe("#/deals/deal-expansion");
+    ).toBe("/#/deals/deal-expansion");
   },
 );
 
@@ -666,4 +666,38 @@ it("keeps an unlinked subject in the framed title", () => {
       name: "Review the transcript · Buyer meeting",
     }),
   ).toBeTruthy();
+});
+
+// The day lands under a reader who may already be reading the greeting. What
+// is still out holds the room it will take, so nothing pushes in later.
+it("waits for the day in the card's own frame", () => {
+  stubApi({});
+  const { container } = render(<BriefFeed day={undefined} state="loading" />);
+  const pending = container.querySelector(".brief-triage-pending");
+  expect(pending?.querySelector('[role="status"]')).not.toBeNull();
+  expect(screen.getByText(en["brief.feed.loading"])).toBeTruthy();
+});
+
+it("holds the opening sentence's line while the day is read, and only then", () => {
+  stubApi({});
+  const now = new Date(2026, 6, 5, 9, 30, 0);
+  const glance = (pending: boolean) =>
+    render(
+      <BriefGlance
+        view="morning"
+        firstName="Ada"
+        now={now}
+        day={undefined}
+        week={undefined}
+        pending={pending}
+      />,
+    );
+  const reading = glance(true);
+  expect(
+    reading.container.querySelector(".glance-sentence-pending"),
+  ).not.toBeNull();
+  reading.unmount();
+  // A day that failed to load says nothing rather than holding a grey line.
+  const failed = glance(false);
+  expect(failed.container.querySelector(".glance-sentence-pending")).toBeNull();
 });

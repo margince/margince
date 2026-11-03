@@ -153,6 +153,75 @@ export const LeadScoreExplained: Story = {
   },
 };
 
+// The activities behind a behavioral factor, with the card open.
+//
+// Three sources and two rows. The third is an activity this reader cannot
+// discover, so the card says it is showing fewer than the count. One row is a
+// conversation whose content belongs to its participants, and the row says so
+// where a subject would go.
+export const LeadScoreSourcesNamed: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
+      "GET /leads/l-1": () => jsonResponse(lead),
+      "GET /leads/l-1/score": () =>
+        jsonResponse({
+          score: 72,
+          explained: true,
+          current: {
+            score: 72,
+            score_computed: 72,
+            raw_sum: 71.6,
+            rounded_sum: 72,
+            computed_at: "2026-06-04T00:00:00Z",
+            factors: [
+              { factor: "decision_maker_title", points: 15 },
+              {
+                factor: "reply",
+                points: 22.6,
+                base_points: 25,
+                source_activity_ids: ["a-1", "a-2", "a-3"],
+                source_activities: [
+                  {
+                    activity_id: "a-1",
+                    kind: "email",
+                    subject: "Re: pricing for the pilot",
+                    occurred_at: "2026-06-02T09:12:00Z",
+                    occurred_precision: "instant",
+                    content_state: "available",
+                  },
+                  {
+                    activity_id: "a-2",
+                    kind: "message",
+                    subject: null,
+                    occurred_at: "2026-05-28T00:00:00Z",
+                    occurred_precision: "day",
+                    content_state: "withheld",
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      "GET /me": () =>
+        jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /3 / }));
+  },
+};
+
 // An engaged lead as the design draws it. It shows How it stands with its
 // dated ladder, the score's readings, the timeline to a booked meeting, and
 // the cards under it. Dates are set from the moment the story opens, because

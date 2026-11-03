@@ -51,7 +51,7 @@ func requireBadArgs(t *testing.T, err error) {
 // refuseAnchor resolves as a company reader and requires a refusal.
 func refuseAnchor(t *testing.T, engine *rankingProbe, args anchorArgs) error {
 	t.Helper()
-	got, err := resolveAnchor(searchReader("company"), engine.search, args)
+	got, err := resolveAnchor(searchReader("company"), engine.search, nil, args)
 	requireBadArgs(t, err)
 	if got != (ids.UUID{}) {
 		t.Errorf("returned id %s beside a refusal", got)
@@ -62,7 +62,7 @@ func refuseAnchor(t *testing.T, engine *rankingProbe, args anchorArgs) error {
 // resolvesTo resolves as a company reader and requires the id it should find.
 func resolvesTo(t *testing.T, engine *rankingProbe, args anchorArgs, want ids.UUID) {
 	t.Helper()
-	got, err := resolveAnchor(searchReader("company"), engine.search, args)
+	got, err := resolveAnchor(searchReader("company"), engine.search, nil, args)
 	if err != nil {
 		t.Fatalf("resolveAnchor: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestANameMatchingNothingIsRefused(t *testing.T) {
 // that type is a denial, not "nothing matches".
 func TestANameOfATypeTheCallerCannotReadIsDenied(t *testing.T) {
 	engine := rankedHits(aCompany())
-	_, err := resolveAnchor(searchReader("contact"), engine.search, anchorArgs{RecordType: "company", RecordName: "Contoso"})
+	_, err := resolveAnchor(searchReader("contact"), engine.search, nil, anchorArgs{RecordType: "company", RecordName: "Contoso"})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("naming an unreadable type answered %v, want ErrPermissionDenied", err)
 	}

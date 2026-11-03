@@ -118,7 +118,7 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 		return row{}, err
 	}
 
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		return row{}, err
 	}
 
@@ -192,7 +192,7 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 	}
 }
 
-func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
+func (s *Service) validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
@@ -200,7 +200,10 @@ func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
+	if err := checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record"); err != nil {
+		return err
+	}
+	return s.checkContextPin(ctx, tx, a)
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -318,6 +321,10 @@ var contextTargetKinds = map[string]string{
 // removes. TestEveryUnpinnedKindIsExplained holds each entry to its rationale,
 // and TestNoKindIsBothContextOnlyAndUnpinned holds the two maps apart.
 var unpinnedKinds = map[string]string{
+	approvalsubject.KindOwnershipTransfer: "A transfer is about WHO owns the record, never its fields, " +
+		"and a record waits in the inbox for days while its owner keeps working it, so " +
+		"every edit and every captured message would cancel the request. The accept re-reads " +
+		"the owner under the record's row lock and refuses when the owner it names has moved.",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +

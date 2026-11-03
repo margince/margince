@@ -906,7 +906,7 @@ func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 		listed := func(asOf time.Time) int {
 			t.Helper()
 			rows, _, err := activities.NewStore(e.DB()).ListActivities(w.ctx, activities.ListActivitiesInput{
-				AssigneeID: &rep, TaskAsOf: &asOf, Kind: new("task"),
+				AssigneeID: &rep, AsOf: &asOf, Kind: new("task"),
 			})
 			if err != nil {
 				t.Fatalf("reading the colleague's tasks: %v", err)

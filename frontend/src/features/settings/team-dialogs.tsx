@@ -276,21 +276,26 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
   );
 }
 
+/** Creates a team and refreshes every list that names teams. Shared by the
+ *  Teams page and the member dialogs' team picker. */
+export function useCreateTeam(onCreated?: () => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) =>
+      unwrap(await api.POST("/teams", { body: { name } })),
+    onSuccess: async () => {
+      onCreated?.();
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
+      await qc.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+}
+
 // Creating a team is the page's verb, not a row's: it sits in the page head.
 export function NewTeamAction() {
   const t = useT();
-  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const create = useMutation({
-    mutationFn: async (name: string) => {
-      return unwrap(await api.POST("/teams", { body: { name } }));
-    },
-    onSuccess: () => {
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["teams"] });
-      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
-    },
-  });
+  const create = useCreateTeam(() => setOpen(false));
   const createRefused = nameRefusal(create.error, t, "users.teamDuplicate");
   return (
     <>

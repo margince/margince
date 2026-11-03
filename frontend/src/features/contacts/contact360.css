@@ -314,8 +314,8 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgInset);
 }
 .pe-meeting-lead .pe-meeting-actions {
   justify-content: flex-end;
@@ -461,6 +461,11 @@
 /* Nor its track, whose column gap would otherwise pad the row's far edge. */
 .pe-meeting:has(> .pe-meeting-verbs:empty) {
   grid-template-columns: auto minmax(0, 1fr);
+}
+/* Folded, a held row's verbs may shrink to the line, so three German labels
+   wrap inside it instead of running past the panel's edge. */
+.pe-meetings .table-scroll-fold [data-fold="end"] {
+  flex-shrink: 1;
 }
 
 /* An invitation still waiting on the contact has no date to hang a page on (a

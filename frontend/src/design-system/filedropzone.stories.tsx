@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { FileUp } from "lucide-react";
 import { useState } from "react";
 import { fireEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { FileDropzone } from "./filedropzone";
+import { Field } from "./atoms";
+import { FileDropzone, FileDropzoneControl } from "./filedropzone";
 
 const meta: Meta = {
   title: "Components/Forms and input/File dropzone",
@@ -33,6 +35,23 @@ export const Empty: Story = {
       emptyLabel="Drop a file here, or click to choose one"
       onPick={() => {}}
     />
+  ),
+};
+
+/** A zone tall enough to stand as a panel carries a mark above its prompt. */
+export const WithIcon: Story = {
+  render: () => (
+    <Field label="Writing samples">
+      {(control) => (
+        <FileDropzoneControl
+          control={control}
+          emptyLabel="Drop files here, or click to choose"
+          icon={FileUp}
+          multiple
+          onPick={() => {}}
+        />
+      )}
+    </Field>
   ),
 };
 

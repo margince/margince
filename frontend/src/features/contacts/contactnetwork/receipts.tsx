@@ -9,6 +9,8 @@
 
 import type { components } from "../../../api/schema";
 import { EmailReference } from "../../../design-system/emailreference";
+import { relayProvenance } from "../../../design-system/provenanceof";
+import { ProvenanceTag, type RelaySend } from "../../../design-system/trust";
 import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
@@ -25,9 +27,12 @@ type Receipt = components["schemas"]["ContactGraphReceipt"];
  */
 export function ReceiptList({
   receipts,
+  relayMember = "unknown",
   onOpenEmail,
 }: Readonly<{
   receipts: readonly Receipt[];
+  /** Whose relationship these receipts are, so a relay send says whom it was for. */
+  relayMember?: RelaySend["member"];
   /**
    * Opens one of these messages in the contact page's email drawer.
    *
@@ -67,6 +72,14 @@ export function ReceiptList({
                 locale,
                 recordZone,
               )}
+            </>
+          )}
+          {r.controller_send && (
+            <>
+              {" "}
+              <ProvenanceTag
+                provenance={relayProvenance(r.controller_send, relayMember)}
+              />
             </>
           )}
         </li>

@@ -36,10 +36,8 @@ type PrivacyInformation struct {
 	// contact_acquisition_evidence's own closed vocabulary. Art. 14(2)(f)
 	// requires naming the source.
 	AcquiredAs string
-	// AcquiredAt is when the acquisition happened. Where the creating door did
-	// not record a time, the evidence row's own write stands in — the same
-	// coalesce the notice-case deadline runs on, so the page and the duty date
-	// the acquisition alike. Nil only where there is no evidence row at all.
+	// AcquiredAt is the actual acquisition date, including a later source assessment.
+	// Capture time orders unknown history but does not stand in for acquisition.
 	AcquiredAt *time.Time
 	// Purposes are what the installation uses this contact's data for, by
 	// published name. PurposeKeys holds each one's key at the same index, so a
@@ -67,10 +65,8 @@ func subjectRights() []string {
 
 // assembleDisclosure builds the Art. 14 answer for one contact.
 //
-// It reads the EARLIEST acquisition, because that is the one whose duty is
-// being discharged: a contact obtained from a list in March and met again at a
-// conference in June was first obtained in March, and the disclosure is about
-// how they came to be in the system at all.
+// It reads the earliest known source, using an officer's assessment where present.
+// Unknown history cannot displace a confirmed source in the disclosure.
 //
 // It carries no name, no employer, no address and no phone. The message said we
 // hold information about you and here is what and why; it did not offer to show
@@ -82,10 +78,12 @@ func (s *Store) assembleDisclosure(
 	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{}}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT kind, coalesce(occurred_at, captured_at)
-			  FROM contact_acquisition_evidence
-			 WHERE contact_id = $1
-			 ORDER BY coalesce(occurred_at, captured_at), id
+			SELECT coalesce(n.source_kind, e.kind),
+                   CASE WHEN n.source_kind IS NOT NULL THEN n.source_obtained_at ELSE e.occurred_at END
+              FROM contact_acquisition_evidence e LEFT JOIN privacy_notice_case n ON n.acquisition_id = e.id
+             WHERE e.contact_id = $1
+             ORDER BY (coalesce(n.source_kind, e.kind) = 'unknown_legacy'),
+                      coalesce(n.source_obtained_at, e.occurred_at, e.captured_at), e.id
 			 LIMIT 1`, contactID).Scan(&out.AcquiredAs, &out.AcquiredAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// A contact with no acquisition row predates the doors that write
