@@ -895,6 +895,9 @@ export const en = {
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
+  "reporting.movement.excluded": "Left out after review",
+  "reporting.movement.reinstated": "Counted again after review",
+  "reporting.movement.not_checked": "Not checked",
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
@@ -1467,6 +1470,10 @@ export const en = {
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.commit_evidence": "commit evidence",
   "reporting.compare.basis.weighted": "the weighted pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "supported commit evidence",
+  "reporting.compare.basis.qualified_weighted":
+    "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
@@ -6419,6 +6426,10 @@ export const en = {
   "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "From supported commit evidence",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
   "brief.weekly.bridge": "Weekly change",
   "brief.weekly.bridge.opening": "Monday",
@@ -6430,6 +6441,9 @@ export const en = {
   "brief.weekly.bar.created": "Created",
   "brief.weekly.bar.advanced": "Advanced",
   "brief.weekly.bar.slipped": "Slipped",
+  "brief.weekly.bar.excluded": "Left after review",
+  "brief.weekly.bar.reinstated": "Back after review",
+  "brief.weekly.bar.not_checked": "Not checked",
   "brief.weekly.bar.won": "Won",
   "brief.weekly.bar.lost": "Lost",
   "brief.weekly.bar.other": "Rates and definitions",
@@ -14207,6 +14221,10 @@ export const en = {
     "Commit evidence: confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":
     "Weighted: every open deal at its stage probability",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Supported commit evidence: confirmed close dates the customer still supports",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Supported weighted: open deals the customer still supports, at their stage probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
   "forecast.landing": "Landing",
@@ -14214,6 +14232,9 @@ export const en = {
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.commit_evidence": "Won + confirmed commit",
   "forecast.basis.weighted": "Won + weighted open deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Won + supported confirmed commit",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
@@ -14243,6 +14264,8 @@ export const en = {
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows commit evidence.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":
     "The call is below the amount already won. It is shown as recorded, not corrected.",
   "forecast.pipelineNeeded": "Deal value needed",

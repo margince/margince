@@ -10,11 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,13 +54,9 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	qualifiedMinor, enforced, err := forecastQualifiedOpen(ctx, tx, readings)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
 	var qualifiedOpen *int64
-	if enforced {
-		qualifiedOpen = &qualifiedMinor
+	if readings.Qualified != nil {
+		qualifiedOpen = &readings.Qualified.OpenMinor
 	}
 	facts, err = forecastOpenFacts(frame, facts, readings, qualifiedOpen)
 	if err != nil {
@@ -233,20 +227,6 @@ func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fac
 		})
 	}
 	return out, nil
-}
-
-// forecastQualifiedOpen is the open money the qualified forecast keeps, and
-// false while it is switched off. With enforcement on, every deal read carries
-// a qualification, so only a quarter with no deal needs the setting itself.
-func forecastQualifiedOpen(ctx context.Context, tx pgx.Tx, readings forecasting.Readings) (int64, bool, error) {
-	if readings.Qualified != nil {
-		return readings.Qualified.OpenMinor, true, nil
-	}
-	if len(readings.Contributions) > 0 {
-		return 0, false, nil
-	}
-	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
-	return 0, enforced, err
 }
 
 // forecastOpenFacts adds the open totals a target comparison divides, as

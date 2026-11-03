@@ -7919,9 +7919,9 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: {type: string, enum: [open, weighted, evidence, best_case], default: open}
+          schema: {type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted], default: open}
           description: >-
-            Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
       responses:
         '200':
           description: The classified difference.
@@ -19588,7 +19588,7 @@ components:
           format: double
         basis:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing:
           type: number
@@ -20533,6 +20533,7 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
+        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -20599,6 +20600,11 @@ components:
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
         qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: >-
+            Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
         self_correcting:
           type: boolean
           description: >-
@@ -20760,9 +20766,9 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: >-
-            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
         won_minor:
           type: integer
           format: int64
@@ -20779,9 +20785,9 @@ components:
             Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
+          enum: [call_absent, call_below_actual, qualified_unavailable]
           description: >-
-            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -21036,7 +21042,7 @@ components:
         The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: {type: string, enum: [open, weighted, evidence, best_case]}
+        reading: {type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted]}
         opening_minor: {type: integer, format: int64}
         closing_minor: {type: integer, format: int64}
         buckets:
@@ -21055,9 +21061,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded, reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
-            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false

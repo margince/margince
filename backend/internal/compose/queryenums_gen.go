@@ -192,7 +192,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/movement": {
-		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case"}, Array: false, Explode: true},
+		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case", "qualified_evidence", "qualified_best_case", "qualified_weighted"}, Array: false, Explode: true},
 	},
 	"GET /v1/imports": {
 		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},

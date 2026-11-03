@@ -230,12 +230,26 @@ func forecastHistoryClauses(
 // existed — or by a future that gained a measure this build does not know —
 // resolves to the default instead of reaching the projection as a string it
 // will refuse.
+//
+// Nobody having chosen a measure is its own answer: while viability reviews are
+// enforced the landing is the qualified one, and otherwise commit evidence. A
+// saved measure is kept as saved, so turning enforcement on never switches a
+// choice somebody made.
 func ForecastForwardMeasure(
 	ctx context.Context, tx pgx.Tx,
 ) (forecasting.ForwardMeasure, error) {
-	stored, err := identity.ForecastForwardMeasureOf(ctx, tx)
+	stored, chosen, err := identity.ForecastForwardMeasureOf(ctx, tx)
 	if err != nil {
 		return "", err
+	}
+	if !chosen {
+		policy, err := forecastQualifiedPolicy(ctx, tx)
+		if err != nil {
+			return "", err
+		}
+		if policy != "" {
+			return forecasting.MeasureQualifiedCommitEvidence, nil
+		}
 	}
 	measure, err := values.ParseForwardMeasure(&stored, "forecast_forward_measure")
 	if err != nil {

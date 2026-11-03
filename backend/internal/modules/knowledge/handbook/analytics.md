@@ -310,20 +310,19 @@ than "forbidden", so it does not confirm that they exist.
 The **Landing** card is won plus what is still to come. What "still to come"
 means is the **Projection basis** installation setting, and the card names it:
 
-- **Commit evidence**: confirmed close dates only. The default, and the
-  strictest.
+- **Commit evidence**: confirmed close dates only. The strictest.
 - **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
-- **Manager’s call**: the recorded number *replaces* the projection rather
-  than adding to what is already won.
-  **From the deal records** shows won plus commit evidence beside it, never added.
+- **Supported commit evidence**, **Supported weighted**: the same, for deals the customer supports.
+- **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus commit evidence beside it, never added.
 
+With no basis chosen, the card uses supported commit evidence while **Count only deals the customer supports** is on. A chosen basis stays chosen.
 No deal is counted in both parts.
 
-The card tells you about two caveats under **Landing has a caveat**:
+The card tells you about three caveats under **Landing has a caveat**:
 
 - "No call recorded for this period, so this shows commit evidence."
-- "The call is below the amount already won. It is shown as recorded, not
-  corrected."
+- "The call is below the amount already won. It is shown as recorded, not corrected."
+- "The count of supported deals is off, so this shows all deals."
 
 ### Deal value needed
 

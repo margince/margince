@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 161939,
+    "tool_catalog_bytes": 162112,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41799,
+    "approx_wire_tokens_total": 41842,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35619,
-      "input_schema_bytes": 67191,
-      "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 102810
+      "input_schema_bytes": 67325,
+      "output_schema_bytes": 49680,
+      "description_plus_input_schema_bytes": 102944
     }
   },
   "tools": {
@@ -6801,12 +6801,15 @@
               "type": "string"
             },
             "reading": {
-              "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+              "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
               "enum": [
                 "open",
                 "weighted",
                 "evidence",
-                "best_case"
+                "best_case",
+                "qualified_evidence",
+                "qualified_best_case",
+                "qualified_weighted"
               ],
               "type": "string"
             },
@@ -7246,6 +7249,9 @@
                 },
                 "priced_count": {
                   "type": "integer"
+                },
+                "qualification_mode": {
+                  "type": "string"
                 },
                 "qualified": {
                   "properties": {

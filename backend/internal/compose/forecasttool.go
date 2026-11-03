@@ -212,6 +212,7 @@ func forecastToolResult(
 		BaseCurrency:       baseCurrency,
 		ScopeLimited:       &limited,
 		CoverageNote:       in.CoverageNote(),
+		QualificationMode:  in.QualificationMode(),
 	}
 	if scope.ID != nil {
 		id := scope.ID.String()
