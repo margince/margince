@@ -21,7 +21,6 @@ import {
   useReviewActions,
 } from "../../lib/reviewactions";
 import { replaceDial } from "../../lib/urlstate";
-import { AccountCoverageView } from "./analytics.accounts";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -29,10 +28,9 @@ import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { DataCoverageView } from "./analytics.coverageview";
 import { FirstRunNotice } from "./analytics.firstrun";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
-import { MyOutcomesView } from "./analytics.outcomes";
+import { FramedSection } from "./analytics.framed";
 import { AnalyticsOverview } from "./analytics.overview";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
@@ -255,40 +253,6 @@ function TabVerbs({
 
 // One section's body, chosen in its own component so the screen's own render
 // stays a header plus a choice rather than a ladder of ternaries.
-// The sections that need the frame alone: the zone for a date, the seat's
-// default population, or the chosen scope.
-function FramedSection({
-  section,
-  context,
-  selection,
-  scopeControl,
-  locale,
-}: Readonly<{
-  section: "coverage" | "accounts" | "outcomes";
-  context: components["schemas"]["AnalyticsContext"];
-  selection: AnalyticsSelection | null;
-  scopeControl: ReactNode;
-  locale: Locale;
-}>) {
-  switch (section) {
-    case "coverage":
-      return <DataCoverageView locale={locale} timezone={context.timezone} />;
-    case "accounts":
-      return selection ? (
-        <AccountCoverageView
-          scope={selection.scope}
-          scopeControl={scopeControl}
-          locale={locale}
-          timezone={context.timezone}
-        />
-      ) : null;
-    case "outcomes":
-      return (
-        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
-      );
-  }
-}
-
 function SectionBody({
   section,
   locale,
