@@ -10886,10 +10886,73 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.domainReview.defer": "Để sau",
   "worklist.domainReview.restore": "Đưa lại vào mục xem xét",
   "worklist.domainReview.deferEffect":
-    "Để sau ẩn câu hỏi khỏi hàng đợi của bạn cho đến khi có bằng chứng mới. Bạn vẫn có thể tìm thấy câu hỏi tại đây.",
-  "worklist.domainReview.title": "Xem xét tên miền",
-  "worklist.domainReview.loading": "Đang tải tên miền…",
-  "worklist.domainReview.empty": "Không có tên miền cần xem xét.",
+    "Để sau sẽ ẩn câu hỏi khỏi danh sách của bạn cho đến khi có email mới từ tên miền. Câu hỏi vẫn ở đây.",
+  "worklist.domainReview.title": "Câu hỏi về công ty",
+  "worklist.source.domain_question": "Câu hỏi về công ty",
+  "worklist.disposition.verb.notNow": "Để sau",
+  "worklist.disposition.hint.notNow":
+    "Ẩn câu hỏi khỏi danh sách của bạn. Email mới từ tên miền này sẽ đưa câu hỏi trở lại.",
+  "worklist.disposition.done.notNow":
+    "Đã để sau. Email mới từ tên miền này sẽ đưa câu hỏi trở lại.",
+  "worklist.domainQuestion.heading": "{name} làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingPair":
+    "{name} và một liên hệ khác làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingMany":
+    "{name} và {others} liên hệ khác làm việc cho công ty nào?",
+  "worklist.domainQuestion.headingDomain": "{domain} thuộc về công ty nào?",
+  "worklist.domainQuestion.reason.unread":
+    "Không đọc được trang web nên Margince không biết địa chỉ này thuộc công ty nào.",
+  "worklist.domainQuestion.reason.read":
+    "Trang web đã được đọc nhưng không nêu tên công ty nào.",
+  "worklist.domainQuestion.reason.forwarded":
+    "Trang web chuyển hướng sang một trang khác nên Margince không thể ghép công ty một cách chắc chắn.",
+  "worklist.domainQuestion.reason.vendor":
+    "Trang web có vẻ là nhà cung cấp email hoặc hosting, nơi có thể cấp địa chỉ cho nhiều công ty.",
+  "worklist.domainQuestion.reason.nearDuplicate":
+    "Đã có hơn một công ty ở đây mang tên mà trang web nêu.",
+  "worklist.domainQuestion.reason.stale":
+    "Email mới nhất từ tên miền này đã quá cũ để đối chiếu với trang web hiện tại.",
+  "worklist.domainQuestion.basis.name_twin":
+    "Công ty này có đúng tên mà trang web nêu.",
+  "worklist.domainQuestion.basis.redirect_target":
+    "Trang web chuyển hướng đến tên miền của công ty này.",
+  "worklist.domainQuestion.basis.contact_employer":
+    "Một liên hệ đã gửi email hiện làm việc ở đó.",
+  "worklist.domainQuestion.suggested": "Công ty được gợi ý: {name}.",
+  "worklist.domainQuestion.confirm": "Xác nhận công ty",
+  "worklist.domainQuestion.confirmEffectNone":
+    "Xác nhận sẽ liên kết {domain} với {company}. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
+  "worklist.domainQuestion.confirmEffect_one":
+    "Xác nhận sẽ liên kết {domain} với {company} và gán {count} liên hệ cho công ty đó. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
+  "worklist.domainQuestion.confirmEffect_other":
+    "Xác nhận sẽ liên kết {domain} với {company} và gán {count} liên hệ cho công ty đó. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
+  "worklist.domainQuestion.confirmed": "Đã liên kết công ty",
+  "worklist.domainQuestion.confirmFailed":
+    "Chưa liên kết được công ty. Hãy thử lại.",
+  "worklist.domainQuestion.choose": "Chọn công ty",
+  "worklist.domainQuestion.chooseAnother": "Chọn công ty khác",
+  "worklist.domainQuestion.stopCapturingEffect":
+    "Email từ {domain} sẽ không còn được lưu từ hộp thư của bạn. Email đã lưu vẫn giữ nguyên.",
+  "worklist.domainQuestion.originWith":
+    "Margince tìm thấy {domain} trong email của bạn với",
+  "worklist.domainQuestion.originHidden":
+    "Margince tìm thấy {domain} trong email của bạn với một liên hệ mà bạn không xem được.",
+  "worklist.domainQuestion.originFrom":
+    "Margince tìm thấy {domain} trong email của bạn từ {address}.",
+  "worklist.domainQuestion.originUnknown":
+    "Margince tìm thấy {domain} trong email của bạn.",
+  "worklist.domainQuestion.andMore_one": "và {count} liên hệ khác",
+  "worklist.domainQuestion.andMore_other": "và {count} liên hệ khác",
+  "worklist.domainReview.focusedTitle": "Câu hỏi về công ty",
+  "worklist.domainReview.details": "Chi tiết trang web",
+  "worklist.domainReview.createEffect":
+    "Tạo công ty sẽ thêm một công ty mới và liên kết các liên hệ của tên miền với công ty đó.",
+  "worklist.domainReview.retryEffect":
+    "Đọc lại trang web sẽ đọc trang web lần nữa và giữ câu hỏi mở.",
+  "worklist.domainReview.keepVendorEffect":
+    "Giữ là nhà cung cấp sẽ không tạo công ty và không hỏi lại về tên miền này.",
+  "worklist.domainReview.loading": "Đang tải câu hỏi về công ty…",
+  "worklist.domainReview.empty": "Không có câu hỏi nào về công ty.",
   "worklist.domainReview.more": "Tải thêm",
   "worklist.domainReview.forwarded": "Trang phản hồi: {url}",
   "worklist.domainReview.evidenceAt": "Bằng chứng mới nhất: {date}",
@@ -10899,17 +10962,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ghép sẽ liên kết tên miền và liên hệ đã ghi nhận với công ty đã chọn.",
   "worklist.domainReview.create": "Tạo công ty",
   "worklist.domainReview.retry": "Đọc lại trang",
-  "worklist.domainReview.exclude": "Loại tên miền",
-  "worklist.domainReview.forwardedEffects":
-    "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
-  "worklist.domainReview.effects":
-    "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
   "worklist.domainReview.keepVendor": "Giữ là nhà cung cấp",
-  "worklist.domainReview.vendorEffects":
-    "Tạo sẽ thêm công ty và liên kết các liên hệ của nó. Giữ là nhà cung cấp không tạo gì và không hỏi lại. Loại trừ dừng thu thập cho hộp thư của bạn.",
   "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
   "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
-  "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
+  "blockedDomains.source.unevidenced": "Không tìm thấy công ty từ trang web",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
   "blockedDomains.source.vendorVerdict":
@@ -17542,7 +17598,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.capture_health":
     "Một hộp thư đã ngừng thu thập thư. Kết nối lại để thư được thu thập trở lại.",
   "worklist.ask.domain_question":
-    "Margince không xác định được tên miền này thuộc về đâu. Tạo công ty cho tên miền, giữ làm nhà cung cấp, hoặc loại trừ.",
+    "Margince không xác định được liên hệ này làm việc cho công ty nào. Hãy xác nhận một công ty, chọn công ty, hoặc ngừng ghi nhận tên miền.",
   "worklist.ask.ai_work_health":
     "Một tác vụ AI liên tục thất bại. Kiểm tra nhà cung cấp AI của tác vụ trong Cài đặt.",
   "worklist.ask.bounce":
@@ -17999,7 +18055,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryStarted": "Đang chạy lại quy tắc…",
   "worklist.verb.retryFailed": "Không thể chạy lại quy tắc. Thử lại.",
   "worklist.verb.keep": "Tạo công ty",
-  "worklist.verb.discard": "Loại trừ tên miền",
+  "worklist.verb.discard": "Ngừng ghi nhận trong hộp thư của bạn",
   "worklist.verb.domainKept": "Đã tạo công ty từ tên miền",
   "worklist.verb.domainKeepFailed": "Không thể tạo công ty. Thử lại.",
   "worklist.verb.keepAsVendor": "Giữ là nhà cung cấp",
