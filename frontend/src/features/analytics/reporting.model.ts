@@ -32,6 +32,10 @@ export function reportingQuery(selection: ReportingSelection) {
     end_at: selection.interval?.end_at,
     target_basis: selection.target_basis,
     close_window: selection.close_window,
+    product_id: selection.product_id,
+    country: selection.country,
+    industry: selection.industry,
+    value_basis: selection.value_basis,
     metrics: selection.metrics,
     blocks: selection.blocks,
   };

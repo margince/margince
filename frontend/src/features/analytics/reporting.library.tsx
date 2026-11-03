@@ -18,6 +18,7 @@ import type { AnalyticsScope } from "./analytics.context";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { PreparedReports } from "./reporting.preparedpanel";
+import { ProductReports } from "./reporting.productpanel";
 import { ReportingReportDetail } from "./reporting.report";
 
 export function ReportingLibrary({
@@ -60,6 +61,7 @@ export function ReportingLibrary({
     );
   return (
     <>
+      <ProductReports />
       {scope && (
         <PreparedReports
           scope={{

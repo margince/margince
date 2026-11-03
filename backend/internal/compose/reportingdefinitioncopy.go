@@ -33,6 +33,7 @@ var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	reportingPartnerActivity:          {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
 	reportingStageConversion:          {En: "Stage conversion", De: "Weiterkommen pro Phase", Vi: "Tỷ lệ đi tiếp theo giai đoạn"},
 	reportingLeadCohortOutcomes:       {En: "What became of new leads", De: "Was aus neuen Leads wurde", Vi: "Kết quả của lead mới"},
+	reportingBookingsMix:              {En: "Commercial mix", De: "Umsatzmix", Vi: "Cơ cấu doanh số"},
 }
 
 // reportingMetricName names a metric in the reading's language. An edition
@@ -144,6 +145,11 @@ var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		De: "Von den Leads, die im gewählten Zeitraum eingegangen sind, der Anteil derer, die seitdem qualifiziert oder übergeben und angenommen wurden, gemessen an denen mit einem Ergebnis; noch offene Leads stehen getrennt und zählen nie als verloren. Beispiel: Im Mai gehen 20 Leads ein, 3 werden übergeben und angenommen, 4 qualifiziert, 5 disqualifiziert und 8 sind noch offen, also zeigt der Mai 7 von 12.",
 		Vi: "Trong các lead đến trong khoảng thời gian bạn chọn, phần lead sau đó đủ điều kiện hoặc được bàn giao và chấp nhận, trên số lead đã có kết quả; lead vẫn đang mở được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 20 lead đến, 3 lead được bàn giao và chấp nhận, 4 lead đủ điều kiện, 5 lead bị loại và 8 lead vẫn đang mở, nên tháng 5 hiển thị 7 trên 12.",
 	},
+	reportingBookingsMix: {
+		En: "The value of deals won in the period you picked, split by what each product sold is: software, implementation or other, with the part of a deal no product carries shown as unallocated. The split reads the accepted offer's lines, or the products set by hand on the deal. Example: a €10,000 deal won in May with €7,000 of software and €3,000 of implementation on its accepted offer counts €7,000 under software and €3,000 under implementation.",
+		De: "Der Wert der im gewählten Zeitraum gewonnenen Deals, aufgeteilt danach, was jedes verkaufte Produkt ist: Software, Umsetzung oder Sonstiges. Der Teil eines Deals, der keinem Produkt zugeordnet ist, steht als nicht zugeordnet. Die Aufteilung liest die Positionen des angenommenen Angebots oder die am Deal von Hand gesetzten Produkte. Beispiel: Ein im Mai gewonnener Deal über 10.000 € mit 7.000 € Software und 3.000 € Umsetzung im angenommenen Angebot zählt 7.000 € unter Software und 3.000 € unter Umsetzung.",
+		Vi: "Giá trị các deal đã thắng trong khoảng thời gian bạn chọn, chia theo loại của từng sản phẩm đã bán: phần mềm, triển khai hoặc khác; phần của deal không gắn với sản phẩm nào hiển thị là chưa phân bổ. Việc chia đọc từ các dòng của báo giá đã chấp nhận, hoặc từ các sản phẩm đặt thủ công trên deal. Ví dụ: deal 10.000 € thắng vào tháng 5 với 7.000 € phần mềm và 3.000 € triển khai trong báo giá đã chấp nhận được tính 7.000 € vào phần mềm và 3.000 € vào triển khai.",
+	},
 }
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
@@ -243,6 +249,11 @@ var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phra
 		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt im Zeitraum seines Eingangs, egal wie spät sein Ergebnis kommt.",
 		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính vào kỳ lead đến, dù kết quả đến muộn đến đâu.",
 	},
+	reportingBookingsMix: {
+		En: "Credit goes to the deal's current owner and pipeline, so a reassigned deal moves with it; each allocation keeps the product's classification from when it was written, so a later catalog change does not rewrite a closed deal.",
+		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals, ein neu zugewiesener Deal wandert also mit; jede Zuordnung behält die Einordnung des Produkts vom Zeitpunkt des Schreibens, sodass eine spätere Katalogänderung einen abgeschlossenen Deal nicht umschreibt.",
+		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal, nên deal được chuyển giao sẽ đi theo người mới; mỗi phân bổ giữ phân loại của sản phẩm tại lúc ghi, nên thay đổi danh mục sau này không viết lại deal đã đóng.",
+	},
 }
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
@@ -341,5 +352,10 @@ var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 leads with an outcome, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Leads mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
 		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 lead đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+	},
+	reportingBookingsMix: {
+		En: "Only deals you may see are counted; a won deal with no accepted offer and no products set by hand counts whole as unallocated, an allocation in another currency than the deal's has no value, and a deal whose amount is unknown adds nothing.",
+		De: "Gezählt werden nur Deals, die du sehen darfst; ein gewonnener Deal ohne angenommenes Angebot und ohne von Hand gesetzte Produkte zählt ganz als nicht zugeordnet, eine Zuordnung in einer anderen Währung als der des Deals hat keinen Wert, und ein Deal ohne bekannten Betrag trägt nichts bei.",
+		Vi: "Chỉ tính các deal bạn được phép xem; deal đã thắng không có báo giá được chấp nhận và không có sản phẩm đặt thủ công được tính toàn bộ là chưa phân bổ, phân bổ bằng loại tiền khác với deal không có giá trị, và deal không rõ số tiền không đóng góp gì.",
 	},
 }

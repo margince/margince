@@ -4487,6 +4487,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The products a deal sells, with the value allocated to each.
+         * @description `offer` rows are rewritten from the accepted offer's lines that name a product. One
+         *     `manual` set replaces every offer-derived row and the next accepted offer leaves it
+         *     alone. Product bookings and the commercial mix read these allocations.
+         */
+        get: operations["listDealProducts"];
+        /** Set a deal's products by hand, replacing every allocation it had. */
+        put: operations["replaceDealProducts"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -34910,6 +34936,44 @@ export interface components {
             groups_omitted: ("contacts" | "deals" | "signal_route" | "our_side")[];
             signal_route?: components["schemas"]["CompanyGraphSignalRoute"];
         };
+        DealProduct: {
+            /** Format: uuid */
+            product_id: string;
+            product_name: string;
+            /**
+             * @description `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+             * @enum {string}
+             */
+            source: "offer" | "manual";
+            /**
+             * Format: int64
+             * @description The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.
+             */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /**
+             * @description The classification of the product when the allocation was written.
+             * @enum {string|null}
+             */
+            component_kind?: "software" | "implementation" | "other" | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DealProductListResponse: {
+            data: components["schemas"]["DealProduct"][];
+        };
+        DealProductInput: {
+            /** Format: uuid */
+            product_id: string;
+            /**
+             * Format: int64
+             * @description The value allocated to the product in the currency of the deal. Omit to name the product without an amount.
+             */
+            amount_minor?: number | null;
+        };
+        ReplaceDealProductsRequest: {
+            products: components["schemas"]["DealProductInput"][];
+        };
         /**
          * @description The typed edge. Mirrors `relationship` (data-model §5). Shapes by `kind`:
          *     `employment` (contact↔company), `deal_stakeholder` (deal↔contact), `project_company`
@@ -41342,7 +41406,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -41627,6 +41691,20 @@ export interface components {
             /** Format: date-time */
             end_at: string;
         };
+        /**
+         * Format: uuid
+         * @description Narrows deal figures to deals that sell this product (their `deal_product` rows) and lead figures to leads interested in it. Money figures of won deals take the product's allocated value. A reader that cannot honour the product answers `unsupported`.
+         */
+        ReportingProductId: string;
+        /** @description Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code. */
+        ReportingCountry: string;
+        /** @description Narrows to records whose company has this industry; a lead with no company keeps its own. */
+        ReportingIndustry: string;
+        /**
+         * @description Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
+         * @enum {string}
+         */
+        ReportingValueBasis: "all" | "software" | "implementation";
         ReportingSelection: {
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
@@ -41644,6 +41722,10 @@ export interface components {
             target_basis: "month" | "fiscal_quarter";
             /** @enum {string} */
             close_window: "fiscal_quarter" | "all_open";
+            product_id?: components["schemas"]["ReportingProductId"];
+            country?: components["schemas"]["ReportingCountry"];
+            industry?: components["schemas"]["ReportingIndustry"];
+            value_basis?: components["schemas"]["ReportingValueBasis"];
             metrics: components["schemas"]["ReportingMetricID"][];
             /**
              * @description The chart kinds the report draws, in order. When `layout` is present the service
@@ -41752,6 +41834,11 @@ export interface components {
             /** @description The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed. */
             horizon?: components["schemas"]["ReportingWindow"];
             close_interval?: components["schemas"]["ReportingWindow"];
+            product_id?: components["schemas"]["ReportingProductId"];
+            product_label?: string;
+            country?: components["schemas"]["ReportingCountry"];
+            industry?: components["schemas"]["ReportingIndustry"];
+            value_basis?: components["schemas"]["ReportingValueBasis"];
             timezone: string;
             currency: string;
             /** Format: date-time */
@@ -49177,6 +49264,11 @@ export interface components {
              * @enum {integer|null}
              */
             billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /**
+             * @description What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
+             * @enum {string|null}
+             */
+            component_kind?: "software" | "implementation" | "other" | null;
             currency: string;
             /**
              * Format: double
@@ -49219,6 +49311,11 @@ export interface components {
              * @enum {integer|null}
              */
             billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /**
+             * @description What kind of value the product is. Omit or send null to leave it unclassified.
+             * @enum {string|null}
+             */
+            component_kind?: "software" | "implementation" | "other" | null;
             currency: string;
             /**
              * Format: double
@@ -49247,6 +49344,11 @@ export interface components {
              * @enum {integer|null}
              */
             billing_interval_months?: 1 | 3 | 6 | 12 | null;
+            /**
+             * @description What kind of value the product is. Omit to leave it unchanged.
+             * @enum {string}
+             */
+            component_kind?: "software" | "implementation" | "other";
             currency?: string;
             /** Format: double */
             default_tax_rate?: number;
@@ -61523,6 +61625,60 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listDealProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's product allocations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealProductListResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    replaceDealProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceDealProductsRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal's product allocations after the write. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealProductListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjects: {
         parameters: {
             query?: {
@@ -70151,6 +70307,10 @@ export interface operations {
                 close_window?: "fiscal_quarter" | "all_open";
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
+                product_id?: string;
+                country?: components["schemas"]["ReportingCountry"];
+                industry?: components["schemas"]["ReportingIndustry"];
+                value_basis?: components["schemas"]["ReportingValueBasis"];
             };
             header?: never;
             path?: never;
@@ -70190,6 +70350,10 @@ export interface operations {
                 close_window?: "fiscal_quarter" | "all_open";
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
+                product_id?: string;
+                country?: components["schemas"]["ReportingCountry"];
+                industry?: components["schemas"]["ReportingIndustry"];
+                value_basis?: components["schemas"]["ReportingValueBasis"];
                 metric: components["schemas"]["ReportingMetricID"];
                 group_key?: string;
                 through?: string;

@@ -29,6 +29,9 @@ type metricFactQuery struct {
 	revision                                                                   int64
 	from, where, owner, at, value, key, stage, stageLabel, outcome, provenance string
 	money                                                                      bool
+	// allocatable says the reader values a won deal, so a product or value
+	// basis replaces the deal's amount with its allocations.
+	allocatable bool
 	// group renders the breakdown key and label columns; nil for a metric
 	// with no breakdown.
 	group func(context.Context, *reportingBindings) (key, label string, err error)
@@ -63,7 +66,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b)
+	where += reportingFactFilters(frame, metric, spec, &b) + dealDimensionSQL(frame, &b, "t")
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"
@@ -140,7 +143,7 @@ func readReportingOutcomes(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 }
 
 func closingMetricQuery(money bool) metricFactQuery {
-	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: colOwnerID, at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money}
+	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: colOwnerID, at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money, allocatable: money}
 	if money {
 		query.where += " AND t.status='won'"
 	} else {
@@ -179,6 +182,9 @@ func reportingFactValue(ctx context.Context, frame crmcontracts.ReportingContext
 		value = currentStageAgeSQL(b.add(frame.EvaluatedAt) + "::timestamptz")
 	}
 	if spec.money {
+		if value == "" && spec.allocatable && (frame.ProductId != nil || reportingValueBasis(frame) != reportingValueBasisAll) {
+			value = allocationValueSQL(frame, b, "t")
+		}
 		if value == "" {
 			value = deals.BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
 		}
@@ -209,4 +215,35 @@ func reportingFactFilters(frame crmcontracts.ReportingContext, metric crmcontrac
 		where += reportingClosePredicate(frame, b)
 	}
 	return where
+}
+
+// readReportingBookingsMix reads one row per allocation of a won deal: each
+// product's value under its component kind, and the deal's unallocated
+// remainder as a group of its own. A product selection keeps that product's
+// allocations alone and drops the remainder, which is not that product's.
+func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	var b reportingBindings
+	parts := "SELECT dp.product_id::text AS part, COALESCE(dp.component_kind,'unclassified') AS kind, dp.amount_minor AS amount, dp.currency FROM deal_product dp WHERE dp.deal_id=t.id AND dp.amount_minor IS NOT NULL"
+	if frame.ProductId != nil {
+		parts += " AND dp.product_id=" + b.add(*frame.ProductId)
+	} else {
+		parts += " UNION ALL SELECT 'unallocated', 'unallocated', t.amount_minor-(SELECT COALESCE(SUM(x.amount_minor),0) FROM deal_product x WHERE x.deal_id=t.id AND x.currency=t.currency), t.currency"
+	}
+	if basis := reportingValueBasis(frame); basis != reportingValueBasisAll {
+		parts = "SELECT * FROM (" + parts + ") kinds WHERE kinds.kind=" + b.add(string(basis))
+	}
+	said := reporting.ExplanationCopy(frame)
+	query := closingMetricQuery(true)
+	query.allocatable = false
+	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount>0"
+	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
+	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", b.add(frame.Currency))
+	query.group = func(context.Context, *reportingBindings) (string, string, error) {
+		label := "CASE part.kind"
+		for kind, phrase := range reportingComponentKindLabels {
+			label += " WHEN '" + kind + "' THEN " + b.add(said.Say(phrase))
+		}
+		return "'kind:'||part.kind", label + " END", nil
+	}
+	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
 }
