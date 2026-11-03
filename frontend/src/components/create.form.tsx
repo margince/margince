@@ -134,6 +134,10 @@ export function RecordFormBody({
     )
       onSubmit(submittedValues(fields, answers), rows);
   });
+  // A dialog that edits one field is titled with that field's name.
+  const titledByDialog =
+    dialog !== undefined &&
+    shown.filter((field) => !field.divider).length === 1;
   const stack = (
     <>
       {shown.map((field) => {
@@ -150,6 +154,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               formId={formId}
+              labelHidden={titledByDialog}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);

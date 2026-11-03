@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button, Card, Field, Radio } from "../design-system/atoms";
+import { Button, Field, Radio } from "../design-system/atoms";
 import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import {
@@ -11,6 +11,7 @@ import {
   type FormRow,
   fieldControl,
   fieldLabel,
+  type SubField,
 } from "./create";
 import {
   kindOf,
@@ -31,14 +32,17 @@ export function RepeatableRowsField({
   formId,
   rows,
   setRows,
+  labelHidden,
 }: Readonly<{
   field: CreateField;
   formId: string;
   rows: FormRow[];
   setRows: (next: FormRow[]) => void;
+  /** Where the surface around the group already names it: a dialog titled for it. */
+  labelHidden?: boolean;
 }>) {
   const t = useT();
-  const rowFields = field.rowFields ?? [];
+  const [valueField, ...detailFields] = field.rowFields ?? [];
   const primaryKey = field.primaryKey;
   const typeKey = field.typeKey;
   const typeDefault = field.typeDefault ?? "";
@@ -115,95 +119,126 @@ export function RepeatableRowsField({
     const created = rows.length;
     pendingFocus.current = (container) =>
       container
-        .querySelectorAll(":scope > .card")
+        .querySelectorAll(".repeatablerowsfield-row")
         .item(created)
         ?.querySelector("input, textarea, select, button") ?? null;
     setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}]);
   }
 
+  function subFieldControl(subField: SubField, index: number) {
+    const row = rows[index] ?? {};
+    return (
+      <Field
+        key={subField.key}
+        className={
+          subField === valueField
+            ? "repeatablerowsfield-value"
+            : "repeatablerowsfield-detail"
+        }
+        label={t(subField.label)}
+        // The first row's labels head every column, as a table header would.
+        labelHidden={index > 0}
+        required={subField.required}
+      >
+        {(control) =>
+          fieldControl(
+            subField,
+            control,
+            row[subField.key] ?? "",
+            (next) => updateRow(index, subField.key, next),
+            t,
+          )
+        }
+      </Field>
+    );
+  }
+
   return (
-    <div className="field-repeatable" ref={containerRef}>
-      <span className="t-label">
-        {fieldLabel(field, t)}
-        {field.required ? " *" : ""}
-      </span>
-      {rows.map((row, index) => (
-        // Rows have no stable identity until saved, so index is the only key.
-        // Reorder swaps two entries, but every cell — each subfield input and
-        // the primary radio — is controlled from rows[index], so React re-renders
-        // each position with the swapped row's values rather than carrying stale
-        // local state; the index key stays correct under a move.
-        <Card
-          as="div"
-          // biome-ignore lint/suspicious/noArrayIndexKey: every cell is controlled from rows[index], so a swap re-renders in place
-          key={index}
-          className="repeatablerowsfield-row"
-        >
-          {rowFields.map((subField) => (
-            <Field
-              key={subField.key}
-              label={t(subField.label)}
-              required={subField.required}
-            >
-              {(control) =>
-                fieldControl(
-                  subField,
-                  control,
-                  row[subField.key] ?? "",
-                  (next) => updateRow(index, subField.key, next),
-                  t,
-                )
-              }
-            </Field>
+    <div
+      className="field-repeatable repeatablerowsfield-group"
+      ref={containerRef}
+    >
+      {!labelHidden && (
+        <span className="t-label">
+          {fieldLabel(field, t)}
+          {field.required ? " *" : ""}
+        </span>
+      )}
+      {rows.length > 0 && (
+        <div className="repeatablerowsfield-rows">
+          {rows.map((row, index) => (
+            // Rows have no stable identity until saved, so index is the only key.
+            // biome-ignore lint/suspicious/noArrayIndexKey: every cell is controlled from rows[index], so a swap re-renders in place
+            <div key={index} className="repeatablerowsfield-row">
+              {valueField && subFieldControl(valueField, index)}
+              <div className="repeatablerowsfield-details">
+                {detailFields.map((subField) =>
+                  subFieldControl(subField, index),
+                )}
+                {primaryKey && (
+                  <Radio
+                    className="t-label repeatablerowsfield-primary"
+                    // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
+                    name={`${formId}-${field.key}-${kindOf(row, typeKey, typeDefault)}-primary`}
+                    checked={row[primaryKey] === "true"}
+                    onChange={() => markPrimary(index)}
+                    label={t("field.primary")}
+                  />
+                )}
+                <div className="repeatablerowsfield-actions">
+                  <Button
+                    type="button"
+                    variant="bare"
+                    iconOnly
+                    data-move="up"
+                    data-row={index}
+                    disabled={index === 0}
+                    aria-label={t("field.moveRowUp", {
+                      n: ordinalNumber(index + 1),
+                    })}
+                    onClick={() => moveRow(index, "up")}
+                  >
+                    <ChevronUp aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="bare"
+                    iconOnly
+                    data-move="down"
+                    data-row={index}
+                    disabled={index === rows.length - 1}
+                    aria-label={t("field.moveRowDown", {
+                      n: ordinalNumber(index + 1),
+                    })}
+                    onClick={() => moveRow(index, "down")}
+                  >
+                    <ChevronDown aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="bare"
+                    iconOnly
+                    data-remove={index}
+                    aria-label={t("field.removeRowLabel", {
+                      n: ordinalNumber(index + 1),
+                    })}
+                    onClick={() => removeRow(index)}
+                  >
+                    <Trash2 aria-hidden />
+                  </Button>
+                </div>
+              </div>
+            </div>
           ))}
-          {primaryKey && (
-            <Radio
-              className="t-label"
-              // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
-              name={`${formId}-${field.key}-${kindOf(row, typeKey, typeDefault)}-primary`}
-              checked={row[primaryKey] === "true"}
-              onChange={() => markPrimary(index)}
-              label={t("field.primary")}
-            />
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            data-move="up"
-            data-row={index}
-            disabled={index === 0}
-            aria-label={t("field.moveRowUp", { n: ordinalNumber(index + 1) })}
-            onClick={() => moveRow(index, "up")}
-          >
-            <ChevronUp aria-hidden />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            data-move="down"
-            data-row={index}
-            disabled={index === rows.length - 1}
-            aria-label={t("field.moveRowDown", { n: ordinalNumber(index + 1) })}
-            onClick={() => moveRow(index, "down")}
-          >
-            <ChevronDown aria-hidden />
-          </Button>
-          {/* field.removeRow and field.removeRowLabel are one control's two
-              names — the short visible text and the row-numbered accessible
-              name — and an edit to either wording has to carry the other. */}
-          <Button
-            type="button"
-            data-remove={index}
-            aria-label={t("field.removeRowLabel", {
-              n: ordinalNumber(index + 1),
-            })}
-            onClick={() => removeRow(index)}
-          >
-            {t("field.removeRow")}
-          </Button>
-        </Card>
-      ))}
-      <Button type="button" data-add-row onClick={addRow}>
+        </div>
+      )}
+      <Button
+        type="button"
+        className="repeatablerowsfield-add"
+        data-add-row
+        onClick={addRow}
+      >
+        <Plus aria-hidden />
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
       <p className="sr-only" role="status" aria-live="polite">

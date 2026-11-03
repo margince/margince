@@ -1,6 +1,59 @@
+.repeatablerowsfield-group {
+  container: repeatablerows / inline-size;
+}
+.repeatablerowsfield-rows {
+  display: flex;
+  flex-direction: column;
+}
 .repeatablerowsfield-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--space-2);
-  align-items: center;
+}
+.repeatablerowsfield-row + .repeatablerowsfield-row {
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--groundSeam);
+}
+.repeatablerowsfield-details {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+}
+.repeatablerowsfield-detail {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+.repeatablerowsfield-primary {
+  flex: none;
+  min-block-size: var(--controlHeight);
+}
+.repeatablerowsfield-actions {
+  display: flex;
+  flex: none;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
+}
+.repeatablerowsfield-add {
+  align-self: start;
+  margin-block-start: var(--space-1);
+}
+@container repeatablerows (min-width: 30rem) {
+  .repeatablerowsfield-row {
+    flex-direction: row;
+    align-items: end;
+    gap: var(--space-3);
+  }
+  .repeatablerowsfield-value {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+  .repeatablerowsfield-details {
+    flex: none;
+    gap: var(--space-3);
+  }
+  .repeatablerowsfield-detail {
+    flex: none;
+    inline-size: 8rem;
+  }
 }
