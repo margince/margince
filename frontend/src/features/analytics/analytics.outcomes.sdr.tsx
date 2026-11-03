@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Badge, Button, StatCard } from "../../design-system/atoms";
+import { Badge, StatCard } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -24,6 +24,10 @@ import {
 import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import {
+  MoreRows,
+  useHandoffPages,
+} from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
@@ -436,68 +440,5 @@ function ReturnedHandoffs({
         </>
       )}
     </QueryGate>
-  );
-}
-
-/**
- * Whose open handoffs to list: one seat, a team, or the whole company. No
- * kind is the seat's own default population, which My teams is.
- */
-export type HandoffScope = Readonly<{
-  kind?: "owner" | "team" | "workspace";
-  id?: string;
-}>;
-
-/** The open handoffs of a scope in one state, one page at a time. */
-export function useHandoffPages(
-  scope: HandoffScope,
-  state: "waiting" | "returned",
-  enabled: boolean,
-  // The summary's instant, so the rows describe the totals beside them.
-  asOf?: string,
-) {
-  return useInfiniteQuery({
-    queryKey: [
-      "sdr-summary",
-      scope.id ?? scope.kind ?? "default",
-      "handoffs",
-      state,
-      asOf ?? null,
-    ],
-    enabled,
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam, signal }) =>
-      unwrap(
-        await api.GET("/analytics/sdr-summary/handoffs", {
-          params: {
-            query: {
-              ...(scope.kind ? { scope_kind: scope.kind } : {}),
-              ...(scope.id ? { scope_id: scope.id } : {}),
-              state,
-              ...(pageParam ? { cursor: pageParam } : {}),
-              ...(asOf ? { as_of: asOf } : {}),
-            },
-          },
-          signal,
-        }),
-      ),
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
-  });
-}
-
-export function MoreRows({
-  rows,
-}: Readonly<{ rows: ReturnType<typeof useHandoffPages> }>) {
-  const t = useT();
-  if (!rows.hasNextPage) return null;
-  return (
-    <PanelRow>
-      <Button
-        onClick={() => void rows.fetchNextPage()}
-        disabled={rows.isFetchingNextPage}
-      >
-        {t("analytics.sdrShowMore")}
-      </Button>
-    </PanelRow>
   );
 }

@@ -19,7 +19,7 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import type { HandoffScope } from "./analytics.outcomes.sdr";
+import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { outboundDials, TEAM_PERIODS } from "./analytics.overview.context";
 import { QualificationNote } from "./analytics.overview.prospecting";
 import {
