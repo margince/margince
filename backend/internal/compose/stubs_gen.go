@@ -375,6 +375,18 @@ func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
 }
 
+func (stubs) ListSalesDecisions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesDecisionsParams) {
+	httperr.NotImplemented(w, r, "ListSalesDecisions")
+}
+
+func (stubs) RecordSalesDecision(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RecordSalesDecisionParams) {
+	httperr.NotImplemented(w, r, "RecordSalesDecision")
+}
+
+func (stubs) RecordSalesDecisionOutcome(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordSalesDecisionOutcome")
+}
+
 func (stubs) CompareReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CompareReportingEditionsParams) {
 	httperr.NotImplemented(w, r, "CompareReportingEditions")
 }

@@ -26,7 +26,7 @@ import (
 func initiativeManager(e *forecastEnv) context.Context {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"sales_initiative", "report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "product"} {
+	for _, object := range []string{"sales_initiative", "report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "product", "activity"} {
 		grants[object] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 	}
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
