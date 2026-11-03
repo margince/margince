@@ -96,9 +96,17 @@ The deal store applies these owners and the caller's visibility rules before lim
 An empty set reads no owners. No set means the visible workspace view.
 Team reads keep work from former team members and work with no owner.
 
-Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
+Company and lead duplicate pairs and tag suggestions have no requested decider.
 **Mine** and chosen member views skip those sources before building the decision page and counts.
 **Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+A Deal Scout suggestion (source `deal_suggestion`, `attention/suggestionlane.go`) belongs to its company's owner.
+Its list and count take the same owner set as the deal risk read, so each view reads only the suggestions for companies its owners hold.
+The row names the company's current owner as its requested decider, read at request time.
+A change of company owner moves the suggestion with no write to it.
+A suggestion for a company with no owner shows under **Unassigned** and in team views.
+An owner who may not read all of a suggestion's evidence does not get the row, and no other reader gets it in their place.
+The suggestion ranks as a possible opportunity, at the level of a held customer send: above routine cleanup, below customer replies, promises, deal risk and agreed tasks.
 
 Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
 A case is a group of contacts joined by open pairs, and its row id is the lowest member id.

@@ -32494,7 +32494,7 @@ type AttentionItem struct {
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
 
-	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.

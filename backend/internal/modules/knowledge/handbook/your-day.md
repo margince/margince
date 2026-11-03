@@ -255,7 +255,7 @@ Worklist items are in bands, shown in this order:
 
 The views are **Today** (your work), **Decisions** (choices someone must make) and **System**
 (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
-the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts). A possible deal also waits in **Decisions**, in the Worklist of the company's owner. It sits above routine cleanup and below customer replies, promises and your planned tasks. A company with no owner shows its possible deal under **Unassigned**. If the company gets a new owner, the possible deal moves to them. See [How do I review a possible deal?](leads-deals-and-projects.md#how-do-i-review-a-possible-deal)
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
