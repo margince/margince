@@ -26,22 +26,27 @@ func TestDomainQuestionHTTPKeepsTheReadersBoundary(t *testing.T) {
 		t.Fatal(err)
 	}
 	invalidCursor := "not-a-cursor"
+	focused, malformed := domain, "not a domain"
 	agent := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:test"})
 	for _, tc := range []struct {
 		name          string
 		ctx           context.Context
 		cursor        *string
+		domain        *string
 		status, count int
 	}{
-		{"owner", ctx, nil, 200, 1},
-		{"other reader", e.As(e.Rep2, nil, integration.AdminPerms), nil, 200, 0},
-		{"agent", agent, nil, 403, 0},
-		{"malformed cursor", ctx, &invalidCursor, 422, 0},
+		{"owner", ctx, nil, nil, 200, 1},
+		{"other reader", e.As(e.Rep2, nil, integration.AdminPerms), nil, nil, 200, 0},
+		{"agent", agent, nil, nil, 403, 0},
+		{"malformed cursor", ctx, &invalidCursor, nil, 422, 0},
+		{"owner's focused read", ctx, nil, &focused, 200, 1},
+		{"focused read of a question the reader does not hold", e.As(e.Rep2, nil, integration.AdminPerms), nil, &focused, 404, 0},
+		{"focused read of no domain", ctx, nil, &malformed, 404, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			request := httptest.NewRequest("GET", "/capture/domain-questions", nil).WithContext(tc.ctx)
 			response := httptest.NewRecorder()
-			domainQuestionHandlers{contacts: e.Contacts}.ListDomainQuestions(response, request, crmcontracts.ListDomainQuestionsParams{Cursor: tc.cursor})
+			domainQuestionHandlers{contacts: e.Contacts}.ListDomainQuestions(response, request, crmcontracts.ListDomainQuestionsParams{Cursor: tc.cursor, Domain: tc.domain})
 			if response.Code != tc.status {
 				t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 			}
@@ -54,6 +59,12 @@ func TestDomainQuestionHTTPKeepsTheReadersBoundary(t *testing.T) {
 			}
 			if len(page.Data) != tc.count {
 				t.Fatalf("questions=%d, want%d", len(page.Data), tc.count)
+			}
+			if tc.count == 1 {
+				context := page.Data[0].DomainContext
+				if context == nil || context.SenderAddress == nil || *context.SenderAddress != "hello@"+domain || context.OriginActivityId == nil {
+					t.Fatalf("domain_context = %+v, want the mail that raised the question", context)
+				}
 			}
 		})
 	}

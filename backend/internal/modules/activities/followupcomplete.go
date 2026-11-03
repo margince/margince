@@ -73,8 +73,9 @@ func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID
 }
 
 // CompleteCarriedSystemTasks completes the open system-minted tasks among a
-// NAMED set of activities — the ones a promotion moved from the lead onto the
-// contact, which the lead.promoted payload carries.
+// NAMED set of activities. A promotion names the ones it moved from the lead
+// onto the contact, which the lead.promoted payload carries. The review pass
+// names the review tasks whose findings are all settled.
 //
 // Named ids rather than a link column, which is what makes it exact for a
 // MERGE. The contact-keyed reading answers "every open system task on this

@@ -16,6 +16,7 @@
 
 import { ProblemError } from "../../lib/problem";
 import { problemDetails } from "../../lib/problembody";
+import type { RefusedRecipient } from "../../lib/sendstatus";
 
 // OverrulableRecipient is one refused contact the rep may vouch for, and the
 // send category the vouch covers.
@@ -33,6 +34,9 @@ export type SendReview = Readonly<{
   // refusal with no message to decide about. The reference still travels so a
   // human can pick the review up.
   actions: readonly SendReviewAction[];
+  // Each refused address with the engine's reason. Empty when the server named
+  // none this build can read, which then reads as a refusal with no cause.
+  refusals: readonly RefusedRecipient[];
 }>;
 
 // The actions a surface knows how to draw. A server naming one this build has
@@ -70,7 +74,36 @@ export function sendReviewOf(error: unknown): SendReview | null {
     reviewId,
     actions: actionsIn(details.available_actions),
     overrulable: overrulableIn(details.overrulable),
+    refusals: refusalsIn(details.refusals),
   };
+}
+
+// refusalsIn keeps each entry with an address and a reason. Dropping one
+// malformed entry is safe: the status never reads fewer refusals as ready.
+function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const out: RefusedRecipient[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "object" || entry === null) {
+      continue;
+    }
+    const address: unknown = Reflect.get(entry, "address");
+    const reasonCode: unknown = Reflect.get(entry, "reason_code");
+    const category: unknown = Reflect.get(entry, "category");
+    if (typeof address !== "string" || typeof reasonCode !== "string") {
+      continue;
+    }
+    out.push({
+      address,
+      reasonCode,
+      category: typeof category === "string" ? category : undefined,
+      // Only a stated yes counts. Absent is not permission to guess one.
+      canBeOverruled: Reflect.get(entry, "can_be_overruled") === true,
+    });
+  }
+  return out;
 }
 
 // overrulableIn keeps each well-formed entry. One malformed entry drops the
