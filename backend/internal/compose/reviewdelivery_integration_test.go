@@ -374,3 +374,30 @@ func TestAMoveWhoseRecordWasLostIsRecordedOnTheNextPass(t *testing.T) {
 		t.Errorf("after the next owner change the task is with %q, want %s", got, v.Rep3)
 	}
 }
+
+// The check walks findings by value, largest first. The delivered review on
+// the larger deal comes first, and it must not end the walk.
+func TestADeliveredReviewDoesNotKeepALaterReviewFromItsDelivery(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	pipeline, err := ids.Parse(v.WsScalar(t, `SELECT pipeline_id::text FROM deal WHERE id = $1`, v.silent))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage, err := ids.Parse(v.WsScalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, v.silent))
+	if err != nil {
+		t.Fatal(err)
+	}
+	smaller := v.commitDeal(t, ids.From[ids.PipelineKind](pipeline), ids.From[ids.StageKind](stage),
+		"Silent since summer", 50_000, v.now.AddDate(0, 0, -150))
+
+	v.runCheck(t)
+	queued := v.queuedDeliveries(t)
+	if len(queued) != 1 {
+		t.Fatalf("%d deliveries queued, want one for the new review", len(queued))
+	}
+	v.deliverReviews(t)
+	if all, open := v.reviewTasks(t, smaller); all != 1 || open != 1 {
+		t.Fatalf("%d review tasks on the smaller deal, %d open; want one open task", all, open)
+	}
+}
