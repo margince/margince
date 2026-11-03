@@ -57,6 +57,18 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 		return parentKey, nil
 	}
 	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
+	// The sender chose that Message-ID, so a key some other message already carries
+	// would file this reply into a conversation it never belonged to.
+	var taken bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity
+		                WHERE thread_key = $1 AND NOT (source_system = $2 AND source_id = $3))`,
+		own, connector.EmailSourceSystem, rec.NaturalKey.SourceID).Scan(&taken); err != nil {
+		return "", fmt.Errorf("capture: reading whether a split conversation's key is free: %w", err)
+	}
+	if taken {
+		return parentKey, nil
+	}
 	return own, carryThreadVerdictsTx(ctx, tx, parentKey, own)
 }
 

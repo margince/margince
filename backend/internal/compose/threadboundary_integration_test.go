@@ -110,3 +110,19 @@ func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
 		t.Errorf("the split conversation's verdict is %q, want the owner's held_by_owner carried over", got)
 	}
 }
+
+// A sender who names their reply after another conversation's key does not land in it:
+// the split refuses a key some other message carries and the reply stays with its parent.
+func TestASplitNeverTakesAKeyAnotherConversationCarries(t *testing.T) {
+	e := integration.Setup(t)
+	addr := angebotThread(t, e)
+	// A conversation keyed on a root this seat never received.
+	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Vertrag", addr, "member@counterparty.example", "Tue, 02 Jun 2026 09:00:00 +0000",
+		"ghost-root@counterparty.example", "ghost-root@counterparty.example"))
+	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Something else", addr, "ghost-root@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
+		"answer@counterparty.example", "opener@counterparty.example", "answer@counterparty.example"))
+
+	if got := threadKeyOfMessage(t, e, "ghost-root@counterparty.example"); got != "opener@counterparty.example" {
+		t.Errorf("the reply naming another conversation's key is filed under %q, want its parent's conversation", got)
+	}
+}

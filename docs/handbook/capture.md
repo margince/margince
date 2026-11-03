@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
@@ -237,6 +237,11 @@ To see every email with a contact in Margince, open the contact and choose its *
 2. Or set **Activity kind** to **Email**, and use **Search this timeline** to find one message.
 You see only the messages whose audience includes you; a held message stays with those who were on it. See [Who can see an email](who-can-see-an-email.md).
 Also called: email history, correspondence, all mails with a customer.
+
+### What counts as one email thread?
+A reply whose subject changes starts a new conversation. Reply prefixes such as "Re:" and "AW:" do not count as a change, and neither do capital letters or extra spaces. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
+Mail is split this way when the message it answers is already in Margince. When a newly connected mailbox brings in older mail, a reply can arrive before the message it answers, and then it stays in the old conversation until the people who run your Margince regroup older mail.
+Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?
 To read a whole thread in Margince, press an email on the **History** tab. The thread opens beside the record, oldest message first.
