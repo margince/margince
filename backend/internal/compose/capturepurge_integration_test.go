@@ -425,6 +425,51 @@ func nullIfEmpty(resolution string) *string {
 	return &resolution
 }
 
+// seedSubjectRefOnlyRequest files an open request that names its subject only by
+// the free-text subject_ref — the subject's contact id as text — with contact_id
+// left NULL. It is the case an officer opens by hand before the subject is
+// resolved to a contact row, and the one the guarded subject_ref::uuid arm of
+// underAnOpenRequest exists for.
+func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string) {
+	t.Helper()
+	subject := e.SeedContact(t, "Der Mandant", nil)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:x')`,
+		ids.NewV7(), subject, address); err != nil {
+		t.Fatalf("seeding the subject's address: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO data_subject_request (id, kind, status, subject_ref, contact_id, due_at)
+		VALUES ($1, 'erasure', 'open', $2::text, NULL, now() + interval '30 days')`,
+		ids.NewV7(), subject); err != nil {
+		t.Fatalf("seeding the subject-ref-only request: %v", err)
+	}
+}
+
+// A request that names its subject only by subject_ref — no resolved contact_id
+// — still shields the subject's mail. With contact_id NULL the shield hangs
+// entirely on the guarded subject_ref::uuid arm of underAnOpenRequest, so this
+// is the regression guard for that arm: an index-friendly rewrite of the id
+// comparison must not quietly drop the handle an unresolved case carries.
+func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "anwalt@kanzlei.example"
+	evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+	seedSubjectRefOnlyRequest(t, e, address)
+
+	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+	outcome := runPurge(t, e, e.Rep1, rule, false)
+	if outcome.Skipped != 1 || outcome.Destroyed != 0 {
+		t.Fatalf("skipped=%d destroyed=%d, want 1 and 0 — a request that names its subject only "+
+			"by subject_ref must still shield the subject's mail", outcome.Skipped, outcome.Destroyed)
+	}
+	if body := activityBody(t, e, evidence); body == "" {
+		t.Fatal("mail an open subject-ref-only request is about was destroyed")
+	}
+}
+
 // A message a data-subject request has not finished with survives an owner's
 // purge, and the count says so.
 //

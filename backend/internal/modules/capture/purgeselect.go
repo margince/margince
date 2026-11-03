@@ -84,9 +84,13 @@ func (s PurgeSubject) Total() int {
 // already read both: a case an officer opened by hand may carry only
 // `subject_ref`, and fulfilling an erasure TOMBSTONES that reference on the
 // subject's other cases — so either half alone misses a real open request.
-// The comparison casts the contact id to text rather than the reference to a
-// uuid, because `subject_ref` is free text and a row holding anything else
-// would fail the whole query rather than simply not match.
+// The subject-ref arm casts `subject_ref` to a uuid only behind a canonical-uuid
+// guard: it is free text, and an unguarded cast of a row holding an email or a
+// name would fail the whole query rather than simply not match. The guard keeps
+// that arm identical to the old `contact_id::text = subject_ref` comparison —
+// `contact_id::text` is itself canonical, so only a canonical uuid ever matched —
+// while letting both arms resolve to `contact_id = ANY(...)`, which an index on
+// contact_email(contact_id) serves instead of a per-row scan of the whole table.
 //
 // EVERY ADDRESS THE PURGE CAN MATCH ON, not only the counterparty. A workspace rule
 // reaches a message through a To or Cc line, so a subject who was copied rather than
@@ -110,8 +114,10 @@ const underAnOpenRequest = `EXISTS (
 		                                       WHERE ap.activity_id = a.id
 		                                         AND ap.address IS NOT NULL
 		                                         AND lower(ap.address) = lower(ce.email)))
-		                      AND (ce.contact_id = d.contact_id
-		                           OR ce.contact_id::text = d.subject_ref)))`
+		                      AND ce.contact_id = ANY (ARRAY[
+		                           d.contact_id,
+		                           CASE WHEN d.subject_ref ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+		                                THEN d.subject_ref::uuid END])))`
 
 // SelectPurgeSubjectTx finds what a purge of one exclusion rule would touch,
 // for one seat.
