@@ -229,6 +229,9 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err != nil {
 			return err
 		}
+		if err := syncDealProductsFromOffer(ctx, tx, dealID, current); err != nil {
+			return err
+		}
 
 		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(),
 			acceptedOfferImage(now, dealChanged))

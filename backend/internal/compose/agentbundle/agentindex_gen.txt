@@ -87,6 +87,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/advance` | advanceDeal | Advance a deal to a new stage (audit-logged with prior + next stage). | Change records | may wait for approval |
 | `POST /deals/{id}/progress` | progressDeal | Move a deal to a stage and note why, in one call. | Change records | may wait for approval |
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | Read records | at once |
+| `GET /deals/{id}/products` | listDealProducts | The products a deal sells, with the value allocated to each. | Read records | at once |
+| `PUT /deals/{id}/products` | replaceDealProducts | Set a deal's products by hand, replacing every allocation it had. | Change records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
 | `GET /loss-reasons` | listLossReasons | List the reasons a deal can be lost for, active and retired, in display order. | Read records | at once |

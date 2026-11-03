@@ -1928,6 +1928,48 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: List a deal's stakeholders (deal↔contact relationships).
+  /deals/{id}/products:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealProducts
+      summary: The products a deal sells, with the value allocated to each.
+      description: |-
+        `offer` rows are rewritten from the accepted offer's lines that name a product. One
+        `manual` set replaces every offer-derived row and the next accepted offer leaves it
+        alone. Product bookings and the commercial mix read these allocations.
+      responses:
+        '200':
+          description: The deal's product allocations.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealProductListResponse'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      tags: [Deals]
+      operationId: replaceDealProducts
+      summary: Set a deal's products by hand, replacing every allocation it had.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReplaceDealProductsRequest'}
+      responses:
+        '200':
+          description: The deal's product allocations after the write.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealProductListResponse'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: |-
+        Set a deal's products by hand, replacing every allocation it had.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
   /projects:
     get:
       tags: [Projects]
@@ -4888,6 +4930,27 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
       description: Evaluate reporting
   /analytics/evidence:
     get:
@@ -5005,6 +5068,27 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
         - name: metric
           in: query
           required: true
@@ -14628,6 +14712,40 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
+    DealProduct:
+      type: object
+      required: [product_id, product_name, source, updated_at]
+      properties:
+        product_id: {type: string, format: uuid}
+        product_name: {type: string}
+        source: {type: string, enum: [offer, manual], description: '`offer` is derived from the accepted offer; `manual` was set by hand on the deal.'}
+        amount_minor: {type: [integer, 'null'], format: int64, description: 'The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.'}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'The classification of the product when the allocation was written.'}
+        updated_at: {type: string, format: date-time}
+      additionalProperties: false
+    DealProductListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/DealProduct'}}
+      additionalProperties: false
+    DealProductInput:
+      type: object
+      required: [product_id]
+      properties:
+        product_id: {type: string, format: uuid}
+        amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The value allocated to the product in the currency of the deal. Omit to name the product without an amount.'}
+      additionalProperties: false
+    ReplaceDealProductsRequest:
+      type: object
+      required: [products]
+      properties:
+        products:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/DealProductInput'}
+      additionalProperties: false
     Relationship:
       type: object
       description: |-
@@ -18879,6 +18997,7 @@ components:
         - partner_activity
         - stage_conversion
         - lead_cohort_outcomes
+        - bookings_mix
     ReportingBlockKind:
       type: string
       description: |-
@@ -18944,6 +19063,25 @@ components:
         end_at:
           type: string
           format: date-time
+    ReportingProductId:
+      type: string
+      format: uuid
+      description: >-
+        Narrows deal figures to deals that sell this product (their `deal_product` rows) and lead figures to leads interested in it. Money figures of won deals take the product's allocated value. A reader that cannot honour the product answers `unsupported`.
+    ReportingCountry:
+      type: string
+      pattern: '^[A-Z]{2}$'
+      description: >-
+        Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code.
+    ReportingIndustry:
+      type: string
+      maxLength: 120
+      description: Narrows to records whose company has this industry; a lead with no company keeps its own.
+    ReportingValueBasis:
+      type: string
+      enum: [all, software, implementation]
+      description: >-
+        Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -18986,6 +19124,14 @@ components:
           enum:
             - fiscal_quarter
             - all_open
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         metrics:
           type: array
           items:
@@ -19149,6 +19295,16 @@ components:
             The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        product_label:
+          type: string
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         timezone:
           type: string
         currency:
@@ -22360,6 +22516,7 @@ components:
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.'}
         active: {type: boolean}
@@ -22387,6 +22544,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
@@ -22403,6 +22561,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: string, enum: [software, implementation, other], description: 'What kind of value the product is. Omit to leave it unchanged.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}
