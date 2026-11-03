@@ -404,6 +404,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
+- `deal_product_offer_line_item_idx`: `btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL)`
 - `deal_product_pkey`: `unique, btree (deal_id, product_id)`
 - `deal_product_product_idx`: `btree (product_id)`
 
