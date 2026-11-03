@@ -36,7 +36,7 @@ import (
 // recencyFloor names SQL functions that answer "when did the other side last
 // engage", which the census must find. The census itself is every function a
 // migration names last_activity_of_*, so a new one is checked without joining
-// a list: a new one that skips the exclusion is the defect this gate catches.
+// a list. A new one that skips the exclusion is the defect this gate catches.
 var recencyFloor = []string{
 	"last_activity_of_deal",
 	"last_activity_of_contact",
