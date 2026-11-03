@@ -507,6 +507,27 @@ func (e PublicEventRetentionRestrictedAction) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventSalesInitiativeUpdatedStatus.
+const (
+	Draft PublicEventSalesInitiativeUpdatedStatus = "draft"
+	Ended PublicEventSalesInitiativeUpdatedStatus = "ended"
+	Live  PublicEventSalesInitiativeUpdatedStatus = "live"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventSalesInitiativeUpdatedStatus enum.
+func (e PublicEventSalesInitiativeUpdatedStatus) Valid() bool {
+	switch e {
+	case Draft:
+		return true
+	case Ended:
+		return true
+	case Live:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventTeamChangedChange.
 const (
 	PublicEventTeamChangedChangeArchived      PublicEventTeamChangedChange = "archived"
@@ -655,6 +676,7 @@ const (
 	RetentionApplied                      SubscribableEventType = "retention.applied"
 	RetentionRestricted                   SubscribableEventType = "retention.restricted"
 	RoleChanged                           SubscribableEventType = "role.changed"
+	SalesInitiativeUpdated                SubscribableEventType = "sales_initiative.updated"
 	SignalDetected                        SubscribableEventType = "signal.detected"
 	SignalResolved                        SubscribableEventType = "signal.resolved"
 	SignalUpdated                         SubscribableEventType = "signal.updated"
@@ -918,6 +940,8 @@ func (e SubscribableEventType) Valid() bool {
 	case RetentionRestricted:
 		return true
 	case RoleChanged:
+		return true
+	case SalesInitiativeUpdated:
 		return true
 	case SignalDetected:
 		return true
@@ -2471,6 +2495,17 @@ type PublicEventRoleChanged struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventSalesInitiativeUpdated Payload for sales_initiative.updated. A sales initiative was defined, changed, launched or had its picked and excluded records changed. The entity is the initiative. `changed_fields` names what moved rather than carrying it; the definition and the members stay on the record.
+type PublicEventSalesInitiativeUpdated struct {
+	// ChangedFields Which parts moved, such as definition, status, members.
+	ChangedFields []string                                `json:"changed_fields"`
+	InitiativeId  openapi_types.UUID                      `json:"initiative_id"`
+	Status        PublicEventSalesInitiativeUpdatedStatus `json:"status"`
+}
+
+// PublicEventSalesInitiativeUpdatedStatus defines model for PublicEventSalesInitiativeUpdated.Status.
+type PublicEventSalesInitiativeUpdatedStatus string
+
 // PublicEventSignalDetected Payload for signal.detected. A signal was created (signals/signal.go's CreateSignal). The entity_type and entity_id data fields name the signal's subject (deal | company | contact) when it is known at creation time. They differ from the envelope's own entity ref, which is the signal itself (this event's entity type is the static "signal"). Both are absent on a raw signal (only a raw_ref), which enters unresolved and waits for the resolver. The resolution_confidence field is set only when the signal was created already resolved.
 type PublicEventSignalDetected struct {
 	// SubjectEntityId The subject record's id — a payload data field, absent until a raw signal resolves.
@@ -3322,6 +3357,10 @@ func (PublicEventRoleChanged) EventType() string { return "role.changed" }
 
 func (PublicEventRoleChanged) EntityType() string { return "user" }
 
+func (PublicEventSalesInitiativeUpdated) EventType() string { return "sales_initiative.updated" }
+
+func (PublicEventSalesInitiativeUpdated) EntityType() string { return "sales_initiative" }
+
 func (PublicEventSignalDetected) EventType() string { return "signal.detected" }
 
 func (PublicEventSignalDetected) EntityType() string { return "signal" }
@@ -3552,6 +3591,7 @@ var PublicEventVersions = map[string]int{
 	"retention.applied":                         1,
 	"retention.restricted":                      1,
 	"role.changed":                              1,
+	"sales_initiative.updated":                  1,
 	"signal.detected":                           1,
 	"signal.resolved":                           1,
 	"signal.updated":                            1,
@@ -3700,6 +3740,7 @@ var PublicEventSamples = map[string]string{
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"sales_initiative.updated":                  "{\"changed_fields\":[\"Sample changed fields\"],\"initiative_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"draft\"}",
 	"signal.detected":                           "{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\",\"kind\":\"Sample kind\",\"resolution_confidence\":1.5,\"resolution_state\":\"Sample resolution state\",\"severity\":\"Sample severity\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_channel\":\"Sample source channel\"}",
 	"signal.resolved":                           "{\"match_confidence\":1.5,\"matched_on\":\"Sample matched on\",\"resolution_state\":\"Sample resolution state\",\"resolved_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"resolved_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"signal.updated":                            "{\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"signal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

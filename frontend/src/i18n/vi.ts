@@ -904,7 +904,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.closedOn": "Ngày chốt",
   "reporting.meetingOn": "Ngày họp",
   "reporting.acceptedOn": "Ngày chấp nhận",
-  "reporting.record": "Hồ sơ",
+  "reporting.memberRecord": "Hồ sơ",
   "reporting.dealValue": "Giá trị deal",
   "reporting.createdOn": "Ngày tạo",
   "reporting.movedOn": "Ngày đổi trạng thái",
@@ -1036,6 +1036,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang chờ chụp. Ảnh chụp sẽ hiện ở đây khi sẵn sàng.",
   "reporting.createReport": "Tạo từ Hiệu suất",
   "reporting.newCustomReport": "Báo cáo tùy chỉnh mới",
+  "reporting.previewReport": "Xem trước báo cáo",
+  "reporting.unsavedPreview": "Bản xem trước chưa lưu",
+  "reporting.assessmentCard": "Đánh giá",
+  "reporting.assessmentDeterministic":
+    "Được viết từ các con số mà báo cáo này đọc. Chỉ nêu các con số đã đo.",
+  "reporting.useExample": "Dùng ví dụ",
+  "reporting.exampleQuestion":
+    "Doanh số Margince tại Đức trong quý này: đơn hàng, chuyển đổi lead và pipeline đang mở theo quốc gia.",
+  "reporting.whatToUnderstand": "Bạn muốn hiểu điều gì?",
+  "reporting.customBuilderPurpose":
+    "Một báo cáo: lựa chọn, các biểu đồ theo thứ tự và một câu hỏi tùy chỉnh. Không có gì được lưu cho đến khi bạn lưu bản xem trước.",
+  "reporting.reportingSelection": "Lựa chọn báo cáo",
+  "reporting.includeAssessment": "Bao gồm đánh giá",
+  "reporting.customQuestion": "Câu hỏi tùy chỉnh",
+  "reporting.customQuestionHint":
+    "Một bảng nhóm các deal đang mở theo cùng lựa chọn.",
+  "reporting.measure": "Chỉ số",
+  "reporting.groupBy": "Nhóm theo",
+  "reporting.dealCount": "Số deal đang mở",
+  "reporting.openValueBase": "Giá trị đang mở, đã quy đổi",
+  "reporting.addQuestionCard": "Thêm câu hỏi này",
+  "reporting.askQuestion": "Đặt câu hỏi",
+  "reporting.noPreview":
+    "Không có báo cáo nào đang được xem trước. Hãy bắt đầu một báo cáo trong Báo cáo.",
+  "reporting.backToReports": "Quay lại báo cáo",
   "reporting.stageAmountDeals_one": "{amount} · gồm {count} deal có giá",
   "reporting.stageAmountDeals_other": "{amount} · gồm {count} deal có giá",
   "reporting.stageDeals": "Deal có giá",
@@ -1232,6 +1257,96 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.period": "Khoảng thời gian",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Tất cả pipeline",
+  "reporting.pickDone": "Xong",
+  "analytics.overview.chipInitiative": "Sáng kiến: {name}",
+  "analytics.overview.profileInitiative": "Sáng kiến bán hàng",
+  "reporting.initiative": "Sáng kiến bán hàng",
+  "reporting.allInitiatives": "Tất cả sáng kiến",
+  "reporting.initiativeUnnamed": "Sáng kiến đã chọn",
+  "reporting.initiatives": "Sáng kiến bán hàng",
+  "reporting.initiativesPurpose":
+    "Một sáng kiến thêm mục tiêu, các bản ghi thuộc về và đường cơ sở khi khởi động vào cùng một báo cáo.",
+  "reporting.newInitiative": "Sáng kiến bán hàng mới",
+  "reporting.noInitiatives":
+    "Chưa có sáng kiến bán hàng. Mô tả một nỗ lực và chọn những bản ghi thuộc về nó.",
+  "reporting.initiativeStatus.draft": "Bản nháp",
+  "reporting.initiativeStatus.live": "Đang chạy",
+  "reporting.initiativeStatus.ended": "Đã kết thúc",
+  "reporting.trackingOnly": "Chỉ theo dõi",
+  "reporting.initiativeTarget": "Mục tiêu {target}",
+  "reporting.initiativeSummary": "{objective} · hạn {deadline}",
+  "reporting.initiativeDrawerPurpose":
+    "Đặt mục tiêu trước. Sau đó chọn những bản ghi thuộc về. Không có gì được ghi danh cho đến khi bạn khởi động.",
+  "reporting.initiativeSteps": "Các bước thiết lập",
+  "reporting.stepGoal": "Mục tiêu",
+  "reporting.stepMembers": "Bản ghi thuộc về",
+  "reporting.stepReview": "Xem lại và khởi động",
+  "reporting.initiativeName": "Tên sáng kiến",
+  "reporting.initiativeNamePlaceholder": "Ví dụ: Mở rộng ngành sản xuất Q4",
+  "reporting.objective": "Mục tiêu chính",
+  "reporting.targetValue": "Chỉ tiêu",
+  "reporting.targetHint": "Để trống nếu chỉ theo dõi.",
+  "reporting.deadline": "Hạn",
+  "reporting.nameDoesNotDecide":
+    "Tên không quyết định tư cách thành viên. Bước tiếp theo xác định quy tắc hoặc các bản ghi thuộc về.",
+  "reporting.chooseIncludedRecords": "Chọn bản ghi thuộc về",
+  "reporting.backToGoal": "Quay lại mục tiêu",
+  "reporting.reviewIncludedRecords": "Xem lại bản ghi thuộc về",
+  "reporting.saveMembership": "Lưu thành viên",
+  "reporting.backToIncludedRecords": "Quay lại bản ghi thuộc về",
+  "reporting.launchInitiative": "Khởi động sáng kiến bán hàng",
+  "reporting.membersPurpose":
+    "Đưa vào các bản ghi khớp mọi điều kiện đã chọn, hoặc chọn thủ công. Danh sách bên dưới cho thấy những gì thuộc về.",
+  "reporting.anyProduct": "Sản phẩm bất kỳ",
+  "reporting.anyIndustry": "Ngành bất kỳ",
+  "reporting.anyCountry": "Quốc gia bất kỳ",
+  "reporting.ruleAnd": "Mọi điều kiện đã chọn áp dụng cùng lúc.",
+  "reporting.noConditions":
+    "Chưa chọn điều kiện nào. Chỉ các bản ghi chọn thủ công thuộc về.",
+  "reporting.includeFuture": "Bản ghi khớp trong tương lai tự động tham gia",
+  "reporting.pickDeals": "Chọn deal",
+  "reporting.pickLeads": "Chọn lead",
+  "reporting.removePick": "Bỏ {name}",
+  "reporting.nonePicked": "Chưa chọn",
+  "reporting.addRecord": "Thêm",
+  "reporting.searchRecords": "Tìm bản ghi",
+  "reporting.noMatchingRecords": "Không có bản ghi khớp",
+  "reporting.pickExplains":
+    "Chọn một deal không ghi danh mọi liên hệ ở công ty đó. Lead giữ nguyên lịch sử chuyển đổi.",
+  "reporting.memberCounts":
+    "{leads} lead · {deals} deal · {companies} công ty liên quan",
+  "reporting.membersTruncated":
+    "Quy tắc khớp nhiều bản ghi hơn một lần đọc liệt kê.",
+  "reporting.membersPending": "Đang đọc các bản ghi khớp.",
+  "reporting.saveGoalFirst": "Lưu mục tiêu để xem các bản ghi khớp.",
+  "reporting.include": "Đưa vào",
+  "reporting.includeRecord": "Đưa {name} vào",
+  "reporting.record": "Bản ghi",
+  "reporting.recordType.lead": "Lead",
+  "reporting.recordType.deal": "Deal",
+  "reporting.whyIncluded": "Vì sao thuộc về",
+  "reporting.memberReason.rule": "Khớp quy tắc",
+  "reporting.memberReason.picked": "Chọn thủ công",
+  "reporting.memberReason.carried": "Chuyển từ lead thành viên",
+  "reporting.memberReason.excluded": "Đã loại trừ",
+  "reporting.trackingOnlyVerdict": "Chỉ theo dõi · không đánh giá chỉ tiêu",
+  "reporting.targetBy": "{target} trước {deadline}",
+  "reporting.knownDealValue": "{value} giá trị deal đã biết, mọi trạng thái",
+  "reporting.baselineNote":
+    "Các deal có sẵn khi khởi động trở thành đường cơ sở. Ghi danh chúng không biến chúng thành pipeline mới tạo.",
+  "reporting.futureJoins": "Bản ghi mới khớp quy tắc sẽ tự động tham gia.",
+  "reporting.futureStays":
+    "Thành viên được chọn rõ ràng. Deal chuyển từ lead thành viên vẫn được mang theo.",
+  "reporting.reviewAfterLaunch": "Sau khi khởi động, tổng quan mở ra cho",
+  "reporting.includedRecords": "Bản ghi thuộc về",
+  "reporting.initiativeSince":
+    "Kể từ khi khởi động ngày {launch} · hạn {deadline}",
+  "reporting.initiativeDraftNotice":
+    "Sáng kiến này là bản nháp. Khởi động nó trong Báo cáo để đóng băng đường cơ sở.",
+  "reporting.objectiveOfTarget": "{value} trên {target}",
+  "reporting.objectiveProgress": "{share} của mục tiêu",
+  "reporting.noTargetForSlice":
+    "Không có chỉ tiêu cho lát cắt này. Kết quả vẫn hiển thị; không so sánh mức đạt.",
   "reporting.product": "Sản phẩm",
   "reporting.allProducts": "Tất cả sản phẩm",
   "reporting.productUnnamed": "Sản phẩm đã chọn",
@@ -1244,8 +1359,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.software": "Chỉ phần mềm",
   "reporting.basis.implementation": "Chỉ triển khai",
   "reporting.productReports": "Doanh số sản phẩm",
-  "reporting.productReportsPurpose": "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
-  "reporting.noProducts": "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
+  "reporting.productReportsPurpose":
+    "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
+  "reporting.noProducts":
+    "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at}",
   "reporting.periodNotStarted":
     "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
@@ -5125,6 +5242,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Đang tải các yếu tố tính điểm…",
   "lead.scoreNoFactors": "Chưa có yếu tố nào được tính vào điểm này.",
   "lead.scoreSources": "{count} hoạt động",
+  "lead.scoreSourcesHead": "Hoạt động phía sau yếu tố này",
+  "lead.scoreSourceNoSubject": "Không có tiêu đề",
   "lead.factor.decision_maker_title": "Chức danh có quyền quyết định",
   "lead.factor.reply": "Lead đã trả lời",
   "lead.factor.meeting_held": "Đã họp",
@@ -7081,6 +7200,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo vì lead này đã gửi thư hoặc đặt lịch hẹn. Một câu trả lời không tự chuyển đổi ai: hãy xác nhận lead đủ điều kiện khi họ sẵn sàng.",
   "tasks.origin.assurance":
     "Bước kiểm tra dự báo hằng đêm đã tạo việc này: dữ liệu đầu vào của deal này cần xem lại. Trang deal liệt kê các dữ liệu đó.",
+  "tasks.origin.analytics_decision":
+    "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
     "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất và đã được duyệt.",
   "tasks.origin.commitment":
@@ -11388,6 +11509,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "client.attribution":
     "Mọi lần thu thập đều ghi rõ ai thu thập và có thể kiểm tra lại.",
 
+  "book.pageTitle": "Đặt lịch họp với {host}",
+  "book.pageTitleGeneric": "Đặt lịch họp",
+  "book.meetingTitle": "Cuộc họp của quý khách",
   "book.attendee": "Email người tham dự",
   "book.subject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
@@ -12653,7 +12777,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.candidate.applyHint":
     "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, giữ giọng văn hiện tại và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.firstHint":
-    "Nếu bản này đúng văn phong của bạn, hãy dùng. Nếu không, hãy bỏ bản này và thêm văn mẫu; bản dựng tiếp theo sẽ học từ đó.",
+    "Nếu bản này đúng văn phong của bạn, hãy dùng. Thiết lập hoàn tất khi bạn dùng một phiên bản. Nếu không, hãy bỏ bản này, thêm văn mẫu và dựng lại; bản dựng tiếp theo sẽ học từ đó.",
   "voice.candidate.reason.uncomparable":
     "Không thể so sánh hồ sơ giọng văn trước đó. Hãy kiểm tra phiên bản này trước khi thay thế.",
   "voice.candidate.reason.identity":
@@ -12875,6 +12999,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.report_schedule": "Lịch chạy báo cáo",
   "roles.object.report_edition": "Ảnh chụp báo cáo",
   "roles.object.sales_target": "Mục tiêu doanh số",
+  "roles.object.sales_initiative": "Sáng kiến bán hàng",
   "roles.object.reporting_framework": "Thiết lập báo cáo",
   "roles.object.reporting_credit": "Kết quả SDR",
   "roles.object.capture_settings": "Quy tắc thu thập",
@@ -14092,7 +14217,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
-  "setup.caption.voice": "Cần 800 từ do bạn viết.",
+  "setup.caption.voice": "Cần thêm khoảng {n} từ do bạn viết.",
+  "setup.caption.voiceSamples": "Cần văn mẫu do chính bạn viết.",
+  "setup.caption.voiceReview":
+    "Giọng văn của bạn đã được huấn luyện và chờ bạn xem lại.",
+  "setup.caption.voiceBuilding":
+    "Đang dựng giọng văn. Việc này vẫn tiếp tục khi bạn rời trang.",
+  "setup.caption.voiceDeferred": "Bản dựng giọng văn đang chờ chạy.",
+  "setup.caption.voiceFailed": "Lần dựng gần nhất chưa hoàn tất.",
+  "setup.caption.voiceReady": "Văn mẫu của bạn đã đủ để dựng.",
+  "setup.caption.voiceUnknown": "Không kiểm tra được giọng văn của bạn.",
+  "setup.action.voiceReview": "Xem lại giọng văn",
+  "setup.action.voiceProgress": "Xem tiến độ",
+  "setup.action.voiceRetry": "Thử lại",
+  "setup.action.voiceBuild": "Dựng giọng văn",
+  "setup.action.voiceOpen": "Mở giọng văn",
   "setup.caption.booking": "Khách hàng đặt giờ rảnh của bạn.",
   "setup.caption.bookingNeedsCalendar": "Cần có lịch.",
   "setup.reminder.progress": "Tiến độ thiết lập",
@@ -15396,6 +15535,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã nhờ hỗ trợ một cam kết",
   "webhooks.event.weekly_plan.help_requested.when":
     "Nhân viên kinh doanh nhờ trưởng nhóm hỗ trợ một cam kết.",
+  "webhooks.event.sales_initiative.updated.label":
+    "Sáng kiến bán hàng đã thay đổi",
+  "webhooks.event.sales_initiative.updated.when":
+    "Một sáng kiến bán hàng được tạo, chỉnh sửa, khởi động hoặc thay đổi các bản ghi được đưa vào.",
   "webhooks.eventGroup.notices_notifications": "Thông điệp và thông báo",
   "webhooks.event.notice.created.label": "Đã ghi nhận thông điệp",
   "webhooks.event.notice.created.when":
@@ -16042,12 +16185,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.lastRecordedExchange":
     "từ lần trao đổi gần nhất được ghi nhận với liên hệ này",
   "contact.standing.lastInbound": "Tin nhắn đến gần nhất",
+  "contact.standing.noneAccessible": "Không có tin nhắn bạn mở được",
   "contact.standing.direction.twoWay": "Cả hai bên đều đã viết.",
   "contact.standing.direction.inboundOnly":
-    "Đến nay chỉ có họ viết. Nhóm của bạn chưa gửi gì.",
+    "Trong các tin nhắn bạn mở được, chỉ có họ viết. Không có tin nhắn nào từ nhóm của bạn.",
   "contact.standing.direction.outboundOnly":
-    "Chỉ ghi nhận tin nhắn gửi đi từ nhóm của bạn. Chưa ghi nhận trả lời.",
-  "contact.standing.direction.none": "Chưa có tin nhắn theo chiều nào.",
+    "Trong các tin nhắn bạn mở được, chỉ nhóm của bạn đã viết. Chưa có trả lời.",
+  "contact.standing.direction.none":
+    "Không có tin nhắn nào trong dữ liệu bạn mở được.",
   "contact.subtitle.at": "tại",
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
@@ -16406,7 +16551,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.amount": "Số tiền quy đổi",
   "filters.field.city": "Thành phố",
   "filters.field.classification": "Phân loại",
+  "filters.field.company_country": "Quốc gia của công ty",
   "filters.field.company_industry": "Ngành của công ty",
+  "filters.field.product_id": "Sản phẩm",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
   "filters.field.company_size_band": "Số nhân viên",
   "filters.field.country": "Mã quốc gia",
@@ -16492,6 +16639,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Với bộ lọc, không hồ sơ nào mang thẻ trong kho lưu trữ.",
   "filters.sentence.ref.project_one": "{count} dự án",
   "filters.sentence.ref.project_other": "{count} dự án",
+  "filters.sentence.ref.product_one": "{count} sản phẩm",
+  "filters.sentence.ref.product_other": "{count} sản phẩm",
   "filters.tab.leads": "Lead",
   "filters.matchLeads_one": "{count} lead khớp",
   "filters.matchLeads_other": "{count} lead khớp",
@@ -17210,6 +17359,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.lastFromCompany": "Lần cuối nhận từ công ty",
   "worklist.pane.lastToCompany": "Lần cuối gửi cho công ty",
   "worklist.pane.never": "Chưa có",
+  "worklist.pane.noneAccessible": "Không có tin nhắn bạn mở được",
   "worklist.pane.company": "Công ty",
   "worklist.pane.role": "Vai trò",
   "worklist.why.title": "Vì sao việc này cần chú ý",
@@ -18458,6 +18608,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Tạo một liên kết để chia sẻ trang cho khách chọn giờ.",
   "scheduling.replaceAddress": "Thay địa chỉ",
+  "scheduling.alias.label": "Địa chỉ ngắn",
+  "scheduling.alias.help":
+    "Không bắt buộc. Địa chỉ ngắn như /book/alex dễ chia sẻ và cũng dễ đoán. Ai đoán được sẽ thấy trang đặt lịch và các giờ trống của bạn. Địa chỉ dài của bạn vẫn hoạt động.",
+  "scheduling.alias.preview": "Liên kết của bạn sẽ kết thúc bằng {path}",
+  "scheduling.alias.save": "Lưu địa chỉ",
+  "scheduling.alias.clear": "Gỡ địa chỉ ngắn",
+  "scheduling.alias.changeTitle": "Đổi địa chỉ ngắn?",
+  "scheduling.alias.clearTitle": "Gỡ địa chỉ ngắn?",
+  "scheduling.alias.changeHelp":
+    "{old} sẽ ngừng hoạt động ngay. Khách có địa chỉ này sẽ thấy trang không còn khả dụng. Không ai khác có thể lấy địa chỉ này, và bạn có thể lấy lại bất cứ lúc nào.",
+  "scheduling.alias.error.too_short": "Dùng ít nhất 3 ký tự.",
+  "scheduling.alias.error.too_long": "Dùng tối đa 30 ký tự.",
+  "scheduling.alias.error.invalid":
+    "Dùng chữ cái, chữ số và dấu gạch ngang. Bắt đầu và kết thúc bằng chữ cái hoặc chữ số.",
+  "scheduling.alias.error.reserved":
+    "Địa chỉ này đã được dành riêng. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.taken":
+    "Một trang đặt lịch khác đang hoặc đã từng dùng địa chỉ này. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.no_booking_link": "Hãy tạo liên kết đặt lịch trước.",
+  "scheduling.replaceAliasHelp":
+    "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
@@ -19239,6 +19410,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
   "analytics.hero.noPrior": "Chưa có kỳ trước để so sánh.",
   "analytics.overview.more": "Thêm",
+  "analytics.decisions.title": "Quyết định từ lần xem xét trước",
+  "analytics.decisions.purpose":
+    "Mỗi quyết định là một việc cần làm trên deal, do một thành viên chịu trách nhiệm, với ngày xem lại. Hoàn thành ghi nhận công việc, không phải một deal đã thắng.",
+  "analytics.decisions.record": "Ghi quyết định",
+  "analytics.decisions.review": "Xem lại các quyết định",
+  "analytics.decisions.none": "Chưa ghi quyết định nào.",
+  "analytics.decisions.decision": "Quyết định",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Chịu trách nhiệm",
+  "analytics.decisions.reviewOn": "Xem lại vào",
+  "analytics.decisions.status": "Trạng thái",
+  "analytics.decisions.done": "Đã xong",
+  "analytics.decisions.open": "Đang mở",
+  "analytics.decisions.recordOutcome": "Ghi kết quả",
+  "analytics.decisions.resultLine": "Kết quả: {result}",
+  "analytics.decisions.chooseDeal": "Chọn deal",
+  "analytics.decisions.chooseOwner": "Chọn thành viên chịu trách nhiệm",
+  "analytics.decisions.expected": "Kết quả mong đợi",
+  "analytics.decisions.recordNote":
+    "Ghi lại cùng một quyết định đang mở trên cùng deal sẽ trả về việc cần làm đó.",
+  "analytics.decisions.confirm": "Ghi lại",
+  "analytics.decisions.whatWasDone": "Công việc nào đã hoàn thành?",
+  "analytics.decisions.outcomeNote":
+    "Hoàn thành công việc không làm deal đủ điều kiện hay thắng.",
+  "analytics.decisions.saveOutcome": "Lưu kết quả",
   "analytics.overview.filtersToggle": "Bộ lọc",
   "analytics.overview.chipPipeline": "Pipeline đang chọn: {name}",
   "analytics.overview.chipClose": "Chốt: {window}",

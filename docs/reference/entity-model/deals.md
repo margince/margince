@@ -72,7 +72,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-46 columns · primary key `(id)` · referenced by 28 foreign keys
+46 columns · primary key `(id)` · referenced by 29 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -140,6 +140,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `deal_amount_minor_base_js_safe`: `CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))`
 - `deal_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `deal_closed_at`: `CHECK (((status = 'open') OR (closed_at IS NOT NULL)))`
 - `deal_closed_fx`: `CHECK (((status = 'open') OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))`
@@ -404,6 +405,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Indexes**
 
+- `deal_product_offer_line_item_idx`: `btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL)`
 - `deal_product_pkey`: `unique, btree (deal_id, product_id)`
 - `deal_product_product_idx`: `btree (product_id)`
 

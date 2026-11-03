@@ -31,7 +31,6 @@ reach features/automations/automations.recipe.ts features/settings/audit.tsx
 reach features/automations/connected-agents.test.tsx features/settings/settings.tsx
 reach features/automations/connected-agents.tsx features/settings/settings-agents.css
 reach features/automations/extension-access.tsx features/settings/grantmatrix.tsx
-reach features/booking/booking-common.tsx features/deals/buyerroomframe.tsx
 reach features/booking/booking-invite.test.tsx features/mail/compose.tsx
 reach features/booking/booking-meeting.tsx features/brief/meetingbrief/drawer.tsx
 reach features/booking/booking-preview.test.tsx app/queryclient.ts

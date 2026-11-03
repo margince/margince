@@ -145,7 +145,7 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db), initiatives: newInitiativeStore(pool)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
 		WithBaseLanguage(identity.BaseLanguageForRecord).
 		WithReaderLanguage(identity.ReaderLanguageForRecord).
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})

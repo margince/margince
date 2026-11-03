@@ -23,12 +23,12 @@ import (
 // meetingWithQuery picks, per meeting, the first outside participant by name.
 // Outside means no seat, no colleague and no employee of the own company.
 // By name, because participant rows carry no reliable order of their own.
-const meetingWithQuery = `
+var meetingWithQuery = `
 	SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.contact_id
 	  FROM activity_participant ap
 	  JOIN activity a ON a.id = ap.activity_id AND a.kind = 'meeting' AND ` + activityLive + ` AND %s
 	  JOIN contact c ON c.id = ap.contact_id AND c.archived_at IS NULL
-	 WHERE ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND %s
+	 WHERE ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND NOT ` + calendarResourceParticipantSQL(scopeUnbounded) + ` AND %s
 	   AND NOT %s
 	   AND NOT EXISTS (
 	       SELECT 1 FROM relationship emp
@@ -160,23 +160,19 @@ func colleagueParticipantSQL(provedIdentities, contactScope string) string {
 		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.LiveMemberSQL("u"), seatAddress, ownContact, seatContact, contactScope)
 }
 
-// outsidePartySQL holds when meeting a may have somebody from outside on it.
-// A meeting with no address on any participant row has no roster to judge,
-// and keeps its place. Otherwise a participant counts as outside unless it is
-// a seat, a colleague, or employed at the own company as this reader may see.
-// Evidence the reader may not read counts as unknown, so the guest is outside.
-const outsidePartySQL = `(NOT EXISTS (SELECT 1 FROM activity_participant roster
-	                   WHERE roster.activity_id = a.id AND roster.address IS NOT NULL)
-	OR EXISTS (
-	       SELECT 1 FROM activity_participant ap
-	        WHERE ap.activity_id = a.id AND ap.user_id IS NULL
-	          AND NOT %s
-	          AND NOT EXISTS (
-	              SELECT 1 FROM relationship emp
-	                JOIN company co ON co.id = emp.company_id AND co.is_anchor AND co.archived_at IS NULL AND %s
-	                JOIN contact cs ON cs.id = emp.contact_id AND %s
-	               WHERE emp.contact_id = ap.contact_id AND emp.kind = 'employment' AND emp.archived_at IS NULL
-	                 AND %s AND %s)))`
+// Unknown guests keep a meeting in the customer lane; known resources cannot establish an outside party.
+// Contact evidence is scoped to the reader.
+var outsidePartySQL = `((NOT EXISTS (SELECT 1 FROM activity_participant roster
+     WHERE roster.activity_id = a.id AND roster.address IS NOT NULL)
+ AND NOT EXISTS (SELECT 1 FROM activity_participant ap
+     WHERE ap.activity_id = a.id AND %[1]s))
+ OR EXISTS (SELECT 1 FROM activity_participant ap
+     WHERE ap.activity_id = a.id AND ap.user_id IS NULL AND NOT %[1]s AND NOT %[2]s
+       AND NOT EXISTS (SELECT 1 FROM relationship emp
+           JOIN company co ON co.id = emp.company_id AND co.is_anchor AND co.archived_at IS NULL AND %[3]s
+           JOIN contact cs ON cs.id = emp.contact_id AND %[4]s
+          WHERE emp.contact_id = ap.contact_id AND emp.kind = 'employment' AND emp.archived_at IS NULL
+            AND %[5]s AND %[6]s)))`
 
 // outsidePartyClause renders outsidePartySQL for this reader, inside the
 // transaction that reads the seats' proved mailboxes.
@@ -194,7 +190,7 @@ func outsidePartyClause(ctx context.Context, tx pgx.Tx) func(arg func(any) int) 
 		if err != nil {
 			return "", err
 		}
-		return storekit.SQLf(outsidePartySQL, colleagueParticipantSQL(proved, contactScope),
+		return storekit.SQLf(outsidePartySQL, calendarResourceParticipantSQL(contactScope), colleagueParticipantSQL(proved, contactScope),
 			companyScope, contactScope, employment.IsCurrentSQL("emp.ended_at"), edgeScope), nil
 	}
 }

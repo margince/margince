@@ -24,7 +24,7 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 		filters = append(filters, "pipeline", "close_window")
 	}
 	if slices.Contains(reportingDimensionMetrics, out.Id) {
-		filters = append(filters, "product", "country", "industry")
+		filters = append(filters, "product", "initiative", "country", "industry")
 	}
 	if slices.Contains(reportingValueBasisMetrics, out.Id) {
 		filters = append(filters, "value_basis")

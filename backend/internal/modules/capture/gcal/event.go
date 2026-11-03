@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -89,11 +91,6 @@ type eventActor struct {
 	ResponseStatus string `json:"responseStatus"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
 
-// roomResourceDomain is where Google Calendar homes every booked room and
-// device. An event stored before the resource flag was read carries the address
-// alone, so the domain is recognised as well as the flag.
-const roomResourceDomain = "resource.calendar.google.com"
-
 // isRoom reports whether this attendee is a booked room or device rather than a
 // contact. A room is not a party to a meeting: it cannot be a counterparty, it
 // cannot be answered, and — the case that matters — it is on no workspace's own
@@ -104,7 +101,7 @@ func (a eventActor) isRoom() bool {
 		return true
 	}
 	dom := domainOf(a.Email)
-	return dom == roomResourceDomain || strings.HasSuffix(dom, "."+roomResourceDomain)
+	return values.IsCalendarResourceDomain(owndomain.Fold(dom))
 }
 
 // decodeEvent reads one raw Calendar event resource into the neutral shape —

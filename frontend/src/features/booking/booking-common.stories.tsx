@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { UTC_ZONE } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
-import { BookingFooter, BookingZone } from "./booking-common";
+import { BookingZone } from "./booking-common";
 import "./book.css";
 
 const meta: Meta = {
@@ -14,7 +14,6 @@ export const Light: StoryObj = {
     <StoryProviders>
       <div className="book-guest-page">
         <BookingZone value={UTC_ZONE} onChange={() => {}} />
-        <BookingFooter />
       </div>
     </StoryProviders>
   ),

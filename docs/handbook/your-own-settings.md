@@ -2,12 +2,8 @@
 <!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go -->
 # Your own settings
 
-Your own settings in Margince are the pages under **You** in Settings:
-**Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
-**Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
-Capture activity also carries one card that holds for the whole company: the
-company's rules for what capture keeps out, beside your own. Connections only shows the company's
-email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
+Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
+Capture activity also carries one card that holds for the whole company: the company's rules for what capture keeps out, beside your own. Connections only shows the company's email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 
@@ -22,6 +18,8 @@ To see what is left of your setup in Margince, open Settings and look at **Your 
 It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
 While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
 Also called: setup list, getting started, onboarding steps.
+
+The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
 ### How do I save a change on a settings page?
 To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
