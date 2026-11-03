@@ -627,6 +627,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `uploadauthorder_test.go` | H1 | An upload route refuses an unauthorized caller before it reads the body. |
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
+| `withclockresult_test.go` | H2 | A WithClock method returns a copy, and no caller discards what it returns. |
 | `workflowhandler_test.go` | H2 | A workflow.Handler's Match is a pure predicate and its Plan computes the typed Effect without applying it, which is what makes dry-run and diff preview possible. |
 
 ## Claim

@@ -222,7 +222,7 @@ func TestTheLanguageLadderTakesTheFirstTierThatKnows(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			resolver := draftfloor.NewResolver().
-				WithClock(func() time.Time { return time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC) })
+				SetClock(func() time.Time { return time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC) })
 			if tc.base != "" {
 				resolver = resolver.WithBaseLanguage(func(context.Context) string { return tc.base })
 			}
@@ -240,7 +240,7 @@ func TestTheLanguageLadderTakesTheFirstTierThatKnows(t *testing.T) {
 func TestTheRegisterFollowsTheResolvedLanguage(t *testing.T) {
 	t.Parallel()
 	resolver := draftfloor.NewResolver().
-		WithClock(func() time.Time { return time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC) }).
+		SetClock(func() time.Time { return time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC) }).
 		WithBaseLanguage(func(context.Context) string { return "de" })
 
 	// A German body: the envelope is German and carries a register.

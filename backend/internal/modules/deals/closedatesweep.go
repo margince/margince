@@ -46,10 +46,8 @@ type CloseDateCorrector struct {
 	policy   CorrectionPolicy
 	reviewer QuietReviewReader
 	log      *slog.Logger
-	// now is the corrector's clock. WithClock overrides it, and a test that
-	// asks what TOMORROW's pass does has no other way to get there: the
-	// proposed date is computed from "today", so two passes in one process
-	// otherwise always run on the same day.
+	// now is the corrector's clock, and SetClock overrides it. The proposed
+	// date is computed from "today", so only this lets a test run TOMORROW's pass.
 	now func() time.Time
 	// installation answers which zone this sweep computes its dates in. A
 	// close date is a DATE, so the zone decides which day a deal is late on.
@@ -68,21 +66,11 @@ func NewCloseDateCorrector(db *database.DB, policy CorrectionPolicy, reviewer Qu
 	}
 }
 
-// WithClock overrides the "today" this sweep computes its dates against
-// (tests only). Returns the corrector for chaining, like every other clock
-// seam in this module.
-//
-// Without it no test can state what the sweep does on a SECOND night, because
-// every pass in one process reads the same wall clock — and "the same question
-// tomorrow" is the whole of what the rejection memory promises.
-//
-// It moves the ASSESSMENT's today and not the candidate query's, which reads the
-// database clock. The two only have to agree to within the pre-filter's slack:
-// that query is a deliberate superset — anything dated within the stalled window
-// (60 days ahead), missing, or still provisional — so a clock ahead of the
-// database's by less than that window changes which deals are FLAGGED and never
-// which are looked at. A test crossing a day or two is well inside it.
-func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
+// SetClock overrides the "today" the sweep's assessment uses and returns the
+// corrector. The candidate query keeps the database clock. Its window reaches
+// 60 days ahead, so a test clock a day or two ahead changes which deals are
+// flagged, never which are looked at.
+func (c *CloseDateCorrector) SetClock(clock func() time.Time) *CloseDateCorrector {
 	c.now = clock
 	return c
 }
