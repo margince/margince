@@ -46,6 +46,7 @@ func TestUnassignedDecisionFloodCannotConsumeAPersonalDecisionPage(t *testing.T)
 	}
 }
 
+// gatekit:fixture the label each scope prints in a failure message
 var scopeNames = map[TaskScope]string{
 	TasksMine: "mine", TasksOwnedBy: "named member", TasksVisible: "visible", TasksUnassigned: "unassigned",
 }
