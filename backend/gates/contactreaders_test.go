@@ -126,6 +126,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/mergeprimaryrepair.go:restoreMergeDroppedPrimary":  "the merge-dropped-primary data task re-reads one contact under its employment lock as the system principal, after ReconcileMergeDroppedPrimariesTx asked contact update. Only the heir edge id and version leave the read, for the audited promotion",
 	"internal/modules/contacts/signatureorphanphones.go:retractUnsupportedPhones": "the system-only signature repair locks contacts before their phone rows, matching the signature writer's lock order. No contact fields leave the repair; its output is an audited count",
 
 	"internal/modules/contacts/mergecompanyedges.go:primaryEmployersOf":         "the company merge lists the live contacts whose current employer it is about to change, under the merge's own write grant, so it can file their same-employer twins. Only contact ids stay inside the merge transaction and go to the duplicate re-check; no contact row reaches a caller",

@@ -88,7 +88,7 @@ func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
 	}
 	owner := ids.From[ids.UserKind](e.Rep1)
 	amount, currency, closes := int64(90000000), "EUR", today.AddDate(0, 0, 3)
-	row, err := e.Deals.WithClock(clock).CreateDeal(ctx, deals.CreateDealInput{
+	row, err := e.Deals.SetClock(clock).CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Briefed past the sweep", PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &closes, Source: "manual",
 	})

@@ -163,7 +163,7 @@ func coverageDeal(writer context.Context, t *testing.T, e *forecastEnv, source *
 	}
 	won := e.seedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, 'Won', 10, 'won', 100)`, e.pipeline)
 	reason := "imported"
-	if _, err := store.WithClock(closedAt).AdvanceDeal(writer, ids.From[ids.DealKind](ids.UUID(created.Id)), deals.AdvanceDealInput{
+	if _, err := store.SetClock(closedAt).AdvanceDeal(writer, ids.From[ids.DealKind](ids.UUID(created.Id)), deals.AdvanceDealInput{
 		ToStageID: ids.From[ids.StageKind](won), WonWithoutContractReason: &reason,
 	}); err != nil {
 		t.Fatal(err)

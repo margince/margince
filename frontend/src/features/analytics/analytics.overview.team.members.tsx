@@ -3,6 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { Disclosure } from "../../design-system/disclosure";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { forReader } from "../../format/collate";
 import { formatDuration, formatNumber } from "../../format/format";
@@ -32,9 +33,16 @@ function countColumn(
     align: "end",
     render: (row) => {
       const figure = value(row);
-      return figure == null ? "" : formatNumber(figure, locale);
+      return figure == null ? "—" : formatNumber(figure, locale);
     },
   };
+}
+
+function eventQualifications(review: Review): boolean {
+  return (
+    review.qualification_basis === "first_qualification" ||
+    review.members.some((member) => member.qualified_events != null)
+  );
 }
 
 function qualificationColumns(
@@ -46,17 +54,51 @@ function qualificationColumns(
   const qualified = leads || figureWithheld(review, "qualified");
   const unanswered = leads || figureWithheld(review, "unanswered");
   const meetings = figureWithheld(review, "meetings");
-  const targets = review.member_targets;
+  const events = eventQualifications(review);
+  const targets =
+    qualified || figureWithheld(review, "targets")
+      ? undefined
+      : events
+        ? review.member_event_targets
+        : review.member_targets;
+  const legacy =
+    events &&
+    !qualified &&
+    !figureWithheld(review, "targets") &&
+    review.member_targets &&
+    review.members.some((row) => row.target != null);
+  const targetText = (row: Member, arrival = false) => {
+    const target = arrival || !events ? row.target : row.event_target;
+    if (!target) return t("analytics.team.noTarget");
+    const text = t("analytics.team.targetOf", {
+      actual: formatNumber(target.actual, locale),
+      target: formatNumber(target.value, locale),
+    });
+    return !arrival &&
+      events &&
+      (review.qualification_target_unattributed ?? 0) > 0
+      ? t("analytics.team.atLeast", { value: text })
+      : text;
+  };
   return [
     ...(qualified
       ? []
       : [
-          countColumn(
-            "qualified",
-            t("analytics.team.qualified"),
-            (row) => row.qualified,
-            locale,
-          ),
+          {
+            key: "qualified",
+            header: events
+              ? t("analytics.team.qualified")
+              : t("analytics.team.arrivalQualified"),
+            align: "end" as const,
+            render: (row: Member) => {
+              const value = events ? row.qualified_events : row.qualified;
+              if (value == null) return t("analytics.readingUnavailable");
+              const count = formatNumber(value, locale);
+              return events && (review.qualification_unattributed ?? 0) > 0
+                ? t("analytics.team.atLeast", { value: count })
+                : count;
+            },
+          },
         ]),
     ...(meetings
       ? []
@@ -84,13 +126,17 @@ function qualificationColumns(
             key: "target",
             header: t("analytics.team.target"),
             align: "end" as const,
-            render: (row: Member) =>
-              row.target
-                ? t("analytics.team.targetOf", {
-                    actual: formatNumber(row.target.actual, locale),
-                    target: formatNumber(row.target.value, locale),
-                  })
-                : t("analytics.team.noTarget"),
+            render: (row: Member) => targetText(row),
+          },
+        ]
+      : []),
+    ...(legacy
+      ? [
+          {
+            key: "arrivalTarget",
+            header: t("analytics.team.arrivalTarget"),
+            align: "end" as const,
+            render: (row: Member) => targetText(row, true),
           },
         ]
       : []),
@@ -170,35 +216,55 @@ function memberNotes(
   const qualification = review.workflow === "qualification";
   const leads = figureWithheld(review, "leads");
   const handoffs = figureWithheld(review, "handoffs");
+  const targets = review.member_event_targets ?? review.member_targets;
   const notes = [
-    qualification && !leads && t("analytics.team.qualificationBasis"),
+    qualification &&
+      !leads &&
+      t(
+        eventQualifications(review)
+          ? "analytics.team.eventCredit"
+          : "analytics.team.qualificationBasis",
+      ),
     !qualification && !handoffs && t("analytics.team.handoffBasis"),
-    review.member_targets &&
+    targets &&
       t("analytics.team.targetBasis", {
-        month: reportingPeriodLabel(review.member_targets.window, zone, locale),
+        month: reportingPeriodLabel(targets.window, zone, locale),
       }),
-    figureWithheld(review, "meetings") && t("analytics.team.meetingsHidden"),
     !figureWithheld(review, "meetings") && t("analytics.team.rowsOverlap"),
-    qualification && leads && t("analytics.team.leadsHidden"),
-    qualification &&
-      !leads &&
-      figureWithheld(review, "qualified") &&
-      t("analytics.team.qualifiedHidden"),
-    qualification &&
-      !leads &&
-      figureWithheld(review, "unanswered") &&
-      t("analytics.team.unansweredHidden"),
-    !qualification && handoffs && t("analytics.team.handoffsHidden"),
-    qualification &&
-      !leads &&
-      figureWithheld(review, "targets") &&
-      t("analytics.team.targetsHidden"),
     t("analytics.team.rowsNotTeam"),
     review.membership_basis === "current" && t("analytics.team.todaysMembers"),
     t("analytics.team.notARanking"),
     review.members_truncated && t("analytics.team.truncated"),
   ];
   return notes.filter((note): note is string => typeof note === "string");
+}
+
+function MemberVisibility({ review }: Readonly<{ review: Review }>) {
+  const t = useT();
+  return (
+    <>
+      {[
+        figureWithheld(review, "meetings") &&
+          t("analytics.team.meetingsHidden"),
+        figureWithheld(review, "leads") && t("analytics.team.leadsHidden"),
+        !figureWithheld(review, "leads") &&
+          figureWithheld(review, "qualified") &&
+          t("analytics.team.qualifiedHidden"),
+        !figureWithheld(review, "leads") &&
+          figureWithheld(review, "unanswered") &&
+          t("analytics.team.unansweredHidden"),
+        figureWithheld(review, "targets") && t("analytics.team.targetsHidden"),
+        figureWithheld(review, "handoffs") &&
+          t("analytics.team.handoffsHidden"),
+      ]
+        .filter((note): note is string => typeof note === "string")
+        .map((note) => (
+          <p key={note} className="t-caption">
+            {note}
+          </p>
+        ))}
+    </>
+  );
 }
 
 /**
@@ -210,6 +276,7 @@ export function MemberTable({
   zone,
 }: Readonly<{ review: Review; zone: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const handoffColumns = useHandoffColumns(review);
   if (review.members_withheld) {
@@ -241,11 +308,37 @@ export function MemberTable({
         ]}
       />
       <PanelBody>
-        {memberNotes(review, zone, t, locale).map((note) => (
-          <p key={note} className="t-caption">
-            {note}
+        <MemberVisibility review={review} />
+        {review.workflow === "qualification" && (
+          <p className="t-caption">
+            {t(
+              eventQualifications(review)
+                ? "analytics.team.eventCredit"
+                : "analytics.team.arrivalCredit",
+            )}
           </p>
-        ))}
+        )}
+        {(review.qualification_unattributed ?? 0) > 0 && (
+          <p className="t-caption">
+            {plural(
+              "analytics.team.qualificationUnattributed",
+              review.qualification_unattributed ?? 0,
+              {
+                count: formatNumber(
+                  review.qualification_unattributed ?? 0,
+                  locale,
+                ),
+              },
+            )}
+          </p>
+        )}
+        <Disclosure summary={t("reporting.definitions")}>
+          {memberNotes(review, zone, t, locale).map((note) => (
+            <p key={note} className="t-caption">
+              {note}
+            </p>
+          ))}
+        </Disclosure>
       </PanelBody>
     </Panel>
   );

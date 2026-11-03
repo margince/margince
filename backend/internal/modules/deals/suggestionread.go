@@ -171,6 +171,8 @@ type SuggestionQuery struct {
 	OwnerID     *ids.UserID
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
+	// ScopeOwners narrows to the Worklist scope's owners; nil is unrestricted.
+	ScopeOwners *storekit.OwnerSet
 	Cursor      string
 	Limit       int
 }
@@ -210,30 +212,12 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := suggestionVisibleClause(ctx, arg, "")
+	where, err := openSuggestionWhere(ctx, in, arg)
 	if err != nil {
 		return nil, "", err
 	}
 	query := `SELECT ` + suggestionColumns + ` FROM deal_suggestion s JOIN company c ON c.id = s.company_id
-	 WHERE s.state = 'open' AND ` + visible
-	var querySb189 strings.Builder
-	for _, filter := range []struct {
-		column string
-		value  *ids.UUID
-	}{{"s.company_id", in.CompanyID}, {"s.pipeline_id", in.PipelineID}, {"s.proposed_stage_id", in.StageID}} {
-		if filter.value != nil {
-			fmt.Fprintf(&querySb189, " AND %s = $%d", filter.column, arg(*filter.value))
-		}
-	}
-	query += querySb189.String()
-	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
-	if err != nil {
-		return nil, "", err
-	}
-	if ownership != "" {
-		// Unqualified, it names c.owner_id: deal_suggestion has no owner column.
-		query += " AND " + ownership
-	}
+	 WHERE ` + where
 	if in.Cursor != "" {
 		cur, err := storekit.DecodeOpaque[suggestionCursor](in.Cursor)
 		if err != nil || cur.ID.IsZero() {
@@ -269,27 +253,58 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	return out, next, nil
 }
 
-// CountOpenSuggestions is how many open suggestions THIS caller can see. A
-// count is a read, so it carries the list's own visibility clause.
-func (s *Store) CountOpenSuggestions(ctx context.Context) (int, error) {
+// CountOpenSuggestions is how many open suggestions this caller can see under
+// in's filters. A count is a read, so it carries the list's own where clause.
+func (s *Store) CountOpenSuggestions(ctx context.Context, in SuggestionQuery) (int, error) {
 	if err := requireSuggestionRead(ctx); err != nil {
 		return 0, err
 	}
 	var args []any
-	visible, err := suggestionVisibleClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) }, "")
+	where, err := openSuggestionWhere(ctx, in,
+		func(v any) int { args = append(args, v); return len(args) })
 	if err != nil {
 		return 0, err
 	}
 	var open int
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM deal_suggestion s WHERE s.state = 'open' AND `+visible, args...).Scan(&open)
+			`SELECT count(*) FROM deal_suggestion s JOIN company c ON c.id = s.company_id WHERE `+where, args...).Scan(&open)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("deals: counting suggestions: %w", err)
 	}
 	return open, nil
+}
+
+// openSuggestionWhere is the one filter the list and the count share, so a
+// count is never of rows the list would not show. Every caller joins company c.
+func openSuggestionWhere(ctx context.Context, in SuggestionQuery, arg func(any) int) (string, error) {
+	visible, err := suggestionVisibleClause(ctx, arg, "")
+	if err != nil {
+		return "", err
+	}
+	var where strings.Builder
+	where.WriteString("s.state = 'open' AND " + visible)
+	for _, filter := range []struct {
+		column string
+		value  *ids.UUID
+	}{{"s.company_id", in.CompanyID}, {"s.pipeline_id", in.PipelineID}, {"s.proposed_stage_id", in.StageID}} {
+		if filter.value != nil {
+			fmt.Fprintf(&where, " AND %s = $%d", filter.column, arg(*filter.value))
+		}
+	}
+	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
+	if err != nil {
+		return "", err
+	}
+	if ownership != "" {
+		// Unqualified, it names c.owner_id: deal_suggestion has no owner column.
+		where.WriteString(" AND " + ownership)
+	}
+	if scoped := storekit.OwnerSetClause("c.owner_id", in.ScopeOwners, arg); scoped != "" {
+		where.WriteString(" AND " + scoped)
+	}
+	return where.String(), nil
 }
 
 // GetSuggestion reads one suggestion in any state, when the caller may see it.

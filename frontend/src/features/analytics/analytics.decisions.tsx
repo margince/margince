@@ -62,6 +62,14 @@ export function DecisionsPanel() {
   const canClose = useCanWrite("activity", "update");
   const [recording, setRecording] = useState(false);
   const [closing, setClosing] = useState<SalesDecision | null>(null);
+  if (!decisions.isError && !decisions.data?.length && !recording)
+    return canRecord ? (
+      <div className="actions">
+        <Button variant="ghost" onClick={() => setRecording(true)}>
+          {t("analytics.decisions.record")}
+        </Button>
+      </div>
+    ) : null;
   return (
     <Panel
       title={t("analytics.decisions.title")}
