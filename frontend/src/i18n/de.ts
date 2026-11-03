@@ -5309,6 +5309,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anzahlen dieser verantwortlichen Person darfst du nicht auswerten.",
   "lead.boardTerminalRowsUnavailable":
     "Diese Leads konnten nicht geladen werden. Die Anzahl oben stimmt weiterhin.",
+  "lead.boardTerminalRowsUnavailableNoCount":
+    "Diese Leads konnten nicht geladen werden.",
   "lead.boardTerminalOnly":
     "Hier sind keine offenen Leads. Die Leads zählen unter Qualifiziert und Disqualifiziert.",
 

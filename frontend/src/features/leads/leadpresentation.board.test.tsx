@@ -3,7 +3,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import type { ListQuery } from "../../components/listquery";
@@ -173,6 +179,24 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     expect(column("disqualified").querySelector(STATED_COUNT)).toBeNull();
     expect(document.body.textContent).not.toContain(
       en["lead.boardCountsUnavailable"],
+    );
+  });
+
+  it("claim no count above a withheld column whose leads did not load", async () => {
+    serve(() =>
+      json({ title: "Unavailable", status: 503, code: "unavailable" }, 503),
+    );
+    drawBoard(mine({ min_score: "80" }));
+
+    const head = column("promoted").querySelector(".board-col-head");
+    if (head === null) throw new Error("no Qualified head");
+    fireEvent.click(head);
+
+    expect(
+      await screen.findByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toContain(
+      en["lead.boardTerminalRowsUnavailable"],
     );
   });
 });

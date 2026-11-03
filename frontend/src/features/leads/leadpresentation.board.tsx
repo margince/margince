@@ -286,7 +286,13 @@ export function LeadBoard({
         <ErrorLine>{t("lead.boardCountsUnavailable")}</ErrorLine>
       )}
       {terminalRows.isError && (
-        <ErrorLine>{t("lead.boardTerminalRowsUnavailable")}</ErrorLine>
+        <ErrorLine>
+          {t(
+            withheld
+              ? "lead.boardTerminalRowsUnavailableNoCount"
+              : "lead.boardTerminalRowsUnavailable",
+          )}
+        </ErrorLine>
       )}
       <PipelineBoard
         variant="plain"

@@ -5170,6 +5170,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lượng của người chịu trách nhiệm này nằm ngoài phạm vi số liệu bạn được xem.",
   "lead.boardTerminalRowsUnavailable":
     "Không thể tải các lead này. Số lượng ở trên vẫn đúng.",
+  "lead.boardTerminalRowsUnavailableNoCount": "Không thể tải các lead này.",
   "lead.boardTerminalOnly":
     "Không có lead đang mở ở đây. Các lead được tính trong Đủ điều kiện và Đã loại.",
 

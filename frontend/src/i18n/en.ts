@@ -5259,6 +5259,7 @@ export const en = {
     "This owner’s counts are outside what you may measure.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
+  "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
   "lead.boardTerminalOnly":
     "No open leads here. They are counted under Qualified and Disqualified.",
 
