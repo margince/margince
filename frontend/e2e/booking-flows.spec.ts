@@ -336,10 +336,15 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
 }) => {
   const availability: string[] = [];
   let previewing = false;
+  let probeRead = () => {};
+  const settingsProbeRead = new Promise<void>((resolve) => {
+    probeRead = resolve;
+  });
   await context.route("**/v1/availability?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("reliable")).toBe("true");
     if (previewing) availability.push(url.searchParams.get("from") ?? "");
+    else probeRead();
     await route.fulfill({ json: { slots: bookingSlots, truncated: false } });
   });
   let profile = { ...bookingProfile, enabled: false };
@@ -382,6 +387,8 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   ).toBeVisible();
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ notice_minutes: 1440, enabled: false });
+  // The hours save does not re-key the probe, so its one read has landed.
+  await settingsProbeRead;
   previewing = true;
   await page
     .getByRole("button", { name: de["scheduling.preview"] })
@@ -393,11 +400,16 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  // Only reads after the preview opens count: the settings page makes its
-  // own. October in Berlin runs past the 31-day bound, so it takes two windows.
+  // September takes one window. October gains an hour at the clock change in
+  // Berlin, so it runs past the 31-day bound and takes two.
   await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
+  expect(availability).toEqual([
+    "2026-09-27T06:00:00.000Z",
+    "2026-09-30T22:00:00.000Z",
+    "2026-10-31T22:00:00.000Z",
+  ]);
   await slot.click();
   await page.getByLabel(de["book.name"], { exact: true }).fill("Demo guest");
   await page

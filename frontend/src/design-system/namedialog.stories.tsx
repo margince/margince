@@ -57,6 +57,26 @@ export const Rename: Story = {
   },
 };
 
+// A label that repeats the title is not drawn twice; the field keeps its name.
+export const RenameTitleIsLabel: Story = {
+  args: {
+    title: "Deal name",
+    label: "Deal name",
+    initial: "Berlin rollout",
+    confirmLabel: "Save",
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const printed = dialog
+      .getAllByText("Deal name")
+      .filter((node) => !node.classList.contains("sr-only"));
+    await expect(printed).toHaveLength(1);
+    await expect(
+      dialog.getByRole("textbox", { name: "Deal name" }),
+    ).toHaveValue("Berlin rollout");
+  },
+};
+
 // The raw key sits under the field, the one place it shows, and describes it.
 export const RenameWithKey: Story = {
   args: {

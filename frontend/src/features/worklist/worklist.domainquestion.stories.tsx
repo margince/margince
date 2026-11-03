@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -19,12 +20,9 @@ import "./worklist.row.css";
 
 // ANSWERING AN UNDECIDED DOMAIN, from the row that asked.
 //
-// TWO VERBS OF EQUAL WEIGHT, so neither is filled and neither takes the end of
-// the line: the machine could not tell whether this domain is a company, two
-// colleagues sharing an installation may answer it opposite ways, and drawing
-// one as the expected press would be the same guess that left the question open.
-// That is what these frames are for, and it is invisible to an assertion — both
-// buttons render either way.
+// No verb is filled, and none takes the end of the line. The machine could not
+// tell which company this is, and a filled verb would repeat its guess. These
+// frames show that; an assertion cannot see it.
 //
 // They are a fragment with no container of their own, so the host is the row's
 // line and nothing else, the frame `worklist.dispositions.stories.tsx` gives the
@@ -52,19 +50,31 @@ const DISCARD = `POST /capture/domain-questions/${UNDECIDED.id}/discard`;
 // Both writes, answered at once. They go to two stores under two gates — keeping
 // creates the company the triage withheld, discarding writes one seat's own
 // capture exclusion — so a frame routing one proves nothing about the other.
+const ME = {
+  "GET /me": () =>
+    jsonResponse(
+      meFixture({ allow: { company: ["read", "update", "create"] } }),
+    ),
+};
+
 function settleAtOnce() {
   installFetchStub({
+    ...ME,
     [KEEP]: () => jsonResponse(null, 202),
     [DISCARD]: () => jsonResponse(null, 202),
   });
 }
 
 function neverSettles() {
-  installFetchStub({ [KEEP]: () => new Promise<Response>(() => {}) });
+  installFetchStub({
+    ...ME,
+    [KEEP]: () => new Promise<Response>(() => {}),
+  });
 }
 
 function refused() {
   installFetchStub({
+    ...ME,
     [KEEP]: () =>
       jsonResponse(
         {
@@ -169,6 +179,7 @@ const VENDOR: WorklistItem = {
 export const AVendorQuestionOffersCreateOrKeepAsVendor: Story = {
   render: line(VENDOR, () =>
     installFetchStub({
+      ...ME,
       [`POST /capture/domain-questions/${VENDOR.id}/keep`]: () =>
         jsonResponse(null, 202),
       [`POST /capture/domain-questions/${VENDOR.id}/keep-vendor`]: () =>
@@ -185,28 +196,104 @@ export const AVendorQuestionOffersCreateOrKeepAsVendor: Story = {
     await expect(
       canvas.getByRole("button", { name: "Create company" }),
     ).toBeVisible();
-    await expect(
-      canvas.queryByRole("button", { name: "Domain review" }),
-    ).not.toBeInTheDocument();
   },
 };
 
-export const ForwardedDomainOpensReviewBeforeCreation: Story = {
-  render: line(
-    {
-      ...UNDECIDED,
-      domain_reason_code: "forwarded_identity",
-      actions: ["keep", "discard", "reopen"],
+const ALEX = {
+  id: "01a1a000-0000-7000-8000-00000000a1e7",
+  name: "Alex Example",
+};
+
+const REDIRECTED: WorklistItem = {
+  ...UNDECIDED,
+  id: "alias.example",
+  title: "alias.example",
+  domain_reason_code: "forwarded_identity",
+  // What the server sends for a redirected site: never keep.
+  actions: ["discard", "reopen"],
+  domain_context: {
+    contacts: [ALEX],
+    contact_count: 2,
+    hidden_senders: false,
+    linked_contact_count: 2,
+    sender_address: "alex@alias.example",
+    suggested_company: {
+      id: "01a1a000-0000-7000-8000-0000000000c0",
+      name: "Example Company",
+      basis: "redirect_target",
     },
-    settleAtOnce,
+  },
+};
+
+// The company grant decides Confirm and Choose, so every frame below grants it.
+function withCompanyGrant(routes: Record<string, () => Response>) {
+  return () =>
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({ allow: { company: ["read", "update", "create"] } }),
+        ),
+      ...routes,
+    });
+}
+
+/**
+ * A redirected site with one company the evidence supports. The reader
+ * confirms it or chooses another; nothing is created from the redirect.
+ */
+export const ARedirectWithASuggestedCompany: Story = {
+  render: line(
+    REDIRECTED,
+    withCompanyGrant({
+      [`POST /capture/domain-questions/${REDIRECTED.id}/keep`]: () =>
+        jsonResponse({}, 200),
+    }),
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("button", { name: "Domain review" }),
+      await canvas.findByRole("button", { name: "Confirm company" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByText(
+        /Confirming links alias.example to Example Company and gives 2 contacts/,
+      ),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Create company" }),
     ).not.toBeInTheDocument();
   },
+};
+export const ARedirectWithASuggestedCompanyDark: Story = {
+  ...ARedirectWithASuggestedCompany,
+  globals: { theme: "dark" },
+};
+
+/** No company qualifies: the reader chooses one or creates one. */
+export const NoSuggestion: Story = {
+  render: line(
+    {
+      ...UNDECIDED,
+      domain_reason_code: "unevidenced",
+      actions: ["keep", "discard", "reopen"],
+      domain_context: {
+        contacts: [ALEX],
+        contact_count: 1,
+        hidden_senders: false,
+        linked_contact_count: 2,
+        site_read: "unread",
+      },
+    },
+    withCompanyGrant({}),
+  ),
+};
+export const NoSuggestionDark: Story = {
+  ...NoSuggestion,
+  globals: { theme: "dark" },
+};
+
+/** The vendor question gets the same choose path as every other question. */
+export const AVendorQuestionCanChooseAnother: Story = {
+  render: line(VENDOR, withCompanyGrant({})),
+  globals: { theme: "dark" },
 };

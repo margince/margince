@@ -435,7 +435,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
-// The record with its name renamed in place, through the details' own edit.
+// The record whose head renames it through the details' own edit.
 function DealRecordView({
   deal,
   ...view

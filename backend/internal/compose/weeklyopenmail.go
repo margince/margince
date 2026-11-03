@@ -44,14 +44,14 @@ func (w *weeklyGenerateWorker) openTasksMail(ctx context.Context, review weekly.
 		if !taskDueInReportedWeek(item, weekEnd) {
 			continue
 		}
-		line := mailWorkItem(item, words, zone)
-		if line == "" {
+		row, ok := mailWorkItem(item, words, zone)
+		if !ok {
 			continue
 		}
 		if shown == 0 {
 			body.Heading(words.MailOpenNow)
 		}
-		body.Paragraph(line)
+		body.Item(row)
 		writeMailItemLink(&body, item, w.mail.PublicBaseURL, words)
 		shown++
 		if shown == 3 {

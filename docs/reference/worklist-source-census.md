@@ -53,7 +53,7 @@ seam or lane cuts after reading.
 | `approval` | `modules/approvals` `Service.ListWire` and `CountPending` | `batchScanDepth` = 200 (Go, over 200-row SQL batches) | Requested-for arms judged in Go per batch, then the decidable check |
 | `dedupe_candidate` | `modules/contacts` `ListDedupeCandidates` | `batchScanDepth` asked, clamped to `dedupeQueueMaxLimit` = 100 (SQL) | Both sides visible; no owner predicate; not read for `mine` or a named owner |
 | `contact_case` | `contacts` `ListContactCases` | `contactCaseListMax` = 50 per call; the seam pages to `batchScanDepth` | Case scope mine, unassigned or all; filtered again in Go |
-| `deal_suggestion` | `deals` `ListSuggestions` | `suggestionMaxLimit` = 200 (SQL) | Company row scope; not read for `mine` or a named owner |
+| `deal_suggestion` | `deals` `ListSuggestions` | `suggestionMaxLimit` = 200 (SQL) | `storekit.OwnerSetClause` on the company owner in SQL, as `deal_at_risk`; the evidence visibility rule |
 | `tag_suggestion` | `modules/collections` `OpenTagSuggestions` | `tagSuggestionMaxLimit` = 200 (SQL) | Row scope and `tag` read; not read for `mine` or a named owner |
 | `relationship_decay` | `modules/search` quiet contacts, through `compose/attentionlanesseam.go` | `decayCandidateCap` = 40 times `decayCandidatePages` = 3 candidates (SQL), then `decayLaneCap` = 5 (Go) | Contact `owner_id` for `mine` and a named owner; no live owner for `unassigned`; none for `team` and `all` |
 | `domain_question` | `contacts` `OpenDomainQuestionsForOwner` | `DomainQuestionLimit` = 100 (SQL) | The reader decides the question |

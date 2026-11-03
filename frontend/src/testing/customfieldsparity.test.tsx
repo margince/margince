@@ -104,7 +104,7 @@ it.each([false, true])(
     const readings = EVERY_TYPE.map(({ label }) => {
       const cell = details.getByText(label).nextElementSibling;
       return writable
-        ? cell?.firstElementChild?.textContent
+        ? cell?.querySelector(".editable-value-face")?.textContent
         : cell?.textContent;
     });
     expect(readings).toEqual(
