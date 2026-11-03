@@ -187,6 +187,7 @@ func (s *Store) writeContributions(
 			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"qualification", "audit_id", "approval_id", "captured_by",
 			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
+			"qualified_policy_version", "viability_assessed_at", "viability_disposition", "qualification_complete",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -218,6 +219,7 @@ func (s *Store) writeContributions(
 			if err != nil {
 				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
 			}
+			policy, assessed, disposition, complete := basisColumns(row.Basis)
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
@@ -227,6 +229,7 @@ func (s *Store) writeContributions(
 				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
 				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
+				policy, assessed, disposition, complete,
 			}, nil
 		}))
 	if err != nil {

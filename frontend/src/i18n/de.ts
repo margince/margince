@@ -943,6 +943,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Neue Deals",
   "reporting.movement.pulled_in": "In den Zeitraum vorgezogen",
   "reporting.movement.pushed_out": "Aus dem Zeitraum geschoben",
+  "reporting.movement.excluded": "Nach Prüfung herausgenommen",
+  "reporting.movement.reinstated": "Nach Prüfung wieder gezählt",
+  "reporting.movement.not_checked": "Nicht geprüft",
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
@@ -1528,6 +1531,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
   "reporting.compare.basis.commit_evidence": "belegten Commit-Deals",
   "reporting.compare.basis.weighted": "der gewichteten Pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "gestützten Commit-Deals",
+  "reporting.compare.basis.qualified_weighted":
+    "der gestützten gewichteten Pipeline",
   "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
@@ -6418,6 +6425,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "Aus gestützten Commit-Belegen",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "Aus gestützten gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
     "Aus der Einschätzung der Führungskraft",
   "brief.weekly.bridge": "Veränderung der Woche",
@@ -6430,6 +6441,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Neu erstellt",
   "brief.weekly.bar.advanced": "Vorangekommen",
   "brief.weekly.bar.slipped": "Verschoben",
+  "brief.weekly.bar.excluded": "Nach Prüfung raus",
+  "brief.weekly.bar.reinstated": "Nach Prüfung zurück",
+  "brief.weekly.bar.not_checked": "Nicht geprüft",
   "brief.weekly.bar.won": "Gewonnen",
   "brief.weekly.bar.lost": "Verloren",
   "brief.weekly.bar.other": "Wechselkurse und Definitionen",
@@ -14256,6 +14270,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Commit-Belege: nur bestätigte Abschlussdaten",
   "installationSettings.forwardMeasure.weighted":
     "Gewichtet: jeder offene Deal mit der Wahrscheinlichkeit seiner Phase",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Gestützte Commit-Belege: bestätigte Abschlussdaten, die der Kunde noch stützt",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit der Wahrscheinlichkeit ihrer Phase",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
@@ -14263,6 +14281,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Gewonnen + gestützter bestätigter Commit",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
@@ -14295,6 +14316,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "Die Zählung gestützter Deals ist aus, daher zeigt dies alle Deals.",
   "forecast.landing.caveat.call_below_actual":
     "Die Einschätzung liegt unter dem bereits gewonnenen Betrag. Die Einschätzung wird wie erfasst angezeigt, nicht korrigiert.",
   "forecast.pipelineNeeded": "Benötigter Deal-Wert",

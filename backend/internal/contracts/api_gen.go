@@ -11619,8 +11619,9 @@ func (e ForecastContributionExclusionReason) Valid() bool {
 
 // Defines values for ForecastLandingCaveat.
 const (
-	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
-	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatCallAbsent           ForecastLandingCaveat = "call_absent"
+	ForecastLandingCaveatLandingCaveatCallBelowActual      ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatQualifiedUnavailable ForecastLandingCaveat = "qualified_unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -11630,6 +11631,8 @@ func (e ForecastLandingCaveat) Valid() bool {
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
 		return true
+	case ForecastLandingCaveatLandingCaveatQualifiedUnavailable:
+		return true
 	default:
 		return false
 	}
@@ -11637,9 +11640,11 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureCommitEvidence ForecastLandingMeasure = "commit_evidence"
-	ForecastLandingMeasureForwardMeasureManagerCall    ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureWeighted       ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureCommitEvidence          ForecastLandingMeasure = "commit_evidence"
+	ForecastLandingMeasureForwardMeasureManagerCall             ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence ForecastLandingMeasure = "qualified_commit_evidence"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted       ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted                ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -11648,6 +11653,10 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureCommitEvidence:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -11658,10 +11667,13 @@ func (e ForecastLandingMeasure) Valid() bool {
 
 // Defines values for ForecastMovementReading.
 const (
-	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
-	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
-	ForecastMovementReadingOpen     ForecastMovementReading = "open"
-	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
+	ForecastMovementReadingBestCase          ForecastMovementReading = "best_case"
+	ForecastMovementReadingEvidence          ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen              ForecastMovementReading = "open"
+	ForecastMovementReadingQualifiedBestCase ForecastMovementReading = "qualified_best_case"
+	ForecastMovementReadingQualifiedEvidence ForecastMovementReading = "qualified_evidence"
+	ForecastMovementReadingQualifiedWeighted ForecastMovementReading = "qualified_weighted"
+	ForecastMovementReadingWeighted          ForecastMovementReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastMovementReading enum.
@@ -11672,6 +11684,12 @@ func (e ForecastMovementReading) Valid() bool {
 	case ForecastMovementReadingEvidence:
 		return true
 	case ForecastMovementReadingOpen:
+		return true
+	case ForecastMovementReadingQualifiedBestCase:
+		return true
+	case ForecastMovementReadingQualifiedEvidence:
+		return true
+	case ForecastMovementReadingQualifiedWeighted:
 		return true
 	case ForecastMovementReadingWeighted:
 		return true
@@ -11685,13 +11703,16 @@ const (
 	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
 	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
 	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
+	ForecastMovementBucketNameExcluded           ForecastMovementBucketName = "excluded"
 	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
 	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
 	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
+	ForecastMovementBucketNameNotChecked         ForecastMovementBucketName = "not_checked"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
 	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
+	ForecastMovementBucketNameReinstated         ForecastMovementBucketName = "reinstated"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -11706,6 +11727,8 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameDefinition:
 		return true
+	case ForecastMovementBucketNameExcluded:
+		return true
 	case ForecastMovementBucketNameFx:
 		return true
 	case ForecastMovementBucketNameLost:
@@ -11714,11 +11737,15 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameNew:
 		return true
+	case ForecastMovementBucketNameNotChecked:
+		return true
 	case ForecastMovementBucketNamePulledIn:
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
 	case ForecastMovementBucketNameRecordChanged:
+		return true
+	case ForecastMovementBucketNameReinstated:
 		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
@@ -11773,6 +11800,24 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastReadingsQualificationMode.
+const (
+	ForecastReadingsQualificationModeEnforcing ForecastReadingsQualificationMode = "enforcing"
+	ForecastReadingsQualificationModeOff       ForecastReadingsQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the ForecastReadingsQualificationMode enum.
+func (e ForecastReadingsQualificationMode) Valid() bool {
+	switch e {
+	case ForecastReadingsQualificationModeEnforcing:
+		return true
+	case ForecastReadingsQualificationModeOff:
 		return true
 	default:
 		return false
@@ -13419,9 +13464,11 @@ func (e InstallationSettingsDateFormat) Valid() bool {
 
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence InstallationSettingsForecastForwardMeasure = "commit_evidence"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall    InstallationSettingsForecastForwardMeasure = "manager_call"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted       InstallationSettingsForecastForwardMeasure = "weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence          InstallationSettingsForecastForwardMeasure = "commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall             InstallationSettingsForecastForwardMeasure = "manager_call"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence InstallationSettingsForecastForwardMeasure = "qualified_commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted       InstallationSettingsForecastForwardMeasure = "qualified_weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted                InstallationSettingsForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
@@ -13430,6 +13477,10 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
 		return true
@@ -18810,9 +18861,11 @@ func (e ReportingStatus) Valid() bool {
 
 // Defines values for ReportingTargetComparisonBasis.
 const (
-	ReportingTargetComparisonBasisCommitEvidence ReportingTargetComparisonBasis = "commit_evidence"
-	ReportingTargetComparisonBasisManagerCall    ReportingTargetComparisonBasis = "manager_call"
-	ReportingTargetComparisonBasisWeighted       ReportingTargetComparisonBasis = "weighted"
+	ReportingTargetComparisonBasisCommitEvidence          ReportingTargetComparisonBasis = "commit_evidence"
+	ReportingTargetComparisonBasisManagerCall             ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisQualifiedCommitEvidence ReportingTargetComparisonBasis = "qualified_commit_evidence"
+	ReportingTargetComparisonBasisQualifiedWeighted       ReportingTargetComparisonBasis = "qualified_weighted"
+	ReportingTargetComparisonBasisWeighted                ReportingTargetComparisonBasis = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
@@ -18821,6 +18874,10 @@ func (e ReportingTargetComparisonBasis) Valid() bool {
 	case ReportingTargetComparisonBasisCommitEvidence:
 		return true
 	case ReportingTargetComparisonBasisManagerCall:
+		return true
+	case ReportingTargetComparisonBasisQualifiedCommitEvidence:
+		return true
+	case ReportingTargetComparisonBasisQualifiedWeighted:
 		return true
 	case ReportingTargetComparisonBasisWeighted:
 		return true
@@ -22140,9 +22197,11 @@ func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
 
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
-	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
-	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall    UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
-	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence          UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall             UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted                UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
@@ -22151,6 +22210,10 @@ func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	case UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
 		return true
@@ -23637,12 +23700,15 @@ func (e WeeklyReviewLearningsState) Valid() bool {
 
 // Defines values for WeeklyReviewMovementBar.
 const (
-	WeeklyReviewMovementBarWeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
-	WeeklyReviewMovementBarWeeklyBarCreated  WeeklyReviewMovementBar = "created"
-	WeeklyReviewMovementBarWeeklyBarLost     WeeklyReviewMovementBar = "lost"
-	WeeklyReviewMovementBarWeeklyBarOther    WeeklyReviewMovementBar = "other"
-	WeeklyReviewMovementBarWeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
-	WeeklyReviewMovementBarWeeklyBarWon      WeeklyReviewMovementBar = "won"
+	WeeklyReviewMovementBarWeeklyBarAdvanced   WeeklyReviewMovementBar = "advanced"
+	WeeklyReviewMovementBarWeeklyBarCreated    WeeklyReviewMovementBar = "created"
+	WeeklyReviewMovementBarWeeklyBarExcluded   WeeklyReviewMovementBar = "excluded"
+	WeeklyReviewMovementBarWeeklyBarLost       WeeklyReviewMovementBar = "lost"
+	WeeklyReviewMovementBarWeeklyBarNotChecked WeeklyReviewMovementBar = "not_checked"
+	WeeklyReviewMovementBarWeeklyBarOther      WeeklyReviewMovementBar = "other"
+	WeeklyReviewMovementBarWeeklyBarReinstated WeeklyReviewMovementBar = "reinstated"
+	WeeklyReviewMovementBarWeeklyBarSlipped    WeeklyReviewMovementBar = "slipped"
+	WeeklyReviewMovementBarWeeklyBarWon        WeeklyReviewMovementBar = "won"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
@@ -23652,9 +23718,15 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 		return true
 	case WeeklyReviewMovementBarWeeklyBarCreated:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarExcluded:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarLost:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarNotChecked:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarOther:
+		return true
+	case WeeklyReviewMovementBarWeeklyBarReinstated:
 		return true
 	case WeeklyReviewMovementBarWeeklyBarSlipped:
 		return true
@@ -23667,9 +23739,11 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureCommitEvidence WeeklyReviewOutlookForwardMeasure = "commit_evidence"
-	WeeklyReviewOutlookForwardMeasureManagerCall    WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureWeighted       WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureCommitEvidence          WeeklyReviewOutlookForwardMeasure = "commit_evidence"
+	WeeklyReviewOutlookForwardMeasureManagerCall             WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence WeeklyReviewOutlookForwardMeasure = "qualified_commit_evidence"
+	WeeklyReviewOutlookForwardMeasureQualifiedWeighted       WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
+	WeeklyReviewOutlookForwardMeasureWeighted                WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
@@ -23678,6 +23752,10 @@ func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
 	case WeeklyReviewOutlookForwardMeasureWeighted:
 		return true
@@ -27147,10 +27225,13 @@ func (e ListForecastCallsParamsScopeKind) Valid() bool {
 
 // Defines values for GetForecastMovementParamsReading.
 const (
-	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
-	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
-	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
-	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
+	GetForecastMovementParamsReadingBestCase          GetForecastMovementParamsReading = "best_case"
+	GetForecastMovementParamsReadingEvidence          GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen              GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingQualifiedBestCase GetForecastMovementParamsReading = "qualified_best_case"
+	GetForecastMovementParamsReadingQualifiedEvidence GetForecastMovementParamsReading = "qualified_evidence"
+	GetForecastMovementParamsReadingQualifiedWeighted GetForecastMovementParamsReading = "qualified_weighted"
+	GetForecastMovementParamsReadingWeighted          GetForecastMovementParamsReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
@@ -27161,6 +27242,12 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingEvidence:
 		return true
 	case GetForecastMovementParamsReadingOpen:
+		return true
+	case GetForecastMovementParamsReadingQualifiedBestCase:
+		return true
+	case GetForecastMovementParamsReadingQualifiedEvidence:
+		return true
+	case GetForecastMovementParamsReadingQualifiedWeighted:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
 		return true
@@ -44701,10 +44788,10 @@ type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -44717,10 +44804,10 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
@@ -44743,11 +44830,11 @@ type ForecastMovementBucket struct {
 	AmountMinor int64 `json:"amount_minor"`
 	DealCount   int   `json:"deal_count"`
 
-	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -44828,6 +44915,9 @@ type ForecastReadings struct {
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
 	PricedCount int `json:"priced_count"`
 
+	// QualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+	QualificationMode ForecastReadingsQualificationMode `json:"qualification_mode"`
+
 	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
@@ -44867,6 +44957,9 @@ type ForecastReadings struct {
 	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
 	WonMinor int64 `json:"won_minor"`
 }
+
+// ForecastReadingsQualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+type ForecastReadingsQualificationMode string
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
@@ -46799,11 +46892,18 @@ type InstallationSettings struct {
 	// something by it, and one that commits everything does not — their weighted number
 	// is the honest one.
 	//
-	// `commit_evidence` is the default and the strictest: committed deals whose close
-	// date somebody confirmed, a provisional date being a guess that stays out.
+	// `commit_evidence` is the strictest baseline: committed deals whose close date
+	// somebody confirmed, a provisional date being a guess that stays out.
+	// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+	// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 	// `manager_call` takes the authored call as the whole period's landing and is not
 	// added to what is already won; with no current call the read falls back to
 	// `commit_evidence` and says so in the landing's `caveat`.
+	//
+	// With no measure saved, the landing uses `qualified_commit_evidence` while the
+	// installation enforces viability reviews and `commit_evidence` otherwise; this field
+	// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+	// client shows an unknown value by its name.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
@@ -46890,11 +46990,18 @@ type InstallationSettingsDateFormat string
 // something by it, and one that commits everything does not — their weighted number
 // is the honest one.
 //
-// `commit_evidence` is the default and the strictest: committed deals whose close
-// date somebody confirmed, a provisional date being a guess that stays out.
+// `commit_evidence` is the strictest baseline: committed deals whose close date
+// somebody confirmed, a provisional date being a guess that stays out.
+// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 // `manager_call` takes the authored call as the whole period's landing and is not
 // added to what is already won; with no current call the read falls back to
 // `commit_evidence` and says so in the landing's `caveat`.
+//
+// With no measure saved, the landing uses `qualified_commit_evidence` while the
+// installation enforces viability reviews and `commit_evidence` otherwise; this field
+// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+// client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
@@ -61993,8 +62100,11 @@ type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {
-	// Bar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+	// Bar Which move this is. Folded from the forecast engine's movement buckets, whose
 	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+	// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+	// qualified measure: a deal that left or rejoined the qualified number on its viability
+	// review alone, or left because its review status became unknown. The set can grow.
 	//
 	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 	// reprice, a category move and a stage move each go both ways, and reading the cause
@@ -62015,8 +62125,11 @@ type WeeklyReviewMovement struct {
 	Drivers *[]WeeklyReviewDriver `json:"drivers,omitempty"`
 }
 
-// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's movement buckets, whose
 // grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+// qualified measure: a deal that left or rejoined the qualified number on its viability
+// review alone, or left because its review status became unknown. The set can grow.
 //
 // `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 // reprice, a category move and a stage move each go both ways, and reading the cause
@@ -68198,7 +68311,7 @@ type GetForecastMovementParams struct {
 	// To The closing snapshot.
 	To openapi_types.UUID `form:"to" json:"to"`
 
-	// Reading Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+	// Reading Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
 	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
 }
 

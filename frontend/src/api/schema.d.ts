@@ -24466,14 +24466,21 @@ export interface components {
              *     something by it, and one that commits everything does not — their weighted number
              *     is the honest one.
              *
-             *     `commit_evidence` is the default and the strictest: committed deals whose close
-             *     date somebody confirmed, a provisional date being a guess that stays out.
+             *     `commit_evidence` is the strictest baseline: committed deals whose close date
+             *     somebody confirmed, a provisional date being a guess that stays out.
+             *     `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+             *     the deals the customer still supports (the `qualified` block on `GET /forecast`).
              *     `manager_call` takes the authored call as the whole period's landing and is not
              *     added to what is already won; with no current call the read falls back to
              *     `commit_evidence` and says so in the landing's `caveat`.
+             *
+             *     With no measure saved, the landing uses `qualified_commit_evidence` while the
+             *     installation enforces viability reviews and `commit_evidence` otherwise; this field
+             *     then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+             *     client shows an unknown value by its name.
              * @enum {string}
              */
-            forecast_forward_measure: "commit_evidence" | "weighted" | "manager_call";
+            forecast_forward_measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -24652,7 +24659,7 @@ export interface components {
              *     at once and re-means no stored row.
              * @enum {string}
              */
-            forecast_forward_measure?: "commit_evidence" | "weighted" | "manager_call";
+            forecast_forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -42865,7 +42872,7 @@ export interface components {
              * @description The forward measure the landing was projected with.
              * @enum {string}
              */
-            basis?: "commit_evidence" | "weighted" | "manager_call";
+            basis?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: double */
             landing?: number;
             /** Format: double */
@@ -43795,6 +43802,11 @@ export interface components {
             /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
             snapshots?: components["schemas"]["ForecastSnapshotRef"][];
             qualified?: components["schemas"]["ForecastQualifiedReadings"];
+            /**
+             * @description Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+             * @enum {string}
+             */
+            qualification_mode: "off" | "enforcing";
             /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
             self_correcting?: boolean;
             /**
@@ -43942,10 +43954,10 @@ export interface components {
              */
             amount_minor: number;
             /**
-             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
              * @enum {string}
              */
-            measure: "commit_evidence" | "weighted" | "manager_call";
+            measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
             /**
              * Format: int64
              * @description The money already banked, the backward half of the sum.
@@ -43962,10 +43974,10 @@ export interface components {
              */
             system_minor?: number;
             /**
-             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
              * @enum {string}
              */
-            caveat?: "call_absent" | "call_below_actual";
+            caveat?: "call_absent" | "call_below_actual" | "qualified_unavailable";
         };
         /**
          * @description Whether the open pipeline supports the reference landing, and what the reference is.
@@ -44235,7 +44247,7 @@ export interface components {
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
             /** @enum {string} */
-            reading: "open" | "weighted" | "evidence" | "best_case";
+            reading: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */
@@ -44247,10 +44259,10 @@ export interface components {
         };
         ForecastMovementBucket: {
             /**
-             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
              * @enum {string}
              */
-            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
+            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "excluded" | "reinstated" | "not_checked" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
             /** Format: int64 */
             amount_minor: number;
             deal_count: number;
@@ -52091,7 +52103,7 @@ export interface components {
              *     said. Freezing an opinion as a measurement would make the record argue with itself.
              * @enum {string}
              */
-            forward_measure?: "commit_evidence" | "weighted" | "manager_call";
+            forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: int64 */
             won_minor: number;
             /** Format: int64 */
@@ -52116,8 +52128,11 @@ export interface components {
         /** @description One bar of the movement bridge, and the deals behind it. */
         WeeklyReviewMovement: {
             /**
-             * @description Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+             * @description Which move this is. Folded from the forecast engine's movement buckets, whose
              *     grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+             *     `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+             *     qualified measure: a deal that left or rejoined the qualified number on its viability
+             *     review alone, or left because its review status became unknown. The set can grow.
              *
              *     `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
              *     reprice, a category move and a stage move each go both ways, and reading the cause
@@ -52126,7 +52141,7 @@ export interface components {
              *     DID it, and crediting it as progress tells a rep they sold what a rate move did.
              * @enum {string}
              */
-            bar: "created" | "advanced" | "slipped" | "won" | "lost" | "other";
+            bar: "created" | "advanced" | "slipped" | "excluded" | "reinstated" | "not_checked" | "won" | "lost" | "other";
             /**
              * Format: int64
              * @description Signed. A bar takes money out of the window as well as putting it in, and an unsigned
@@ -87965,8 +87980,8 @@ export interface operations {
                 from: string;
                 /** @description The closing snapshot. */
                 to: string;
-                /** @description Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. */
-                reading?: "open" | "weighted" | "evidence" | "best_case";
+                /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`. */
+                reading?: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
             };
             header?: never;
             path?: never;

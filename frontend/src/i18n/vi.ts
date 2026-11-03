@@ -920,6 +920,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Deal mới",
   "reporting.movement.pulled_in": "Kéo vào kỳ này",
   "reporting.movement.pushed_out": "Đẩy ra khỏi kỳ này",
+  "reporting.movement.excluded": "Bị loại sau rà soát",
+  "reporting.movement.reinstated": "Được tính lại sau rà soát",
+  "reporting.movement.not_checked": "Chưa kiểm tra",
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
@@ -1502,6 +1505,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Kết quả dự kiến {landing}, theo {basis}",
   "reporting.compare.basis.commit_evidence": "deal cam kết có bằng chứng",
   "reporting.compare.basis.weighted": "pipeline có trọng số",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "deal cam kết có bằng chứng được ủng hộ",
+  "reporting.compare.basis.qualified_weighted":
+    "pipeline có trọng số được ủng hộ",
   "reporting.compare.basis.manager_call": "ước tính của quản lý",
   "reporting.compare.remaining": "Còn phải thắng",
   "reporting.compare.remainingBasis": "Đã thắng {won} trên {target}",
@@ -6266,6 +6273,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Mở dự báo",
   "brief.weekly.outlook.measure.commit_evidence": "Theo bằng chứng Commit",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "Theo bằng chứng Commit được ủng hộ",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "Theo deal có trọng số được ủng hộ",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
   "brief.weekly.bridge": "Biến động trong tuần",
   "brief.weekly.bridge.opening": "Thứ Hai",
@@ -6277,6 +6288,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Mới tạo",
   "brief.weekly.bar.advanced": "Tiến lên",
   "brief.weekly.bar.slipped": "Bị lùi",
+  "brief.weekly.bar.excluded": "Bị loại sau rà soát",
+  "brief.weekly.bar.reinstated": "Được tính lại sau rà soát",
+  "brief.weekly.bar.not_checked": "Chưa kiểm tra",
   "brief.weekly.bar.won": "Thắng",
   "brief.weekly.bar.lost": "Thua",
   "brief.weekly.bar.other": "Tỷ giá và định nghĩa",
@@ -13883,6 +13897,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bằng chứng Commit: chỉ ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":
     "Có trọng số: mọi deal đang mở theo xác suất giai đoạn",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Bằng chứng Commit được ủng hộ: ngày chốt đã xác nhận mà khách hàng vẫn ủng hộ",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Có trọng số được ủng hộ: deal đang mở mà khách hàng vẫn ủng hộ, theo xác suất giai đoạn",
   "installationSettings.forwardMeasure.manager_call":
     "Nhận định của quản lý: con số đã nhập cho kỳ",
   "forecast.landing": "Dự kiến cuối kỳ",
@@ -13890,6 +13908,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.commit_evidence": "Đã chốt + cam kết đã xác nhận",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
+  "forecast.basis.qualified_commit_evidence":
+    "Đã chốt + cam kết đã xác nhận được ủng hộ",
+  "forecast.basis.qualified_weighted": "Đã chốt + deal có trọng số được ủng hộ",
   "forecast.basis.manager_call": "Ước tính của quản lý",
   "forecast.basis.unknown": "Chưa ghi nhận cơ sở",
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
@@ -13918,6 +13939,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "Việc đếm deal được ủng hộ đang tắt, nên số này hiển thị mọi deal.",
   "forecast.landing.caveat.call_below_actual":
     "Nhận định thấp hơn số tiền đã chốt. Số này hiển thị đúng như đã ghi, không chỉnh sửa.",
   "forecast.pipelineNeeded": "Giá trị deal cần có",
