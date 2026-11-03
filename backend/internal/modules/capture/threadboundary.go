@@ -53,10 +53,27 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if err != nil {
 		return "", fmt.Errorf("capture: reading the message a reply answers: %w", err)
 	}
-	if topicsDiffer(subject, parentSubject) {
-		return strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">"), nil
+	if !topicsDiffer(subject, parentSubject) {
+		return parentKey, nil
 	}
-	return parentKey, nil
+	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
+	return own, carryThreadVerdictsTx(ctx, tx, parentKey, own)
+}
+
+// carryThreadVerdictsTx gives a conversation split off another every seat's verdict on
+// it, before the reply's audience is decided, so a held exchange stays held.
+func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO capture_thread_verdict
+		       (thread_key, user_id, status, kind, confidence, disposition_reason, seen_addresses,
+		        first_activity_id, resolved_at, next_attempt_at)
+		SELECT $2, user_id, status, kind, confidence, disposition_reason, seen_addresses,
+		       first_activity_id, resolved_at, next_attempt_at
+		  FROM capture_thread_verdict WHERE thread_key = $1
+		    ON CONFLICT (thread_key, user_id) DO NOTHING`, from, to); err != nil {
+		return fmt.Errorf("capture: carrying thread verdicts to a split conversation: %w", err)
+	}
+	return nil
 }
 
 // topicsDiffer compares subjects as mailsubject.Normalized does. A blank topic, such as

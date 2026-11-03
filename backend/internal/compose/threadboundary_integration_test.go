@@ -9,7 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 func subjectMail(subject, to, messageID, at, inReplyTo string, references ...string) []byte {
@@ -80,5 +84,29 @@ func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
 
 	if got := threadKeyOfMessage(t, e, "claimed@counterparty.example"); got != "foreign@counterparty.example" {
 		t.Errorf("a parent only another seat holds moved the reply to %q, want the root its header names", got)
+	}
+}
+
+// A conversation the owner held stays held when a reply changes its subject. A new
+// conversation starts pending, which a classifier may later clear; the owner's decision
+// is carried so that it cannot.
+func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
+	e := integration.Setup(t)
+	addr := angebotThread(t, e)
+	owner := e.As(e.Rep1, nil, integration.AccountRepPerms)
+	if err := database.WithWorkspaceTx(owner, e.Pool, func(tx pgx.Tx) error {
+		return capture.NewThreadVerdictStore(e.DB()).DecideAsOwner(owner, tx, "opener@counterparty.example", false)
+	}); err != nil {
+		t.Fatalf("holding the conversation: %v", err)
+	}
+	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Privat", addr, "private@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
+		"answer@counterparty.example", "opener@counterparty.example", "answer@counterparty.example"))
+
+	if got := threadKeyOfMessage(t, e, "private@counterparty.example"); got != "private@counterparty.example" {
+		t.Fatalf("the reply is filed under %q, want its own conversation", got)
+	}
+	if got := e.WsScalar(t, `SELECT coalesce(max(status), 'none') FROM capture_thread_verdict
+		WHERE thread_key = 'private@counterparty.example' AND user_id = $1`, e.Rep1); got != "held_by_owner" {
+		t.Errorf("the split conversation's verdict is %q, want the owner's held_by_owner carried over", got)
 	}
 }
