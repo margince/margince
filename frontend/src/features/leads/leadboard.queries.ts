@@ -48,8 +48,8 @@ function isCounted(dial: string): boolean {
   return COUNTED_DIALS.some((counted) => counted === dial);
 }
 
-// The counts query's `enabled` and the column's words both read this, so a
-// count is never explained by a rule other than the one that withheld it.
+// The counts query's `enabled` and the column's words both read this, so the
+// two cannot disagree.
 export function terminalCountsWithheldBecause(
   query: ListQuery,
 ): MessageKey | undefined {

@@ -184,7 +184,10 @@ describe("the lead board's terminal columns under the queue's dials", () => {
 
   it("claim no count above a withheld column whose leads did not load", async () => {
     serve(() =>
-      json({ title: "Unavailable", status: 503, code: "unavailable" }, 503),
+      json(
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
+        503,
+      ),
     );
     drawBoard(mine({ min_score: "80" }));
 

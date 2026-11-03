@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SRC_ROOT, screenFiles } from "./screenfiles";
 
@@ -57,6 +57,26 @@ function sendsSort(source: string): boolean {
   );
 }
 
+// The screen's own source, and that of each sibling builder the fetcher spreads
+// onto its query (`...leadsQueryParams(query)`), which then owns the wire.
+function wireSources(file: string, source: string): string[] {
+  const builders = [...source.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap(
+    ([, name]) => {
+      if (name === undefined) return [];
+      const from = new RegExp(
+        `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
+      ).exec(source)?.[1];
+      if (from === undefined) return [];
+      const base = resolve(SRC_ROOT, dirname(file), from);
+      const path = [`${base}.ts`, `${base}.tsx`].find((candidate) =>
+        existsSync(candidate),
+      );
+      return path ? [readFileSync(path, "utf8")] : [];
+    },
+  );
+  return [source, ...builders];
+}
+
 /** Every way this screen names an ordering to the reader. */
 function sortClaims(source: string): string[] {
   const claims: string[] = [];
@@ -91,7 +111,7 @@ describe("a list claims no ordering its endpoint cannot give", () => {
 
   it.each(listScreens())("%s", (file) => {
     const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
-    if (sendsSort(source)) {
+    if (wireSources(file, source).some(sendsSort)) {
       return;
     }
     expect(
