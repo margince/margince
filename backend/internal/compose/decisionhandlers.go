@@ -5,6 +5,7 @@ package compose
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -81,4 +82,5 @@ func (s *Server) wireSalesReview(pool *pgxpool.Pool) {
 	s.salesDecisionHandlers = salesDecisionHandlers{decisions: decisions}
 	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool))}
 	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool)}
+	s.accountCoverageHandlers = accountCoverageHandlers{svc: accountCoverage{db: InstallationDB(pool), now: time.Now}}
 }
