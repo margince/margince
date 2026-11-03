@@ -32,9 +32,9 @@ var seatEmploymentGuards = []string{"contactIsSeatTx", "seatContactsTx"}
 // capturedEmploymentAudit is the helper an inferred employment write records
 // its provenance through, and its callers are this census.
 //
-// The generic relationship create needs no waiver now. It stores what a human
-// asserted and records no inferred provenance, so it is not a subject. That
-// waiver was how an inferred caller of it inherited an exemption.
+// The generic relationship create is not a subject: it stores what a human
+// asserted and records no inferred provenance. Its own inferred callers are,
+// because each records that provenance itself.
 const capturedEmploymentAudit = "auditCapturedEmployment"
 
 func TestEveryInferredEmploymentInsertAsksWhetherTheContactIsASeat(t *testing.T) {
@@ -88,8 +88,6 @@ func TestEveryInferredEmploymentInsertAsksWhetherTheContactIsASeat(t *testing.T)
 	}
 }
 
-// insertsEmployment reports whether the function holds both halves of an
-// employment insert, in one literal or in two.
 // writesInferredEmployment reports whether fn records the provenance of an
 // inferred employment edge. It reads the call and not the statement, so a
 // writer whose SQL comes from a helper or a constant stays in the census.
