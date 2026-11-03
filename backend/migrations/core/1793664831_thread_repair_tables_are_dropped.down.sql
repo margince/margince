@@ -1,3 +1,4 @@
+SET lock_timeout = '3s';
 ALTER INDEX comms_outbound_workspace_activity_ix RENAME TO comms_outbound_thread_repair_page;
 ALTER INDEX activity_mail_reference_referenced_idx RENAME TO activity_mail_reference_inverse;
 ALTER INDEX activity_identity_activity_idx RENAME TO activity_identity_repair_page;

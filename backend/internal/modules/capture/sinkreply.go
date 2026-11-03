@@ -83,8 +83,8 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 	// A reply is answered on the medium it arrived on, so a cross-medium match
 	// could never have been actionable anyway.
 	//
-	// It matches on the PAIR because kind alone stopped discriminating at
-	// ADR-0107/A158: every channel row now carries kind='message' whatever
+	// It matches on the PAIR because kind alone stopped discriminating:
+	// every channel row now carries kind='message' whatever
 	// carried it, so kind separates mail from channel but no longer one
 	// transport from another — and the same forgery would then reach across
 	// providers instead of across media. IS NOT DISTINCT FROM is what lets one
