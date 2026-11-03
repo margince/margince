@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -189,19 +189,7 @@ export function useCoachTeammate() {
 // reason. Deciding one needs the rest: the payload a reader may edit, who
 // staged it, the evidence behind it. So the row being decided fetches the
 // approval it shows, the same read the record page makes.
-export function useApproval(id: string, enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["approvals", "one", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/approvals/{id}", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
+export { useApproval } from "../../lib/approvalread";
 
 /**
  * Set a lapsed contact aside, stop following them, or put them back.

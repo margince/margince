@@ -19,6 +19,7 @@ import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
 import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
+import { approvalQueryKey } from "../lib/approvalread";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -81,10 +82,11 @@ function TranscriptReadOutcome({
 // watched the task appear, came back to a card still saying one was waiting.
 // Nothing was wrong with the number; the sentence was about a different fact.
 //
-// The decisions are read where they actually live, one authorised read per
-// staged approval, keyed ["approval", id] — the key approvalrow already
-// invalidates when a decision lands, so accepting from the worklist refreshes
-// this card without a reload.
+// The decisions are read where they actually live: one authorised read per
+// staged approval, keyed by `approvalQueryKey`.
+//
+// That is the key approvalrow invalidates when a decision lands, so accepting
+// from the worklist refreshes this card without a reload.
 //
 // A hook cannot sit under a changing early return, which is why this is its own
 // component: the parent returns before it for a failed or empty reading.
@@ -94,7 +96,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const { locale } = useLocale();
   const decisions = useQueries({
     queries: ids.map((id) => ({
-      queryKey: ["approval", id],
+      queryKey: approvalQueryKey(id),
       queryFn: async () => {
         return unwrap(
           await api.GET("/approvals/{id}", {

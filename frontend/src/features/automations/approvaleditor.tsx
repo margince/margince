@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
-import { api } from "../../api/client";
 import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
@@ -33,6 +31,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
+import { useApproval } from "../../lib/approvalread";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { approvalHref } from "./approvalhref";
@@ -45,7 +44,6 @@ import { useApprovalNames } from "./approvalresponsibility";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
-import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import "../../design-system/querystates.css";
 
@@ -105,17 +103,7 @@ export function ApprovalDetailModal({
   // the reader's own clock rather than the record's.
   const zone = viewerZone();
   const headingId = useId();
-  const detail = useQuery({
-    queryKey: ["approval", approvalId],
-    enabled: open,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/approvals/{id}", {
-          params: { path: { id: approvalId } },
-        }),
-      );
-    },
-  });
+  const detail = useApproval(approvalId, open);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
       <DrawerHead>
