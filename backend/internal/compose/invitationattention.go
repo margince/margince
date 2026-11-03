@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -19,11 +20,11 @@ import (
 type invitationAttention struct{ pool *pgxpool.Pool }
 
 var invitationAttentionCopy = map[string]struct{ subject, body string }{
-	"calendar_disconnected": {
+	string(crmcontracts.MeetingInvitationAttentionReasonCalendarDisconnected): {
 		"Your calendar refused Margince, so your invitations are paused",
 		"Reconnect your calendar with permission to add events. The paused invitations then go out on their own.",
 	},
-	"delivery_failed": {
+	string(crmcontracts.MeetingInvitationAttentionReasonDeliveryFailed): {
 		"An invitation could not be delivered",
 		"Open the meeting to retry the invitation. The time stays reserved while you decide.",
 	},

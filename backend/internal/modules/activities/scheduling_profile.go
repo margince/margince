@@ -172,7 +172,7 @@ func (s *Store) calendarBlocker(ctx context.Context, host ids.UserID, profile cr
 
 // calendarNotConnected is the refusal a host can act on when their calendar
 // refused us; calendarAuthFailure recognises it by value.
-var calendarNotConnected = SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+var calendarNotConnected = SchedulingArgumentError{Field: "provider", Code: codeRequired, Message: "Connect a calendar first"}
 
 func errCalendarNotConnected() error {
 	refusal := calendarNotConnected
