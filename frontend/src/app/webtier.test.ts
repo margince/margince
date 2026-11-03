@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { BOOKING_HOST_IDS, BOOKING_ID_PREFIXES } from "../lib/bookingaddress";
 
 // What nginx.conf answers for a path, worked out from the file the image ships
 // by nginx's own location rules: an exact match first, then the longest
@@ -250,4 +251,31 @@ describe("a booking page has a real path a preview fetcher can read", () => {
       expect(answer(path)).toBe("shell");
     },
   );
+});
+
+describe("a booking path that names a host control or a guest token is refused unlogged", () => {
+  const reserved = [
+    ...BOOKING_HOST_IDS,
+    ...BOOKING_ID_PREFIXES.map((prefix) => `${prefix}private-token`),
+  ];
+
+  it.each(reserved.flatMap((id) => [`/book/${id}`, `/book/${id}/`]))(
+    "answers %s with 404 and never sends it to the preview",
+    (path) => {
+      const where = locate(path);
+      expect(where.body).not.toContain("/v1/public/booking/");
+      expect(where.body).toMatch(/return 404 "Not found\\n";/);
+      expect(where.body).toMatch(/access_log off;/);
+    },
+  );
+
+  it("leaves a slug that only starts like a reserved word to the booking page", () => {
+    for (const path of ["/book/managex", "/book/previews", "/book/contacts"]) {
+      expect(locate(path).pattern).toBe("^/book/([A-Za-z0-9_-]+)/?$");
+    }
+  });
+
+  it("does not log a booking page's slug", () => {
+    expect(locate("/book/Ab3_x-9Q").body).toMatch(/access_log off;/);
+  });
 });

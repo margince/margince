@@ -25,7 +25,7 @@ const previewOrigin = "https://crm.example.test"
 // below also proves the escaping.
 func hostWithBookingPage(t *testing.T, e *integration.Env, enabled bool) string {
 	t.Helper()
-	e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, e.AdminUser, `Ada <b>"Host"</b>`)
+	e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, e.AdminUser, `Ada <script>alert("Host")</script>`)
 	store := e.Activities.WithPublicBaseURL(previewOrigin).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
 	profile, err := store.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{
 		Enabled: enabled, Provider: "gcal", CalendarId: "primary", DurationMinutes: 45, NoticeMinutes: 120, HorizonDays: 30,
@@ -74,21 +74,21 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 	}
 	page := previewOrigin + "/book/" + slug
 	for _, want := range []string{
-		`<title>Book a meeting with Ada &lt;b&gt;&#34;Host&#34;&lt;/b&gt;</title>`,
+		`<title>Book a meeting with Ada &lt;script&gt;alert(&#34;Host&#34;)&lt;/script&gt;</title>`,
 		`<link rel="canonical" href="` + page + `">`,
 		`<meta property="og:url" content="` + page + `">`,
 		`<meta property="og:site_name" content="Acme GmbH">`,
 		`<meta property="og:image" content="` + previewOrigin + `/v1/public/booking/company-logo">`,
 		`<meta name="twitter:image" content="` + previewOrigin + `/v1/public/booking/company-logo">`,
 		`<meta name="twitter:card" content="summary">`,
-		`Tea &amp; &lt;script&gt;alert(1)&lt;/script&gt;: a 45-minute meeting with Ada &lt;b&gt;&#34;Host&#34;&lt;/b&gt; of Acme GmbH.`,
+		`Tea &amp; &lt;script&gt;alert(1)&lt;/script&gt;: a 45-minute meeting with Ada &lt;script&gt;alert(&#34;Host&#34;)&lt;/script&gt; of Acme GmbH.`,
 		`<a id="record" href="/#/book/` + slug + `">Open booking page</a>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("preview lacks %s:\n%s", want, body)
 		}
 	}
-	for _, banned := range []string{"Margince", "margince.com", "<script>alert", "<b>"} {
+	for _, banned := range []string{"Margince", "margince.com", "<script>alert", `"Host"`} {
 		if strings.Contains(body, banned) {
 			t.Fatalf("preview carries %q:\n%s", banned, body)
 		}
@@ -187,5 +187,39 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 	}
 	if live := fetchBookingPreview(t, server, http.MethodGet, *replaced.Slug); live.Code != http.StatusOK {
 		t.Fatalf("replacement page: %d", live.Code)
+	}
+}
+
+func TestABookingPageOfAHostWhoseAccountIsNotLiveIsGoneEverywhere(t *testing.T) {
+	for name, retire := range map[string]string{
+		"suspended":   `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
+		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
+		"archived":    `UPDATE app_user SET archived_at = now() WHERE id = $1`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			theCompanyExists(t, e)
+			slug := hostWithBookingPage(t, e, true)
+			server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithPublicBaseURL(previewOrigin))
+			if live := fetchBookingPreview(t, server, http.MethodGet, slug); live.Code != http.StatusOK {
+				t.Fatalf("live host: %d", live.Code)
+			}
+			e.WsExec(t, retire, e.AdminUser)
+			for _, method := range []string{http.MethodGet, http.MethodHead} {
+				response := fetchBookingPreview(t, server, method, slug)
+				if response.Code != http.StatusNotFound {
+					t.Fatalf("%s preview: %d %s", method, response.Code, response.Body.String())
+				}
+				expectNoMarginceOrHost(t, response.Body.String())
+			}
+			// The booking page itself refuses the same way: one resolution path.
+			for _, path := range []string{"/profile", "/availability?from=2026-10-05T00:00:00Z&to=2026-10-06T00:00:00Z"} {
+				response := httptest.NewRecorder()
+				server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/booking/"+slug+path, nil))
+				if response.Code != http.StatusNotFound || strings.Contains(response.Body.String(), "Ada") {
+					t.Fatalf("%s: %d %s", path, response.Code, response.Body.String())
+				}
+			}
+		})
 	}
 }
