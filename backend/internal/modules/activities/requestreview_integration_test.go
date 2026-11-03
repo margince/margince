@@ -128,7 +128,7 @@ func TestUnthreadedUnclassifiedMailNeedsRequestEvidence(t *testing.T) {
 		}
 	}
 	assertListed(false)
-	if _, err := store.SetCaptureLabel(asClassifier(e), ids.UUID(source.Id), "meeting"); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, ids.UUID(source.Id), "meeting"); err != nil {
 		t.Fatal(err)
 	}
 	assertListed(true)
