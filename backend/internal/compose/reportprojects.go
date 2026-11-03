@@ -235,9 +235,23 @@ func projectsGoneQuietSpec() reportSpec {
 }
 
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
-	sum := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
-	if coverage, ok := spec.sumCoverage[aggregate.Field]; ok && aggregate.Fn == aggFnSum {
-		return deals.FinalizeBaseTotalSQL(sum, "sum("+coverage+")")
+	rendered := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
+	coverage, ok := spec.sumCoverage[aggregate.Field]
+	if !ok {
+		return rendered
 	}
-	return sum
+	if aggregate.Fn == aggFnSum {
+		return deals.FinalizeBaseTotalSQL(rendered, "sum("+coverage+")")
+	}
+	// An average, a minimum or a maximum over a converted amount skips the
+	// rows that could not be priced, and reads as the whole group. They have
+	// no zero to fall back on, so an unpriced row leaves no answer.
+	if foldsMoney[aggregate.Fn] {
+		return deals.StrictBaseTotalSQL(rendered, "sum("+coverage+")")
+	}
+	return rendered
 }
+
+// foldsMoney are the aggregates that combine amounts into one, apart from the
+// sum, which has its own answer for an empty group.
+var foldsMoney = map[string]bool{aggFnAvg: true, aggFnMin: true, aggFnMax: true}

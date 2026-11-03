@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.6 KB |
+| Tool catalog | 158.8 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41918 |
+| Approx. wire tokens | 41960 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
-| Input schemas | 66.0 KB | 41% | Yes, every step |
+| Input schemas | 66.2 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.8 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **101.0 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1526 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -2355,6 +2355,14 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     },
     "relationship_stage": {
       "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
+      "type": "string"
+    },
+    "settle": {
+      "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+      "enum": [
+        "complete",
+        "keep"
+      ],
       "type": "string"
     },
     "source_id": {

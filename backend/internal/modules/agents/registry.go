@@ -91,6 +91,10 @@ type Registry struct {
 	// language writes every staged summary in the installation's base
 	// language (summarycopy.go). Nil writes English.
 	language baselanguage.Resolver
+	// closeTasks answers and settles the open tasks a closing deal leaves.
+	// A registry composed without one closes deals without asking, which is
+	// the behaviour this field exists to end.
+	closeTasks DealTaskSettler
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
