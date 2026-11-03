@@ -51,7 +51,8 @@ func main() {
 	}
 }
 
-// start is --check-config when args ask for it, and the boot otherwise.
+// start is --version or --check-config when args ask for it, and the boot
+// otherwise.
 func start(ctx context.Context, args []string, stdout io.Writer) error {
 	if buildinfo.AsksForVersion(args) {
 		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-api"))

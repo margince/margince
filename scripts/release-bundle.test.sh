@@ -23,13 +23,15 @@ fail() {
 # plant <arch>: one platform folder, laid out as the Dockerfile's bundle stage.
 plant() {
 	local dir="$work/bundle/linux_$1"
-	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server"
+	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server" "$dir/config"
 	for program in margince-api margince-worker margince-migrate; do
 		printf '#!/bin/sh\necho %s-%s\n' "$program" "$1" >"$dir/bin/$program"
 	done
 	echo '<!doctype html>' >"$dir/web/index.html"
 	cp "$SCRIPT_DIR"/deploy/*.sh "$SCRIPT_DIR"/deploy/*.sql "$dir/deploy/"
 	cp "$SCRIPT_DIR"/deploy/server/* "$dir/deploy/server/"
+	cp "$SCRIPT_DIR/../config/margince.example.yaml" "$dir/config/"
+	cp "$SCRIPT_DIR/../.env.example" "$dir/margince.env.example"
 	echo 'Business Source License 1.1' >"$dir/LICENSE"
 }
 
@@ -87,6 +89,15 @@ if pack; then
 	fail "a bundle without margince-worker was packed, and its unit would fail on the server"
 elif ! grep -q 'bin/margince-worker' "$work/out"; then
 	fail "the refusal does not name the missing file: $(cat "$work/out")"
+fi
+
+# --- a bundle without the settings template the install starts from ----------
+plant arm64
+rm "$work/bundle/linux_arm64/margince.env.example"
+if pack; then
+	fail "a bundle without margince.env.example was packed, and the install has no settings to start from"
+elif ! grep -q 'margince.env.example' "$work/out"; then
+	fail "the refusal does not name the missing template: $(cat "$work/out")"
 fi
 
 if [[ "$FAILURES" -gt 0 ]]; then

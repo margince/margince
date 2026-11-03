@@ -1,6 +1,7 @@
 # The api on a server. It runs the image's own entrypoint, so it applies the
 # migrations as the owner role and then serves as the app role, as the image
-# does. Settings come from /etc/margince/margince.env.
+# does. Settings come from /etc/margince/margince.env. The worker unit runs the
+# outbox relay, so this api runs none of its own.
 [Unit]
 Description=Margince api
 Wants=network-online.target
@@ -12,6 +13,7 @@ User=margince
 Group=margince
 WorkingDirectory=/var/lib/margince
 EnvironmentFile=/etc/margince/margince.env
+Environment=MARGINCE_INLINE_RELAY=false
 Environment=PATH=/opt/margince/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/opt/margince/deploy/api-entrypoint.sh
 Restart=on-failure

@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -23,6 +24,9 @@ import (
 var (
 	apiMount       = regexp.MustCompile(`mux\.Handle(?:Func)?\("(?:[A-Z]+ )?(/[^"]*)"`)
 	securityTxt    = regexp.MustCompile(`securityTxtPath = "(/[^"]+)"`)
+	inboundPrefix  = regexp.MustCompile(`inboundPrefix = "(/[^"]+)"`)
+	uploadMax      = regexp.MustCompile(`Max: config\.Some\((\d+)\)`)
+	frontBodyLimit = regexp.MustCompile(`(?m)^    client_max_body_size (\d+)m;$`)
 	nginxLocation  = regexp.MustCompile(`(?m)^    location (\^~|~|=)? ?(\S+) \{\n((?:        .*\n)*?)    \}`)
 	proxiedToAPI   = "proxy_pass http://margince_api;"
 	pathsOfTheWebs = []string{"/", "/mcp-apps/view.html", "/assets/app.js", "/.well-known/acme-challenge/token", "/r/deals/1"}
@@ -79,15 +83,51 @@ func apiMounts(t *testing.T) []string {
 			mounts = append(mounts, m[1])
 		}
 	}
-	m := securityTxt.FindStringSubmatch(readRepoFile(t, filepath.Join("internal", "compose", "securitytxt.go")))
-	if m == nil {
-		t.Fatal("securitytxt.go no longer declares securityTxtPath; read the path from where it is now")
-	}
-	mounts = append(mounts, m[1])
+	mounts = append(mounts,
+		declaredPath(t, securityTxt, "securitytxt.go"),
+		// Extension inbound edges mount at run time under this prefix, one per
+		// declared endpoint, so a path below it stands for all of them.
+		declaredPath(t, inboundPrefix, "extinbound.go")+"unit/endpoint")
 	if !slices.Contains(mounts, "/v1/") || len(mounts) < 10 {
 		t.Fatalf("read %d mounts from routes.go (%v); the pattern no longer sees how routes.go mounts", len(mounts), mounts)
 	}
 	return mounts
+}
+
+// declaredPath reads one path constant from a compose file.
+func declaredPath(t *testing.T, declaration *regexp.Regexp, file string) string {
+	t.Helper()
+	m := declaration.FindStringSubmatch(readRepoFile(t, filepath.Join("internal", "compose", file)))
+	if m == nil {
+		t.Fatalf("%s no longer matches %s; read the path from where it is now", file, declaration)
+	}
+	return m[1]
+}
+
+// The front server must take every body an upload setting can allow; a lower
+// ceiling answers 413 before the api sees a request it would accept.
+func TestTheServerFrontTakesTheLargestUploadASettingAllows(t *testing.T) {
+	t.Parallel()
+	settings := uploadMax.FindAllStringSubmatch(readRepoFile(t, filepath.Join("internal", "compose", "uploadsettings.go")), -1)
+	if len(settings) < 4 {
+		t.Fatalf("read %d upload maximums from uploadsettings.go; the pattern no longer sees how a setting is bounded", len(settings))
+	}
+	largestMB := 0
+	for _, m := range settings {
+		mb, err := strconv.Atoi(m[1])
+		if err != nil {
+			t.Fatalf("upload maximum %q: %v", m[1], err)
+		}
+		largestMB = max(largestMB, mb)
+	}
+	limit := frontBodyLimit.FindStringSubmatch(readRepoFile(t, filepath.Join("..", "scripts", "deploy", "server", "nginx.conf")))
+	if limit == nil {
+		t.Fatal("nginx.conf sets no client_max_body_size in megabytes, so nginx refuses any body over 1m")
+	}
+	// nginx's m is 2^20 bytes and a setting's MB is 10^6, so equal numbers cover it.
+	if mib, err := strconv.Atoi(limit[1]); err != nil || mib < largestMB {
+		t.Errorf("nginx.conf takes bodies up to %sm, and an upload setting allows %d MB", limit[1], largestMB)
+	}
 }
 
 func apiLocations(t *testing.T) []serverLocation {

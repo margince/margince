@@ -36,9 +36,10 @@ What each other feature needs is in
 
 ## Pull a release
 
-Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `worker:<tag>` and `web:<tag>`, for `linux/amd64`
-and `linux/arm64`. Pull each by the hash that `images.txt` on the release page names, so all three roles come
-from one release. The release page shows how to check each image with `cosign verify`.
+Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
+`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+the release page names, so all three roles come from one release. The release page gives the `cosign verify`
+command that checks each one.
 
 ## Build the images
 

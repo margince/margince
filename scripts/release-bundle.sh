@@ -46,6 +46,8 @@ required=(
 	deploy/server/proxy.conf
 	deploy/server/margince-api.service
 	deploy/server/margince-worker.service
+	config/margince.example.yaml
+	margince.env.example
 	LICENSE
 )
 

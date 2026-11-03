@@ -50,7 +50,7 @@ sudo tar -xzf "margince-$VERSION-linux-$ARCH.tar.gz" -C /opt
 sudo ln -sfn "/opt/margince-$VERSION-linux-$ARCH" /opt/margince
 cat /opt/margince/VERSION
 /opt/margince/bin/margince-api --version
-sudo useradd --system --home-dir /var/lib/margince --create-home --shell /usr/sbin/nologin margince
+sudo useradd --system --user-group --home-dir /var/lib/margince --create-home --shell /usr/sbin/nologin margince
 ```
 
 `VERSION` and `--version` name the release and the commit it was built from. Each of the three
@@ -147,8 +147,20 @@ release guard needs: stop the worker, start the api, then start the worker.
 ```sh
 sudo systemctl stop margince-worker
 sudo ln -sfn "/opt/margince-$VERSION-linux-$ARCH" /opt/margince
+sudo cp /opt/margince/deploy/server/margince-api.service /opt/margince/deploy/server/margince-worker.service /etc/systemd/system/
+sudo systemctl daemon-reload
 sudo systemctl restart margince-api
 sudo systemctl start margince-worker
+```
+
+The copies under `/etc` do not follow the link, so take the units again as above. Take `web.conf` again
+too. Compare the new `nginx.conf` with yours, which holds your host name and certificate, and carry over
+what changed:
+
+```sh
+sudo cp /opt/margince/deploy/server/web.conf /etc/nginx/conf.d/margince-web.conf
+diff /opt/margince/deploy/server/nginx.conf /etc/nginx/conf.d/margince.conf
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 The api applies the new release's migrations when it starts. Keep the folder of the release before

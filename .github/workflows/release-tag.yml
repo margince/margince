@@ -425,7 +425,15 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
           \`\`\`
 
-          The same two flags check an image: \`cosign verify ghcr.io/margince/api:$VERSION ...\`.
+          And each image:
+
+          \`\`\`sh
+          while read -r image; do
+            cosign verify "\$image" \\
+              --certificate-identity "https://github.com/$GH_REPO/.github/workflows/release-tag.yml@refs/tags/$VERSION" \\
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com
+          done < images.txt
+          \`\`\`
           NOTES
 
           # The hand-written half: the draft's body, or on a re-run the
