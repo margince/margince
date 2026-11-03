@@ -190,6 +190,27 @@ func (e AccessPreviewRowScope) Valid() bool {
 	}
 }
 
+// Defines values for AccountCoverageView.
+const (
+	AccountCoverageViewSilent         AccountCoverageView = "silent"
+	AccountCoverageViewSingleThreaded AccountCoverageView = "single_threaded"
+	AccountCoverageViewUntouched      AccountCoverageView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the AccountCoverageView enum.
+func (e AccountCoverageView) Valid() bool {
+	switch e {
+	case AccountCoverageViewSilent:
+		return true
+	case AccountCoverageViewSingleThreaded:
+		return true
+	case AccountCoverageViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AccountDraftReasonKind.
 const (
 	AccountDraftReasonKindCommitment   AccountDraftReasonKind = "commitment"
@@ -17995,6 +18016,132 @@ func (e ReportScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportSetupProposalSite.
+const (
+	ReportSetupProposalSiteCustomReportSetup ReportSetupProposalSite = "custom_report_setup"
+	ReportSetupProposalSiteInitiativeSetup   ReportSetupProposalSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupProposalSite enum.
+func (e ReportSetupProposalSite) Valid() bool {
+	switch e {
+	case ReportSetupProposalSiteCustomReportSetup:
+		return true
+	case ReportSetupProposalSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupRequestSite.
+const (
+	ReportSetupRequestSiteCustomReportSetup ReportSetupRequestSite = "custom_report_setup"
+	ReportSetupRequestSiteInitiativeSetup   ReportSetupRequestSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupRequestSite enum.
+func (e ReportSetupRequestSite) Valid() bool {
+	switch e {
+	case ReportSetupRequestSiteCustomReportSetup:
+		return true
+	case ReportSetupRequestSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSelectionPeriod.
+const (
+	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
+	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
+	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSelectionPeriod enum.
+func (e ReportSetupSelectionPeriod) Valid() bool {
+	switch e {
+	case ReportSetupSelectionPeriodLastMonth:
+		return true
+	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodThisMonth:
+		return true
+	case ReportSetupSelectionPeriodThisQuarter:
+		return true
+	case ReportSetupSelectionPeriodThisWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSourceField.
+const (
+	ReportSetupSourceFieldChart       ReportSetupSourceField = "chart"
+	ReportSetupSourceFieldCountry     ReportSetupSourceField = "country"
+	ReportSetupSourceFieldDeadline    ReportSetupSourceField = "deadline"
+	ReportSetupSourceFieldIndustry    ReportSetupSourceField = "industry"
+	ReportSetupSourceFieldMetric      ReportSetupSourceField = "metric"
+	ReportSetupSourceFieldName        ReportSetupSourceField = "name"
+	ReportSetupSourceFieldObjective   ReportSetupSourceField = "objective"
+	ReportSetupSourceFieldPeriod      ReportSetupSourceField = "period"
+	ReportSetupSourceFieldProduct     ReportSetupSourceField = "product"
+	ReportSetupSourceFieldTargetValue ReportSetupSourceField = "target_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSourceField enum.
+func (e ReportSetupSourceField) Valid() bool {
+	switch e {
+	case ReportSetupSourceFieldChart:
+		return true
+	case ReportSetupSourceFieldCountry:
+		return true
+	case ReportSetupSourceFieldDeadline:
+		return true
+	case ReportSetupSourceFieldIndustry:
+		return true
+	case ReportSetupSourceFieldMetric:
+		return true
+	case ReportSetupSourceFieldName:
+		return true
+	case ReportSetupSourceFieldObjective:
+		return true
+	case ReportSetupSourceFieldPeriod:
+		return true
+	case ReportSetupSourceFieldProduct:
+		return true
+	case ReportSetupSourceFieldTargetValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupUnsupportedCode.
+const (
+	ReportSetupUnsupportedCodeNotExpressible ReportSetupUnsupportedCode = "not_expressible"
+	ReportSetupUnsupportedCodeNotOffered     ReportSetupUnsupportedCode = "not_offered"
+	ReportSetupUnsupportedCodeUnknownValue   ReportSetupUnsupportedCode = "unknown_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupUnsupportedCode enum.
+func (e ReportSetupUnsupportedCode) Valid() bool {
+	switch e {
+	case ReportSetupUnsupportedCodeNotExpressible:
+		return true
+	case ReportSetupUnsupportedCodeNotOffered:
+		return true
+	case ReportSetupUnsupportedCodeUnknownValue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingBlockKind.
 const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
@@ -18988,6 +19135,48 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	case RunReportRequestAggregatesFnP75:
 		return true
 	case RunReportRequestAggregatesFnSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentConfidence.
+const (
+	SalesAssessmentConfidenceHigh   SalesAssessmentConfidence = "high"
+	SalesAssessmentConfidenceLow    SalesAssessmentConfidence = "low"
+	SalesAssessmentConfidenceMedium SalesAssessmentConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentConfidence enum.
+func (e SalesAssessmentConfidence) Valid() bool {
+	switch e {
+	case SalesAssessmentConfidenceHigh:
+		return true
+	case SalesAssessmentConfidenceLow:
+		return true
+	case SalesAssessmentConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentSentenceKind.
+const (
+	SalesAssessmentSentenceKindClaim       SalesAssessmentSentenceKind = "claim"
+	SalesAssessmentSentenceKindHypothesis  SalesAssessmentSentenceKind = "hypothesis"
+	SalesAssessmentSentenceKindObservation SalesAssessmentSentenceKind = "observation"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentSentenceKind enum.
+func (e SalesAssessmentSentenceKind) Valid() bool {
+	switch e {
+	case SalesAssessmentSentenceKindClaim:
+		return true
+	case SalesAssessmentSentenceKindHypothesis:
+		return true
+	case SalesAssessmentSentenceKindObservation:
 		return true
 	default:
 		return false
@@ -24988,6 +25177,48 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	}
 }
 
+// Defines values for GetAccountCoverageParamsScopeKind.
+const (
+	GetAccountCoverageParamsScopeKindOwner     GetAccountCoverageParamsScopeKind = "owner"
+	GetAccountCoverageParamsScopeKindTeam      GetAccountCoverageParamsScopeKind = "team"
+	GetAccountCoverageParamsScopeKindWorkspace GetAccountCoverageParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsScopeKind enum.
+func (e GetAccountCoverageParamsScopeKind) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsScopeKindOwner:
+		return true
+	case GetAccountCoverageParamsScopeKindTeam:
+		return true
+	case GetAccountCoverageParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAccountCoverageParamsView.
+const (
+	GetAccountCoverageParamsViewSilent         GetAccountCoverageParamsView = "silent"
+	GetAccountCoverageParamsViewSingleThreaded GetAccountCoverageParamsView = "single_threaded"
+	GetAccountCoverageParamsViewUntouched      GetAccountCoverageParamsView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsView enum.
+func (e GetAccountCoverageParamsView) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsViewSilent:
+		return true
+	case GetAccountCoverageParamsViewSingleThreaded:
+		return true
+	case GetAccountCoverageParamsViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSalesDecisionsParamsStatus.
 const (
 	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
@@ -28069,6 +28300,97 @@ type AccessPreviewMemberStatus string
 
 // AccessPreviewRowScope defines model for AccessPreview.RowScope.
 type AccessPreviewRowScope string
+
+// AccountCoverage defines model for AccountCoverage.
+type AccountCoverage struct {
+	// ActivityReadable False when the reader may not read activity: the two account views are then empty and uncounted.
+	ActivityReadable  bool                  `json:"activity_readable"`
+	AsOf              time.Time             `json:"as_of"`
+	Counts            AccountCoverageCounts `json:"counts"`
+	FrameworkRevision int64                 `json:"framework_revision"`
+	Rows              []AccountCoverageRow  `json:"rows"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	Thresholds AccountCoverageThresholds `json:"thresholds"`
+
+	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
+	Truncated *bool               `json:"truncated,omitempty"`
+	View      AccountCoverageView `json:"view"`
+
+	// Withheld Deals of the view whose committee the reader could not read whole, left out rather than judged.
+	Withheld *int `json:"withheld,omitempty"`
+}
+
+// AccountCoverageView defines model for AccountCoverage.View.
+type AccountCoverageView string
+
+// AccountCoverageAccount defines model for AccountCoverageAccount.
+type AccountCoverageAccount struct {
+	Id      openapi_types.UUID  `json:"id"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+}
+
+// AccountCoverageCounts defines model for AccountCoverageCounts.
+type AccountCoverageCounts struct {
+	Silent         *int `json:"silent,omitempty"`
+	SingleThreaded int  `json:"single_threaded"`
+	Untouched      *int `json:"untouched,omitempty"`
+}
+
+// AccountCoverageDeal defines model for AccountCoverageDeal.
+type AccountCoverageDeal struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	ClosedAt          *time.Time          `json:"closed_at,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+	Name              string              `json:"name"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Stage             *string             `json:"stage,omitempty"`
+}
+
+// AccountCoverageRow defines model for AccountCoverageRow.
+type AccountCoverageRow struct {
+	Company AccountCoverageAccount `json:"company"`
+
+	// DaysSilent Days since the newest exchange either way, or since the won deal closed when there was none.
+	DaysSilent *int                 `json:"days_silent,omitempty"`
+	Deal       *AccountCoverageDeal `json:"deal,omitempty"`
+
+	// EngagedSeats People inside the account engaged on the deal, for a single-threaded row.
+	EngagedSeats *int       `json:"engaged_seats,omitempty"`
+	LastInbound  *time.Time `json:"last_inbound,omitempty"`
+	LastOutbound *time.Time `json:"last_outbound,omitempty"`
+
+	// NamedSeats People named on the deal, engaged or not.
+	NamedSeats *int `json:"named_seats,omitempty"`
+
+	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
+
+	// OpenDeals Open deals on the account, for an untouched row.
+	OpenDeals *int                 `json:"open_deals,omitempty"`
+	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
+}
+
+// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+type AccountCoverageThresholds struct {
+	// MaxEngagedSeats A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
+
+	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	SilentDays *int `json:"silent_days,omitempty"`
+
+	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	UntouchedDays *int `json:"untouched_days,omitempty"`
+
+	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	WonWithinDays *int `json:"won_within_days,omitempty"`
+}
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
 // take the draft on trust. Structured rather than a phrase, because the composer
@@ -53928,6 +54250,94 @@ type ReportScope struct {
 // ReportScopeKind defines model for ReportScope.Kind.
 type ReportScopeKind string
 
+// ReportSetupObjective defines model for ReportSetupObjective.
+type ReportSetupObjective struct {
+	Deadline    *openapi_types.Date `json:"deadline,omitempty"`
+	Metric      ReportingMetricID   `json:"metric"`
+	TargetValue *int64              `json:"target_value,omitempty"`
+}
+
+// ReportSetupProposal defines model for ReportSetupProposal.
+type ReportSetupProposal struct {
+	// Clarifications What the words leave open, as questions to the reader.
+	Clarifications []string `json:"clarifications"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+	ModelUsed   *string   `json:"model_used,omitempty"`
+
+	// Name A name the words suggest.
+	Name      *string               `json:"name,omitempty"`
+	Objective *ReportSetupObjective `json:"objective,omitempty"`
+
+	// Selection The part of a reporting selection the words named. Absent means the words said nothing about it.
+	Selection ReportSetupSelection    `json:"selection"`
+	Site      ReportSetupProposalSite `json:"site"`
+
+	// Sources The phrase each resolved field came from.
+	Sources     []ReportSetupSource      `json:"sources"`
+	Unsupported []ReportSetupUnsupported `json:"unsupported"`
+}
+
+// ReportSetupProposalSite defines model for ReportSetupProposal.Site.
+type ReportSetupProposalSite string
+
+// ReportSetupRequest defines model for ReportSetupRequest.
+type ReportSetupRequest struct {
+	// Description What the reader typed. Only this and the catalog reach the model.
+	Description string `json:"description"`
+
+	// Site Which drawer asks: a sales initiative's goal or a custom report.
+	Site ReportSetupRequestSite `json:"site"`
+}
+
+// ReportSetupRequestSite Which drawer asks: a sales initiative's goal or a custom report.
+type ReportSetupRequestSite string
+
+// ReportSetupSelection The part of a reporting selection the words named. Absent means the words said nothing about it.
+type ReportSetupSelection struct {
+	Blocks    *[]ReportingBlockKind       `json:"blocks,omitempty"`
+	Country   *ReportingCountry           `json:"country,omitempty"`
+	Industry  *ReportingIndustry          `json:"industry,omitempty"`
+	Metrics   *[]ReportingMetricID        `json:"metrics,omitempty"`
+	Period    *ReportSetupSelectionPeriod `json:"period,omitempty"`
+	ProductId *ReportingProductId         `json:"product_id,omitempty"`
+}
+
+// ReportSetupSelectionPeriod defines model for ReportSetupSelection.Period.
+type ReportSetupSelectionPeriod string
+
+// ReportSetupSource defines model for ReportSetupSource.
+type ReportSetupSource struct {
+	Field ReportSetupSourceField `json:"field"`
+
+	// Label The value's name as the reader sees it.
+	Label *string `json:"label,omitempty"`
+
+	// Phrase The words it was read from.
+	Phrase string `json:"phrase"`
+
+	// Value The resolved id, or the value as proposed.
+	Value string `json:"value"`
+}
+
+// ReportSetupSourceField defines model for ReportSetupSource.Field.
+type ReportSetupSourceField string
+
+// ReportSetupUnsupported defines model for ReportSetupUnsupported.
+type ReportSetupUnsupported struct {
+	// Code `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+	Code   ReportSetupUnsupportedCode `json:"code"`
+	Phrase string                     `json:"phrase"`
+	Reason string                     `json:"reason"`
+}
+
+// ReportSetupUnsupportedCode `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+type ReportSetupUnsupportedCode string
+
 // ReportVocabulary What `describe_report_vocabulary` answers.
 type ReportVocabulary struct {
 	Vocabulary map[string]interface{} `json:"vocabulary"`
@@ -54304,6 +54714,8 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
+	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
 	Reason          string                          `json:"reason"`
@@ -55237,6 +55649,65 @@ type RunReportRequest struct {
 
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
+
+// SalesAssessment defines model for SalesAssessment.
+type SalesAssessment struct {
+	// Cells The figures the sentences may cite, as the model read them.
+	Cells      []SalesAssessmentCell      `json:"cells"`
+	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
+
+	// Decisions How many recorded decisions the model read.
+	Decisions int `json:"decisions"`
+
+	// EvaluationKey The evaluation the assessment read.
+	EvaluationKey string    `json:"evaluation_key"`
+	GeneratedAt   time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy  WrittenBy                 `json:"generated_by"`
+	ModelUsed    *string                   `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision  `json:"next_decision,omitempty"`
+	Sentences    []SalesAssessmentSentence `json:"sentences"`
+}
+
+// SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
+type SalesAssessmentConfidence string
+
+// SalesAssessmentCell defines model for SalesAssessmentCell.
+type SalesAssessmentCell struct {
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	Id    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SalesAssessmentDecision defines model for SalesAssessmentDecision.
+type SalesAssessmentDecision struct {
+	DealId  openapi_types.UUID `json:"deal_id"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+	Text    string             `json:"text"`
+}
+
+// SalesAssessmentRequest defines model for SalesAssessmentRequest.
+type SalesAssessmentRequest struct {
+	// Refresh Ask the model again, whatever is kept.
+	Refresh   *bool              `json:"refresh,omitempty"`
+	Selection ReportingSelection `json:"selection"`
+}
+
+// SalesAssessmentSentence defines model for SalesAssessmentSentence.
+type SalesAssessmentSentence struct {
+	// Cells The cell ids the sentence rests on.
+	Cells []string                    `json:"cells"`
+	Kind  SalesAssessmentSentenceKind `json:"kind"`
+	Text  string                      `json:"text"`
+}
+
+// SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
+type SalesAssessmentSentenceKind string
 
 // SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
 type SalesDecision struct {
@@ -63869,6 +64340,19 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAccountCoverageParams defines parameters for GetAccountCoverage.
+type GetAccountCoverageParams struct {
+	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	View      *GetAccountCoverageParamsView      `form:"view,omitempty" json:"view,omitempty"`
+}
+
+// GetAccountCoverageParamsScopeKind defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsScopeKind string
+
+// GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsView string
+
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
 	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
@@ -71213,6 +71697,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
+type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
+
 // RecordSalesDecisionJSONRequestBody defines body for RecordSalesDecision for application/json ContentType.
 type RecordSalesDecisionJSONRequestBody = SalesDecisionInput
 
@@ -71263,6 +71750,9 @@ type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
 
 // UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
 type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
+// ProposeReportSetupJSONRequestBody defines body for ProposeReportSetup for application/json ContentType.
+type ProposeReportSetupJSONRequestBody = ReportSetupRequest
 
 // CreateReportingTargetJSONRequestBody defines body for CreateReportingTarget for application/json ContentType.
 type CreateReportingTargetJSONRequestBody = ReportingTargetInput
@@ -84032,6 +84522,19 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+	// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+	// facts behind its verdict. Counts for every view come with each answer; rows come for
+	// the view asked for. The thresholds are the framework's, and the answer prints them.
+	// (GET /analytics/account-coverage)
+	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
+	// The Sales review's assessment of one selection: a few sentences on what the measured
+	// figures show, each citing the cells it rests on, and one next decision on a deal the
+	// reader may see. Written by the model and kept per reader until the figures or the
+	// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+	// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+	// (POST /analytics/assessment)
+	AssessSalesReview(w http.ResponseWriter, r *http.Request)
 	// Which population this caller measures by default, and which they may choose.
 	// (GET /analytics/context)
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
@@ -84207,6 +84710,13 @@ type ServerInterface interface {
 	// How a team's handoffs ended and what still waits, for coaching.
 	// (GET /analytics/sdr-team)
 	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
+	// A sales initiative or a custom report proposed from a description in plain words:
+	// the filters, metrics and charts the words name, resolved against what the reader may
+	// use, with the phrase each came from, the questions the words leave open and the phrases
+	// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+	// a model it answers 409 `ai_not_configured`.
+	// (POST /analytics/setup-proposal)
+	ProposeReportSetup(w http.ResponseWriter, r *http.Request)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -87288,6 +87798,25 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+// facts behind its verdict. Counts for every view come with each answer; rows come for
+// the view asked for. The thresholds are the framework's, and the answer prints them.
+// (GET /analytics/account-coverage)
+func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The Sales review's assessment of one selection: a few sentences on what the measured
+// figures show, each citing the cells it rests on, and one next decision on a deal the
+// reader may see. Written by the model and kept per reader until the figures or the
+// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+// (POST /analytics/assessment)
+func (_ Unimplemented) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which population this caller measures by default, and which they may choose.
 // (GET /analytics/context)
 func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
@@ -87634,6 +88163,16 @@ func (_ Unimplemented) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Re
 // How a team's handoffs ended and what still waits, for coaching.
 // (GET /analytics/sdr-team)
 func (_ Unimplemented) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A sales initiative or a custom report proposed from a description in plain words:
+// the filters, metrics and charts the words name, resolved against what the reader may
+// use, with the phrase each came from, the questions the words leave open and the phrases
+// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+// a model it answers 409 `ai_not_configured`.
+// (POST /analytics/setup-proposal)
+func (_ Unimplemented) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96083,6 +96622,91 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetAccountCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAccountCoverageParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountCoverage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssessSalesReview operation middleware
+func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssessSalesReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAnalyticsContext operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
 
@@ -99324,6 +99948,26 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSdrTeamReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeReportSetup operation middleware
+func (siw *ServerInterfaceWrapper) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeReportSetup(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135641,6 +136285,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/account-coverage", wrapper.GetAccountCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)
 	})
 	r.Group(func(r chi.Router) {
@@ -135813,6 +136463,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/setup-proposal", wrapper.ProposeReportSetup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)

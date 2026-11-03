@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/accountcoverage.go -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
@@ -32,7 +32,7 @@ To see your pipeline report in Margince, click **Analytics** in the sidebar and 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
+The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **Account coverage**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
 
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
@@ -78,6 +78,8 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
 Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
+
+**Account coverage** lists the accounts at risk among the records you chose, in three views. **Single-threaded deals** are open deals with at most one person inside the account who exchanged mail or had a meeting with you lately. **Untouched in pipeline** are accounts with an open deal and no exchange either way in the last 21 days. **Won but silent** are accounts with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose people you may not all see is not judged.
 
 ## Overview
 
@@ -215,8 +217,7 @@ The **Delivery** section of Analytics holds the project reports.
 
 **Projects by phase**: phase, projects, open deal value, won deal value. **Open project tasks**: project, phase, open tasks, overdue tasks. **Projects inactive for 30 days**: project, phase, quiet since.
 
-When there is nothing, the page says which nothing it means: "No projects yet. Create one under
-Projects with New project. A won deal moves its project to Delivering." or "No project in delivery has gone quiet."
+When there is nothing, the page says which nothing it means: "No projects yet. Create one under Projects with New project. A won deal moves its project to Delivering." or "No project in delivery has gone quiet."
 
 ## Data coverage
 
