@@ -37,7 +37,7 @@ func bookingPreviewSlug(path string) (string, bool) {
 // GetPublicBookingPreview renders the card. The booking edge has already
 // resolved the slug and bound the public booking principal.
 func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
-	preview, err := s.activitiesHandlers.PublicBookingPreview(r.Context(), hostSlug)
+	preview, err := s.PublicBookingPreview(r.Context(), hostSlug)
 	if err != nil {
 		s.writeBookingPreviewUnavailable(w, r, hostSlug, err)
 		return
