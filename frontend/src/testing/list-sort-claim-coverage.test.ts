@@ -68,7 +68,7 @@ function functionBody(source: string, name: string): string | undefined {
 }
 
 // The text from `text[from]`, an opening bracket, to the bracket closing it.
-// A bracket inside quotes is text, not structure.
+// A bracket or quote inside a string or a comment is text, not structure.
 function balanced(text: string, from: number): string | undefined {
   const open = text[from];
   const close = open === "(" ? ")" : "}";
@@ -79,6 +79,14 @@ function balanced(text: string, from: number): string | undefined {
     if (quote !== undefined) {
       if (char === "\\") at++;
       else if (char === quote) quote = undefined;
+      continue;
+    }
+    if (text.startsWith("//", at) || text.startsWith("/*", at)) {
+      const end = text.startsWith("//", at)
+        ? text.indexOf("\n", at)
+        : text.indexOf("*/", at) + 1;
+      if (end <= 0) return undefined;
+      at = end;
       continue;
     }
     if (char === '"' || char === "'" || char === "`") quote = char;
@@ -192,6 +200,15 @@ describe("a list claims no ordering its endpoint cannot give", () => {
     expect(listScreens().length).toBeGreaterThanOrEqual(6);
   });
 
+  it("reads the company contacts list's in-place fetcher whole", () => {
+    const file = "features/companies/companycontacts/contacts.tsx";
+    const body = fetcherBody(readFileSync(resolve(SRC_ROOT, file), "utf8"));
+    expect(body?.trimEnd().endsWith("[companyId],\n  )")).toBe(true);
+    expect(wireQueries(body ?? "").some((wire) => wire.includes("sort:"))).toBe(
+      true,
+    );
+  });
+
   it.each(listScreens())("%s", (file) => {
     const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
     if (screenSendsSort(file, source)) {
@@ -292,6 +309,16 @@ describe("a fetcher's spread builder", () => {
     expect(
       sends(fetcherOf(wireCall('search: "}", ...sortedParams(query)'))),
     ).toBe(true);
+  });
+
+  it("reads past an apostrophe in a comment inside the wire call", () => {
+    const fetcher = fetcherOf(
+      '  return api.GET("/things", {',
+      "    /* the wire query */ // the reader's own dials",
+      "    params: { query: { ...sortedParams(query), limit: 50 } },",
+      "  });",
+    );
+    expect(sends(fetcher)).toBe(true);
   });
 
   it("finds the list read behind a supporting read", () => {
