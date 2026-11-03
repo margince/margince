@@ -227,7 +227,9 @@ export const LeadScoreSourcesNamed: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: /3 / }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^3 activities$/ }),
+    );
   },
 };
 
