@@ -46,6 +46,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		placeholder := b.add(value)
 		spec.from = strings.ReplaceAll(spec.from, "@"+name, placeholder)
 		spec.value = strings.ReplaceAll(spec.value, "@"+name, placeholder)
+		spec.where = strings.ReplaceAll(spec.where, "@"+name, placeholder)
 	}
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), spec.owner, b.arg, unownedIsExcluded)
 	if err != nil {
@@ -78,7 +79,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b) + dimensions
+	where += reportingFactFilters(frame, metric, spec, &b) + dimensions + initiativeMemberSQL(ctx, &b, "t", string(recordTypeDeal))
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"
@@ -254,11 +255,13 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
 	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", "@currency")
 	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
-		label := "CASE part.kind"
+		var label strings.Builder
+		label.WriteString("CASE part.kind")
 		for kind, phrase := range reportingComponentKindLabels {
-			label += " WHEN '" + kind + "' THEN " + b.add(said.Say(phrase))
+			label.WriteString(" WHEN '" + kind + "' THEN " + b.add(said.Say(phrase)))
 		}
-		return "'kind:'||part.kind", label + " END", nil
+		label.WriteString(" END")
+		return "'kind:'||part.kind", label.String(), nil
 	}
 	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
 }

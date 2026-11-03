@@ -17,7 +17,7 @@ import { dayInZone, viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { BookingFooter, useBookingIntent } from "./booking-common";
+import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
   dayRefusal,
@@ -223,6 +223,7 @@ export function BookingGuestScreen({
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
   const publicUnavailable = !preview && !profile.data?.enabled;
+  useBookingTitle(preview ? null : guestTitle(t, profile.data));
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
@@ -344,10 +345,20 @@ export function BookingGuestScreen({
             )
           }
         </QueryGate>
-        <BookingFooter />
       </div>
     </div>
   );
+}
+
+// The tab names the host only while their page takes bookings; a paused or
+// missing page keeps a generic title, as its link-preview card does.
+function guestTitle(
+  t: ReturnType<typeof useT>,
+  host: { enabled: boolean; host_name: string } | undefined,
+): string {
+  return host?.enabled && host.host_name
+    ? t("book.pageTitle", { host: host.host_name })
+    : t("book.pageTitleGeneric");
 }
 
 // A busy month's read stops after a bounded number of pages; a day past where

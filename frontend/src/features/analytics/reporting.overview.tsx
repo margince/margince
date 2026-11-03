@@ -22,6 +22,7 @@ import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
+import { CustomReportDrawer } from "./reporting.custombuilder";
 import { valueBasisOf } from "./reporting.dimensions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -122,6 +123,7 @@ export function useOverviewFilters(
   const setCloseWindow = (value: string) => replaceDial("close", value);
   const dimensions: Dimensions = {
     product_id: params.get("product") || undefined,
+    initiative_id: params.get("initiative") || undefined,
     country: params.get("country") || undefined,
     industry: params.get("industry") || undefined,
     value_basis:
@@ -133,6 +135,7 @@ export function useOverviewFilters(
     const dials = new Map(currentParams());
     const pairs: [string, string | undefined][] = [
       ["product", next.product_id],
+      ["initiative", next.initiative_id],
       ["country", next.country],
       ["industry", next.industry],
       ["basis", next.value_basis === "all" ? undefined : next.value_basis],
@@ -164,12 +167,13 @@ export function useOverviewFilters(
 /** The dials that narrow a report to a product or a market. */
 export type Dimensions = Pick<
   ReportingSelection,
-  "product_id" | "country" | "industry" | "value_basis"
+  "product_id" | "initiative_id" | "country" | "industry" | "value_basis"
 >;
 
 export function dimensionsOf(selection: ReportingSelection): Dimensions {
   return {
     product_id: selection.product_id,
+    initiative_id: selection.initiative_id,
     country: selection.country,
     industry: selection.industry,
     value_basis: selection.value_basis,
@@ -179,6 +183,7 @@ export function dimensionsOf(selection: ReportingSelection): Dimensions {
 function sameDimensions(a: Dimensions, b: Dimensions): boolean {
   return (
     a.product_id === b.product_id &&
+    a.initiative_id === b.initiative_id &&
     a.country === b.country &&
     a.industry === b.industry &&
     (a.value_basis ?? "all") === (b.value_basis ?? "all")
@@ -234,6 +239,7 @@ function OverviewBody({
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
   const shape = VIEW_SHAPE[view];
   const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
@@ -265,6 +271,15 @@ function OverviewBody({
         actions={
           <>
             {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                variant="ghost"
+                onClick={() => setCustomizing(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.customize")}
+              </Button>
+            )}
             {canSave && (
               <Button
                 onClick={() => setSaving(true)}
@@ -347,6 +362,12 @@ function OverviewBody({
                   evaluation={evaluation}
                   reference={evidence}
                   onClose={closeEvidence}
+                />
+              )}
+              {customizing && (
+                <CustomReportDrawer
+                  initial={evaluation.selection}
+                  onClose={() => setCustomizing(false)}
                 />
               )}
               {saving && (

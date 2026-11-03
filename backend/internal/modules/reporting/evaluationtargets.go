@@ -394,6 +394,6 @@ func targetAppliesToInterval(frame crmcontracts.ReportingContext, interval *crmc
 }
 
 func dimensioned(frame crmcontracts.ReportingContext) bool {
-	return frame.ProductId != nil || frame.Country != nil || frame.Industry != nil ||
+	return frame.ProductId != nil || frame.InitiativeId != nil || frame.Country != nil || frame.Industry != nil ||
 		(frame.ValueBasis != nil && *frame.ValueBasis != crmcontracts.ReportingValueBasisAll)
 }

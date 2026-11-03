@@ -8,6 +8,7 @@ import { ExpanderChevron } from "../../design-system/disclosure";
 import { FilterBar } from "../../design-system/filterbar";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
+import { ReviewDecisionsAction } from "./analytics.decisions";
 import { OverviewSaveActions } from "./analytics.overview.readings";
 import { DimensionChips } from "./reporting.dimensions";
 import { ReportingExportButton } from "./reporting.export";
@@ -65,6 +66,7 @@ export function SalesHeader({
           <DimensionChips
             selection={selection}
             productLabel={evaluation?.context.product_label}
+            initiativeLabel={evaluation?.context.initiative_label}
             onChange={onChange}
           />
           <Badge>
@@ -101,6 +103,7 @@ export function SalesHeader({
       </Button>
       <OverflowMenu label={t("analytics.overview.more")}>
         <OverviewSaveActions selection={saved} scope={scope} />
+        <ReviewDecisionsAction />
         {evaluation && !charts?.isPending && (
           <ReportingExportButton
             evaluation={evaluation}
