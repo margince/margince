@@ -575,3 +575,45 @@ describe("which characters a bare address takes", () => {
     ]);
   });
 });
+
+// An underscore inside a word is a literal underscore, as CommonMark reads it.
+// A note naming customer_id, a field such as utm_source, a file such as
+// Q3_report_final.pdf or a URL keeps every underscore and sets nothing in
+// italics. Underscores around a whole word still mark emphasis.
+describe("underscores in a note", () => {
+  it.each([
+    ["snake_case", "Mentioned customer_id and order_id, then a_b_c."],
+    ["a form field", "utm_source: x"],
+    ["a name", "Anna_Maria O_Brien sent Q3_report_final.pdf"],
+    [
+      "a URL",
+      "See https://example.test/path_to/page_one?utm_campaign=spring_sale",
+    ],
+    ["a leading underscore", "the _id field of the record"],
+  ])("keeps the underscores in %s", (_case, source) => {
+    const { container } = render(<Markdown source={source} />);
+    expect(visibleText(container)).toBe(source);
+    expect(container.querySelector("em")).toBeNull();
+    expect(container.querySelector("strong")).toBeNull();
+  });
+
+  it("keeps a form's lines and their underscores", () => {
+    const { container } = render(
+      <Markdown source={"utm_source: x\nutm_medium: y"} />,
+    );
+    expect(visibleText(container)).toContain("utm_source: x");
+    expect(visibleText(container)).toContain("utm_medium: y");
+    expect(container.querySelector("em")).toBeNull();
+  });
+
+  it("still reads underscores around whole words as emphasis", () => {
+    const { container } = render(
+      <Markdown source={"This is _really_ and __very__ important, *too*."} />,
+    );
+    const ems = [...container.querySelectorAll("em")].map(
+      (em) => em.textContent,
+    );
+    expect(ems).toEqual(["really", "too"]);
+    expect(container.querySelector("strong")).toHaveTextContent("very");
+  });
+});

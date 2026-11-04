@@ -347,8 +347,12 @@ const CODE_OPEN = /^`+/;
 // allows: `alert(1)` is a plausible payload and a reader of the refusal test
 // should see the real shape of one.
 const LINK = /^\[([^\][]*)\]\([ \t]*((?:[^()\s]|\([^()\s]*\))*)[ \t]*\)/;
-const STRONG = /^(\*\*|__)([\s\S]+?)\1/;
-const EM = /^([*_])([^\s*_][\s\S]*?)\1/;
+const STRONG = /^(\*\*)([\s\S]+?)\1/;
+const EM = /^(\*)([^\s*_][\s\S]*?)\1/;
+// A letter or digit in any script. An underscore beside one on the inside of
+// a word is a literal underscore, never emphasis (CommonMark's flanking rule
+// for `_`): customer_id, a_b_c, utm_source and a file or URL path keep theirs.
+const WORD_CHAR = /[\p{L}\p{N}]/u;
 const ESCAPABLE = /^[\\`*_{}[\]()#+\-.!|>~]$/;
 
 export function parseInline(text: string): Inline[] {
@@ -366,7 +370,7 @@ export function parseInline(text: string): Inline[] {
       i += 2;
       continue;
     }
-    const taken = takeInline(rest);
+    const taken = takeInline(rest, i > 0 ? (text[i - 1] ?? "") : "");
     if (taken === null) {
       plain += text[i];
       i++;
@@ -380,13 +384,50 @@ export function parseInline(text: string): Inline[] {
   return nodes;
 }
 
-function takeInline(rest: string): { node: Inline; length: number } | null {
+function takeInline(
+  rest: string,
+  before: string,
+): { node: Inline; length: number } | null {
   return (
     takeCode(rest) ??
     takeLink(rest) ??
     takeWrapped(rest, STRONG, "strong") ??
-    takeWrapped(rest, EM, "em")
+    takeUnderscored(rest, before, "__", "strong") ??
+    takeWrapped(rest, EM, "em") ??
+    takeUnderscored(rest, before, "_", "em")
   );
+}
+
+// takeUnderscored reads `_em_` or `__strong__` only where the underscores
+// stand outside a word: the opener has no letter or digit before it and
+// no space after it, and the closer has no space before it and no letter or
+// digit after it. An underscore inside a word is text.
+function takeUnderscored(
+  rest: string,
+  before: string,
+  fence: "_" | "__",
+  kind: "strong" | "em",
+): { node: Inline; length: number } | null {
+  if (!rest.startsWith(fence) || WORD_CHAR.test(before)) return null;
+  const first = rest[fence.length] ?? "";
+  if (first === "" || /\s/.test(first) || first === "_") return null;
+  for (let at = fence.length + 1; at < rest.length; at++) {
+    if (!rest.startsWith(fence, at)) continue;
+    const end = at + fence.length;
+    const after = rest[end] ?? "";
+    if (
+      /\s/.test(rest[at - 1] ?? "") ||
+      WORD_CHAR.test(after) ||
+      after === "_"
+    ) {
+      continue;
+    }
+    return {
+      node: { kind, children: parseInline(rest.slice(fence.length, at)) },
+      length: end,
+    };
+  }
+  return null;
 }
 
 function takeCode(rest: string): { node: Inline; length: number } | null {
