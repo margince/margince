@@ -50,7 +50,7 @@ func TestAReadingEveryModelWithheldIsRefusedNotRetried(t *testing.T) {
 
 			_, signalErr := (&SignalExtractor{brain: lane, log: quiet}).ask(ctx, thread)
 			_, transcriptErr := (&TranscriptProposer{brain: lane, log: quiet}).ask(ctx, []string{"hello"}, "2026-09-24", nil)
-			_, documentErr := (&DocumentExtractor{brain: lane, log: quiet}).ask(ctx, documentSource{Text: "terms", Parent: ids.New[ids.CompanyKind]().Ref()})
+			_, documentErr := (&DocumentExtractor{brain: lane, log: quiet}).ask(ctx, dealFacts, documentSource{Text: "terms", Parent: ids.New[ids.CompanyKind]().Ref()})
 			claims, stageErr := (&StageEvidenceReader{brain: lane, log: quiet}).ask(ctx, criteria, spans)
 
 			for site, got := range map[string]struct {

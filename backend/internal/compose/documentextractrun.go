@@ -170,7 +170,11 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		// affordance only `failed` offers. No model call was made either way.
 		return d.fail(ctx, store, readID, claimedAt, detail)
 	}
-	fields, err := d.ask(ctx, src)
+	question, known := documentQuestionNamed(claim.Question)
+	if !known {
+		return d.fail(ctx, store, readID, claimedAt, documentWords.Refused.In(d.said.Lang()))
+	}
+	fields, err := d.ask(ctx, question, src)
 	if err != nil {
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
@@ -181,7 +185,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 	}
 	return store.FinishExtractionRead(ctx, readID, activities.ExtractionReadOutcome{
 		Status:    activities.ExtractionReadDone,
-		Detail:    d.emptyReadingDetail(fields),
+		Detail:    d.emptyReadingDetail(question, fields),
 		Fields:    fields,
 		ClaimedAt: claimedAt,
 	})
@@ -221,11 +225,14 @@ func (d *DocumentExtractor) retryable(
 // documents state none of the four — but an empty panel that does not explain
 // itself reads as a broken feature, which is the one thing this whole shape
 // exists to prevent.
-func (d *DocumentExtractor) emptyReadingDetail(fields []extraction.ExtractedField) string {
+func (d *DocumentExtractor) emptyReadingDetail(q documentQuestion, fields []extraction.ExtractedField) string {
 	for _, f := range fields {
 		if !f.Omitted {
 			return ""
 		}
+	}
+	if q.name == activities.ExtractionQuestionChatCapture {
+		return documentWords.NoChat.In(d.said.Lang())
 	}
 	return documentWords.NoFields.In(d.said.Lang())
 }
@@ -388,16 +395,23 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 	return documentSource{Text: text, Filename: meta.Filename, Parent: attachmentParent(meta)}, ""
 }
 
-// attachmentParent is the record a document hangs on, as the citation names it.
-//
-// Two kinds and no default: the contract's own enum is activity or company, and
-// a third arriving here as a zero Ref would make the call cite nothing rather
-// than fail — which is the quiet half of a purge that misses.
+// attachmentParent is the record a document hangs on, as the call cites it.
+// An erasure of that record then finds the captured payload of the call.
 func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
-	if meta.EntityType == crmcontracts.AttachmentEntityTypeCompany {
-		return ids.From[ids.CompanyKind](ids.UUID(meta.EntityId)).Ref()
+	id := ids.UUID(meta.EntityId)
+	switch meta.EntityType {
+	case crmcontracts.AttachmentEntityTypeCompany:
+		return ids.From[ids.CompanyKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeContact:
+		return ids.From[ids.ContactKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeDeal:
+		return ids.From[ids.DealKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeLead:
+		return ids.From[ids.LeadKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeProject:
+		return ids.From[ids.ProjectKind](id).Ref()
 	}
-	return ids.From[ids.ActivityKind](ids.UUID(meta.EntityId)).Ref()
+	return ids.From[ids.ActivityKind](id).Ref()
 }
 
 // refusedReadingDetail is what the panel says about a refused reading, and there
@@ -422,9 +436,11 @@ func (d *DocumentExtractor) refusedReadingDetail(err error) string {
 // A site whose corpus grades a validator production never calls is certifying a
 // standard the product does not hold itself to — the reply that would have been
 // refused in the lane reaches a deal instead.
-func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extraction.ExtractedField, error) {
-	req := documentExtractRequest(src)
-	validate := documentShapeValid(src)
+func (d *DocumentExtractor) ask(
+	ctx context.Context, q documentQuestion, src documentSource,
+) ([]extraction.ExtractedField, error) {
+	req := documentExtractRequest(q, src)
+	validate := documentShapeValid(q, src)
 	// The document's own text IS the request, so the call is about the record
 	// it hangs on. The filename is not offered as the label: it is the
 	// uploader's string and the rail draws its unnamed sentence rather than
@@ -444,7 +460,7 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 	if err := validate(resp.Text); err != nil {
 		return nil, fmt.Errorf("%w: %w", errRefusedDocument, err)
 	}
-	return readDocumentFields(resp.Text)
+	return readDocumentFields(q, resp.Text)
 }
 
 // unreadableDocument separates a refusal a rep can act on from a fault the job

@@ -2518,6 +2518,24 @@ func (e AttachmentExtractionStatus) Valid() bool {
 	}
 }
 
+// Defines values for AttachmentReadQuestion.
+const (
+	AttachmentReadQuestionChatCapture AttachmentReadQuestion = "chat_capture"
+	AttachmentReadQuestionDealFacts   AttachmentReadQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentReadQuestion enum.
+func (e AttachmentReadQuestion) Valid() bool {
+	switch e {
+	case AttachmentReadQuestionChatCapture:
+		return true
+	case AttachmentReadQuestionDealFacts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachmentReadStartedStatus.
 const (
 	AttachmentReadStartedStatusQueued  AttachmentReadStartedStatus = "queued"
@@ -32650,6 +32668,13 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// Question What a reading asks of the document. `deal_facts` reads the deal name, amount,
+	// currency and expected close date. `chat_capture` reads a chat screenshot: the fields
+	// are `chat_text` (the visible messages, one per line, as printed), `counterparty_name`
+	// and `counterparty_phone` (the name and number in the chat header) and `network` (the
+	// app, only when the screenshot prints it).
+	Question AttachmentReadQuestion `json:"question"`
+
 	// Stalled true when a live reading has aged past the lease its worker holds: the worker
 	// died, timed out, or never claimed it, and nothing will move the reading on its
 	// own. Derived at read time, never stored. Asking for the file to be read again
@@ -32698,6 +32723,23 @@ type AttachmentOrigin struct {
 	// Sender One address on a message, resolved to a contact or a seat when it is one.
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
+}
+
+// AttachmentReadQuestion What a reading asks of the document. `deal_facts` reads the deal name, amount,
+// currency and expected close date. `chat_capture` reads a chat screenshot: the fields
+// are `chat_text` (the visible messages, one per line, as printed), `counterparty_name`
+// and `counterparty_phone` (the name and number in the chat header) and `network` (the
+// app, only when the screenshot prints it).
+type AttachmentReadQuestion string
+
+// AttachmentReadRequest What to read the document for. An absent `question` means `deal_facts`.
+type AttachmentReadRequest struct {
+	// Question What a reading asks of the document. `deal_facts` reads the deal name, amount,
+	// currency and expected close date. `chat_capture` reads a chat screenshot: the fields
+	// are `chat_text` (the visible messages, one per line, as printed), `counterparty_name`
+	// and `counterparty_phone` (the name and number in the chat header) and `network` (the
+	// app, only when the screenshot prints it).
+	Question *AttachmentReadQuestion `json:"question,omitempty"`
 }
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
@@ -73707,6 +73749,9 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
+
+// ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
+type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
 
 // AcceptAttachmentExtractionJSONRequestBody defines body for AcceptAttachmentExtraction for application/json ContentType.
 type AcceptAttachmentExtractionJSONRequestBody = AcceptExtractionRequest

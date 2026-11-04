@@ -126,11 +126,6 @@ The name is decided by what the document records:
   3 — revision C") is what it is called and what it is about, not something anybody is
   buying. Many attached files are this kind.`
 
-// documentSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
-func documentSystemFor(fence promptfence.Fence) string {
-	return documentSystem + "\n" + fence.Rule("document")
-}
-
 // documentSource is one document in exactly the form it reaches the model:
 // either its own text, or its bytes as a part the binding declared it carries.
 // Exactly one of the two, decided by documentLaneFor before a call is built.
@@ -218,10 +213,10 @@ var errRefusedDocument = errors.New("compose: the reading could not be used")
 //
 //promptlang:exempt every value returned is copied out of the document verbatim and carries a source_quote proving it — groundOneField checks the quote against the document's own bytes, so instructing a language here would ask the model to translate the one thing that has to match character for character.
 //promptvoice:exempt every value returned is copied out of the document verbatim and carries a source_quote checked against the document's own bytes.
-func documentExtractRequest(src documentSource) model.Request {
+func documentExtractRequest(q documentQuestion, src documentSource) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString("One business document (untrusted).\n")
+	prompt.WriteString(q.intro + "\n")
 	if src.Filename != "" {
 		prompt.WriteString(fence.WrapAttr("document", "filename", src.Filename) + "\n")
 	}
@@ -248,19 +243,9 @@ func documentExtractRequest(src documentSource) model.Request {
 		prompt.WriteString("The document itself is attached to this message.\n")
 		prompt.WriteString(fence.WrapAttr("document", "media_type", src.Part.MIME) + "\n")
 	}
-	fmt.Fprintf(&prompt,
-		`Return JSON: { "fields": [ { "field", "stated", "value", "source_quote", "page_or_section", "confidence" } ] } — `+
-			`one entry for EACH of %s, in that order, and no others. `+
-			`Set "stated" to %q for a field this document states and %q for one it does not, leaving the other values empty when it does not. `+
-			`"value" for %s is the figure the document prints, digits and decimal point only: drop the currency symbol and every thousands separator ("1,250.50" is written 1250.50), and convert nothing; `+
-			`for %s it is the ISO-4217 code; for %s it is the calendar date as YYYY-MM-DD; `+
-			`for %s it is what is being bought or supplied — not the document's own title, and not_stated for a document that records no purchase at all. `+
-			`"source_quote" is the exact text the value was read from, copied verbatim — never a paraphrase and never text you composed. `+
-			`"page_or_section" names where in the document it appears.`,
-		strings.Join(modelFieldOrder(), ", "), documentStated, documentNotStated,
-		modelFieldAmount, documentFieldCurrency, documentFieldClose, documentFieldName)
+	prompt.WriteString(q.answer())
 
-	system := documentSystemFor(fence)
+	system := q.system + "\n" + fence.Rule("document")
 	if !src.onTextLane() {
 		system += "\n" + ai.AttachmentTextRule("document")
 	}
@@ -268,7 +253,7 @@ func documentExtractRequest(src documentSource) model.Request {
 		System:         system,
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: documentExtractSchema(),
+		ResponseSchema: documentExtractSchema(q),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 	if !src.onTextLane() {
@@ -277,25 +262,47 @@ func documentExtractRequest(src documentSource) model.Request {
 	return req
 }
 
-// documentFieldOrder is the closed field set, in the order the prompt asks for
-// them and the order a reading reports them. Derived from nothing — written
-// once, here, and read by the prompt, the validator and the coercion alike, so
-// widening the set is one edit rather than three that can disagree.
-func documentFieldOrder() []string {
+// dealFactsAnswer is the deal-facts question's answer format.
+func dealFactsAnswer() string {
+	return fmt.Sprintf(
+		`Return JSON: { "fields": [ { "field", "stated", "value", "source_quote", "page_or_section", "confidence" } ] } — `+
+			`one entry for EACH of %s, in that order, and no others. `+
+			`Set "stated" to %q for a field this document states and %q for one it does not, leaving the other values empty when it does not. `+
+			`"value" for %s is the figure the document prints, digits and decimal point only: drop the currency symbol and every thousands separator ("1,250.50" is written 1250.50), and convert nothing; `+
+			`for %s it is the ISO-4217 code; for %s it is the calendar date as YYYY-MM-DD; `+
+			`for %s it is what is being bought or supplied — not the document's own title, and not_stated for a document that records no purchase at all. `+
+			`"source_quote" is the exact text the value was read from, copied verbatim — never a paraphrase and never text you composed. `+
+			`"page_or_section" names where in the document it appears.`,
+		strings.Join(dealFactsModelFields(), ", "), documentStated, documentNotStated,
+		modelFieldAmount, documentFieldCurrency, documentFieldClose, documentFieldName)
+}
+
+// dealFactsFieldOrder is the closed deal-fact set, in the order the prompt asks
+// for them and the order a reading reports them.
+func dealFactsFieldOrder() []string {
 	return []string{documentFieldName, documentFieldAmount, documentFieldCurrency, documentFieldClose}
 }
 
-// modelFieldOrder is the same closed set in the model's own vocabulary.
-func modelFieldOrder() []string {
-	names := documentFieldOrder()
+// dealFactsModelFields is the deal-fact set in the model's own vocabulary.
+func dealFactsModelFields() []string {
+	names := dealFactsFieldOrder()
 	for i, name := range names {
 		names[i] = toModelField(name)
 	}
 	return names
 }
 
+// modelFieldOrder is a question's closed set in the model's own vocabulary.
+func modelFieldOrder(q documentQuestion) []string {
+	names := q.fields()
+	for i, name := range names {
+		names[i] = q.toModel(name)
+	}
+	return names
+}
+
 // documentExtractSchema is the generation-time shape guardrail.
-func documentExtractSchema() json.RawMessage {
+func documentExtractSchema(q documentQuestion) json.RawMessage {
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			laneFields: schema.Array(schema.Object(
@@ -321,24 +328,24 @@ func documentExtractSchema() json.RawMessage {
 // output entirely would leave the panel unable to say whether the document was
 // silent about it or the reading forgot to look — and "the document does not
 // state a close date" is information a rep acts on.
-func groundDocumentFields(payload documentPayload) []extraction.ExtractedField {
+func groundDocumentFields(q documentQuestion, payload documentPayload) []extraction.ExtractedField {
 	reported := make(map[string]documentField, len(payload.fields()))
 	for _, field := range payload.fields() {
 		// Keyed by the DEAL's own field names: the model's vocabulary stops at
 		// this line, and everything downstream — the row, the accept allowlist,
 		// the panel — speaks one.
-		reported[fromModelField(field.Field)] = field
+		reported[q.fromModel(field.Field)] = field
 	}
-	out := make([]extraction.ExtractedField, 0, len(documentFieldOrder()))
-	for _, name := range documentFieldOrder() {
-		out = append(out, groundOneField(name, reported[name]))
+	out := make([]extraction.ExtractedField, 0, len(q.fields()))
+	for _, name := range q.fields() {
+		out = append(out, groundOneField(q, name, reported[name]))
 	}
 	return out
 }
 
 // groundOneField decides one field's fate: grounded with its evidence, or
 // omitted with the reason it was.
-func groundOneField(name string, field documentField) extraction.ExtractedField {
+func groundOneField(q documentQuestion, name string, field documentField) extraction.ExtractedField {
 	omitted := extraction.ExtractedField{Field: name, Omitted: true, OmittedReason: omitReasonNotStated}
 	if field.Stated != documentStated {
 		return omitted
@@ -350,7 +357,7 @@ func groundOneField(name string, field documentField) extraction.ExtractedField 
 		omitted.OmittedReason = omitReasonNotConfident
 		return omitted
 	}
-	value, ok := coerceDocumentValue(name, field.Value)
+	value, ok := q.coerce(name, field.Value)
 	if !ok {
 		// The document states something this field cannot hold — an amount that
 		// is not a number, a currency that is not a code. Silence is the wrong
@@ -454,7 +461,7 @@ func resolveDocumentAmount(fields []extraction.ExtractedField) []extraction.Extr
 //
 // The certification case calls THIS, not a copy of it, so what a corpus scores
 // is what a deal gets.
-func readDocumentFields(output string) ([]extraction.ExtractedField, error) {
+func readDocumentFields(q documentQuestion, output string) ([]extraction.ExtractedField, error) {
 	var payload documentPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(output)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: output is not the required JSON shape: %w", errRefusedDocument, err)
@@ -462,5 +469,5 @@ func readDocumentFields(output string) ([]extraction.ExtractedField, error) {
 	if payload.Fields == nil {
 		return nil, fmt.Errorf("%w: the reply carries no fields key", errRefusedDocument)
 	}
-	return resolveDocumentAmount(groundDocumentFields(payload)), nil
+	return q.resolve(groundDocumentFields(q, payload)), nil
 }

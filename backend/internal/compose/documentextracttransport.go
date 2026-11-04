@@ -37,7 +37,11 @@ type documentReadEngine struct {
 // start queues the reading and says how the request landed.
 func (e *documentReadEngine) start(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	attachmentID := ids.UUID(id)
-	read, joined, err := e.activities.StartExtractionReadQueued(r.Context(), attachmentID, requestedBy(r.Context()),
+	question, ok := decodeReadQuestion(w, r)
+	if !ok {
+		return
+	}
+	read, joined, err := e.activities.StartExtractionReadFor(r.Context(), attachmentID, question, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read activities.ExtractionRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, DocumentExtractArgs{
 				Workspace:        storekit.MustWorkspace(ctx),
@@ -89,4 +93,20 @@ func (h documentReadHandlers) ReadAttachmentForFields(w http.ResponseWriter, r *
 		return
 	}
 	h.start(w, r, id)
+}
+
+// decodeReadQuestion reads the optional body. No body, or no question in it,
+// asks for the deal facts.
+func decodeReadQuestion(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if r.ContentLength == 0 {
+		return activities.ExtractionQuestionDealFacts, true
+	}
+	var req crmcontracts.AttachmentReadRequest
+	if !httperr.Decode(w, r, &req) {
+		return "", false
+	}
+	if req.Question == nil {
+		return activities.ExtractionQuestionDealFacts, true
+	}
+	return string(*req.Question), true
 }

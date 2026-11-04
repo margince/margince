@@ -76,3 +76,4 @@
 1793803166_the_qualified_forecast_is_retired.up.sql | setting | three single-key rows at most: the retired enforcement switch, and the saved forward measure only where it names a qualified reading
 1793803166_the_qualified_forecast_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793807753_margince_judges_a_deals_date_amount_and_probability.down.sql | assurance_deal_receipt | runs only on a rollback and deletes only receipts a verdict wrote for a deal the input check had not walked; there is at most one receipt per open deal
+1793822322_a_document_reading_names_its_question.down.sql | attachment_extraction | runs only on a rollback and deletes only chat-screenshot readings, each started by hand on one image since the upgrade

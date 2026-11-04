@@ -147,7 +147,7 @@ func refuseUnreachableFields(want map[string]string) error {
 		// land on the record, which is the level a document can be right or
 		// wrong at. What the model is asked to call the amount is an argument
 		// between the prompt and the reply, settled before a corpus sees it.
-		if !slices.Contains(documentFieldOrder(), name) {
+		if !slices.Contains(dealFactsFieldOrder(), name) {
 			return fmt.Errorf(
 				"document_extract/fields: the scenario expects %q, which is not a field this site reads for", name)
 		}
@@ -188,7 +188,7 @@ type documentFieldsCase struct {
 // request in the shape-retry when the brain supports one, and a case that did
 // too would certify the answer a model gives after being told to try again.
 func (c *documentFieldsCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := documentExtractRequest(c.src)
+	req := documentExtractRequest(dealFacts, c.src)
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {
@@ -210,10 +210,10 @@ func (c *documentFieldsCase) Run(ctx context.Context, completer aitasks.Complete
 // decides whether a value is OFFERED at all, so a reading too unsure to offer
 // an amount has, as far as any human will ever see, not read the amount.
 func (c *documentFieldsCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	if err := documentShapeValid(c.src)(trace.Output); err != nil {
+	if err := documentShapeValid(dealFacts, c.src)(trace.Output); err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	fields, err := readDocumentFields(trace.Output)
+	fields, err := readDocumentFields(dealFacts, trace.Output)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
@@ -239,7 +239,7 @@ func (c *documentFieldsCase) disagreements(fields []extraction.ExtractedField) [
 		}
 	}
 	var out []string
-	for _, name := range documentFieldOrder() {
+	for _, name := range dealFactsFieldOrder() {
 		want, expected := c.expected[name]
 		got, offered := grounded[name]
 		switch {

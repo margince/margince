@@ -34069,6 +34069,16 @@ paths:
         attachment can be read by someone who could never accept the result. That is
         deliberate — the read is valid for any entity_type and is worth having on its own —
         but it does mean a reading can be paid for and then have nowhere to land.
+
+        The optional body names the question. `deal_facts`, the default, reads the four deal
+        fields. `chat_capture` reads a chat screenshot for its messages and the name or number
+        in its header; it is refused with 422 on a file that is not an image. A reading in
+        flight for the other question answers 409 instead of being joined.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachmentReadRequest' }
       responses:
         '202':
           description: The reading is queued; poll it with `getAttachmentExtraction`.
@@ -34078,6 +34088,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
@@ -54636,9 +54647,10 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists (RD-AC-N-2).
-      required: [id, status, stalled, fields, omitted, created_at]
+      required: [id, question, status, stalled, fields, omitted, created_at]
       properties:
         id: { type: string, format: uuid, description: This reading's own id. }
+        question: { $ref: '#/components/schemas/AttachmentReadQuestion' }
         status:
           type: string
           enum: [queued, running, done, failed]
@@ -54661,6 +54673,23 @@ components:
         omitted: { type: array, items: { $ref: '#/components/schemas/OmittedExtractionField' } }
         created_at: { type: string, format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
+
+    AttachmentReadQuestion:
+      type: string
+      enum: [deal_facts, chat_capture]
+      description: |
+        What a reading asks of the document. `deal_facts` reads the deal name, amount,
+        currency and expected close date. `chat_capture` reads a chat screenshot: the fields
+        are `chat_text` (the visible messages, one per line, as printed), `counterparty_name`
+        and `counterparty_phone` (the name and number in the chat header) and `network` (the
+        app, only when the screenshot prints it).
+
+    AttachmentReadRequest:
+      type: object
+      description: What to read the document for. An absent `question` means `deal_facts`.
+      properties:
+        question: { $ref: '#/components/schemas/AttachmentReadQuestion' }
+      additionalProperties: false
 
     AttachmentReadStarted:
       type: object

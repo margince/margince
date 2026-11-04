@@ -23086,6 +23086,11 @@ export interface paths {
          *     attachment can be read by someone who could never accept the result. That is
          *     deliberate — the read is valid for any entity_type and is worth having on its own —
          *     but it does mean a reading can be paid for and then have nowhere to land.
+         *
+         *     The optional body names the question. `deal_facts`, the default, reads the four deal
+         *     fields. `chat_capture` reads a chat screenshot for its messages and the name or number
+         *     in its header; it is refused with 422 on a file that is not an image. A reading in
+         *     flight for the other question answers 409 instead of being joined.
          */
         post: operations["readAttachmentForFields"];
         delete?: never;
@@ -39411,6 +39416,7 @@ export interface components {
              * @description This reading's own id.
              */
             id: string;
+            question: components["schemas"]["AttachmentReadQuestion"];
             /**
              * @description queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
              * @enum {string}
@@ -39436,6 +39442,19 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             finished_at?: string | null;
+        };
+        /**
+         * @description What a reading asks of the document. `deal_facts` reads the deal name, amount,
+         *     currency and expected close date. `chat_capture` reads a chat screenshot: the fields
+         *     are `chat_text` (the visible messages, one per line, as printed), `counterparty_name`
+         *     and `counterparty_phone` (the name and number in the chat header) and `network` (the
+         *     app, only when the screenshot prints it).
+         * @enum {string}
+         */
+        AttachmentReadQuestion: "deal_facts" | "chat_capture";
+        /** @description What to read the document for. An absent `question` means `deal_facts`. */
+        AttachmentReadRequest: {
+            question?: components["schemas"]["AttachmentReadQuestion"];
         };
         /** @description The reading `readAttachmentForFields` started, or the one already in flight it joined. */
         AttachmentReadStarted: {
@@ -91693,7 +91712,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttachmentReadRequest"];
+            };
+        };
         responses: {
             /** @description The reading is queued; poll it with `getAttachmentExtraction`. */
             202: {
@@ -91707,6 +91730,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
             /** @description The process role wired no model path or no job runner — declared absent, never a silent no-op. */
             501: {

@@ -52,6 +52,7 @@ func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request
 func extractionReport(read ExtractionRead, now time.Time) crmcontracts.AttachmentExtraction {
 	out := crmcontracts.AttachmentExtraction{
 		Id:           openapi_types.UUID(read.ID),
+		Question:     crmcontracts.AttachmentReadQuestion(read.Question),
 		Status:       crmcontracts.AttachmentExtractionStatus(read.Status),
 		Stalled:      read.Abandoned(now),
 		StatusDetail: read.StatusDetail,

@@ -34,6 +34,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,10 +66,22 @@ const (
 	ExtractionReadFailed  = "failed"
 )
 
+// The questions a reading may answer. A reading answers one question, named
+// on its row, so the engine asks it and the accept knows what it read.
+const (
+	// ExtractionQuestionDealFacts reads a document for the deal fields it states.
+	ExtractionQuestionDealFacts = "deal_facts"
+	// ExtractionQuestionChatCapture reads a chat screenshot for its messages and
+	// the name or number in its header.
+	ExtractionQuestionChatCapture = "chat_capture"
+)
+
 // ExtractionRead is one reading of one attached document.
 type ExtractionRead struct {
 	ID           ids.UUID
 	AttachmentID ids.UUID
+	// Question is what the reading asks of the document.
+	Question     string
 	Status       string
 	StatusDetail *string
 	// Fields is what the reading grounded and what it honestly omitted. It is
@@ -120,13 +133,13 @@ func (r ExtractionRead) Abandoned(now time.Time) bool {
 	return r.Live() && now.Sub(r.liveSince()) > ExtractionReadLease
 }
 
-const extractionReadColumns = `id, attachment_id, status, status_detail, fields,
+const extractionReadColumns = `id, attachment_id, question, status, status_detail, fields,
 	requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanExtractionRead(r pgx.Row) (ExtractionRead, error) {
 	var read ExtractionRead
 	var raw []byte
-	err := r.Scan(&read.ID, &read.AttachmentID, &read.Status, &read.StatusDetail, &raw,
+	err := r.Scan(&read.ID, &read.AttachmentID, &read.Question, &read.Status, &read.StatusDetail, &raw,
 		&read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt, &read.Attempt, &read.AttemptAt)
 	if err != nil {
 		return read, err
@@ -154,6 +167,20 @@ type ExtractionReadEnqueue func(ctx context.Context, tx pgx.Tx, read ExtractionR
 func (s *Store) StartExtractionReadQueued(
 	ctx context.Context, attachmentID ids.UUID, requestedBy string, enqueue ExtractionReadEnqueue,
 ) (ExtractionRead, bool, error) {
+	return s.StartExtractionReadFor(ctx, attachmentID, ExtractionQuestionDealFacts, requestedBy, enqueue)
+}
+
+// StartExtractionReadFor is StartExtractionReadQueued for a named question.
+//
+// A chat screenshot is read only off an image. On a text file the text lane
+// would take any file as a "chat". A reading in flight for another question
+// is refused rather than joined, since its answer is not the one asked for.
+func (s *Store) StartExtractionReadFor(
+	ctx context.Context, attachmentID ids.UUID, question, requestedBy string, enqueue ExtractionReadEnqueue,
+) (ExtractionRead, bool, error) {
+	if err := knownQuestion(question); err != nil {
+		return ExtractionRead{}, false, err
+	}
 	var out ExtractionRead
 	var joined bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -166,17 +193,22 @@ func (s *Store) StartExtractionReadQueued(
 		if err := refuseWithheldBytes(ctx, tx, attachmentID); err != nil {
 			return err
 		}
+		if question == ExtractionQuestionChatCapture {
+			if err := refuseNonImage(ctx, tx, attachmentID); err != nil {
+				return err
+			}
+		}
 		readID := ids.NewV7()
 		// In-flight uniqueness is arbitrated by uq_attachment_extraction_inflight
 		// itself: DO NOTHING rather than catching the violation keeps the
 		// transaction alive, so the join SELECT below sees the winning row in the
 		// same tx, with no second-transaction gap for it to finish in.
 		inserted := tx.QueryRow(ctx, `
-			INSERT INTO attachment_extraction (id, attachment_id, requested_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO attachment_extraction (id, attachment_id, question, requested_by)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT DO NOTHING
 			RETURNING `+extractionReadColumns,
-			readID, attachmentID, requestedBy)
+			readID, attachmentID, question, requestedBy)
 		// `out` is the closure's, not this block's, so the pair is assigned
 		// rather than declared — `:=` here would shadow it and the caller would
 		// receive a zero reading.
@@ -192,7 +224,7 @@ func (s *Store) StartExtractionReadQueued(
 			// attachment_extraction.* type. What a reading produces reaches a
 			// record only through the accept, which emits the deal's own event.
 			auditID, err := storekit.Audit(ctx, tx, "create", "attachment_extraction", readID, nil, map[string]any{
-				"attachment_id": attachmentID.String(), "requested_by": requestedBy,
+				"attachment_id": attachmentID.String(), "question": question, "requested_by": requestedBy,
 			})
 			if err != nil {
 				return fmt.Errorf("audit extraction reading start: %w", err)
@@ -216,6 +248,10 @@ func (s *Store) StartExtractionReadQueued(
 		}
 		if err != nil {
 			return fmt.Errorf("join in-flight extraction reading: %w", err)
+		}
+		if out.Question != question {
+			return fmt.Errorf("%w: this document is being read for another question; ask again when that reading ends",
+				apperrors.ErrConflict)
 		}
 		return s.rearmIfAbandonedExtraction(ctx, tx, &out, enqueue)
 	})
@@ -333,4 +369,52 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID)
 		return nil
 	})
 	return out, err
+}
+
+// knownQuestion refuses a question no reading can answer.
+func knownQuestion(question string) error {
+	switch question {
+	case ExtractionQuestionDealFacts, ExtractionQuestionChatCapture:
+		return nil
+	}
+	return &UnknownQuestionError{Question: question}
+}
+
+// UnknownQuestionError refuses a reading question outside the closed set.
+type UnknownQuestionError struct{ Question string }
+
+func (e *UnknownQuestionError) Error() string {
+	return fmt.Sprintf("%q is not a question a document can be read for; use deal_facts or chat_capture", e.Question)
+}
+
+// FieldFault names the body field the caller can correct.
+func (e *UnknownQuestionError) FieldFault() (field, code, message string) {
+	return "question", "unknown_question", e.Error()
+}
+
+// NotAnImageError refuses a chat reading of a file that is not an image.
+type NotAnImageError struct{}
+
+func (*NotAnImageError) Error() string {
+	return "a chat is read off a screenshot, and this file is not an image"
+}
+
+// FieldFault names the body field the caller can correct.
+func (e *NotAnImageError) FieldFault() (field, code, message string) {
+	return "question", "not_an_image", e.Error()
+}
+
+// refuseNonImage refuses a file whose stored type is not an image. The type is
+// what ingress recorded; the reading checks the bytes again before a model
+// sees them.
+func refuseNonImage(ctx context.Context, tx pgx.Tx, attachmentID ids.UUID) error {
+	var contentType *string
+	if err := tx.QueryRow(ctx,
+		`SELECT content_type FROM attachment WHERE id = $1`, attachmentID).Scan(&contentType); err != nil {
+		return fmt.Errorf("read attachment type: %w", err)
+	}
+	if contentType == nil || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(*contentType)), "image/") {
+		return &NotAnImageError{}
+	}
+	return nil
 }

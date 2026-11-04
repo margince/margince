@@ -126,7 +126,6 @@ internal/compose/deepread_integration_test.go#func TestDeepReadAttributesItsWrit
 internal/compose/deepreadprincipal.go#func withClaimedRequester
 internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
-internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
 internal/compose/export.go#func exportableColumns
 internal/compose/extensionpolicy.go#func preflightRetentionClasses
