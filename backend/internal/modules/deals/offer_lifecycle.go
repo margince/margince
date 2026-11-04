@@ -116,8 +116,14 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("apply send transition: %w", err)
 		}
-
-		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After())
+		// The FX rate's day also picks each category line's tax rate. It runs
+		// after the version guard, so the totals write cannot trip that guard.
+		retax, err := s.retaxAtSend(ctx, tx, &current, rateDate)
+		if err != nil {
+			return err
+		}
+		before, after := retax.images(p.Before(), p.After())
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", id.UUID, before, after, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer send: %w", err)
 		}
@@ -338,6 +344,12 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 		if err := copyOfferIntoRevision(ctx, tx, id, newID, nextRevision, by); err != nil {
 			return err
 		}
+		// The revision is a new draft: its category lines take today's rates,
+		// and its typed lines stay as copied.
+		retax, err := retaxOffer(ctx, tx, newID, s.draftTaxBasis(ctx, tx, legalEntityIDOf(current)))
+		if err != nil {
+			return err
+		}
 
 		supersede := storekit.NewPatch()
 		supersede.Set("status", current.Status, "superseded")
@@ -345,9 +357,9 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 			return fmt.Errorf("mark prior revision superseded: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
 			"offer_number": current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
-		})
+		}, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer regenerate: %w", err)
 		}
@@ -421,10 +433,10 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
 		                              unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
-		                              billing_model, billing_interval_months, interval_count)
+		                              billing_model, billing_interval_months, interval_count, tax_category)
 		 SELECT uuidv7(), $2, position, product_id, description,
 		        unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
-		        billing_model, billing_interval_months, interval_count
+		        billing_model, billing_interval_months, interval_count, tax_category
 		 FROM offer_line_item WHERE offer_id = $1`,
 		fromID, newID); err != nil {
 		return fmt.Errorf("copy lines into new revision: %w", err)

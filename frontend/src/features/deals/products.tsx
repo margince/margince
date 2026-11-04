@@ -20,7 +20,6 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -37,6 +36,11 @@ import {
   productStatus,
 } from "./products.display";
 import { ProductTranslationsDialog } from "./products.translations";
+import {
+  TAX_CATEGORIES,
+  TAX_CATEGORY_LABEL,
+  taxCategoryOf,
+} from "./taxcategory";
 import "../lists/listsection.css";
 import {
   currencyOptions,
@@ -90,25 +94,6 @@ export async function searchProductCandidates(
     }),
   );
   return data.data.map((p) => ({ id: p.id, name: p.name }));
-}
-
-type TaxCategory = NonNullable<Product["tax_category"]>;
-
-const TAX_CATEGORIES: readonly TaxCategory[] = [
-  "standard",
-  "reduced",
-  "exempt",
-];
-
-const TAX_CATEGORY_LABEL: Readonly<Record<TaxCategory, MessageKey>> = {
-  standard: "taxRates.category.standard",
-  reduced: "taxRates.category.reduced",
-  exempt: "taxRates.category.exempt",
-};
-
-// taxCategoryOf narrows a form value to a category, undefined for unset.
-function taxCategoryOf(value: unknown): TaxCategory | undefined {
-  return TAX_CATEGORIES.find((category) => category === value);
 }
 
 // Built per render: option labels are shown as given, so they arrive translated.

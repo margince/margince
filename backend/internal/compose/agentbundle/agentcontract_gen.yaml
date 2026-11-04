@@ -23000,7 +23000,8 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: number, format: double, description: '0–100, up to 2 decimal places.'}
-        tax_rate: {type: number, format: double, description: 'Percent, up to 2 decimal places.'}
+        tax_rate: {type: number, format: double, description: 'Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer''s legal entity: today''s on a draft, the send day''s once sent.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.'}
         line_net_minor: {type: integer, format: int64, readOnly: true, description: 'round(qty × unit_price × (1 − discount_pct/100)) — server-computed.'}
         line_tax_minor: {type: integer, format: int64, readOnly: true, description: 'round — server-computed.'}
         line_total_minor: {type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed.}
@@ -23111,7 +23112,8 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: [number, 'null'], format: double, minimum: 0, maximum: 100}
-        tax_rate: {type: [number, 'null'], format: double, minimum: 0}
+        tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: 'A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Take the rate from the tax rate sheet, for the country of the offer''s legal entity, else the installation''s. A category with no rate on the sheet is refused (422 `tax_rate_missing`).'}
     UpdateOfferLineItemRequest:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
@@ -23125,7 +23127,8 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: number, format: double, minimum: 0, maximum: 100}
-        tax_rate: {type: number, format: double, minimum: 0}
+        tax_rate: {type: number, format: double, minimum: 0, description: 'A typed rate. It drops the line''s tax category, so the send leaves the rate alone.'}
+        tax_category: {type: string, enum: [standard, reduced, exempt], description: 'Take the rate from the tax rate sheet for the draft today.'}
     CreateOfferRequest:
       type: object
       required: [currency, source]

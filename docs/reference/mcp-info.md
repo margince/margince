@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.4 KB |
+| Tool catalog | 158.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41855 |
+| Approx. wire tokens | 41909 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
-| Input schemas | 65.8 KB | 41% | Yes, every step |
+| Input schemas | 66.0 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.6 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **100.8 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 821 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
@@ -1814,7 +1814,17 @@ record's own fields, and create_record with record_type offer to make an offer w
         "quantity": {
           "type": "number"
         },
+        "tax_category": {
+          "description": "Take the rate from the tax rate sheet instead; not together with tax_rate",
+          "enum": [
+            "standard",
+            "reduced",
+            "exempt"
+          ],
+          "type": "string"
+        },
         "tax_rate": {
+          "description": "A typed rate; the line then keeps it",
           "type": "number"
         },
         "unit": {
