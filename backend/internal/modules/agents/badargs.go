@@ -87,6 +87,9 @@ func decodeArgs[T any](in json.RawMessage, into *T) error {
 	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
 		return &BadArgsError{Cause: outOfRange, Field: outOfRange.Field}
 	}
+	if repeated := datasource.RejectRepeatedItems(into); repeated != nil {
+		return &BadArgsError{Cause: repeated, Field: repeated.Field}
+	}
 	return nil
 }
 

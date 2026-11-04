@@ -11,6 +11,8 @@
 //   - type: [T, 'null'] -> type: T + nullable: true
 //   - schema-level examples: [x, …] -> example: x (3.0 has no plural form)
 //   - const: X -> enum: [X] (3.0 has no const; the single-value enum is exact)
+//   - uniqueItems: true also tags the generated field `unique:"items"`, the
+//     tag every request decoder refuses a repeated item by (UniqueItemsTag)
 //
 // Any OTHER 3.1-only construct with no faithful 3.0 equivalent
 // (unsupported31Keywords) fails loudly rather than degrading silently —
@@ -85,6 +87,13 @@ var arbitraryKeyContainers = map[string]struct{}{
 var opaqueValueKeys = map[string]struct{}{
 	"example": {}, "default": {},
 }
+
+// UniqueItemsTag is the struct tag a `uniqueItems: true` array's generated
+// field carries. oapi-codegen keeps uniqueItems out of the Go type, so without
+// the tag no decoder could know the contract refuses a repeated item.
+// datasource.UniqueItemsTag reads it; TestEveryUniqueItemsListIsTaggedForTheDecoders
+// fails if the two names differ.
+const UniqueItemsTag = "unique"
 
 // Node downgrades a parsed OpenAPI 3.1 YAML node tree to 3.0.3 in place. The
 // document root is a schema-keyword position (scanKeys=true).
@@ -211,6 +220,17 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error
 				kept = append(kept, member)
 			}
 			val.Content = kept
+		}
+		return true, false, nil
+	case "uniqueItems":
+		if val.Kind == yaml.ScalarNode && val.Value == "true" {
+			mapping.Content = append(mapping.Content,
+				&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "x-oapi-codegen-extra-tags"},
+				&yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: UniqueItemsTag},
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "items"},
+				}},
+			)
 		}
 		return true, false, nil
 	case "const":
