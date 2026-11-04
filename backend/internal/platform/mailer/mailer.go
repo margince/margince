@@ -127,7 +127,12 @@ func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBo
 	return s.send(ctx, to, subject, textBody, htmlBody, messageID, nil)
 }
 
-// send is SendAlternative with the inline images the markup shows.
+// SendRelated is SendAlternative with the inline images the markup shows by
+// content id.
+func (s SMTP) SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
+	return s.send(ctx, to, subject, textBody, htmlBody, messageID, inline)
+}
+
 func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
@@ -256,4 +261,10 @@ func closeQuietly(c io.Closer) {
 // AlternativeSender preserves the already-authorized HTML and text alternatives.
 type AlternativeSender interface {
 	SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error
+}
+
+// RelatedSender is an AlternativeSender that also attaches the images the
+// markup shows inline.
+type RelatedSender interface {
+	SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error
 }

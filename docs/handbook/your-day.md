@@ -85,13 +85,13 @@ Captured mail needs a reply only when Margince finds a request or you keep it as
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right after you picked it.
 
-The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off your list ("Undo failed. The message is still off your list."). Snoozed items also come back on their own when the snooze ends. Also called: restore, bring back, unsnooze.
+The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off your list ("Undo failed. The message is still off your list."). Snoozed items also come back on their own when the snooze ends.
+
+Undoing **Done** clears only your own choice, and the row then follows the usual rules. A deal a colleague closed, or a task they completed, stays off your list. Home and the Worklist show the same rows. Also called: restore, bring back, unsnooze.
 
 ### How do I see all my tasks?
-To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the
-**Tasks** button under **Work type**.
-Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**,
-**Due this week** and **Later**. There is no separate "Due today" heading.
+To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
+Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
 
 A task more than 30 days late leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest, and so does a reminder of yours that is due. The task stays open, keeps its due date, and still shows on its record. A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab. Also called: my to-dos, tasks due today, open tasks, task list.
 

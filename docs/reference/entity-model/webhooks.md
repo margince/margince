@@ -62,7 +62,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 | `body_template` | `text` |  | The body template every delivery is rendered from; null sends the standard envelope. |
 | `custom_headers` | `jsonb`, default `'[]'::jsonb` | yes | The headers sent with every delivery, by name. |
 | `event_types` | `text[]` | yes | The subscribed event types, each from the published event catalog. |
-| `owner_id` | `uuid` | yes | Points at `app_user.id`. |
+| `owner_id` | `uuid` | yes | The member every delivery runs under: an event goes out only when they may see its record. |
 | `signing_secret_ref` | `text` | yes |  |
 | `state` | `text`, default `'active'::text` | yes | One of `active`, `paused`. |
 | `target_url` | `text` | yes | HTTPS-only delivery endpoint. |

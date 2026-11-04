@@ -13917,6 +13917,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.projects_other": "{count} Projekte",
   "users.handover.tasks_one": "{count} offene Aufgabe",
   "users.handover.tasks_other": "{count} offene Aufgaben",
+  "users.handover.webhooks_one": "{count} Webhook",
+  "users.handover.webhooks_other": "{count} Webhooks",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":
@@ -15819,6 +15821,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.targetUrl": "Ziel-URL",
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
+  "webhooks.field.owner": "Läuft als",
+  "webhooks.field.ownerHint": "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
+  "webhooks.field.ownerInactive": "Früheres Teammitglied, nicht mehr aktiv",
+  "webhooks.field.ownerCurrent": "Aktuell zuständig",
+  "webhooks.row.ownerInactive": "Gestoppt: Verantwortlicher deaktiviert",
   "webhooks.edit": "Bearbeiten",
   "webhooks.archiveDone": "Webhook archiviert",
   "webhooks.archive": "Archivieren",
@@ -17229,6 +17236,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.profile.landingTitle": "Antwort erhalten",
   "provider.profile.landing": "Wird im Datensatz gespeichert…",
   "provider.profile.lookupRefused": "Abfrage nicht ausgeführt",
+  "provider.profile.lookupNotYours":
+    "Du kannst diesen Kontakt nicht bearbeiten und ihn deshalb nicht nachschlagen. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hat keine Daten zu diesem Kontakt.",
   "provider.profile.stale":

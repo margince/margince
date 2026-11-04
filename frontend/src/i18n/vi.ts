@@ -13546,6 +13546,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.projects_other": "{count} dự án",
   "users.handover.tasks_one": "{count} việc cần làm đang mở",
   "users.handover.tasks_other": "{count} việc cần làm đang mở",
+  "users.handover.webhooks_one": "{count} đăng ký webhook",
+  "users.handover.webhooks_other": "{count} đăng ký webhook",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
   "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
   "users.removeMfaConfirmBody":
@@ -15406,6 +15408,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.targetUrl": "URL đích",
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
+  "webhooks.field.owner": "Chạy dưới tên",
+  "webhooks.field.ownerHint": "Sự kiện chỉ được gửi khi đồng nghiệp này còn hoạt động và được xem bản ghi. Khóa ký vẫn giữ nguyên.",
+  "webhooks.field.ownerInactive": "Chủ sở hữu cũ, không còn hoạt động",
+  "webhooks.field.ownerCurrent": "Đang phụ trách",
+  "webhooks.row.ownerInactive": "Đã dừng: chủ sở hữu bị vô hiệu hóa",
   "webhooks.edit": "Sửa",
   "webhooks.archiveDone": "Đã chuyển webhook vào kho lưu trữ",
   "webhooks.archive": "Chuyển vào kho lưu trữ",
@@ -16766,6 +16773,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "provider.profile.landingTitle": "Đã nhận phản hồi",
   "provider.profile.landing": "Đang lưu vào hồ sơ…",
   "provider.profile.lookupRefused": "Không thể chạy tra cứu",
+  "provider.profile.lookupNotYours":
+    "Bạn không có quyền sửa liên hệ này nên không thể tra cứu. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "provider.profile.completed": "Đã tìm thấy",
   "provider.profile.noMatch": "Nhà cung cấp không có dữ liệu cho liên hệ này.",
   "provider.profile.stale":

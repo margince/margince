@@ -24292,8 +24292,13 @@ export interface components {
         WebhookSubscription: {
             /** Format: uuid */
             id: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The member every delivery runs under: an event goes out only when they may see its record.
+             */
             owner_id: string;
+            /** @description Whether the owner is still an active member. False when they were deactivated or archived: they see nothing, so no event is delivered, while `state` may still read `active`. Give the subscription a new `owner_id`, or hand the member's work over. */
+            readonly owner_active: boolean;
             /**
              * Format: uri
              * @description HTTPS-only delivery endpoint.
@@ -24371,6 +24376,11 @@ export interface components {
         UpdateWebhookSubscriptionRequest: {
             /** @enum {string} */
             state?: "active" | "paused";
+            /**
+             * Format: uuid
+             * @description The member the subscription runs under from now on. A delivery carries what its owner may see, so naming one is acting for that member: the caller needs `user_admin` update and the reach over the new owner a handover takes (403 otherwise). The owner must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
+             */
+            owner_id?: string;
             event_types?: string[];
             /** @description Headers sent with every delivery. Names are unique ignoring case; reserved names are refused. */
             custom_headers?: components["schemas"]["WebhookCustomHeaderInput"][];
@@ -37223,6 +37233,8 @@ export interface components {
             project: number;
             /** @description Open tasks assigned to the member. */
             task: number;
+            /** @description Live webhook subscriptions the member owns. Each delivers only while its owner is active. */
+            webhook: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -65673,7 +65685,7 @@ export interface operations {
                 occurred_after?: string;
                 /** @description Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone. */
                 occurred_before?: string;
-                /** @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. */
+                /** @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. It lists for the whole team, whoever the mail is addressed to, within what the caller may read; the caller's own waiting mail is `GET /v1/worklist`. */
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
