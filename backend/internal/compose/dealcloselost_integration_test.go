@@ -269,7 +269,7 @@ func TestARefusalWithAnAcceptedMeetingAheadIsNotClosed(t *testing.T) {
 	}
 }
 
-func TestTheCloseNamesTheSilenceItWasDecidedOn(t *testing.T) {
+func TestACloseDecidedOnPrivateMailNamesOnlyTheThreshold(t *testing.T) {
 	c := setupCloseLost(t)
 	private := c.now.AddDate(0, 0, -121)
 	c.customerWrites(t, c.silent, private)
@@ -279,14 +279,16 @@ func TestTheCloseNamesTheSilenceItWasDecidedOn(t *testing.T) {
 	if got := c.run(t); got != 1 {
 		t.Fatalf("closed %d deals, want 1: 121 days of silence is over the threshold", got)
 	}
+	// The private reply set the count, so the text every reader sees names the
+	// threshold and neither 121 nor the 196 the visible mail alone would give.
 	reason := c.WsScalar(t, `SELECT lost_reason FROM deal WHERE id = $1`, c.silent)
-	if !strings.Contains(reason, "121 days") {
-		t.Fatalf("lost reason = %q, want the 121 days the close was decided on", reason)
+	if !strings.Contains(reason, "more than 120 days") || strings.Contains(reason, "121") || strings.Contains(reason, "196") {
+		t.Fatalf("lost reason = %q, want the threshold and no day the private reply set", reason)
 	}
 	note := c.WsScalar(t, `SELECT a.body FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.deal_id = $1 AND a.subject = 'Margince closed this deal as lost'`, c.silent)
-	if !strings.Contains(note, "121 days") {
-		t.Fatalf("timeline note = %q, want 121 days", note)
+	if !strings.Contains(note, "more than 120 days") || strings.Contains(note, "121") {
+		t.Fatalf("timeline note = %q, want the threshold and no day the private reply set", note)
 	}
 }
 

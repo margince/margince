@@ -220,10 +220,20 @@ func decideClose(
 		return decision, true
 	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
-		decision.reason = fmt.Sprintf("No word from the customer for %d days", silentDays)
+		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
 		return decision, true
 	}
 	return closeDecision{}, false
+}
+
+// silenceReason names the silence the close was decided on. The reason reaches
+// every reader of the deal, so when only private mail is newer than the mail
+// everyone may read, it names the threshold and not a day that private mail set.
+func silenceReason(silentDays, visibleDays, threshold int) string {
+	if silentDays < visibleDays {
+		return fmt.Sprintf("No word from the customer for more than %d days", threshold)
+	}
+	return fmt.Sprintf("No word from the customer for %d days", silentDays)
 }
 
 func silentReason(reasons []viability.Reason) bool {
