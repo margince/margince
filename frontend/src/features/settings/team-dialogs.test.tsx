@@ -5,11 +5,16 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { jsonResponse, render } from "../../testing/settings.testkit";
-import { NewTeamAction, RenameTeamAction } from "./team-dialogs";
+import {
+  NewTeamAction,
+  RenameTeamAction,
+  TeamMembersModal,
+  type TeamUser,
+} from "./team-dialogs";
 
 // A team name is unique, and the 409 detail names the store, not the reader's
 // next step.
@@ -57,3 +62,92 @@ it.each<[string, ReactNode, string]>([
     expect(dialog.queryByText(en["users.teamDuplicate"])).toBeNull();
   },
 );
+
+// A team of 120 is searched by name. The search narrows the rows, a removal
+// takes off the member on the pressed row, and focus lands on the next row the
+// reader can still see.
+const TEAM = { id: "t-dach", name: "DACH Sales" } as const;
+
+function teamOf(size: number): TeamUser[] {
+  return Array.from({ length: size }, (_, at) => {
+    const n = String(at).padStart(3, "0");
+    return {
+      id: `u-${n}`,
+      display_name: `Roster Member ${n}`,
+      email: `roster-${n}@example.test`,
+      status: "active",
+      team_ids: [TEAM.id],
+    } as TeamUser;
+  });
+}
+
+// Holds the roster as the server would after a removal lands.
+let dropMember: (id: string) => void = () => {};
+function Roster({ size }: Readonly<{ size: number }>) {
+  const [users, setUsers] = useState(() => teamOf(size));
+  useEffect(() => {
+    dropMember = (id) =>
+      setUsers((all) =>
+        all.map((u) => (u.id === id ? { ...u, team_ids: [] } : u)),
+      );
+  }, []);
+  return (
+    <TeamMembersModal
+      team={{ ...TEAM, member_count: users.length } as never}
+      users={users}
+      usersPartial={false}
+      canEdit
+      open
+      onClose={() => {}}
+    />
+  );
+}
+
+it("searches a team of 120 and removes the member on the row pressed", async () => {
+  const removed: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "DELETE") {
+        const id = new URL(req.url).pathname.split("/").at(-1) ?? "";
+        removed.push(id);
+        dropMember(id);
+        return new Response(null, { status: 204 });
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+  const user = userEvent.setup();
+  render(<Roster size={120} />);
+  const dialog = within(await screen.findByRole("dialog"));
+  const rows = () => dialog.queryAllByText(/^Roster Member \d{3}$/);
+  expect(rows()).toHaveLength(120);
+
+  await user.type(
+    dialog.getByRole("searchbox", { name: en["teams.searchMembers"] }),
+    "Roster Member 07",
+  );
+  // "07" is a word of 007, 070 to 079 and 107: twelve rows, in name order.
+  const expected = teamOf(120)
+    .map((u) => u.display_name)
+    .filter((name) => name.includes("07"));
+  expect(expected).toHaveLength(12);
+  expect(rows().map((row) => row.textContent)).toEqual(expected);
+  expect(dialog.getByText("12 of 120 members")).toBeInTheDocument();
+
+  await user.click(
+    dialog.getByRole("button", {
+      name: "Remove Roster Member 072 from DACH Sales",
+    }),
+  );
+  await vi.waitFor(() => expect(removed).toEqual(["u-072"]));
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(
+      dialog.getByRole("button", {
+        name: "Remove Roster Member 073 from DACH Sales",
+      }),
+    ),
+  );
+});

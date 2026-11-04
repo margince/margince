@@ -7,7 +7,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RosterPartialNote } from "../../components/roster";
-import { Avatar, Button, Field, Modal } from "../../design-system/atoms";
+import {
+  Avatar,
+  Button,
+  Field,
+  Modal,
+  SearchField,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ComboBox } from "../../design-system/combobox";
 import { Heading } from "../../design-system/heading";
@@ -15,10 +21,12 @@ import { IconAction } from "../../design-system/iconaction";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { useToast } from "../../design-system/toast";
 import { forReader } from "../../format/collate";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { matchingMembers } from "./users-members";
 import "./users-access.css";
 
 export type TeamUser = components["schemas"]["User"];
@@ -61,6 +69,8 @@ export function TeamMembersModal({
   // row's place. It is the title (-1) when the control it was on is gone.
   const refocusAt = useRef<number | null>(null);
   const [draft, setDraft] = useState("");
+  // A team of a hundred or more is found in by name, not by scrolling.
+  const [search, setSearch] = useState("");
   const setMember = useMutation({
     mutationFn: async ({
       teamId,
@@ -87,7 +97,10 @@ export function TeamMembersModal({
       refocusAt.current = null;
     },
   });
-  const members = membersOf(users, team.id, locale);
+  const everyMember = membersOf(users, team.id, locale);
+  // The rows shown, and the list the refocus below walks: a removal while a
+  // search stands lands on the next row the reader can see.
+  const members = matchingMembers(everyMember, search);
   // SetTeamMember refuses an agent seat and a seat that is not active.
   const candidates = users
     .filter(
@@ -138,8 +151,33 @@ export function TeamMembersModal({
         {team.name}
       </Heading>
       <div className="form-stack">
-        {members.length === 0 ? (
+        {everyMember.length > 0 && (
+          <Field
+            label={t("teams.searchMembers")}
+            hintLive
+            hint={
+              search
+                ? t("users.resultCount", {
+                    matching: formatNumber(members.length, locale),
+                    total: formatNumber(everyMember.length, locale),
+                  })
+                : undefined
+            }
+          >
+            {(control) => (
+              <SearchField
+                {...control}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("users.searchPlaceholder")}
+              />
+            )}
+          </Field>
+        )}
+        {everyMember.length === 0 ? (
           <p>{t("users.teamNoMembers")}</p>
+        ) : members.length === 0 ? (
+          <p>{t("users.noSearchResults")}</p>
         ) : (
           <ul
             ref={list}
