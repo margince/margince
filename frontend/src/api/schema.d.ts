@@ -5564,7 +5564,8 @@ export interface paths {
          * Undo several changes Margince made, one deal at a time.
          * @description Each item names one deal and the changes on it to take back. The changes of one item
          *     are undone newest first through the same reversal the single Undo uses; the first is
-         *     checked against `version`, the version the caller read. Items are independent: one
+         *     checked against `version`, the version the caller read. Like the single Undo, it is
+         *     for a signed-in human only. Items are independent: one
          *     refused deal does not stop the next. The answer reports each deal as `undone`,
          *     `partly_undone` (some changes kept, each with its reason) or `refused`.
          */
@@ -55642,9 +55643,9 @@ export interface components {
             deal_id: string;
             /**
              * Format: int64
-             * @description The deal's version as the caller read it. Absent skips the check.
+             * @description The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
              */
-            version?: number;
+            version: number;
             /** @description The changes to take back, all on this deal. */
             audit_log_ids: string[];
         };

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -160,6 +161,11 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 
 // UndoMarginceChanges takes back the named changes, deal by deal.
 func (h marginceChangeHandlers) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	// A human only, as the single Undo: a bulk door no wider than the one.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	var req crmcontracts.UndoMarginceChangesRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -189,7 +195,7 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 	if err != nil {
 		return result, err
 	}
-	version := item.Version
+	version := &item.Version
 	for i, correction := range corrections {
 		if correction.Reversed() {
 			result.Kept = append(result.Kept, keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonAlreadyUndone))

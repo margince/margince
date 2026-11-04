@@ -4587,36 +4587,6 @@ paths:
               schema: {$ref: '#/components/schemas/MarginceChangeSummary'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-  /deal-corrections/undo:
-    post:
-      tags: [Deals]
-      operationId: undoMarginceChanges
-      security: [{bearerAuth: []}]
-      summary: Undo several changes Margince made, one deal at a time.
-      description: |-
-        Each item names one deal and the changes on it to take back. The changes of one item
-        are undone newest first through the same reversal the single Undo uses; the first is
-        checked against `version`, the version the caller read. Items are independent: one
-        refused deal does not stop the next. The answer reports each deal as `undone`,
-        `partly_undone` (some changes kept, each with its reason) or `refused`.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UndoMarginceChangesRequest'}
-      responses:
-        '200':
-          description: One result per item, in the order asked.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/UndoMarginceChangesResult'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/{id}/stage-progressions/{approvalId}/revert:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -41831,38 +41801,6 @@ components:
           format: int64
           description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
         latest_at: {type: string, format: date-time}
-    UndoMarginceChangesRequest:
-      type: object
-      required: [items]
-      properties:
-        items:
-          type: array
-          minItems: 1
-          maxItems: 200
-          items: {$ref: '#/components/schemas/UndoMarginceChangeItem'}
-    UndoMarginceChangesResult:
-      type: object
-      required: [results]
-      properties:
-        results:
-          type: array
-          items: {$ref: '#/components/schemas/UndoMarginceChangeResult'}
-    UndoMarginceChangeResult:
-      type: object
-      description: |-
-        What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
-        change left in place and why.
-      required: [deal_id, outcome, undone, kept]
-      properties:
-        deal_id: {type: string, format: uuid}
-        outcome: {type: string, enum: [undone, partly_undone, refused]}
-        undone:
-          type: array
-          items: {type: string}
-          description: The kinds of change taken back.
-        kept:
-          type: array
-          items: {$ref: '#/components/schemas/UndoMarginceChangeKept'}
     DealMarginceChanges:
       type: object
       required: [changes]
@@ -41886,31 +41824,6 @@ components:
           type: array
           items: {$ref: '#/components/schemas/TeamMarginceChangeRow'}
         truncated: {type: boolean, description: True when more rows exist than were returned. The groups are never cut.}
-    UndoMarginceChangeItem:
-      type: object
-      required: [deal_id, audit_log_ids]
-      properties:
-        deal_id: {type: string, format: uuid}
-        version:
-          type: integer
-          format: int64
-          description: The deal's version as the caller read it. Absent skips the check.
-        audit_log_ids:
-          type: array
-          minItems: 1
-          maxItems: 50
-          items: {type: string, format: uuid}
-          description: The changes to take back, all on this deal.
-    UndoMarginceChangeKept:
-      type: object
-      description: One change an undo left in place, and why.
-      required: [audit_log_id, reason]
-      properties:
-        audit_log_id: {type: string, format: uuid}
-        kind: {type: string, description: The kind of change; absent when the change could not be read.}
-        reason:
-          type: string
-          enum: [already_undone, changed_since, not_found, not_permitted, version_skew]
     TeamMarginceChangeGroup:
       type: object
       required: [owner_id, owner_name, kind, deals, undone, value_base_minor]

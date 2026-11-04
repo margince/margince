@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ChangeBundle is every change Margince made to one deal that its owner has
+// ChangeBundle holds the changes Margince made to one deal that its owner has
 // neither accepted nor undone.
 type ChangeBundle struct {
 	DealID   ids.DealID

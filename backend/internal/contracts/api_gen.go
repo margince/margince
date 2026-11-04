@@ -60739,8 +60739,8 @@ type UndoMarginceChangeItem struct {
 	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
 	DealId      openapi_types.UUID   `json:"deal_id"`
 
-	// Version The deal's version as the caller read it. Absent skips the check.
-	Version *int64 `json:"version,omitempty"`
+	// Version The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+	Version int64 `json:"version"`
 }
 
 // UndoMarginceChangeKept One change an undo left in place, and why.
@@ -115008,8 +115008,6 @@ func (siw *ServerInterfaceWrapper) GetPendingMarginceChanges(w http.ResponseWrit
 func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

@@ -94,7 +94,6 @@
         "set_weekly_plan": "set_weekly_plan_contract",
         "snooze_brief_item": "snooze_brief_item",
         "start_weekly_plan": "start_weekly_plan",
-        "undo_margince_changes": "undo_margince_changes",
         "unpin_row": "unpin_worklist_row",
         "unsnooze_brief_item": "unsnooze_brief_item"
       }

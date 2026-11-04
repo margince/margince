@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -57,8 +58,7 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 	bundle := summary.Bundles[0]
 	item := crmcontracts.UndoMarginceChangeItem{DealId: openapi_types.UUID(bundle.DealID.UUID), AuditLogIds: wireUUIDs(bundle.AuditLogIDs)}
 
-	stale := bundle.Version - 1
-	item.Version = &stale
+	item.Version = bundle.Version - 1
 	refused, err := h.undoBundle(v.owner(t), item)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,11 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
 		t.Fatal(err)
 	}
-	item.Version = nil
+	current, err := strconv.ParseInt(v.field(t, "version"), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item.Version = current
 	partly, err := h.undoBundle(v.owner(t), item)
 	if err != nil {
 		t.Fatal(err)
@@ -216,5 +220,27 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 	if amount.BeforeAmount != nil || amount.AfterAmount != nil ||
 		strings.Contains(string(amount.Evidence), "45") || strings.Contains(string(wire), "45,000") || strings.Contains(string(wire), "45000") {
 		t.Fatalf("masked owner's amount change = %s (evidence %s), want no amount anywhere", wire, amount.Evidence)
+	}
+}
+
+func TestAnAgentCannotUndoMarginceChangesInBulk(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	agent := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), v.WS), ids.NewV7()),
+		principal.Principal{
+			Type: principal.PrincipalAgent, ID: "agent:bulk-undo", SeatType: principal.SeatFull,
+			OnBehalfOf: v.Rep1, UserID: v.Rep1, TeamIDs: []ids.UUID{v.Team1},
+			Scopes:      principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
+			Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}}, RowScope: principal.RowScopeAll},
+		})
+	body := `{"items":[{"deal_id":"` + v.deal.String() + `","version":1,"audit_log_ids":["` + v.deal.String() + `"]}]}`
+	w := httptest.NewRecorder()
+	newMarginceChangeHandlers(v.Pool).UndoMarginceChanges(w,
+		httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body)).WithContext(agent))
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("an agent's bulk Undo = %d %s, want 403 as the single Undo answers", w.Code, w.Body.String())
+	}
+	if got := v.field(t, "amount_minor"); got != "4500000" {
+		t.Fatalf("amount after the refused Undo = %s, want Margince's 45,000.00 EUR still there", got)
 	}
 }

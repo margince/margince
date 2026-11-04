@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.2 KB |
+| Tool catalog | 190.1 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 49993 |
+| Approx. wire tokens | 49981 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.1 KB | 24% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
-| Input schemas | 91.4 KB | 48% | Yes, every step |
+| Input schemas | 91.3 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
 | **Description + input schema** | **133.0 KB** | **69%** | **the recurring cost** |
 
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1856 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 793 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 781 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
@@ -1645,7 +1645,6 @@ scope "write".)
         "set_weekly_plan",
         "snooze_brief_item",
         "start_weekly_plan",
-        "undo_margince_changes",
         "unpin_row",
         "unsnooze_brief_item"
       ],
@@ -1685,7 +1684,7 @@ scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, undo_margince_changes only: The request body of acceptDealSuggestion",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
       "type": "object"
     },
     "row_id": {

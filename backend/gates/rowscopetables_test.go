@@ -631,5 +631,9 @@ const (
 	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
 	// guests onto the meeting that stays, under a system job or a calendar sync.
 	// The contacts move between two rows of one meeting, and nothing is returned.
-	modulesTierUnscopedCeiling = 152
+	//
+	// 153: deals.correctionReceiptSelect is the SELECT list every change report
+	// shares, with no WHERE of its own. Each caller (RecentCorrectionsOwnedBy,
+	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
+	modulesTierUnscopedCeiling = 153
 )
