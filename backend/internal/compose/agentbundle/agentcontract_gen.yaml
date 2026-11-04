@@ -21151,7 +21151,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system]
+      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
     NotificationDelivery:
       type: string
       description: |-
@@ -27866,7 +27866,11 @@ components:
           format: date-time
           description: >-
             When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
-        source: {type: string, readOnly: true, description: What recorded this assessment.}
+        source:
+          type: string
+          readOnly: true
+          description: >-
+            What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
         source_author:
           type: string
           readOnly: true

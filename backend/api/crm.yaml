@@ -7714,6 +7714,40 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /projects/{id}/health-assessments/{assessment_id}/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: assessment_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Projects]
+      operationId: undoProjectHealthAssessment
+      security: [ { cookieAuth: [] } ]   # human session only — taking back an AI judgement is the owner's own act, never an agent's
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Undo a reading the health job wrote.
+      description: |
+        Appends a successor with source `undo` that supersedes the AI reading. The reading that
+        stood before it stands again; when there was none, the project reads as not judged. An
+        undo row never counts as the current reading, and it keeps the health job from judging
+        the project again until new activity is filed on it. Only a current AI reading can be
+        undone: a user's reading, an undo row and a reading already superseded are refused
+        with 409.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: The undo row.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHealthAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -42094,7 +42128,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system]
+      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
     NotificationDelivery:
       type: string
       description: |
@@ -51457,7 +51491,13 @@ components:
           description: >-
             When the judgement APPLIES, which is not when it was written: a lead catching up
             on Monday records Friday's reading, and the timeline shows it on Friday.
-        source: { type: string, readOnly: true, description: What recorded this assessment. }
+        source:
+          type: string
+          readOnly: true
+          description: >-
+            What recorded this assessment: `human` for a user, `ai` for the health job, which
+            judges from the project's quiet and overdue state and says why in `note`, and `undo`
+            for a user undoing an AI reading. An `undo` row never counts as the current reading.
         source_author:
           type: string
           readOnly: true
