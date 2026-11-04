@@ -120,7 +120,8 @@ var logActivityCopy = toolCopy{
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
 		"read the source. A source-identity replay returns the original and adds no task. " +
 		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
-		"relink_activity links it later (onto a project, after the user's yes)." +
+		"relink_activity links it later (onto a project, after the user's yes). A meeting the " +
+		"user says took place takes meeting_status held; without it, the meeting asks for its outcome." +
 		pastDayNeedsATime,
 	Instead: "Use progress_deal when the event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed; attach_document for a file, whose text never " +

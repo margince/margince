@@ -365,6 +365,8 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"occurred_precision":{"enum":["instant","day"]},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
+			"meeting_status":{"type":"string","enum":` + activityMeetingStatusEnum + `,
+				"description":"Meeting only. held when the user says the meeting took place; no_show when the other side did not come; booked for one still to come; canceled for one called off. Leave it out when nobody said whether it happened: a past start is not attendance, and the meeting then asks for its outcome. held and no_show are refused on a meeting whose start has not passed."},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},

@@ -2266,6 +2266,8 @@ type CreateActivityRequest struct {
 		EntityId   string                               `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
+
+	// MeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -2324,7 +2326,7 @@ type CreateActivityRequestKind string
 // CreateActivityRequestLinksEntityType defines model for CreateActivityRequest.Links.EntityType.
 type CreateActivityRequestLinksEntityType string
 
-// CreateActivityRequestMeetingStatus defines model for CreateActivityRequest.MeetingStatus.
+// CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
 // Deal A deal. Mirrors the `deal` table.

@@ -38874,7 +38874,10 @@ export interface components {
              * @enum {string|null}
              */
             call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
-            /** @enum {string|null} */
+            /**
+             * @description Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
+             * @enum {string|null}
+             */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             source_system?: string | null;
             /**
