@@ -241,7 +241,7 @@ export const DecisionApproved: Story = {
     await waitFor(() =>
       expect(
         canvasElement.querySelectorAll("#brief-today .brief-triage > li"),
-      ).toHaveLength(1),
+      ).toHaveLength(2),
     );
   },
 };

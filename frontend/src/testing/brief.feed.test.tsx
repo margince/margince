@@ -29,11 +29,6 @@ const MENU_LEAD = en["worklist.rowMenu"].slice(
 );
 const rowMenu = (name: string) => name.startsWith(MENU_LEAD);
 
-/** The cards still waiting behind the one in hand, one press each. */
-function queued(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>(".brief-task-open")];
-}
-
 /** The waiting card whose press names `name`; it fails when none does. */
 function queuedCard(container: HTMLElement, name: RegExp): HTMLElement {
   const card = within(container)

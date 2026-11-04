@@ -2,7 +2,7 @@
 <!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
-Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
+Home has one ranking engine behind three views: the Worklist, the **Your tasks** section on Home, and the
 weekly review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.

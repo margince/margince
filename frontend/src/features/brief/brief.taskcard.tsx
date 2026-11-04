@@ -241,12 +241,12 @@ export function cardWhen(
 ): string | null {
   if (item.source === "task" && !item.due_at) return null;
   const { t, plural, locale } = words;
-  if (item.overdue === true && item.due_at) {
-    const clock = item.source === "task" ? recordZone : zone;
-    const late = calendarDaysBetween(new Date(item.due_at), now, clock);
+  // Only a task's due day counts days late; a meeting's time is its own read.
+  if (item.source === "task" && item.overdue === true && item.due_at) {
+    const late = calendarDaysBetween(new Date(item.due_at), now, recordZone);
     if (late > 0)
       return [
-        formatDayMonthNearYear(item.due_at, locale, clock, now),
+        formatDayMonthNearYear(item.due_at, locale, recordZone, now),
         plural("co.next.daysLate", late, { days: formatNumber(late, locale) }),
       ].join(" · ");
   }

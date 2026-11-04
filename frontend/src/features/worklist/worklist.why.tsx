@@ -39,8 +39,8 @@ export function WorklistWhy({
               className="worklist-why-reasons"
               aria-label={t("worklist.why.reasons")}
             >
-              {reasons.map((reason, index) => (
-                <li key={`${index}:${reason}`}>{reason}</li>
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
               ))}
             </ol>
           )}
@@ -90,7 +90,9 @@ function whyReasons(
   locale: Locale,
   zone: string,
 ): string[] {
-  return item.because
+  // A reason said twice is read once, and the text is then its own key.
+  const said = item.because
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((text): text is string => text !== null);
+  return [...new Set(said)];
 }
