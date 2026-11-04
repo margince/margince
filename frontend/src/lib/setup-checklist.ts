@@ -256,7 +256,7 @@ export type SetupChecklist = Readonly<{
   steps: readonly SetupStep[];
   done: number;
   total: number;
-  /** Every read answered and every step is done. A failed read drops its
+  /** Every read succeeded and every step is done. A failed read drops its
    *  steps, so the count alone cannot say setup is finished. */
   complete: boolean;
   /** The reader hid the reminder for the rest of this sign-in. */
