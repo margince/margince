@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,7 +38,7 @@ func TestAMergedRequestCoversOnlyTheAddressesItWasMadeOn(t *testing.T) {
 		"recorded by the rep": func(t *testing.T, e *integration.Env, store *consent.Store, asker ids.UUID) {
 			if _, err := store.RecordQualifyingEvent(e.Admin(), ids.From[ids.ContactKind](asker), consent.RecordQualifyingEventInput{
 				Kind: consent.KindRequestedBySubject, Note: "Asked for a quote on the phone.",
-				OccurredAt: time.Now().Add(-time.Hour), AsksForQuote: true,
+				OccurredAt: clocktest.Now(t).Add(-time.Hour), AsksForQuote: true,
 			}); err != nil {
 				t.Fatalf("recording the request: %v", err)
 			}
@@ -125,7 +126,7 @@ func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) 
 	asker := seedMergeContact(t, e, "Asker", askerAddress, contacts.Acquisition{})
 	other := seedMergeContact(t, e, "Other", otherAddress, contacts.Acquisition{})
 	if _, err := store.RecordQualifyingEvent(e.Admin(), ids.From[ids.ContactKind](asker), consent.RecordQualifyingEventInput{
-		Kind: consent.KindRequestedBySubject, Note: "Asked to hear from us.", OccurredAt: time.Now().Add(-time.Hour),
+		Kind: consent.KindRequestedBySubject, Note: "Asked to hear from us.", OccurredAt: clocktest.Now(t).Add(-time.Hour),
 	}); err != nil {
 		t.Fatalf("recording the request: %v", err)
 	}
