@@ -146,5 +146,8 @@ describe("the deal's products", () => {
     show("deal-refused");
     const edit = await screen.findByRole("button", { name: "Set products" });
     expect(edit.getAttribute("aria-describedby")).toContain("deal-refused");
+    expect(edit.hasAttribute("disabled")).toBe(true);
+    await userEvent.setup().click(edit);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

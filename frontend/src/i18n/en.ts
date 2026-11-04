@@ -4140,6 +4140,8 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.products.emptyTakesOffer":
+    "With no product here, the deal takes its products from its accepted offer again, if it has one.",
   "deal.products.title": "Products",
   "deal.products.denied": "You may not see the products on this deal.",
   "deal.products.empty":

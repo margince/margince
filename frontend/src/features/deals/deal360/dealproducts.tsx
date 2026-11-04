@@ -24,6 +24,7 @@ import {
 import { formatMoneyOrAbsent } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingkeys";
 import { searchProductCandidates } from "../products";
 
 type DealProduct = components["schemas"]["DealProduct"];
@@ -173,6 +174,8 @@ export function DealProductsEditor({
       ).data,
     onSuccess: (saved) => {
       client.setQueryData(dealProductsKey(dealId), saved);
+      // The commercial mix and product bookings read these allocations.
+      void client.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
       onClose();
     },
   });
@@ -207,6 +210,9 @@ export function DealProductsEditor({
           ? t("deal.products.replacesOffer")
           : t("deal.products.intro")}
       </p>
+      {list.length === 0 && (
+        <p className="t-caption">{t("deal.products.emptyTakesOffer")}</p>
+      )}
       {list.length > 0 && (
         <ul className="deal-products-edit">
           {list.map((row) => (

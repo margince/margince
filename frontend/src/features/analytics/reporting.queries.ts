@@ -4,6 +4,7 @@ import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingkeys";
 import {
   type MetricNames,
   type ReportingSelection,
@@ -36,7 +37,7 @@ export function useReportingEvaluation(
 ) {
   return useQuery({
     enabled,
-    queryKey: ["reporting-evaluation", selection],
+    queryKey: [...REPORTING_EVALUATION_KEY, selection],
     queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/analytics/evaluate", {
