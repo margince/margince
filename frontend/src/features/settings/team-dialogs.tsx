@@ -7,7 +7,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RosterPartialNote } from "../../components/roster";
-import { Avatar, Button, Field, Modal } from "../../design-system/atoms";
+import {
+  Avatar,
+  Button,
+  Field,
+  Modal,
+  SearchField,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ComboBox } from "../../design-system/combobox";
 import { Heading } from "../../design-system/heading";
@@ -15,10 +21,12 @@ import { IconAction } from "../../design-system/iconaction";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { useToast } from "../../design-system/toast";
 import { forReader } from "../../format/collate";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { matchingMembers } from "./users-members";
 import "./users-access.css";
 
 export type TeamUser = components["schemas"]["User"];
@@ -57,10 +65,19 @@ export function TeamMembersModal({
   const qc = useQueryClient();
   const titleId = useId();
   const list = useRef<HTMLUListElement | null>(null);
-  // Where focus goes once the list changes under it: the row now in a removed
-  // row's place. It is the title (-1) when the control it was on is gone.
-  const refocusAt = useRef<number | null>(null);
+  // Where focus goes once a write has landed and the list reflects it: the row
+  // now in a removed row's place, or the title (-1) when the control it was on
+  // is gone. Pressed holds the press's place until the write succeeds; a
+  // search typed meanwhile moves no focus.
+  const pressed = useRef<number | null>(null);
+  const [refocus, setRefocus] = useState<{
+    at: number;
+    userId: string;
+    member: boolean;
+  } | null>(null);
   const [draft, setDraft] = useState("");
+  // A team of a hundred or more is found in by name, not by scrolling.
+  const [search, setSearch] = useState("");
   const setMember = useMutation({
     mutationFn: async ({
       teamId,
@@ -78,16 +95,24 @@ export function TeamMembersModal({
           : await api.DELETE("/teams/{id}/members/{userId}", params),
       );
     },
-    onSuccess: () => {
+    onSuccess: (_answer, written) => {
+      const at = pressed.current;
+      pressed.current = null;
+      if (at !== null) {
+        setRefocus({ at, userId: written.userId, member: written.member });
+      }
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["teams"] });
       qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
     },
     onError: () => {
-      refocusAt.current = null;
+      pressed.current = null;
     },
   });
-  const members = membersOf(users, team.id, locale);
+  const everyMember = membersOf(users, team.id, locale);
+  // The rows shown, and the list the refocus below walks: a removal while a
+  // search stands lands on the next row the reader can see.
+  const members = matchingMembers(everyMember, search);
   // SetTeamMember refuses an agent seat and a seat that is not active.
   const candidates = users
     .filter(
@@ -98,16 +123,23 @@ export function TeamMembersModal({
     )
     .sort((a, b) => forReader(a.display_name, b.display_name, locale));
 
+  // Runs once the roster shows the landed write: the removed member is off the
+  // team, or the added one is on it. Not on a search, which changes the rows
+  // shown but writes nothing.
+  const landed =
+    refocus !== null &&
+    everyMember.some((member) => member.id === refocus.userId) ===
+      refocus.member;
   useEffect(() => {
-    const at = refocusAt.current;
-    if (at === null) {
+    if (!landed || refocus === null) {
       return;
     }
-    refocusAt.current = null;
+    setRefocus(null);
     const verbs = list.current?.querySelectorAll("button") ?? [];
-    const next = at < 0 ? undefined : verbs[Math.min(at, members.length - 1)];
+    const at = refocus.at;
+    const next = at < 0 ? undefined : verbs[Math.min(at, verbs.length - 1)];
     (next ?? document.getElementById(titleId))?.focus();
-  }, [members.length, titleId]);
+  }, [landed, refocus, titleId]);
 
   const pick = (value: string) => {
     const user = candidates.find((candidate) => candidate.id === value);
@@ -121,7 +153,7 @@ export function TeamMembersModal({
     }
     setDraft("");
     // The last one picked takes the field away with it.
-    refocusAt.current = candidates.length === 1 ? -1 : null;
+    pressed.current = candidates.length === 1 ? -1 : null;
     setMember.mutate({ teamId: team.id, userId: user.id, member: true });
   };
 
@@ -138,8 +170,37 @@ export function TeamMembersModal({
         {team.name}
       </Heading>
       <div className="form-stack">
-        {members.length === 0 ? (
+        {everyMember.length > 0 && (
+          <Field
+            label={t("teams.searchMembers")}
+            hintLive
+            hint={
+              search
+                ? t("users.resultCount", {
+                    matching: formatNumber(members.length, locale),
+                    // The team's own count, which no roster page cuts short.
+                    total: formatNumber(
+                      Math.max(team.member_count ?? 0, everyMember.length),
+                      locale,
+                    ),
+                  })
+                : undefined
+            }
+          >
+            {(control) => (
+              <SearchField
+                {...control}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("users.searchPlaceholder")}
+              />
+            )}
+          </Field>
+        )}
+        {everyMember.length === 0 ? (
           <p>{t("users.teamNoMembers")}</p>
+        ) : members.length === 0 ? (
+          <p>{t("users.noSearchResults")}</p>
         ) : (
           <ul
             ref={list}
@@ -171,7 +232,7 @@ export function TeamMembersModal({
                       setMember.variables?.userId !== member.id
                     }
                     onClick={() => {
-                      refocusAt.current = index;
+                      pressed.current = index;
                       setMember.mutate({
                         teamId: team.id,
                         userId: member.id,
