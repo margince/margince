@@ -814,6 +814,8 @@ Panels: []extension.Panel{{
 
 | Slot | Where the panel shows |
 |---|---|
+| `extension.SlotContactPanel` (`record_panel.contact`) | The end of a contact page's **Data & tools** tab, after its lists |
+| `extension.SlotCompanyPanel` (`record_panel.company`) | The end of a company page's **Contacts** tab, after the reach card |
 | `extension.SlotDealPanel` (`record_panel.deal`) | The end of a deal page's **Edit details** drawer, after its lists |
 
 - **`Export`** is a named export of your frontend package's `main` module: the function the page mounts.

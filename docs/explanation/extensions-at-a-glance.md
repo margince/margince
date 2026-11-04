@@ -95,7 +95,7 @@ stale page.
 | **Hear** that it was merged | ✅ | ✅ | ✅ | · | · |
 | **Add a button** to its page | ✅ | ✅ | ✅ | ✅ | · |
 | **Add a small note** to its page | ✅ | ✅ | ✅ | · | · |
-| **Add a card** to its page | · | ✅ | · | · | · |
+| **Add a card** to its page | ✅ | ✅ | ✅ | · | · |
 
 ### What else a unit can add
 
@@ -139,6 +139,8 @@ Every field of `Extension` that brings something to the core.
 | `record_mark.contact` | small note | Small note beside a contact page's header verbs. |
 | `record_mark.company` | small note | Small note beside a company page's header verbs. |
 | `record_mark.deal` | small note | Small note beside a deal page's header verbs. |
+| `record_panel.contact` | card | End of a contact page's research drawer, after its lists. |
+| `record_panel.company` | card | End of a company page's Contacts tab, after the reach card. |
 | `record_panel.deal` | card | End of a deal page's Edit details drawer, after its lists. |
 <!-- generated:extensions:end -->
 
