@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo, useState } from "react";
 import { splitEmailBody } from "../format/emailtext";
 import { useT } from "../i18n";
 import { writtenAsMarkdown } from "./activitytimeline";
-import { Markdown } from "./markdown";
+import { NoteMarkdown } from "./markdown";
 import { URL_PATTERN } from "./markdown-autolink";
 import { ReaderRendering } from "./readerrendering";
 import "./composed.css";
@@ -106,11 +106,7 @@ export function TimelineText({
   return (
     <Block className="tl-text">
       <Block ref={setEl} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {Block === "div" ? (
-          <Markdown source={trimmed} autolink />
-        ) : (
-          linkify(trimmed)
-        )}
+        {Block === "div" ? <NoteMarkdown source={trimmed} /> : linkify(trimmed)}
       </Block>
       {(clipped || open) && (
         <button
@@ -166,7 +162,11 @@ export function TimelineBody({
     return text;
   }
   return (
-    <ReaderRendering activityId={entry.id} language={entry.language}>
+    <ReaderRendering
+      activityId={entry.id}
+      language={entry.language}
+      note={writtenAsMarkdown(entry)}
+    >
       {text}
     </ReaderRendering>
   );
