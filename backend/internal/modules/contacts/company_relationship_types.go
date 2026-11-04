@@ -234,12 +234,9 @@ func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (boo
 // archive what is gone, leave the rest alone so an untouched type keeps its
 // original provenance and created_at. Returns the before image for the audit.
 //
-// It refuses to drop `partner` while the partner extension row lives. ADR-0032
-// bound partnerhood to a classification value and nothing enforced it; ADR-0079
-// moves the invariant here and this is where it is kept. Refusing is the honest
-// answer: the caller is asking for a state the partner APIs would contradict,
-// and silently keeping the row would make the request a lie in the other
-// direction.
+// It refuses to drop `partner` while the partner extension row lives. ADR-0079
+// keeps that invariant here: the caller asks for a state the partner APIs would
+// contradict, and keeping the row silently would make the request a lie.
 // With ext set it replaces the extension half, else core's half; the partner
 // rule applies to core's half only.
 func reconcileCompanyRelationshipTypes(

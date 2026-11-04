@@ -24,6 +24,10 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["address", "history.field.address"],
   ["amount_minor", "history.field.amount_minor"],
   ["expected_arr_minor", "history.field.expected_arr_minor"],
+  [
+    "extension_relationship_types",
+    "history.field.extension_relationship_types",
+  ],
   ["assignee_id", "history.field.assignee_id"],
   ["body", "history.field.body"],
   ["candidate_company_key", "history.field.candidate_company_key"],

@@ -37,11 +37,11 @@ import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
 import {
   companyTypeLabel,
   useCompanyTypeDirectory,
 } from "../../lib/companytypes";
-import { useCan } from "../../lib/capability";
 import {
   KIND_LABELS,
   MEANING_LABELS,
