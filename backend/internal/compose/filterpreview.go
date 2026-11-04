@@ -142,7 +142,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 // rows are read in a later one. Under `READ COMMITTED` a row that turned private
 // between the two would be read as it is now, past the scope that admitted it.
 // The statements only read, so the snapshot cannot fail to serialize. The one
-// write, the agent's log row, is an insert no other writer contends for.
+// write, the agent's log row, is a fresh insert that no update contends with.
 //
 // logged writes the preview to system_log in the same transaction. A human
 // typing is not logged; an agent's preview is, because for an agent the same

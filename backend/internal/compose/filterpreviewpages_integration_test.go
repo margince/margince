@@ -156,6 +156,9 @@ func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
 	observer := integration.OwnerConn(t)
 	testdb.WaitForContention(t, returned, "the preview finished without reading contact_email", "the preview never waited on contact_email",
 		func(ctx context.Context) (bool, error) {
+			if _, err := observer.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, err
+			}
 			var waiting bool
 			err := observer.QueryRow(ctx,
 				`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, holderPID).Scan(&waiting)
