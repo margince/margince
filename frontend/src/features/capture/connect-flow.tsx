@@ -54,8 +54,8 @@ const ACCOUNT_DESCRIPTION: Record<FlowAccount, MessageKey> = {
 
 /**
  * Connecting mail and calendar, in three steps. First comes which account, then
- * what it brings in, then the hand-off to the vendor's own sign-in, which lands
- * back on Connections: one consent screen at Google, two chained at Microsoft.
+ * what it brings in, then the hand-off to the vendor's own sign-in. Google shows
+ * one consent screen and Microsoft two, and both land back on Connections.
  *
  * `startFrom` opens on step 2 for a reader who already chose the vendor.
  * Another mail host has no step 3 here. Continue hands over to the IMAP form,
