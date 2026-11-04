@@ -17723,6 +17723,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partnerNone": "Không có",
   "deal.editDetails": "Sửa chi tiết",
   "deal.committee.card": "Hội đồng mua",
+  "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.

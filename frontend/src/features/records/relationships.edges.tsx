@@ -6,6 +6,7 @@ import type { EntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
 import type { RelationshipEntity } from "../../lib/relationshipcandidates";
 import { KIND_LABELS } from "../../lib/relationshipkinds";
+import { worklistKey } from "../../lib/workkeys";
 import type {
   CreatableRelationshipKind,
   CreateRelationshipRequest,
@@ -225,6 +226,9 @@ export function endpointBody(
  * Without the coverage drop, a seated champion shows in the table while the map
  * still says the champion is missing.
  *
+ * The deal status, the contact page and the Worklist read the same seats, so
+ * they drop too.
+ *
  * It drops the whole coverage prefix, not one deal's key. A stakeholder can be
  * seated from the contact's page, where the changed deal is the picked target
  * rather than the scope. A page that knows only "some deal moved" cannot name
@@ -235,7 +239,12 @@ export function invalidateAfterEdge(
   touchesADeal: boolean,
 ) {
   queryClient.invalidateQueries({ queryKey: ["relationships"] });
+  // A contact's page shows the role it holds on each deal.
+  queryClient.invalidateQueries({ queryKey: ["contact360"] });
   if (touchesADeal) {
     queryClient.invalidateQueries({ queryKey: DEAL_COVERAGE_KEY });
+    // The deal's next move and Home's champion warning read the same seats.
+    queryClient.invalidateQueries({ queryKey: ["deal-status"] });
+    queryClient.invalidateQueries({ queryKey: worklistKey });
   }
 }
