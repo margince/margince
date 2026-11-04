@@ -409,7 +409,7 @@ it("keeps a closed drawer's count on Home's live read after the drawer was open"
 });
 
 it.each(["failed", "bounded", "scope"])(
-  "does not claim an exact drawer total for %s coverage",
+  "draws the drawer total for %s coverage as a floor",
   async (gap) => {
     const day = readingsDay({}, [], undefined, { total: 42 });
     day.counts = [
@@ -427,15 +427,18 @@ it.each(["failed", "bounded", "scope"])(
     if (gap === "scope") day.scope_truncated = true;
     stubApi({ "GET /worklist": () => jsonResponse(day) });
     const { client } = render(<BriefScreen />);
-    const toggle = await screen.findByRole("button", {
-      name: en["brief.queue.show"],
-    });
     await waitFor(() =>
       expect(
         client.getQueryState(["worklist", "mine", "all", "", "today"])?.status,
       ).toBe("success"),
     );
-    expect(toggle.querySelector(".optioncount")).toBeNull();
+    // The tabs draw the same "42+", so the way into the queue agrees with them.
+    const toggle = await screen.findByRole("button", {
+      name: new RegExp(en["brief.queue.show"]),
+    });
+    await waitFor(() =>
+      expect(toggle.querySelector(".optioncount")?.textContent).toBe("42+"),
+    );
   },
 );
 

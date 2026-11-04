@@ -118,6 +118,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.callZalo",
     "installationSettings.individualPerformance",
     "installationSettings.selfCorrecting",
+    "installationSettings.likelyThreshold",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],

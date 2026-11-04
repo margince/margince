@@ -116,8 +116,8 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
 	// THE SUBJECT'S OWN ACT. An objection, a withdrawal, a restriction and a
 	// request to stop are things the contact did, and Art. 21 makes the first
-	// absolute. No answer or recorded fact lifts these; only an admin may send
-	// past one, a single message at a time (see RemediesFor).
+	// absolute. No answer, recorded fact or exception lifts these, an admin's
+	// included (see RemediesFor).
 	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn:
 		return LevelSubject
 

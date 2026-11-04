@@ -132,7 +132,6 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
-	reviewAnswerHandlers
 	companyOfferedHandlers
 	receiptHandlers
 	recordAccessHandlers
@@ -147,7 +146,6 @@ type Server struct {
 	jobHealthHandlers
 	dataTaskHandlers
 	captureHealthHandlers
-	dealViabilityHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
 	automaticWorkHandlers

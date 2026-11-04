@@ -37,7 +37,7 @@ describe("where Analytics opens", () => {
     const tabs = within(row).getAllByRole("button");
     expect(tabs[0]).toHaveTextContent("Overview");
     expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("Won + confirmed commit")).toBeVisible();
+    expect(await screen.findByText("Won + Likely deals")).toBeVisible();
   });
 
   it.each([

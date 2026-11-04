@@ -22,12 +22,12 @@ func at(m time.Month, d int) time.Time {
 // a case proves is that field.
 func healthy() Subject {
 	return Subject{
-		DealID:           "d1",
-		Owner:            "u1",
-		AmountMinor:      new(int64(500_000)),
-		Currency:         "EUR",
-		ExpectedClose:    new(at(time.June, 30)),
-		Category:         "commit",
+		DealID:         "d1",
+		Owner:          "u1",
+		AmountMinor:    new(int64(500_000)),
+		Currency:       "EUR",
+		ExpectedClose:  new(at(time.June, 30)),
+		WinProbability: 90, Likely: true,
 		StageName:        "Negotiation",
 		Viability:        &SubjectViability{Outcome: viability.OutcomeEligible},
 		HasNextStep:      true,
@@ -76,7 +76,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			fires:    func(s Subject) Subject { s.CloseProvisional = true; return s },
 			// Provisional but not committed: the forecast does not rest on it.
 			quiet: func(s Subject) Subject {
-				s.CloseProvisional, s.Category = true, "pipeline"
+				s.CloseProvisional, s.Likely = true, false
 				return s
 			},
 		},
@@ -103,21 +103,12 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			ruleType: TypeNoNextStep,
 			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
 			// No next step on a deal nobody is forecasting is not a finding.
-			quiet: func(s Subject) Subject { s.HasNextStep, s.Category = false, "omitted"; return s },
+			quiet: func(s Subject) Subject { s.HasNextStep, s.Likely = false, false; return s },
 		},
 		{
 			ruleType: TypeNoEconomicBuyer,
 			fires:    func(s Subject) Subject { s.HasEconomicBuyer = false; return s },
-			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Category = false, "pipeline"; return s },
-		},
-		{
-			ruleType: TypeDealViability,
-			fires:    func(s Subject) Subject { s.Viability = reviewRequired(); return s },
-			// A wait the customer asked for is judged, and it is not a review.
-			quiet: func(s Subject) Subject {
-				s.Viability = &SubjectViability{Outcome: viability.OutcomeWaiting}
-				return s
-			},
+			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Likely = false, false; return s },
 		},
 		{
 			ruleType: TypeCommitUnpriced,
@@ -126,7 +117,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 				return s
 			},
 			quiet: func(s Subject) Subject {
-				s.AmountMinor, s.Currency, s.Category = nil, "", "pipeline"
+				s.AmountMinor, s.Currency, s.Likely = nil, "", false
 				return s
 			},
 		},
@@ -285,5 +276,22 @@ func reviewRequired() *SubjectViability {
 		Outcome:    viability.OutcomeReviewRequired,
 		Reasons:    []viability.Reason{viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported},
 		SilentDays: 196,
+	}
+}
+
+// A retired type keeps its stored findings and no rule raises it again, even
+// on a deal the customer stopped answering.
+func TestNoRuleRaisesARetiredType(t *testing.T) {
+	t.Parallel()
+	silent := healthy()
+	silent.Viability = reviewRequired()
+	for _, rule := range Rules() {
+		if rule.Type == TypeDealViability || rule.Type == TypeBuyerSilent {
+			t.Errorf("rule %s asks a retired question", rule.Type)
+		}
+		if found := rule.Ask(at(time.May, 14), silent, DefaultConfig()); found != nil &&
+			(found.Type == TypeDealViability || found.Type == TypeBuyerSilent) {
+			t.Errorf("rule %s raised a retired %s finding", rule.Type, found.Type)
+		}
 	}
 }
