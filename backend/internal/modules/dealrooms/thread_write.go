@@ -385,14 +385,14 @@ func (s *Store) Reply(ctx context.Context, roomID ids.DealRoomID, threadID ids.U
 	return out, err
 }
 
-// ResolveThread closes a thread. Human-only: resolving a required-change
-// thread is what unblocks the buyer's confirmation, so a contact stands behind
-// it. Already resolved answers the thread unchanged.
+// ResolveThread closes a thread. Resolving a required-change thread unblocks
+// the buyer's confirmation, so the user or their agent stands behind it, never
+// automatic work. Already resolved answers the thread unchanged.
 func (s *Store) ResolveThread(ctx context.Context, roomID ids.DealRoomID, threadID ids.UUID) (crmcontracts.DealRoomThread, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
 	userID, err := writingUser(ctx)

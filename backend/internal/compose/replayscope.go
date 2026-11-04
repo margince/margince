@@ -438,6 +438,7 @@ var replayableOperations = map[string]replayTarget{
 	// record.
 	"POST /v1/projects/{id}/health-assessments":                             {object: tableProject, table: tableProject, pathParam: "id"},
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {object: tableProject, table: tableProject, pathParam: "id"},
+	"POST /v1/projects/{id}/health-assessments/{assessment_id}/undo":        {object: tableProject, table: tableProject, pathParam: "id"},
 	"PATCH /v1/record-roles/{id}":                                           {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/lead-disqualify-reasons":                                      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-disqualify-reasons/{id}":                                {object: objectCustomField, rowNote: noOwnerCatalog},

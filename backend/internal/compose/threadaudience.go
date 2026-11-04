@@ -80,7 +80,7 @@ func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 // another for even a moment is a thread somebody screenshotted.
 func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, share bool) (ThreadAudienceOutcome, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
 	}
 	// A read seat is licensed to look, not to change what colleagues can read.

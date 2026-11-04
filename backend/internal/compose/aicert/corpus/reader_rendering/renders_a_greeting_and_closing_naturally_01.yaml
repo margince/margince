@@ -1,0 +1,22 @@
+name: reader_rendering_renders_a_greeting_and_closing_naturally
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "email"
+  subject: "Ihre Anfrage"
+  body: "Sehr geehrte Frau Okafor,\n\nvielen Dank für Ihre Anfrage. Gern senden wir Ihnen die Unterlagen zu.\n\nMit freundlichen Grüßen\nJonas Brandt"
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Okafor", "Jonas Brandt"]
+    omits: ["very honored", "with friendly greetings"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The greeting and closing read the way an English writer would put them (Dear Ms Okafor; Kind regards or Best regards), not a literal rendering such as 'very honored' or 'with friendly greetings'."

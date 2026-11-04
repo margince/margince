@@ -8,6 +8,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import {
   type ReportingEvaluation,
   type ReportingMetricID,
@@ -71,7 +72,7 @@ function TargetReadings({
   const t = useT();
   const metricName = useMetricNames();
   const query = useQuery({
-    queryKey: ["reporting-evaluation", "my-targets", self, metrics],
+    queryKey: [...REPORTING_EVALUATION_KEY, "my-targets", self, metrics],
     queryFn: async (): Promise<Readings> => {
       const [fiscal_quarter, month] = await Promise.all([
         evaluate(self, "fiscal_quarter", metrics),

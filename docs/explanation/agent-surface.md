@@ -6,7 +6,8 @@ How AI agents *act* inside Margince, and what *runs the model* behind them. The 
 data changes; here we look at the other side, how a proposal becomes a checked action. The rules that
 govern it (the autonomy tiers, passports, and the one admission gate) are in
 [authorization.md](authorization.md). What follows is what the agent *does* and how the model runtime
-is put together.
+is put together. Which actions an agent may take at all is
+[An agent does what its user does](../principles/an-agent-does-what-its-user-does.md).
 
 ## Two surfaces, one gate
 
@@ -61,8 +62,10 @@ optional `contract_id`. The store checks the contract as it checks one a human n
 
 `agents.AttachLimit` (`internal/modules/agents/tools_documents.go`) sets one file size limit for an
 agent on MCP and REST. It is what one MCP request carries inline, or the operator's attachment limit
-when that is smaller. A human's upload keeps the route's own limit. The routes that fetch, delete
-or hide a file stay human-only, so no tool or route returns a file's contents to an agent.
+when that is smaller. A human's upload keeps the route's own limit. An agent reads a file through
+`list_documents` by naming its `id`, or through the file actions of `read_details`. The answer is
+`content_base64`, up to `agents.MaxInlineFileBytes`; `routeAnswer`
+(`internal/compose/routeverbseam.go`) refuses a larger file.
 
 `TestNoAgentLoopAttachesAToolThatCarriesAFile` (`internal/compose/agentcatalog_test.go`) fails when a
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds

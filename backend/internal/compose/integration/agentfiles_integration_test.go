@@ -112,9 +112,9 @@ func (d *twoDoors) toolFileIDs(t *testing.T, entityType, entityID string) []stri
 			AttachmentID string `json:"attachment_id"`
 		} `json:"documents"`
 	}
-	raw := d.tool(t, "list_documents", map[string]any{"entity_type": entityType, "entity_id": entityID})
+	raw := d.tool(t, "list_record_documents", map[string]any{"entity_type": entityType, "entity_id": entityID})
 	if err := json.Unmarshal(raw, &page); err != nil {
-		t.Fatalf("list_documents does not decode: %v", err)
+		t.Fatalf("list_record_documents does not decode: %v", err)
 	}
 	out := make([]string, 0, len(page.Documents))
 	for _, doc := range page.Documents {
@@ -238,22 +238,38 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 	}
 }
 
-// Downloading and deleting stay human-only: no tool reads a file's bytes, and
-// no route lets a passport do it either.
-func TestAPassportCannotDownloadOrDeleteAFile(t *testing.T) {
-	d := newTwoDoors(t, "files-human-only", "read", "write")
+// A passport reads a file's bytes through the tool, as the signed-in admin reads
+// them on the route. An archived file is gone from that door too.
+func TestAPassportReadsAFileThroughTheToolUntilItIsArchived(t *testing.T) {
+	d := newTwoDoors(t, "files-read", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Kept Works", "source": "manual"})
-	status, raw := uploadAs(t, d.e, nil, "company", company, []byte("PDF-KEPT"))
+	content := []byte("PDF-KEPT\x00\xff")
+	status, raw := uploadAs(t, d.e, nil, "company", company, content)
 	if status != http.StatusCreated {
 		t.Fatalf("the admin's upload → %d %s", status, raw)
 	}
 	file := attachmentIDOf(t, raw)
-	for _, method := range []string{"GET", "DELETE"} {
-		var refusal fileRefusal
-		if status := d.e.Call(t, method, "/v1/attachments/"+file, nil, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "permission_denied" {
-			t.Errorf("%s /v1/attachments/{id} as a passport → %d %q, want 403 permission_denied", method, status, refusal.Code)
-		}
+
+	var got struct {
+		Filename      string `json:"filename"`
+		SizeBytes     int    `json:"size_bytes"`
+		ContentBase64 string `json:"content_base64"`
 	}
+	if err := json.Unmarshal(d.tool(t, "list_documents", map[string]any{"id": file}), &got); err != nil {
+		t.Fatalf("the download does not decode: %v", err)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(got.ContentBase64)
+	if err != nil {
+		t.Fatalf("content_base64 does not decode: %v", err)
+	}
+	if !bytes.Equal(decoded, content) || got.Filename != "scan.pdf" || got.SizeBytes != len(content) {
+		t.Errorf("the download answered %q, %d bytes, named %q; want the uploaded scan.pdf", decoded, got.SizeBytes, got.Filename)
+	}
+
+	if status := d.e.Call(t, "DELETE", "/v1/attachments/"+file, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("the admin's archive → %d", status)
+	}
+	d.mcp.CallRefused(t, "list_documents", map[string]any{"id": file})
 }
 
 // A file over what attach_document takes is refused on REST in the tool's own

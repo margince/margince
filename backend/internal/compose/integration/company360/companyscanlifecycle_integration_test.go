@@ -393,13 +393,18 @@ func TestAReaderTheAccountRefusesGetsNoRead(t *testing.T) {
 	if _, err := svc.Ensure(owner, theirs, false); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an open on a hidden account: %v, want not found", err)
 	}
-	// An agent is refused as a matter of permission: the scan is a contact's.
-	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := svc.Ensure(agent, company, false); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent's open: %v, want permission denied", err)
+	// Passportless work acts for nobody, so the scan is not its to open or read.
+	actor, ok := principal.Actor(owner)
+	if !ok {
+		t.Fatal("no actor")
 	}
-	if _, err := svc.Get(agent, company); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent's read: %v, want permission denied", err)
+	actor.Type, actor.ID = principal.PrincipalAgent, "agent:deal-scout"
+	passportless := principal.WithActor(owner, actor)
+	if _, err := svc.Ensure(passportless, company, false); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("passportless work's open: %v, want permission denied", err)
+	}
+	if _, err := svc.Get(passportless, company); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("passportless work's read: %v, want permission denied", err)
 	}
 
 	// A read the owner queued, run under a principal whose grants no longer

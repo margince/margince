@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // actingIdentity reads the human behind the call.
@@ -49,15 +50,11 @@ func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
 }
 
 // proseLanguage names the language stored prose must be written in: the
-// member's own choice, or the installation's base language when they never
-// made one.
-//
-// It answers a language name rather than a code ("German", not "de"), for the
-// reason promptlang.Rule already gives: the reader is a model writing a
-// sentence, and a two-letter code is a lookup it can get wrong.
+// member's own choice, else identity.ReaderLanguageForPrompt.
+// It answers a name ("German", not "de"), because a model reads it.
 func proseLanguage(ctx context.Context, pool *pgxpool.Pool, locale string) string {
-	if locale == "" {
-		locale = identity.BaseLanguageForPrompt(ctx, pool)
+	if !textlang.Known(locale) {
+		locale = identity.ReaderLanguageForPrompt(ctx, pool)
 	}
 	return promptlang.LanguageName(locale)
 }

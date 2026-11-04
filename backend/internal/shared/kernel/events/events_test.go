@@ -70,6 +70,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"status_changed": true,
 		// A lead's first-response deadline passed unanswered (formulas §18.2).
 		"sla_breached": true,
+		// A reading of how a project is going was appended to its history.
+		"health_assessed": true,
 		// A record joined or left a Shortlist.
 		"member_added": true, "member_removed": true,
 		// A Live List's scheduled check saw records join or leave it.

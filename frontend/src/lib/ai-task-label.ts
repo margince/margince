@@ -25,6 +25,7 @@ const TASK_NAME_KEYS: Readonly<Record<AiTask, MessageKey>> = {
   owed_verdict: "aiTask.name.owed_verdict",
   propose_roles: "aiTask.name.propose_roles",
   rate_extract: "aiTask.name.rate_extract",
+  reader_rendering: "aiTask.name.reader_rendering",
   report_interpret: "aiTask.name.report_interpret",
   report_setup: "aiTask.name.report_setup",
   request_settlement: "aiTask.name.request_settlement",

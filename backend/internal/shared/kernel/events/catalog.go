@@ -123,10 +123,11 @@ var catalog = map[string]struct {
 	"deal.erased":        {dealStreamEntity, 1},
 	// The project rides the deal family stream: it is the body of work the
 	// deals hang off, and a consumer interested in one is interested in both.
-	"project.created":       {dealStreamEntity, 1},
-	"project.updated":       {dealStreamEntity, 1},
-	"project.phase_changed": {dealStreamEntity, 1},
-	"project.archived":      {dealStreamEntity, 1},
+	"project.created":         {dealStreamEntity, 1},
+	"project.updated":         {dealStreamEntity, 1},
+	"project.phase_changed":   {dealStreamEntity, 1},
+	"project.health_assessed": {dealStreamEntity, 1},
+	"project.archived":        {dealStreamEntity, 1},
 	// A commission entry rides the deal family stream for the same reason a
 	// contract does: it is what a WON deal produced, and a consumer following
 	// the commercial arc of one deal wants the money that came out of it on

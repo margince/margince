@@ -46,7 +46,7 @@ var createTagCopy = toolCopy{
 	Limits: "list_tags FIRST: a workspace with \"Key Account\" does not want \"key accounts\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
 		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
-		"it, which a contact restores in Settings; no tool does. Needs the tag.create grant, " +
+		"it, which change_tags restores. Needs the tag.create grant, " +
 		"which an ordinary seat does not hold.",
 }
 
@@ -76,7 +76,7 @@ var updateTagCopy = toolCopy{
 
 var archiveTagCopy = toolCopy{
 	Purpose: "Retire a word. Records carrying it keep it, and it can no longer be applied.",
-	Limits:  "It needs the tag grant an ordinary seat lacks. A retired name stays taken; only Settings restores it.",
+	Limits:  "It needs the tag grant an ordinary seat lacks. A retired name stays taken until change_tags restore brings it back.",
 }
 
 var readTagsCopy = toolCopy{
@@ -100,7 +100,7 @@ var changeTagsCopy = toolCopy{
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
 		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
-		"together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update " +
+		"together, and a taken name is a conflict, even a retired one, which restore brings back. create and update need tag grants an ordinary seat lacks. update " +
 		"sends no version, so read the tag right before editing; it changes what a word is " +
 		"called, never what carries it. Removing a tag that is not there succeeds. archive retires " +
 		"a word for every record; the records keep it.",

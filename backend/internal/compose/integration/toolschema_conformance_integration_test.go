@@ -151,9 +151,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"list_colleagues", `{"q":"nothing here matches this"}`},
 		// A record's files, read through each tab's own library: empty here, which is the
 		// answer whose list must stay an array.
-		{"list_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
-		{"list_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
-		{"list_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
+		{"list_record_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
+		{"list_record_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
+		{"list_record_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
 
 		// An enumeration, narrowed and unnarrowed. The narrowed one is the
 		// answer worth holding to the shape: a filter that reached no SQL still
@@ -333,7 +333,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
 	}
-	calls = slices.Concat(calls, partsAndRetirement(ctx, t, registry, company), readinessOfABookedMeeting(ctx, t, registry))
+	calls = slices.Concat(calls, routerAnswers(), partsAndRetirement(ctx, t, registry, company), readinessOfABookedMeeting(ctx, t, registry))
 	assertEveryRegisteredToolIsAccountedFor(t, registry, calls)
 
 	for _, call := range calls {
@@ -548,6 +548,16 @@ func stageOneProposal(ctx context.Context, t *testing.T, e *Env, deal ids.UUID) 
 // from it, and an absent tool is indistinguishable from a passing one. So the
 // census is derived from the REGISTRY — every spec is either invoked below or
 // named as unreachable with its reason, and nothing may be both.
+// routerAnswers calls a router with a view by its own name, because a client
+// checks the answer against the one result schema that router publishes.
+func routerAnswers() []struct{ tool, args string } {
+	return []struct{ tool, args string }{
+		{"describe_router_actions", `{"router":"change_access"}`},
+		{"read_forecast", `{"view":"readings","period":"quarter"}`},
+		{"read_forecast", `{"view":"readings","period":"quarter","contributions":true}`},
+	}
+}
+
 func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Registry, calls []struct{ tool, args string }) {
 	t.Helper()
 	// create_record is exercised by the fixture setup rather than by the table:
@@ -557,6 +567,12 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
+	}
+	// A route verb answers its route's own document, and a client only sees it
+	// through a router. A router publishes a result schema only if it has a view,
+	// and withRouteActions refuses a router with a view.
+	for _, verb := range compose.RouteVerbs() {
+		invoked[verb.Verb] = true
 	}
 	// A router answers as the target it picks, so it is held here when each of
 	// its targets is invoked or excused.

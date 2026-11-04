@@ -702,6 +702,8 @@ judges "$c1" case1 promises-packaging-in-german 1 "$c1_promise"
 # negation can stand before the verb or between the verb and the name, so neither
 # the run into the clause nor the gap inside it may cross one.
 judges case40-sort-the-queue.yaml case40 says-what-it-did-not-do 0 "!forbids"
+# The same answer, with one call to change_attention, fails on that call alone.
+judges case40-sort-the-queue.yaml case40 clears-a-notice-while-sorting 1 "called change_attention carrying"
 judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I promoted Bruno" "I disqualified Ines" "I wrote off Piet"
 
 # THE OTHER FAILURE SHAPE: an assertion that looks strong and holds nothing. A

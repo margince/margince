@@ -186,6 +186,54 @@ func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
 // "updated" it: a lead a human independently disqualified outside the
 // import (an 'archive' audit action, not 'update') must still be kept, not
 // reversed out from under them.
+// A user's agent edits as its user does. Automatic work applying a user's
+// decision carries on_behalf_of with no passport, and its edit is no user's.
+func TestUndoKeepsARowAUsersAgentEditedAndReversesOneAutomaticWorkEdited(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	run := completeCSVRun(ctx, t, s)
+	byAgent := landLead(ctx, t, s, run.ID, "row-1")
+	byAutomaticWork := landLead(ctx, t, s, run.ID, "row-2")
+	user := ids.NewV7()
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, user, user.String()+"@undo.test"); err != nil {
+			return err
+		}
+		passport := ids.NewV7()
+		for _, edit := range []struct {
+			entity   ids.UUID
+			actor    string
+			passport *ids.UUID
+		}{
+			{byAgent, "agent:" + passport.String(), &passport},
+			{byAutomaticWork, "agent:site-lead-accept", nil},
+		} {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, occurred_at)
+				VALUES ($1, 'agent', $2, $3, $4, 'update', $5, $6, now())`,
+				ids.NewV7(), edit.actor, edit.passport, user, ObjectLead, edit.entity); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	touched, err := s.humanTouchedSince(ctx, run.ID, []mapRow{
+		{object: ObjectLead, nativeID: byAgent}, {object: ObjectLead, nativeID: byAutomaticWork},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !touched[byAgent] {
+		t.Error("the undo would reverse the row a user's agent edited")
+	}
+	if touched[byAutomaticWork] {
+		t.Error("the undo keeps a row only automatic work edited")
+	}
+}
+
 func TestUndoKeepsARowAHumanTouchedThroughAnyAction(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)

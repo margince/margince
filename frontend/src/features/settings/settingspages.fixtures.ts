@@ -32,6 +32,7 @@ const NOTIFICATION_PREFERENCES: Schemas["NotificationPreferenceList"] = {
     { class: "approval_pending", delivery: "email", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
+    { class: "project_health", delivery: "in_app", chosen: false },
     { class: "capture", delivery: "in_app", chosen: false },
     { class: "system", delivery: "in_app", chosen: false },
     { class: "coach", delivery: "in_app", chosen: false },

@@ -81,7 +81,8 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 				COALESCE(r.input_per_mtok_microusd, 0),
 				COALESCE(r.output_per_mtok_microusd, 0),
 				COALESCE(r.cache_read_per_mtok_microusd, 0),
-				COALESCE(r.cache_write_per_mtok_microusd, 0)
+				COALESCE(r.cache_write_per_mtok_microusd, 0),
+				`+longContextColumns("r")+`
 			FROM ai_call c
 			LEFT JOIN LATERAL (`+pricedRate("c", 2, 3)+`) r ON true
 			WHERE c.correlation_id = $1
@@ -92,14 +93,17 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 		defer rows.Close()
 		for rows.Next() {
 			var call runCall
+			var band scannedBand
 			if err := rows.Scan(&call.Task, &call.Tier, &call.Provider, &call.ConfiguredModel,
 				&call.ServedModel, &call.ServedIdentitySource, &call.TokensIn, &call.TokensOut, &call.CachedTokens,
 				&call.CacheWriteTokens, &call.ReasoningTokens, &call.LatencyMS,
 				&call.OccurredAt, &call.IsTerminal, &call.RateFound, &call.Rate.InputPerMTokMicroUSD,
 				&call.Rate.OutputPerMTokMicroUSD, &call.Rate.CacheReadPerMTokMicroUSD,
-				&call.Rate.CacheWritePerMTokMicroUSD); err != nil {
+				&call.Rate.CacheWritePerMTokMicroUSD,
+				&band.above, &band.input, &band.output, &band.cacheRead, &band.cacheWrite); err != nil {
 				return err
 			}
+			call.Rate.LongContext = band.band()
 			calls = append(calls, call)
 		}
 		return rows.Err()

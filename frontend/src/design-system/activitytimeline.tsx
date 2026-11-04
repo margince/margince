@@ -158,6 +158,7 @@ export function activityTimeline(
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
       body: activity.body,
+      language: activity.language,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
       // Who wrote it, by the shared rule: known authorship over transport.

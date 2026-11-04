@@ -136,6 +136,13 @@ func (s Server) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_record_fields", noArguments{})
 }
 
+// DescribeRouterActions serves describe_router_actions.
+func (s Server) DescribeRouterActions(w http.ResponseWriter, r *http.Request, params crmcontracts.DescribeRouterActionsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_router_actions", struct {
+		Router string `json:"router"`
+	}{params.Router})
+}
+
 // DescribeListFilters serves describe_list_filters.
 func (s Server) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_list_filters", noArguments{})

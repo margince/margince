@@ -39,6 +39,7 @@ function standingDefaults(): Preference[] {
     preference("approval_pending", "email", false),
     preference("automation", "in_app", false),
     preference("lead_sla", "in_app", false),
+    preference("project_health", "in_app", false),
     preference("capture", "in_app", false),
     preference("system", "in_app", false),
     preference("coach", "in_app", false),
