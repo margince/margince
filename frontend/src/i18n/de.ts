@@ -841,8 +841,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Organisiert von",
   "approval.preview.intendedAttendee":
     "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
-  "approval.preview.hostNamedAttendee":
-    "Nur per Adresse eingeladen (ohne Einwilligungsprüfung)",
+  "approval.preview.hostNamedAttendee": "Eingegebene Adresse",
   "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",

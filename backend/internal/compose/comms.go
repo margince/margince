@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -349,6 +350,11 @@ func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 		return ids.Nil, errors.New("comms: no host named and the principal has no user calendar")
 	}
 	return actor.UserID, nil
+}
+
+// InvitationRoster resolves the request's addresses as delivery will.
+func (c commsAdapter) InvitationRoster(ctx context.Context, in crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return c.store.InvitationRoster(ctx, in)
 }
 
 func (c commsAdapter) InviteMeeting(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
