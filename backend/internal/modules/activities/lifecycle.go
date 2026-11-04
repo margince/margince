@@ -41,9 +41,12 @@ type UpdateActivityInput struct {
 	OccurredPrecision *string
 	DurationSeconds   *int
 	DueAt             *time.Time
-	RemindAt          *time.Time
-	AssigneeID        *ids.UserID
-	IsDone            *bool
+	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
+	// a DueAt without it is a day (admitPatchTime).
+	DueHasTime *bool
+	RemindAt   *time.Time
+	AssigneeID *ids.UserID
+	IsDone     *bool
 	// Clear names the fields sent as an explicit JSON null, which a nil pointer
 	// cannot tell from a field not mentioned.
 	Clear []string
@@ -129,6 +132,7 @@ func updateActivityInTx(
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
+		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
 		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
@@ -148,7 +152,7 @@ func updateActivityInTx(
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -215,6 +219,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	}
 	if in.DueAt != nil {
 		p.Set("due_at", current.DueAt, *in.DueAt)
+	}
+	if in.DueHasTime != nil {
+		p.Set(fieldDueHasTime, current.DueHasTime, *in.DueHasTime)
 	}
 	if in.RemindAt != nil {
 		p.Set("remind_at", current.RemindAt, *in.RemindAt)
@@ -328,6 +335,9 @@ func admitActivityPatch(
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
+		if err := in.admitPatchTime(current.Kind); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 	}
 	if !held {
 		if err := validateActivityDuration(in.DurationSeconds); err != nil {
@@ -344,6 +354,7 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
+		in.followReminder(current)
 		endPassedReminder(current, in)
 	}
 	return current, held, nil
