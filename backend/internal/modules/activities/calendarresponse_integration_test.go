@@ -86,7 +86,7 @@ func owedNow(t *testing.T, e *loadEnv, id ids.UUID) bool {
 
 func badgeNeedsReply(t *testing.T, e *loadEnv, id ids.UUID) bool {
 	t.Helper()
-	summaries, err := storeKnowing(e).EmailSummariesByID(e.as(), []ids.UUID{id})
+	summaries, err := readingAt(storeKnowing(e), requestInstant.Add(time.Hour)).EmailSummariesByID(e.as(), []ids.UUID{id})
 	if err != nil {
 		t.Fatal(err)
 	}
