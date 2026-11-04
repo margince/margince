@@ -335,11 +335,11 @@ As you move down, the list loads every task, every waiting customer and every de
 
 Each count is exact, or Margince says it is not:
 
-- **Today**, **Decisions** and **System** each show a count only when it is exact. The heading above the list shows it, such as **12 outstanding actions**, or **25+ outstanding actions** when some work was not counted.
-- A **Work type** button shows a number only when that number is exact. Tasks and approvals are counted in full. On **Team**, approvals are not.
+- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**.
+- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not.
 - **"{shown} of {considered} items loaded"**: how far you are, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": nobody knows the total. Each load checks a fixed number of these, and the list stops there.
-- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so it shows no count for Today.
+- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so the count for Today ends in `+`.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
