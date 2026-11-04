@@ -17,14 +17,8 @@ import (
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func DecodedValueRefusal(into any, raw json.RawMessage, owned func(path string) bool) error {
-	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
-		return Validation(outOfRange.Field, "out_of_range", outOfRange.Error())
-	}
-	if outOfBounds := datasource.RejectOutOfBoundsNumbers(into, raw, owned); outOfBounds != nil {
-		return Validation(outOfBounds.Field, "out_of_range", outOfBounds.Error())
-	}
-	if repeated := datasource.RejectRepeatedItems(into); repeated != nil {
-		return Validation(repeated.Field, "duplicate", repeated.Error())
+	if refused := datasource.RefuseDecodedValue(into, raw, owned); refused != nil {
+		return Validation(refused.Field, refused.Code, refused.Error())
 	}
 	return nil
 }
@@ -38,4 +32,12 @@ func DecodedValueRefusal(into any, raw json.RawMessage, owned func(path string) 
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func DecodeJudged(w http.ResponseWriter, r *http.Request, into any, owned func(path string) bool) bool {
 	return decodeWrite(w, r, into, owned, false)
+}
+
+// DecodeJudgedOrRefusal is DecodeOrRefusal with DecodeJudged's `owned` paths,
+// for a handler that answers an empty body itself.
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func DecodeJudgedOrRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(path string) bool) error {
+	return decodeRefusal(w, r, into, owned, false)
 }
