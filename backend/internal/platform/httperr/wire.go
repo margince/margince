@@ -136,7 +136,7 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
 	if datasource.HasCustomFieldMap(into) {
-		return decodeCustomFieldBody(r, raw, into)
+		return decodeCustomFieldBody(r, raw, into, owned)
 	}
 	// A key that only case-folds onto a contract field, or is unknown, is refused
 	// rather than matched by encoding/json. The provider seam applies the same gate.

@@ -18,6 +18,9 @@ import (
 // bounds instead, so no bound the contract states goes unheld.
 var decodeJudgedCallers = gatekit.Waive(map[string]string{
 	"internal/compose/handlers_ai_taskoverrides.go:ReplaceAiTaskOverrides": "ai.TaskOverridesFromWire holds both timeout bounds and lists every refused path in one 422; the settings screen shows them field by field",
+	"internal/modules/deals/handlers_deal.go:CreateDeal":                   "the deals store refuses a negative amount_minor as amount_negative (NegativeAmountError), the code the contract and the create form name",
+	"internal/modules/deals/handlers_deal.go:UpdateDeal":                   "the deals store refuses a negative amount_minor as amount_negative (NegativeAmountError), the code the contract and the create form name",
+	"internal/modules/deals/handlers_suggestions.go:AcceptDealSuggestion":  "the deals store refuses a negative amount_minor as amount_negative (NegativeAmountError), the code the contract and the create form name",
 	"internal/compose/handlers_ai_taskoverrides.go:PreviewAiTaskOverrides": "the preview lists an out-of-range timeout among its errors from ai.TaskOverridesFromWire, so a decode refusal would turn the preview into a 422",
 })
 
@@ -58,7 +61,7 @@ func callsDecodeJudged(body *ast.BlockStmt) bool {
 		if !ok {
 			return !found
 		}
-		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "DecodeJudged" {
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && (sel.Sel.Name == "DecodeJudged" || sel.Sel.Name == "DecodeJudgedOrRefusal") {
 			if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "httperr" {
 				found = true
 			}

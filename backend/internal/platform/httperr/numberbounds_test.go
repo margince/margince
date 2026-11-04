@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The contract bounds the employment backfill batch to 1..25. The shared
@@ -52,5 +53,21 @@ func TestDecodeRefusesAHomeRepairPreviewOfZeroRecords(t *testing.T) {
 		if refused && (rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), `"field":"limit"`)) {
 			t.Errorf("%s answered %d %s, want 422 naming limit", body, rec.Code, rec.Body)
 		}
+	}
+}
+
+// The provider seam decodes with StrictDecode. Its refusal of a limit past the
+// bound answers as the REST decode does: the field, and out_of_range.
+func TestTheProviderSeamNamesAnOutOfRangeFieldAsTheRESTDecodeDoes(t *testing.T) {
+	var into crmcontracts.BackfillEmploymentImportJSONRequestBody
+	err := datasource.StrictDecode([]byte(`{"limit":26}`), &into)
+	if err == nil {
+		t.Fatal("a limit of 26 decoded")
+	}
+	rec := httptest.NewRecorder()
+	Write(rec, httptest.NewRequest(http.MethodPost, "/v1/employment-import/backfill", nil), err)
+	body := rec.Body.String()
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(body, `"field":"limit"`) || !strings.Contains(body, `"code":"out_of_range"`) {
+		t.Errorf("answered %d %s, want 422 naming limit as out_of_range", rec.Code, body)
 	}
 }

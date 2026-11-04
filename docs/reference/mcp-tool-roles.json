@@ -29,14 +29,14 @@
       "verb": "archive_record",
       "allowed_for": [],
       "refused_for": [
-        "read_only",
-        "rep"
+        "read_only"
       ],
       "unproven_for": [
         "admin",
         "management",
         "manager",
-        "ops"
+        "ops",
+        "rep"
       ]
     },
     {
@@ -2308,14 +2308,13 @@
       "action": "save_booking_page",
       "verb": "put_scheduling_profile",
       "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
+      "refused_for": [],
       "unproven_for": [
         "admin",
         "management",
         "manager",
         "ops",
+        "read_only",
         "rep"
       ]
     },
