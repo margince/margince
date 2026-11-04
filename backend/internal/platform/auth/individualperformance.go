@@ -59,6 +59,6 @@ func (IndividualPerformanceOffError) Is(target error) bool {
 // MessageFault says what the reader can still ask.
 func (IndividualPerformanceOffError) MessageFault() (code, message string) {
 	return "individual_performance_off", "An administrator switched off individual performance. " +
-		"You can see your own figures, and totals that at least two other members contribute to. " +
-		"A total is also withheld when taking another team's total from it would leave fewer than two."
+		"You can see your own figures. " +
+		"A figure is withheld when fewer than two other members make it up, or when taking another team's total from it would leave fewer than two."
 }

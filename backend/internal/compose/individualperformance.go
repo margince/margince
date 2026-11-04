@@ -162,20 +162,13 @@ func withholdColleagues(
 	if !errors.As(err, new(auth.IndividualPerformanceOffError)) {
 		return facts, coverage, err
 	}
-	return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+	return []reporting.Fact{}, belowFloorCoverage(frame), nil
 }
 
-// loneColleagueCoverage is a figure withheld because one colleague besides the
-// reader makes it up.
-func loneColleagueCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
-	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LoneColleague))
-	withheld.Withheld = true
-	return withheld
-}
-
-// thinTeamCoverage withholds a figure of a population that populationBelowFloor holds back.
-func thinTeamCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
-	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ThinTeam))
+// belowFloorCoverage is a figure the small-group floor withholds, by its
+// contributors or by its population's members. Both say the same rule.
+func belowFloorCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
+	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.BelowFloor))
 	withheld.Withheld = true
 	return withheld
 }

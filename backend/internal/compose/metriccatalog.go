@@ -264,7 +264,7 @@ func (e metricEvaluator) projectMovementCharts(ctx context.Context, tx pgx.Tx, f
 // thin team's, or one that cannot follow the selection's dimensions.
 func unreadMetric(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, thinTeam bool) (crmcontracts.ReportingCoverage, bool) {
 	if thinTeam {
-		return thinTeamCoverage(frame), true
+		return belowFloorCoverage(frame), true
 	}
 	return reportingDimensionGap(frame, metric)
 }

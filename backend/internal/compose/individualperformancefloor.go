@@ -190,11 +190,12 @@ func liveColleagues(ctx context.Context, tx pgx.Tx, seats []ids.UUID) (map[ids.U
 	return out, nil
 }
 
-// requirePopulationFloor holds a team, "My teams" or company total to the
-// floor by its members, not only by who contributed. Otherwise a total equal
-// to another team's would show that the one member between them sold nothing.
-// An owner population is the reader's own and has nothing to hold. A capture
-// the system takes has no reader; what it froze meets the floor when read.
+// requirePopulationFloor holds a team or "My teams" total to the floor by its
+// members, not only by who contributed. Otherwise a total equal to another
+// team's would show that the one member between them sold nothing. A company
+// total is held by its contributors alone, so a member on no team who has no
+// figure hides nothing. An owner population is the reader's own. A capture the
+// system takes has no reader; what it froze meets the floor when read.
 func requirePopulationFloor(ctx context.Context, tx pgx.Tx, resolved ResolvedScope) error {
 	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalSystem {
 		return nil
@@ -213,16 +214,47 @@ func requirePopulationFloor(ctx context.Context, tx pgx.Tx, resolved ResolvedSco
 // requireSpecPopulationFloor is requirePopulationFloor for a report spec's
 // answer. A spec without an owner column has no team to narrow to, so no team
 // total to take from it.
+// The membership and the figures are read in one snapshot. Otherwise a team
+// change between the two answers a figure the floor never judged.
 func requireSpecPopulationFloor(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) error {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed || !measuresOwners(spec) {
 		return err
 	}
-	resolved, err := ResolveAnalyticsScope(ctx, tx, reportPopulationScope(spec, requested))
+	if err := requireOneSnapshot(ctx, tx); err != nil {
+		return err
+	}
+	return requireRequestedPopulationFloor(ctx, tx, reportPopulationScope(spec, requested))
+}
+
+// requireRequestedPopulationFloor is requirePopulationFloor for a scope as the
+// caller asked for it. Nothing is resolved while the switch is on.
+func requireRequestedPopulationFloor(ctx context.Context, tx pgx.Tx, requested RequestedScope) error {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return err
+	}
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
 		return err
 	}
 	return requirePopulationFloor(ctx, tx, resolved)
+}
+
+// errFloorOutsideOneSnapshot is a door that runs a floored report in a
+// transaction whose statements each read their own instant.
+var errFloorOutsideOneSnapshot = errors.New("compose: a report held to the small-group floor must run in one REPEATABLE READ snapshot")
+
+// requireOneSnapshot refuses a transaction below `REPEATABLE READ`.
+func requireOneSnapshot(ctx context.Context, tx pgx.Tx) error {
+	var level string
+	if err := tx.QueryRow(ctx, `SELECT current_setting('transaction_isolation')`).Scan(&level); err != nil {
+		return fmt.Errorf("compose: reading the transaction's isolation: %w", err)
+	}
+	if level != "repeatable read" && level != "serializable" {
+		return errFloorOutsideOneSnapshot
+	}
+	return nil
 }
 
 // populationBelowFloor answers, while the switch is off, whether a reporting
@@ -243,8 +275,9 @@ func populationBelowFloor(ctx context.Context, tx pgx.Tx, scope crmcontracts.Rep
 	return thin[0], nil
 }
 
-// populationMembers lists the seats a population's totals count. counted is
-// false for an owner population, which has no members to list.
+// populationMembers lists the seats a team or "My teams" total counts. counted
+// is false for an owner or company population, which the floor judges by its
+// contributors only.
 func populationMembers(ctx context.Context, tx pgx.Tx, kind string, id *ids.UUID) (members []ids.UUID, counted bool, err error) {
 	var sql string
 	var args []any
@@ -260,8 +293,6 @@ func populationMembers(ctx context.Context, tx pgx.Tx, kind string, id *ids.UUID
 			return nil, false, errors.New("compose: no actor bound to context")
 		}
 		sql, args = teamMembersSQL(1, "= ANY($%d)"), []any{p.TeamIDs}
-	case ScopeKindWorkspace:
-		sql = companyMembersSQL
 	default:
 		return nil, false, nil
 	}
@@ -271,11 +302,6 @@ func populationMembers(ctx context.Context, tx pgx.Tx, kind string, id *ids.UUID
 	}
 	return members, true, nil
 }
-
-// companyMembersSQL selects the members whose work the company's totals count,
-// on the rule a team's totals count theirs by.
-var companyMembersSQL = `SELECT u.id AS user_id FROM app_user u WHERE NOT u.is_agent
-	AND ((` + identity.LiveMemberSQL("u") + `) OR (` + identity.DepartedMemberSQL("u") + `))`
 
 // targetFloor answers, while the switch is off, which team and company
 // targets keep enough colleagues behind them to show. A target is in effect a
@@ -308,9 +334,10 @@ func targetFloor(ctx context.Context, tx pgx.Tx) (reporting.TargetFloor, error) 
 	if err := rows.Err(); err != nil {
 		return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
 	}
-	everyone, _, err := populationMembers(ctx, tx, ScopeKindWorkspace, nil)
-	if err != nil {
-		return reporting.TargetFloor{}, err
+	var everyone []ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(u.id), '{}') FROM app_user u WHERE NOT u.is_agent AND ((`+
+		identity.LiveMemberSQL("u")+`) OR (`+identity.DepartedMemberSQL("u")+`))`).Scan(&everyone); err != nil {
+		return reporting.TargetFloor{}, fmt.Errorf("compose: reading the members for the company target floor: %w", err)
 	}
 	thin, err := thinGroups(ctx, tx, append(members, everyone))
 	if err != nil {

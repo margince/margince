@@ -27,13 +27,17 @@ func factVisibilityKey(fact reporting.Fact) reportingVisibilityKey {
 	return reportingVisibilityKey{table: fact.SourceType, metric: fact.Metric, money: fact.SourceType == string(recordTypeDeal) && fact.Metric != reportingClosedWinRate && fact.Metric != reportingStageAge}
 }
 
-func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
+func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
 	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
 	owners, err := readerMeasurableOwners(ctx, tx)
 	if err != nil {
 		return nil, false, err
+	}
+	thin, err := populationBelowFloor(ctx, tx, scope, owners)
+	if err != nil || thin {
+		return []reporting.Fact{}, thin, err
 	}
 	markOwnerWithheld(owners, facts)
 	facts, lone, err := withoutLoneColleagueMetrics(ctx, tx, facts)

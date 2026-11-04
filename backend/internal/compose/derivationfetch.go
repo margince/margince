@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -56,7 +55,7 @@ type derivationOutcome struct {
 // the aggregate recompute run over the identical WHERE side (validated
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(plan.scope), plan.groupBy, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}

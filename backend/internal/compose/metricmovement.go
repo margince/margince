@@ -189,7 +189,7 @@ func (e metricEvaluator) capturedMovementChart(ctx context.Context, tx pgx.Tx, f
 		return chart, nil, err
 	}
 	facts = append(facts, closingFacts...)
-	_, withheld, err := (reportingAuthority{}).Visible(ctx, tx, facts)
+	_, withheld, err := (reportingAuthority{}).Visible(ctx, tx, frame.Scope, facts)
 	if err != nil {
 		return chart, nil, err
 	}

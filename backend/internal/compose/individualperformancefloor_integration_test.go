@@ -56,9 +56,7 @@ func (e *forecastEnv) seedTeam(t *testing.T, name string, members ...ids.UUID) i
 	return team
 }
 
-// joinTeam seats existing members on a team. The suites of a company share with
-// the switch off seat its issuer on one. Someone on no team would be all that
-// the company minus a team leaves, so the floor would withhold the share.
+// joinTeam seats existing members on a team.
 func (e *forecastEnv) joinTeam(t *testing.T, team ids.UUID, members ...ids.UUID) {
 	t.Helper()
 	for _, member := range members {
@@ -87,8 +85,6 @@ func TestIndividualPerformanceOffWithholdsATeamThatANestedTeamLeavesToOneMember(
 	if status, code := e.reportRefusal(reader, t, "win-loss", teamScopeBody(teams.north)); status != http.StatusOK {
 		t.Errorf("North with the switch off = %d %q, want 200", status, code)
 	}
-	status, code = e.reportRefusal(reader, t, "win-loss", `{"scope":{"kind":"workspace"}}`)
-	requireRefusedIndividual(t, "the company, which minus Sales is one colleague", status, code)
 
 	chris := e.dealReadCtx(teams.chris, nil, principal.RowScopeAll)
 	if status, code := e.reportRefusal(chris, t, "win-loss", teamScopeBody(e.Team1)); status != http.StatusOK {
@@ -192,7 +188,7 @@ func TestIndividualPerformanceOffWithholdsANestedTeamsParentReadings(t *testing.
 	e.showIndividualPerformance(t, false)
 	sales := won(e.Team1)
 	if sales.Value != nil || !sales.Coverage.Withheld || sales.Coverage.Reason == nil ||
-		!strings.Contains(*sales.Coverage.Reason, "another team's members are taken out") {
+		!strings.Contains(*sales.Coverage.Reason, "taking another team's total from it") {
 		t.Errorf("Sales's sales won = %v %+v, want withheld with the difference named", sales.Value, sales.Coverage)
 	}
 	if north := won(teams.north); north.Value == nil || *north.Value != 2000 {
@@ -260,4 +256,27 @@ func TestTheFloorSubtractsTheTeamsTheScopeResolverAccepts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// The company total is judged by who contributed to it. A member on no team
+// with no figure hides nothing. A seller on no team, whom taking a team's
+// total away would leave alone, is withheld.
+func TestIndividualPerformanceOffJudgesTheCompanyTotalByItsContributors(t *testing.T) {
+	e := setupForecast(t)
+	members := e.addMembers(t, e.Team1, "anna@floor.test", "ben@floor.test")
+	e.joinTeam(t, e.Team1, e.Rep3)
+	for _, owner := range []ids.UUID{e.Rep3, members[0], members[1]} {
+		e.seedWinIn(t, owner, "EUR")
+	}
+	e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'admin@floor.test', 'Admin')`)
+	reader := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
+	company := `{"scope":{"kind":"workspace"}}`
+	e.showIndividualPerformance(t, false)
+	if status, code := e.reportRefusal(reader, t, "win-loss", company); status != http.StatusOK {
+		t.Errorf("the company beside a member on no team who sold nothing = %d %q, want 200", status, code)
+	}
+	solo := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'solo@floor.test', 'Solo')`)
+	e.seedWinIn(t, solo, "EUR")
+	status, code := e.reportRefusal(reader, t, "win-loss", company)
+	requireRefusedIndividual(t, "the company, whose contributors minus the team are one seller", status, code)
 }

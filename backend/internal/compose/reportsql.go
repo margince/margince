@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -106,7 +107,7 @@ type fetchedRows struct {
 
 func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) (fetchedRows, error) {
 	var out fetchedRows
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
@@ -182,6 +183,14 @@ func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requ
 		return nil, err
 	}
 	return &holds, nil
+}
+
+// withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so
+// the small-group floor and the figures it guards read the same instant.
+func withReportSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
+	return database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, pool, fn)
+	})
 }
 
 // reportPopulationScope is the population a report's answer covers. A spec

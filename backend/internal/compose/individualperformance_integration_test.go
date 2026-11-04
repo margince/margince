@@ -291,7 +291,6 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace}, SnapshotID: &id,
 		ExpiresAt: clocktest.Now(t).UTC().Add(24 * time.Hour),
 	})
-	e.joinTeam(t, e.Team2, writerUser)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
 	status, body := e.exportShare(reader, t, token)
