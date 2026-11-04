@@ -75,7 +75,7 @@ func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontra
 		return crmcontracts.DealViability{}, err
 	}
 	if dealScope == "" {
-		dealScope = "true"
+		dealScope = sqlUnnarrowed
 	}
 	taskScope, err := auth.ActivityDiscoverClause(ctx, "t", arg)
 	if err != nil {
@@ -149,8 +149,8 @@ func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.Deal
 		out.ExpectedCloseDate = &openapi_types.Date{Time: *v.close}
 	}
 	if v.outcome != nil && v.validUntil != nil && v.receiptPolicy != nil {
-		// The forecast takes a receipt exactly when the basis is complete; one
-		// it no longer takes leaves the deal unknown.
+		// The forecast takes a receipt when the basis is complete. One it no
+		// longer takes leaves the deal unknown.
 		out.Receipt = &crmcontracts.DealViabilityReceipt{
 			Outcome: *v.outcome, Reasons: v.reasons, ValidUntil: *v.validUntil,
 			PolicyVersion: *v.receiptPolicy, Current: v.complete,
@@ -170,8 +170,8 @@ func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.Deal
 }
 
 // standing is the qualification as the qualified forecast counts the deal. A
-// won or lost deal is in no open reading, so it reads closed rather than the
-// eligible the qualification rule gives every deal that is not open.
+// won or lost deal is in no open reading, so it reads closed. The
+// qualification rule alone would call it eligible.
 func (v dealViabilityRow) standing() crmcontracts.DealViabilityQualification {
 	if !v.open {
 		return crmcontracts.DealViabilityQualificationClosed
