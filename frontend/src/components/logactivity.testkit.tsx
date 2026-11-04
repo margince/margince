@@ -16,11 +16,9 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-// The installation's zone this suite asserts against. Named rather than taken
-// from the fallback: what these tests prove is that a logged entry's stored
-// instant is cut on the INSTALLATION's clock, and a test that minted and read
-// back on the same default would agree with itself whichever zone the code
-// actually used.
+// The installation's zone the suites assert against, named rather than the
+// fallback. A logged entry's instant is cut on the installation's clock. A test
+// that wrote and read on the default would pass whichever zone the code used.
 export const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
 
 export function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
