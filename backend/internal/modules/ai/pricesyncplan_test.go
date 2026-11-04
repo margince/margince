@@ -146,8 +146,8 @@ func TestAnUnreachableCatalogueWritesNothing(t *testing.T) {
 
 func TestASheetModelTheCatalogueDoesNotNameIsUnlisted(t *testing.T) {
 	plan := planPriceSync(vendorSources(t, providerGemini),
-		[]ModelRateRow{sheetRow(providerGemini, "gemini-3.1-pro-preview", "2", RateSourceSeed)})
-	if got := plan.lines[providerGemini].Unlisted; !slices.Equal(got, []string{"gemini-3.1-pro-preview"}) {
+		[]ModelRateRow{sheetRow(providerGemini, "gemini-1.5-pro", "2", RateSourceSeed)})
+	if got := plan.lines[providerGemini].Unlisted; !slices.Equal(got, []string{"gemini-1.5-pro"}) {
 		t.Errorf("unlisted = %v", got)
 	}
 }
@@ -232,18 +232,41 @@ func TestAModelTheVendorSwitchedCallsToIsPricedEvenUnlisted(t *testing.T) {
 	}
 }
 
-// A seeded row with a long-context band is kept as it is. The catalogue
-// publishes one flat price, and writing it would drop the band.
-func TestASyncKeepsARowWithALongContextBand(t *testing.T) {
-	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-3.5-flash", Lane: model.LaneChat})
-	banded := sheetRow(providerGemini, "gemini-3.5-flash", "2", RateSourceSeed)
-	banded.LongContext = true
+func bandedRow(provider, id, input string) ModelRateRow {
+	row := sheetRow(provider, id, input, RateSourceSeed)
+	row.LongContext = &ModelRateBand{AboveTokens: 200_000, InputUsd: "4", OutputUsd: "18", CacheReadUsd: "0.4", CacheWriteUsd: "0"}
+	return row
+}
 
-	plan := planPriceSync(src, []ModelRateRow{banded})
+// The catalogue publishes no band for this model and its base price moved. The
+// sync cannot say whether the band moved too. It keeps the row and names it for
+// review, and writes no price that drops or misstates the band.
+func TestASyncFlagsABandedRowWhoseCataloguePriceChangedWithoutABand(t *testing.T) {
+	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-3.5-flash", Lane: model.LaneChat})
+
+	plan := planPriceSync(src, []ModelRateRow{bandedRow(providerGemini, "gemini-3.5-flash", "2")})
+
 	if got := writesOf(plan); len(got) != 0 {
 		t.Fatalf("writes = %v, want none", got)
 	}
-	if line := plan.lines[providerGemini]; line.Kept != 1 || line.Updated != 0 {
-		t.Errorf("line = %+v, want the banded row kept", line)
+	if line := plan.lines[providerGemini]; !slices.Equal(line.Review, []string{"gemini-3.5-flash"}) || line.Updated != 0 {
+		t.Errorf("line = %+v, want the banded row named for review", line)
+	}
+}
+
+// The catalogue publishes the band, so a changed base price is written with the
+// catalogue's band.
+func TestASyncWritesTheCataloguesBandWithANewBasePrice(t *testing.T) {
+	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-3.1-pro-preview", Lane: model.LaneChat})
+
+	plan := planPriceSync(src, []ModelRateRow{bandedRow(providerGemini, "gemini-3.1-pro-preview", "2")})
+
+	got, wrote := writesOf(plan)["gemini/gemini-3.1-pro-preview"]
+	if !wrote || got.InputUsd != "2.500000" {
+		t.Fatalf("write = %+v, want the catalogue's new base price", got)
+	}
+	want := &ModelRateBand{AboveTokens: 200_000, InputUsd: "5", OutputUsd: "22.5", CacheReadUsd: "0.5", CacheWriteUsd: "0"}
+	if !sameBand(got.LongContext, want) {
+		t.Errorf("band = %+v, want the catalogue's %+v", got.LongContext, want)
 	}
 }

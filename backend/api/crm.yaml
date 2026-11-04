@@ -35944,6 +35944,20 @@ components:
             rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
             planted when the installation was provisioned. Removing a model's price hands it back
             to the sync.
+        long_context: { $ref: '#/components/schemas/AiModelRateLongContext' }
+    AiModelRateLongContext:
+      type: object
+      description: |
+        The second price band of a model that charges more for a call whose prompt is longer than
+        `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+        model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+      required: [above_tokens, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok]
+      properties:
+        above_tokens: { type: integer, minimum: 1 }
+        input_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
+        output_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
+        cache_read_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
+        cache_write_per_mtok: { type: string, pattern: '^[0-9]{1,12}(\.[0-9]{1,6})?$' }
     AiModelRateListResponse:
       type: object
       required: [data]
@@ -35986,6 +36000,12 @@ components:
           type: array
           items: { type: string }
           description: Bound model ids the catalogue does not name.
+        review:
+          type: array
+          items: { type: string }
+          description: |
+            Model ids whose price carries a long-context band the catalogue does not publish, and
+            whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
     AiPriceSync:
       type: object
       additionalProperties: false
@@ -36033,6 +36053,11 @@ components:
           type: string
           format: date
           description: A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
+        clear_long_context:
+          type: boolean
+          description: |
+            True drops the model's long-context band, so every call pays the prices above. Omitted
+            or false keeps the band the model already carries.
 
     # ---- outbound webhooks (E10/S-E10.6, A51; BYO-DDL-3/4) ----
     WebFormSender:

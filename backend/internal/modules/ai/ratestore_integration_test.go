@@ -543,8 +543,8 @@ func TestCostReportPricesAZeroCachePriceAtTheInputRate(t *testing.T) {
 }
 
 // A call whose prompt passes a row's long-context line costs the band's prices
-// in the cost report, and one at the line costs the row's own. RateFor hands
-// the band back so a Go reader prices the same call to the same figure.
+// in the cost report. A call at the line costs the row's own. RateFor returns
+// the band, so a Go reader prices the same call to the same figure.
 func TestCostReportPricesAPromptAboveTheBandAtTheBand(t *testing.T) {
 	e := setupRateStore(t)
 	ctx := context.Background()

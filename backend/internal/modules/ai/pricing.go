@@ -40,10 +40,9 @@ type ModelRate struct {
 }
 
 // ContextBand is the price of a call whose prompt is longer than AboveTokens.
-// Above the line the vendor bills every token of the call at the band's
-// prices, not only the tokens past it, so PriceCall swaps all four prices.
-// The prompt size is Usage.TokensIn, which counts cached tokens too: the
-// vendor measures the prompt it was sent, cached or not.
+// Above the line the vendor bills every token of the call at the band. So
+// PriceCall swaps all four prices, not only the price of the excess. The
+// prompt size is Usage.TokensIn, which counts cached tokens too.
 type ContextBand struct {
 	AboveTokens                                         int
 	InputPerMTokMicroUSD, OutputPerMTokMicroUSD         int64
@@ -94,6 +93,17 @@ func PriceCall(u Usage, r ModelRate) int64 {
 		int64(u.CacheWriteTokens)*cacheRate(r.CacheWritePerMTokMicroUSD, r.InputPerMTokMicroUSD) +
 		int64(u.TokensOut)*r.OutputPerMTokMicroUSD
 	return total / 1_000_000
+}
+
+// PriceCalls prices `calls` calls whose usage sums to u. The band line is per
+// call, so a sum is never held against it. The band is chosen once from the
+// mean prompt, and the whole sum is priced at it.
+func PriceCalls(u Usage, calls int64, r ModelRate) int64 {
+	if calls > 0 {
+		r = r.forPrompt(int(int64(u.TokensIn) / calls))
+	}
+	r.LongContext = nil
+	return PriceCall(u, r)
 }
 
 // cacheRate is what one cached-token bucket costs per MTok. A cache price of 0
@@ -228,12 +238,11 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// rate from 2027-01-01; the step is an effective-dated row an operator adds.
 		rateOn(day, providerGemini, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
-		// gemini-3.1-pro-preview, the example file's frontier binding, is the
-		// only Gemini model here whose rate varies with prompt size (verified
-		// 2026-08-12): $2.00/$12.00 per MTok up to 200k prompt tokens and
-		// $4.00/$18.00 above it, cache read at 0.1x input in each band. Above
-		// 200k every token of the call pays the higher band, so the row
-		// carries it as its long-context band (#1045).
+		// gemini-3.1-pro-preview is the example file's frontier binding. It is
+		// the only Gemini model here whose rate varies with prompt size
+		// (verified 2026-08-12). It costs $2.00/$12.00 per MTok up to 200k
+		// prompt tokens and $4.00/$18.00 above, cache read at 0.1x input.
+		// Above 200k every token pays the higher band.
 		withLongContext(rateOn(day, providerGemini, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
 			200_000, 4_000_000, 18_000_000, 400_000, 0),
 

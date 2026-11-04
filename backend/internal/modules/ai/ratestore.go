@@ -82,20 +82,16 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 }
 
 // CostReport prices the [from, to) window's ai_call rows against their
-// as-of-date rate and sums per (calendar day, task, tier) — THE one
-// money computation that runs at read time (price-on-read: the
-// router/meter/adapters never compute a cost). One SQL statement: a
-// LATERAL join picks each row's as-of-date rate (RateFor's same
-// resolution, inlined so the whole window prices in one query instead of
-// one round-trip per call), the four-bucket arithmetic mirrors PriceCall
-// exactly (same floor, same zero-cache-price fallback to the input rate, same
-// long-context band, same truncating /1000000), and GROUP BY the
-// call's UTC calendar day + task + tier rolls the window up to exactly
-// AIRT-WIRE-1's /ai/usage grain — one report line per wire row, so the
-// handler attaches each line to its one matching (day, task, tier) row
-// instead of broadcasting a shared task total across every tier that
-// task ran on (which double-counts whenever a client sums cost_est_minor
-// across rows).
+// as-of-date rate and sums per (calendar day, task, tier). It is the one money
+// computation that runs at read time; the router, meter and adapters never
+// compute a cost.
+//
+// It is one SQL statement. A LATERAL join picks each row's as-of-date rate, as
+// RateFor does, so the window prices in one query. The arithmetic mirrors
+// PriceCall: the same floor, zero-cache fallback, long-context band and
+// truncating /1000000. GROUP BY day, task and tier matches the /ai/usage wire
+// grain, so the handler attaches each line to one row. A shared task total
+// spread over every tier would double-count when a client sums the rows.
 //
 // Two kinds of row spend nothing and are never counted unpriced, because
 // they are free BY CONSTRUCTION, not merely unrated: a cache_hit (served
@@ -160,10 +156,9 @@ func callCostMicroUSD(alias string) string {
 		promptPrice(alias, "cache_write_per_mtok_microusd"), promptPrice(alias, "output_per_mtok_microusd"))
 }
 
-// promptPrice is one of the rate r's four prices for the ai_call row aliased
-// alias: the long-context band's when the row has one and the call's prompt is
-// above its line, the row's own otherwise. ModelRate.forPrompt is the same rule
-// in Go.
+// promptPrice is one of rate r's four prices for the ai_call row aliased alias.
+// Above the band's line it is the band's price, otherwise the row's own.
+// ModelRate.forPrompt is the same rule in Go.
 func promptPrice(alias, column string) string {
 	return fmt.Sprintf(`CASE WHEN %[1]s.tokens_in > r.long_context_above_tokens
 	        THEN r.long_context_%[2]s ELSE r.%[2]s END`, alias, column)

@@ -62,7 +62,7 @@ func TestPriceCall(t *testing.T) {
 			ModelRate{InputPerMTokMicroUSD: 5_000_000, CacheReadPerMTokMicroUSD: 500_000},
 			25,
 		},
-		// A banded row at exactly its line: 200k in at $2, 1k out at $12
+		// A banded row at its line: 200k in at $2, 1k out at $12
 		// = (200_000×2e6 + 1_000×12e6)/1e6 = 400_000 + 12_000 = 412_000
 		{
 			"a prompt at the band's line pays the base prices",
@@ -86,6 +86,21 @@ func TestPriceCall(t *testing.T) {
 				t.Fatalf("PriceCall(%+v, %+v) = %d, want %d", c.u, c.r, got, c.want)
 			}
 		})
+	}
+}
+
+// A sum of calls is held against the band line per call, not as one prompt.
+func TestPriceCallsChoosesTheBandPerCall(t *testing.T) {
+	rate := proPreviewRate()
+	three := Usage{TokensIn: 300_000, TokensOut: 3_000}
+	// 300k in at $2 and 3k out at $12: the base band, though the sum is past the line.
+	if got, want := PriceCalls(three, 3, rate), int64(600_000+36_000); got != want {
+		t.Errorf("three 100k calls = %d, want %d at the base band", got, want)
+	}
+	one := Usage{TokensIn: 250_000, TokensOut: 1_000}
+	// 250k in at $4 and 1k out at $18.
+	if got, want := PriceCalls(one, 1, rate), int64(1_000_000+18_000); got != want {
+		t.Errorf("one 250k call = %d, want %d at the long-context band", got, want)
 	}
 }
 
@@ -194,10 +209,9 @@ func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 //
 // The one legitimate reason: a ModelRate row cannot express the model's actual
 // charges, so any single row would be a confident wrong number. pricing.go
-// states the invariant that makes this the better answer — "a call with no
-// rate row is UNPRICED, which is a materially different signal from FREE" —
-// and DayCost.UnpricedCalls surfaces it in the report, where a 2x-wrong price
-// would surface as a price.
+// states why no row is better: "a call with no rate row is UNPRICED, which is
+// a materially different signal from FREE". DayCost.UnpricedCalls surfaces the
+// unpriced call in the report, where a 2x-wrong price would read as a price.
 //
 // Ratified rather than tolerated, because the two failures look identical from
 // here: a binding nobody priced and a binding somebody could not price differ

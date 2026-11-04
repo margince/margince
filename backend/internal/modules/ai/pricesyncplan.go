@@ -45,10 +45,7 @@ func (p *pricePlan) line(provider string) *ProviderRefresh {
 // a hand-set price is kept, a matching one counted, anything else written.
 func (p *pricePlan) apply(t catalogueTarget, cur *ModelRateRow, price func(*ModelRateRow) (SetModelRateInput, bool)) {
 	line := p.line(t.provider)
-	// A hand-set price is the admin's. A row with a long-context band is kept
-	// too: the catalogue's one flat price would drop the band and under-price
-	// every long call.
-	if cur != nil && (cur.Source == RateSourceManual || cur.LongContext) {
+	if cur != nil && cur.Source == RateSourceManual {
 		line.Kept++
 		return
 	}
@@ -56,7 +53,16 @@ func (p *pricePlan) apply(t catalogueTarget, cur *ModelRateRow, price func(*Mode
 	switch {
 	case !ok:
 		return
-	case cur != nil && sameMicroUSD(rateInput(*cur), next):
+	case cur != nil && cur.LongContext != nil && next.LongContext == nil:
+		// The catalogue publishes no band for a model whose row carries one,
+		// so it cannot say whether the band moved with a new base price.
+		if !sameMicroUSD(rateInput(*cur), next) {
+			line.Review = append(line.Review, t.modelID)
+			return
+		}
+		line.Unchanged++
+		return
+	case cur != nil && sameMicroUSD(rateInput(*cur), next) && sameBand(cur.LongContext, next.LongContext):
 		line.Unchanged++
 		return
 	case cur != nil:
