@@ -5,7 +5,7 @@
 
 package integration
 
-// toolRoleFixtures are the arguments a verb needs and its schema does not say:
+// toolRoleFixtures are what a verb needs and its schema does not say:
 // a field one record type requires, a list that must not be empty. They are
 // laid over what the filler wrote. A request_body is merged into the filled one.
 //
