@@ -362,6 +362,11 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
 		return err
 	}
+	if err := stampArchivable(ctx, tx, auth.ContactArchive, contacts,
+		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Contact, may bool) { p.Archivable = &may }); err != nil {
+		return err
+	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Contact, len(contacts))
 	contactIDs := make([]ids.UUID, len(contacts))
 	for i := range contacts {

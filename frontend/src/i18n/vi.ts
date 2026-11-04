@@ -5886,6 +5886,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
   "deal.archiveRefused":
     "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
+  "contact.archiveRefused":
+    "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
+  "company.archiveRefused":
+    "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
@@ -12128,6 +12132,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.runs.outcomeBlocked": "Bị chặn",
   "auto.runs.outcomeSkipped": "Đã bỏ qua",
   "auto.runs.outcomeQueued": "Chờ duyệt",
+  "auto.runs.reasonCode.target_missing":
+    "bản ghi mà nó xử lý không còn tồn tại",
+  "auto.runs.reasonCode.not_permitted":
+    "chủ sở hữu của nó không còn được phép làm việc này",
+  "auto.runs.reasonCode.conflict":
+    "trạng thái của bản ghi không cho phép việc này",
+  "auto.runs.reasonCode.record_changed":
+    "bản ghi đã thay đổi trước khi quy tắc kịp thực hiện",
+  "auto.runs.reasonCode.no_consent": "liên hệ này chưa đồng ý cho việc này",
+  "auto.runs.reasonCode.budget_exhausted": "ngân sách cho việc này đã hết",
+  "auto.runs.reasonCode.not_completed": "đã có lỗi khi chạy",
+  "auto.runs.reasonCode.blocked":
+    "một bước kiểm tra quyền hoặc một phê duyệt bị từ chối đã dừng nó",
   "auto.runs.outcome": "Kết quả",
 
   "auto.preview.open": "Xem trước",
@@ -17904,7 +17921,52 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.closeLostUndone":
     "Đã hoàn tác. Hãy thêm ghi chú vì sao deal này vẫn còn hy vọng, nếu không Margince sẽ đóng lại ở lần kiểm tra tiếp theo.",
   "worklist.handled.verdictUndone":
-    "Đã hoàn tác. Margince sẽ không thay đổi điều này nữa cho đến khi deal có điều gì mới.",
+    "Đã hoàn tác. Margince sẽ không thay đổi {field} nữa cho đến khi deal có điều gì mới.",
+  "changes.field.closeDate": "ngày chốt",
+  "changes.field.amount": "giá trị",
+  "changes.field.probability": "xác suất",
+  "changes.field.status": "trạng thái",
+  "changes.fieldJoin": "{first} và {second}",
+  "changes.kind.close_lost": "Đã đóng, thua",
+  "changes.kind.deal_close_date": "Ngày chốt mới",
+  "changes.kind.deal_amount": "Giá trị mới",
+  "changes.kind.deal_probability": "Xác suất mới",
+  "changes.summary_one":
+    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
+  "changes.summary_other":
+    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
+  "changes.part.closed_one": "{count} đã đóng",
+  "changes.part.closed_other": "{count} đã đóng",
+  "changes.part.redated_one": "{count} đổi ngày",
+  "changes.part.redated_other": "{count} đổi ngày",
+  "changes.part.revalued_one": "{count} đổi giá trị",
+  "changes.part.revalued_other": "{count} đổi giá trị",
+  "changes.part.probabilities_one": "{count} xác suất",
+  "changes.part.probabilities_other": "{count} xác suất",
+  "changes.viewAll": "Xem tất cả",
+  "changes.undoAll": "Hoàn tác tất cả",
+  "changes.undoAllDone_one": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.undoAllDone_other": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.undoAllPartly":
+    "Đã hoàn tác trên {undone} giao dịch. {kept} giao dịch giữ một thay đổi đã được sửa sau đó.",
+  "changes.partly":
+    "Đã hoàn tác, trừ {field} đã được thay đổi sau khi Margince đặt.",
+  "changes.refused":
+    "Chưa hoàn tác. Giao dịch đã thay đổi từ khi bạn mở trang này. Hãy tải lại và thử lại.",
+  "changes.alreadyAccepted":
+    "Bạn đã chấp nhận thay đổi này nên nó được giữ lại.",
+  "changes.deal.title": "Thay đổi của Margince",
+  "changes.deal.loading": "Đang tải thay đổi…",
+  "changes.team.title": "Thay đổi của Margince trong nhóm",
+  "changes.team.empty":
+    "Tuần này Margince không thay đổi giao dịch nào của nhóm.",
+  "changes.team.loading": "Đang tải thay đổi của nhóm…",
+  "changes.team.owner": "Phụ trách",
+  "changes.team.kind": "Thay đổi",
+  "changes.team.deals": "Giao dịch",
+  "changes.team.value": "Giá trị",
+  "changes.team.undone": "Đã hoàn tác",
+  "changes.team.truncated": "Danh sách đã bị cắt bớt. Vẫn còn thay đổi khác.",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",
@@ -18875,7 +18937,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.send_email": "Đã gửi một tin nhắn",
   "magic.action.schedule": "Đã đặt một cuộc họp",
   "magic.action.disqualify": "Một lead đã bị loại",
-  "magic.action.automation_troubled": "{name} đang gặp trục trặc: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} không thể hoàn tất ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",

@@ -6037,6 +6037,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
+  "contact.archiveRefused":
+    "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "company.archiveRefused":
+    "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
@@ -12463,6 +12467,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.runs.outcomeBlocked": "Blockiert",
   "auto.runs.outcomeSkipped": "Übersprungen",
   "auto.runs.outcomeQueued": "Wartet auf Freigabe",
+  "auto.runs.reasonCode.target_missing":
+    "der Datensatz, auf den sie wirkt, existiert nicht mehr",
+  "auto.runs.reasonCode.not_permitted":
+    "ihr Verantwortlicher darf das nicht mehr",
+  "auto.runs.reasonCode.conflict":
+    "der Datensatz ließ das in seinem Zustand nicht zu",
+  "auto.runs.reasonCode.record_changed":
+    "der Datensatz hat sich geändert, bevor die Regel handeln konnte",
+  "auto.runs.reasonCode.no_consent": "der Kontakt hat dem nicht zugestimmt",
+  "auto.runs.reasonCode.budget_exhausted": "das Budget dafür ist ausgeschöpft",
+  "auto.runs.reasonCode.not_completed":
+    "beim Ausführen ist etwas schiefgegangen",
+  "auto.runs.reasonCode.blocked":
+    "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
 
   "auto.preview.open": "Vorschau",
@@ -18376,7 +18394,52 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.closeLostUndone":
     "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
   "worklist.handled.verdictUndone":
-    "Rückgängig gemacht. Margince ändert das nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+    "Rückgängig gemacht. Margince ändert {field} nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+  "changes.field.closeDate": "das Abschlussdatum",
+  "changes.field.amount": "den Betrag",
+  "changes.field.probability": "die Wahrscheinlichkeit",
+  "changes.field.status": "den Status",
+  "changes.fieldJoin": "{first} und {second}",
+  "changes.kind.close_lost": "Als verloren geschlossen",
+  "changes.kind.deal_close_date": "Neues Abschlussdatum",
+  "changes.kind.deal_amount": "Neuer Betrag",
+  "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.summary_one":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.summary_other":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.part.closed_one": "{count} geschlossen",
+  "changes.part.closed_other": "{count} geschlossen",
+  "changes.part.redated_one": "{count} neu datiert",
+  "changes.part.redated_other": "{count} neu datiert",
+  "changes.part.revalued_one": "{count} neu bewertet",
+  "changes.part.revalued_other": "{count} neu bewertet",
+  "changes.part.probabilities_one": "{count} Wahrscheinlichkeit",
+  "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
+  "changes.viewAll": "Alle ansehen",
+  "changes.undoAll": "Alle rückgängig machen",
+  "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",
+  "changes.undoAllDone_other": "Auf {count} Deals rückgängig gemacht.",
+  "changes.undoAllPartly":
+    "Auf {undone} Deals rückgängig gemacht. Bei {kept} blieb eine Änderung, die seitdem bearbeitet wurde.",
+  "changes.partly":
+    "Rückgängig gemacht, außer {field}, das seitdem geändert wurde.",
+  "changes.refused":
+    "Nicht rückgängig gemacht. Der Deal hat sich geändert, seit du die Seite geöffnet hast. Lade neu und versuche es noch einmal.",
+  "changes.alreadyAccepted":
+    "Du hast diese Änderung schon übernommen, sie bleibt.",
+  "changes.deal.title": "Änderungen durch Margince",
+  "changes.deal.loading": "Änderungen werden geladen…",
+  "changes.team.title": "Änderungen durch Margince in deinem Team",
+  "changes.team.empty":
+    "Margince hat diese Woche keine Deals deines Teams geändert.",
+  "changes.team.loading": "Teamänderungen werden geladen…",
+  "changes.team.owner": "Zuständig",
+  "changes.team.kind": "Änderung",
+  "changes.team.deals": "Deals",
+  "changes.team.value": "Wert",
+  "changes.team.undone": "Rückgängig",
+  "changes.team.truncated": "Liste gekürzt. Es gibt weitere Änderungen.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
@@ -19383,7 +19446,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.send_email": "Eine Nachricht wurde gesendet",
   "magic.action.schedule": "Ein Termin wurde gebucht",
   "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
-  "magic.action.automation_troubled": "{name} hat Probleme: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} konnte nicht abgeschlossen werden ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",

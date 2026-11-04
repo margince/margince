@@ -34,7 +34,10 @@ type TroubledAutomationRun struct {
 	Name         string
 	Outcome      string
 	Reason       *string
-	CreatedAt    time.Time
+	// ReasonCode is Reason in the closed RunReasonCodes set, for a reader who
+	// does not read English.
+	ReasonCode string
+	CreatedAt  time.Time
 }
 
 // troubledRunsSQL reads recent failed and blocked runs of live, enabled rules.
@@ -78,6 +81,7 @@ func (s *AutomationStore) TroubledRuns(ctx context.Context, since time.Time, lim
 			if run.Reason, detailErr = decodeRunDetail(rawDetail); detailErr != nil {
 				return detailErr
 			}
+			run.ReasonCode = runReasonCode(run.Outcome, run.Reason)
 			troubled = append(troubled, run)
 		}
 		return rows.Err()

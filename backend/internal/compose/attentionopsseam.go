@@ -205,6 +205,7 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 			AutomationID: run.AutomationID,
 			Name:         run.Name,
 			Outcome:      run.Outcome,
+			ReasonCode:   run.ReasonCode,
 			OccurredAt:   run.CreatedAt,
 		}
 		if run.Reason != nil {

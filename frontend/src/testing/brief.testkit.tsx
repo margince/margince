@@ -92,6 +92,20 @@ const DEFAULTS: Routes = {
       receipts: [],
       truncated: false,
     }),
+  // Home asks for the changes Margince made beside the receipts; a quiet
+  // night has none.
+  "GET /deal-corrections/pending": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      deals: 0,
+      closed: 0,
+      redated: 0,
+      revalued: 0,
+      probabilities: 0,
+      base_currency: "EUR",
+      bundles: [],
+      truncated: false,
+    }),
   // The receipt at the foot of the page. Every lane, `totals` and both caveat
   // lists are required by the contract, so the generic empty page would fail
   // the panel in a way no server could produce — the same reason /worklist is
