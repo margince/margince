@@ -50,6 +50,9 @@ type EmailAttempt struct {
 	ApprovalID *ids.ApprovalID
 	Notice     Notice
 	Recipient  ids.UserID
+	// ClaimedAt is the stamp this claim wrote. A release matches it, so a
+	// claim another attempt took since is never freed.
+	ClaimedAt time.Time
 }
 
 // ClaimEmailAttempt takes this notice's ONE mail attempt, or reports that there
@@ -122,6 +125,7 @@ func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
 	}
 	attempt.Notice.ID = id
 	attempt.Recipient = ids.From[ids.UserKind](recipient)
+	attempt.ClaimedAt = claimedAt
 	if targetType != nil && targetID != nil {
 		attempt.Notice.Target = Target{Type: *targetType, ID: *targetID}
 	}
@@ -167,38 +171,40 @@ func (s *Store) EmailFailed(ctx context.Context, id ids.UUID, cause string) erro
 
 // ReleaseEmailAttempts frees the claims of one send the relay never took, so
 // the job's next attempt can claim and send them. Its caller holds the proof
-// (mailer.NotTaken); a send the relay may have taken is never released. One
-// transaction frees all of them or none, so a retry never finds half its
-// message spent.
-func (s *Store) ReleaseEmailAttempts(ctx context.Context, notices []ids.UUID) error {
+// (mailer.NotTaken); a send the relay may have taken is never released.
+//
+// All of them or none. A claim whose stamp is not the one this attempt wrote
+// answers ErrReleaseChanged and rolls the transaction back. A retry never
+// finds half its message spent.
+func (s *Store) ReleaseEmailAttempts(ctx context.Context, attempts []EmailAttempt) error {
+	claims := map[ids.UUID]time.Time{}
+	for _, attempt := range attempts {
+		claims[attempt.Notice.ID] = attempt.ClaimedAt
+	}
+	noticeIDs := make([]ids.UUID, 0, len(claims))
+	stamps := make([]time.Time, 0, len(claims))
+	for id, at := range claims {
+		noticeIDs, stamps = append(noticeIDs, id), append(stamps, at)
+	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			WITH held AS (
-			       SELECT id, email_attempted_at, email_error FROM notice
-			        WHERE id = ANY($1::uuid[]) AND email_attempted_at IS NOT NULL
-			        FOR UPDATE)
+			       SELECT n.id, n.email_attempted_at, n.email_error FROM notice n
+			         JOIN unnest($1::uuid[], $2::timestamptz[]) AS c(id, claimed_at)
+			           ON c.id = n.id AND c.claimed_at = n.email_attempted_at
+			          FOR UPDATE OF n)
 			UPDATE notice SET email_attempted_at = NULL, email_error = NULL
 			  FROM held WHERE notice.id = held.id
-			RETURNING notice.id, held.email_attempted_at, held.email_error`, notices)
+			RETURNING notice.id, held.email_attempted_at, held.email_error`, noticeIDs, stamps)
 		if err != nil {
 			return fmt.Errorf("notices: releasing the mail attempts the relay never took: %w", err)
 		}
-		type release struct {
-			id    ids.UUID
-			at    time.Time
-			cause *string
-		}
-		var released []release
-		for rows.Next() {
-			var r release
-			if err := rows.Scan(&r.id, &r.at, &r.cause); err != nil {
-				rows.Close()
-				return fmt.Errorf("notices: reading a released mail attempt: %w", err)
-			}
-			released = append(released, r)
-		}
-		if err := rows.Err(); err != nil {
+		released, err := scanReleases(rows)
+		if err != nil {
 			return err
+		}
+		if len(released) != len(claims) {
+			return ErrReleaseChanged
 		}
 		for _, r := range released {
 			if _, err := storekit.Audit(ctx, tx, "update", "notice", r.id,
@@ -209,4 +215,27 @@ func (s *Store) ReleaseEmailAttempts(ctx context.Context, notices []ids.UUID) er
 		}
 		return nil
 	})
+}
+
+// ErrReleaseChanged refuses a release whose claims are not all as this
+// attempt left them. Nothing was released.
+var ErrReleaseChanged = errors.New("notices: a claim changed since it was taken, so none was released")
+
+type release struct {
+	id    ids.UUID
+	at    time.Time
+	cause *string
+}
+
+func scanReleases(rows pgx.Rows) ([]release, error) {
+	defer rows.Close()
+	var released []release
+	for rows.Next() {
+		var r release
+		if err := rows.Scan(&r.id, &r.at, &r.cause); err != nil {
+			return nil, fmt.Errorf("notices: reading a released mail attempt: %w", err)
+		}
+		released = append(released, r)
+	}
+	return released, rows.Err()
 }

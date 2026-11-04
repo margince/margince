@@ -198,7 +198,7 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 		// the same thing here: do not send.
 		return nil
 	}
-	return w.deliver(sysCtx, attempt, job.Attempt >= job.MaxAttempts)
+	return jobs.FaultContext(sysCtx, w.deliver(sysCtx, attempt, job.Attempt >= job.MaxAttempts))
 }
 
 // deliver renders one claimed notice and hands it to the relay.
@@ -208,6 +208,7 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 // this is called, which is the one thing a reader has to hold while reading it.
 // lastRung says River has no attempt left after this one.
 func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.EmailAttempt, lastRung bool) error {
+	claimed := attempt
 	address, wanted, err := w.recipient(ctx, attempt)
 	if err != nil {
 		w.log.WarnContext(ctx, "the notice was not mailed: its recipient could not be resolved",
@@ -256,7 +257,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	subject, message := approvalMailMessage(sent, w.mail.PublicBaseURL, words)
 	message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
 	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, subject, message); err != nil {
-		return w.answerRelayFailure(ctx, attempt.Notice.ID, sent, err, lastRung)
+		return w.answerRelayFailure(ctx, claimed, sent, err, lastRung)
 	}
 	return nil
 }
