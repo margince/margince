@@ -126,8 +126,7 @@ func TestProjectAndBoardValueTheSameMixedCurrencyDealsAsAnalytics(t *testing.T) 
 	if _, err := f.e.Deals.UpdateDeal(f.e.Admin(), usd, deals.UpdateDealInput{WinProbability: new(95)}); err != nil {
 		t.Fatal(err)
 	}
-	likely := deals.ListDealsInput{ProjectID: &f.project}
-	likely.WinProbabilityMin = new(90)
+	likely := deals.ListDealsInput{ProjectID: &f.project, WinProbabilityMin: new(90)}
 	cards, _, err := f.e.Deals.ListDeals(f.e.Admin(), likely)
 	if err != nil || len(cards) != 1 {
 		t.Fatalf("probability-filtered cards = %d, %v", len(cards), err)

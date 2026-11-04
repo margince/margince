@@ -102,8 +102,7 @@ func TestAClosedDealRefusesAProbabilityOfItsOwn(t *testing.T) {
 
 	set := 40
 	_, err = e.store.UpdateDeal(e.asDealWriter(), deal, UpdateDealInput{WinProbability: &set})
-	var refused *ProbabilityFixedWhenClosedError
-	if !errors.As(err, &refused) {
+	if _, ok := errors.AsType[*ProbabilityFixedWhenClosedError](err); !ok {
 		t.Fatalf("setting a probability on a lost deal answered %v, want probability_fixed_when_closed", err)
 	}
 	if p, source := probabilityInSQL(t, e, deal); p != 0 || source != SourceStage {

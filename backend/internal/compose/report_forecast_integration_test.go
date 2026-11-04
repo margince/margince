@@ -534,15 +534,6 @@ func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T)
 	}
 }
 
-// reportStatus runs a plan against any report key and yields only the status,
-// for the refusals whose whole assertion is which status a caller gets.
-func (e *forecastEnv) reportStatus(ctx context.Context, report, body string) int {
-	req := httptest.NewRequest(http.MethodPost, "/v1/reports/"+report, strings.NewReader(body)).WithContext(ctx)
-	rec := httptest.NewRecorder()
-	e.handlers.RunReport(rec, req, report)
-	return rec.Code
-}
-
 // What is a partner bringing us THIS quarter — the pipeline question, asked of
 // the same dimension deals-by-stage answers about what already landed.
 //

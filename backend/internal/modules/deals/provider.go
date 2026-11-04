@@ -216,7 +216,7 @@ func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInp
 		LostReasonCode:           in.LostReasonCode,
 		IfVersion:                in.IfVersion,
 	})
-	out := datasource.AdvanceDealResult{Ref: ref(datasource.EntityDeal, v.Deal.Id)}
+	out := datasource.AdvanceDealResult{Ref: ref(datasource.EntityDeal, v.Id)}
 	if v.Probability != nil {
 		out.ProbabilityNote = v.Probability.Note
 	}
