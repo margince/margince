@@ -61,8 +61,9 @@ func setAmount(state State, change *deals.VerdictChange, amountMinor int64) stri
 }
 
 // convert takes whole units of one currency into the deal's currency through
-// the base currency: amount × rate(from→base) ÷ rate(to→base), rounded half
-// away from zero to whole units. The rates and their dates go in evidence.
+// the base currency, as amount × rate(from→base) ÷ rate(to→base). It rounds
+// half away from zero to whole units. The rates and their dates go in
+// evidence.
 func convert(amount int64, from, to string, rates Rates, evidence map[string]any) (int64, bool, error) {
 	fromRate, ok, err := rates.For(from)
 	if err != nil || !ok {

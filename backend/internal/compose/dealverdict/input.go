@@ -72,9 +72,9 @@ type PriorAction struct {
 	Outcome string `json:"outcome"`
 }
 
-// State is what the rules in code check besides the model's answer: the
-// deal's values as read, the owner's switches, the Undo holds and the last
-// time a colleague edited each field.
+// State is what the rules in code check besides the model's answer. It holds
+// the deal's values as read, the owner's switches, the Undo holds and the
+// last colleague edit of each field.
 type State struct {
 	Seen deals.VerdictValues
 	// SwitchedOn holds the correction names whose owner switch is on.

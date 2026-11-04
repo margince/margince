@@ -4,8 +4,8 @@
 package dealverdict
 
 // Reading the price out of the customer's own words. The amount Margince sets
-// is the one the quote states, never the number the model wrote beside it:
-// a mail can carry harmless words while asking the model for any figure.
+// is the one the quote states, never the number the model wrote beside it.
+// A mail can carry harmless words while asking the model for any figure.
 
 import (
 	"math"
@@ -53,7 +53,7 @@ func quotedPrice(quote string) (int64, string, bool) {
 }
 
 // parseQuotedNumber reads 50,000 / 50.000 / 50 000 / 49,999.50 / 49.999,50.
-// A separator followed by exactly three digits groups thousands; one followed
+// A separator followed by three digits groups thousands; one followed
 // by one or two digits at the end marks the decimals.
 func parseQuotedNumber(text string) (float64, bool) {
 	text = strings.ReplaceAll(text, " ", " ")

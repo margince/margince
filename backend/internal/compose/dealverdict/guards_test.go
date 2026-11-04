@@ -140,7 +140,7 @@ func TestAConversionRoundsToWholeUnits(t *testing.T) {
 	}
 }
 
-// An accepted offer lets the amount become exactly that offer's.
+// An accepted offer lets the amount become that offer's gross amount.
 func TestAnAcceptedOfferSetsItsOwnAmount(t *testing.T) {
 	t.Parallel()
 	state := guardState()

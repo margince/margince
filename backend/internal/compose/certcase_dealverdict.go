@@ -4,13 +4,11 @@
 package compose
 
 // The certification case for deal_verdict/deal_verdict. The request comes
-// from dealverdict.Request, the builder the nightly pass sends, and the reply
-// is read by dealverdict.Parse, the check the pass applies.
+// from dealverdict.Request and the reply is read by dealverdict.Parse, as in
+// the nightly pass.
 //
-// The expectation is the set of change kinds a correct answer proposes, with
-// the date or amount where the scenario names one. The fixture names its
-// activities by label and Prepare mints their ids, so a cited id is one the
-// model was handed.
+// The expectation is the change kinds a correct answer proposes. Prepare
+// mints the activity ids, so a cited id is one the model was handed.
 
 import (
 	"context"
@@ -64,8 +62,9 @@ func (dealVerdictCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskDealVerdict, Variant: "deal_verdict", Kind: ai.SiteKindOneShot}
 }
 
-// CertifiedScope is the one call the pass makes per deal.
-func (dealVerdictCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
+// CertifiedScope is the whole invocation: the pass makes one call per deal
+// and acts on its answer alone.
+func (dealVerdictCases) CertifiedScope() string { return aitasks.ScopeFullInvocation }
 
 // Prepare builds the input the pass would build for the fixture's deal.
 //

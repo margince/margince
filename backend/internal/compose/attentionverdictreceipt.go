@@ -13,8 +13,8 @@ import (
 )
 
 // verdictReceipt renders an amount or probability Margince set from the
-// deal's evidence: before and after, the reason, and for an amount the quote
-// and the conversion it rests on.
+// deal's evidence, with the value before and after and the reason. An amount
+// also names the quote and the conversion.
 func verdictReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	var summary string
 	if c.Correction == deals.VerdictAmountCorrection {

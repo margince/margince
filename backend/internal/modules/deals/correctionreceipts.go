@@ -151,26 +151,25 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		if err != nil {
 			return fmt.Errorf("deals: reading last night's corrections: %w", err)
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var row CorrectionReceipt
-			var evidence []byte
-			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
-				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence,
-				&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
-				&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
-				&row.Currency); err != nil {
-				return err
-			}
-			row.EstimateBasis = correctionEstimateBasis(evidence)
-			row.Evidence = evidence
-			out = append(out, row)
-		}
-		return rows.Err()
+		out, err = pgx.CollectRows(rows, scanCorrectionReceipt)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
+	var row CorrectionReceipt
+	if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
+		&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
+		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
+		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
+		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
+		&row.Currency); err != nil {
+		return row, err
+	}
+	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
+	return row, nil
 }

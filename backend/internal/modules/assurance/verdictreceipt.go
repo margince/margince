@@ -18,8 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
-// DealVerdict is Margince's last reading of one deal's evidence, kept on the
-// deal's receipt so a deal whose evidence has not moved is not read again.
+// DealVerdict is Margince's last reading of one deal's evidence. It is kept
+// on the deal's receipt, so a deal whose evidence has not moved is not read again.
 type DealVerdict struct {
 	DealID ids.UUID
 	// Fingerprint is the deal's viability fingerprint now. It is stored only

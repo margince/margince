@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package dealverdict is what Margince's nightly reading of one open deal
-// asks the model, what it accepts back, and the rules in code that decide
-// which of the model's changes may reach the deal.
+// Package dealverdict is the prompt of Margince's nightly reading of one open
+// deal and the check of the answer. Its rules in code decide which of the
+// model's changes may reach the deal.
 //
 // Its own package so the prompt digest covers this prompt alone; the pass
 // that reads the deal and writes the changes stays in compose.
@@ -46,7 +46,7 @@ var PromptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 })
 
 // Prompt is the user turn: the deal's facts, then every activity fenced by
-// its id, so no message can close its span and pose as another.
+// its id. No message can close its span and pose as another.
 func Prompt(fence promptfence.Fence, in Input) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Today: %s\nDeal: %s\nStage: %s\n", in.Today.Format(time.DateOnly), in.DealName, in.Stage)

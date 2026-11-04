@@ -227,8 +227,8 @@ func verdictColumns(correction string, seen, current VerdictValues) ([]string, b
 }
 
 // verdictPatch sets the change's value. It reports false for a change the
-// deal can no longer take: a probability a colleague set, or an amount in a
-// currency the deal does not hold.
+// deal can no longer take. That is a probability a colleague set, or an
+// amount with no currency on either side.
 func verdictPatch(patch *storekit.Patch, change VerdictChange, current VerdictValues) bool {
 	switch change.Correction {
 	case VerdictCloseDateCorrection:
