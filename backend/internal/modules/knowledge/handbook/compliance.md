@@ -30,6 +30,8 @@ Yes. Admin and Ops switch off **Show individual performance** on the **Installat
 - Reports, analytics questions, forecasts, forecast shares, targets and editions show no colleague's figures. That holds for their exports and for agent answers about them too.
 - Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
 - A figure that holds a colleague's work shows only if it holds the work of at least two colleagues besides you who still work here.
+- The same holds for the difference between two totals. A team or company total is hidden when taking away the members of another team you can see would leave fewer than two colleagues.
+- Say one team is A, B and C, and a second team is A and B. The first team is hidden, because it minus the second is C alone. The second team still shows. The difference counts members, so a total that would show that C won nothing is hidden too. A company total is checked the same way, so one colleague on no team can hide it.
 - Team weeks are not made, sent or opened. Each member's own week stays.
 - Everyone still sees their own figures.
 
@@ -41,7 +43,8 @@ What the switch does not cover yet:
 
 What the switch cannot promise:
 - Records stay open to read. A list of deals still shows each deal's owner and amount.
-- Totals of teams that share members can be compared. Say you share one team with A and B, one with A and C, and one with B and C. The three totals together give each colleague's figure.
+- One team's total can be compared over time. When a member joins or leaves, this month's total minus last month's can show that member's figure.
+- Totals that only add up to a colleague's figure across three teams or more are not compared, apart from your own **My teams**.
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 

@@ -95,6 +95,9 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		if err := requireNoLoneColleagueIn(ctx, tx, frame, contributorsSQL(spec, where, nil), args); err != nil {
 			return err
 		}
+		if err := requireSpecPopulationFloor(ctx, tx, spec, requestedReportScope(plan.scope)); err != nil {
+			return err
+		}
 		if out.Rows, err = derivationRows(ctx, tx, frame, report, spec, plan, whereSQL, args); err != nil {
 			return err
 		}

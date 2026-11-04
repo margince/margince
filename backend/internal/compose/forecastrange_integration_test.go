@@ -216,6 +216,7 @@ func TestIndividualPerformanceOffKeepsTheSharedRangeOverTheRowsTheTotalsCount(t 
 		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
 	}
 	token := e.issueFrozenShare(t)
+	e.joinTeam(t, e.Team2, writerUser)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
 	onLow, onHigh := e.sharedRangeOf(reader, t, token)
@@ -239,6 +240,7 @@ func TestASharedSnapshotSaysWhenItsExportHoldsOnlyTheReadersOwnDeals(t *testing.
 		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
 	}
 	token := e.issueFrozenShare(t)
+	e.joinTeam(t, e.Team2, writerUser)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
 	for _, c := range []struct {
@@ -274,6 +276,7 @@ func TestASharedSnapshotWithEveryRowWithheldExportsOneSummaryRow(t *testing.T) {
 		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
 	}
 	token := e.issueFrozenShare(t)
+	e.joinTeam(t, e.Team2, writerUser)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 	e.showIndividualPerformance(t, false)
 

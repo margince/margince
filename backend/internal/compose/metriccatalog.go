@@ -165,7 +165,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	}
 
 	selection.Scope = frame.Scope
-	thinTeam, err := teamBelowFloor(ctx, tx, frame.Scope, owners)
+	thinTeam, err := populationBelowFloor(ctx, tx, frame.Scope, owners)
 	if err != nil {
 		return reporting.Evaluation{}, err
 	}

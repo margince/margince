@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // individualPerformance answers the switch for this request: the value its door
@@ -77,135 +76,6 @@ func requireMeasurableSeat(ctx context.Context, tx pgx.Tx, seat ids.UUID) error 
 		return nil
 	}
 	return auth.IndividualPerformanceOffError{}
-}
-
-// fewestColleagues is how many live colleagues besides the reader must share a
-// total that any colleague contributes to, while the switch is off. With one,
-// the total minus the reader's own figure is that colleague's figure.
-const fewestColleagues = 2
-
-// requireNoLoneColleague refuses, while the switch is off, an answer with a
-// group that other seats contribute to but fewer than fewestColleagues live
-// colleagues do. Each group is the owners whose rows make up one figure. A
-// departed owner's rows still count as a colleague's, and do not count toward
-// the floor.
-func requireNoLoneColleague(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) error {
-	allowed, err := individualPerformance(ctx, tx)
-	if err != nil || allowed {
-		return err
-	}
-	thin, err := thinGroups(ctx, tx, groups)
-	if err != nil {
-		return err
-	}
-	if slices.Contains(thin, true) {
-		return auth.IndividualPerformanceOffError{}
-	}
-	return nil
-}
-
-// thinGroups answers, per group, whether other seats are in it but fewer than
-// fewestColleagues live colleagues besides the reader are.
-func thinGroups(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, error) {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, errors.New("compose: no actor bound to context")
-	}
-	others := map[ids.UUID]bool{}
-	for _, group := range groups {
-		for _, owner := range group {
-			if !owner.IsZero() && owner != p.UserID {
-				others[owner] = true
-			}
-		}
-	}
-	out := make([]bool, len(groups))
-	if len(others) == 0 {
-		return out, nil
-	}
-	live, err := liveColleagues(ctx, tx, slices.Collect(maps.Keys(others)))
-	if err != nil {
-		return nil, err
-	}
-	for index, group := range groups {
-		contributes, counted := false, 0
-		for _, owner := range group {
-			if others[owner] {
-				contributes = true
-				if live[owner] {
-					counted++
-				}
-			}
-		}
-		out[index] = contributes && counted < fewestColleagues
-	}
-	return out, nil
-}
-
-// targetFloor answers, while the switch is off, which team and company
-// targets keep enough colleagues behind them to show. A target is in effect a
-// colleague's own when its scope has other members but fewer than
-// fewestColleagues live ones besides the reader. Archived teams are checked
-// too, and a team the check never reads is not on the list, so it is withheld.
-func targetFloor(ctx context.Context, tx pgx.Tx) (reporting.TargetFloor, error) {
-	allowed, err := individualPerformance(ctx, tx)
-	if err != nil || allowed {
-		return reporting.TargetFloor{}, err
-	}
-	rows, err := tx.Query(ctx, `SELECT t.id, array_remove(array_agg(tm.user_id), NULL) FROM team t
-		LEFT JOIN team_membership tm ON tm.team_id = t.id
-		GROUP BY t.id ORDER BY t.id`)
-	if err != nil {
-		return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
-	}
-	var teams []ids.UUID
-	var members [][]ids.UUID
-	for rows.Next() {
-		var team ids.UUID
-		var seats []ids.UUID
-		if err := rows.Scan(&team, &seats); err != nil {
-			rows.Close()
-			return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
-		}
-		teams, members = append(teams, team), append(members, seats)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
-	}
-	var everyone []ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(u.id), '{}') FROM app_user u WHERE NOT u.is_agent`).Scan(&everyone); err != nil {
-		return reporting.TargetFloor{}, fmt.Errorf("compose: reading the members for the company target floor: %w", err)
-	}
-	thin, err := thinGroups(ctx, tx, append(members, everyone))
-	if err != nil {
-		return reporting.TargetFloor{}, err
-	}
-	floor := reporting.TargetFloor{Applies: true, Workspace: !thin[len(teams)], Teams: []ids.UUID{}}
-	for index, team := range teams {
-		if !thin[index] {
-			floor.Teams = append(floor.Teams, team)
-		}
-	}
-	return floor, nil
-}
-
-// liveColleagues answers which of these seats are live human members.
-func liveColleagues(ctx context.Context, tx pgx.Tx, seats []ids.UUID) (map[ids.UUID]bool, error) {
-	rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE u.id = ANY($1) AND NOT u.is_agent AND `+
-		identity.LiveMemberSQL("u"), seats)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading which contributors are live members: %w", err)
-	}
-	found, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading which contributors are live members: %w", err)
-	}
-	out := make(map[ids.UUID]bool, len(found))
-	for _, id := range found {
-		out[id] = true
-	}
-	return out, nil
 }
 
 // requireNoLoneColleagueIn runs requireNoLoneColleague over a statement that
@@ -303,26 +173,7 @@ func loneColleagueCoverage(frame crmcontracts.ReportingContext) crmcontracts.Rep
 	return withheld
 }
 
-// teamBelowFloor answers, while the switch is off, whether a team scope has
-// other members but fewer than fewestColleagues live ones. That is the floor
-// the team review holds. It reads membership, not the seats a figure credits.
-// In a team of two, a figure credited to the reader can be a colleague's work.
-func teamBelowFloor(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, owners reporting.MeasurableOwners) (bool, error) {
-	if !owners.IndividualOff || scope.Kind != ScopeKindTeam || scope.Id == nil {
-		return false, nil
-	}
-	var members []ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(user_id), '{}') FROM team_membership WHERE team_id = $1`, ids.UUID(*scope.Id)).Scan(&members); err != nil {
-		return false, fmt.Errorf("compose: reading a team's members for the floor: %w", err)
-	}
-	thin, err := thinGroups(ctx, tx, [][]ids.UUID{members})
-	if err != nil {
-		return false, err
-	}
-	return thin[0], nil
-}
-
-// thinTeamCoverage withholds a figure of a team that teamBelowFloor holds back.
+// thinTeamCoverage withholds a figure of a population that populationBelowFloor holds back.
 func thinTeamCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
 	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ThinTeam))
 	withheld.Withheld = true
@@ -432,7 +283,11 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 	if err != nil || allowed {
 		return rows, false, err
 	}
-	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope))
+	if err != nil {
+		return nil, false, err
+	}
+	if err := requirePopulationFloor(ctx, tx, resolved); err != nil {
 		return nil, false, err
 	}
 	owners, categories := []ids.UUID{}, []string{}
