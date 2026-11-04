@@ -10,6 +10,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // closings are the lines a message signs off with, folded. A line that is one
@@ -72,6 +74,12 @@ func Strip(text string) string {
 		return kept
 	}
 	return trimmed
+}
+
+// QuotedPast reports whether quote appears in text once its greeting and
+// sign-off are gone. Strip composes text to NFC, so quote is composed too.
+func QuotedPast(text, quote string) bool {
+	return values.Quoted(Strip(text), norm.NFC.String(quote))
 }
 
 // withoutSignOff drops the closing a message ends on, with the signature lines
