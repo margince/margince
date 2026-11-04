@@ -104,6 +104,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// of them legitimately moved. The pairs below are the ones where the schema
 	// NAMES the column's concept, which is a judgement a scan cannot make.
 	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
+	"capture_counterparty_hold.kind":          {"internal/contracts", "CaptureCounterpartyHoldKind"},
 	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
 	"capture_exclusion.scope":                 {"internal/contracts", "CaptureExclusionScope"},
 	"capture_owner_identity.kind":             {"internal/contracts", "CaptureOwnerIdentityKind"},
