@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -98,7 +98,10 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;
-- the rules for sales mail.
+- who your company says it is, and whom to ask about data, at the foot of its mail;
+- the sales-mail rules for recipients under that law.
+
+The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 
