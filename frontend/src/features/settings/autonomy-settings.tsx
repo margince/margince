@@ -150,6 +150,18 @@ const KIND_COPY: Readonly<
     label: "autonomy.kind.deal_close_lost.label",
     help: "autonomy.kind.deal_close_lost.help",
   },
+  deal_amount: {
+    label: "autonomy.kind.deal_amount.label",
+    help: "autonomy.kind.deal_amount.help",
+  },
+  deal_probability: {
+    label: "autonomy.kind.deal_probability.label",
+    help: "autonomy.kind.deal_probability.help",
+  },
+  deal_stage_move: {
+    label: "autonomy.kind.deal_stage_move.label",
+    help: "autonomy.kind.deal_stage_move.help",
+  },
   company_name_promotion: {
     label: "autonomy.kind.company_name_promotion.label",
     help: "autonomy.kind.company_name_promotion.help",

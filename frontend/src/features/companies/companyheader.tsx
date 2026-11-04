@@ -388,6 +388,8 @@ export function CompanyActionBadges({
             a reader cannot walk back from the header. */}
         <ArchiveAction
           requires={{ object: "company", action: "delete" }}
+          archivable={company.archivable ?? false}
+          refusedReason={t("company.archiveRefused")}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}

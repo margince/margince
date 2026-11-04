@@ -133,9 +133,23 @@ const closeDateCorrectionKind = "close_date_correction"
 // It is never staged; the owner's mode for it is the whole of the switch.
 const kindDealCloseLost = "deal_close_lost"
 
+// kindDealAmount and kindDealProbability are Margince setting a deal's amount
+// and probability from the customer's own words. Never staged, like a close.
+const (
+	kindDealAmount      = "deal_amount"
+	kindDealProbability = "deal_probability"
+)
+
+// kindDealStageMove is Margince moving a deal forward from the customer's
+// own words. Never staged; its Undo moves the deal back.
+const kindDealStageMove = "deal_stage_move"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
+	kindDealAmount:           true,
+	kindDealProbability:      true,
+	kindDealStageMove:        true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
 }

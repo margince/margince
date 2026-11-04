@@ -191,6 +191,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/products` | listDealProducts | The products a deal sells, with the value allocated to each. | Read records | at once |
 | `PUT /deals/{id}/products` | replaceDealProducts | Set a deal's products by hand, replacing every allocation it had. | Change records | at once |
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
+| `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
+| `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
 | `POST /deals/{id}/stage-progressions/{approvalId}/revert` | revertStageProgression | Take back a stage move the product made by itself. | Change records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /deals/{id}/win-evidence` | getDealWinEvidence | Whether the deal has the signed agreement a win rests on. | Read records | at once |
@@ -325,6 +327,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /scheduling/profile` | getSchedulingProfile | Read the caller's reusable booking page and scheduling policy. | Read records | at once |
 | `PUT /scheduling/profile` | putSchedulingProfile | Configure and activate the caller's booking page. | Change records | at once |
 | `PUT /scheduling/profile/alias` | putSchedulingAlias | Choose, change or clear the caller's friendly booking address. | Change records | at once |
+| `POST /scheduling/profile/shared` | markBookingPageShared | Record that the caller shared their booking link. | Change records | at once |
 | `POST /scheduling/invitations` | createMeetingInvitation | Reserve a meeting and request a calendar-native invitation. | Send messages | waits for approval |
 | `GET /scheduling/invitations/{id}` | getMeetingInvitation | Read invitation delivery and calendar state. | Read records | at once |
 | `PATCH /scheduling/invitations/{id}` | changeMeetingInvitation | Reschedule, cancel or retry an invitation through its original calendar event. | Send messages | at once |
@@ -657,6 +660,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PUT /worklist/ready` | confirmMeetingReady | Say you are ready for a meeting you attend. | Change records | at once |
 | `POST /worklist/ready/undo` | undoMeetingReady | Take back your "I'm ready" for a meeting — the undo behind it. | Change records | at once |
 | `GET /worklist/team` | getTeamBoard | One row per teammate — who is carrying what, so a lead can see where to help. | Read records | at once |
+| `GET /worklist/team/changes` | getTeamMarginceChanges | What Margince changed on your team's deals. | Read records | at once |
 | `GET /worklist/handled` | getHandledForYou | What the product did on your behalf, so you can check it. | Read records | at once |
 | `GET /worklist/exceptions` | getTeamExceptions | What is going wrong on this lead's team, and what it was judged against. | Read records | at once |
 | `GET /worklist/hidden` | getHiddenBacklog | What the queue is not showing, and which rule is holding it back. | Read records | at once |

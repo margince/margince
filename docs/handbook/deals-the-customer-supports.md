@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -44,3 +44,67 @@ closes the deal again at the next check.
 
 To stop it for your own deals, turn off **Close silent deals as lost** among
 the automatic changes. [Approvals](approvals.md) says where the switches are.
+
+## When the customer names a date, a price or a decision
+
+Each night Margince also reads the mail, meetings, calls, notes and offers on
+every open deal. It may then set three things for the owner:
+
+- **The close date**, when a message names the day or the month the customer
+  will decide or sign. Margince sets a date only inside a day, a month or a
+  quarter the words of the message name.
+- **The amount**, when the customer or your offer names a price for the deal.
+  Margince sets the price the words state, to the cent.
+- **The win probability**, when the evidence clearly moves it. Margince may
+  lower it for any reason the evidence gives. It never raises it above the
+  probability of the deal's stage.
+
+Margince reads a deal again only when something new arrived on it, its close
+date passed, or its owner changed a switch. A deal whose price had no exchange
+rate is read again once the rate is stored.
+
+Margince reads only what everyone in the workspace may read. A message only
+its participants can see never reaches the reason or the evidence.
+
+Margince leaves a value alone in these cases:
+
+- It is not sure enough of what the words say.
+- A colleague changed the field after the message the change rests on arrived.
+- You set the win probability yourself.
+- The new close date is in the past, more than 18 months away, or not in the
+  words of the message.
+- An accepted offer fixes the amount. Margince may still set the deal to the
+  exact amount of that offer.
+- The price is not in the words of the message, or the words state another
+  price.
+- The price is in another currency and no exchange rate is stored for it.
+- Something on the deal changed while Margince was reading it. The deal is
+  read again the next night.
+
+A price in another currency is converted into the deal's currency at the stored
+rate, through the base currency. It is rounded to whole units. The receipt
+shows the customer's words, the amount they named and the date of the rate.
+
+A close date from the customer is no longer an estimate, so Margince marks it
+as confirmed. **Undo** marks it as an estimate again.
+
+Each change shows on the owner's **Home** under **Handled for you**, with the
+old and new value, the reason and **Undo**. It stays there until the owner
+accepts or undoes it. The deal's timeline gets one note for the night's
+changes.
+
+**Undo** puts the old value back. It is refused when someone changed the field
+since. After an Undo, Margince does not make that change on the deal again.
+That lasts until a new message, offer or stage move arrives on the deal.
+
+The switches are **Close dates**, **Deal amounts**, **Win probabilities** and
+**Stage moves** among the automatic changes. Margince checks the switch again
+just before it writes.
+
+## When the deal reached a later stage
+
+Margince may move an open deal to a later stage. It never moves a deal back,
+and never to won or lost. It moves a deal only across stages that list
+criteria. A message, meeting or note on the deal must show each of the
+criteria of each stage the deal leaves. **Undo** moves the deal back, unless someone moved it since. An admin
+can stop all stage moves in the installation settings.

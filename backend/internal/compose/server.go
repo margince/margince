@@ -316,6 +316,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
+		file:   NewChatCaptureFile(pool),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),

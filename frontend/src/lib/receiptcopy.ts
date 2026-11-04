@@ -4,13 +4,13 @@
 import {
   summaryFieldsLine,
   summarySentence,
-} from "../../design-system/approvalsummary";
-import { middayInstant } from "../../format/calendarday";
-import { formatDate, formatNumber } from "../../format/format";
-import type { Locale, Translator } from "../../i18n";
-import { pluralKey } from "../../i18n";
-import { summaryWords } from "../../lib/approvalpreviewfields";
-import type { Receipt } from "./worklist.queries";
+} from "../design-system/approvalsummary";
+import { middayInstant } from "../format/calendarday";
+import { formatDate, formatNumber } from "../format/format";
+import type { Locale, Translator } from "../i18n";
+import { pluralKey } from "../i18n";
+import { summaryWords } from "./approvalpreviewfields";
+import type { Receipt } from "./handled";
 
 export function receiptSummary(
   receipt: Receipt,

@@ -42,6 +42,8 @@ type DealCorrection struct {
 	AppliedAt  time.Time
 	ReversedAt *time.Time
 	ReversedBy *string
+	// AcceptedAt is when the owner kept the change; an accepted change has no Undo.
+	AcceptedAt *time.Time
 	Evidence   CorrectionEvidence
 	// StageHistoryID is the stage move a close as lost wrote; nil for every
 	// other correction.
@@ -157,12 +159,12 @@ func (s *Store) CorrectionForAudit(ctx context.Context, tx pgx.Tx, auditID ids.U
 	var out DealCorrection
 	err := tx.QueryRow(ctx, `
 		SELECT id, deal_id, audit_log_id, correction, fields, applied_at,
-		       reversed_at, reversed_by,
+		       reversed_at, reversed_by, accepted_at,
 		       remaining_open_stages, asking, standing_close_date
 		  FROM deal_correction
 		 WHERE audit_log_id = $1`, auditID).
 		Scan(&out.ID, &out.DealID, &out.AuditLogID, &out.Correction, &out.Fields,
-			&out.AppliedAt, &out.ReversedAt, &out.ReversedBy,
+			&out.AppliedAt, &out.ReversedAt, &out.ReversedBy, &out.AcceptedAt,
 			&out.Evidence.RemainingOpenStages, &out.Evidence.Asking,
 			&out.Evidence.StandingCloseDate)
 	if errors.Is(err, pgx.ErrNoRows) {

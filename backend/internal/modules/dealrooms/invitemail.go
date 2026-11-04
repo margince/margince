@@ -9,9 +9,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WithInviteMailer wires the operator's outbound mail relay. Nil means the
@@ -72,27 +75,104 @@ func (h Handlers) buyerLink(credential string) string {
 // take, and the contact that is recorded about is told so before they do it —
 // in the invitation rather than on the room screen, so it reaches them before
 // the first act rather than at the moment of it.
-func (h Handlers) sendInvite(r *http.Request, issued IssuedInvitation) error {
+func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error {
 	language := "en"
 	if h.mailLanguage != nil {
-		language = h.mailLanguage(r.Context())
+		language = h.mailLanguage(ctx)
 	}
 	words := mailcopy.For(language)
 	inviter, company := "", ""
 	if h.inviteContext != nil {
 		var err error
-		inviter, company, err = h.inviteContext(r.Context())
+		inviter, company, err = h.inviteContext(ctx)
 		if err != nil {
-			slog.WarnContext(r.Context(), "invitation attribution unavailable; sending the access link", "cause", err)
+			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
 	}
 	body := words.RoomMessage(issued.RoomTitle, inviter, company, h.buyerLink(issued.Credential), issued.ExpiresAt.UTC())
 
-	if err := mailer.SendProduct(r.Context(), h.inviteMailer, string(issued.Participant.Email),
+	if err := mailer.SendProduct(ctx, h.inviteMailer, string(issued.Participant.Email),
 		body.Title, body); err != nil {
 		return fmt.Errorf("send deal room invitation: %w", err)
 	}
 	return nil
+}
+
+// inviteSendTimeout bounds one invitation's lookups and relay exchange, so a
+// stuck relay cannot pin a goroutine.
+const inviteSendTimeout = 2 * time.Minute
+
+// inviteSendBudget is the time one invitation send may take.
+func (h Handlers) inviteSendBudget() time.Duration {
+	if h.sendBudget > 0 {
+		return h.sendBudget
+	}
+	return inviteSendTimeout
+}
+
+// sendInviteDetached mails the invitation off the request, so a slow relay does
+// not hold the seller's Invite. It reports whether it handed the mail over.
+//
+// A goroutine and not a queued job: a job table stores its arguments verbatim,
+// and the raw credential must not enter it. The relay's answer is stamped on
+// the invitation, where the roster reads it as `sent` or `failed`; until then
+// the roster reads `pending`.
+//
+// The send runs later than the issue, so the invitation is read again first.
+// A revoke, a resend, an address correction or an archive in between means
+// the old link must not reach the old address.
+func (h Handlers) sendInviteDetached(r *http.Request, issued IssuedInvitation) bool {
+	if !h.canSendInvite() {
+		return false
+	}
+	httpserver.DetachedSend{
+		What:   "deal room invitation send",
+		Budget: h.inviteSendBudget(),
+		Done:   h.sendDone,
+		Send: func(ctx context.Context) (bool, error) {
+			return h.sendIfStillInvited(ctx, issued)
+		},
+		Record: func(ctx context.Context, sendErr error) {
+			h.recordSendOutcome(ctx, issued, sendErr)
+		},
+	}.Start(r.Context())
+	return true
+}
+
+// inviteMailRecords is what the detached send reads and writes on the
+// invitation it carries.
+type inviteMailRecords interface {
+	InvitationMailable(ctx context.Context, credential, email string) (bool, error)
+	RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, credential string, sendErr error) error
+}
+
+func (h Handlers) inviteMail() inviteMailRecords {
+	if h.inviteRecords != nil {
+		return h.inviteRecords
+	}
+	return h.store
+}
+
+// sendIfStillInvited mails the invitation only while its credential still
+// admits its bearer and the participant's address is the one it was issued to.
+func (h Handlers) sendIfStillInvited(ctx context.Context, issued IssuedInvitation) (bool, error) {
+	live, err := h.inviteMail().InvitationMailable(ctx, issued.Credential, string(issued.Participant.Email))
+	if err != nil {
+		slog.ErrorContext(ctx, "reading a deal room invitation before mailing it failed",
+			"participant_id", issued.Participant.Id, "err", err)
+		return false, nil
+	}
+	if !live {
+		slog.InfoContext(ctx, "deal room invitation not mailed: it changed before the send",
+			"participant_id", issued.Participant.Id)
+		return false, nil
+	}
+	sendErr := h.sendInvite(ctx, issued)
+	if sendErr != nil {
+		slog.ErrorContext(ctx, "deal room invitation email failed",
+			"participant_id", issued.Participant.Id, "err", sendErr)
+	}
+	return true, sendErr
 }
 
 // WithMailLanguage supplies the fallback language for external recipients.

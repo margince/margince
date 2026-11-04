@@ -131,3 +131,17 @@ func TestTheLogoPlateKeepsItsLightBackgroundInDarkMode(t *testing.T) {
 		t.Fatalf("the plate is not a fixed light background the dark sheet leaves alone: %s", open)
 	}
 }
+
+func TestAMailWhoseLogoIsGoneIsHeadedByTheName(t *testing.T) {
+	message := Message{Title: "Your request", Text: "We recorded your request.", Language: "en"}
+	named := Letterhead{Name: `Northstar "North" & Co`, Attribution: "Powered by Margince"}
+	withLogo := named
+	withLogo.LogoContentID = "letterhead-logo@margince"
+	markup := Render(message, withLogo)
+	if got, want := WithoutLetterheadLogo(markup, withLogo.LogoContentID), Render(message, named); got != want {
+		t.Fatalf("without its logo the mail reads\n%s\nwant the name-only letterhead\n%s", got, want)
+	}
+	if got := WithoutLetterheadLogo(markup, "signature-logo@margince"); got != markup {
+		t.Fatal("markup changed for a content id it does not show")
+	}
+}

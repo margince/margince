@@ -356,7 +356,7 @@ Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does a contact say “Review source”?
 The record does not say where the contact's details come from, so no notice deadline is set.
-In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
 

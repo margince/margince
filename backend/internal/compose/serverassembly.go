@@ -395,6 +395,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		recompute: activities.RecomputeAudienceTx,
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
+	s.marginceChangeHandlers = newMarginceChangeHandlers(pool)
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
@@ -481,6 +482,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
 		WithInstallationZone(identity.ZoneAppliedTx).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		WithNoticeHeldReader(privacyNoticeHeld{db: InstallationDB(pool)}).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.
 		WithSettings(StoredConfig(pool)).

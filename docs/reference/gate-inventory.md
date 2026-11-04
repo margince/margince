@@ -111,6 +111,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
+| `frontendrunreasons_test.go` | H2 | The browser puts a troubled run's reason code into words. |
 | `frontendschedulinglimits_test.go` | H3 | The Meetings settings screen stops a title or a location at the contract's length before the request is sent. |
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
@@ -205,6 +206,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
@@ -284,6 +286,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `declinedwrite_test.go` | H2 | A conditional by-id write that declines to happen says so. |
+| `decodejudged_test.go` | H3 | decodeJudgedCallers are the handlers that take number bounds out of the shared decode (httperr.DecodeJudged). |
 | `deliverysenderonerule_test.go` | H2 | The mail system's own sender names (mailer-daemon, postmaster) are spelled in platform/mailidentity and nowhere else. |
 | `detachedwrites_test.go` | H2 | A detached write says what bounds it. |
 | `directionowner_test.go` | H3 | Every reader of exchanges that asks "did they write" or "did we write" asks relstrength.TheyWroteSQL and WeWroteSQL. |
@@ -370,6 +373,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
 | `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT rather than by a sentinel. |
+| `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds no generated field carries: an array item, a map value, a oneOf branch, an inline response. |
 | `occurredatcompare_test.go` | H2 | Whether an activity has happened by a moment, or falls in a period, is asked of occurredday. |
 | `occurredprecisioncontract_test.go` | H2 | Every activity time on the wire says how precisely it is known. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the caller wrote is one number, declared in platform/database as CallerPredicateBudget. |

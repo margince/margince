@@ -141,6 +141,12 @@ func StrictDecode(raw json.RawMessage, into any) error {
 	if outOfRange := RejectOutOfRangeTimes(into); outOfRange != nil {
 		return &FieldDecodeError{Cause: outOfRange}
 	}
+	if outOfBounds := RejectOutOfBoundsNumbers(into, raw, nil); outOfBounds != nil {
+		return &FieldDecodeError{Cause: outOfBounds}
+	}
+	if repeated := RejectRepeatedItems(into); repeated != nil {
+		return &FieldDecodeError{Cause: repeated}
+	}
 	return nil
 }
 

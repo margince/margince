@@ -127,7 +127,12 @@ func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBo
 	return s.send(ctx, to, subject, textBody, htmlBody, messageID, nil)
 }
 
-// send is SendAlternative with the inline images the markup shows.
+// SendRelated is SendAlternative with the inline images the markup shows by
+// content id.
+func (s SMTP) SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
+	return s.send(ctx, to, subject, textBody, htmlBody, messageID, inline)
+}
+
 func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
@@ -140,24 +145,13 @@ func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, message
 		return err
 	}
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	client, err := s.connect(ctx, addr)
+	client, w, err := s.openMessage(ctx, addr, to)
 	if err != nil {
-		return err
+		return &NotTakenError{Err: err}
 	}
 	defer closeQuietly(client)
-
-	if err := client.Mail(s.FromAddress); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
-	}
-	if err := client.Rcpt(to); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
-	}
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
-	}
 	if _, err := w.Write(msg); err != nil {
-		return fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)
+		return &NotTakenError{Err: fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)}
 	}
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("mailer: relay %s did not accept the message: %w", addr, err)
@@ -167,6 +161,29 @@ func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, message
 			"relay", addr, "cause", err)
 	}
 	return nil
+}
+
+// openMessage runs the exchange up to the message body. On an error the
+// relay holds nothing of this message.
+func (s SMTP) openMessage(ctx context.Context, addr, to string) (*smtp.Client, io.WriteCloser, error) {
+	client, err := s.connect(ctx, addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := client.Mail(s.FromAddress); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
+	}
+	w, err := client.Data()
+	if err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
+	}
+	return client, w, nil
 }
 
 // helloName is what this installation announces to the relay.
@@ -256,4 +273,10 @@ func closeQuietly(c io.Closer) {
 // AlternativeSender preserves the already-authorized HTML and text alternatives.
 type AlternativeSender interface {
 	SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error
+}
+
+// RelatedSender is an AlternativeSender that also attaches the images the
+// markup shows inline.
+type RelatedSender interface {
+	SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error
 }

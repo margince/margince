@@ -55,6 +55,16 @@ func assignedTask(t *testing.T, e *integration.Env, subject string, assignee ids
 	return id
 }
 
+// seedWebhook stores a subscription owned by owner, archived when asked.
+func seedWebhook(t *testing.T, e *integration.Env, owner ids.UUID, archived bool) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref, archived_at)
+		VALUES ($1, $2, 'https://hooks.example.test/in', ARRAY['deal.stage_changed'], 'sealed', CASE WHEN $3 THEN now() END)`,
+		id, owner, archived)
+	return id
+}
+
 func assigneeOf(t *testing.T, e *integration.Env, task ids.UUID) ids.UUID {
 	t.Helper()
 	assignee, err := ids.Parse(e.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE id = $1`, task))
@@ -85,19 +95,22 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	openTask := assignedTask(t, e, "Call BAER back", e.Rep1, false)
 	assignedTask(t, e, "Sent last week", e.Rep1, true)
 	foreignTask := assignedTask(t, e, "Rep3's call", e.Rep3, false)
+	hooks := []ids.UUID{seedWebhook(t, e, e.Rep1, false), seedWebhook(t, e, e.Rep1, false)}
+	archivedHook := seedWebhook(t, e, e.Rep1, true)
 	deactivate(t, e, e.Rep1)
 	seam := handoverSeamFor(e)
 
-	owned, err := seam.Owned(e.Admin(), e.Rep1)
+	admin := adminWithWebhooks(e)
+	owned, err := seam.Owned(admin, e.Rep1)
 	if err != nil {
 		t.Fatalf("count what the departed rep owns: %v", err)
 	}
-	want := crmcontracts.HandoverCounts{Lead: 2, Contact: 2, Company: 1, Deal: 1, Project: 1, Task: 1}
+	want := crmcontracts.HandoverCounts{Lead: 2, Contact: 2, Company: 1, Deal: 1, Project: 1, Task: 1, Webhook: 2}
 	if owned != want {
 		t.Fatalf("owned = %+v, want %+v", owned, want)
 	}
 
-	out, err := seam.HandOver(e.Admin(), e.Rep1, e.Rep2)
+	out, err := seam.HandOver(admin, e.Rep1, e.Rep2)
 	if err != nil {
 		t.Fatalf("hand over: %v", err)
 	}
@@ -113,10 +126,15 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 		{"company", company},
 		{"deal", deal},
 		{"project", ids.UUID(project.Id)},
+		{"webhook_subscription", hooks[0]},
+		{"webhook_subscription", hooks[1]},
 	} {
 		if got := ownerOf(t, e, row.table, row.id); got != e.Rep2 {
 			t.Errorf("%s %s is owned by %s, want the colleague it was handed to", row.table, row.id, got)
 		}
+	}
+	if got := ownerOf(t, e, "webhook_subscription", archivedHook); got != e.Rep1 {
+		t.Errorf("an archived webhook moved to %s; only live ones carry a running integration", got)
 	}
 	if got := ownerOf(t, e, "deal", foreignDeal); got != e.Rep3 {
 		t.Errorf("another rep's deal moved to %s", got)
