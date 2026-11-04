@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import {
-  installOverviewServer,
   isSetup,
   OVERVIEW_SCENARIOS,
   type OverviewView,
   overviewAddress,
   type ScenarioName,
 } from "./analytics.overview.scenarios.fixtures";
+import { installOverviewServer } from "./analytics.overview.server.fixtures";
 
 // Analytics' opening page as each reader meets it, one story per scenario and
 // view the scenario map applies to, named by scenarioStoryName. The address
