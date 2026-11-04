@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32319,
-    "median_tool_tokens": 613,
-    "mean_tool_tokens": 717
+    "tokens": 32174,
+    "median_tool_tokens": 611,
+    "mean_tool_tokens": 714
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 45,
-      "tokens": 6651,
-      "listing_tokens": 3512,
-      "step_schema_tokens": 2547,
-      "percent_of_ceiling": 20,
-      "headroom_tokens": 16559,
+      "tokens": 6404,
+      "listing_tokens": 3365,
+      "step_schema_tokens": 2446,
+      "percent_of_ceiling": 19,
+      "headroom_tokens": 16806,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -88,12 +88,12 @@
       "tokens": 2310
     },
     {
-      "name": "change_activities",
-      "tokens": 1957
-    },
-    {
       "name": "find_records",
       "tokens": 1863
+    },
+    {
+      "name": "change_activities",
+      "tokens": 1856
     },
     {
       "name": "change_state",
@@ -128,12 +128,12 @@
       "tokens": 908
     },
     {
-      "name": "create_record",
-      "tokens": 817
-    },
-    {
       "name": "bulk_update_records",
       "tokens": 798
+    },
+    {
+      "name": "create_record",
+      "tokens": 794
     },
     {
       "name": "change_attention",
@@ -156,10 +156,6 @@
       "tokens": 656
     },
     {
-      "name": "update_record",
-      "tokens": 633
-    },
-    {
       "name": "change_offers",
       "tokens": 628
     },
@@ -174,6 +170,10 @@
     {
       "name": "resolve_duplicates",
       "tokens": 613
+    },
+    {
+      "name": "update_record",
+      "tokens": 611
     },
     {
       "name": "change_tags",
