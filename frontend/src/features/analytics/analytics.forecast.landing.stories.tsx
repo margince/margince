@@ -36,7 +36,7 @@ const CURRENCY = "EUR";
 function landing(over: Partial<Landing> = {}): Landing {
   return {
     amount_minor: 184_000_00,
-    measure: "commit_evidence",
+    measure: "likely",
     won_minor: 92_000_00,
     remaining_minor: 92_000_00,
     ...over,
@@ -63,7 +63,7 @@ export const LandingWithoutCaveat: Story = {
 };
 
 // A manager-call installation with no current call, so the figure fell back to
-// commit evidence. The caveat is the point of the frame: it says why this is
+// the Likely deals. The caveat is the point of the frame: it says why this is
 // not the plain answer, under a heading of its OWN — sharing the card's label
 // read as a second copy of the figure's name.
 export const LandingWithCaveat: Story = {

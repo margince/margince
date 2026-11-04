@@ -105,28 +105,28 @@ const stageRows = [
 
 const forecastRows = [
   {
-    forecast_category: "commit",
+    win_probability_band: "90_plus",
     raw_minor: 2800000,
     weighted_minor: 2380000,
     deal_count: 4,
     currency: "EUR",
   },
   {
-    forecast_category: "best_case",
+    win_probability_band: "60_89",
     raw_minor: 1250000,
     weighted_minor: 500000,
     deal_count: 3,
     currency: "EUR",
   },
   {
-    forecast_category: "pipeline",
+    win_probability_band: "30_59",
     raw_minor: 940000,
     weighted_minor: 188000,
     deal_count: 6,
     currency: "EUR",
   },
   {
-    forecast_category: "slipped",
+    win_probability_band: "1_29",
     raw_minor: 90000,
     weighted_minor: 45000,
     deal_count: 1,
@@ -167,7 +167,12 @@ const forecastReadings = {
   scope_kind: "workspace",
   won_minor: 92_000_00,
   evidence_minor: 148_000_00,
-  best_case_minor: 260_000_00,
+  likely_threshold: 90,
+  by_source: {
+    stage: { open_minor: 240_000_00, weighted_minor: 132_000_00 },
+    human: { open_minor: 0, weighted_minor: 0 },
+    margince: { open_minor: 0, weighted_minor: 0 },
+  },
   open_minor: 240_000_00,
   weighted_minor: 132_000_00,
   eligible_count: 52,
@@ -533,25 +538,25 @@ export const ExplainLoading: Story = {
 };
 
 // The door, and the tile that has none. Five tiles partition the pipeline into
-// named buckets, and "which deals are in commit" is the first question anyone
-// asks of one. `slipped` is derived by the report rather than stored. No query
-// parameter names its set, so it draws no door. A reader sees the difference
-// between a figure that opens and one that is an end.
+// probability bands, and "which deals are in this band" is the first question
+// anyone asks of one. A band the server added after this build has no range to
+// open, so it draws no door. A reader sees the difference between a figure that
+// opens and one that is an end.
 export const ForecastDoors: Story = {
   render: () => (
     <StoryProviders>
       <StatStrip>
         <ForecastTile
-          label="Commit"
+          label="90% or more"
           amountMinor={1_240_000}
           weightedMinor={1_116_000}
           dealCount={8}
           currency="EUR"
           locale="en"
-          dealsUrl="#/deals?forecast_category=commit"
+          dealsUrl="#/deals?win_probability=90..100"
         />
         <ForecastTile
-          label="Slipped"
+          label="95_plus"
           amountMinor={320_000}
           weightedMinor={96_000}
           dealCount={3}
@@ -564,7 +569,7 @@ export const ForecastDoors: Story = {
 };
 
 // The four absences a slot has to tell apart, side by side, because they are
-// four different facts and one of them used to be drawn as €0.00. A category
+// four different facts and one of them used to be drawn as €0.00. A band
 // the report returned no row for was measured in no currency at all; a band of
 // deals nobody priced has a currency but no figure; a band whose deals ARE
 // counted answers with the count and says the amount is what is missing; a
