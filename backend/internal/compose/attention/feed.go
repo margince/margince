@@ -221,7 +221,6 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	reviews     reviewRead
 	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage

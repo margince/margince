@@ -20,7 +20,7 @@ func TestCloseDateReceiptRetainsItsWrittenLanguageAndCorrection(t *testing.T) {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupCloseDate(t)
 			integration.SetBaseLanguage(env.Admin(), t, env.Pool, tc.language)
-			id := env.seedSweepDeal(t, "Quiet deal", env.late, new("commit"), new(30), 90)
+			id := env.seedSweepDeal(t, "Quiet deal", env.late, new(95), new(30), 90)
 			if err := env.sweep(); err != nil {
 				t.Fatal(err)
 			}
@@ -34,7 +34,7 @@ func TestCloseDateReceiptRetainsItsWrittenLanguageAndCorrection(t *testing.T) {
 				t.Fatalf("receipt lost its deal or language: %+v", receipts)
 			}
 			corrected := env.readSwept(t, id)
-			if corrected.forecastCat == nil || *corrected.forecastCat != "best_case" || env.pendingCorrections(t, id) != 0 {
+			if corrected.probability == nil || *corrected.probability != 45 || env.pendingCorrections(t, id) != 0 {
 				t.Fatalf("language changed correction behavior: %+v", corrected)
 			}
 		})

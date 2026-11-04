@@ -66,7 +66,7 @@ const examples: Record<View, Pick<SalesAssessment, "paragraphs" | "cells">> = {
     cells: [
       { id: "won", label: "Sales won this quarter", value: "420000 EUR" },
       { id: "target", label: "Quarter target", value: "800000 EUR" },
-      { id: "landing", label: "Won + confirmed commit", value: "760000 EUR" },
+      { id: "landing", label: "Won + Likely deals", value: "760000 EUR" },
       {
         id: "remaining",
         label: "Confirmed open commitments",

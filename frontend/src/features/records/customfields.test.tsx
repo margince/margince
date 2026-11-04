@@ -222,6 +222,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -240,6 +241,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -261,6 +263,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -279,6 +282,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -842,6 +846,7 @@ describe("the create-form setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
@@ -927,6 +932,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -944,6 +950,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
@@ -959,40 +966,11 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
       screen.getByRole("switch", { name: "Use “Tier” in reports" }),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("AuditRail states", () => {
-  const noop = () => undefined;
-
-  it("says nothing about emptiness while the read is still running", () => {
-    wrap(<AuditRail entries={[]} state="loading" onRetry={noop} />);
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("offers a retry on a failed read, and does not claim the trail is empty", () => {
-    const retry = vi.fn();
-    wrap(<AuditRail entries={[]} state="failed" onRetry={retry} />);
-    expect(screen.getByText(/did not load/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-    expect(screen.getByRole("button", { name: /^retry$/i })).toBeTruthy();
-  });
-
-  it("says the trail is withheld, not empty, when the role cannot read it", () => {
-    wrap(<AuditRail entries={[]} state="withheld" onRetry={noop} />);
-    expect(screen.getByText(/Hidden for your role/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("shows the empty line only for a settled, genuinely empty read", () => {
-    wrap(<AuditRail entries={[]} state="empty" onRetry={noop} />);
-    expect(
-      screen.getByText(/No custom field changes yet/i),
     ).toBeInTheDocument();
   });
 });

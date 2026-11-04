@@ -144,6 +144,9 @@ export function stubBackend(
   deals: Deal[],
   opts: {
     onAdvance?: (body: unknown, ifMatch: string | null) => void;
+    // What an advance answers it set the probability to. Left out, the move
+    // set none, as an older server answers.
+    probabilitySet?: components["schemas"]["DealProbabilitySet"];
     onCloseDay?: (body: unknown, ifMatch: string | null) => void;
     // Makes the stub enforce the server's win-evidence rule. A win naming
     // neither a contract nor a reason is refused 422, as the real server does.
@@ -336,7 +339,10 @@ export function stubBackend(
           422,
         );
       }
-      return jsonResponse(deal({ stage_id: body.to_stage_id }));
+      return jsonResponse({
+        ...deal({ stage_id: body.to_stage_id }),
+        probability_set: opts.probabilitySet,
+      });
     }
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
       return jsonResponse(opts.single ?? deals[0]);

@@ -84,8 +84,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
-- [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
-  review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.

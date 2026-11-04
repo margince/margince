@@ -306,7 +306,6 @@
         "enrichment_run": "get_contact_enrichment_run",
         "evidence": "get_claim_evidence",
         "field_history": "get_field_history",
-        "forecast_assurance_enforcement": "get_forecast_assurance_enforcement",
         "forecast_assurance_preview": "preview_forecast_assurance",
         "forecast_share_csv": "export_forecast_share",
         "forecast_shared_reading": "open_forecast_share",

@@ -3,13 +3,15 @@
 
 import type { components } from "../../../api/schema";
 import { useRecordAssignments } from "../../../components/recordassignments.queries";
+import { RelationshipRows } from "../../../components/relationshiprows";
+import { AddRelationshipAction } from "../../../components/relationships";
+import { Disclosure } from "../../../design-system/disclosure";
 import { OverviewCard } from "../../../design-system/overviewcard";
 import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
 import { useViewerZone } from "../../../lib/viewerzone";
-import { AddRelationshipAction } from "../../records/relationships";
 import { type AddSeat, CommitteeReading, committeeFoot } from "./dealcommittee";
 import { committeeTeam } from "./dealcommitteeteam";
 
@@ -20,6 +22,10 @@ type DealCoverage = components["schemas"]["DealCoverage"];
  * ours works the deal and in what job, and who of the buyer sits on it and how
  * engaged. Each seat the coverage rules find missing carries the verb that
  * fills it, and each buyer seat opens its contact.
+ *
+ * A reader who may change or remove a stakeholder finds each edge under a
+ * fold below the committee, with the same Edit and Remove the relationship
+ * panel offers everywhere else. A seat stays a link to its contact.
  */
 export function DealCommitteeCard({
   dealId,
@@ -44,6 +50,10 @@ export function DealCommitteeCard({
 }>) {
   const t = useT();
   const canCreate = useCanWrite("relationship", "create");
+  // Both asked on every render: hooks run in one order, so no short circuit.
+  const canUpdate = useCanWrite("relationship", "update");
+  const canDelete = useCanWrite("relationship", "delete");
+  const canChange = canUpdate || canDelete;
   const { locale } = useLocale();
   const zone = useViewerZone();
   const assignments = useRecordAssignments("deal", dealId);
@@ -95,6 +105,15 @@ export function DealCommitteeCard({
         wroteOn={(at, precision) => activityDay(at, precision, locale, zone)}
         addSeat={addSeat}
       />
+      {canChange && !withheld && (
+        <Disclosure summary={t("deal.committee.change")}>
+          <RelationshipRows
+            scope={{ deal_id: dealId }}
+            refusedReasonId={refusedReasonId}
+            stacked
+          />
+        </Disclosure>
+      )}
     </OverviewCard>
   );
 }

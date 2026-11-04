@@ -162,6 +162,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if !directableBy(ctx, review.Refusals) {
 			return apperrors.ErrPermissionDenied
 		}
+		// Recorded so the re-check at staging and dispatch knows which
+		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
+		givenByAdmin := auth.RequireAdmin(ctx) == nil
 		// THE FACTS ARE THE REVIEW'S, not the clock's. An instruction says "on
 		// what this review recorded, send anyway", and dating it from now would
 		// claim it was taken on facts nobody has looked at.
@@ -202,11 +205,11 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
-			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording)
-			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
+			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin)
+			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9)
 			RETURNING id`,
 			reviewID, director, in.ReasonCode, in.Explanation,
-			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged).Scan(&out.ID); err != nil {
+			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged, givenByAdmin).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
 			// unique key on review_id says. Named rather than reported as a
 			// storage fault: the caller retrying a send whose decision already
@@ -236,7 +239,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 				// read `communication_instruction.create` — a permission
 				// nothing checks. The entity stays the table, which is how a
 				// reader finds the row; the authority is recorded here.
-				"authorized_by": entityCommunicationException,
+				"authorized_by":  entityCommunicationException,
+				"given_by_admin": givenByAdmin,
 			}); err != nil {
 			return err
 		}

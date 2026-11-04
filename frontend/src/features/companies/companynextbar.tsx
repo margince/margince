@@ -173,6 +173,8 @@ export function CompanyNextBar({
   }
   return (
     <RecordNextBar
+      // The Overview's "Last contact" tile already shows the last exchange.
+      lastExchange={false}
       title={task?.subject}
       late={lateTag}
       detail={task && taskDetail(task)}

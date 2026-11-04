@@ -25,8 +25,8 @@ import (
 func frozenDeal(deal, owner ids.UUID, base int64) forecasting.Contribution {
 	return forecasting.Contribution{
 		DealID: deal.String(), Owner: owner.String(), AmountMinor: &base, Currency: "EUR",
-		BaseMinor: &base, Category: forecasting.CategoryCommit, StageProbability: 50,
-		WeightedMinor: base / 2, InOpen: true, InEvidence: true, InBestCase: true,
+		BaseMinor: &base, Source: forecasting.SourceStage, StageProbability: 50,
+		WeightedMinor: base / 2, InOpen: true, InEvidence: true,
 	}
 }
 

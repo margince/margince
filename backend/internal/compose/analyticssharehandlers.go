@@ -193,9 +193,6 @@ func (h analyticsShareHandlers) serveSnapshot(
 	// its base currency or its fiscal year.
 	out.AsOf = &frame.TakenAt
 	shared.Readings.Range = frozen.Range
-	if err := applySharedQualified(ctx, tx, *share.SnapshotID, frame, &shared.Readings); err != nil {
-		return err
-	}
 	out.Readings = forecasting.ReadingsToWire(
 		frame.Period, share.Scope, shared.Readings, frame.BaseCurrency, frame.TakenAt)
 	out.Readings.SelfCorrecting = frame.SelfCorrecting
@@ -376,7 +373,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 //nolint:goconst // these are COLUMN HEADINGS of an exported file, and the constants goconst points at name other concepts that spell the same word — a request field, a database column. Hiding these behind them would assert a correspondence that does not hold: renaming one of those would silently change a file contacts have already saved formulas against
 var shareExportColumns = []string{
 	"deal_id", "deal_name", "owner_id", "amount_minor", "currency",
-	"base_minor", "effective_close_date", "category",
+	"base_minor", "effective_close_date", "probability_source",
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
@@ -403,7 +400,7 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 			csvCell(row.DealID), csvCell(row.DealName), csvCellPtr(row.Owner),
 			csvCellPtr(row.AmountMinor), csvCell(row.Currency),
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
-			csvCell(row.Category), csvCell(row.InWon), csvCell(row.InOpen),
+			csvCell(row.ProbabilitySource), csvCell(row.InWon), csvCell(row.InOpen),
 			csvCell(row.ExclusionReason),
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
 			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),

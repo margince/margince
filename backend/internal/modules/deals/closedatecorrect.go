@@ -23,12 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The §7 forecast categories, as the deal column spells them.
-//
-// Named here rather than imported: forecasting declares the same four words for
-// its own readings, and a module never imports a sibling. Two spellings of a
-// database enum is the price of that rule, and the column is what holds them
-// together — a change to either would fail the other's tests against it.
 // correctionFlagsKey names the hygiene findings inside a correction's
 // deal.updated payload — one spelling for all three tiers.
 const correctionFlagsKey = "flags"
@@ -62,41 +56,14 @@ func ownerString(owner *ids.UUID) string {
 	return owner.String()
 }
 
-const (
-	forecastCommit   = "commit"
-	forecastBestCase = "best_case"
-	forecastPipeline = "pipeline"
-	forecastOmitted  = "omitted"
-)
-
-// effectiveForecastCategory is the §7 reading: the rep's explicit
-// override wins; otherwise the stage probability derives the default
-// (commit ≥ 90, best-case ≥ 50).
-func effectiveForecastCategory(override *string, winProbability int) string {
-	if override != nil {
-		return *override
+// lowerWinProbability is the downgrade tier's notch: half the probability,
+// floored to a multiple of five, and nothing below ten. 90 goes to 45, 20,
+// 10, 5 and then 0 on successive quiet nights.
+func lowerWinProbability(p int) int {
+	if p < 10 {
+		return 0
 	}
-	switch {
-	case winProbability >= forecastCommitMinProb:
-		return forecastCommit
-	case winProbability >= lateStageMinProb:
-		return forecastBestCase
-	default:
-		return forecastPipeline
-	}
-}
-
-// forecastDowngrade is the 🔻 notch: Commit→Best-case→Pipeline→Omitted,
-// never below Omitted.
-func forecastDowngrade(category string) string {
-	switch category {
-	case forecastCommit:
-		return forecastBestCase
-	case forecastBestCase:
-		return forecastPipeline
-	default:
-		return forecastOmitted
-	}
+	return p / 2 / 5 * 5
 }
 
 // setCloseDate assigns the sweep's proposed date only where it differs from the
@@ -115,28 +82,6 @@ func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
 	p.SetDate(closeDateField, before, &proposed)
 }
 
-// setForecastCategory assigns the notched category only where it differs from
-// the one the deal effectively carries.
-//
-// The same reasoning as setCloseDate, and the branch it guards used to lack it.
-// forecastDowngrade floors at "omitted", so a deal already sitting there was
-// assigned "omitted" again every night it stayed quiet — a patch that is not
-// Empty(), so an audit row and a deal.updated event were written for a change
-// that did not happen, forever.
-//
-// The comparison is against the EFFECTIVE category rather than the stored
-// column, because the column is nullable and the two disagree: a deal with no
-// override carries NULL while reading as its probability-derived default. The
-// notch is computed from the effective reading, so the guard has to ask the
-// same question — comparing against a raw NULL would find every value
-// different and write on every pass, which is the bug it exists to stop.
-func setForecastCategory(p *storekit.Patch, stored *string, effective, notched string) {
-	if effective == notched {
-		return
-	}
-	p.Set("forecast_category", stored, notched)
-}
-
 // correct applies one deal's A6 tier and reports WHAT IT DID, not which tier it
 // chose. The write runs in its own audited transaction; the 🟡 staging follows
 // it (Stage opens its own) — if the staging fails the provisional row simply
@@ -149,7 +94,7 @@ func setForecastCategory(p *storekit.Patch, stored *string, effective, notched s
 // INTENTION would let the receipt claim corrections that never reached a deal.
 // That is the same "machine work that changed nothing" defect the no-op guard
 // exists to stop, one layer up.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
+func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID) (string, error) {
 	// Nothing to correct. A provisional date the sweep set and nobody has
 	// changed since is simply the date this deal has — there is no card to keep
 	// alive, because the correction was applied when it was made and the
@@ -244,24 +189,22 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		return closeDateEffect{wrote: wrote}.outcome(), nil
 
 	case CloseDateActionDowngradeAndReview:
-		return c.downgradeAndReview(ctx, cand, hygiene, category, proposal, pace, now, loc, runID)
+		return c.downgradeAndReview(ctx, cand, hygiene, proposal, pace, now, loc, runID)
 	}
 	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
 
-// downgradeAndReview is the 🔻 tier: a deal nobody has touched drops a forecast
-// notch and its owner is asked whether it is still real.
+// downgradeAndReview is the 🔻 tier. A deal nobody has touched has its win
+// probability lowered one notch, and its owner is asked whether it is still
+// real. A probability a colleague set is theirs and is never lowered.
 func (c *CloseDateCorrector) downgradeAndReview(
-	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string,
+	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene,
 	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
-	lowers, err := c.policy.LowersForecastCategory(ctx)
-	if err != nil {
-		return "", err
-	}
-	notched := category
-	if lowers {
-		notched = forecastDowngrade(category)
+	effective, source := cand.winProbability()
+	notched := effective
+	if source != SourceHuman {
+		notched = lowerWinProbability(effective)
 	}
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the
 	// stage-velocity date the assessment computed, on BOTH branches. It
@@ -312,7 +255,9 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		extra[CloseDateRemainingStagesKey] = StagesToGo(cand.remainingOpen)
 	}
 	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
-		setForecastCategory(p, cand.forecastCat, category, notched)
+		if notched != effective {
+			setWinProbability(p, cand.override, cand.overrideBy, &notched, SourceMargince)
+		}
 		// A future date stays intact while confidence is reviewed.
 		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {

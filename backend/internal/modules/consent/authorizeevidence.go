@@ -333,23 +333,39 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 	return found, nil
 }
 
-// askedToBeContacted reports whether this contact's acquisition evidence records
-// them ASKING to hear from us, inside the window.
+// requestScope names which records count as a request for one kind of message.
+type requestScope struct {
+	acquisitionKinds []string
+	eventKinds       []string
+	// quoteOnly keeps only events whose request was for a quote.
+	quoteOnly bool
+}
+
+// followupRequests and quoteRequests are the two scopes the validators read.
+// Permission given in person, a callback asked for and a form enquiry support a
+// follow-up. Only a request for a quote or meeting supports a quote.
+var (
+	followupRequests = requestScope{
+		acquisitionKinds: []string{"requested_quote_or_meeting", "in_person_permission"},
+		eventKinds:       []string{KindRequestedBySubject, KindInquiry},
+	}
+	quoteRequests = requestScope{
+		acquisitionKinds: []string{"requested_quote_or_meeting"},
+		eventKinds:       []string{KindRequestedBySubject},
+		quoteOnly:        true,
+	}
+)
+
+// requestOnRecord reports whether the record holds this contact asking to hear
+// from us, within scope. That is a request a rep recorded, a form enquiry, or
+// acquisition evidence of a request.
 //
-// TWO KINDS ONLY, and the narrowness is the rule. Where a contact came from is
-// provenance; a purchased list and a public source say nothing about what the
-// contact wanted. Only requested_quote_or_meeting and in_person_permission ARE a
-// request, and they exist so a rep who logged "they asked me for a quote at the
-// fair" is not asked to record the same fact twice in a second table.
-//
-// BOUNDED IN BOTH DIRECTIONS. occurred_at is caller-stated — the column exists
-// so an import can land today carrying a business card collected last year —
-// so a future date is not a memory of anything and must not authorize a send
-// now. The same bound and the same reason as RecordQualifyingEvent's, with the
-// same small allowance for a client clock that runs fast.
-func askedToBeContacted(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+// No age limit: a request covers the follow-up at the agreed timing. A stop or
+// a retraction ends it (RetractQualifyingEvent, and the acquisition request's
+// own retraction). occurred_at is caller-stated, so a future date does not count.
+func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope) (bool, error) {
 	if subject.Kind != entityContact {
-		// contact_acquisition_evidence is keyed on contact_id; a lead holds none.
+		// Both tables are keyed on contact_id; a lead holds neither.
 		return false, nil
 	}
 	var found bool
@@ -357,10 +373,18 @@ func askedToBeContacted(ctx context.Context, tx pgx.Tx, subject subjectRef, sinc
 		SELECT EXISTS (
 			SELECT 1 FROM contact_acquisition_evidence e
 			 WHERE e.contact_id = $1::uuid
-			   AND e.kind IN ('requested_quote_or_meeting', 'in_person_permission')
-			   AND coalesce(e.occurred_at, e.captured_at) >= $2
-			   AND coalesce(e.occurred_at, e.captured_at) <= $3
-		)`, subject.ID, since, time.Now().Add(clockSkewAllowance)).Scan(&found)
+			   AND e.kind = ANY($4::text[])
+			   AND coalesce(e.occurred_at, e.captured_at) <= $2
+			   AND e.request_retracted_at IS NULL
+		) OR EXISTS (
+			SELECT 1 FROM consent_qualifying_event q
+			 WHERE q.contact_id = $1::uuid
+			   AND q.kind = ANY($3::text[])
+			   AND q.occurred_at <= $2
+			   AND q.retracted_at IS NULL
+			   AND (q.asks_for_quote OR NOT $5)
+		)`, subject.ID, time.Now().Add(clockSkewAllowance),
+		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}
