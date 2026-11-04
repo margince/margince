@@ -385,7 +385,7 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		gate := NewGate(e.store)
-		rules, err := e.store.packRulesFor(e.ctx, tx)
+		rules, err := packRulesFor(e.ctx, tx, ruleSubject{Kind: entityContact, ID: e.contact.String()})
 		if err != nil {
 			return err
 		}

@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // capLockNamespace keys this module's advisory locks apart from every other
@@ -52,17 +51,22 @@ const capLockNamespace = int64(0x636d7361) << 32 // "cmsa"
 // because the ORDER matters across the whole message: the locks must all be
 // held, sorted, before the first count, and a per-recipient lock taken inside
 // the decide loop would order them by the caller's To list.
+//
+// The ceiling is the recipient's country's, so only an address whose own rules
+// carry one is locked.
 func (g *Gate) lockCapAddresses(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) error {
-	rules, _, applicable, err := g.store.applicableRules(ctx, tx)
-	if err != nil {
-		return err
-	}
-	if !applicable || rules.FrequencyCap == nil {
-		return nil
-	}
 	addresses := make([]string, 0, len(recipients))
 	for _, r := range recipients {
-		if a := strings.TrimSpace(r.Email); a != "" {
+		a := strings.TrimSpace(r.Email)
+		if a == "" {
+			continue
+		}
+		country, err := recipientCountryOf(ctx, tx, r)
+		if err != nil {
+			return err
+		}
+		rules, _, applicable := applicableRules(country.Code)
+		if applicable && rules.FrequencyCap != nil {
 			addresses = append(addresses, a)
 		}
 	}
@@ -84,10 +88,11 @@ func (g *Gate) applyFrequencyCap(ctx context.Context, tx pgx.Tx, d commsauthz.De
 		// rule — stated here because silence would read as an oversight.
 		return d, nil
 	}
-	rules, _, applicable, err := g.store.applicableRules(ctx, tx)
+	country, err := recipientCountryTx(ctx, tx, subjectOfDecision(d))
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
+	rules, _, applicable := applicableRules(country.Code)
 	if !applicable || rules.FrequencyCap == nil {
 		return d, nil
 	}
@@ -251,38 +256,4 @@ func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string,
 		return 0, fmt.Errorf("consent: count the advertising this address received: %w", err)
 	}
 	return count, nil
-}
-
-// applicableRules resolves which jurisdiction's messaging rules bind this
-// installation's outbound mail.
-//
-// Today that is the country the installation declares. The recipient's own
-// country is the other half and is not read yet: the product records no
-// reliable recipient country, and guessing one from an email domain would apply
-// a foreign ceiling on a guess. When that evidence exists the resolution folds
-// both codes through messagingrules.Strictest, which is why this returns the
-// FOLD of a code list rather than a single lookup.
-//
-// An unstated or unknown country resolves to no rules, and no rules means no
-// ceiling — not because an unknown country is permissive, but because a cap is
-// a jurisdiction's own number and there is no universal one to fall back to.
-// The consent requirement that DOES bind everywhere is enforced by the marketing
-// verdict itself, which runs before this and does not depend on a pack.
-// IT RETURNS Applied AS WELL, and stays the ONE door rather than gaining a
-// second beside it. A decision records which jurisdictions judged it, and a
-// separate wider entry point would have left this gate's scan
-// (gates/messagingruleapplied_test.go pins the lookup by name) blind to reads
-// through the other one. Callers that need only the rules discard it.
-func (s *Store) applicableRules(
-	ctx context.Context, tx pgx.Tx,
-) (messagingrules.Rules, messagingrules.Applied, bool, error) {
-	code, err := s.installationCountry(ctx, tx)
-	if err != nil {
-		return messagingrules.Rules{}, messagingrules.Applied{}, false, err
-	}
-	if code == "" {
-		return messagingrules.Rules{}, messagingrules.Applied{}, false, nil
-	}
-	rules, applied, found := messagingrules.Strictest(code)
-	return rules, applied, found, nil
 }

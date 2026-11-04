@@ -70,7 +70,7 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		// The SAME window the send path binds a decision to. A preview that
 		// answered on a different span would tell a rep a send is allowed that
 		// the engine then refuses, which is worse than no preview at all.
-		w, err := s.packRulesFor(ctx, tx)
+		w, err := packRulesFor(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
 		if err != nil {
 			return err
 		}

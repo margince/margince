@@ -12780,7 +12780,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.confirm.deadlines":
     "Fristen für Anfragen folgen dem neuen Rechtsraum. Ein Anfragetyp ohne eigene Frist behält die Monatsfrist der DSGVO.",
   "jurisdiction.confirm.messaging":
-    "Ausgehende Nachrichten folgen den Nachrichtenregeln des neuen Rechtsraums.",
+    "Werberegeln richten sich nach dem Land der Empfangenden. Die Änderung wendet sie auf Empfangende im neuen Land an.",
   "jurisdiction.floor.none": "keine Frist",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd": "{period} ab Ende des Kalenderjahres",
@@ -12796,10 +12796,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.effects.carriedValue":
     "{floor}, für E-Mails vor dem {before}, bis {until}",
   "jurisdiction.effects.deadline": "Frist: {kind}",
-  "jurisdiction.effects.messaging": "Nachrichtenregeln",
+  "jurisdiction.effects.messaging": "Werberegeln für Empfangende hier",
   "jurisdiction.effects.messagingValue": "Regelwerk Version {version}",
   "jurisdiction.effects.messagingNone":
-    "Keine. Jede Werbenachricht braucht eine Einwilligung.",
+    "Keine. Werbung an Empfangende hier braucht eine Einwilligung.",
   "jurisdiction.effects.class": "Aufbewahrungsklasse",
   "jurisdiction.deadline.fromReceipt": "{period} ab Eingang",
   "jurisdiction.rule.gdpr": "DSGVO, ein Kalendermonat",

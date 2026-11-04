@@ -49,14 +49,18 @@ type rulesetStampValue struct {
 // answer in both cases, so they are what a reader keys on and the version is the
 // refinement available when exactly one jurisdiction applied.
 //
-// BOTH NULL is a real answer. An installation that declares no country resolves
-// to no rules at all, and that is recorded as absence rather than as zero: a
-// zero version would read as a ruleset that exists and has no version.
-func (g *Gate) rulesetStamp(ctx context.Context, tx pgx.Tx) (rulesetStampValue, error) {
-	rules, applied, found, err := g.store.applicableRules(ctx, tx)
+// It is asked per recipient, because each recipient's country picks their
+// rules. One row names the pack that judged that recipient and no other.
+//
+// Both NULL is a real answer. A recipient under the baseline resolves to no
+// rules at all, recorded as absence. A zero version would read as a ruleset
+// that exists and has no version.
+func rulesetStamp(ctx context.Context, tx pgx.Tx, who ruleSubject) (rulesetStampValue, error) {
+	country, err := recipientCountryTx(ctx, tx, who)
 	if err != nil {
 		return rulesetStampValue{}, err
 	}
+	rules, applied, found := applicableRules(country.Code)
 	if !found || len(applied.Codes) == 0 {
 		return rulesetStampValue{}, nil
 	}

@@ -12776,7 +12776,7 @@ export const en = {
   "jurisdiction.confirm.deadlines":
     "Request deadlines follow the new jurisdiction. A request type it sets no deadline for keeps the GDPR month.",
   "jurisdiction.confirm.messaging":
-    "Outgoing messages follow the new jurisdiction’s messaging rules.",
+    "Marketing rules follow each recipient’s country, so this change applies them to recipients in the new country.",
   "jurisdiction.floor.none": "no floor",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd":
@@ -12793,10 +12793,10 @@ export const en = {
   "jurisdiction.effects.carriedValue":
     "{floor}, for mail from before {before}, until {until}",
   "jurisdiction.effects.deadline": "Deadline: {kind}",
-  "jurisdiction.effects.messaging": "Messaging rules",
+  "jurisdiction.effects.messaging": "Marketing rules for recipients here",
   "jurisdiction.effects.messagingValue": "Rule set version {version}",
   "jurisdiction.effects.messagingNone":
-    "None. Every advertising message needs consent.",
+    "None. Advertising to recipients here needs consent.",
   "jurisdiction.effects.class": "Retention class",
   "jurisdiction.deadline.fromReceipt": "{period} from receipt",
   "jurisdiction.rule.gdpr": "GDPR, one calendar month",

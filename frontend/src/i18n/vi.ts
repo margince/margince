@@ -12438,7 +12438,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.confirm.deadlines":
     "Thời hạn yêu cầu theo khu vực pháp lý mới. Loại yêu cầu không có thời hạn riêng vẫn giữ một tháng theo GDPR.",
   "jurisdiction.confirm.messaging":
-    "Tin nhắn gửi đi tuân theo quy tắc nhắn tin của khu vực pháp lý mới.",
+    "Quy tắc tiếp thị theo quốc gia của bên nhận, nên thay đổi này áp dụng chúng cho bên nhận ở quốc gia mới.",
   "jurisdiction.floor.none": "không có thời hạn",
   "jurisdiction.floor.value": "{class}, thời hạn {period}",
   "jurisdiction.floor.fromYearEnd": "{period} kể từ cuối năm dương lịch",
@@ -12454,10 +12454,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.effects.carriedValue":
     "{floor}, cho thư trước {before}, đến {until}",
   "jurisdiction.effects.deadline": "Thời hạn: {kind}",
-  "jurisdiction.effects.messaging": "Quy tắc nhắn tin",
+  "jurisdiction.effects.messaging": "Quy tắc tiếp thị cho bên nhận tại đây",
   "jurisdiction.effects.messagingValue": "Bộ quy tắc phiên bản {version}",
   "jurisdiction.effects.messagingNone":
-    "Không có. Mọi tin quảng cáo đều cần sự đồng ý.",
+    "Không có. Quảng cáo gửi bên nhận tại đây cần sự đồng ý.",
   "jurisdiction.effects.class": "Loại lưu trữ",
   "jurisdiction.deadline.fromReceipt": "{period} kể từ khi nhận",
   "jurisdiction.rule.gdpr": "GDPR, một tháng dương lịch",

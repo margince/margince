@@ -161,7 +161,7 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 				Reason:    commsauthz.ReasonUnknownPurpose,
 			}, nil
 		}
-		w, err := g.store.packRulesFor(ctx, tx)
+		w, err := packRulesFor(ctx, tx, ruleSubject{Kind: subject.Kind, ID: subject.ID})
 		if err != nil {
 			return resolution{}, err
 		}

@@ -80,7 +80,7 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// match, so nil is the purpose it will still have when applySuppression
 	// asks — the same answer, not a guess standing in for one.
 	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
-		w, err := g.store.packRulesFor(ctx, tx)
+		w, err := packRulesFor(ctx, tx, ruleSubject{Kind: subject.Kind, ID: subject.ID})
 		if err != nil {
 			return resolution{}, err
 		}
@@ -328,7 +328,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		return denyContradiction(d, fromPurpose), &purposeID, nil
 	}
 
-	w, err := g.store.packRulesFor(ctx, tx)
+	w, err := packRulesFor(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID})
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}

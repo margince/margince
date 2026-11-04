@@ -28,7 +28,7 @@ import (
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, ruleset rulesetStampValue) ([]commsauthz.Decision, error) {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet) ([]commsauthz.Decision, error) {
 	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
@@ -55,6 +55,10 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		if d.SubjectKind != "" {
 			id := d.SubjectID
 			subjectID = &id
+		}
+		ruleset, err := rulesetStamp(ctx, tx, subjectOfDecision(d))
+		if err != nil {
+			return nil, err
 		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
