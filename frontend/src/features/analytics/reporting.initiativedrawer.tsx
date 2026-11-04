@@ -20,6 +20,7 @@ import { formatMoney, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
@@ -259,7 +260,7 @@ export function InitiativeDrawer({
     onSuccess: (next) => {
       setSaved(next);
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["reporting-evaluation"] });
+      queryClient.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
       if (live) onClose();
       else setStep("review");
     },

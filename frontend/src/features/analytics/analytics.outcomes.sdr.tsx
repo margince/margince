@@ -24,6 +24,7 @@ import {
 import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
@@ -112,7 +113,7 @@ function MyLeads({
   const readsReports = useCan("report_definition", "read");
   const catalog = useReportingCatalog(readsReports);
   const evaluation = useQuery({
-    queryKey: ["reporting-evaluation", "my-leads", self],
+    queryKey: [...REPORTING_EVALUATION_KEY, "my-leads", self],
     enabled: readsReports,
     queryFn: async ({ signal }): Promise<ReportingEvaluation> => {
       const selection: ReportingSelection = {
