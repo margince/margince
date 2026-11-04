@@ -22,14 +22,8 @@ const (
 	// confirmed close dates. The strictest reading: a provisional date is a
 	// guess and stays out.
 	MeasureLikely ForwardMeasure = "likely"
-	// MeasureQualifiedLikely is Likely over the deals the customer still
-	// supports: the qualified forecast's strictest reading.
-	MeasureQualifiedLikely ForwardMeasure = "qualified_likely"
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted ForwardMeasure = "weighted"
-	// MeasureQualifiedWeighted is the weighted reading over the deals the
-	// customer still supports.
-	MeasureQualifiedWeighted ForwardMeasure = "qualified_weighted"
 	// MeasureManagerCall takes the authored call as the whole period's landing.
 	// It is NOT added to what is already won: a manager calling the quarter is
 	// calling the finish line, not the distance left to run.
@@ -37,7 +31,7 @@ const (
 )
 
 // ForwardMeasures is every measure, in the order a chooser should offer them:
-// strictest first, each followed by its qualified form, then the manager call.
+// strictest first, then the manager call.
 //
 // Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go),
 // which derives the contract's own enums and requires them to agree with this
@@ -47,17 +41,17 @@ const (
 // Returned as a fresh slice because a package-level array would let one caller
 // reorder every other caller's chooser.
 func ForwardMeasures() []ForwardMeasure {
-	return []ForwardMeasure{
-		MeasureLikely, MeasureQualifiedLikely,
-		MeasureWeighted, MeasureQualifiedWeighted, MeasureManagerCall,
-	}
+	return []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall}
 }
 
-// legacyForwardMeasures are the spellings snapshots frozen before Likely
-// replaced commit evidence still hold.
+// legacyForwardMeasures are the spellings stored rows still hold: snapshots
+// frozen before Likely replaced commit evidence, and measures of the retired
+// qualified forecast, which read as the baseline reading they restricted.
 var legacyForwardMeasures = map[string]ForwardMeasure{
 	"commit_evidence":           MeasureLikely,
-	"qualified_commit_evidence": MeasureQualifiedLikely,
+	"qualified_commit_evidence": MeasureLikely,
+	"qualified_likely":          MeasureLikely,
+	"qualified_weighted":        MeasureWeighted,
 }
 
 // ParseForwardMeasure turns a stored or wire value into a measure.

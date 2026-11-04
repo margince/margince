@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // The buckets a change can land in, in the order a waterfall draws them.
@@ -28,25 +27,18 @@ const (
 	// BucketRecordChanged is a deal whose weight moved while its stage did
 	// not: its stage chance or its risk effect moved with recorded outcomes.
 	BucketRecordChanged = "record_changed"
-	// BucketExcluded and BucketReinstated are a deal leaving or rejoining a
-	// qualified reading because of its viability review, with its date and
-	// amount unchanged. BucketNotChecked is one that left because its review
-	// status became unknown, which is a gap in the check and not an exclusion.
-	BucketExcluded   = "excluded"
-	BucketReinstated = "reinstated"
-	BucketNotChecked = "not_checked"
-	BucketWon        = "won"
-	BucketLost       = "lost"
-	BucketArchived   = "reopened_or_archived"
-	BucketFx         = "fx"
-	BucketDefinition = "definition"
-	BucketModel      = "model"
+	BucketWon           = "won"
+	BucketLost          = "lost"
+	BucketArchived      = "reopened_or_archived"
+	BucketFx            = "fx"
+	BucketDefinition    = "definition"
+	BucketModel         = "model"
 )
 
 // bucketOrder is the drawing order, and the ONE place it is stated.
 var bucketOrder = []string{
 	BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-	BucketStageWeight, BucketRecordChanged, BucketExcluded, BucketReinstated, BucketNotChecked,
+	BucketStageWeight, BucketRecordChanged,
 	BucketWon, BucketLost, BucketArchived, BucketFx,
 	BucketDefinition, BucketModel,
 }
@@ -106,15 +98,11 @@ type DealDelta struct {
 	// snapshot's stored reference rather than reconstructed from timestamps.
 	AuditID    *ids.UUID
 	ApprovalID *ids.UUID
-	// Causes lists the changes the deal went through, in drawing order, with
-	// CauseQualification last. Bucket is the one its money is counted under;
+	// Causes lists the changes the deal went through, in drawing order. Bucket
+	// is the one its money is counted under;
 	// a deal whose amount, stage and close date all moved is still one row.
 	Causes []string
 }
-
-// CauseQualification is a deal leaving or rejoining the qualified forecast. It
-// is a cause and never a bucket: a reading's money does not move with it.
-const CauseQualification = "qualification"
 
 // snapshotSide is one end of the comparison: which reading is being explained,
 // and the rows behind it.
@@ -138,7 +126,6 @@ type snapshotSide struct {
 	TakenAt               time.Time
 	PopulationFingerprint string
 	InputFingerprint      string
-	QualifiedPolicy       string
 	// Withheld says the lens dropped rows: deals this caller cannot read, or that
 	// no longer exist. A consumer that draws a complete-looking chart from the
 	// remainder must say the rest is withheld.
@@ -150,31 +137,14 @@ type snapshotSide struct {
 // not belong in the same total.
 type Reading string
 
-// The money answers a movement can explain. The qualified three are the
-// baseline readings over the deals the customer still supports.
+// The money answers a movement can explain.
 const (
-	ReadingOpen              Reading = "open"
-	ReadingWeighted          Reading = "weighted"
-	ReadingEvidence          Reading = "evidence"
-	ReadingQualifiedEvidence Reading = "qualified_evidence"
-	ReadingQualifiedWeighted Reading = "qualified_weighted"
+	ReadingOpen     Reading = "open"
+	ReadingWeighted Reading = "weighted"
+	ReadingEvidence Reading = "evidence"
 )
 
-// baselineOf is the reading a qualified one restricts, and the reading itself
-// for a baseline one.
-func baselineOf(reading Reading) (Reading, bool) {
-	switch reading {
-	case ReadingQualifiedEvidence:
-		return ReadingEvidence, true
-	case ReadingQualifiedWeighted:
-		return ReadingWeighted, true
-	default:
-		return reading, false
-	}
-}
-
-// everyReading lists the baseline money answers. A call's drift is compared in
-// each; a qualified reading's change reaches the call as QualificationChanges.
+// everyReading lists the money answers. A call's drift is compared in each.
 //
 // Held by: TestEveryReadingIsComparedForACall (backend/internal/modules/forecasting/calldrift_test.go)
 var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence}
@@ -189,13 +159,6 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 	// buckets would report a rules change as sales activity — which is the one
 	// thing a manager reading a waterfall must never be told.
 	definitionChanged := from.DefinitionVersion != to.DefinitionVersion
-	// A qualified reading also means what its policy says. A side or a row
-	// frozen with no policy, or under another one, changes the definition and
-	// not the deals.
-	if _, qualified := baselineOf(reading); qualified {
-		definitionChanged = definitionChanged || from.QualifiedPolicy == "" ||
-			from.QualifiedPolicy != to.QualifiedPolicy || !basisAgrees(from, to)
-	}
 
 	out := Movement{
 		OpeningMinor: totalOf(reading, from.Contributions),
@@ -285,8 +248,6 @@ func classifyOutcome(reading Reading, was Contribution, existed bool, now Contri
 		return BucketNew
 	case now.InLost && !was.InLost && inReading(reading, was):
 		return BucketLost
-	case qualificationMoved(reading, was, now) != "":
-		return qualificationMoved(reading, was, now)
 	case now.ExclusionReason == "" && was.ExclusionReason != "":
 		// It became countable again: a price arrived, or a rate did.
 		return BucketAmount
@@ -372,34 +333,8 @@ func fxChanged(was, now Contribution) bool {
 	return *was.BaseMinor != *now.BaseMinor
 }
 
-// qualificationMoved answers the bucket of a deal that stayed in a qualified
-// reading's baseline and crossed in or out of it on its review alone. Empty for
-// a baseline reading, or when the review is not what moved it.
-func qualificationMoved(reading Reading, was, now Contribution) string {
-	base, qualified := baselineOf(reading)
-	if !qualified || !inReading(base, was) || !inReading(base, now) {
-		return ""
-	}
-	wasIn := was.Qualification == viability.QualificationEligible
-	nowIn := now.Qualification == viability.QualificationEligible
-	switch {
-	case !wasIn && nowIn:
-		return BucketReinstated
-	case wasIn && now.Qualification == viability.QualificationUnknown:
-		return BucketNotChecked
-	case wasIn && !nowIn:
-		return BucketExcluded
-	default:
-		return ""
-	}
-}
-
-// inReading answers whether a contribution is part of one reading. A qualified
-// reading holds the baseline's deals the customer still supports.
+// inReading answers whether a contribution is part of one reading.
 func inReading(reading Reading, c Contribution) bool {
-	if base, qualified := baselineOf(reading); qualified {
-		return inReading(base, c) && c.Qualification == viability.QualificationEligible
-	}
 	switch reading {
 	case ReadingEvidence:
 		return c.InEvidence
@@ -417,7 +352,7 @@ func contributionOf(reading Reading, c Contribution) int64 {
 	if !inReading(reading, c) {
 		return 0
 	}
-	if reading == ReadingWeighted || reading == ReadingQualifiedWeighted {
+	if reading == ReadingWeighted {
 		return c.WeightedMinor
 	}
 	// An unpriced or unconvertible deal is IN the reading and contributes
@@ -490,7 +425,6 @@ func causesOf(was Contribution, existed bool, now Contribution) []string {
 		{BucketWon, now.InWon && !was.InWon},
 		{BucketLost, now.InLost && !was.InLost},
 		{BucketFx, !amountChanged(was, now) && fxChanged(was, now)},
-		{CauseQualification, was.Qualification != now.Qualification},
 	} {
 		if cause.when {
 			out = append(out, cause.name)

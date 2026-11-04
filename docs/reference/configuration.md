@@ -291,12 +291,6 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
 
-### `assurance`
-
-| Key | Env | Flag | Type | Default | Programs | Doc |
-|---|---|---|---|---|---|---|
-| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories. |
-
 ### `auth`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -523,7 +517,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
+`installation.forecast_forward_measure` takes `likely`, `weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,

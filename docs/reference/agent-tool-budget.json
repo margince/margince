@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32185,
+    "tokens": 32145,
     "median_tool_tokens": 611,
-    "mean_tool_tokens": 714
+    "mean_tool_tokens": 713
   },
   "agents": [
     {
@@ -105,7 +105,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1461
+      "tokens": 1453
     },
     {
       "name": "send_outbound",
@@ -113,7 +113,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 1008
+      "tokens": 1004
     },
     {
       "name": "preview_import",
@@ -125,7 +125,7 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 908
+      "tokens": 880
     },
     {
       "name": "bulk_update_records",

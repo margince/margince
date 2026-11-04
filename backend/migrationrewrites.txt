@@ -73,3 +73,5 @@
 1793791341_the_win_probability_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793791342_the_landing_is_built_from_likely.up.sql | setting | one row, the saved forward measure, and only where it holds an old spelling
 1793791342_the_landing_is_built_from_likely.down.sql | setting | one row, the saved forward measure, and only where it holds a Likely spelling
+1793803166_the_qualified_forecast_is_retired.up.sql | setting | three single-key rows at most: the retired enforcement switch, and the saved forward measure only where it names a qualified reading
+1793803166_the_qualified_forecast_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing

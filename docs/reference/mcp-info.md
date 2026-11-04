@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.7 KB |
+| Tool catalog | 190.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50132 |
+| Approx. wire tokens | 49945 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.6 KB | 24% | **No**: a result's shape, never listed to a model |
+| Output schemas | 46.1 KB | 24% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
-| Input schemas | 91.3 KB | 47% | Yes, every step |
+| Input schemas | 91.2 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **133.0 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **132.9 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -91,8 +91,8 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1461 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 908 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1453 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 880 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -100,7 +100,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2311 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1008 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 1681 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 312 |
@@ -7860,7 +7860,6 @@ own fields.
         "enrichment_run",
         "evidence",
         "field_history",
-        "forecast_assurance_enforcement",
         "forecast_assurance_preview",
         "forecast_share_csv",
         "forecast_shared_reading",
@@ -8126,13 +8125,11 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "type": "string"
     },
     "reading": {
-      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
+      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
       "enum": [
         "open",
         "weighted",
-        "evidence",
-        "qualified_evidence",
-        "qualified_weighted"
+        "evidence"
       ],
       "type": "string"
     },
@@ -8574,52 +8571,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "priced_count": {
           "type": "integer"
-        },
-        "qualification_mode": {
-          "type": "string"
-        },
-        "qualified": {
-          "properties": {
-            "amounts_partial": {
-              "type": "boolean"
-            },
-            "evidence_minor": {
-              "type": "integer"
-            },
-            "excluded_count": {
-              "type": "integer"
-            },
-            "excluded_minor": {
-              "type": "integer"
-            },
-            "unknown_count": {
-              "type": "integer"
-            },
-            "unknown_minor": {
-              "type": "integer"
-            },
-            "unsupported_count": {
-              "type": "integer"
-            },
-            "unsupported_minor": {
-              "type": "integer"
-            },
-            "weighted_minor": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "amounts_partial",
-            "evidence_minor",
-            "excluded_count",
-            "excluded_minor",
-            "unknown_count",
-            "unknown_minor",
-            "unsupported_count",
-            "unsupported_minor",
-            "weighted_minor"
-          ],
-          "type": "object"
         },
         "range_high_minor": {
           "type": "integer"
@@ -10166,7 +10117,6 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",
-        "deal_viability",
         "dedupe_candidate",
         "dedupe_candidates",
         "email_presentation",

@@ -1971,10 +1971,6 @@ func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "GetDealStatus")
 }
 
-func (stubs) GetDealViability(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetDealViability")
-}
-
 func (stubs) GetDealWinEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetDealWinEvidence")
 }
@@ -2147,28 +2143,12 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
-func (stubs) GetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetForecastAssuranceEnforcement")
-}
-
-func (stubs) SetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "SetForecastAssuranceEnforcement")
-}
-
 func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
-func (stubs) CloseLostInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "CloseLostInputCheck")
-}
-
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
-}
-
-func (stubs) WaitInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "WaitInputCheck")
 }
 
 func (stubs) PreviewForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {

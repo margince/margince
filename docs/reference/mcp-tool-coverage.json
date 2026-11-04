@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 11,
     "permitted_but_never_required": 2,
-    "tokens_served_but_never_driven": 5647,
+    "tokens_served_but_never_driven": 5643,
     "use_case_cases": 45,
     "acceptance_criteria_named": 84,
     "tools_added_by_shipped_units": 0,
@@ -2111,7 +2111,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1008,
+      "tokens": 1004,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2572,7 +2572,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1461,
+      "tokens": 1453,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",
@@ -2689,7 +2689,7 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 908,
+      "tokens": 880,
       "agents": [],
       "required_by_cases": [
         "case22_can_i_trust_the_numbers",

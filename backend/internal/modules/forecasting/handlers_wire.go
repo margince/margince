@@ -37,7 +37,6 @@ func ReadingsToWire(
 		AsOf:               asOf,
 		Timezone:           period.Zone.String(),
 		BaseCurrency:       baseCurrency,
-		QualificationMode:  crmcontracts.ForecastReadingsQualificationMode(in.QualificationMode()),
 	}
 	if scope.ID != nil {
 		id := openapi_types.UUID(*scope.ID)
@@ -45,15 +44,6 @@ func ReadingsToWire(
 	}
 	if in.Range != nil {
 		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
-	}
-	if q := in.Qualified; q != nil {
-		out.Qualified = &crmcontracts.ForecastQualifiedReadings{
-			EvidenceMinor: q.EvidenceMinor, WeightedMinor: q.WeightedMinor,
-			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
-			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount,
-			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
-			AmountsPartial: &q.AmountsPartial,
-		}
 	}
 	return out
 }

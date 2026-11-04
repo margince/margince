@@ -10657,96 +10657,6 @@ func (e DealSuggestionEvidenceKind) Valid() bool {
 	}
 }
 
-// Defines values for DealViabilityDisposition.
-const (
-	DealViabilityDispositionNone        DealViabilityDisposition = "none"
-	DealViabilityDispositionOpenReview  DealViabilityDisposition = "open_review"
-	DealViabilityDispositionOverride    DealViabilityDisposition = "override"
-	DealViabilityDispositionUnsupported DealViabilityDisposition = "unsupported"
-)
-
-// Valid indicates whether the value is a known member of the DealViabilityDisposition enum.
-func (e DealViabilityDisposition) Valid() bool {
-	switch e {
-	case DealViabilityDispositionNone:
-		return true
-	case DealViabilityDispositionOpenReview:
-		return true
-	case DealViabilityDispositionOverride:
-		return true
-	case DealViabilityDispositionUnsupported:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for DealViabilityQualification.
-const (
-	DealViabilityQualificationClosed      DealViabilityQualification = "closed"
-	DealViabilityQualificationEligible    DealViabilityQualification = "eligible"
-	DealViabilityQualificationExcluded    DealViabilityQualification = "excluded"
-	DealViabilityQualificationUnknown     DealViabilityQualification = "unknown"
-	DealViabilityQualificationUnsupported DealViabilityQualification = "unsupported"
-)
-
-// Valid indicates whether the value is a known member of the DealViabilityQualification enum.
-func (e DealViabilityQualification) Valid() bool {
-	switch e {
-	case DealViabilityQualificationClosed:
-		return true
-	case DealViabilityQualificationEligible:
-		return true
-	case DealViabilityQualificationExcluded:
-		return true
-	case DealViabilityQualificationUnknown:
-		return true
-	case DealViabilityQualificationUnsupported:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for DealViabilityQualificationMode.
-const (
-	DealViabilityQualificationModeEnforcing DealViabilityQualificationMode = "enforcing"
-	DealViabilityQualificationModeOff       DealViabilityQualificationMode = "off"
-)
-
-// Valid indicates whether the value is a known member of the DealViabilityQualificationMode enum.
-func (e DealViabilityQualificationMode) Valid() bool {
-	switch e {
-	case DealViabilityQualificationModeEnforcing:
-		return true
-	case DealViabilityQualificationModeOff:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for DealViabilityReviewDeliveryState.
-const (
-	DealViabilityReviewDeliveryStateDelivered DealViabilityReviewDeliveryState = "delivered"
-	DealViabilityReviewDeliveryStateFailed    DealViabilityReviewDeliveryState = "failed"
-	DealViabilityReviewDeliveryStatePending   DealViabilityReviewDeliveryState = "pending"
-)
-
-// Valid indicates whether the value is a known member of the DealViabilityReviewDeliveryState enum.
-func (e DealViabilityReviewDeliveryState) Valid() bool {
-	switch e {
-	case DealViabilityReviewDeliveryStateDelivered:
-		return true
-	case DealViabilityReviewDeliveryStateFailed:
-		return true
-	case DealViabilityReviewDeliveryStatePending:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DecideCommissionRequestDecision.
 const (
 	DecideCommissionRequestDecisionApprove DecideCommissionRequestDecision = "approve"
@@ -11935,27 +11845,6 @@ func (e ForecastAssuranceStatus) Valid() bool {
 	}
 }
 
-// Defines values for ForecastAssuranceEnforcementState.
-const (
-	ForecastAssuranceEnforcementStateEnforcing   ForecastAssuranceEnforcementState = "enforcing"
-	ForecastAssuranceEnforcementStateNotEnrolled ForecastAssuranceEnforcementState = "not_enrolled"
-	ForecastAssuranceEnforcementStateObserving   ForecastAssuranceEnforcementState = "observing"
-)
-
-// Valid indicates whether the value is a known member of the ForecastAssuranceEnforcementState enum.
-func (e ForecastAssuranceEnforcementState) Valid() bool {
-	switch e {
-	case ForecastAssuranceEnforcementStateEnforcing:
-		return true
-	case ForecastAssuranceEnforcementStateNotEnrolled:
-		return true
-	case ForecastAssuranceEnforcementStateObserving:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ForecastAssurancePreviewReadiness.
 const (
 	ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete    ForecastAssurancePreviewReadiness = "checks_incomplete"
@@ -12117,9 +12006,8 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 
 // Defines values for ForecastLandingCaveat.
 const (
-	ForecastLandingCaveatLandingCaveatCallAbsent           ForecastLandingCaveat = "call_absent"
-	ForecastLandingCaveatLandingCaveatCallBelowActual      ForecastLandingCaveat = "call_below_actual"
-	ForecastLandingCaveatLandingCaveatQualifiedUnavailable ForecastLandingCaveat = "qualified_unavailable"
+	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
+	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -12129,8 +12017,6 @@ func (e ForecastLandingCaveat) Valid() bool {
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
 		return true
-	case ForecastLandingCaveatLandingCaveatQualifiedUnavailable:
-		return true
 	default:
 		return false
 	}
@@ -12138,11 +12024,9 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureLikely            ForecastLandingMeasure = "likely"
-	ForecastLandingMeasureForwardMeasureManagerCall       ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureQualifiedLikely   ForecastLandingMeasure = "qualified_likely"
-	ForecastLandingMeasureForwardMeasureQualifiedWeighted ForecastLandingMeasure = "qualified_weighted"
-	ForecastLandingMeasureForwardMeasureWeighted          ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureLikely      ForecastLandingMeasure = "likely"
+	ForecastLandingMeasureForwardMeasureManagerCall ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureWeighted    ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -12151,10 +12035,6 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureLikely:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
-		return true
-	case ForecastLandingMeasureForwardMeasureQualifiedLikely:
-		return true
-	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -12165,11 +12045,9 @@ func (e ForecastLandingMeasure) Valid() bool {
 
 // Defines values for ForecastMovementReading.
 const (
-	ForecastMovementReadingEvidence          ForecastMovementReading = "evidence"
-	ForecastMovementReadingOpen              ForecastMovementReading = "open"
-	ForecastMovementReadingQualifiedEvidence ForecastMovementReading = "qualified_evidence"
-	ForecastMovementReadingQualifiedWeighted ForecastMovementReading = "qualified_weighted"
-	ForecastMovementReadingWeighted          ForecastMovementReading = "weighted"
+	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen     ForecastMovementReading = "open"
+	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastMovementReading enum.
@@ -12178,10 +12056,6 @@ func (e ForecastMovementReading) Valid() bool {
 	case ForecastMovementReadingEvidence:
 		return true
 	case ForecastMovementReadingOpen:
-		return true
-	case ForecastMovementReadingQualifiedEvidence:
-		return true
-	case ForecastMovementReadingQualifiedWeighted:
 		return true
 	case ForecastMovementReadingWeighted:
 		return true
@@ -12195,16 +12069,13 @@ const (
 	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
 	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
 	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
-	ForecastMovementBucketNameExcluded           ForecastMovementBucketName = "excluded"
 	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
 	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
 	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
-	ForecastMovementBucketNameNotChecked         ForecastMovementBucketName = "not_checked"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
 	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
-	ForecastMovementBucketNameReinstated         ForecastMovementBucketName = "reinstated"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -12219,8 +12090,6 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameDefinition:
 		return true
-	case ForecastMovementBucketNameExcluded:
-		return true
 	case ForecastMovementBucketNameFx:
 		return true
 	case ForecastMovementBucketNameLost:
@@ -12229,15 +12098,11 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameNew:
 		return true
-	case ForecastMovementBucketNameNotChecked:
-		return true
 	case ForecastMovementBucketNamePulledIn:
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
 	case ForecastMovementBucketNameRecordChanged:
-		return true
-	case ForecastMovementBucketNameReinstated:
 		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
@@ -12259,7 +12124,6 @@ const (
 	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
 	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
 	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
-	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
 	ForecastMovementDealCausesRecordChanged      ForecastMovementDealCauses = "record_changed"
 	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
 	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
@@ -12283,8 +12147,6 @@ func (e ForecastMovementDealCauses) Valid() bool {
 		return true
 	case ForecastMovementDealCausesPushedOut:
 		return true
-	case ForecastMovementDealCausesQualification:
-		return true
 	case ForecastMovementDealCausesRecordChanged:
 		return true
 	case ForecastMovementDealCausesReopenedOrArchived:
@@ -12292,24 +12154,6 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ForecastReadingsQualificationMode.
-const (
-	ForecastReadingsQualificationModeEnforcing ForecastReadingsQualificationMode = "enforcing"
-	ForecastReadingsQualificationModeOff       ForecastReadingsQualificationMode = "off"
-)
-
-// Valid indicates whether the value is a known member of the ForecastReadingsQualificationMode enum.
-func (e ForecastReadingsQualificationMode) Valid() bool {
-	switch e {
-	case ForecastReadingsQualificationModeEnforcing:
-		return true
-	case ForecastReadingsQualificationModeOff:
 		return true
 	default:
 		return false
@@ -13956,11 +13800,9 @@ func (e InstallationSettingsDateFormat) Valid() bool {
 
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureLikely            InstallationSettingsForecastForwardMeasure = "likely"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall       InstallationSettingsForecastForwardMeasure = "manager_call"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedLikely   InstallationSettingsForecastForwardMeasure = "qualified_likely"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted InstallationSettingsForecastForwardMeasure = "qualified_weighted"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted          InstallationSettingsForecastForwardMeasure = "weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureLikely      InstallationSettingsForecastForwardMeasure = "likely"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall InstallationSettingsForecastForwardMeasure = "manager_call"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted    InstallationSettingsForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
@@ -13969,10 +13811,6 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureLikely:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
-		return true
-	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedLikely:
-		return true
-	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
 		return true
@@ -19243,27 +19081,6 @@ func (e ReportingPresetId) Valid() bool {
 	}
 }
 
-// Defines values for ReportingQualifiedCoverageStatus.
-const (
-	ReportingQualifiedCoverageStatusCompared      ReportingQualifiedCoverageStatus = "compared"
-	ReportingQualifiedCoverageStatusNotEnforced   ReportingQualifiedCoverageStatus = "not_enforced"
-	ReportingQualifiedCoverageStatusTargetReached ReportingQualifiedCoverageStatus = "target_reached"
-)
-
-// Valid indicates whether the value is a known member of the ReportingQualifiedCoverageStatus enum.
-func (e ReportingQualifiedCoverageStatus) Valid() bool {
-	switch e {
-	case ReportingQualifiedCoverageStatusCompared:
-		return true
-	case ReportingQualifiedCoverageStatusNotEnforced:
-		return true
-	case ReportingQualifiedCoverageStatusTargetReached:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ReportingQuestionAnswerStatus.
 const (
 	ReportingQuestionAnswerStatusAnswered   ReportingQuestionAnswerStatus = "answered"
@@ -19491,11 +19308,9 @@ func (e ReportingStatus) Valid() bool {
 
 // Defines values for ReportingTargetComparisonBasis.
 const (
-	ReportingTargetComparisonBasisLikely            ReportingTargetComparisonBasis = "likely"
-	ReportingTargetComparisonBasisManagerCall       ReportingTargetComparisonBasis = "manager_call"
-	ReportingTargetComparisonBasisQualifiedLikely   ReportingTargetComparisonBasis = "qualified_likely"
-	ReportingTargetComparisonBasisQualifiedWeighted ReportingTargetComparisonBasis = "qualified_weighted"
-	ReportingTargetComparisonBasisWeighted          ReportingTargetComparisonBasis = "weighted"
+	ReportingTargetComparisonBasisLikely      ReportingTargetComparisonBasis = "likely"
+	ReportingTargetComparisonBasisManagerCall ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisWeighted    ReportingTargetComparisonBasis = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
@@ -19504,10 +19319,6 @@ func (e ReportingTargetComparisonBasis) Valid() bool {
 	case ReportingTargetComparisonBasisLikely:
 		return true
 	case ReportingTargetComparisonBasisManagerCall:
-		return true
-	case ReportingTargetComparisonBasisQualifiedLikely:
-		return true
-	case ReportingTargetComparisonBasisQualifiedWeighted:
 		return true
 	case ReportingTargetComparisonBasisWeighted:
 		return true
@@ -22905,11 +22716,9 @@ func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
 
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
-	UpdateInstallationSettingsRequestForecastForwardMeasureLikely            UpdateInstallationSettingsRequestForecastForwardMeasure = "likely"
-	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall       UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
-	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedLikely   UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_likely"
-	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
-	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted          UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureLikely      UpdateInstallationSettingsRequestForecastForwardMeasure = "likely"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted    UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
@@ -22918,10 +22727,6 @@ func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	case UpdateInstallationSettingsRequestForecastForwardMeasureLikely:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
-		return true
-	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedLikely:
-		return true
-	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
 		return true
@@ -24450,15 +24255,12 @@ func (e WeeklyReviewLearningsState) Valid() bool {
 
 // Defines values for WeeklyReviewMovementBar.
 const (
-	WeeklyReviewMovementBarWeeklyBarAdvanced   WeeklyReviewMovementBar = "advanced"
-	WeeklyReviewMovementBarWeeklyBarCreated    WeeklyReviewMovementBar = "created"
-	WeeklyReviewMovementBarWeeklyBarExcluded   WeeklyReviewMovementBar = "excluded"
-	WeeklyReviewMovementBarWeeklyBarLost       WeeklyReviewMovementBar = "lost"
-	WeeklyReviewMovementBarWeeklyBarNotChecked WeeklyReviewMovementBar = "not_checked"
-	WeeklyReviewMovementBarWeeklyBarOther      WeeklyReviewMovementBar = "other"
-	WeeklyReviewMovementBarWeeklyBarReinstated WeeklyReviewMovementBar = "reinstated"
-	WeeklyReviewMovementBarWeeklyBarSlipped    WeeklyReviewMovementBar = "slipped"
-	WeeklyReviewMovementBarWeeklyBarWon        WeeklyReviewMovementBar = "won"
+	WeeklyReviewMovementBarWeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
+	WeeklyReviewMovementBarWeeklyBarCreated  WeeklyReviewMovementBar = "created"
+	WeeklyReviewMovementBarWeeklyBarLost     WeeklyReviewMovementBar = "lost"
+	WeeklyReviewMovementBarWeeklyBarOther    WeeklyReviewMovementBar = "other"
+	WeeklyReviewMovementBarWeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
+	WeeklyReviewMovementBarWeeklyBarWon      WeeklyReviewMovementBar = "won"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
@@ -24468,15 +24270,9 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 		return true
 	case WeeklyReviewMovementBarWeeklyBarCreated:
 		return true
-	case WeeklyReviewMovementBarWeeklyBarExcluded:
-		return true
 	case WeeklyReviewMovementBarWeeklyBarLost:
 		return true
-	case WeeklyReviewMovementBarWeeklyBarNotChecked:
-		return true
 	case WeeklyReviewMovementBarWeeklyBarOther:
-		return true
-	case WeeklyReviewMovementBarWeeklyBarReinstated:
 		return true
 	case WeeklyReviewMovementBarWeeklyBarSlipped:
 		return true
@@ -24489,11 +24285,9 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureLikely            WeeklyReviewOutlookForwardMeasure = "likely"
-	WeeklyReviewOutlookForwardMeasureManagerCall       WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureQualifiedLikely   WeeklyReviewOutlookForwardMeasure = "qualified_likely"
-	WeeklyReviewOutlookForwardMeasureQualifiedWeighted WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
-	WeeklyReviewOutlookForwardMeasureWeighted          WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureLikely      WeeklyReviewOutlookForwardMeasure = "likely"
+	WeeklyReviewOutlookForwardMeasureManagerCall WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureWeighted    WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
@@ -24502,10 +24296,6 @@ func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	case WeeklyReviewOutlookForwardMeasureLikely:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
-		return true
-	case WeeklyReviewOutlookForwardMeasureQualifiedLikely:
-		return true
-	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
 	case WeeklyReviewOutlookForwardMeasureWeighted:
 		return true
@@ -25212,7 +25002,6 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
-	WorklistItemSourceDealReview          WorklistItemSource = "deal_review"
 	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
@@ -25258,8 +25047,6 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
-		return true
-	case WorklistItemSourceDealReview:
 		return true
 	case WorklistItemSourceDealSuggestion:
 		return true
@@ -25389,7 +25176,6 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
-	WorklistReachSourceDealReview          WorklistReachSource = "deal_review"
 	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
@@ -25435,8 +25221,6 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
-		return true
-	case WorklistReachSourceDealReview:
 		return true
 	case WorklistReachSourceDealSuggestion:
 		return true
@@ -27987,11 +27771,9 @@ func (e ListForecastCallsParamsScopeKind) Valid() bool {
 
 // Defines values for GetForecastMovementParamsReading.
 const (
-	GetForecastMovementParamsReadingEvidence          GetForecastMovementParamsReading = "evidence"
-	GetForecastMovementParamsReadingOpen              GetForecastMovementParamsReading = "open"
-	GetForecastMovementParamsReadingQualifiedEvidence GetForecastMovementParamsReading = "qualified_evidence"
-	GetForecastMovementParamsReadingQualifiedWeighted GetForecastMovementParamsReading = "qualified_weighted"
-	GetForecastMovementParamsReadingWeighted          GetForecastMovementParamsReading = "weighted"
+	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
@@ -28000,10 +27782,6 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingEvidence:
 		return true
 	case GetForecastMovementParamsReadingOpen:
-		return true
-	case GetForecastMovementParamsReadingQualifiedEvidence:
-		return true
-	case GetForecastMovementParamsReadingQualifiedWeighted:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
 		return true
@@ -32648,18 +32426,6 @@ type AssuranceFreshness struct {
 
 // AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
-
-// AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
-type AssuranceReviewDeliveries struct {
-	// Delivered Reviews that have their task, including a task somebody already completed while the review stays open.
-	Delivered int `json:"delivered"`
-
-	// Failed Reviews whose task could not be delivered after every retry.
-	Failed int `json:"failed"`
-
-	// Pending Reviews whose task is queued or retrying.
-	Pending int `json:"pending"`
-}
 
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
@@ -44166,86 +43932,6 @@ type DealSuggestionListResponse struct {
 	Page PageInfo         `json:"page"`
 }
 
-// DealViability defines model for DealViability.
-type DealViability struct {
-	// AssessedAt When the input check last assessed the deal; null when it never did.
-	AssessedAt *time.Time `json:"assessed_at,omitempty"`
-
-	// CloseDateOverdue True when the expected close date is before today in the installation's zone.
-	CloseDateOverdue     bool `json:"close_date_overdue"`
-	CloseDateProvisional bool `json:"close_date_provisional"`
-
-	// Complete Whether the deal was judged on its current evidence under the current policy.
-	Complete *bool              `json:"complete,omitempty"`
-	DealId   openapi_types.UUID `json:"deal_id"`
-
-	// Disposition The review standing the qualification rests on.
-	Disposition       *DealViabilityDisposition `json:"disposition,omitempty"`
-	ExpectedCloseDate *openapi_types.Date       `json:"expected_close_date,omitempty"`
-	PolicyVersion     *string                   `json:"policy_version,omitempty"`
-
-	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
-	Qualification DealViabilityQualification `json:"qualification"`
-
-	// QualificationMode Whether the installation's qualified forecast applies `qualification`.
-	QualificationMode DealViabilityQualificationMode `json:"qualification_mode"`
-
-	// Receipt The input check's last answer about the deal. Absent when it never assessed it.
-	Receipt *DealViabilityReceipt `json:"receipt,omitempty"`
-
-	// Review The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
-	Review *DealViabilityReview `json:"review,omitempty"`
-
-	// StageProbability The baseline chance, the deal's stage probability.
-	StageProbability int `json:"stage_probability"`
-}
-
-// DealViabilityDisposition The review standing the qualification rests on.
-type DealViabilityDisposition string
-
-// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
-type DealViabilityQualification string
-
-// DealViabilityQualificationMode Whether the installation's qualified forecast applies `qualification`.
-type DealViabilityQualificationMode string
-
-// DealViabilityReceipt The input check's last answer about the deal. Absent when it never assessed it.
-type DealViabilityReceipt struct {
-	// Current Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
-	Current bool `json:"current"`
-
-	// Outcome The check's outcome, such as `eligible` or `unsupported`.
-	Outcome string `json:"outcome"`
-
-	// PolicyVersion The viability policy the check applied.
-	PolicyVersion string `json:"policy_version"`
-
-	// Reasons The reason codes the check recorded.
-	Reasons    []string  `json:"reasons"`
-	ValidUntil time.Time `json:"valid_until"`
-}
-
-// DealViabilityReview The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
-type DealViabilityReview struct {
-	// DeliveryState How far handing the review to a task got; null before a pass queued it.
-	DeliveryState *DealViabilityReviewDeliveryState `json:"delivery_state,omitempty"`
-	Episode       int                               `json:"episode"`
-	Id            openapi_types.UUID                `json:"id"`
-	OpenedAt      time.Time                         `json:"opened_at"`
-
-	// Task The task the review was delivered as. Absent until delivered, or when the reader may not see it.
-	Task *DealViabilityTask `json:"task,omitempty"`
-}
-
-// DealViabilityReviewDeliveryState How far handing the review to a task got; null before a pass queued it.
-type DealViabilityReviewDeliveryState string
-
-// DealViabilityTask The task the review was delivered as. Absent until delivered, or when the reader may not see it.
-type DealViabilityTask struct {
-	Done bool               `json:"done"`
-	Id   openapi_types.UUID `json:"id"`
-}
-
 // DealWinEvidence defines model for DealWinEvidence.
 type DealWinEvidence struct {
 	// HasSignedContract True when the deal has a contract that left draft, with a signing date and a
@@ -45827,10 +45513,7 @@ type ForecastAssurance struct {
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
-
-	// ReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
-	ReviewDeliveries AssuranceReviewDeliveries `json:"review_deliveries"`
-	RunId            openapi_types.UUID        `json:"run_id"`
+	RunId     openapi_types.UUID          `json:"run_id"`
 
 	// Sources Every source the run tried, and how far it reached into each.
 	Sources []ForecastAssuranceSource `json:"sources"`
@@ -45844,20 +45527,6 @@ type ForecastAssuranceReadiness string
 
 // ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
 type ForecastAssuranceStatus string
-
-// ForecastAssuranceEnforcement Whether the qualified forecast applies the viability reviews.
-type ForecastAssuranceEnforcement struct {
-	// Locks The settings in this response that a boot source sets, each with its source. A client
-	// shows each as read-only. Empty when nothing is locked. A write ignores it.
-	Locks *SettingLocks `json:"locks,omitempty"`
-
-	// Preview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
-	Preview *ForecastEnforcementPreview       `json:"preview,omitempty"`
-	State   ForecastAssuranceEnforcementState `json:"state"`
-}
-
-// ForecastAssuranceEnforcementState defines model for ForecastAssuranceEnforcement.State.
-type ForecastAssuranceEnforcementState string
 
 // ForecastAssurancePreview What a pass would find now, for somebody deciding whether to start one. Nothing here was recorded, and looking changed nothing.
 type ForecastAssurancePreview struct {
@@ -45973,28 +45642,16 @@ type ForecastContributionExclusionReason string
 // ForecastContributionProbabilitySource Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
 type ForecastContributionProbabilitySource string
 
-// ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
-type ForecastEnforcementPreview struct {
-	// Digest Names the policy version and every open deal's treatment this preview counted.
-	Digest string `json:"digest"`
-
-	// LeftOutCount Open deals the qualified forecast would leave out, under review or unsupported.
-	LeftOutCount int `json:"left_out_count"`
-
-	// UnknownCount Open deals the last check could not judge on current evidence.
-	UnknownCount int `json:"unknown_count"`
-}
-
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
 // The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -46007,10 +45664,10 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
@@ -46033,11 +45690,11 @@ type ForecastMovementBucket struct {
 	AmountMinor int64 `json:"amount_minor"`
 	DealCount   int   `json:"deal_count"`
 
-	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. The set can grow, so a client shows an unknown bucket by its name.
 	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. The set can grow, so a client shows an unknown bucket by its name.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -46049,7 +45706,7 @@ type ForecastMovementDeal struct {
 	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
 	Bucket  string              `json:"bucket"`
 
-	// Causes Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+	// Causes Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row.
 	Causes *[]ForecastMovementDealCauses `json:"causes,omitempty"`
 	DealId openapi_types.UUID            `json:"deal_id"`
 
@@ -46060,27 +45717,6 @@ type ForecastMovementDeal struct {
 
 // ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
 type ForecastMovementDealCauses string
-
-// ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
-type ForecastQualifiedReadings struct {
-	// AmountsPartial True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
-	AmountsPartial *bool `json:"amounts_partial,omitempty"`
-	EvidenceMinor  int64 `json:"evidence_minor"`
-	ExcludedCount  int   `json:"excluded_count"`
-
-	// ExcludedMinor Open baseline money on every deal left out: under an open viability review, or unsupported.
-	ExcludedMinor int64 `json:"excluded_minor"`
-	UnknownCount  int   `json:"unknown_count"`
-
-	// UnknownMinor Open baseline money on deals the check could not judge on current evidence.
-	UnknownMinor     int64 `json:"unknown_minor"`
-	UnsupportedCount int   `json:"unsupported_count"`
-
-	// UnsupportedMinor The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
-	UnsupportedMinor int64 `json:"unsupported_minor"`
-	WeightedMinor    int64 `json:"weighted_minor"`
-}
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
@@ -46122,13 +45758,6 @@ type ForecastReadings struct {
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
 	PricedCount int `json:"priced_count"`
 
-	// QualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
-	QualificationMode ForecastReadingsQualificationMode `json:"qualification_mode"`
-
-	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
-	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
-
 	// RangeHighMinor The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 
@@ -46164,9 +45793,6 @@ type ForecastReadings struct {
 	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
 	WonMinor int64 `json:"won_minor"`
 }
-
-// ForecastReadingsQualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
-type ForecastReadingsQualificationMode string
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
@@ -48107,15 +47733,12 @@ type InstallationSettings struct {
 	//
 	// `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
 	// percent or more whose close date somebody confirmed, a provisional date being a
-	// guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
-	// readings over the deals the customer still supports (the `qualified` block on
-	// `GET /forecast`). `manager_call` takes the authored call as the whole period's
+	// guess that stays out. `manager_call` takes the authored call as the whole period's
 	// landing and is not added to what is already won; with no current call the read
 	// falls back to `likely` and says so in the landing's `caveat`.
 	//
-	// With no measure saved, the landing uses `qualified_likely` while the installation
-	// enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
-	// client shows an unknown value by its name.
+	// With no measure saved, the landing uses `likely`. A saved measure is used as saved.
+	// The set can grow, so a client shows an unknown value by its name.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
 	// ForecastLikelyThreshold The win probability, in percent, from which an open deal with a confirmed close date
@@ -48208,15 +47831,12 @@ type InstallationSettingsDateFormat string
 //
 // `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
 // percent or more whose close date somebody confirmed, a provisional date being a
-// guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
-// readings over the deals the customer still supports (the `qualified` block on
-// `GET /forecast`). `manager_call` takes the authored call as the whole period's
+// guess that stays out. `manager_call` takes the authored call as the whole period's
 // landing and is not added to what is already won; with no current call the read
 // falls back to `likely` and says so in the landing's `caveat`.
 //
-// With no measure saved, the landing uses `qualified_likely` while the installation
-// enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
-// client shows an unknown value by its name.
+// With no measure saved, the landing uses `likely`. A saved measure is used as saved.
+// The set can grow, so a client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
@@ -56200,10 +55820,9 @@ type ReportingComparison struct {
 
 // ReportingComparisonOperands The evidence each figure of a target comparison was read from.
 type ReportingComparisonOperands struct {
-	Landing               ReportingEvidenceRef  `json:"landing"`
-	OpenPipeline          ReportingEvidenceRef  `json:"open_pipeline"`
-	QualifiedOpenPipeline *ReportingEvidenceRef `json:"qualified_open_pipeline,omitempty"`
-	Won                   ReportingEvidenceRef  `json:"won"`
+	Landing      ReportingEvidenceRef `json:"landing"`
+	OpenPipeline ReportingEvidenceRef `json:"open_pipeline"`
+	Won          ReportingEvidenceRef `json:"won"`
 }
 
 // ReportingContext defines model for ReportingContext.
@@ -56593,22 +56212,6 @@ type ReportingQualification struct {
 	StageIds   []openapi_types.UUID `json:"stage_ids"`
 }
 
-// ReportingQualifiedCoverage Coverage over the deals the qualified forecast keeps, beside the
-// coverage over all open deals. Present when the comparison carries
-// figures.
-type ReportingQualifiedCoverage struct {
-	Coverage     *float64 `json:"coverage,omitempty"`
-	OpenPipeline *float64 `json:"open_pipeline,omitempty"`
-
-	// Status `not_enforced` means the qualified forecast is switched off, so no
-	// open deal is judged and no qualified figure exists.
-	Status ReportingQualifiedCoverageStatus `json:"status"`
-}
-
-// ReportingQualifiedCoverageStatus `not_enforced` means the qualified forecast is switched off, so no
-// open deal is judged and no qualified figure exists.
-type ReportingQualifiedCoverageStatus string
-
 // ReportingQuestionAnswer A bound question card's answer for this reader. `restricted`: the reader may not see a
 // value the question filters on, so nothing of the answer is shown: no rows, no labels
 // and no total.
@@ -56857,13 +56460,8 @@ type ReportingTargetComparison struct {
 	OpenPipeline    *float64                                  `json:"open_pipeline,omitempty"`
 
 	// Operands The evidence each figure of a target comparison was read from.
-	Operands *ReportingComparisonOperands `json:"operands,omitempty"`
-
-	// Qualified Coverage over the deals the qualified forecast keeps, beside the
-	// coverage over all open deals. Present when the comparison carries
-	// figures.
-	Qualified *ReportingQualifiedCoverage `json:"qualified,omitempty"`
-	Remaining *float64                    `json:"remaining,omitempty"`
+	Operands  *ReportingComparisonOperands `json:"operands,omitempty"`
+	Remaining *float64                     `json:"remaining,omitempty"`
 
 	// Status `compared` carries every figure. `target_reached` means `remaining`
 	// is zero; it carries no `coverage`, never an infinite one.
@@ -63584,9 +63182,7 @@ type WeeklyReviewLearningsState string
 type WeeklyReviewMovement struct {
 	// Bar Which move this is. Folded from the forecast engine's movement buckets, whose
 	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
-	// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
-	// qualified measure: a deal that left or rejoined the qualified number on its viability
-	// review alone, or left because its review status became unknown. The set can grow.
+	// The set can grow.
 	//
 	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 	// reprice, a category move and a stage move each go both ways, and reading the cause
@@ -63609,9 +63205,7 @@ type WeeklyReviewMovement struct {
 
 // WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's movement buckets, whose
 // grain is right for diagnosing a quarter and too fine for a weekly retrospective.
-// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
-// qualified measure: a deal that left or rejoined the qualified number on its viability
-// review alone, or left because its review status became unknown. The set can grow.
+// The set can grow.
 //
 // `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 // reprice, a category move and a stage move each go both ways, and reading the cause
@@ -64914,11 +64508,6 @@ type WorklistItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	//
-	// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
-	// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
-	// into it, and it stays while the review is open, even once its task is done. It offers
-	// only `open`; the review is answered on the deal.
-	//
 	// `batch` is the one that names no single record: it stands for a GROUP of
 	// routine decisions that read alike, so a hundred of them cost the reader one
 	// row rather than a hundred. Its own facts ride in `batch`.
@@ -65045,11 +64634,6 @@ type WorklistItemDueGroup string
 type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
-//
-// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
-// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
-// into it, and it stays while the review is open, even once its task is done. It offers
-// only `open`; the review is answered on the deal.
 //
 // `batch` is the one that names no single record: it stands for a GROUP of
 // routine decisions that read alike, so a hundred of them cost the reader one
@@ -69749,14 +69333,6 @@ type GetForecastParamsPeriod string
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
 
-// SetForecastAssuranceEnforcementJSONBody defines parameters for SetForecastAssuranceEnforcement.
-type SetForecastAssuranceEnforcementJSONBody struct {
-	Enabled bool `json:"enabled"`
-
-	// PreviewDigest The `digest` of the preview shown before switching on.
-	PreviewDigest *string `json:"preview_digest,omitempty"`
-}
-
 // ListInputChecksParams defines parameters for ListInputChecks.
 type ListInputChecksParams struct {
 	// ScopeKind Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
@@ -69768,19 +69344,6 @@ type ListInputChecksParams struct {
 
 // ListInputChecksParamsScopeKind defines parameters for ListInputChecks.
 type ListInputChecksParamsScopeKind string
-
-// CloseLostInputCheckJSONBody defines parameters for CloseLostInputCheck.
-type CloseLostInputCheckJSONBody struct {
-	LostReason string `json:"lost_reason"`
-
-	// LostReasonCode An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.
-	LostReasonCode *string `json:"lost_reason_code,omitempty"`
-}
-
-// WaitInputCheckJSONBody defines parameters for WaitInputCheck.
-type WaitInputCheckJSONBody struct {
-	Until openapi_types.Date `json:"until"`
-}
 
 // ListForecastCallsParams defines parameters for ListForecastCalls.
 type ListForecastCallsParams struct {
@@ -69809,7 +69372,7 @@ type GetForecastMovementParams struct {
 	// To The closing snapshot.
 	To openapi_types.UUID `form:"to" json:"to"`
 
-	// Reading Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
+	// Reading Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
 	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
 }
 
@@ -74281,17 +73844,8 @@ type ConnectFinanceSourceJSONRequestBody = ConnectFinanceSourceRequest
 // LinkFinanceSourceCustomerJSONRequestBody defines body for LinkFinanceSourceCustomer for application/json ContentType.
 type LinkFinanceSourceCustomerJSONRequestBody = LinkFinanceSourceCustomerRequest
 
-// SetForecastAssuranceEnforcementJSONRequestBody defines body for SetForecastAssuranceEnforcement for application/json ContentType.
-type SetForecastAssuranceEnforcementJSONRequestBody SetForecastAssuranceEnforcementJSONBody
-
-// CloseLostInputCheckJSONRequestBody defines body for CloseLostInputCheck for application/json ContentType.
-type CloseLostInputCheckJSONRequestBody CloseLostInputCheckJSONBody
-
 // ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
 type ResolveInputCheckJSONRequestBody = ResolveInputCheck
-
-// WaitInputCheckJSONRequestBody defines body for WaitInputCheck for application/json ContentType.
-type WaitInputCheckJSONRequestBody WaitInputCheckJSONBody
 
 // RecordForecastCallJSONRequestBody defines body for RecordForecastCall for application/json ContentType.
 type RecordForecastCallJSONRequestBody = NewForecastCall
@@ -88797,9 +88351,6 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
-	// Whether the customer still supports this deal, and the review behind the answer.
-	// (GET /deals/{id}/viability)
-	GetDealViability(w http.ResponseWriter, r *http.Request, id Id)
 	// Whether the deal has the signed agreement a win rests on.
 	// (GET /deals/{id}/win-evidence)
 	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
@@ -88929,24 +88480,12 @@ type ServerInterface interface {
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
-	// Whether the qualified forecast applies the viability reviews.
-	// (GET /forecast/assurance/enforcement)
-	GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
-	// Switch the qualified forecast's enforcement on or off.
-	// (PUT /forecast/assurance/enforcement)
-	SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
 	// The open findings this caller can see.
 	// (GET /forecast/assurance/exceptions)
 	ListInputChecks(w http.ResponseWriter, r *http.Request, params ListInputChecksParams)
-	// Answer a customer review by closing its deal as lost.
-	// (POST /forecast/assurance/exceptions/{id}/close-lost)
-	CloseLostInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Answer a finding from the nightly input check.
 	// (POST /forecast/assurance/exceptions/{id}/resolve)
 	ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Answer a customer review with the day the customer asked you to wait until.
-	// (POST /forecast/assurance/exceptions/{id}/wait)
-	WaitInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What a check would find, without recording any of it.
 	// (GET /forecast/assurance/preview)
 	PreviewForecastAssurance(w http.ResponseWriter, r *http.Request)
@@ -93318,12 +92857,6 @@ func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Whether the customer still supports this deal, and the review behind the answer.
-// (GET /deals/{id}/viability)
-func (_ Unimplemented) GetDealViability(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Whether the deal has the signed agreement a win rests on.
 // (GET /deals/{id}/win-evidence)
 func (_ Unimplemented) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id) {
@@ -93582,39 +93115,15 @@ func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Whether the qualified forecast applies the viability reviews.
-// (GET /forecast/assurance/enforcement)
-func (_ Unimplemented) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Switch the qualified forecast's enforcement on or off.
-// (PUT /forecast/assurance/enforcement)
-func (_ Unimplemented) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // The open findings this caller can see.
 // (GET /forecast/assurance/exceptions)
 func (_ Unimplemented) ListInputChecks(w http.ResponseWriter, r *http.Request, params ListInputChecksParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Answer a customer review by closing its deal as lost.
-// (POST /forecast/assurance/exceptions/{id}/close-lost)
-func (_ Unimplemented) CloseLostInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Answer a finding from the nightly input check.
 // (POST /forecast/assurance/exceptions/{id}/resolve)
 func (_ Unimplemented) ResolveInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Answer a customer review with the day the customer asked you to wait until.
-// (POST /forecast/assurance/exceptions/{id}/wait)
-func (_ Unimplemented) WaitInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118612,40 +118121,6 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
-// GetDealViability operation middleware
-func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDealViability(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetDealWinEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
 
@@ -120130,48 +119605,6 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// GetForecastAssuranceEnforcement operation middleware
-func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetForecastAssuranceEnforcement(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetForecastAssuranceEnforcement operation middleware
-func (siw *ServerInterfaceWrapper) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetForecastAssuranceEnforcement(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListInputChecks operation middleware
 func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 
@@ -120226,38 +119659,6 @@ func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// CloseLostInputCheck operation middleware
-func (siw *ServerInterfaceWrapper) CloseLostInputCheck(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CloseLostInputCheck(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ResolveInputCheck operation middleware
 func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
 
@@ -120281,38 +119682,6 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResolveInputCheck(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// WaitInputCheck operation middleware
-func (siw *ServerInterfaceWrapper) WaitInputCheck(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.WaitInputCheck(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -141899,9 +141268,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/deals/{id}/viability", wrapper.GetDealViability)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)
 	})
 	r.Group(func(r chi.Router) {
@@ -142031,22 +141397,10 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/forecast/assurance/enforcement", wrapper.GetForecastAssuranceEnforcement)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/forecast/assurance/enforcement", wrapper.SetForecastAssuranceEnforcement)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance/exceptions", wrapper.ListInputChecks)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/close-lost", wrapper.CloseLostInputCheck)
-	})
-	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/resolve", wrapper.ResolveInputCheck)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/forecast/assurance/exceptions/{id}/wait", wrapper.WaitInputCheck)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance/preview", wrapper.PreviewForecastAssurance)

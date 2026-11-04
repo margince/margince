@@ -15516,26 +15516,6 @@ paths:
               schema: {$ref: '#/components/schemas/ForecastAssurancePreview'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
-  /forecast/assurance/enforcement:
-    get:
-      tags: [Reports]
-      operationId: getForecastAssuranceEnforcement
-      security: [{bearerAuth: []}]
-      summary: Whether the qualified forecast applies the viability reviews.
-      description: |-
-        `state` is `not_enrolled` before the input check has ever run, `observing` once it
-        runs and raises reviews and tasks but the forecast figures are unchanged, and
-        `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-        forecast reading carry `qualified`, and only then does the close-date sweep stop
-        lowering forecast categories.
-      responses:
-        '200':
-          description: The installation's enforcement state.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/ForecastAssuranceEnforcement'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
   /analytics/coverage:
     get:
       tags: [Reports]
@@ -15620,9 +15600,9 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted], default: open}
+          schema: {type: string, enum: [open, weighted, evidence], default: open}
           description: >-
-            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
       responses:
         '200':
           description: The classified difference.
@@ -16933,29 +16913,6 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DealCoverage'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /deals/{id}/viability:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Deals]
-      operationId: getDealViability
-      security: [{bearerAuth: []}]
-      summary: Whether the customer still supports this deal, and the review behind the answer.
-      description: |-
-        The deal's treatment in the qualified forecast and what it rests on: the input check's
-        last receipt and its reasons, the close date's standing, the stage chance, and the open
-        `deal_viability` review with its task. The review is shown while it is open, even when
-        its task is done: completing the task does not answer the review.
-      responses:
-        '200':
-          description: The deal's viability.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/DealViability'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -33525,7 +33482,7 @@ components:
           format: double
         basis:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing:
           type: number
@@ -33545,8 +33502,6 @@ components:
         coverage:
           type: number
           format: double
-        qualified:
-          $ref: '#/components/schemas/ReportingQualifiedCoverage'
         operands:
           $ref: '#/components/schemas/ReportingComparisonOperands'
     ReportingForecastBasis:
@@ -33604,27 +33559,6 @@ components:
           minimum: 0
           description: >-
             The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
-    ReportingQualifiedCoverage:
-      type: object
-      additionalProperties: false
-      description: |-
-        Coverage over the deals the qualified forecast keeps, beside the
-        coverage over all open deals. Present when the comparison carries
-        figures.
-      required: [status]
-      properties:
-        status:
-          type: string
-          enum: [compared, target_reached, not_enforced]
-          description: |-
-            `not_enforced` means the qualified forecast is switched off, so no
-            open deal is judged and no qualified figure exists.
-        open_pipeline:
-          type: number
-          format: double
-        coverage:
-          type: number
-          format: double
     ReportingComparisonOperands:
       type: object
       additionalProperties: false
@@ -33636,8 +33570,6 @@ components:
         landing:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline:
-          $ref: '#/components/schemas/ReportingEvidenceRef'
-        qualified_open_pipeline:
           $ref: '#/components/schemas/ReportingEvidenceRef'
     ReportingEvaluation:
       type: object
@@ -34611,7 +34543,6 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
-        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -34682,12 +34613,6 @@ components:
           items: {$ref: '#/components/schemas/ForecastSnapshotRef'}
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
-        qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
-        qualification_mode:
-          type: string
-          enum: ['off', enforcing]
-          description: >-
-            Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
         self_correcting:
           type: boolean
           description: >-
@@ -34839,126 +34764,6 @@ components:
           description: The estimated share of those deals that end won. Absent when none closed.
         chance_in_use: {type: integer, minimum: 0, maximum: 100}
       additionalProperties: false
-    DealViability:
-      type: object
-      additionalProperties: false
-      required: [deal_id, qualification_mode, qualification, stage_probability, close_date_provisional, close_date_overdue]
-      properties:
-        deal_id: {type: string, format: uuid}
-        qualification_mode:
-          type: string
-          enum: ['off', enforcing]
-          description: Whether the installation's qualified forecast applies `qualification`.
-        qualification:
-          type: string
-          enum: [eligible, excluded, unsupported, unknown, closed]
-          description: >-
-            The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
-        assessed_at:
-          type: [string, 'null']
-          format: date-time
-          description: When the input check last assessed the deal; null when it never did.
-        disposition:
-          type: string
-          enum: [none, open_review, override, unsupported]
-          description: The review standing the qualification rests on.
-        complete:
-          type: boolean
-          description: Whether the deal was judged on its current evidence under the current policy.
-        policy_version: {type: string}
-        receipt:
-          $ref: '#/components/schemas/DealViabilityReceipt'
-        expected_close_date: {type: [string, 'null'], format: date}
-        close_date_provisional: {type: boolean}
-        close_date_overdue:
-          type: boolean
-          description: True when the expected close date is before today in the installation's zone.
-        stage_probability:
-          type: integer
-          minimum: 0
-          maximum: 100
-          description: The baseline chance, the deal's stage probability.
-        review:
-          $ref: '#/components/schemas/DealViabilityReview'
-    DealViabilityReceipt:
-      type: object
-      additionalProperties: false
-      description: The input check's last answer about the deal. Absent when it never assessed it.
-      required: [outcome, reasons, valid_until, policy_version, current]
-      properties:
-        outcome: {type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.'}
-        policy_version: {type: string, description: The viability policy the check applied.}
-        current:
-          type: boolean
-          description: >-
-            Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
-        reasons:
-          type: array
-          items: {type: string}
-          description: The reason codes the check recorded.
-        valid_until: {type: string, format: date-time}
-    DealViabilityReview:
-      type: object
-      additionalProperties: false
-      description: >-
-        The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
-      required: [id, opened_at, episode]
-      properties:
-        id: {type: string, format: uuid}
-        opened_at: {type: string, format: date-time}
-        episode: {type: integer, minimum: 1}
-        delivery_state:
-          type: [string, 'null']
-          enum: [pending, failed, delivered, null]
-          description: How far handing the review to a task got; null before a pass queued it.
-        task:
-          $ref: '#/components/schemas/DealViabilityTask'
-    DealViabilityTask:
-      type: object
-      additionalProperties: false
-      description: The task the review was delivered as. Absent until delivered, or when the reader may not see it.
-      required: [id, done]
-      properties:
-        id: {type: string, format: uuid}
-        done: {type: boolean}
-    ForecastQualifiedReadings:
-      type: object
-      description: >-
-        The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-      required:
-        - evidence_minor
-        - weighted_minor
-        - excluded_minor
-        - unknown_minor
-        - excluded_count
-        - unknown_count
-        - unsupported_minor
-        - unsupported_count
-      properties:
-        evidence_minor: {type: integer, format: int64}
-        weighted_minor: {type: integer, format: int64}
-        excluded_minor:
-          type: integer
-          format: int64
-          description: >-
-            Open baseline money on every deal left out: under an open viability review, or unsupported.
-        unsupported_minor:
-          type: integer
-          format: int64
-          description: >-
-            The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
-        unsupported_count: {type: integer}
-        unknown_minor:
-          type: integer
-          format: int64
-          description: Open baseline money on deals the check could not judge on current evidence.
-        excluded_count: {type: integer}
-        unknown_count: {type: integer}
-        amounts_partial:
-          type: boolean
-          description: >-
-            True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
-      additionalProperties: false
     ForecastSnapshotRef:
       type: object
       description: One frozen forecast, by the handle a movement read takes.
@@ -34983,9 +34788,9 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call]
           description: >-
-            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
+            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
         won_minor:
           type: integer
           format: int64
@@ -35002,9 +34807,9 @@ components:
             Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual, qualified_unavailable]
+          enum: [call_absent, call_below_actual]
           description: >-
-            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
+            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -35195,39 +35000,11 @@ components:
         severity: {type: string, enum: [low, medium, high]}
         count: {type: integer}
       additionalProperties: false
-    ForecastAssuranceEnforcement:
-      type: object
-      description: Whether the qualified forecast applies the viability reviews.
-      required: [state]
-      properties:
-        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
-        state:
-          type: string
-          enum: [not_enrolled, observing, enforcing]
-        preview:
-          $ref: '#/components/schemas/ForecastEnforcementPreview'
-      additionalProperties: false
-    ForecastEnforcementPreview:
-      type: object
-      description: >-
-        What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
-      required: [left_out_count, unknown_count, digest]
-      properties:
-        left_out_count:
-          type: integer
-          description: Open deals the qualified forecast would leave out, under review or unsupported.
-        unknown_count:
-          type: integer
-          description: Open deals the last check could not judge on current evidence.
-        digest:
-          type: string
-          description: Names the policy version and every open deal's treatment this preview counted.
-      additionalProperties: false
     ForecastAssurance:
       type: object
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources, freshness, review_deliveries]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness]
       properties:
         run_id: {type: string, format: uuid}
         as_of: {type: string, format: date-time}
@@ -35250,27 +35027,6 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
-        review_deliveries: {$ref: '#/components/schemas/AssuranceReviewDeliveries'}
-      additionalProperties: false
-    AssuranceReviewDeliveries:
-      type: object
-      description: >-
-        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
-      required: [pending, failed, delivered]
-      properties:
-        pending:
-          type: integer
-          minimum: 0
-          description: Reviews whose task is queued or retrying.
-        failed:
-          type: integer
-          minimum: 0
-          description: Reviews whose task could not be delivered after every retry.
-        delivered:
-          type: integer
-          minimum: 0
-          description: >-
-            Reviews that have their task, including a task somebody already completed while the review stays open.
       additionalProperties: false
     AssuranceFreshness:
       type: object
@@ -35324,7 +35080,7 @@ components:
         The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: {type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted]}
+        reading: {type: string, enum: [open, weighted, evidence]}
         opening_minor: {type: integer, format: int64}
         closing_minor: {type: integer, format: int64}
         buckets:
@@ -35343,9 +35099,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded, reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
-            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -35370,10 +35126,10 @@ components:
         causes:
           type: array
           description: >-
-            Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+            Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, qualification]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx]
       additionalProperties: false
     ForecastCall:
       type: object
@@ -40242,7 +39998,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          enum: [likely, weighted, manager_call]
           description: |-
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
@@ -40267,13 +40023,11 @@ components:
       properties:
         bar:
           type: string
-          enum: [created, advanced, slipped, excluded, reinstated, not_checked, won, lost, other]
+          enum: [created, advanced, slipped, won, lost, other]
           description: |-
             Which move this is. Folded from the forecast engine's movement buckets, whose
             grain is right for diagnosing a quarter and too fine for a weekly retrospective.
-            `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
-            qualified measure: a deal that left or rejoined the qualified number on its viability
-            review alone, or left because its review status became unknown. The set can grow.
+            The set can grow.
         delta_minor:
           type: integer
           format: int64
@@ -40797,7 +40551,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch, deal_review]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -41484,7 +41238,7 @@ components:
         id: {type: string, description: "The owning record's id, as its own endpoint spells it."}
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch, deal_review]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |-
             Which producer raised it, and therefore which endpoint its verbs go to.
         category:

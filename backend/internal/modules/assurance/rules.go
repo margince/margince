@@ -64,8 +64,8 @@ type SubjectViability struct {
 	// NextChange is when the answer changes by the clock alone; nil when only
 	// new evidence can change it.
 	NextChange *time.Time
-	// Fingerprint is what the assessment read. The forecast compares it with
-	// the deal's current one before trusting the receipt.
+	// Fingerprint is what the assessment read. The freshness check compares it
+	// with the deal's current one to find the deals worth checking again.
 	Fingerprint string
 }
 
@@ -99,14 +99,17 @@ const (
 	TypeNoEconomicBuyer  = "no_economic_buyer"
 	TypeCommitUnpriced   = "commit_unpriced"
 	TypeStageExitUnmet   = "stage_exit_unmet"
-	TypeDealViability    = "deal_viability"
 )
 
-// TypeBuyerSilent is a RETIRED type. deal_viability asks its question with one
-// silence clock, apart from the close date. Stored findings keep the type for
-// their history. A pass that read the mailbox clears the open ones, because no
-// rule raises them any more.
+// TypeBuyerSilent is a RETIRED type. Stored findings keep it for their
+// history. A pass that read the mailbox clears the open ones, because no rule
+// raises them any more.
 const TypeBuyerSilent = "buyer_silent"
+
+// TypeDealViability is a RETIRED type: Margince closes a deal the customer
+// stopped answering itself, so nobody is asked to review one. Stored findings
+// keep it for their history.
+const TypeDealViability = "deal_viability"
 
 // retiredRules are types no rule raises, with the sources a pass must have read
 // before it may close their open findings in absence.
@@ -151,9 +154,7 @@ type Rule struct {
 	Version string
 	// Needs names the coverage sources this rule stands on, both to raise a
 	// finding and to clear one. A rule that reads only the deal graph needs
-	// none: the subjects read itself proves the graph was reachable. The
-	// viability rule needs the mailbox: on a night it was not read, silence was
-	// not observed, and "nothing arrived" would mean "nothing was read".
+	// none: the subjects read itself proves the graph was reachable.
 	Needs []string
 	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
 }
@@ -161,8 +162,7 @@ type Rule struct {
 // Config is what an installation decides rather than the product.
 type Config struct {
 	// ReceiptLifetime is how long a viability receipt stands before the next
-	// scheduled check should have replaced it. Zero makes every receipt stale
-	// at once, which the qualified forecast reads as unknown.
+	// scheduled check should have replaced it.
 	ReceiptLifetime time.Duration
 	// MaterialMinor is the amount below which a discrepancy is not worth a
 	// contact's morning.
@@ -189,7 +189,7 @@ func Rules() []Rule {
 	return []Rule{
 		closePast(), closeUnconfirmed(), closePushed(),
 		amountVsOffer(), amountVsContract(),
-		noNextStep(), noEconomicBuyer(), dealViability(), commitUnpriced(),
+		noNextStep(), noEconomicBuyer(), commitUnpriced(),
 		stageExitUnmet(),
 	}
 }
@@ -325,35 +325,6 @@ func noEconomicBuyer() Rule {
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
-}
-
-// The customer no longer supports the deal, or a review of it is still open.
-//
-// The deals module judged it (deals.AssessViability); this rule only turns a
-// review_required answer into a finding. It reads customer progress only. A
-// rep mailing a silent prospect weekly keeps last_activity_at fresh, and the
-// close date is no evidence either way.
-//
-// It declares no run-level Needs. Whether the mail was read is judged per
-// deal, on the mailboxes the deal's mail could reach. A deal whose mail was not
-// read arrives as unknown and raises nothing, so one broken mailbox does not
-// stop the check for every deal. A review type never clears in absence, so
-// declaring no need clears nothing either.
-func dealViability() Rule {
-	return Rule{
-		Type: TypeDealViability, Version: viability.PolicyVersion,
-		Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-			if s.Viability == nil || s.Viability.Outcome != viability.OutcomeReviewRequired {
-				return nil
-			}
-			return &Finding{
-				Type: TypeDealViability, SubjectID: s.DealID, Severity: SeverityHigh,
-				Claim:         map[string]any{"policy_version": viability.PolicyVersion},
-				Observed:      map[string]any{"reasons": s.Viability.Reasons, "silent_days": s.Viability.SilentDays},
-				AffectedMinor: s.AmountMinor, Currency: s.Currency,
-			}
-		},
-	}
 }
 
 // A Likely deal with no price on it. It is counted as eligible pipeline and

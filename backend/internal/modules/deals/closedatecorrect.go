@@ -201,13 +201,9 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene,
 	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
-	lowers, err := c.policy.LowersWinProbability(ctx)
-	if err != nil {
-		return "", err
-	}
 	effective, source := cand.winProbability()
 	notched := effective
-	if lowers && source != SourceHuman {
+	if source != SourceHuman {
 		notched = lowerWinProbability(effective)
 	}
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the

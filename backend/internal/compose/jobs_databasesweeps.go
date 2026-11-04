@@ -55,7 +55,6 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	// fired must not be able to differ in what they do.
 	addDeclaredWorker[AssuranceRunArgs](reg, &assuranceRunWorker{sweep: assuranceSweep})
 	addDeclaredWorker[AssuranceDealRescanArgs](reg, &assuranceDealRescanWorker{sweep: assuranceSweep})
-	addDeclaredWorker[AssuranceReviewDeliveryArgs](reg, &assuranceReviewDeliveryWorker{sweep: assuranceSweep})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})

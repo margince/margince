@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195270,
+    "tool_catalog_bytes": 194524,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50132,
+    "approx_wire_tokens_total": 49945,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93539,
-      "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 136210
+      "input_schema_bytes": 93377,
+      "output_schema_bytes": 47182,
+      "description_plus_input_schema_bytes": 136048
     }
   },
   "tools": {
@@ -7176,7 +7176,6 @@
                 "enrichment_run",
                 "evidence",
                 "field_history",
-                "forecast_assurance_enforcement",
                 "forecast_assurance_preview",
                 "forecast_share_csv",
                 "forecast_shared_reading",
@@ -7425,13 +7424,11 @@
               "type": "string"
             },
             "reading": {
-              "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
+              "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
               "enum": [
                 "open",
                 "weighted",
-                "evidence",
-                "qualified_evidence",
-                "qualified_weighted"
+                "evidence"
               ],
               "type": "string"
             },
@@ -7867,52 +7864,6 @@
                 },
                 "priced_count": {
                   "type": "integer"
-                },
-                "qualification_mode": {
-                  "type": "string"
-                },
-                "qualified": {
-                  "properties": {
-                    "amounts_partial": {
-                      "type": "boolean"
-                    },
-                    "evidence_minor": {
-                      "type": "integer"
-                    },
-                    "excluded_count": {
-                      "type": "integer"
-                    },
-                    "excluded_minor": {
-                      "type": "integer"
-                    },
-                    "unknown_count": {
-                      "type": "integer"
-                    },
-                    "unknown_minor": {
-                      "type": "integer"
-                    },
-                    "unsupported_count": {
-                      "type": "integer"
-                    },
-                    "unsupported_minor": {
-                      "type": "integer"
-                    },
-                    "weighted_minor": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "amounts_partial",
-                    "evidence_minor",
-                    "excluded_count",
-                    "excluded_minor",
-                    "unknown_count",
-                    "unknown_minor",
-                    "unsupported_count",
-                    "unsupported_minor",
-                    "weighted_minor"
-                  ],
-                  "type": "object"
                 },
                 "range_high_minor": {
                   "type": "integer"
@@ -9401,7 +9352,6 @@
                 "deal_outcome_reviews",
                 "deal_stakeholders",
                 "deal_status",
-                "deal_viability",
                 "dedupe_candidate",
                 "dedupe_candidates",
                 "email_presentation",

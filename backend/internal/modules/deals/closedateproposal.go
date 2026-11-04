@@ -41,13 +41,10 @@ const CloseDateCorrectionKind = "close_date_correction"
 // a date the machine had already computed — expired into silence when nobody
 // answered it, leaving the deal on a guess with nothing saying so.
 //
-// LowersWinProbability is asked before every downgrade. It is false while
-// the qualified forecast applies viability reviews, because the review then
-// decides what counts. LikelyThreshold is the probability from which a deal
-// counts in the Likely forecast, read once per page of the pass.
+// LikelyThreshold is the probability from which a deal counts in the Likely
+// forecast, read once per page of the pass.
 type CorrectionPolicy interface {
 	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
-	LowersWinProbability(ctx context.Context) (bool, error)
 	LikelyThreshold(ctx context.Context) (int, error)
 }
 
