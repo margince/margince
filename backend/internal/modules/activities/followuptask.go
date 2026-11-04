@@ -35,7 +35,7 @@ func followUpFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	}
 	task := req.FollowUpTask
 	followUp, err := TaskInputFrom(crmcontracts.CreateTaskRequest{
-		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt,
+		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt, DueHasTime: task.DueHasTime,
 		AssigneeId: task.AssigneeId, Source: req.Source,
 	})
 	if err != nil {
@@ -118,6 +118,9 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 		return err
 	}
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
+		return err
+	}
+	if err := admitTaskTime(in); err != nil {
 		return err
 	}
 	return validateActivityDuration(in.DurationSeconds)

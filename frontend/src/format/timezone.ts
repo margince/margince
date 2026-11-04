@@ -279,6 +279,32 @@ function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
 }
 
 /**
+ * The time of day a task is due at, as `HH:MM` on `zone`'s wall clock, or
+ * `""` for a task due by a day. `hasTime` is the task's own `due_has_time`:
+ * the server's flag decides, never what the clock happens to read, so a task
+ * stored at any instant of its day reads as a day until it says otherwise.
+ */
+export function dueTimeOf(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  zone: string,
+): string {
+  const at = Date.parse(dueAt);
+  if (hasTime !== true || Number.isNaN(at)) {
+    return "";
+  }
+  return wallClockTime(at, zone);
+}
+
+/** `HH:MM` on `zone`'s wall clock at the instant `at`. */
+export function wallClockTime(at: number, zone: string): string {
+  const timeOfDay = ((wallClockMs(at, zone) % DAY_MS) + DAY_MS) % DAY_MS;
+  const minutes = Math.floor(timeOfDay / 60_000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+/**
  * The instant on `day` at which `zone`'s wall clock reads `timeOfDayMs` past
  * midnight, in whole seconds. On a DST switch day a wall time can be missing
  * or happen twice:

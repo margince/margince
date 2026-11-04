@@ -16,7 +16,7 @@ import {
 } from "../../design-system/overviewcard";
 import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
@@ -165,7 +165,9 @@ function TaskRow({
     undefined;
   const sub = [
     step.due_at &&
-      t("co.next.due", { when: formatDayMonth(step.due_at, locale, zone) }),
+      t("co.next.due", {
+        when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
+      }),
     linked && t("co.overview.for", { name: linked }),
   ]
     .filter(Boolean)
