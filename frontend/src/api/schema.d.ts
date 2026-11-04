@@ -23207,8 +23207,8 @@ export interface paths {
         /**
          * One named reading of this attachment, for a screen polling the reading it started.
          * @description The reading `readAttachmentForFields` answered with, by its id. Unlike
-         *     `getAttachmentExtraction`, which reports the newest reading of any question, this
-         *     reports exactly the one named. A reading of another attachment is 404. An agent
+         *     `getAttachmentExtraction`, which reports the newest reading for its `question`
+         *     parameter (`deal_facts` when absent), this reports exactly the one named. A reading of another attachment is 404. An agent
          *     reads the newest reading through `get_attachment_extraction`.
          */
         get: operations["getAttachmentExtractionReading"];
