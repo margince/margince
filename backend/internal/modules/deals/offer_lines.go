@@ -257,7 +257,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 
-		curPosition, curDescription, curUnit, line, err := readOfferLineForUpdate(ctx, tx, offerID, lineID)
+		cur, err := readOfferLineForUpdate(ctx, tx, offerID, lineID)
 		if err != nil {
 			return err
 		}
@@ -265,7 +265,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 
-		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
+		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, cur)
 		// Validate the resulting line's figures and math up front (422, not a CHECK 500).
 		if err := checkLineFigures(line); err != nil {
 			return err
@@ -315,20 +315,31 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 	return out, err
 }
 
+// currentOfferLine is what a line patch reads before it writes: the fields
+// the audit's before-image records, and the figures it validates against.
+type currentOfferLine struct {
+	Position          int
+	Description, Unit string
+	TaxCategory       *string
+	Figures           OfferLineInput
+}
+
 // readOfferLineForUpdate loads the line's current snapshot for a patch;
 // a missing line (or one on another offer) is 404, not a fault.
-func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, lineID ids.UUID) (curPosition int, curDescription, curUnit string, line OfferLineInput, err error) {
-	err = tx.QueryRow(ctx,
-		`SELECT position, description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text
+func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, lineID ids.UUID) (currentOfferLine, error) {
+	var cur currentOfferLine
+	err := tx.QueryRow(ctx,
+		`SELECT position, description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text, tax_category
 		 FROM offer_line_item WHERE id = $1 AND offer_id = $2`, lineID, offerID).
-		Scan(&curPosition, &curDescription, &curUnit, &line.Quantity, &line.UnitPriceMinor, &line.DiscountPct, &line.TaxRate)
+		Scan(&cur.Position, &cur.Description, &cur.Unit, &cur.Figures.Quantity, &cur.Figures.UnitPriceMinor,
+			&cur.Figures.DiscountPct, &cur.Figures.TaxRate, &cur.TaxCategory)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, "", "", OfferLineInput{}, apperrors.ErrNotFound
+		return currentOfferLine{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return 0, "", "", OfferLineInput{}, fmt.Errorf("read offer line: %w", err)
+		return currentOfferLine{}, fmt.Errorf("read offer line: %w", err)
 	}
-	return curPosition, curDescription, curUnit, line, nil
+	return cur, nil
 }
 
 // buildOfferLinePatch folds the caller's sparse line edit into a
@@ -337,7 +348,8 @@ func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID,
 // instead — the draft gate is the mutability rule here. It returns the
 // SET fragments and args ($1 is the line id), the before/after audit
 // maps, and the resulting line with the edits applied for validation.
-func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition int, curDescription, curUnit string, line OfferLineInput) (sets []string, args []any, before, after map[string]any, validated OfferLineInput) {
+func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, cur currentOfferLine) (sets []string, args []any, before, after map[string]any, validated OfferLineInput) {
+	line := cur.Figures
 	before, after = map[string]any{}, map[string]any{}
 	sets, args = []string{}, []any{lineID}
 	set := func(column string, oldVal, newVal any) {
@@ -346,13 +358,13 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 		before[column], after[column] = oldVal, newVal
 	}
 	if in.Position != nil {
-		set("position", curPosition, *in.Position)
+		set("position", cur.Position, *in.Position)
 	}
 	if in.Description != nil {
-		set("description", curDescription, *in.Description)
+		set("description", cur.Description, *in.Description)
 	}
 	if in.Unit != nil {
-		set("unit", curUnit, *in.Unit)
+		set("unit", cur.Unit, *in.Unit)
 	}
 	if in.Quantity != nil {
 		set("quantity", line.Quantity, *in.Quantity)
@@ -378,7 +390,7 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 	}
 	if in.TaxRate != nil {
 		set("tax_rate", line.TaxRate, *in.TaxRate)
-		set(taxCategoryField, nil, in.TaxCategory)
+		set(taxCategoryField, cur.TaxCategory, in.TaxCategory)
 		line.TaxRate = *in.TaxRate
 	}
 	return sets, args, before, after, line

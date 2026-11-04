@@ -344,6 +344,12 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 		if err := copyOfferIntoRevision(ctx, tx, id, newID, nextRevision, by); err != nil {
 			return err
 		}
+		// The revision is a new draft: its category lines take today's rates,
+		// and its typed lines stay as copied.
+		retax, err := retaxOffer(ctx, tx, newID, s.draftTaxBasis(ctx, tx, legalEntityIDOf(current)))
+		if err != nil {
+			return err
+		}
 
 		supersede := storekit.NewPatch()
 		supersede.Set("status", current.Status, "superseded")
@@ -351,9 +357,9 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 			return fmt.Errorf("mark prior revision superseded: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
 			"offer_number": current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
-		})
+		}, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer regenerate: %w", err)
 		}

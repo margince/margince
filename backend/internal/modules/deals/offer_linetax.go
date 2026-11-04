@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -144,6 +145,30 @@ func checkLineTaxCategory(asked, typedRate *string) error {
 		return &TaxRateAndCategoryError{}
 	}
 	return checkTaxCategory(*asked)
+}
+
+// stagedLineTax gives a drafted line grounded on a classified product that
+// product's category and the sheet's rate. A line on no product, or on an
+// unclassified one, keeps the rate the drafter proposed.
+func stagedLineTax(ctx context.Context, tx pgx.Tx, basis lazyTaxBasis, in *StagedOfferLineInput) error {
+	if in.ProductID == nil {
+		return nil
+	}
+	var category *string
+	err := tx.QueryRow(ctx,
+		`SELECT tax_category FROM product WHERE id = $1 AND archived_at IS NULL`, *in.ProductID).Scan(&category)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return auth.NameMissingReference("product_id", apperrors.ErrNotFound)
+	}
+	if err != nil || category == nil {
+		return err
+	}
+	rate, err := sheetTaxRate(ctx, tx, basis, *category)
+	if err != nil {
+		return err
+	}
+	in.TaxRate, in.taxCategory = rate, category
+	return nil
 }
 
 // patchedCategoryRate turns a patch's tax category into the rate the sheet

@@ -91,7 +91,7 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 **Reject** takes a reason you may leave empty. The reason is kept in the audit log, not on the offer.
 
-**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent.
+**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent. A line with a **Tax category** takes today's rate in the new version; a typed rate stays as it was.
 
 You can make an offer **PDF** at any point, draft included. Where your Margince has no file storage set up, it says "PDF rendering is not available on this installation."
 
@@ -159,7 +159,7 @@ An Admin or Ops keeps the **Tax rates** card under **Settings → Company profil
 
 A line from a product with a **Tax category** takes the rate of that category from the **Tax rates** card. It is the rate for the **Country** of the company that issues the offer, or your own **Country** when that company names none. The line shows its category under the rate.
 
-A draft takes today's rate. **Send** takes the rate again for the day you send, so a new rate from that day applies. After the send the line does not change. Moving a draft to another company under **Edit** takes that company's rates.
+A line the AI drafts from a product with a category does the same. A draft takes today's rate. **Send** takes the rate again for the day you send, so a new rate from that day applies. After the send the line does not change. Moving a draft to another company under **Edit** takes that company's rates.
 
 A line from a product with no category takes its **Default tax rate %**. A rate you type on a line is kept as you typed it, also when you send, and the line no longer shows a category.
 

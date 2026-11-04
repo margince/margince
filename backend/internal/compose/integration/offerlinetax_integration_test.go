@@ -213,3 +213,84 @@ func TestASendWithNoRateForTheCountryIsRefused(t *testing.T) {
 		t.Errorf("the refused offer is %s with %v (%v), want an unchanged draft", still.Status, rates(still), err)
 	}
 }
+
+func TestADraftedLineOnAClassifiedProductTakesTheSheetsRate(t *testing.T) {
+	f := newLineTaxFixture(t)
+	draft := f.offer(t, nil)
+	evidence := deals.StagedOfferLineEvidence{Snippet: "they want the consulting", SourceID: "activity:1"}
+	staged, err := f.e.Deals.AddStagedOfferLines(f.desk, offerIDOf(draft), []deals.StagedOfferLineInput{
+		{Description: "Consulting", Quantity: "1", UnitPriceMinor: 10000, TaxRate: "16", ProductID: &f.product, Evidence: evidence, PriceGrounded: true},
+		{Description: "Travel", Quantity: "1", UnitPriceMinor: 10000, TaxRate: "7", Evidence: evidence, PriceGrounded: true},
+	})
+	if err != nil {
+		t.Fatalf("stage the drafted lines: %v", err)
+	}
+	onProduct, onNothing := staged[0], staged[1]
+	if onProduct.TaxRate != 19 || onProduct.TaxCategory == nil || *onProduct.TaxCategory != "standard" {
+		t.Errorf("the line on the classified product took %v (%v), want the sheet's 19 standard", onProduct.TaxRate, onProduct.TaxCategory)
+	}
+	if onNothing.TaxRate != 7 || onNothing.TaxCategory != nil {
+		t.Errorf("the line on no product took %v (%v), want the drafter's 7 and no category", onNothing.TaxRate, onNothing.TaxCategory)
+	}
+	if _, err := f.e.Deals.AcceptOfferLineItem(f.desk, offerIDOf(draft), ids.UUID(onProduct.Id)); err != nil {
+		t.Fatalf("accept the drafted line: %v", err)
+	}
+
+	tomorrow := lineTaxNoon.AddDate(0, 0, 1)
+	if _, _, err := record(f.desk, f.e, "de", "standard", "21", tomorrow.Truncate(24*time.Hour)); err != nil {
+		t.Fatalf("record tomorrow's rate: %v", err)
+	}
+	f.e.Deals.SetClock(func() time.Time { return tomorrow })
+	sent, err := f.e.Deals.SendOffer(f.desk, offerIDOf(draft), nil)
+	if err != nil {
+		t.Fatalf("send tomorrow: %v", err)
+	}
+	if got := rates(sent); got[2] != [2]string{"21", "standard"} || got[3] != [2]string{"7", "none"} {
+		t.Errorf("after the send the drafted lines read %v, want tomorrow's 21 standard and the drafter's 7", got[2:])
+	}
+}
+
+func TestARevisionTakesTodaysRates(t *testing.T) {
+	f := newLineTaxFixture(t)
+	sent := f.offer(t, nil)
+	if _, err := f.e.Deals.SendOffer(f.desk, offerIDOf(sent), nil); err != nil {
+		t.Fatalf("send today: %v", err)
+	}
+	tomorrow := lineTaxNoon.AddDate(0, 0, 1)
+	if _, _, err := record(f.desk, f.e, "de", "standard", "21", tomorrow.Truncate(24*time.Hour)); err != nil {
+		t.Fatalf("record tomorrow's rate: %v", err)
+	}
+	f.e.Deals.SetClock(func() time.Time { return tomorrow })
+	revision, err := f.e.Deals.RegenerateOffer(f.desk, offerIDOf(sent))
+	if err != nil {
+		t.Fatalf("regenerate: %v", err)
+	}
+	if got := rates(revision); got[0] != [2]string{"21", "standard"} || got[1] != [2]string{"16", "none"} {
+		t.Errorf("the revision reads %v, want today's 21 standard and the typed 16 as copied", got)
+	}
+	if *revision.GrossMinor != 12100+11600 {
+		t.Errorf("the revision's gross is %d, want 121.00 + 116.00", *revision.GrossMinor)
+	}
+}
+
+func TestALinePatchAuditsTheCategoryItReplaced(t *testing.T) {
+	f := newLineTaxFixture(t)
+	if _, _, err := record(f.desk, f.e, "de", "reduced", "7", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("record the reduced rate: %v", err)
+	}
+	draft := f.offer(t, nil)
+	line := ids.UUID((*draft.LineItems)[0].Id)
+	reduced, typed := "reduced", "10"
+	for _, patch := range []deals.UpdateOfferLineInput{{TaxCategory: &reduced}, {TaxRate: &typed}} {
+		if _, err := f.e.Deals.UpdateOfferLineItem(f.desk, offerIDOf(draft), line, patch); err != nil {
+			t.Fatalf("patch the line: %v", err)
+		}
+	}
+	for _, step := range []struct{ was, now string }{{`"standard"`, `"reduced"`}, {`"reduced"`, `null`}} {
+		if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1
+			AND evidence -> 'line_before' -> 'tax_category' = $2::jsonb
+			AND evidence -> 'line_after' -> 'tax_category' = $3::jsonb`, draft.Id, step.was, step.now); got != 1 {
+			t.Errorf("%d audit rows record the category moving from %s to %s, want 1", got, step.was, step.now)
+		}
+	}
+}
