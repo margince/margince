@@ -4124,6 +4124,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.col.verbs": "Thao tác",
   "co.next.daysLate_one": "trễ {days} ngày",
   "co.next.daysLate_other": "trễ {days} ngày",
+  "promise.late.today": "Quá hạn từ sớm hôm nay và vẫn đang mở.",
+  "promise.late.sentence_one": "Quá hạn một ngày và vẫn đang mở.",
+  "promise.late.sentence_other": "Quá hạn {days} ngày và vẫn đang mở.",
+  "promise.claim.today":
+    "Đã cam kết thực hiện vào thời điểm trước đó trong hôm nay.",
+  "promise.claim.sentence_one": "Đã cam kết thực hiện vào hôm qua.",
+  "promise.claim.sentence_other": "Đã cam kết thực hiện cách đây {days} ngày.",
   "co.next.dueToday": "Đến hạn hôm nay",
   "co.next.inDays_one": "{days} ngày nữa",
   "co.next.inDays_other": "{days} ngày nữa",
@@ -14898,6 +14905,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_close_lost.label": "Đóng deal im lặng là thua",
   "autonomy.kind.deal_close_lost.help":
     "Đóng deal là thua khi khách hàng không trả lời trong 120 ngày (quản trị viên có thể đổi con số này), hoặc ngay lập tức khi khách hàng từ chối. Mỗi lần đóng hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_amount.label": "Giá trị deal",
+  "autonomy.kind.deal_amount.help":
+    "Đặt giá trị deal khi khách hàng hoặc báo giá của bạn nêu giá cho deal, ví dụ “50.000 USD cho năm đầu”. Giá bằng tiền tệ khác được quy đổi theo tỷ giá đã lưu. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_probability.label": "Xác suất thắng",
+  "autonomy.kind.deal_probability.help":
+    "Đặt xác suất thắng của deal khi bằng chứng thay đổi rõ ràng, ví dụ khách đồng ý miệng hoặc ngân sách bị đóng băng. Xác suất do bạn tự đặt không bao giờ bị thay đổi. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -15409,7 +15422,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.field.owner": "Chạy dưới tên",
-  "webhooks.field.ownerHint": "Sự kiện chỉ được gửi khi đồng nghiệp này còn hoạt động và được xem bản ghi. Khóa ký vẫn giữ nguyên.",
+  "webhooks.field.ownerHint":
+    "Sự kiện chỉ được gửi khi đồng nghiệp này còn hoạt động và được xem bản ghi. Khóa ký vẫn giữ nguyên.",
   "webhooks.field.ownerInactive": "Chủ sở hữu cũ, không còn hoạt động",
   "webhooks.field.ownerCurrent": "Đang phụ trách",
   "webhooks.row.ownerInactive": "Đã dừng: chủ sở hữu bị vô hiệu hóa",
@@ -16565,8 +16579,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.event.meetingKind": "cuộc họp",
   "contact.standing.event.promiseDue": "Cam kết đến hạn",
   "standing.wrote": "{name} đã viết",
-  "contact.standing.late_one": "Trễ {count} ngày",
-  "contact.standing.late_other": "Trễ {count} ngày",
   "contact.rail.consentTitle": "Quyền liên lạc",
   "contact.rail.phone": "Điện thoại",
   "contact.rail.noEmailAddress": "Chưa lưu địa chỉ",
@@ -17890,6 +17902,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.putBackDone": "Đã hoàn tác",
   "worklist.handled.closeLostUndone":
     "Đã hoàn tác. Hãy thêm ghi chú vì sao deal này vẫn còn hy vọng, nếu không Margince sẽ đóng lại ở lần kiểm tra tiếp theo.",
+  "worklist.handled.verdictUndone":
+    "Đã hoàn tác. Margince sẽ không thay đổi điều này nữa cho đến khi deal có điều gì mới.",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",
@@ -19496,6 +19510,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.cert_judge": "Đánh giá chứng nhận mô hình",
   "aiTask.name.cold_start": "Phân tích thông tin thiết lập",
   "aiTask.name.corpus_ask": "Hỏi đáp trên bộ tài liệu",
+  "aiTask.name.deal_verdict": "Kiểm tra ngày, giá trị và cơ hội của deal",
   "aiTask.name.deal_health": "Thẻ trạng thái Deal",
   "aiTask.name.document_extract": "Trích xuất tài liệu",
   "aiTask.name.draft_reply": "Soạn bản nháp trả lời",

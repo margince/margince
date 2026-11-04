@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 194524,
+    "tool_catalog_bytes": 194543,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 49945,
+    "approx_wire_tokens_total": 49950,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93377,
+      "input_schema_bytes": 93396,
       "output_schema_bytes": 47182,
-      "description_plus_input_schema_bytes": 136048
+      "description_plus_input_schema_bytes": 136067
     }
   },
   "tools": {
@@ -9838,7 +9838,8 @@
                 "format": "uuid",
                 "type": "string"
               },
-              "type": "array"
+              "type": "array",
+              "uniqueItems": true
             },
             "owner_id": {
               "description": "Who owns the remaining contact: the owner of one selected member",

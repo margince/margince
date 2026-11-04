@@ -141,8 +141,10 @@ function CommitmentRow({
               ? t("co.next.due", { when: formatDate(row.due_at, locale, zone) })
               : t("co.next.undated")}
           </span>{" "}
+          {/* Both badges wrap: the amount and the question are what they are
+              for, and the card's column is narrow on wide screens. */}
           {differs && (
-            <Badge tone="warning">
+            <Badge tone="warning" wrap>
               {t("deal.commitments.differs", {
                 amount: formatMoneyWhole(
                   differs.amount_minor,
@@ -169,7 +171,9 @@ function CommitmentRow({
       }
       right={
         row.overdue ? (
-          <Badge tone="danger">{t("deal.commitments.overdue")}</Badge>
+          <Badge tone="danger" wrap>
+            {t("deal.commitments.overdue")}
+          </Badge>
         ) : undefined
       }
     />

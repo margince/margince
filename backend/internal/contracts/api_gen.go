@@ -987,6 +987,7 @@ const (
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
+	AiActivityKindDealVerdict                   AiActivityKind = "deal_verdict"
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
@@ -1037,6 +1038,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
+		return true
+	case AiActivityKindDealVerdict:
 		return true
 	case AiActivityKindDocumentExtract:
 		return true
@@ -1576,6 +1579,7 @@ const (
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDealVerdict                   AiTask = "deal_verdict"
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
@@ -1625,6 +1629,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCorpusAsk:
 		return true
 	case AiTaskDealHealth:
+		return true
+	case AiTaskDealVerdict:
 		return true
 	case AiTaskDocumentExtract:
 		return true
@@ -1908,17 +1914,23 @@ func (e AnalyticsScopeKind) Valid() bool {
 
 // Defines values for AppliedDealChangeReviewKind.
 const (
-	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
-	AppliedDealChangeReviewKindCloseLost AppliedDealChangeReviewKind = "close_lost"
-	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
+	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
+	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
+	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
 
 // Valid indicates whether the value is a known member of the AppliedDealChangeReviewKind enum.
 func (e AppliedDealChangeReviewKind) Valid() bool {
 	switch e {
+	case AppliedDealChangeReviewKindAmount:
+		return true
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindProbability:
 		return true
 	case AppliedDealChangeReviewKindStage:
 		return true
@@ -30934,7 +30946,7 @@ type AiOpenRouterProvider struct {
 	Only *[]string `json:"only,omitempty"`
 
 	// Order Host slugs to try first, in this order.
-	Order *[]string `json:"order,omitempty"`
+	Order *[]string `json:"order,omitempty" unique:"items"`
 
 	// PreferredMaxLatency Seconds, one number or per percentile; a soft preference.
 	PreferredMaxLatency *AiOpenRouterProvider_PreferredMaxLatency `json:"preferred_max_latency,omitempty"`
@@ -30943,7 +30955,7 @@ type AiOpenRouterProvider struct {
 	PreferredMinThroughput *AiOpenRouterProvider_PreferredMinThroughput `json:"preferred_min_throughput,omitempty"`
 
 	// Quantizations Serving precisions allowed (bf16, fp16, fp8, fp4, int8 …); a hard filter.
-	Quantizations *[]string `json:"quantizations,omitempty"`
+	Quantizations *[]string `json:"quantizations,omitempty" unique:"items"`
 
 	// RequireParameters Keep the request off hosts that lack any parameter it carries.
 	RequireParameters *bool `json:"require_parameters,omitempty"`
@@ -31075,10 +31087,10 @@ type AiOpenRouterUpstream struct {
 	EnforceDistillableText *bool `json:"enforce_distillable_text,omitempty"`
 
 	// Ignore Upstream slugs excluded; a hard filter.
-	Ignore *[]string `json:"ignore,omitempty"`
+	Ignore *[]string `json:"ignore,omitempty" unique:"items"`
 
 	// Only Upstream slugs allowed; a hard filter.
-	Only *[]string `json:"only,omitempty"`
+	Only *[]string `json:"only,omitempty" unique:"items"`
 
 	// Zdr Zero data retention: only hosts that keep no copy of the prompt or the answer may serve a request.
 	Zdr *bool `json:"zdr,omitempty"`
@@ -31126,7 +31138,7 @@ type AiProfile struct {
 	Name             AiProfileName              `json:"name"`
 
 	// Providers Distinct configured provider keys, sorted; fake is never returned.
-	Providers []AiProfileProviders `json:"providers"`
+	Providers []AiProfileProviders `json:"providers" unique:"items"`
 	State     AiProfileState       `json:"state"`
 }
 
@@ -32383,7 +32395,7 @@ type AssistantProfile struct {
 	Name          AssistantProfileName          `json:"name"`
 
 	// Providers Distinct configured provider keys, sorted; fake is never returned.
-	Providers []AssistantProfileProviders `json:"providers"`
+	Providers []AssistantProfileProviders `json:"providers" unique:"items"`
 	State     AssistantProfileState       `json:"state"`
 }
 
@@ -39063,7 +39075,7 @@ type ConfirmCompanySiteReadRequest struct {
 	Resolutions *[]CompanySiteReadResolution `json:"resolutions,omitempty"`
 
 	// SelectedFactKeys The proposed facts to keep, exactly as the read stated them. A fact the reader wants to correct is left out of this list and sent as a use_value resolution instead.
-	SelectedFactKeys []string `json:"selected_fact_keys"`
+	SelectedFactKeys []string `json:"selected_fact_keys" unique:"items"`
 }
 
 // ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
@@ -39987,7 +39999,7 @@ type ContactCaseStatus string
 // ContactCaseDecisionRequest defines model for ContactCaseDecisionRequest.
 type ContactCaseDecisionRequest struct {
 	// MemberIds The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
-	MemberIds []openapi_types.UUID `json:"member_ids"`
+	MemberIds []openapi_types.UUID `json:"member_ids" unique:"items"`
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
@@ -40831,11 +40843,11 @@ type ContactProviderProfile struct {
 	Attributes *[]ContactProviderAttribute `json:"attributes,omitempty"`
 
 	// CategoriesAsked What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
-	CategoriesAsked        *[]string `json:"categories_asked,omitempty"`
-	CategoriesNotRequested []string  `json:"categories_not_requested"`
+	CategoriesAsked        *[]string `json:"categories_asked,omitempty" unique:"items"`
+	CategoriesNotRequested []string  `json:"categories_not_requested" unique:"items"`
 
 	// CategoriesWithoutAnswer What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something.
-	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty"`
+	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty" unique:"items"`
 	City                    *string   `json:"city,omitempty"`
 
 	// ContributingRuns Every retained completed run whose claims contribute to this snapshot. Normally the
@@ -41549,7 +41561,7 @@ type CreateConsentPurposeRequest struct {
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
 type CreateContactEnrichmentRunRequest struct {
 	// Categories Narrow this ONE run to a subset of what the connection buys — how a reader purchases a single priced detail for one contact without changing the setting for every future run. Omit for the connection's own selection. It can only narrow: a category the connection does not carry is refused with 422 rather than trimmed, because buying less than was asked for while answering as though nothing was wrong is a failure the caller cannot see, and an admin's selection is a ceiling a rep must not be able to raise.
-	Categories *[]string `json:"categories,omitempty"`
+	Categories *[]string `json:"categories,omitempty" unique:"items"`
 
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
@@ -42503,7 +42515,7 @@ type CreateWebhookSubscriptionRequest struct {
 	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
 
 	// EventTypes At least one event type from the published catalog; a true set — duplicates are rejected.
-	EventTypes []string `json:"event_types"`
+	EventTypes []string `json:"event_types" unique:"items"`
 
 	// TargetUrl HTTPS-only; http:// is rejected (the contract enforces the scheme, matching the store's check).
 	TargetUrl string `json:"target_url"`
@@ -44184,7 +44196,7 @@ type DismissRelationshipNudgeRequest struct {
 // DismissRelationshipNudgesRequest defines model for DismissRelationshipNudgesRequest.
 type DismissRelationshipNudgesRequest struct {
 	// ContactIds The contacts to set aside, as the Worklist listed them.
-	ContactIds []openapi_types.UUID `json:"contact_ids"`
+	ContactIds []openapi_types.UUID `json:"contact_ids" unique:"items"`
 
 	// Days How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both.
 	Days *int `json:"days,omitempty"`
@@ -45942,7 +45954,7 @@ type FxRate struct {
 type FxRateCurrencyListResponse struct {
 	// BaseCurrency The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
 	BaseCurrency string   `json:"base_currency"`
-	Data         []string `json:"data"`
+	Data         []string `json:"data" unique:"items"`
 }
 
 // FxRateListResponse defines model for FxRateListResponse.
@@ -48147,7 +48159,7 @@ type IssuePassportRequest struct {
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
-	Scopes []IssuePassportRequestScopes `json:"scopes"`
+	Scopes []IssuePassportRequestScopes `json:"scopes" unique:"items"`
 
 	// TtlHours Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time.
 	TtlHours *int `json:"ttl_hours,omitempty"`
@@ -49650,7 +49662,7 @@ type LifecyclePreviewEvidenceScope string
 // LinkCompanyContactsRequest defines model for LinkCompanyContactsRequest.
 type LinkCompanyContactsRequest struct {
 	// ContactIds The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
-	ContactIds []openapi_types.UUID `json:"contact_ids"`
+	ContactIds []openapi_types.UUID `json:"contact_ids" unique:"items"`
 }
 
 // LinkCompanyContactsResult defines model for LinkCompanyContactsResult.
@@ -52351,7 +52363,7 @@ type OnboardingCompanyMessageReply struct {
 	Message                 string                                                 `json:"message"`
 	NextRequiredField       *OnboardingCompanyMessageReplyNextRequiredField        `json:"next_required_field,omitempty"`
 	ProposedChanges         []CompanySiteReadSuggestedChange                       `json:"proposed_changes"`
-	RemainingRequiredFields []OnboardingCompanyMessageReplyRemainingRequiredFields `json:"remaining_required_fields"`
+	RemainingRequiredFields []OnboardingCompanyMessageReplyRemainingRequiredFields `json:"remaining_required_fields" unique:"items"`
 }
 
 // OnboardingCompanyMessageReplyAvailableAction defines model for OnboardingCompanyMessageReply.AvailableAction.
@@ -52417,7 +52429,7 @@ type OnboardingState struct {
 	ConnectSkipped   bool                       `json:"connect_skipped"`
 	CreatedAt        *time.Time                 `json:"created_at,omitempty"`
 	Path             *OnboardingStatePath       `json:"path,omitempty"`
-	SelectedFactKeys []string                   `json:"selected_fact_keys"`
+	SelectedFactKeys []string                   `json:"selected_fact_keys" unique:"items"`
 	SiteReadId       *openapi_types.UUID        `json:"site_read_id,omitempty"`
 	SourceMode       *OnboardingStateSourceMode `json:"source_mode"`
 	Step             OnboardingStateStep        `json:"step"`
@@ -54089,7 +54101,7 @@ type ProviderRun struct {
 	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
 	// live set.
 	Provider            Provider `json:"provider"`
-	RequestedCategories []string `json:"requested_categories"`
+	RequestedCategories []string `json:"requested_categories" unique:"items"`
 
 	// Reservations Maximum credits held per pool before submission, reconciled to actual spend on a terminal result (PI-FORM-1).
 	Reservations []ProviderRunReservation `json:"reservations"`
@@ -54240,7 +54252,7 @@ type PutOnboardingStateRequest struct {
 
 	// ExpectedVersion Zero creates; otherwise the version last read.
 	ExpectedVersion  int                                  `json:"expected_version"`
-	SelectedFactKeys []string                             `json:"selected_fact_keys"`
+	SelectedFactKeys []string                             `json:"selected_fact_keys" unique:"items"`
 	SiteReadId       *openapi_types.UUID                  `json:"site_read_id,omitempty"`
 	SourceMode       *PutOnboardingStateRequestSourceMode `json:"source_mode"`
 
@@ -55333,7 +55345,7 @@ type ReplyRecipient struct {
 	// MailboxUserIds Every member of this company whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
 	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
 	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this company still holds resolves to nobody. Always an array, never null.
-	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
+	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids" unique:"items"`
 
 	// ViewerOnConversation Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
 	// True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
@@ -61907,7 +61919,7 @@ type UpdateWebhookSubscriptionRequest struct {
 
 	// CustomHeaders Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
 	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
-	EventTypes    *[]string                   `json:"event_types,omitempty"`
+	EventTypes    *[]string                   `json:"event_types,omitempty" unique:"items"`
 
 	// OwnerId The member the subscription runs under from now on. A delivery carries what its owner may see, so naming one is acting for that member: the caller needs `user_admin` update and the reach over the new owner a handover takes (403 otherwise). The owner must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
 	OwnerId *openapi_types.UUID                    `json:"owner_id,omitempty"`

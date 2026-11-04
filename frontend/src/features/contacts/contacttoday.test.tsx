@@ -549,7 +549,7 @@ describe("Call on the move a call left owed", () => {
     },
   });
   const lateBy = (days: number) =>
-    en["contact.standing.late_other"].replace("{count}", String(days));
+    en["co.next.daysLate_other"].replace("{days}", String(days));
 
   it("dates the promise and offers its Call when the evidence names another task", async () => {
     show(datedView(), promised([{ type: "task", id: "a-6", label: "Typed" }]));
