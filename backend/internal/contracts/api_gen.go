@@ -24285,9 +24285,11 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureLikely      WeeklyReviewOutlookForwardMeasure = "likely"
-	WeeklyReviewOutlookForwardMeasureManagerCall WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureWeighted    WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureLikely            WeeklyReviewOutlookForwardMeasure = "likely"
+	WeeklyReviewOutlookForwardMeasureManagerCall       WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureQualifiedLikely   WeeklyReviewOutlookForwardMeasure = "qualified_likely"
+	WeeklyReviewOutlookForwardMeasureQualifiedWeighted WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
+	WeeklyReviewOutlookForwardMeasureWeighted          WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
@@ -24296,6 +24298,10 @@ func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	case WeeklyReviewOutlookForwardMeasureLikely:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedLikely:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
 	case WeeklyReviewOutlookForwardMeasureWeighted:
 		return true
@@ -63225,6 +63231,9 @@ type WeeklyReviewOutlook struct {
 	// change, and a past week must keep saying what it was read under rather than silently
 	// re-meaning when somebody changes how the business reads its pipeline.
 	//
+	// `qualified_likely` and `qualified_weighted` appear only on a week frozen under the
+	// retired qualified forecast. No week is frozen under them any more.
+	//
 	// No manager call is consulted for a frozen weekly landing: a call is an assertion about
 	// a period somebody is still working, and a retrospective reports what the pipeline
 	// said. Freezing an opinion as a measurement would make the record argue with itself.
@@ -63259,6 +63268,9 @@ type WeeklyReviewOutlook struct {
 // WeeklyReviewOutlookForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
 // change, and a past week must keep saying what it was read under rather than silently
 // re-meaning when somebody changes how the business reads its pipeline.
+//
+// `qualified_likely` and `qualified_weighted` appear only on a week frozen under the
+// retired qualified forecast. No week is frozen under them any more.
 //
 // No manager call is consulted for a frozen weekly landing: a call is an assertion about
 // a period somebody is still working, and a retrospective reports what the pipeline

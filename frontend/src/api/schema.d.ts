@@ -52536,12 +52536,15 @@ export interface components {
              *     change, and a past week must keep saying what it was read under rather than silently
              *     re-meaning when somebody changes how the business reads its pipeline.
              *
+             *     `qualified_likely` and `qualified_weighted` appear only on a week frozen under the
+             *     retired qualified forecast. No week is frozen under them any more.
+             *
              *     No manager call is consulted for a frozen weekly landing: a call is an assertion about
              *     a period somebody is still working, and a retrospective reports what the pipeline
              *     said. Freezing an opinion as a measurement would make the record argue with itself.
              * @enum {string}
              */
-            forward_measure?: "likely" | "weighted" | "manager_call";
+            forward_measure?: "likely" | "weighted" | "manager_call" | "qualified_likely" | "qualified_weighted";
             /** Format: int64 */
             won_minor: number;
             /**

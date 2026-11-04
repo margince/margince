@@ -12,7 +12,10 @@ package values
 // other enforces — and the drift is invisible until an installation saves a
 // measure the projection then refuses on every read.
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // ForwardMeasure names which reading the forward half of a landing comes from.
 type ForwardMeasure string
@@ -36,6 +39,21 @@ const (
 // Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go).
 func ForwardMeasures() []ForwardMeasure {
 	return []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall}
+}
+
+// RetiredForwardMeasures are the measures of the retired qualified forecast. A
+// frozen weekly review keeps the word it was read under; nothing builds them.
+func RetiredForwardMeasures() []string {
+	return []string{"qualified_likely", "qualified_weighted"}
+}
+
+// RetiredForwardMeasure names the retired measure a stored spelling means, the
+// older qualified_commit_evidence included.
+func RetiredForwardMeasure(raw string) (string, bool) {
+	if raw == "qualified_commit_evidence" {
+		return "qualified_likely", true
+	}
+	return raw, slices.Contains(RetiredForwardMeasures(), raw)
 }
 
 // legacyForwardMeasures are the spellings stored rows still hold. A qualified

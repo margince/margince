@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Where the contract spells a forward measure. Held honest by
@@ -34,15 +35,18 @@ import (
 var forwardMeasureSites = []struct {
 	what string
 	path []string
+	// frozen marks a site that also offers the retired measures, because a
+	// stored row read back keeps the word it was frozen under.
+	frozen bool
 }{
-	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}},
-	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}},
-	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}},
+	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, false},
+	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false},
+	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, false},
 	// The weekly review's FROZEN measure. It records which measure a past week
 	// was read under, so it must offer the same set — a review frozen under a
 	// measure the server no longer builds is a record nobody can re-read.
-	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}},
-	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}},
+	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}, true},
+	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}, false},
 }
 
 // TestEveryForwardMeasureIsOfferedOnTheWire is the gate forecasting.ForwardMeasures names.
@@ -67,6 +71,9 @@ func TestEveryForwardMeasureIsOfferedOnTheWire(t *testing.T) {
 			}
 		}
 		for _, measure := range onWire {
+			if site.frozen && slices.Contains(values.RetiredForwardMeasures(), measure) {
+				continue
+			}
 			if !slices.Contains(inGo, measure) {
 				t.Errorf("%s offers %q and forecasting.ProjectLanding refuses it — "+
 					"an installation that saves this setting errors on every forecast read, "+

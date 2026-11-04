@@ -71004,11 +71004,14 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [likely, weighted, manager_call]
+          enum: [likely, weighted, manager_call, qualified_likely, qualified_weighted]
           description: |
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
             re-meaning when somebody changes how the business reads its pipeline.
+
+            `qualified_likely` and `qualified_weighted` appear only on a week frozen under the
+            retired qualified forecast. No week is frozen under them any more.
 
             No manager call is consulted for a frozen weekly landing: a call is an assertion about
             a period somebody is still working, and a retrospective reports what the pipeline

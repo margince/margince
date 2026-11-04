@@ -39998,7 +39998,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [likely, weighted, manager_call]
+          enum: [likely, weighted, manager_call, qualified_likely, qualified_weighted]
           description: |-
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
