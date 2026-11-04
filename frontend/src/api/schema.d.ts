@@ -16321,7 +16321,12 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update a data-subject request's status / assignee / resolution. */
+        /**
+         * Update a data-subject request's status / assignee / resolution.
+         * @description Fulfilling an erasure runs the erasure and records its own answer, `erased` or
+         *     `nothing_held`. Text sent as `resolution` with it is refused with 422 before anything
+         *     is erased.
+         */
         patch: operations["updateDataSubjectRequest"];
         trace?: never;
     };
@@ -49861,7 +49866,16 @@ export interface components {
              * @description null hands the request back to the unassigned pool.
              */
             assignee_id?: string | null;
-            /** @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft. */
+            /**
+             * @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+             *     the stored answer, is refused with 422. An open request takes any draft.
+             *
+             *     Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+             *     from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+             *     when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+             *     with 422 on `resolution`, before anything is erased, because typed prose could name the
+             *     subject the erasure removes. Rejecting an erasure still needs a written answer.
+             */
             resolution?: string | null;
             /**
              * @description How the requester's identity was checked, recorded in the proof the request keeps once

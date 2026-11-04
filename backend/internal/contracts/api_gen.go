@@ -61218,7 +61218,14 @@ type UpdateDataSubjectRequest struct {
 	// is an address. Ignored on a patch that does not close the request.
 	RequesterEmail *openapi_types.Email `json:"requester_email,omitempty"`
 
-	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
+	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+	// the stored answer, is refused with 422. An open request takes any draft.
+	//
+	// Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+	// from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+	// when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+	// with 422 on `resolution`, before anything is erased, because typed prose could name the
+	// subject the erasure removes. Rejecting an erasure still needs a written answer.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }

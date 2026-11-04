@@ -10285,6 +10285,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
   "privacy.erasureConfirm": "Löschen und sperren",
+  "privacy.resolutionErasureHint":
+    "Nur für eine Ablehnung. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureDraftReplaced":
+    "Deine eingegebene Antwort wird nicht gespeichert. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureAnswer.erased": "Gelöscht",
+  "privacy.erasureAnswer.nothing_held": "Nichts vorhanden (bereits gelöscht)",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",

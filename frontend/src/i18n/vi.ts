@@ -10008,6 +10008,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.erasureIrreversible":
     "Thao tác này xóa vĩnh viễn liên hệ trên toàn hệ thống: hồ sơ, hoạt động đã thu thập và các giá trị dẫn xuất. Không thể hoàn tác. Bản thân thao tác xóa cũng được ghi vào nhật ký hoạt động.",
   "privacy.erasureConfirm": "Xóa và chặn",
+  "privacy.resolutionErasureHint":
+    "Chỉ dùng khi từ chối. Khi hoàn tất, hệ thống ghi lại kết quả xóa: Đã xóa, hoặc Không có dữ liệu.",
+  "privacy.erasureDraftReplaced":
+    "Câu trả lời bạn đã nhập sẽ không được lưu. Khi hoàn tất, hệ thống ghi lại kết quả xóa: Đã xóa, hoặc Không có dữ liệu.",
+  "privacy.erasureAnswer.erased": "Đã xóa",
+  "privacy.erasureAnswer.nothing_held": "Không có dữ liệu (đã xóa trước đó)",
   "privacy.legalHoldTitle": "Bị chặn do lưu trữ pháp lý",
   "privacy.legalHold":
     "Liên hệ này đang trong thời hạn lưu trữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b)). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử xóa này đã được ghi vào nhật ký hoạt động.",

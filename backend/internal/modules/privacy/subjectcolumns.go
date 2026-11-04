@@ -61,6 +61,18 @@ func subjectCustomColumns(ctx context.Context, tx pgx.Tx, object string) ([]fiel
 // nullColumnAssignments renders the `, "cf_x" = NULL, …` fragment an
 // anonymizing UPDATE splices after its fixed SET list — empty when the
 // object has no custom columns, so the caller splices unconditionally.
+// anyColumnHeld is a predicate true while any of cols still holds a value,
+// joined with OR and led by " OR ", or empty when there are none.
+func anyColumnHeld(cols []fieldcatalog.Column) string {
+	var b strings.Builder
+	for _, c := range cols {
+		b.WriteString(" OR ")
+		b.WriteString(pgx.Identifier{c.Name}.Sanitize())
+		b.WriteString(" IS NOT NULL")
+	}
+	return b.String()
+}
+
 func nullColumnAssignments(cols []fieldcatalog.Column) string {
 	var b strings.Builder
 	for _, c := range cols {
