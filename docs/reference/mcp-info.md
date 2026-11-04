@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 190.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 49950 |
+| Approx. wire tokens | 49956 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -67,7 +67,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1856 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1862 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 781 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
@@ -1554,7 +1554,7 @@ yes before calling, unless they asked for this call themselves; requires passpor
       "type": "boolean"
     },
     "request_body": {
-      "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
+      "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
       "type": "object"
     },
     "scope": {
