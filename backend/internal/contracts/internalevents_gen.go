@@ -146,8 +146,8 @@ type InternalEventDealSuggestionDismissed struct{}
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
 
-// InternalEventExistingCustomerNoticeDeclared An administrator declared that a group of customers was told at collection that they may object to advertising.
-type InternalEventExistingCustomerNoticeDeclared struct {
+// InternalEventExistingCustomerNoticeCreated An administrator declared that a group of customers was told at collection that they may object to advertising.
+type InternalEventExistingCustomerNoticeCreated struct {
 	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
 }
 
@@ -270,11 +270,11 @@ func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_s
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
 
-func (InternalEventExistingCustomerNoticeDeclared) EventType() string {
-	return "existing_customer_notice.declared"
+func (InternalEventExistingCustomerNoticeCreated) EventType() string {
+	return "existing_customer_notice.created"
 }
 
-func (InternalEventExistingCustomerNoticeDeclared) EntityType() string {
+func (InternalEventExistingCustomerNoticeCreated) EntityType() string {
 	return "existing_customer_notice"
 }
 

@@ -24844,10 +24844,11 @@ paths:
         UNPAGED: an installation declares a handful, one per customer group.
 
         Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
-        marketing send to a contact without consent goes out when all of these hold: the contact
-        is a stakeholder on a won deal of the sending entity; a live declaration of that entity
-        covers the day the deal was won; the declaration names the send's marketing purpose; and
-        the contact has not objected. The send then records the basis
+        marketing send to a contact without consent goes out when all of these hold: an offer
+        the sending entity issued was accepted on a deal the contact was a stakeholder of before
+        the acceptance; a live declaration of that entity covers the moment of acceptance; the
+        declaration names the send's marketing purpose; and the contact has not objected. An
+        offer that names no issuing entity counts for none. The send then records the basis
         `existing_customer_exception`.
       responses:
         '200':

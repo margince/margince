@@ -24,9 +24,9 @@ components:
       properties:
         object: { type: string }
         action: { type: string }
-    InternalEventExistingCustomerNoticeDeclared:
+    InternalEventExistingCustomerNoticeCreated:
       type: object
-      x-event-type: existing_customer_notice.declared
+      x-event-type: existing_customer_notice.created
       x-entity-type: existing_customer_notice
       description: >-
         An administrator declared that a group of customers was told at

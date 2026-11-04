@@ -86,18 +86,20 @@ func (e *resolveEnv) archivedEntity(t *testing.T) ids.UUID {
 	return entity
 }
 
-// wonDealAt plants a deal won at a moment, with the env's contact as stakeholder.
-func (e *resolveEnv) wonDealAt(t *testing.T, at time.Time) ids.UUID {
+// saleAt plants a sale: a deal with the env's contact as stakeholder from
+// before, and an offer of entity accepted at a moment.
+func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, offer ids.UUID) {
 	t.Helper()
-	deal := ids.NewV7()
+	deal = ids.NewV7()
 	e.ownerExec(t, `
-		INSERT INTO deal (id, name, pipeline_id, stage_id, status, closed_at, source, captured_by)
-		VALUES ($1, 'Spring order', $2, $3, 'won', $4, 'manual', 'human:x')`,
-		deal, e.pipeline, e.stage, at)
+		INSERT INTO deal (id, name, pipeline_id, stage_id, status, source, captured_by)
+		VALUES ($1, 'Spring order', $2, $3, 'open', 'manual', 'human:x')`, deal, e.pipeline, e.stage)
 	e.ownerExec(t, `
-		INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by)
-		VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, deal, e.contact)
-	return deal
+		INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by, created_at)
+		VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x', $3)`, deal, e.contact, at.Add(-30*24*time.Hour))
+	offer = e.offerOn(t, deal, "accepted")
+	e.ownerExec(t, `UPDATE offer SET legal_entity_id = $2, accepted_at = $3 WHERE id = $1`, offer, entity, at)
+	return deal, offer
 }
 
 // declare records a declaration through the store's door.
@@ -114,15 +116,15 @@ func (e *resolveEnv) declare(t *testing.T, entity ids.UUID, from time.Time, unti
 	return n
 }
 
-// customerEnv is a contact under the route who won a deal two years ago, and a
-// newsletter purpose, with nothing declared yet.
+// customerEnv is a contact under the route who bought from the default entity
+// two years ago, and a newsletter purpose, with nothing declared yet.
 func customerEnv(t *testing.T) (*resolveEnv, ids.UUID, time.Time) {
 	t.Helper()
 	e := setupResolve(t)
 	e.livesIn(t, customerRoute())
 	e.seedPurpose(t, "newsletter", "marketing")
 	soldAt := clocktest.Now(t).Add(-2 * year)
-	e.wonDealAt(t, soldAt)
+	e.saleAt(t, e.defaultEntity(t), soldAt)
 	return e, e.purposeID(t, "newsletter"), soldAt
 }
 
@@ -194,18 +196,39 @@ func TestEachExistingCustomerConditionIsNeeded(t *testing.T) {
 	}
 }
 
-func TestASaleBelongsToTheEntityOfItsAcceptedOffer(t *testing.T) {
-	e := setupResolve(t)
-	e.livesIn(t, customerRoute())
-	e.seedPurpose(t, "newsletter", "marketing")
-	newsletter := e.purposeID(t, "newsletter")
-	deal := e.wonDealAt(t, clocktest.Now(t).Add(-year))
-	offer := e.offerOn(t, deal, "accepted")
-	e.ownerExec(t, `UPDATE offer SET legal_entity_id = $2 WHERE id = $1`, offer, e.secondEntity(t))
-	e.declare(t, e.defaultEntity(t), clocktest.Now(t).Add(-2*year), nil, newsletter)
-
-	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
-		t.Fatalf("the default entity sent on a sale the branch made")
+// The sale is an accepted offer of the sending entity. A won deal with no
+// such offer, an offer another entity issued, an offer that names no issuer,
+// and a stakeholder added after the acceptance each carry nothing.
+func TestASaleIsAnAcceptedOfferOfTheSendingEntity(t *testing.T) {
+	for name, plant := range map[string]func(t *testing.T, e *resolveEnv, at time.Time){
+		"a won deal with no accepted offer": func(t *testing.T, e *resolveEnv, at time.Time) {
+			deal, offer := e.saleAt(t, e.defaultEntity(t), at)
+			e.ownerExec(t, `UPDATE deal SET status = 'won', closed_at = $2 WHERE id = $1`, deal, at)
+			e.ownerExec(t, `UPDATE offer SET status = 'sent', accepted_at = NULL WHERE id = $1`, offer)
+		},
+		"an offer the branch issued": func(t *testing.T, e *resolveEnv, at time.Time) {
+			e.saleAt(t, e.secondEntity(t), at)
+		},
+		"an offer that names no issuer": func(t *testing.T, e *resolveEnv, at time.Time) {
+			_, offer := e.saleAt(t, e.defaultEntity(t), at)
+			e.ownerExec(t, `UPDATE offer SET legal_entity_id = NULL WHERE id = $1`, offer)
+		},
+		"a stakeholder added after the acceptance": func(t *testing.T, e *resolveEnv, at time.Time) {
+			deal, _ := e.saleAt(t, e.defaultEntity(t), at)
+			e.ownerExec(t, `UPDATE relationship SET created_at = $2 WHERE deal_id = $1`, deal, at.Add(time.Hour))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			e.livesIn(t, customerRoute())
+			e.seedPurpose(t, "newsletter", "marketing")
+			at := clocktest.Now(t).Add(-year)
+			plant(t, e, at)
+			e.declare(t, e.defaultEntity(t), at.Add(-year), nil, e.purposeID(t, "newsletter"))
+			if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+				t.Fatalf("verdict = allow on basis %q, want a refusal", got.Basis)
+			}
+		})
 	}
 }
 

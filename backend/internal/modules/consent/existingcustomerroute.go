@@ -6,16 +6,19 @@ package consent
 // The existing-customer route (UWG §7(3)): advertising to a customer without
 // consent, when all four conditions hold.
 //
-//  1. The address came with a sale: a won deal with the sending entity names
-//     the contact as a stakeholder.
+//  1. The address came with a sale: an offer the sending entity issued was
+//     accepted, on a deal the contact was a stakeholder of before it was
+//     accepted. The sale is the accepted offer, not the deal's own status or
+//     close date, which a rep may edit at will. An offer that names no issuing
+//     entity carries no sale for any entity.
 //  2. The mail advertises goods like the ones bought: the declaration that
 //     covers the sale names this marketing purpose.
 //  3. The customer did not object: verdictFor refuses on an objection or a
 //     stop before it reaches this file.
 //  4. The customer was told at collection that they may object: an admin
-//     declared the notice for the sending entity, for a period the sale
+//     declared the notice for the sending entity, for a period the acceptance
 //     falls in. A later order confirmation does not count, so the declaration
-//     must cover the day of the sale itself.
+//     must cover the moment of the sale itself.
 //
 // The route asks all three of its own conditions whatever the pack names. The
 // one pack that declares the exception names all four, and asking less than a
@@ -36,44 +39,37 @@ import (
 // on when it goes out under the existing-customer route.
 type ExistingCustomerGround struct {
 	NoticeID ids.UUID
-	DealID   ids.UUID
+	OfferID  ids.UUID
 	SoldAt   time.Time
 }
 
 // existingCustomerGround finds the newest sale of the sending entity to this
 // contact that a live declaration covers for this purpose. None found answers
 // nil.
-//
-// The deal's seller is the entity of its accepted offer, else the default
-// entity, the one an installation with a single entity trades as.
 func existingCustomerGround(
 	ctx context.Context, tx pgx.Tx, contactID, purposeID string, entity ids.UUID,
 ) (*ExistingCustomerGround, error) {
 	var g ExistingCustomerGround
 	err := tx.QueryRow(ctx, `
-		SELECT n.id, d.id, d.closed_at
+		SELECT n.id, o.id, o.accepted_at
 		  FROM relationship r
-		  JOIN deal d ON d.id = r.deal_id
+		  JOIN offer o
+		    ON o.deal_id = r.deal_id
+		   AND o.status = 'accepted'
+		   AND o.legal_entity_id = $3
+		   AND o.accepted_at >= r.created_at
 		  JOIN existing_customer_notice n
 		    ON n.legal_entity_id = $3
 		   AND n.withdrawn_at IS NULL
-		   AND d.closed_at >= n.effective_from
-		   AND (n.effective_until IS NULL OR d.closed_at < n.effective_until)
+		   AND o.accepted_at >= n.effective_from
+		   AND (n.effective_until IS NULL OR o.accepted_at < n.effective_until)
 		  JOIN existing_customer_notice_purpose np
 		    ON np.notice_id = n.id AND np.purpose_id = $2
 		 WHERE r.kind = 'deal_stakeholder'
 		   AND r.contact_id = $1
 		   AND r.archived_at IS NULL
-		   AND d.status = 'won'
-		   AND d.archived_at IS NULL
-		   AND coalesce(
-		         (SELECT o.legal_entity_id FROM offer o
-		           WHERE o.deal_id = d.id AND o.status = 'accepted'
-		             AND o.legal_entity_id IS NOT NULL
-		           ORDER BY o.accepted_at DESC LIMIT 1),
-		         (SELECT le.id FROM legal_entity le WHERE le.is_default)) = $3
-		 ORDER BY d.closed_at DESC, n.id
-		 LIMIT 1`, contactID, purposeID, entity).Scan(&g.NoticeID, &g.DealID, &g.SoldAt)
+		 ORDER BY o.accepted_at DESC, n.id
+		 LIMIT 1`, contactID, purposeID, entity).Scan(&g.NoticeID, &g.OfferID, &g.SoldAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

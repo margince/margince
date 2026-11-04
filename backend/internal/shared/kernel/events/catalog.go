@@ -204,7 +204,7 @@ var catalog = map[string]struct {
 	"legal_entity.member_added": {identityStreamEntity, 1},
 	// A collection-notice declaration is consent configuration an admin
 	// keeps, on the identity stream beside the entity it names.
-	"existing_customer_notice.declared":  {identityStreamEntity, 1},
+	"existing_customer_notice.created":   {identityStreamEntity, 1},
 	"existing_customer_notice.withdrawn": {identityStreamEntity, 1},
 	"meeting_proposal.updated":           {activityStreamEntity, 1},
 	"meeting_invitation.updated":         {activityStreamEntity, 1},

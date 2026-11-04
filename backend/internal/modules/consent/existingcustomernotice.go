@@ -13,6 +13,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -145,7 +146,7 @@ func (s *Store) DeclareCustomerNotice(ctx context.Context, in DeclareNoticeInput
 			return err
 		}
 		out = notice
-		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventExistingCustomerNoticeDeclared{
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventExistingCustomerNoticeCreated{
 			LegalEntityId: openapi_types.UUID(in.LegalEntityID),
 		})
 	})
@@ -214,18 +215,21 @@ func (s *Store) WithdrawCustomerNotice(ctx context.Context, id ids.UUID, reason 
 	}
 	var out CustomerNotice
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
+		var withdrawnAt time.Time
+		err := tx.QueryRow(ctx, `
 			UPDATE existing_customer_notice
 			   SET withdrawn_at = now(), withdrawn_by = $2, withdrawn_reason = $3
-			 WHERE id = $1 AND withdrawn_at IS NULL`, id, by, strings.TrimSpace(reason))
+			 WHERE id = $1 AND withdrawn_at IS NULL
+			RETURNING withdrawn_at`, id, by, strings.TrimSpace(reason)).Scan(&withdrawnAt)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
 		if err != nil {
 			return fmt.Errorf("consent: withdrawing the collection notice: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			return apperrors.ErrNotFound
-		}
-		auditID, err := storekit.AuditEvent(ctx, tx, "update", customerNoticeEntity, id,
-			map[string]any{"withdrawn": true, fieldReason: strings.TrimSpace(reason)})
+		auditID, err := storekit.Audit(ctx, tx, "update", customerNoticeEntity, id,
+			map[string]any{"withdrawn_at": nil, fieldReason: nil},
+			map[string]any{"withdrawn_at": withdrawnAt, fieldReason: strings.TrimSpace(reason)})
 		if err != nil {
 			return err
 		}
