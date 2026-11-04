@@ -10312,6 +10312,96 @@ func (e DealSuggestionEvidenceKind) Valid() bool {
 	}
 }
 
+// Defines values for DealViabilityDisposition.
+const (
+	DealViabilityDispositionNone        DealViabilityDisposition = "none"
+	DealViabilityDispositionOpenReview  DealViabilityDisposition = "open_review"
+	DealViabilityDispositionOverride    DealViabilityDisposition = "override"
+	DealViabilityDispositionUnsupported DealViabilityDisposition = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityDisposition enum.
+func (e DealViabilityDisposition) Valid() bool {
+	switch e {
+	case DealViabilityDispositionNone:
+		return true
+	case DealViabilityDispositionOpenReview:
+		return true
+	case DealViabilityDispositionOverride:
+		return true
+	case DealViabilityDispositionUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualification.
+const (
+	DealViabilityQualificationClosed      DealViabilityQualification = "closed"
+	DealViabilityQualificationEligible    DealViabilityQualification = "eligible"
+	DealViabilityQualificationExcluded    DealViabilityQualification = "excluded"
+	DealViabilityQualificationUnknown     DealViabilityQualification = "unknown"
+	DealViabilityQualificationUnsupported DealViabilityQualification = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualification enum.
+func (e DealViabilityQualification) Valid() bool {
+	switch e {
+	case DealViabilityQualificationClosed:
+		return true
+	case DealViabilityQualificationEligible:
+		return true
+	case DealViabilityQualificationExcluded:
+		return true
+	case DealViabilityQualificationUnknown:
+		return true
+	case DealViabilityQualificationUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualificationMode.
+const (
+	DealViabilityQualificationModeEnforcing DealViabilityQualificationMode = "enforcing"
+	DealViabilityQualificationModeOff       DealViabilityQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualificationMode enum.
+func (e DealViabilityQualificationMode) Valid() bool {
+	switch e {
+	case DealViabilityQualificationModeEnforcing:
+		return true
+	case DealViabilityQualificationModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityReviewDeliveryState.
+const (
+	DealViabilityReviewDeliveryStateDelivered DealViabilityReviewDeliveryState = "delivered"
+	DealViabilityReviewDeliveryStateFailed    DealViabilityReviewDeliveryState = "failed"
+	DealViabilityReviewDeliveryStatePending   DealViabilityReviewDeliveryState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityReviewDeliveryState enum.
+func (e DealViabilityReviewDeliveryState) Valid() bool {
+	switch e {
+	case DealViabilityReviewDeliveryStateDelivered:
+		return true
+	case DealViabilityReviewDeliveryStateFailed:
+		return true
+	case DealViabilityReviewDeliveryStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DecideCommissionRequestDecision.
 const (
 	DecideCommissionRequestDecisionApprove DecideCommissionRequestDecision = "approve"
@@ -43209,6 +43299,86 @@ type DealSuggestionEvidenceKind string
 type DealSuggestionListResponse struct {
 	Data []DealSuggestion `json:"data"`
 	Page PageInfo         `json:"page"`
+}
+
+// DealViability defines model for DealViability.
+type DealViability struct {
+	// AssessedAt When the input check last assessed the deal; null when it never did.
+	AssessedAt *time.Time `json:"assessed_at,omitempty"`
+
+	// CloseDateOverdue True when the expected close date is before today in the installation's zone.
+	CloseDateOverdue     bool `json:"close_date_overdue"`
+	CloseDateProvisional bool `json:"close_date_provisional"`
+
+	// Complete Whether the deal was judged on its current evidence under the current policy.
+	Complete *bool              `json:"complete,omitempty"`
+	DealId   openapi_types.UUID `json:"deal_id"`
+
+	// Disposition The review standing the qualification rests on.
+	Disposition       *DealViabilityDisposition `json:"disposition,omitempty"`
+	ExpectedCloseDate *openapi_types.Date       `json:"expected_close_date,omitempty"`
+	PolicyVersion     *string                   `json:"policy_version,omitempty"`
+
+	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+	Qualification DealViabilityQualification `json:"qualification"`
+
+	// QualificationMode Whether the installation's qualified forecast applies `qualification`.
+	QualificationMode DealViabilityQualificationMode `json:"qualification_mode"`
+
+	// Receipt The input check's last answer about the deal. Absent when it never assessed it.
+	Receipt *DealViabilityReceipt `json:"receipt,omitempty"`
+
+	// Review The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+	Review *DealViabilityReview `json:"review,omitempty"`
+
+	// StageProbability The baseline chance, the deal's stage probability.
+	StageProbability int `json:"stage_probability"`
+}
+
+// DealViabilityDisposition The review standing the qualification rests on.
+type DealViabilityDisposition string
+
+// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+type DealViabilityQualification string
+
+// DealViabilityQualificationMode Whether the installation's qualified forecast applies `qualification`.
+type DealViabilityQualificationMode string
+
+// DealViabilityReceipt The input check's last answer about the deal. Absent when it never assessed it.
+type DealViabilityReceipt struct {
+	// Current Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
+	Current bool `json:"current"`
+
+	// Outcome The check's outcome, such as `eligible` or `unsupported`.
+	Outcome string `json:"outcome"`
+
+	// PolicyVersion The viability policy the check applied.
+	PolicyVersion string `json:"policy_version"`
+
+	// Reasons The reason codes the check recorded.
+	Reasons    []string  `json:"reasons"`
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+// DealViabilityReview The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+type DealViabilityReview struct {
+	// DeliveryState How far handing the review to a task got; null before a pass queued it.
+	DeliveryState *DealViabilityReviewDeliveryState `json:"delivery_state,omitempty"`
+	Episode       int                               `json:"episode"`
+	Id            openapi_types.UUID                `json:"id"`
+	OpenedAt      time.Time                         `json:"opened_at"`
+
+	// Task The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+	Task *DealViabilityTask `json:"task,omitempty"`
+}
+
+// DealViabilityReviewDeliveryState How far handing the review to a task got; null before a pass queued it.
+type DealViabilityReviewDeliveryState string
+
+// DealViabilityTask The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+type DealViabilityTask struct {
+	Done bool               `json:"done"`
+	Id   openapi_types.UUID `json:"id"`
 }
 
 // DealWinEvidence defines model for DealWinEvidence.
@@ -86478,6 +86648,9 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
+	// Whether the customer still supports this deal, and the review behind the answer.
+	// (GET /deals/{id}/viability)
+	GetDealViability(w http.ResponseWriter, r *http.Request, id Id)
 	// Whether the deal has the signed agreement a win rests on.
 	// (GET /deals/{id}/win-evidence)
 	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
@@ -90963,6 +91136,12 @@ func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Reque
 // Where the deal stands, what could lose it, and the one thing to do next.
 // (GET /deals/{id}/status)
 func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the customer still supports this deal, and the review behind the answer.
+// (GET /deals/{id}/viability)
+func (_ Unimplemented) GetDealViability(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115775,6 +115954,40 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealViability operation middleware
+func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealViability(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealWinEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
 
@@ -138491,6 +138704,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/viability", wrapper.GetDealViability)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)

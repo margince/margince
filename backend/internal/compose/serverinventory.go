@@ -148,6 +148,7 @@ type Server struct {
 	jobHealthHandlers
 	dataTaskHandlers
 	captureHealthHandlers
+	dealViabilityHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
 	automaticWorkHandlers
@@ -481,7 +482,6 @@ type Server struct {
 	// the job queue, the event bus, the cache-flush announcement — injected by
 	// WithResetRuntime. Zero value = a Postgres-only reset, which is the honest
 	// posture for a role that wired no queue and no bus.
-	//
 	// dataResetHandlers holds a POINTER to this field rather than a copy:
 	// options run in the order the caller passed them, so a copy taken by
 	// WithDataReset would be the zero value whenever WithResetRuntime is listed

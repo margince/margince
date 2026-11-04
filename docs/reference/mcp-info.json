@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162145,
+    "tool_catalog_bytes": 162162,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41851,
+    "approx_wire_tokens_total": 41855,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35619,
-      "input_schema_bytes": 67358,
+      "input_schema_bytes": 67375,
       "output_schema_bytes": 49680,
-      "description_plus_input_schema_bytes": 102977
+      "description_plus_input_schema_bytes": 102994
     }
   },
   "tools": {
@@ -8733,6 +8733,7 @@
                 "deal_outcome_reviews",
                 "deal_stakeholders",
                 "deal_status",
+                "deal_viability",
                 "dedupe_candidate",
                 "dedupe_candidates",
                 "email_presentation",

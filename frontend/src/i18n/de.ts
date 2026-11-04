@@ -5610,6 +5610,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
+  "deals.viability.title": "Rückhalt beim Kunden",
+  "deals.viability.standing": "Prognose gestützter Deals",
+  "deals.viability.enforced":
+    "Die Prognose zählt nur Deals, die der Kunde stützt.",
+  "deals.viability.notEnforced":
+    "Die Prognose zählt alle Deals; dies ist nur zur Information.",
+  "deals.viability.qualification.eligible": "Gezählt",
+  "deals.viability.qualification.excluded": "Zur Prüfung herausgenommen",
+  "deals.viability.qualification.unsupported": "Herausgenommen: kein Rückhalt",
+  "deals.viability.qualification.unknown": "Nicht geprüft",
+  "deals.viability.qualification.closed":
+    "Abgeschlossen: nicht in der Prognose",
+  "deals.viability.checkOutOfDate":
+    "Diese Prüfung zählt nicht mehr, daher ist der Deal nicht geprüft.",
+  "deals.viability.assessed": "Zuletzt geprüft",
+  "deals.viability.review": "Prüfung des Kundenrückhalts",
+  "deals.viability.reviewOpenedOn": "Geöffnet am {date}",
+  "deals.viability.reviewOpen": "Offen",
+  "deals.viability.taskDoneReviewOpen": "Aufgabe erledigt, noch offen",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",

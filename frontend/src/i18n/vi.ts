@@ -5466,6 +5466,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Xác nhận",
   "deals.cancel": "Hủy",
   "deals.advanced": "Đã chuyển sang {stage}",
+  "deals.viability.title": "Sự ủng hộ của khách hàng",
+  "deals.viability.standing": "Dự báo deal được ủng hộ",
+  "deals.viability.enforced":
+    "Dự báo chỉ tính các deal được khách hàng ủng hộ.",
+  "deals.viability.notEnforced":
+    "Dự báo tính mọi deal; mục này chỉ để tham khảo.",
+  "deals.viability.qualification.eligible": "Được tính",
+  "deals.viability.qualification.excluded": "Tạm loại để rà soát",
+  "deals.viability.qualification.unsupported": "Bị loại: không được ủng hộ",
+  "deals.viability.qualification.unknown": "Chưa kiểm tra",
+  "deals.viability.qualification.closed": "Đã đóng: không nằm trong dự báo",
+  "deals.viability.checkOutOfDate":
+    "Lần kiểm tra này không còn được tính, nên deal được xem là chưa kiểm tra.",
+  "deals.viability.assessed": "Kiểm tra lần cuối",
+  "deals.viability.review": "Rà soát sự ủng hộ",
+  "deals.viability.reviewOpenedOn": "Mở ngày {date}",
+  "deals.viability.reviewOpen": "Đang mở",
+  "deals.viability.taskDoneReviewOpen": "Đã xong việc, vẫn mở",
 
   "deal.ownerKeep": "Giữ người chịu trách nhiệm hiện tại",
   "deal.ownerMe": "Giao cho tôi",
