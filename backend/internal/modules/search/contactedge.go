@@ -131,6 +131,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		      JOIN activity a
 		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
+		     WHERE `+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
@@ -154,14 +155,14 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		DELETE FROM graph_contact_edge e
 		 USING unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
 		 WHERE e.contact_a = t.contact_a AND e.contact_b = t.contact_b
-		   AND NOT EXISTS (
+		   AND NOT (`+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+` AND EXISTS (
 		       SELECT 1
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
 		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
-		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,
+		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
 		first, second); err != nil {
 		return fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
 	}

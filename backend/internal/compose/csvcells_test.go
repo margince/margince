@@ -163,6 +163,20 @@ func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 	}
 }
 
+// A CRM's BCC logging address is refused the same way; a human at the
+// provider's own domain is not.
+func TestImportRefusesHubSpotBCC(t *testing.T) {
+	fields := map[string]string{fieldFullName: "Logger", fieldEmail: "4711@bcc.eu1.hubspot.com"}
+	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem == nil ||
+		problem.Why.Code != migration.ReasonEmailNamesNoContact {
+		t.Fatalf("problem = %+v, want the BCC address refused", problem)
+	}
+	fields[fieldEmail] = "anna@hubspot.com"
+	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+		t.Fatalf("problem = %+v, want none for a human at the provider", problem)
+	}
+}
+
 // A row that states both name parts takes its full name from them. The store
 // never sees a full name that disagrees with the parts beside it.
 func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
