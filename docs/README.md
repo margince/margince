@@ -9,7 +9,7 @@ for the developer who changes or runs the code. So a product task goes in the ha
 
 These docs explain how to build and run Margince. It is a CRM with one company per installation, and
 the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
-on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/). Tutorials help you learn, how-to
+on its own. The docs follow [Diátaxis](https://diataxis.fr/), with operations as a fifth kind. Tutorials help you learn, how-to
 guides do tasks, reference pages are to look things up, and explanation pages say why. The
 [principles](principles/README.md) answer many questions about the shape of this code before they
 start.
@@ -224,9 +224,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
   setting, the default we ship, and region pins.
 - [make-targets.md](reference/make-targets.md): every `make` command.
 - [system-requirements.md](operations/system-requirements.md): what an installation needs, on one
+  machine or on many.
 - [install-from-binaries.md](operations/install-from-binaries.md): build the three
   programs and start them on a host without images.
-  machine or on many.
 - [ai-egress.md](reference/ai-egress.md): which AI tasks can send data out of the installation.
   Generated.
 - [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider
