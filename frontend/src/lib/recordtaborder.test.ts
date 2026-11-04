@@ -8,9 +8,9 @@ import { filesUnder, sourceFileAt } from "../../scripts/lib/source-tree";
 import { CONTACT_TABS } from "./contacttab";
 import { RECORD_TAB_ORDER } from "./recordtaborder";
 
-// A record's tab list opens on Overview and satisfies `RecordTabId[]`, so an
-// unknown id fails to compile. An untyped list of record tab ids alone is a
-// record's strip that skipped the type, and the census takes it to fail it.
+// A record's tab list satisfies `RecordTabId[]`, so an unknown id fails to
+// compile. An untyped list that opens on Overview and holds another record tab
+// id is a strip that skipped the type. The census takes it, so it fails.
 type TabList = Readonly<{ where: string; tabs: string[]; typed: boolean }>;
 
 const SRC = join(__dirname, "..");
@@ -44,9 +44,11 @@ function tabListOf(
   const tabs = arrayOf(node.initializer)?.elements.flatMap((each) =>
     ts.isStringLiteral(each) ? [each.text] : [],
   );
-  if (tabs?.[0] !== "overview") return undefined;
+  if (!tabs) return undefined;
   const typed = isRecordTabType(node.initializer);
-  if (!typed && tabs.some((tab) => slotOf(tab) === -1)) return undefined;
+  const looksLikeStrip =
+    tabs[0] === "overview" && tabs.slice(1).some((tab) => slotOf(tab) !== -1);
+  if (!typed && !looksLikeStrip) return undefined;
   return {
     where: `${relative(SRC, path)} ${node.name.getText()}`,
     tabs,
@@ -77,6 +79,10 @@ describe("the record tab order", () => {
 
   it.each(lists)("$where is typed as a record tab list", ({ typed }) => {
     expect(typed).toBe(true);
+  });
+
+  it.each(lists)("$where opens on Overview", ({ tabs }) => {
+    expect(tabs[0]).toBe("overview");
   });
 
   it.each(lists)("$where follows the shared order", ({ tabs }) => {
