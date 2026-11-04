@@ -348,3 +348,49 @@ func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
 		t.Fatalf("qualified readings %+v, want the deal unknown once its override ended", q)
 	}
 }
+
+// ONE BROKEN MAILBOX DOES NOT BLIND THE CHECK FOR EVERY DEAL (#10350). A
+// colleague's mailbox needs re-authorising. The run is still incomplete, and
+// the colleague's own deal still reads unknown. The owner whose mailbox was read
+// on time still gets the review on their silent deal.
+//
+// Mutation: make dealMailCovered return runCovered alone and the silent deal
+// gets no review. Restore Needs: mail on the viability rule and the same holds.
+func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
+	v := setupViability(t)
+	// The fixture's pipeline and stage, read off a deal it already made.
+	var pipeline ids.PipelineID
+	var open ids.StageID
+	if err := v.Pool.QueryRow(context.Background(), `SELECT pipeline_id, stage_id FROM deal WHERE id = $1`,
+		v.silent).Scan(&pipeline, &open); err != nil {
+		t.Fatal(err)
+	}
+	integration.SeedIDRow(t, integration.OwnerConn(t), `
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, 'imap', $2, 'reauth_required')`, v.Rep2)
+	theirs := v.commitDeal(t, pipeline, open, "Colleague's quiet deal", 50_000, v.now.AddDate(0, 0, -196))
+	colleague := ids.From[ids.UserKind](v.Rep2)
+	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](theirs), deals.UpdateDealInput{
+		OwnerID: &colleague,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	v.check(t)
+
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
+		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
+		t.Fatalf("%d open viability reviews on the silent deal whose owner's mailbox was read, want 1", got)
+	}
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, theirs); got != 0 {
+		t.Fatalf("the deal whose owner's mailbox is broken got %d viability reviews, want none", got)
+	}
+	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
+		FROM assurance_deal_receipt WHERE deal_id = $1`, theirs); got != "unknown:coverage_unknown" {
+		t.Fatalf("the colleague's deal reads %q, want unknown:coverage_unknown", got)
+	}
+	if got := v.WsScalar(t, `SELECT status FROM assurance_run ORDER BY created_at DESC, id DESC LIMIT 1`); got != assurance.StatusIncomplete {
+		t.Fatalf("the run reads %q, want %q: a broken mailbox still makes the run incomplete", got, assurance.StatusIncomplete)
+	}
+}

@@ -178,6 +178,11 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
+	byOwner, err := mailCoverageByOwner(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	mailCovered := dealMailCovered(sourceChecked(coverage, sourceMail), byOwner)
 	query := assuranceSubjectsQuery(now, identities, only, arg)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
@@ -185,13 +190,14 @@ func assuranceSubjects(
 	}
 	defer rows.Close()
 
-	mailCovered := sourceChecked(coverage, sourceMail)
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
 		return scanAssuranceSubject(row, now, zone, mailCovered)
 	})
 }
 
-func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered bool) (assurance.Subject, error) {
+func scanAssuranceSubject(
+	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID) bool,
+) (assurance.Subject, error) {
 	var out assurance.Subject
 	var dealID ids.UUID
 	var owner *ids.UUID
@@ -226,7 +232,7 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
-	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner)
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
@@ -367,47 +373,117 @@ var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo
 // nothing arrived, so "the source fell behind" — while a broken connector under
 // recent mail read as checked. The sync checkpoint is the fact this state
 // actually claims: when the connector last successfully read the source.
+//
+// This is the run's grade over every mailbox in the installation. A deal's
+// own silence is judged on its owner's mailboxes (mailCoverageByOwner), so one
+// broken mailbox does not blind the check for every deal.
 func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	// Aggregates fail CLOSED over every live, not-deliberately-disconnected
-	// connection: min() ignores NULL, so a never-synced broken mailbox next to
-	// a healthy one would otherwise vanish from the aggregate and the run
-	// would claim checked over a source it never read.
-	var live, reauth, unsynced int
-	var oldestSuccess *time.Time
+	var counts mailCounts
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE c.status <> 'disconnected'),
-		       count(*) FILTER (WHERE c.status = 'reauth_required'),
-		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
-		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')
+		SELECT `+mailCountsSQL+`
 		FROM capture_connection c
 		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
-		mailProviders).Scan(&live, &reauth, &unsynced, &oldestSuccess); err != nil {
+		mailProviders).Scan(&counts.live, &counts.reauth, &counts.unsynced, &counts.oldestSuccess); err != nil {
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	}
+	return counts.grade(now)
+}
+
+// mailCountsSQL is the aggregate both mail gradings read.
+//
+// It fails CLOSED over every live, not-deliberately-disconnected connection:
+// min() ignores NULL, so a never-synced broken mailbox next to a healthy one
+// would otherwise vanish from the aggregate and the run would claim checked
+// over a source it never read.
+const mailCountsSQL = `count(*) FILTER (WHERE c.status <> 'disconnected'),
+		       count(*) FILTER (WHERE c.status = 'reauth_required'),
+		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
+		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')`
+
+// mailCounts is the state of a set of mail connections: all of them for the
+// run, or one user's for a deal they own.
+type mailCounts struct {
+	live, reauth, unsynced int
+	oldestSuccess          *time.Time
+}
+
+// grade turns the counts into one coverage answer.
+func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 	switch {
-	case live == 0:
+	case m.live == 0:
 		// Never configured, or every mailbox deliberately disconnected. Either
 		// way there is nothing to fix, only something to decide, and the two
 		// route to different contacts than a broken connector does.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
-	case reauth > 0:
+	case m.reauth > 0:
 		// Somebody must re-grant access; until then part of the mailbox is
 		// unreadable for a permission reason, not a technical one.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
-	case unsynced > 0:
+	case m.unsynced > 0 || m.oldestSuccess == nil:
 		// At least one live mailbox has never been read. One healthy sibling
 		// does not make the source checked — the claim covers all of them.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
-	case now.Sub(*oldestSuccess) > staleAfter:
+	case now.Sub(*m.oldestSuccess) > staleAfter:
 		// The slowest mailbox decides: "mail was checked" over three mailboxes
 		// means all three, so the oldest checkpoint grades the source and caps
 		// the checked-through date below.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
 	default:
 		return assurance.SourceCoverage{
-			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
+			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: m.oldestSuccess,
 		}
+	}
+}
+
+// mailCoverageByOwner grades each user's own live mailboxes, keyed by user.
+// A user with no live mailbox has no entry.
+//
+// It is what a deal's silence is judged on. A colleague's broken mailbox says
+// nothing about whether the owner's mail was read, and grading every deal on
+// the whole installation made one expired token turn every deal's check into
+// coverage_unknown.
+func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids.UUID]assurance.SourceCoverage, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT c.user_id, `+mailCountsSQL+`
+		FROM capture_connection c
+		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+		WHERE c.provider = ANY($1) AND c.archived_at IS NULL
+		GROUP BY c.user_id
+		HAVING count(*) FILTER (WHERE c.status <> 'disconnected') > 0`, mailProviders)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading each owner's mailboxes: %w", err)
+	}
+	defer rows.Close()
+	out := map[ids.UUID]assurance.SourceCoverage{}
+	for rows.Next() {
+		var user ids.UUID
+		var counts mailCounts
+		if err := rows.Scan(&user, &counts.live, &counts.reauth, &counts.unsynced, &counts.oldestSuccess); err != nil {
+			return nil, fmt.Errorf("compose: reading each owner's mailboxes: %w", err)
+		}
+		out[user] = counts.grade(now)
+	}
+	return out, rows.Err()
+}
+
+// dealMailCovered answers, for one deal's owner, whether the mail a silence
+// would be read from was read on time.
+//
+// The run's own grade covers every mailbox, so when it is checked every owner
+// is. Otherwise the owner's own mailboxes decide. A deal with no owner, or an
+// owner with no live mailbox of their own, keeps the run's grade: there is no
+// narrower set of mailboxes to judge it on.
+func dealMailCovered(runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage) func(owner *ids.UUID) bool {
+	return func(owner *ids.UUID) bool {
+		if runCovered || owner == nil {
+			return runCovered
+		}
+		own, ok := byOwner[*owner]
+		if !ok {
+			return false
+		}
+		return own.State == assurance.CoverageChecked
 	}
 }
 
