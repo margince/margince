@@ -21,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnInviteRefusesAnAddressItCouldNeverReach(t *testing.T) {
@@ -175,16 +176,37 @@ func (m heldRelay) Send(ctx context.Context, _, _, _ string) error {
 	}
 }
 
+// stubInviteRecords answers whether the invitation may still be mailed, and
+// keeps the outcomes the send recorded.
+type stubInviteRecords struct {
+	mailable bool
+	recorded []error
+}
+
+func (s *stubInviteRecords) InvitationMailable(context.Context, string, string) (bool, error) {
+	return s.mailable, nil
+}
+
+func (s *stubInviteRecords) RecordInvitationSend(_ context.Context, _ ids.DealRoomParticipantID, _ string, sendErr error) error {
+	s.recorded = append(s.recorded, sendErr)
+	return nil
+}
+
+func heldInvite() IssuedInvitation {
+	return IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
+}
+
 // The relay holds its answer until the test releases it, so the invite can
 // answer only if the send runs off the request.
 func TestAnInviteAnswersBeforeTheRelayDoes(t *testing.T) {
 	relay := heldRelay{taken: make(chan struct{}), release: make(chan struct{})}
+	records := &stubInviteRecords{mailable: true}
 	finished := make(chan struct{})
 	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
+	handler.inviteRecords = records
 	handler.sendDone = func() { close(finished) }
-	invitation := IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
 
-	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), invitation)
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
 	if !body.Queued {
 		t.Error("an invitation handed to the sender reads as not queued")
 	}
@@ -196,6 +218,29 @@ func TestAnInviteAnswersBeforeTheRelayDoes(t *testing.T) {
 	}
 	close(relay.release)
 	<-finished
+	if len(records.recorded) != 1 || records.recorded[0] != nil {
+		t.Errorf("recorded %v, want one sent outcome", records.recorded)
+	}
+}
+
+// An invitation revoked, resent, readdressed or archived after it was issued is
+// no longer mailable. Its old link must not go out, and nothing is recorded.
+func TestAnInvitationThatChangedBeforeTheSendIsNotMailed(t *testing.T) {
+	relay := &invitationMailCapture{}
+	records := &stubInviteRecords{mailable: false}
+	finished := make(chan struct{})
+	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
+	handler.inviteRecords = records
+	handler.sendDone = func() { close(finished) }
+
+	handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), heldInvite())
+	<-finished
+	if relay.to != "" {
+		t.Errorf("the old link was mailed to %q", relay.to)
+	}
+	if len(records.recorded) != 0 {
+		t.Errorf("recorded %v for a mail that never went out", records.recorded)
+	}
 }
 
 // With no relay nothing is handed over, and the answer says so.

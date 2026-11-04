@@ -122,7 +122,7 @@ func credentialFor(r *http.Request, credential string) string {
 // back a participant. A failure to record is logged and swallowed: the
 // credential is valid either way, and only the roster chip is lost.
 func (h Handlers) recordSendOutcome(ctx context.Context, issued IssuedInvitation, sendErr error) {
-	if err := h.store.RecordInvitationSend(ctx,
+	if err := h.inviteMail().RecordInvitationSend(ctx,
 		participantPathID(issued.Participant.Id), issued.Credential, sendErr); err != nil {
 		slog.ErrorContext(ctx, "recording deal room invitation delivery failed",
 			"participant_id", issued.Participant.Id, "err", err)

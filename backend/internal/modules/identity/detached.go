@@ -24,10 +24,6 @@ const resetSendTimeout = 2 * time.Minute
 // the same reason as resetSendTimeout: a stuck relay must not pin a goroutine.
 const inviteSendTimeout = 2 * time.Minute
 
-// inviteOutcomeTimeout bounds writing the relay's answer onto the link, apart
-// from the send's own budget, which a timed-out send has already spent.
-const inviteOutcomeTimeout = 10 * time.Second
-
 // inviteSendBudget is the time one invitation send may take.
 func (h Handlers) inviteSendBudget() time.Duration {
 	if h.sendBudget > 0 {

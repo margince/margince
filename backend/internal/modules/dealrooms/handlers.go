@@ -35,6 +35,9 @@ type Handlers struct {
 	// sendBudget is a test seam: a shorter budget for the invitation send.
 	// Zero means inviteSendTimeout.
 	sendBudget time.Duration
+	// inviteRecords is a test seam standing in for the store's invitation
+	// reads and writes on the detached send. Nil means the store.
+	inviteRecords inviteMailRecords
 	// sendDone is a test seam, called when a detached invitation send has
 	// finished, outcome recorded. Nil in production.
 	sendDone func()

@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WithInviteMailer wires the operator's outbound mail relay. Nil means the
@@ -101,10 +102,6 @@ func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error
 // stuck relay cannot pin a goroutine.
 const inviteSendTimeout = 2 * time.Minute
 
-// inviteOutcomeTimeout bounds writing the relay's answer onto the invitation,
-// apart from the send's own budget, which a timed-out send has already spent.
-const inviteOutcomeTimeout = 10 * time.Second
-
 // inviteSendBudget is the time one invitation send may take.
 func (h Handlers) inviteSendBudget() time.Duration {
 	if h.sendBudget > 0 {
@@ -120,31 +117,62 @@ func (h Handlers) inviteSendBudget() time.Duration {
 // and the raw credential must not enter it. The relay's answer is stamped on
 // the invitation, where the roster reads it as `sent` or `failed`; until then
 // the roster reads `pending`.
+//
+// The send runs later than the issue, so the invitation is read again first.
+// A revoke, a resend, an address correction or an archive in between means
+// the old link must not reach the old address.
 func (h Handlers) sendInviteDetached(r *http.Request, issued IssuedInvitation) bool {
 	if !h.canSendInvite() {
 		return false
 	}
-	// releaseSend runs in the goroutine, which outlives this handler.
-	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
-	done := h.sendDone // test seam; nil in production
-	go func() {
-		defer releaseSend()
-		if done != nil {
-			defer done()
-		}
-		defer httpserver.RecoverDetached("deal room invitation send")
-		sendErr := h.sendInvite(workCtx, issued)
-		if sendErr != nil {
-			slog.ErrorContext(workCtx, "deal room invitation email failed",
-				"participant_id", issued.Participant.Id, "err", sendErr)
-		}
-		// Its own budget: a send that ran out of time has spent workCtx, and the
-		// refusal must still land on the invitation.
-		outcomeCtx, releaseOutcome := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
-		defer releaseOutcome()
-		h.recordSendOutcome(outcomeCtx, issued, sendErr)
-	}()
+	httpserver.DetachedSend{
+		What:   "deal room invitation send",
+		Budget: h.inviteSendBudget(),
+		Done:   h.sendDone,
+		Send: func(ctx context.Context) (bool, error) {
+			return h.sendIfStillInvited(ctx, issued)
+		},
+		Record: func(ctx context.Context, sendErr error) {
+			h.recordSendOutcome(ctx, issued, sendErr)
+		},
+	}.Start(r.Context())
 	return true
+}
+
+// inviteMailRecords is what the detached send reads and writes on the
+// invitation it carries.
+type inviteMailRecords interface {
+	InvitationMailable(ctx context.Context, credential, email string) (bool, error)
+	RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, credential string, sendErr error) error
+}
+
+func (h Handlers) inviteMail() inviteMailRecords {
+	if h.inviteRecords != nil {
+		return h.inviteRecords
+	}
+	return h.store
+}
+
+// sendIfStillInvited mails the invitation only while its credential still
+// admits its bearer and the participant's address is the one it was issued to.
+func (h Handlers) sendIfStillInvited(ctx context.Context, issued IssuedInvitation) (bool, error) {
+	live, err := h.inviteMail().InvitationMailable(ctx, issued.Credential, string(issued.Participant.Email))
+	if err != nil {
+		slog.ErrorContext(ctx, "reading a deal room invitation before mailing it failed",
+			"participant_id", issued.Participant.Id, "err", err)
+		return false, nil
+	}
+	if !live {
+		slog.InfoContext(ctx, "deal room invitation not mailed: it changed before the send",
+			"participant_id", issued.Participant.Id)
+		return false, nil
+	}
+	sendErr := h.sendInvite(ctx, issued)
+	if sendErr != nil {
+		slog.ErrorContext(ctx, "deal room invitation email failed",
+			"participant_id", issued.Participant.Id, "err", sendErr)
+	}
+	return true, sendErr
 }
 
 // WithMailLanguage supplies the fallback language for external recipients.

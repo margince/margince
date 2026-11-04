@@ -178,16 +178,6 @@ func Correlate(next http.Handler) http.Handler {
 	})
 }
 
-// RecoverDetached stops a panic in a goroutine that outlives its request.
-// RecoverPanics cannot see it there, and an unrecovered panic ends the process.
-// It logs the stack, since no request log exists to find the site.
-// Call it deferred, directly: recover only works from the deferred call itself.
-func RecoverDetached(what string) {
-	if panicked := recover(); panicked != nil {
-		slog.Error(what+" panicked", "panic", panicked, "stack", string(debug.Stack()))
-	}
-}
-
 // RecoverPanics is the outermost guard: a panicking handler answers an
 // opaque 500 instead of killing the connection (and taking pre-Go-1.21
 // servers down with it). The panic value and stack are logged — the one

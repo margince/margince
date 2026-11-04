@@ -20,6 +20,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 var errRelayRefused = errors.New("the relay refused the envelope")
@@ -200,4 +203,66 @@ func TestARefusedInvitationShowsAsFailedOnTheRoster(t *testing.T) {
 		t.Error("an invitation handed to the sender reads as not queued")
 	}
 	waitForDeliveryState(t, e, room, "failed")
+}
+
+// roomSenderContext holds deal_room update on the installation's workspace,
+// the authority the detached send reads and stamps the invitation under.
+func roomSenderContext(t *testing.T, e *apptest.AppEnv) context.Context {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
+	user := ids.NewV7()
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"deal_room": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// The detached send mails a link only while it still admits its bearer and
+// the participant still has the address it was issued to.
+func TestAnInvitationIsMailableOnlyWhileItStandsAtItsAddress(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithPublicBaseURL("https://rooms.example.test"))
+	e.BootstrapWorkspace(t)
+	store := dealrooms.NewStore(e.DB())
+	ctx := roomSenderContext(t, e)
+	room := openRoomWithABuyer(t, e)
+
+	mailable := func(credential, email string) bool {
+		t.Helper()
+		ok, err := store.InvitationMailable(ctx, credential, email)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+	if !mailable(room.credential, room.email) {
+		t.Fatal("a standing invitation at its own address reads as not mailable")
+	}
+	if mailable(room.credential, "someone.else@buyer.example") {
+		t.Error("an invitation reads as mailable to an address it was not issued to")
+	}
+
+	var resent AnyMap
+	participant := participantOf(t, e, room)
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants/"+participant+"/resend",
+		AnyMap{}, nil, &resent); status != http.StatusCreated {
+		t.Fatalf("resend = %d %v", status, resent)
+	}
+	if mailable(room.credential, room.email) {
+		t.Error("a link a resend retired still reads as mailable")
+	}
+	fresh, _ := resent["credential"].(string)
+	if !mailable(fresh, room.email) {
+		t.Fatal("the resent link reads as not mailable")
+	}
+
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants/"+participant+"/revoke",
+		AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("revoke = %d", status)
+	}
+	if mailable(fresh, room.email) {
+		t.Error("a revoked participant's link still reads as mailable")
+	}
 }

@@ -14,6 +14,7 @@ package dealrooms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -132,6 +133,29 @@ func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.Deal
 		}
 		return nil
 	})
+}
+
+// InvitationMailable reports whether an issued credential may still be mailed.
+// It must still admit its bearer, by the rule peek and exchange apply. Its
+// participant's address must still be the one it was issued to.
+func (s *Store) InvitationMailable(ctx context.Context, credential, email string) (bool, error) {
+	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
+		return false, err
+	}
+	var current string
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT p.email FROM deal_room_invitation i, deal_room_participant p, deal_room r
+			  WHERE `+exchangeablePredicate,
+			digestOfCredential(credential)).Scan(&current)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read deal room invitation before mailing: %w", err)
+	}
+	return current == email, nil
 }
 
 // failureReasonLimit bounds what a relay's refusal may write into the row.
