@@ -341,15 +341,13 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // connector captured it, it names no counterparty string, it was not declined
 // or abandoned, and it lies inside the diary horizon. A meeting a rep typed by
 // hand is not evidence of anything the contact did. meetingQualifyingEvent and
-// requestedNegotiation share it, so the two cannot drift.
-//
-// occurred_at is compared raw: a day entry near the far edge of a 90-day
-// horizon decides nothing.
+// requestedNegotiation both read this one constant.
 const capturedMeetingSQL = `a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		  AND a.occurred_at <= now() + interval '` + meetingHorizonInterval + `'`
+		  AND now() + interval '` + meetingHorizonInterval + `' >= a.occurred_at -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
+		  `
 
 // meetingHorizonInterval is how far into the diary a meeting still says a
 // relationship is live.
