@@ -68,11 +68,16 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 			continue
 		}
 		spec = registry.Listed(spec)
+		// A router's own action values are offered: the model sends them.
+		offered := map[string]bool{}
+		for _, action := range spec.Actions {
+			offered[action.Action] = true
+		}
 		text := spec.Description + " " + strings.Join(argumentDescriptions(t, spec.InputSchema), " ")
 		for _, word := range strings.FieldsFunc(text, func(c rune) bool {
 			return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 		}) {
-			if unlisted[word] && !namesAnApprovalKind.Waived(t, spec.Name+":"+word) {
+			if unlisted[word] && !offered[word] && !namesAnApprovalKind.Waived(t, spec.Name+":"+word) {
 				t.Errorf("%s's description names %s, which is not offered; name the tool that reaches it",
 					spec.Name, word)
 			}
@@ -112,7 +117,6 @@ func TestNoServedResourceNamesAnUnlistedTool(t *testing.T) {
 // unlisted tool and names something else: a staged action's kind, or a verb.
 var namesAnApprovalKind = gatekit.Waive(map[string]string{
 	"list_approvals:advance_deal":     "the kind filter's example is an approval kind, and a deal move stages under advance_deal",
-	"change_state:set_up_partner":     "the action's own name on change_state, spelled like the tool it routes to",
 	"bulk_update_records:remove_tag":  "one of its own bulk verbs, spelled like the tool and not naming it",
 	"bulk_update_records:create_task": "one of its own bulk verbs, spelled like the tool and not naming it",
 })

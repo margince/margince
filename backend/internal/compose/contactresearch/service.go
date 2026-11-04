@@ -62,9 +62,9 @@ func NewService(store *contacts.Store, view Assembler, provider *contactdata.Reg
 //
 // It writes nothing. The result is the staged set a human reviews.
 func (s *Service) Run(ctx context.Context, contactID ids.ContactID) (crmcontracts.ContactResearchRun, error) {
-	// Research is a reading aid for a contact, and asking a third party about a
-	// named human is not something an unattended agent does on its own.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Asking a third party about a named contact is the user's act, or their
+	// agent's for them; automatic work with no passport never does it.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ContactResearchRun{}, err
 	}
 	// The gate that matters runs HERE, in the caller's own composite read: a
@@ -167,8 +167,9 @@ func wireClaims(claims []contactdata.Claim) []crmcontracts.ContactResearchClaim 
 // conversation claim: it has no status, no needs-review and no dismissal,
 // because nobody said it in a conversation we captured.
 func (s *Service) Save(ctx context.Context, contactID ids.ContactID, in crmcontracts.SaveContactResearchRequest) (int, error) {
-	// Human-only holds for the call whatever its payload, an empty list included.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// The user or their agent saves; the check holds whatever the payload, an
+	// empty list included.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return 0, err
 	}
 	return s.contacts.SaveResearchClaims(ctx, contactID, toClaimInputs(in.Claims))

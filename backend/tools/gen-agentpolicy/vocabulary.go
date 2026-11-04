@@ -68,6 +68,7 @@ type vocabulary struct {
 	tier       []string
 	scope      []string
 	servedBy   []string
+	reason     []string
 }
 
 func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
@@ -80,7 +81,7 @@ func readVocabulary(schemas map[string]schemaNode) (vocabulary, error) {
 	var v vocabulary
 	for field, target := range map[string]*[]string{
 		"access": &v.access, "record_type": &v.recordType, "tier": &v.tier, "scope": &v.scope,
-		"served_by": &v.servedBy,
+		"served_by": &v.servedBy, "human_only_reason": &v.reason,
 	} {
 		prop, ok := declared.Properties[field]
 		if !ok || len(prop.Enum) == 0 {
@@ -160,6 +161,7 @@ func (v vocabulary) violations(policies []policy) []string {
 			{"x-mcp-tool.tier", p.Tier, v.tier},
 			{"x-mcp-tool.scope", p.Scope, v.scope},
 			{"x-mcp-tool.served_by", p.ServedBy, v.servedBy},
+			{"x-human-only-reason", p.HumanOnlyReason, v.reason},
 		} {
 			if check.value == "" || contains(check.allowed, check.value) {
 				continue
@@ -199,7 +201,11 @@ func renderVocabulary(v vocabulary) string {
 		},
 		{
 			"agentServedBy", "servedBy",
-			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. The zero value means the gate admits a call the tool also serves.", v.servedBy,
+			"agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,\n// which admits the call. route: the tool runs the handler, in process.\n// The zero value means the gate admits a call the tool also serves.", v.servedBy,
+		},
+		{
+			"agentHumanOnlyReason", "humanOnly",
+			"agentHumanOnlyReason says why a human-only operation a signed-in user reaches stays out of\n// an agent's reach.", v.reason,
 		},
 	} {
 		fmt.Fprintf(&b, "\n// %s\n//\n// Values are the closed set declared by components.schemas.%s in\n"+

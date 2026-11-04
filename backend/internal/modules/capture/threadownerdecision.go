@@ -3,10 +3,9 @@
 
 package capture
 
-// What the MAILBOX OWNER concluded about a thread, which outranks the
-// classifier: the seat whose correspondence it is decides, and their answer is
-// recorded as its own status so a later reader can tell a contact's decision
-// from a model's.
+// What the MAILBOX OWNER or their agent concluded about a thread, which outranks
+// the classifier. The seat whose correspondence it is decides. Their answer is
+// its own status, so a later reader can tell a contact's decision from a model's.
 
 import (
 	"context"
@@ -23,7 +22,7 @@ import (
 // DecideAsOwner records what the mailbox owner themselves concluded about a
 // thread, overruling whatever a classifier said.
 //
-// A human decision is not a verdict with a different author: it is the end of
+// An owner's decision is not a verdict with a different author: it is the end of
 // the question. The row resolves, its attempts stop mattering, and no later
 // pass re-asks — a classifier that could overturn an owner would make the
 // owner's click advisory, which is not what a contact clicking "keep this
@@ -36,7 +35,7 @@ import (
 func (s *ThreadVerdictStore) DecideAsOwner(
 	ctx context.Context, tx pgx.Tx, threadKey string, share bool,
 ) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)

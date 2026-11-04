@@ -45,14 +45,14 @@ type SetAudienceInput struct {
 const maxAudienceMembers = 200
 
 // SetAudience limits (or re-opens) who may read the activity's content.
-// Human-only: an agent acting for a human never narrows or widens what the
-// human's colleagues read. The caller needs write authority over the row,
+// The user, or their agent, narrows or widens who reads it; automatic work
+// with no passport never does. The caller needs write authority over the row,
 // which is the author, the assignee or host, or a linked record that is
 // theirs to change. The audience column, the member rows, the audit row and
 // the activity.updated event commit together; a row held under a retention
 // obligation is refused by the restriction guard (423).
 func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudienceInput) (crmcontracts.Activity, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {

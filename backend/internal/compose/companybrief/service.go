@@ -157,9 +157,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 func (s *Service) GetScoped(
 	ctx context.Context, companyID ids.CompanyID, force bool, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyBrief, error) {
-	// A brief is a reading aid for a contact; an agent reading records
-	// through a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
 	userID, err := actingUser(ctx)
@@ -195,7 +193,8 @@ func (s *Service) GetScoped(
 	// the name the product shows for it everywhere else: the router sees only
 	// a task and a prompt, so without this the reader's rail could say "this
 	// company" and nothing more.
-	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, companyID.String(), in, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
@@ -208,6 +207,9 @@ func (s *Service) GetScoped(
 		// cosmetic, read from the input the brief was written from rather
 		// than trusted from the model's own reply.
 		Sections: withSectionEvidenceNames(sections, in),
+	}
+	if withheld {
+		return s.enrich(ctx, written.wire(companyID, scope))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return crmcontracts.CompanyBrief{}, err
@@ -231,9 +233,9 @@ func (s *Service) Ask(
 func (s *Service) AskScoped(
 	ctx context.Context, companyID ids.CompanyID, raw crmcontracts.CompanyQuestion, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyAnswer, error) {
-	// A prepared question is a reading aid for a contact; an agent asking about
-	// an account has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A prepared question is a reading aid for the user, or for their agent;
+	// automatic work with no passport has the records themselves.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	question, err := ParseQuestion(raw)

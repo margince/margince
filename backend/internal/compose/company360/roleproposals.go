@@ -73,10 +73,9 @@ const proposalMessages = 6
 func (s *Service) ProposeRoles(
 	ctx context.Context, lane Completer, dealID ids.DealID,
 ) (crmcontracts.DealRoleProposalResult, error) {
-	// Human-only: this spends the workspace's model budget and writes seats a
-	// colleague will act on. An agent asking for it would be the product
-	// deciding to write its own committee.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// It spends the workspace's model budget and writes seats colleagues act on.
+	// So a user or their agent asks for it, and passportless work never does.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoleProposalResult{}, err
 	}
 	// The write grants, checked BEFORE the model call rather than after it. A

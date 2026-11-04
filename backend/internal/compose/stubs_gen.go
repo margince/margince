@@ -3459,6 +3459,10 @@ func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key strin
 	httperr.NotImplemented(w, r, "RestoreRole")
 }
 
+func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {
+	httperr.NotImplemented(w, r, "DescribeRouterActions")
+}
+
 func (stubs) ListScheduledSends(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListScheduledSendsParams) {
 	httperr.NotImplemented(w, r, "ListScheduledSends")
 }

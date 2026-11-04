@@ -44,16 +44,23 @@ func promoteLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, bo
 	}), nil
 }
 
-// disqualifyLeadCommand decodes DELETE /v1/leads/{id}, which carries no body
-// at all — the routed lead is the whole of the call.
+// disqualifyLeadCommand decodes DELETE /v1/leads/{id}. Its optional body carries
+// the reason, which the resolver refuses before a user is asked if no rep could
+// pick it.
 //
 //nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func disqualifyLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
+func disqualifyLeadCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
 	id, err := routedID(r)
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewDisqualifyLeadCall(deps.records, deps.language, agents.DisqualifyLeadCommand{LeadID: id}), nil
+	in, err := commandBody[struct {
+		ReasonID *ids.UUID `json:"reason_id"`
+	}](body)
+	if err != nil {
+		return nil, err
+	}
+	return agents.NewDisqualifyLeadCall(deps.records, deps.language, deps.leadReasons, agents.DisqualifyLeadCommand{LeadID: id, ReasonID: in.ReasonID}), nil
 }
 
 // demoteLeadCommand decodes POST /v1/leads/{id}/demote. The reason travels

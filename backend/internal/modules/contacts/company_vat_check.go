@@ -272,11 +272,11 @@ func (s *Store) VatNumberForCheck(ctx context.Context, company ids.CompanyID) (s
 	return strings.TrimSpace(number), worth && strings.TrimSpace(number) != "", nil
 }
 
-// RequesterVatNumber answers this installation's OWN VAT ID — the number a
-// register consultation is made under — or empty when nobody has stated or
-// confirmed one. A number the website reader proposed and nobody confirmed is
-// not this installation's legal identity, and asking under a wrong one would
-// file somebody else's name on the receipt.
+// RequesterVatNumber answers this installation's own VAT ID, the number a
+// register consultation is made under. It is empty when no user or their agent
+// has stated or confirmed one. A number only the website reader proposed is not
+// this installation's legal identity. Asking under a wrong one would file
+// somebody else's name on the receipt.
 func (s *Store) RequesterVatNumber(ctx context.Context) (string, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
 		return "", err
@@ -290,7 +290,8 @@ func (s *Store) RequesterVatNumber(ctx context.Context) (string, error) {
 			  JOIN company o ON o.id = f.company_id
 			 WHERE o.is_anchor AND o.archived_at IS NULL
 			   AND f.field = 'register_vat'
-			   AND (f.source = 'human' OR f.verified_at IS NOT NULL)`).Scan(&company, &number)
+			   AND (f.source = 'human' OR f.verified_at IS NOT NULL
+			        OR (f.source = 'agent' AND `+storekit.StampForAUserSQL("f.captured_by")+`))`).Scan(&company, &number)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No trusted number: the consultation still runs, without a receipt.
 			return nil

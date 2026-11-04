@@ -88,9 +88,9 @@ type introFacts struct {
 func (s *Service) IntroRequestDraft(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
 ) (crmcontracts.CompanyEmailDraft, error) {
-	// Human-only: this spends the workspace's model budget on prose a colleague
-	// will send under their own name.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// It spends the workspace's model budget on prose the user sends under their
+	// own name, so passportless automatic work may not ask for it.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The colleague being asked is never the reader asking. The routes this
@@ -100,7 +100,7 @@ func (s *Service) IntroRequestDraft(
 	// own sender, written at the workspace's expense. The same rule holds the
 	// ask itself, in introductions.Store.Create.
 	//
-	// RequireHuman above is what refuses a call with nobody behind it, so this
+	// RequireHumanOrItsAgent above is what refuses a call with nobody behind it, so this
 	// branch only answers whether the reader is also the colleague named.
 	if asker, ok := principal.Actor(ctx); ok &&
 		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {

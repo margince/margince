@@ -76,9 +76,9 @@ func (s *Service) RestoreMove(ctx context.Context, dealID ids.DealID, fingerprin
 // setAside runs one write of the set-aside behind the gates both verbs share.
 // So the readers who may set a move aside are the ones who may undo it.
 func (s *Service) setAside(ctx context.Context, dealID ids.DealID, fingerprint, statement string) error {
-	// A passport carries its granting human's id, so an agent's set-aside
-	// would hide a move on a human's page that the human never saw.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// The user, or their agent at their word, sets the move aside; automatic
+	// work with no passport would hide a move nobody saw.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
@@ -144,9 +144,8 @@ func (s *Service) withSetAside(
 // authenticates has set aside, keyed by deal id. A move counts only while its
 // fingerprint matches the one stored, so a different move on the deal shows.
 //
-// Only a human's own set-aside applies, as on the contact page. An agent
-// reading a deal sees every move, including one a human put away, so for any
-// other principal the answer is empty.
+// The set-aside of a user or their agent applies, as on the contact page.
+// Passportless work has none, so for it the answer is empty.
 func MovesSetAside(
 	ctx context.Context, tx pgx.Tx, moves map[ids.UUID]crmcontracts.DealStatusCardMove,
 ) (map[ids.UUID]bool, error) {
@@ -154,7 +153,7 @@ func MovesSetAside(
 	if len(moves) == 0 {
 		return out, nil
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

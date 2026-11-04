@@ -44,6 +44,10 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 	// provenance marker is on the TOOL (mcp.UnitScopedTool) — and this is the
 	// question that map already answers for the contract sweeps.
 	fromExtension := composedToolNames()
+	runsARoute := map[string]bool{}
+	for _, v := range declaredRouteVerbs(agentPolicies) {
+		runsARoute[v.Verb] = true
+	}
 	var mutating, readOnly int
 	for _, spec := range specs {
 		advertised := advertisesRetryKey(t, spec)
@@ -63,6 +67,13 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 		case fromExtension[spec.Name]:
 			if advertised {
 				t.Errorf("%s is an extension's and advertises `%s`, promising a retry the replay gate "+
+					"would refuse to serve", spec.Name, retryKeyMember)
+			}
+		// A route-backed verb's answer is its route's, which carries no replay
+		// evidence, so it offers no key it could not honour.
+		case runsARoute[spec.Name]:
+			if advertised {
+				t.Errorf("%s runs its REST route and advertises `%s`, promising a retry the replay gate "+
 					"would refuse to serve", spec.Name, retryKeyMember)
 			}
 		default:

@@ -15,7 +15,7 @@ import (
 )
 
 func (h domainQuestionHandlers) ListDomainQuestions(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDomainQuestionsParams) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
