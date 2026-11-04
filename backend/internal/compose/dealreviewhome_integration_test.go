@@ -88,3 +88,40 @@ func TestOneHomeActionPerReview(t *testing.T) {
 		t.Errorf("a colleague's own Home carries %d rows of Rep1's review, want none", reviews)
 	}
 }
+
+// The review's task reassigned to a colleague moves the review to the
+// colleague's Home alone, while the task is open and once it is done.
+func TestAReassignedReviewTaskPutsTheReviewOnOneHome(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	review := v.WsScalar(t, `SELECT id::text FROM assurance_exception WHERE type = $1 AND subject_id = $2`,
+		assurance.TypeDealViability, v.silent)
+	task := v.WsScalar(t, `SELECT task_activity_id::text FROM assurance_exception WHERE id = $1`, review)
+	taskID, err := ids.Parse(task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	colleague := ids.From[ids.UserKind](v.Rep2)
+	if _, err := v.Activities.UpdateActivity(v.Admin(), ids.From[ids.ActivityKind](taskID),
+		activities.UpdateActivityInput{AssigneeID: &colleague}); err != nil {
+		t.Fatalf("reassigning the review task: %v", err)
+	}
+	owner := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
+	assignee := v.As(v.Rep2, []ids.UUID{v.Team1}, integration.AdminPerms)
+	homes := func(when string) {
+		t.Helper()
+		ownerRows, _, _ := rowsAbout(v.homeRows(owner, t, "mine"), review, task, v.silent.String())
+		assigneeRows, _, _ := rowsAbout(v.homeRows(assignee, t, "mine"), review, task, v.silent.String())
+		if ownerRows != 0 || assigneeRows != 1 {
+			t.Errorf("%s: the deal owner's Home holds %d review rows and the assignee's %d, want 0 and 1",
+				when, ownerRows, assigneeRows)
+		}
+	}
+	homes("with the task open")
+	done := true
+	if _, err := v.Activities.UpdateActivity(v.Admin(), ids.From[ids.ActivityKind](taskID),
+		activities.UpdateActivityInput{IsDone: &done}); err != nil {
+		t.Fatal(err)
+	}
+	homes("with the task done")
+}

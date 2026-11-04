@@ -71,3 +71,35 @@ func TestNoReviewsLeaveTheRowsAlone(t *testing.T) {
 		t.Fatalf("with no open review the rows became %+v", got)
 	}
 }
+
+// Below a lane's cap the fold above the tail cannot see the rows, so the tail
+// itself leaves a review's task and its deal's quiet row out.
+func TestTheTailLeavesOutWhatAReviewReports(t *testing.T) {
+	t.Parallel()
+	deal, task := ids.NewV7(), ids.NewV7()
+	read := reviewRead{open: []DealReview{{ID: ids.NewV7(), DealID: deal, Task: &task, TaskOpen: true}}}
+	if !read.foldsTask(reviewTask(task)) || read.foldsTask(reviewTask(ids.NewV7())) {
+		t.Error("the tail must leave out the review's own task and no other")
+	}
+	if !read.foldsRisk(quietRisk(deal, "quiet")) || read.foldsRisk(quietRisk(deal, "close_overdue")) ||
+		read.foldsRisk(quietRisk(ids.NewV7(), "quiet")) {
+		t.Error("the tail must leave out the review deal's quiet row only")
+	}
+}
+
+// A store's task count still holds an open review's task, which the fold moved
+// to the review row, so the task totals are left absent rather than overstated.
+func TestAnOpenReviewTaskLeavesTheTaskTotalsAbsent(t *testing.T) {
+	t.Parallel()
+	task := ids.NewV7()
+	tasks := totalKey{sourceTask, "tasks"}
+	s := &Service{}
+	s.backlog.exact = map[totalKey]int{tasks: 12}
+	if got := s.exactSources(crmcontracts.Attention{}, scopeMine, nil); got[tasks] != 12 {
+		t.Fatalf("with no review the task total is %d, want the store's 12", got[tasks])
+	}
+	s.reviews = reviewRead{open: []DealReview{{ID: ids.NewV7(), DealID: ids.NewV7(), Task: &task, TaskOpen: true}}}
+	if _, kept := s.exactSources(crmcontracts.Attention{}, scopeMine, nil)[tasks]; kept {
+		t.Error("an open review task left the store's task count standing, which counts it twice")
+	}
+}
