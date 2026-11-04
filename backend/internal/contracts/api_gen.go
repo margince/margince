@@ -57082,7 +57082,7 @@ type SaveMyLocaleRequestLocale string
 // SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
 type SaveMyTimezoneRequest struct {
 	// Source `browser` is the app's guess from the browser, stored only while no
-	// zone is stored. `chosen` is the person's own pick, always stored.
+	// zone is stored. `chosen` is the user's own pick, always stored.
 	Source SaveMyTimezoneRequestSource `json:"source"`
 
 	// Timezone An IANA zone name, such as `Europe/Berlin`.
@@ -57090,7 +57090,7 @@ type SaveMyTimezoneRequest struct {
 }
 
 // SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
-// zone is stored. `chosen` is the person's own pick, always stored.
+// zone is stored. `chosen` is the user's own pick, always stored.
 type SaveMyTimezoneRequestSource string
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
@@ -61686,10 +61686,10 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
 	Timezone *string `json:"timezone,omitempty"`
 
-	// TimezoneChosen Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
 	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
 	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }

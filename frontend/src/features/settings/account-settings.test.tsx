@@ -56,7 +56,7 @@ it("says so on the save bar and under the field when the account refuses the new
   expect(alerts.some((alert) => named.includes(alert.id))).toBe(true);
 });
 
-it("saves the picked time zone as the person's own choice", async () => {
+it("saves the picked time zone as the user's own choice", async () => {
   const user = userEvent.setup();
   const writes: unknown[] = [];
   installFetchStub({

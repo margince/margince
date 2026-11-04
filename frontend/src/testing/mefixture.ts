@@ -35,7 +35,7 @@ const AVAILABLE: SettingsAvailability = {
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
 
-/** The zone the fixture person stores, for fixtures that need a zone string. */
+/** The zone the fixture user stores, for fixtures that need a zone string. */
 export const FIXTURE_TIMEZONE = "Europe/Berlin";
 
 /**

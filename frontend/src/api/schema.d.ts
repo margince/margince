@@ -22586,16 +22586,16 @@ export interface paths {
          * @description Always the CALLER's own, never anybody else's. An admin does not set a
          *     colleague's time zone through this API.
          *
-         *     One zone per person. Booking reads your working hours on it, and mail
+         *     One zone per user. Booking reads your working hours on it, and mail
          *     sent to you is timed by it.
          *
          *     `source` says who picked the zone. `browser` is the app's first guess
          *     from the browser, and is stored only while no zone is stored. `chosen`
-         *     is the person's own pick: it is always stored and marks the zone as
+         *     is the user's own pick: it is always stored and marks the zone as
          *     chosen. Saving the zone already stored writes nothing.
          *
-         *     Not open to agents: an agent acting for a person must not change the
-         *     clock that person's times, bookings and mail are read on.
+         *     Not open to agents: an agent acting for a user must not change the
+         *     clock that user's times, bookings and mail are read on.
          */
         put: operations["saveMyTimezone"];
         post?: never;
@@ -35046,7 +35046,7 @@ export interface components {
             timezone: string;
             /**
              * @description `browser` is the app's guess from the browser, stored only while no
-             *     zone is stored. `chosen` is the person's own pick, always stored.
+             *     zone is stored. `chosen` is the user's own pick, always stored.
              * @enum {string}
              */
             source: "browser" | "chosen";
@@ -43745,9 +43745,9 @@ export interface components {
             display_name: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
-            /** @description The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
+            /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
-            /** @description Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
+            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
             timezone_chosen?: boolean;
             /**
              * @description The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
