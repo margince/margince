@@ -19621,6 +19621,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
   "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
   "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
+  "brief.coverage.source.contact_employers": "Nơi làm việc của liên hệ",
   "tasks.origin.accepted_recommendation":
     "Được chấp nhận từ một bước được đề xuất.",
   "deal.verdict.yourMove": "Đến lượt bạn",

@@ -8,12 +8,14 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,6 +37,13 @@ func (e employersSaying) CurrentEmployers(_ context.Context, contactIDs []ids.UU
 		}
 	}
 	return out, nil
+}
+
+// employersFailing answers every employer read with an error.
+type employersFailing struct{ err error }
+
+func (e employersFailing) CurrentEmployers(context.Context, []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	return nil, e.err
 }
 
 func TestAnUnansweredMeetingNamesItsCustomerAndItsHost(t *testing.T) {
@@ -121,8 +130,8 @@ func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 		{Source: "waiting", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(sender)}},
 		{Source: "task"},
 	}
-	if err := svc.nameTheEmployers(context.Background(), rows); err != nil {
-		t.Fatalf("naming the employers: %v", err)
+	if note := svc.nameTheEmployers(context.Background(), rows); note != nil {
+		t.Fatalf("naming the employers: %+v", note)
 	}
 	if rows[0].Contact.Employer == nil || rows[0].Contact.Employer.CompanyName != "Acme" {
 		t.Errorf("meeting row employer = %+v, want Acme", rows[0].Contact.Employer)
@@ -135,5 +144,36 @@ func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 	}
 	if len(asked) != 3 {
 		t.Errorf("the employer read was asked about %v, want the three contacts once each", asked)
+	}
+}
+
+// The employer only decorates a row, so a failed read keeps every row and names
+// the missing source, as withheld when the reader was refused.
+func TestAFailedEmployerReadKeepsTheRowsAndSaysSo(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		err  error
+		want crmcontracts.WorklistSourceUnavailableReason
+	}{
+		"failed":  {errors.New("connection reset"), crmcontracts.WorklistSourceUnavailableReasonFailed},
+		"refused": {apperrors.ErrPermissionDenied, crmcontracts.WorklistSourceUnavailableReasonWithheld},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			svc := &Service{employers: employersFailing{err: tc.err}}
+			rows := []crmcontracts.WorklistItem{
+				{Source: "waiting", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(ids.NewV7())}},
+			}
+			note := svc.nameTheEmployers(context.Background(), rows)
+			if note == nil || note.Source != sourceContactEmployers || note.Reason != tc.want {
+				t.Fatalf("note = %+v, want %s %s", note, sourceContactEmployers, tc.want)
+			}
+			if note.ContributesRows == nil || *note.ContributesRows {
+				t.Errorf("an employer read puts no row on the queue, note says %v", note.ContributesRows)
+			}
+			if rows[0].Contact.Employer != nil {
+				t.Errorf("a failed read named an employer %+v", rows[0].Contact.Employer)
+			}
+		})
 	}
 }

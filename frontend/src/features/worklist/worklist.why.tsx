@@ -18,6 +18,8 @@ import { rowAnswer } from "./worklist.row.answer";
 
 import "./worklist.why.css";
 
+const QUOTED_SOURCE = "conversation_claim";
+
 export function WorklistWhy({
   item,
   answer = false,
@@ -44,14 +46,19 @@ export function WorklistWhy({
               ))}
             </ol>
           )}
-          {item.detail && (
-            <figure className="worklist-why-quote">
-              <figcaption className="t-caption">
-                {t("worklist.why.detail")}
-              </figcaption>
-              <blockquote>{item.detail}</blockquote>
-            </figure>
-          )}
+          {item.detail &&
+            // Only a promise carries the contact's own words; every other
+            // detail is the product's explanation, so it is not drawn as a quote.
+            (item.source === QUOTED_SOURCE ? (
+              <figure className="worklist-why-quote">
+                <figcaption className="t-caption">
+                  {t("worklist.why.detail")}
+                </figcaption>
+                <blockquote>{item.detail}</blockquote>
+              </figure>
+            ) : (
+              <p>{item.detail}</p>
+            ))}
           {item.consequence !== "none" && (
             <p className="worklist-why-if">
               <span className="t-caption">{t("worklist.why.consequence")}</span>{" "}

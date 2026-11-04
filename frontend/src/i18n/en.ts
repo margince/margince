@@ -19952,6 +19952,7 @@ export const en = {
   "project.standing.peek.documents": "Files on this project, newest first",
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
   "brief.coverage.source.deal_advice": "Suggested deal steps",
+  "brief.coverage.source.contact_employers": "Where your contacts work",
   "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
   "deal.verdict.yourMove": "Your move",
   "deal.verdict.yourMoveToday":

@@ -44,6 +44,7 @@ export const reachNames = {
 const coverageNames = {
   ...reachNames,
   deal_advice: "brief.coverage.source.deal_advice",
+  contact_employers: "brief.coverage.source.contact_employers",
   calendar: "brief.coverage.source.calendar",
   next_meeting: "brief.coverage.source.next_meeting",
 } satisfies Record<string, MessageKey>;

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -83,8 +84,12 @@ func isMeetingRow(row crmcontracts.WorklistItem) bool {
 }
 
 // nameTheEmployers puts the contact's employer on every row that names a
-// contact, in one read for the page, so each card can name the account.
-func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+// contact, in one read for the page, so each card can name the account. The
+// employer only decorates a row, so a failed read leaves the rows unchanged
+// and says so instead of failing the page.
+func (s *Service) nameTheEmployers(
+	ctx context.Context, rows []crmcontracts.WorklistItem,
+) *crmcontracts.WorklistSourceUnavailable {
 	if s.employers == nil {
 		return nil
 	}
@@ -100,13 +105,23 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 	if len(wanted) == 0 {
 		return nil
 	}
-	employers, err := s.employers.CurrentEmployers(ctx, wanted)
-	// Refused is withheld: the row still names its contact, and no account.
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil
-	}
+	var employers map[ids.UUID]crmcontracts.ContactEmployer
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var err error
+		employers, err = s.employers.CurrentEmployers(ctx, wanted)
+		return err
+	})
+	// A refusal is withheld: the row still names its contact, and no account.
 	if err != nil {
-		return fmt.Errorf("attention: naming where the contacts work: %w", err)
+		rowless := false
+		note := &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceContactEmployers, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld, ContributesRows: &rowless,
+		}
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			note.Reason = crmcontracts.WorklistSourceUnavailableReasonFailed
+			slog.Log(ctx, laneFailureLevel(ctx), "the contacts' employers could not be read", "error", err)
+		}
+		return note
 	}
 	for i := range rows {
 		if rows[i].Contact == nil {

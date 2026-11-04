@@ -20150,6 +20150,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.syncTimeUnknown":
     "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
+  "brief.coverage.source.contact_employers": "Arbeitgeber deiner Kontakte",
   "tasks.origin.accepted_recommendation":
     "Aus einem vorgeschlagenen Schritt übernommen.",
   "deal.verdict.yourMove": "Du bist dran",

@@ -19,8 +19,8 @@ import { completeFailureKey, refetchAfterWrite } from "./taskwritefollowup";
 type TaskPatch = {
   id: string;
   // The version the press was decided against. Every verb on a task goes
-  // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two contacts can complete, each told it worked.
+  // through this one mutation, so pinning it here pins all four at once.
+  // Unpinned, two contacts could each complete one task and be told it worked.
   version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
@@ -49,10 +49,9 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       // skew by the very write it is undoing.
       return data?.version;
     },
-    // Returned, so the mutation stays pending until the reads have landed. The
-    // row the press came from stays drawn at the version it was fetched at
-    // until then, and a second press in that window re-sends it and is
-    // refused as skew by the write that has just succeeded.
+    // Returned, so the mutation stays pending until the reads have landed.
+    // Until then the row keeps the version it was fetched at. A second press
+    // in that window would re-send it and be refused as skew.
     onSuccess: (_data, input) =>
       refetchAfterWrite(queryClient, invalidateKeys, input.id),
     // A stale press is not a failed one: the task moved on under it, so the

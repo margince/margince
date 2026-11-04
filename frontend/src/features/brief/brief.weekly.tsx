@@ -232,7 +232,8 @@ function reportSections(
       key: "observations",
       icon: Sparkles,
       title: "brief.report.chapter.observations",
-      aside: <AiTag />,
+      // Only a lesson the model wrote carries its mark; an empty week is ours.
+      aside: learnings?.items.length ? <AiTag /> : undefined,
       body: <LearningsPanel learnings={learnings} />,
     }),
     ...optional(scorecardRows(review), {

@@ -9,6 +9,7 @@ import {
   formatDayRange,
   formatNumber,
 } from "../../format/format";
+import { useNow } from "../../format/now";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
@@ -39,7 +40,13 @@ export function WeeklyRail({
   // index loads, only the default view is known to show the newest.
   const newest =
     weeks?.[0] ?? (asked === undefined ? review?.local_week_start : undefined);
-  if (review === null) return null;
+  const next = newest ? startOfDayInZone(newest, recordZone, 14) : undefined;
+  // A stalled run leaves the newest week behind; a date already past says
+  // nothing true about when the next report comes.
+  const now = useNow(HOUR_MS);
+  // A week with no report still lists the weeks that have one, since the
+  // stepper has nowhere to go from it.
+  if (review === null) return <WeeksPanel weeks={weeks ?? []} shown={asked} />;
   const numeric = weeklyNumericStatus(review.numeric_summary);
   return (
     <>
@@ -48,14 +55,10 @@ export function WeeklyRail({
       </Panel>
       <WeeksPanel weeks={weeks ?? []} shown={review.local_week_start} />
       {constraints}
-      {newest && (
+      {next && Date.parse(next) >= now && (
         <p className="t-caption brief-report-closing">
           {t("brief.report.next", {
-            date: formatDayLong(
-              startOfDayInZone(newest, recordZone, 14),
-              locale,
-              recordZone,
-            ),
+            date: formatDayLong(next, locale, recordZone),
           })}
         </p>
       )}
@@ -67,6 +70,7 @@ export function WeeklyRail({
 // reaches every older one.
 const LISTED_WEEKS = 4;
 const CHARTED_WEEKS = 8;
+const HOUR_MS = 3_600_000;
 
 /**
  * The newest weeks with a report: what each won as bars, then the weeks as a
@@ -75,7 +79,7 @@ const CHARTED_WEEKS = 8;
 function WeeksPanel({
   weeks,
   shown,
-}: Readonly<{ weeks: readonly string[]; shown: string }>) {
+}: Readonly<{ weeks: readonly string[]; shown: string | undefined }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -142,8 +146,8 @@ function WeeksPanel({
   );
 }
 
-/** Deals won per week, oldest on the left. The list under it says the same
- *  in words, so a screen reader is not read it twice. */
+/** Deals won per week, oldest on the left. It charts more weeks than the
+ *  list names, so it carries every charted count as its own label. */
 function WinsChart({
   weeks,
   wins,
@@ -151,28 +155,45 @@ function WinsChart({
 }: Readonly<{
   weeks: readonly string[];
   wins: ReadonlyMap<string, number>;
-  shown: string;
+  shown: string | undefined;
 }>) {
+  const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const most = Math.max(1, ...weeks.map((week) => wins.get(week) ?? 0));
+  const label = weeks
+    .map((week) => {
+      const won = wins.get(week) ?? 0;
+      return `${t("brief.report.col.week", {
+        week: formatNumber(isoWeekOf(week), locale),
+      })}: ${plural("brief.report.wonCount", won, {
+        count: formatNumber(won, locale),
+      })}`;
+    })
+    .join(", ");
   return (
-    <div className="brief-weekly-wins" aria-hidden="true">
-      {weeks.map((week) => (
-        <div
-          key={week}
-          className="brief-weekly-wins-bar"
-          data-shown={week === shown}
-        >
-          <span
-            style={{
-              blockSize: `${Math.max(4, ((wins.get(week) ?? 0) / most) * 100)}%`,
-            }}
-          />
-          <small className="t-num">
-            {formatNumber(isoWeekOf(week), locale)}
-          </small>
-        </div>
-      ))}
+    <div className="brief-weekly-wins" role="img" aria-label={label}>
+      {weeks.map((week) => {
+        const won = wins.get(week) ?? 0;
+        return (
+          <div
+            key={week}
+            className="brief-weekly-wins-bar"
+            data-shown={week === shown}
+          >
+            {/* A week with no win draws no bar, so it never reads as one. */}
+            <span
+              style={{
+                blockSize:
+                  won === 0 ? 0 : `${Math.max(4, (won / most) * 100)}%`,
+              }}
+            />
+            <small className="t-num">
+              {formatNumber(isoWeekOf(week), locale)}
+            </small>
+          </div>
+        );
+      })}
     </div>
   );
 }

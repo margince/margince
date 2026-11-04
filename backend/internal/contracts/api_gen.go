@@ -64902,7 +64902,7 @@ type WorklistSourceUnavailable struct {
 	Category *string `json:"category,omitempty"`
 
 	// ContributesRows False for a side read that puts no row on the queue — `calendar`,
-	// `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
+	// `next_meeting`, `deal_advice` and `contact_employers` — so its failure cannot hide a row, and a figure counted over
 	// the queue stays exact. True for a lane whose rows may be missing. Absent from
 	// an older server and from a surface that names only lanes, and a client reads
 	// absent as true.

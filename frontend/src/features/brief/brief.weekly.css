@@ -325,9 +325,6 @@
   background: var(--accentLight);
   transition: block-size var(--dur-move) var(--ease-out);
 }
-.brief-weekly-wins-bar[data-shown="true"] > span {
-  background: var(--accent);
-}
 .brief-weekly-wins-bar[data-shown="true"] > small {
   color: var(--textPrimary);
   font-weight: var(--fontWeightBold);
