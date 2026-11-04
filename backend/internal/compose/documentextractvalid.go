@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -99,9 +100,9 @@ func validateDocumentField(q documentQuestion, field documentField, src document
 	switch {
 	case strings.TrimSpace(field.Value) == "":
 		return fmt.Sprintf("field %q is reported as stated but carries no value", field.Field)
-	case len(field.Value) > q.maxValue(field.Field):
+	case utf8.RuneCountInString(field.Value) > q.maxValue(field.Field):
 		return fmt.Sprintf("field %q carries a %d-character value, and at most %d may be reported",
-			field.Field, len(field.Value), q.maxValue(field.Field))
+			field.Field, utf8.RuneCountInString(field.Value), q.maxValue(field.Field))
 	case strings.TrimSpace(field.Quote) == "":
 		return fmt.Sprintf("field %q cites no quote, and an uncited value is a guess", field.Field)
 	case len(field.Quote) > maxDocumentQuote:

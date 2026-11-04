@@ -155,7 +155,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
 
-	src, detail, err := d.sourceFor(ctx, store, attachmentID)
+	src, detail, err := d.sourceFor(ctx, store, attachmentID, question)
 	if err != nil {
 		if terminal, msg := d.unreadableDocument(err); terminal {
 			return d.fail(ctx, store, readID, claimedAt, msg)
@@ -241,7 +241,7 @@ func (d *DocumentExtractor) emptyReadingDetail(q documentQuestion, fields []extr
 // error. The detail is not a failure — the document is intact and the binding
 // is working, they simply do not meet.
 func (d *DocumentExtractor) sourceFor(
-	ctx context.Context, store documentReadStore, attachmentID ids.UUID,
+	ctx context.Context, store documentReadStore, attachmentID ids.UUID, question documentQuestion,
 ) (documentSource, string, error) {
 	meta, body, err := store.OpenAttachment(ctx, attachmentID)
 	if err != nil {
@@ -282,6 +282,11 @@ func (d *DocumentExtractor) sourceFor(
 	}
 	if ai.CarriesImage(mime) {
 		return d.imageSource(meta, mime, bytes)
+	}
+	// A chat is read from a photo type only. Any other file reaching here was
+	// stored before the door refused it, and no lane below reads a chat.
+	if question.name == activities.ExtractionQuestionChatCapture {
+		return documentSource{}, fmt.Sprintf(documentWords.UnsupportedType.In(d.said.Lang()), mime), nil
 	}
 	src, detail := d.laneFor(ctx, meta, mime, bytes)
 	return src, detail, nil
@@ -439,9 +444,6 @@ func (d *DocumentExtractor) refusedReadingDetail(err error) string {
 func (d *DocumentExtractor) ask(
 	ctx context.Context, q documentQuestion, src documentSource,
 ) ([]extraction.ExtractedField, error) {
-	if q.name == activities.ExtractionQuestionChatCapture && src.onTextLane() {
-		return nil, fmt.Errorf("%w: a chat is read from an image, and this file reached the text lane", errRefusedDocument)
-	}
 	req := q.request(src)
 	validate := questionShapeValid(q, src)
 	// The document's own text IS the request, so the call is about the record

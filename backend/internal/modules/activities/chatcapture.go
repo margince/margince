@@ -12,7 +12,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -28,6 +30,22 @@ import (
 // ChatCaptureSourceSystem keys a filed chat on the reading it was read by. A
 // second confirm of the same reading returns the activity the first one wrote.
 const ChatCaptureSourceSystem = "chat_screenshot"
+
+// The fields a chat reading reports, in the order it is asked for them. The
+// reading in compose asks for them; the confirm here reads them back.
+const (
+	ChatFieldText  = "chat_text"
+	ChatFieldName  = "counterparty_name"
+	ChatFieldPhone = "counterparty_phone"
+)
+
+// MaxChatText bounds the text of one chat, read or typed, in characters. A
+// phone screen shows a few dozen short messages; far more is not a screenshot.
+const MaxChatText = 6000
+
+// ChatImageMIMEs are the image types a chat is read from: the photo types the
+// image policy reads (ai.CarriesImage), which compose holds equal to this list.
+func ChatImageMIMEs() []string { return []string{"image/jpeg", "image/png", "image/gif", "image/webp"} }
 
 // ChatCaptureError is one refused confirm. Field names the request field the
 // caller fixes; it is empty when nothing in the request can fix it.
@@ -46,6 +64,9 @@ type ChatCaptureFiling struct {
 	ReadingID    ids.UUID
 	Channel      string
 	Body         string
+	// ConfirmOtherCounterparty is the user's answer to "this chat shows
+	// someone else". Without it such a chat is refused.
+	ConfirmOtherCounterparty bool
 	// WriteAs is the principal the activity is written under. For the
 	// reading's own text it is the reader acting for the user. Nil keeps the
 	// user, who typed or changed the text.
@@ -68,11 +89,17 @@ func refuseUnaskableQuestion(ctx context.Context, tx pgx.Tx, attachmentID ids.UU
 		Scan(&contentType); err != nil {
 		return fmt.Errorf("activities: reading a file's type: %w", err)
 	}
-	if contentType == nil || !strings.HasPrefix(strings.ToLower(*contentType), "image/") {
+	if contentType == nil || !slices.Contains(ChatImageMIMEs(), bareMediaType(*contentType)) {
 		return &ChatCaptureError{Field: "question", Code: "not_an_image",
-			Message: "a chat is read from a screenshot; this file is not an image"}
+			Message: "a chat is read from a JPEG, PNG, GIF or WebP screenshot; this file is none of them"}
 	}
 	return nil
+}
+
+// bareMediaType drops a Content-Type's parameters, so `image/png; q=1` is a PNG.
+func bareMediaType(contentType string) string {
+	media, _, _ := strings.Cut(contentType, ";")
+	return strings.ToLower(strings.TrimSpace(media))
 }
 
 // FileChatCapture writes the message activity and moves the image onto it, in
@@ -82,8 +109,17 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return ids.UUID{}, err
 	}
+	if utf8.RuneCountInString(in.Body) > MaxChatText {
+		return ids.UUID{}, &ChatCaptureError{Field: "body", Code: "too_long",
+			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText)}
+	}
 	var filed ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// Locked before the parent is read, so a second confirm waits here and
+		// then sees the file already on the first confirm's activity.
+		if _, err := storekit.LockRow(ctx, tx, "attachment", in.AttachmentID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		parentType, err := resolveAttachmentParent(ctx, tx, in.AttachmentID, principal.ActionUpdate)
 		if err != nil {
 			return err
@@ -96,7 +132,11 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 			return &ChatCaptureError{Code: "unsupported_entity_type",
 				Message: "a chat is filed from a screenshot on a contact; this file hangs on a " + parentType}
 		}
-		if err := requireChatReading(ctx, tx, in); err != nil {
+		read, err := requireChatReading(ctx, tx, in)
+		if err != nil {
+			return err
+		}
+		if err := requireSameCounterparty(ctx, tx, in, read); err != nil {
 			return err
 		}
 		if err := requireRegisteredChannel(ctx, tx, in.Channel); err != nil {
@@ -113,26 +153,43 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 
 // requireChatReading holds the confirm to the reading the user was shown: one
 // of this file, read for a chat, and finished.
-func requireChatReading(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) error {
-	var question, status string
-	err := tx.QueryRow(ctx,
-		`SELECT question, status FROM attachment_extraction WHERE id = $1 AND attachment_id = $2`,
-		in.ReadingID, in.AttachmentID).Scan(&question, &status)
+func requireChatReading(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (ExtractionRead, error) {
+	read, err := scanExtractionRead(tx.QueryRow(ctx,
+		`SELECT `+extractionReadColumns+` FROM attachment_extraction WHERE id = $1 AND attachment_id = $2`,
+		in.ReadingID, in.AttachmentID))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("%w: extraction reading %s", apperrors.ErrNotFound, in.ReadingID)
+		return read, fmt.Errorf("%w: extraction reading %s", apperrors.ErrNotFound, in.ReadingID)
 	}
 	if err != nil {
-		return fmt.Errorf("activities: reading the chat reading: %w", err)
+		return read, fmt.Errorf("activities: reading the chat reading: %w", err)
 	}
-	if question != ExtractionQuestionChatCapture {
-		return &ChatCaptureError{Field: "extraction_id", Code: "not_a_chat_reading",
+	if read.Question != ExtractionQuestionChatCapture {
+		return read, &ChatCaptureError{Field: "extraction_id", Code: "not_a_chat_reading",
 			Message: "this reading looked for deal facts, not for a chat"}
 	}
-	if status != ExtractionReadDone && status != ExtractionReadFailed {
-		return &ChatCaptureError{Field: "extraction_id", Code: "reading_not_finished",
+	if read.Live() {
+		return read, &ChatCaptureError{Field: "extraction_id", Code: "reading_not_finished",
 			Message: "the screenshot is still being read; file it when the reading finishes"}
 	}
-	return nil
+	return read, nil
+}
+
+// requireSameCounterparty refuses a chat whose header names someone other
+// than the contact, unless the user confirmed it belongs here anyway.
+func requireSameCounterparty(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, read ExtractionRead) error {
+	if in.ConfirmOtherCounterparty {
+		return nil
+	}
+	contactID, err := attachmentParentID(ctx, tx, in.AttachmentID)
+	if err != nil {
+		return err
+	}
+	shows, err := otherChatCounterparty(ctx, tx, contactID, read)
+	if err != nil || shows == "" {
+		return err
+	}
+	return fmt.Errorf("%w: this chat shows %s, not this contact; confirm to file it here anyway",
+		apperrors.ErrConflict, shows)
 }
 
 // requireRegisteredChannel checks the channel against the registry, so a

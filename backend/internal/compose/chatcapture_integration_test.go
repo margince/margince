@@ -154,22 +154,26 @@ func TestAChatConfirmThatCannotBeTrustedWritesNothing(t *testing.T) {
 	}
 }
 
-func TestAChatIsReadOnlyFromAnImage(t *testing.T) {
+func TestAChatIsReadOnlyFromAnImageTheReaderTakes(t *testing.T) {
 	env := integration.Setup(t)
 	ctx := env.Admin()
 	store := activities.NewStore(env.DB()).WithBlobstore(blobstore.NewMemory())
-	contact := env.SeedContact(t, "Text Only", &env.AdminUser)
-	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "chat.txt", ContentType: "text/plain",
-		Content: strings.NewReader("Me: hello"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, _, err = store.StartExtractionReadFor(ctx, ids.UUID(att.Id), activities.ExtractionQuestionChatCapture, "rep", nil)
-	var refused *activities.ChatCaptureError
-	if !errors.As(err, &refused) || refused.Code != "not_an_image" {
-		t.Fatalf("a text file was read as a chat: %v", err)
+	contact := env.SeedContact(t, "Not An Image", &env.AdminUser)
+	for _, file := range []struct{ name, mime string }{
+		{"chat.txt", "text/plain"}, {"chat.tiff", "image/tiff"}, {"chat.heic", "image/heic"},
+	} {
+		att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
+			EntityType: "contact", EntityID: contact, Filename: file.name, ContentType: file.mime,
+			Content: strings.NewReader("not a png"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, err = store.StartExtractionReadFor(ctx, ids.UUID(att.Id), activities.ExtractionQuestionChatCapture, "rep", nil)
+		var refused *activities.ChatCaptureError
+		if !errors.As(err, &refused) || refused.Code != "not_an_image" {
+			t.Errorf("a %s file was read as a chat: %v", file.mime, err)
+		}
 	}
 }
 
@@ -178,7 +182,8 @@ func TestAChatIsReadOnlyFromAnImage(t *testing.T) {
 func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 	f := readChatScreenshot(t, chatReply())
 	body := chatScreenshotText
-	if _, err := f.file(t, &body); err != nil {
+	filed, err := f.file(t, &body)
+	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := f.env.Admin()
@@ -197,5 +202,9 @@ func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM attachment_extraction WHERE id = $1`, f.reading); n != 0 {
 		t.Fatal("the reading holding the chat text survived the erasure")
+	}
+	if n := f.env.WsCount(t, `SELECT count(*) FROM activity
+		 WHERE id = $1 AND body IS NULL AND archived_at IS NOT NULL`, filed); n != 1 {
+		t.Fatal("the filed chat kept its text, or stayed live, after the erasure")
 	}
 }

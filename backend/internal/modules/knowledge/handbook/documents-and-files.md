@@ -164,7 +164,8 @@ Nothing is saved on the contact's history until you click **File on this contact
 Also called: save a WhatsApp chat, log a Telegram message, add a chat screenshot.
 
 The chat is saved as one message on the contact, with the screenshot
-attached to it. When AI cannot read the screenshot, or no AI model is set up,
+attached to it. When the chat's header shows a name or number that is
+not this contact's, the panel says so. Tick the box to save it here all the same. When AI cannot read the screenshot, or no AI model is set up,
 the panel says why and **What was said** stays empty. You can type the text
 yourself or save the screenshot alone.
 

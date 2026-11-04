@@ -52,10 +52,11 @@ func (c *ChatCaptureFile) File(
 		body = *req.Body
 	}
 	filing := activities.ChatCaptureFiling{
-		AttachmentID: attachmentID,
-		ReadingID:    readID,
-		Channel:      string(req.ChannelProvider),
-		Body:         body,
+		AttachmentID:             attachmentID,
+		ReadingID:                readID,
+		Channel:                  string(req.ChannelProvider),
+		Body:                     body,
+		ConfirmOtherCounterparty: req.ConfirmOtherCounterparty != nil && *req.ConfirmOtherCounterparty,
 	}
 	if bodyIsTheReading(read, body) {
 		filing.WriteAs = asChatReader

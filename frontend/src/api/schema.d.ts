@@ -23165,6 +23165,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attachments/{id}/extractions/{extraction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                extraction_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One named reading of this attachment, for a screen polling the reading it started.
+         * @description The reading `readAttachmentForFields` answered with, by its id. Unlike
+         *     `getAttachmentExtraction`, which reports the newest reading of any question, this
+         *     reports exactly the one named. A reading of another attachment is 404. An agent
+         *     reads the newest reading through `get_attachment_extraction`.
+         */
+        get: operations["getAttachmentExtractionReading"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attachments/{id}/request-access": {
         parameters: {
             query?: never;
@@ -39483,6 +39510,13 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             finished_at?: string | null;
+            /**
+             * @description For a finished `chat_capture` reading of a screenshot on a contact: the name or
+             *     number the chat header shows when neither agrees with that contact. Null when
+             *     they agree, when the header shows neither, and for every other reading.
+             *     `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+             */
+            other_counterparty?: string | null;
         };
         AttachmentReadRequest: {
             /**
@@ -39500,8 +39534,15 @@ export interface components {
             extraction_id: string;
             /** @description The messaging app the chat happened in. */
             channel_provider: components["schemas"]["ProviderRef"];
-            /** @description The chat's text as the caller confirmed it. Empty or null files the image alone. */
+            /** @description The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone. */
             body?: string | null;
+            /**
+             * @description The caller confirms the chat belongs on this contact although its header shows
+             *     someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+             *     is refused with 409.
+             * @default false
+             */
+            confirm_other_counterparty: boolean;
         };
         FiledChatCapture: {
             /**
@@ -91862,6 +91903,42 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAttachmentExtractionReading: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                extraction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The named reading. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentExtraction"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

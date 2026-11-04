@@ -19,15 +19,16 @@ import (
 )
 
 // The fields a chat reading reports, in the order it is asked for them.
+// The activities store owns the names, because the confirm reads them back.
 const (
-	chatFieldText  = "chat_text"
-	chatFieldName  = "counterparty_name"
-	chatFieldPhone = "counterparty_phone"
+	chatFieldText  = activities.ChatFieldText
+	chatFieldName  = activities.ChatFieldName
+	chatFieldPhone = activities.ChatFieldPhone
 )
 
-// maxChatText bounds the messages one screenshot yields. A phone screen shows
-// a few dozen short messages; far more is the model writing, not copying.
-const maxChatText = 6000
+// maxChatText bounds the messages one screenshot yields, and what the user may
+// file: one number for the read text and the typed one.
+const maxChatText = activities.MaxChatText
 
 const chatCaptureSystem = `You read ONE screenshot of a conversation in a messaging app and report only what
 it SHOWS. Copy the messages exactly as printed, in their own language and script, in the order

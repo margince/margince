@@ -102,10 +102,16 @@ function stubServer(reading: Reading) {
           201,
         );
       }
-      if (pathname === "/v1/attachments/att-1/extraction") {
-        return request.method === "POST"
-          ? json({ id: "read-1", status: "queued", joined: false }, 202)
-          : json(reading);
+      // Only the start answers on the bare path. A poll of the newest reading
+      // there would read whatever was started last, not this panel's reading.
+      if (
+        request.method === "POST" &&
+        pathname === "/v1/attachments/att-1/extraction"
+      ) {
+        return json({ id: "read-1", status: "queued", joined: false }, 202);
+      }
+      if (pathname === "/v1/attachments/att-1/extractions/read-1") {
+        return json(reading);
       }
       if (pathname === "/v1/attachments/att-1/extraction:file-chat") {
         return json({ activity_id: "act-1" });
@@ -126,7 +132,11 @@ function show(onClose = vi.fn()) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactChatCapture contactId="c-1" onClose={onClose} />
+        <ContactChatCapture
+          contactId="c-1"
+          contactName="Lena Hoffmann"
+          onClose={onClose}
+        />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -184,6 +194,7 @@ describe("capturing a chat from a screenshot", () => {
       extraction_id: "read-1",
       channel_provider: "whatsapp",
       body: READ_TEXT,
+      confirm_other_counterparty: false,
     });
   });
 
@@ -234,5 +245,28 @@ describe("capturing a chat from a screenshot", () => {
       ),
     ).toBe(true);
     expect(filings(sent)).toHaveLength(0);
+  });
+
+  it("asks once before filing a chat that shows someone else", async () => {
+    const sent = stubServer({ ...DONE, other_counterparty: "Jonas Reiter" });
+    show();
+    const user = await pickScreenshot();
+
+    expect(
+      await screen.findByText(
+        "This chat shows Jonas Reiter, not Lena Hoffmann.",
+      ),
+    ).toBeTruthy();
+    const file = await fileButton();
+    expect((file as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(screen.getByLabelText("File it on Lena Hoffmann anyway"));
+    await user.click(file);
+
+    await waitFor(() => expect(filings(sent)).toHaveLength(1));
+    expect(
+      (filings(sent)[0]?.body as { confirm_other_counterparty: boolean })
+        .confirm_other_counterparty,
+    ).toBe(true);
   });
 });

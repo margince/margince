@@ -34192,6 +34192,40 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attachments/{id}/extractions/{extraction_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: extraction_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Attachments]
+      operationId: getAttachmentExtractionReading
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: One named reading of this attachment, for a screen polling the reading it started.
+      description: |
+        The reading `readAttachmentForFields` answered with, by its id. Unlike
+        `getAttachmentExtraction`, which reports the newest reading of any question, this
+        reports exactly the one named. A reading of another attachment is 404. An agent
+        reads the newest reading through `get_attachment_extraction`.
+      responses:
+        '200':
+          description: The named reading.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentExtraction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /attachments/{id}/request-access:
@@ -54718,6 +54752,13 @@ components:
         omitted: { type: array, items: { $ref: '#/components/schemas/OmittedExtractionField' } }
         created_at: { type: string, format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
+        other_counterparty:
+          type: [string, 'null']
+          description: |
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 
     AttachmentReadRequest:
       type: object
@@ -54742,7 +54783,14 @@ components:
         body:
           type: [string, 'null']
           maxLength: 6000
-          description: The chat's text as the caller confirmed it. Empty or null files the image alone.
+          description: The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
+        confirm_other_counterparty:
+          type: boolean
+          default: false
+          description: |
+            The caller confirms the chat belongs on this contact although its header shows
+            someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+            is refused with 409.
 
     FiledChatCapture:
       type: object

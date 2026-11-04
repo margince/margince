@@ -6950,6 +6950,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "chatCapture.unread": "Der Chat konnte nicht gelesen werden",
   "chatCapture.nothingRead": "Kein Chat zum Übernehmen gefunden",
   "chatCapture.header": "Im Kopf des Chats steht {who}.",
+  "chatCapture.otherCounterparty":
+    "Dieser Chat zeigt {shows}, nicht {contact}.",
+  "chatCapture.confirmOther": "Trotzdem bei {contact} ablegen",
   "chatCapture.text": "Was gesagt wurde",
   "chatCapture.textHint":
     "Tippe oder füge ein, was gesagt wurde. Du kannst den Screenshot auch ohne Text ablegen.",

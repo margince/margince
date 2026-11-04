@@ -7,7 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { Textarea } from "../../design-system/field";
+import { Checkbox, Textarea } from "../../design-system/field";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Select } from "../../design-system/select";
@@ -24,6 +24,7 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 // is a document on the contact, and Discard archives it.
 
 type Reading = components["schemas"]["AttachmentExtraction"];
+type Started = Readonly<{ attachmentId: string; readingId: string }>;
 
 // How often a running reading is asked about. A screenshot reads in seconds,
 // so a slower poll would leave the reader waiting on the poll, not the model.
@@ -37,14 +38,25 @@ function isLive(reading: Reading | undefined): boolean {
   return reading?.status === "queued" || reading?.status === "running";
 }
 
-function useChatReading(attachmentId: string | null) {
+// Polls the reading this panel started, by its id: the newest reading of the
+// file could be one somebody else started for another question.
+function useChatReading(started: Started | undefined) {
   return useQuery({
-    queryKey: ["attachment-extraction", attachmentId],
-    enabled: attachmentId !== null,
+    queryKey: [
+      "attachment-extraction",
+      started?.attachmentId,
+      started?.readingId,
+    ],
+    enabled: started !== undefined,
     queryFn: async () =>
       unwrap(
-        await api.GET("/attachments/{id}/extraction", {
-          params: { path: { id: attachmentId ?? "" } },
+        await api.GET("/attachments/{id}/extractions/{extraction_id}", {
+          params: {
+            path: {
+              id: started?.attachmentId ?? "",
+              extraction_id: started?.readingId ?? "",
+            },
+          },
         }),
       ),
     refetchInterval: (query) =>
@@ -57,7 +69,7 @@ function useStartReading(contactId: string, onStored: (id: string) => void) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (file: File): Promise<Started> => {
       const stored = await uploadAttachment(
         { entityType: "contact", entityId: contactId },
         file,
@@ -66,12 +78,13 @@ function useStartReading(contactId: string, onStored: (id: string) => void) {
         throw new Error(t("chatCapture.storedUnread"));
       }
       onStored(stored.id);
-      unwrap(
+      const reading = unwrap(
         await api.POST("/attachments/{id}/extraction", {
           params: { path: { id: stored.id } },
           body: { question: "chat_capture" },
         }),
       );
+      return { attachmentId: stored.id, readingId: reading.id };
     },
     onSettled: () =>
       queryClient.invalidateQueries({
@@ -82,14 +95,15 @@ function useStartReading(contactId: string, onStored: (id: string) => void) {
 
 export function ContactChatCapture({
   contactId,
+  contactName,
   onClose,
-}: Readonly<{ contactId: string; onClose: () => void }>) {
+}: Readonly<{ contactId: string; contactName: string; onClose: () => void }>) {
   const t = useT();
   // Known as soon as the bytes are stored, so Discard reaches a screenshot
   // whose reading could not be started.
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
   const start = useStartReading(contactId, setAttachmentId);
-  const reading = useChatReading(start.isSuccess ? attachmentId : null);
+  const reading = useChatReading(start.data);
   const discard = useMutation({
     mutationFn: async () => {
       if (attachmentId) {
@@ -149,10 +163,11 @@ export function ContactChatCapture({
             {problemMessageOf(reading.error, t)}
           </Callout>
         )}
-        {attachmentId !== null && finished && (
+        {start.data && finished && (
           <ChatReview
             contactId={contactId}
-            attachmentId={attachmentId}
+            contactName={contactName}
+            attachmentId={start.data.attachmentId}
             reading={read}
             onFiled={onClose}
           />
@@ -171,11 +186,13 @@ export function ContactChatCapture({
 // what the model copied and is marked so; a change makes it the reader's own.
 function ChatReview({
   contactId,
+  contactName,
   attachmentId,
   reading,
   onFiled,
 }: Readonly<{
   contactId: string;
+  contactName: string;
   attachmentId: string;
   reading: Reading;
   onFiled: () => void;
@@ -191,6 +208,10 @@ function ChatReview({
     label: entry.label,
   }));
   const [picked, setPicked] = useState("");
+  // A chat whose header names someone else files here only once the reader
+  // says it belongs here; the server refuses it otherwise.
+  const other = reading.other_counterparty ?? null;
+  const [confirmedOther, setConfirmedOther] = useState(false);
   const channel = picked || (options[0]?.value ?? "");
   const who = [
     groundedValue(reading, "counterparty_name"),
@@ -208,6 +229,7 @@ function ChatReview({
             extraction_id: reading.id,
             channel_provider: channel,
             body: text,
+            confirm_other_counterparty: other !== null && confirmedOther,
           },
         }),
       ),
@@ -236,7 +258,23 @@ function ChatReview({
           {reading.status_detail}
         </Callout>
       )}
-      {who && <p>{t("chatCapture.header", { who })}</p>}
+      {other !== null ? (
+        <Callout
+          tone="warning"
+          title={t("chatCapture.otherCounterparty", {
+            shows: other,
+            contact: contactName,
+          })}
+        >
+          <Checkbox
+            label={t("chatCapture.confirmOther", { contact: contactName })}
+            checked={confirmedOther}
+            onChange={(event) => setConfirmedOther(event.target.checked)}
+          />
+        </Callout>
+      ) : (
+        who && <p>{t("chatCapture.header", { who })}</p>
+      )}
       <Field
         label={t("chatCapture.text")}
         hint={
@@ -275,7 +313,9 @@ function ChatReview({
       <div className="card-actions">
         <Button
           variant="primary"
-          disabled={!channel || file.isPending}
+          disabled={
+            !channel || file.isPending || (other !== null && !confirmedOther)
+          }
           onClick={() => file.mutate()}
         >
           {t("chatCapture.file")}

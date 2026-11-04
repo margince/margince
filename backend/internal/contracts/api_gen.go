@@ -32686,6 +32686,12 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
+	// number the chat header shows when neither agrees with that contact. Null when
+	// they agree, when the header shows neither, and for every other reading.
+	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+	OtherCounterparty *string `json:"other_counterparty,omitempty"`
+
 	// Question What the file was read for. `deal_facts` grounds the four deal fields;
 	// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
 	Question AttachmentExtractionQuestion `json:"question"`
@@ -45305,11 +45311,16 @@ type FieldHistoryListResponse struct {
 
 // FileChatCaptureRequest defines model for FileChatCaptureRequest.
 type FileChatCaptureRequest struct {
-	// Body The chat's text as the caller confirmed it. Empty or null files the image alone.
+	// Body The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
 	Body *string `json:"body,omitempty"`
 
 	// ChannelProvider The messaging app the chat happened in.
 	ChannelProvider ProviderRef `json:"channel_provider"`
+
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+	// is refused with 409.
+	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
 
 	// ExtractionId The `chat_capture` reading the caller was shown.
 	ExtractionId openapi_types.UUID `json:"extraction_id"`
@@ -87809,6 +87820,9 @@ type ServerInterface interface {
 	// File a chat screenshot on its contact as one message activity, with the image attached.
 	// (POST /attachments/{id}/extraction:file-chat)
 	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
+	// One named reading of this attachment, for a screen polling the reading it started.
+	// (GET /attachments/{id}/extractions/{extraction_id})
+	GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID)
 	// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
 	// (PATCH /attachments/{id}/metadata)
 	UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id)
@@ -91382,6 +91396,12 @@ func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http
 // File a chat screenshot on its contact as one message activity, with the image attached.
 // (POST /attachments/{id}/extraction:file-chat)
 func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One named reading of this attachment, for a screen polling the reading it started.
+// (GET /attachments/{id}/extractions/{extraction_id})
+func (_ Unimplemented) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104242,6 +104262,47 @@ func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.FileChatCapture(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAttachmentExtractionReading operation middleware
+func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "extraction_id" -------------
+	var extractionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "extraction_id", chi.URLParam(r, "extraction_id"), &extractionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extraction_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAttachmentExtractionReading(w, r, id, extractionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140934,6 +140995,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments/{id}/extraction:file-chat", wrapper.FileChatCapture)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/attachments/{id}/extractions/{extraction_id}", wrapper.GetAttachmentExtractionReading)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/attachments/{id}/metadata", wrapper.UpdateAttachmentMetadata)

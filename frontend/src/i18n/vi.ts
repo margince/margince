@@ -6791,6 +6791,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "chatCapture.unread": "Không đọc được cuộc trò chuyện",
   "chatCapture.nothingRead": "Không tìm thấy cuộc trò chuyện nào để sao chép",
   "chatCapture.header": "Phần đầu cuộc trò chuyện hiển thị {who}.",
+  "chatCapture.otherCounterparty":
+    "Cuộc trò chuyện này hiển thị {shows}, không phải {contact}.",
+  "chatCapture.confirmOther": "Vẫn lưu vào {contact}",
   "chatCapture.text": "Nội dung trao đổi",
   "chatCapture.textHint":
     "Nhập hoặc dán nội dung đã trao đổi. Bạn cũng có thể lưu ảnh mà không có văn bản.",

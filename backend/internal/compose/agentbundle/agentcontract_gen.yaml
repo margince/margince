@@ -30067,6 +30067,13 @@ components:
         omitted: {type: array, items: {$ref: '#/components/schemas/OmittedExtractionField'}}
         created_at: {type: string, format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
+        other_counterparty:
+          type: [string, 'null']
+          description: |-
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
     AttachmentReadRequest:
       type: object
       properties:

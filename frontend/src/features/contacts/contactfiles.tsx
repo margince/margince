@@ -119,10 +119,13 @@ function filesState(
 
 export function ContactFilesTab({
   contactId,
+  contactName,
   refusedReasonId,
   onOpenEmail,
 }: Readonly<{
   contactId: string;
+  // Named in the warning when a pasted chat shows someone else.
+  contactName: string;
   /** Opens a mail in the page's drawer, from the line naming a file's mail. */
   onOpenEmail?: (activityId: string) => void;
   // The id of the page's sentence about why this contact takes no changes,
@@ -146,6 +149,7 @@ export function ContactFilesTab({
       {capturing && (
         <ContactChatCapture
           contactId={contactId}
+          contactName={contactName}
           onClose={() => setCapturing(false)}
         />
       )}

@@ -6980,6 +6980,8 @@ export const en = {
   "chatCapture.unread": "The chat could not be read",
   "chatCapture.nothingRead": "No chat was found to copy",
   "chatCapture.header": "The chat header shows {who}.",
+  "chatCapture.otherCounterparty": "This chat shows {shows}, not {contact}.",
+  "chatCapture.confirmOther": "File it on {contact} anyway",
   "chatCapture.text": "What was said",
   "chatCapture.textHint":
     "Type or paste what was said. You can also file the screenshot without text.",
