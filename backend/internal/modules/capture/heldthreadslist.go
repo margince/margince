@@ -212,10 +212,8 @@ func scanHeldPage(rows pgx.Rows, limit int) ([]HeldThread, string, error) {
 			break
 		}
 		last = at
-		// The subject stays gated, and its own NULL still means only "no
-		// subject reached this reader" — erased or withheld, the row does
-		// not say which and does not need to. Which of the two it is comes
-		// from HasActivity, off the ungated join.
+		// The subject stays gated: a NULL means only that no subject reached
+		// this reader. HasActivity, off the ungated join, says which reason.
 		if subject != nil {
 			t.Subject = *subject
 		}
