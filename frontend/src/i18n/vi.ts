@@ -17837,6 +17837,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Chỉ người có quyền sửa cả hai hồ sơ mới có thể xử lý cặp này: quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Cần chuẩn bị",
+  "worklist.pinnedMark": "Bạn đã ghim",
   "worklist.ready.confirm": "Tôi đã sẵn sàng",
   "worklist.ready.badge": "Sẵn sàng",
   "worklist.ready.done": "Đã ghi nhận bạn sẵn sàng cho cuộc họp này.",
