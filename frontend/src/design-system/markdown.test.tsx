@@ -649,3 +649,48 @@ describe("line breaks in a note and in a document", () => {
     expect(container.querySelector("br")).toBeNull();
   });
 });
+
+describe("a note's line breaks and links, edge cases", () => {
+  it("keeps a CRLF line break as a line break", () => {
+    const { container } = render(
+      <NoteMarkdown
+        source={"Name: A\r\nEmail: b@example.com\r\nMessage: hi"}
+      />,
+    );
+    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(container.querySelectorAll("br")).toHaveLength(2);
+    expect(visibleText(container)).toBe(
+      "Name: AEmail: b@example.comMessage: hi",
+    );
+  });
+
+  it("keeps the underscore inside a link's address", () => {
+    const { container } = render(
+      <NoteMarkdown source={"See [label](https://x.example/a_b) now"} />,
+    );
+    const links = [...container.querySelectorAll("a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "https://x.example/a_b",
+    ]);
+    expect(links[0]?.textContent).toBe("https://x.example/a_b");
+    expect(container.querySelector("em")).toBeNull();
+  });
+});
+
+// A run of underscores with no closer is read in one pass. Before, every
+// opener rescanned the rest of the line, which a long pasted string turned into
+// seconds on the main thread.
+describe("a long run of unclosed underscores", () => {
+  it.each([
+    ["alternating", "_a".repeat(10_000)],
+    ["after spaces", " _a".repeat(6_667).slice(0, 20_000)],
+    ["doubled", " __a".repeat(5_000)],
+  ])("renders %s in well under 100 ms", (_case, source) => {
+    expect(source.length).toBeGreaterThanOrEqual(20_000);
+    const started = performance.now();
+    const { container } = render(<NoteMarkdown source={source} />);
+    const took = performance.now() - started;
+    expect(visibleText(container).trim()).toBe(source.trim());
+    expect(took).toBeLessThan(100);
+  });
+});

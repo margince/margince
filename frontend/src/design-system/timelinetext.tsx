@@ -162,7 +162,11 @@ export function TimelineBody({
     return text;
   }
   return (
-    <ReaderRendering activityId={entry.id} language={entry.language}>
+    <ReaderRendering
+      activityId={entry.id}
+      language={entry.language}
+      note={writtenAsMarkdown(entry)}
+    >
       {text}
     </ReaderRendering>
   );

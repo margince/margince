@@ -359,6 +359,9 @@ const ESCAPABLE = /^[\\`*_{}[\]()#+\-.!|>~]$/;
 
 export function parseInline(text: string): Inline[] {
   const nodes: Inline[] = [];
+  // Where an underscore scan already found no closer, per fence (see
+  // takeUnderscored). Absolute positions in `text`.
+  const scan: UnderscoreScan = { exhausted: new Map() };
   let plain = "";
   const flush = (): void => {
     if (plain !== "") nodes.push({ kind: "text", text: plain });
@@ -372,7 +375,8 @@ export function parseInline(text: string): Inline[] {
       i += 2;
       continue;
     }
-    const taken = takeInline(rest, i > 0 ? (text[i - 1] ?? "") : "");
+    scan.at = i;
+    const taken = takeInline(rest, i > 0 ? (text[i - 1] ?? "") : "", scan);
     if (taken === null) {
       plain += text[i];
       i++;
@@ -389,16 +393,31 @@ export function parseInline(text: string): Inline[] {
 function takeInline(
   rest: string,
   before: string,
+  scan: UnderscoreScan,
 ): { node: Inline; length: number } | null {
   return (
     takeCode(rest) ??
     takeLink(rest) ??
     takeWrapped(rest, STRONG, "strong") ??
-    takeUnderscored(rest, before, "__", "strong") ??
+    takeUnderscored(rest, before, "__", "strong", scan) ??
     takeWrapped(rest, EM, "em") ??
-    takeUnderscored(rest, before, "_", "em")
+    takeUnderscored(rest, before, "_", "em", scan)
   );
 }
+
+/**
+ * What one parseInline call has learned about underscore closers.
+ *
+ * Whether a position can close does not depend on the opener: it asks only
+ * about the characters around the closer. So once a scan from one opener finds
+ * no closer, no later opener can find one either, and its scan is skipped.
+ * Without this, a run such as " _a _a _a…" rescanned the rest of the line at
+ * every underscore, which is quadratic work on the main thread.
+ */
+type UnderscoreScan = {
+  at?: number;
+  exhausted: Map<string, number>;
+};
 
 // takeUnderscored reads `_em_` or `__strong__` only where the underscores
 // stand outside a word: the opener has no letter or digit before it and
@@ -409,10 +428,14 @@ function takeUnderscored(
   before: string,
   fence: "_" | "__",
   kind: "strong" | "em",
+  scan: UnderscoreScan,
 ): { node: Inline; length: number } | null {
   if (!rest.startsWith(fence) || WORD_CHAR.test(before)) return null;
   const first = rest[fence.length] ?? "";
   if (first === "" || /\s/.test(first) || first === "_") return null;
+  const from = scan.at ?? 0;
+  const exhausted = scan.exhausted.get(fence);
+  if (exhausted !== undefined && from >= exhausted) return null;
   for (let at = fence.length + 1; at < rest.length; at++) {
     if (!rest.startsWith(fence, at)) continue;
     const end = at + fence.length;
@@ -429,6 +452,7 @@ function takeUnderscored(
       length: end,
     };
   }
+  scan.exhausted.set(fence, from);
   return null;
 }
 
