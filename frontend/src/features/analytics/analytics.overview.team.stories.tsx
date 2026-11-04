@@ -49,7 +49,7 @@ const qualification = teamReview({
   workflow: "qualification",
   handoffs: undefined,
   member_targets: {
-    metric: "leads_promoted",
+    metric: "leads_qualified",
     window: {
       start_at: "2026-08-31T22:00:00Z",
       end_at: "2026-09-30T22:00:00Z",
@@ -66,8 +66,8 @@ const qualificationEvaluation = () => {
   return {
     ...base,
     metrics: base.metrics.map((reading) =>
-      reading.id === "leads_promoted"
-        ? metric("leads_promoted", 5, { denominator: 12 })
+      reading.id === "leads_qualified"
+        ? metric("leads_qualified", 5, { denominator: 12 })
         : reading,
     ),
   };

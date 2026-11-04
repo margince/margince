@@ -295,7 +295,7 @@ describe("a remembered or shared question the reader can no longer ask", () => {
 describe("every way out of Overview carries its question", () => {
   async function expectedFinishDoor() {
     const strip = await readings();
-    return strip.getByRole("link", { description: "Expected finish" });
+    return strip.getByRole("link", { description: "Won + confirmed commit" });
   }
 
   it("opens Forecast from Expected finish with the question, and says what it cannot narrow to", async () => {
@@ -535,7 +535,7 @@ describe("a copied link", () => {
   it("is refused to a second reader who may not see its team, instead of showing their own", async () => {
     open("#/analytics", answer, TWO);
     const door = (await readings()).getByRole("link", {
-      description: "Expected finish",
+      description: "Won + confirmed commit",
     });
     const href = door.getAttribute("href") ?? "";
     cleanup();

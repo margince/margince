@@ -100,7 +100,7 @@ func TestGroundOfferLinesGroundsConversationPriceOnlyWhenTheAmountIsInTheCitedSn
 	unevidencedPrice := int64(20000)
 	unevidenced.ConversationPriceMinor = &unevidencedPrice
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{evidenced, unevidenced}, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{evidenced, unevidenced}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestGroundOfferLinesGroundsAQuoteThatSpansALineBreakInTheSource(t *testing.
 	spanning := candidate("Priority support", "priority support at 250 EUR/month")
 	invented := candidate("Premium support", "premium support at 250 EUR/month")
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{spanning, invented}, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{spanning, invented}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestGroundOfferLinesRecognizesTheMajorUnitFormOfAnEvidencedPrice(t *testing
 	price := int64(20000) // 20000 minor units == 200.00 EUR major units
 	c.ConversationPriceMinor = &price
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{c}, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{c}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestGroundOfferLinesHonorsAZeroDecimalCurrencysMinorUnitScale(t *testing.T)
 	price := int64(20000)
 	c.ConversationPriceMinor = &price
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{c}, dealContext, "JPY")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{c}, dealContext, "JPY", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestGroundOfferLinesDropsStoreInvalidDecimalsWithoutErroringSiblingLines(t 
 	hexFloat.Quantity = "0x1p10"
 
 	candidates := []offerLineCandidate{good, scientific, notANumber, underscored, hexFloat}
-	lines, err := d.groundOfferLines(context.Background(), candidates, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), candidates, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestGroundOfferLinesDropsZeroAndNegativeQuantity(t *testing.T) {
 	negative := candidate("Negative qty", "wants a workshop")
 	negative.Quantity = "-1"
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{zero, zeroDecimal, negative}, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{zero, zeroDecimal, negative}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestGroundOfferLinesDropsFiguresTheStoreWouldRefuse(t *testing.T) {
 	overTax := candidate("Tax past its column", "wants a workshop")
 	overTax.TaxRate = "1000"
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{overPrecise, overTax}, dealContext, "EUR")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{overPrecise, overTax}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}

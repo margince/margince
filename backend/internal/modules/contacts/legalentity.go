@@ -142,6 +142,25 @@ func ResolveEntityIdentity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID)
 	return entity.EntityIdentity, nil
 }
 
+// ResolveLegalEntity is ResolveEntityIdentity with the entity's archive
+// state, for a writer that may only name a live entity.
+func ResolveLegalEntity(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (identity EntityIdentity, live bool, err error) {
+	entity, err := readLegalEntity(ctx, tx, id)
+	if err != nil {
+		return EntityIdentity{}, false, err
+	}
+	return entity.EntityIdentity, entity.ArchivedAt == nil, nil
+}
+
+// DefaultLegalEntity is the entity a record that names none was issued by.
+func DefaultLegalEntity(ctx context.Context, tx pgx.Tx) (ids.LegalEntityID, error) {
+	var id ids.LegalEntityID
+	if err := tx.QueryRow(ctx, `SELECT id FROM legal_entity WHERE is_default`).Scan(&id); err != nil {
+		return ids.LegalEntityID{}, fmt.Errorf("read the default legal entity: %w", err)
+	}
+	return id, nil
+}
+
 // mergeAnchorIdentity fills the default entity's anchor-held fields. An
 // installation with no anchor company yet leaves them empty.
 //

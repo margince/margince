@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,10 +29,11 @@ import (
 // already bounded by the host's row scope. held is the consent gate's answer
 // to whether any contact or lead holds it, seen or not.
 type attendeeCandidates struct {
-	contacts  []ids.UUID
-	colleague ids.UUID
-	leads     []ids.UUID
-	held      bool
+	contacts      []ids.UUID
+	colleague     ids.UUID
+	colleagueName string
+	leads         []ids.UUID
+	held          bool
 }
 
 // ResolveAttendees resolves each address contact first, then live colleague,
@@ -43,7 +46,8 @@ func (c schedulingCalendar) ResolveAttendees(ctx context.Context, host ids.UserI
 		return nil, err
 	}
 	out := make([]connector.CalendarAttendee, 0, len(addresses))
-	for _, address := range addresses {
+	for _, typed := range addresses {
+		address := connector.AttendeeAddress(typed)
 		found, err := c.attendeeCandidates(ctx, hostCtx, address)
 		if err != nil {
 			return nil, err
@@ -65,17 +69,19 @@ func (c schedulingCalendar) resolveAttendee(hostCtx context.Context, address str
 	held := found.held
 	store := contacts.NewStore(InstallationDB(c.pool))
 	for _, id := range found.contacts {
-		visible, err := hostSees(store.GetContact(hostCtx, ids.From[ids.ContactKind](id), storekit.LiveOnly))
-		if err != nil || visible {
-			return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, AskConsent: true}, err
+		contact, err := store.GetContact(hostCtx, ids.From[ids.ContactKind](id), storekit.LiveOnly)
+		if visible, err := hostSees(err); err != nil || visible {
+			return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, Name: contact.FullName, AskConsent: true}, err
 		}
 	}
 	if !found.colleague.IsZero() {
-		return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeColleague, ID: found.colleague, AskConsent: held}, nil
+		return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeColleague, ID: found.colleague, Name: found.colleagueName, AskConsent: held}, nil
 	}
 	for _, id := range found.leads {
-		visible, err := hostSees(store.GetLead(hostCtx, ids.From[ids.LeadKind](id), storekit.LiveOnly))
-		if err != nil || visible {
+		_, err := store.GetLead(hostCtx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+		if visible, err := hostSees(err); err != nil || visible {
+			// No name: a lead's participant row is an address row, which no
+			// lead scope guards for the meeting's other readers.
 			return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeLead, ID: id, AskConsent: true}, err
 		}
 	}
@@ -84,7 +90,7 @@ func (c schedulingCalendar) resolveAttendee(hostCtx context.Context, address str
 
 // hostSees reads a row-scoped get as visible or not; a miss and a denial both
 // mean the host may not name that record.
-func hostSees[T any](_ T, err error) (bool, error) {
+func hostSees(err error) (bool, error) {
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return false, nil
 	}
@@ -106,26 +112,26 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 	var found attendeeCandidates
 	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT 'contact', e.contact_id FROM contact_email e JOIN contact c ON c.id = e.contact_id
+			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
-			UNION SELECT 'user', u.id FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
-			UNION SELECT 'lead', l.id FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
+			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
+			UNION SELECT 'lead', l.id, '' FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
 			ORDER BY 1, 2`, args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var kind string
+			var kind, name string
 			var id ids.UUID
-			if err := rows.Scan(&kind, &id); err != nil {
+			if err := rows.Scan(&kind, &id, &name); err != nil {
 				return err
 			}
 			switch kind {
 			case "contact":
 				found.contacts = append(found.contacts, id)
 			case "user":
-				found.colleague = id
+				found.colleague, found.colleagueName = id, name
 			default:
 				found.leads = append(found.leads, id)
 			}
@@ -211,4 +217,38 @@ func (c schedulingCalendar) InviteeAddress(ctx context.Context, host ids.UserID,
 		return "", id, nil
 	}
 	return string(*contact.PrimaryEmail), id, nil
+}
+
+// Blocker says why the host's calendar cannot take bookings. It reads the
+// connection's granted scopes and the host's authority, and calls no provider.
+func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
+	if c.registry == nil {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	scopes, err := c.registry.GrantedScopesFor(ctx, host, provider)
+	if errors.Is(err, capture.ErrNoConnection) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if !capture.CalendarWriteGranted(provider, scopes) {
+		return crmcontracts.SchedulingProfileBlockerCalendarReadOnly, nil
+	}
+	err = c.Check(ctx, host, provider)
+	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
+
+// ReconnectedSince reads the connection's grant time; no provider call.
+func (c schedulingCalendar) ReconnectedSince(ctx context.Context, host ids.UserID, provider string, since time.Time) (bool, error) {
+	if c.registry == nil {
+		return false, nil
+	}
+	return c.registry.ReconnectedSince(ctx, host, provider, since)
 }

@@ -67,32 +67,33 @@ describe("My prospecting's results", () => {
       ADDRESS,
       weekAnd(
         prospectingEvaluation(),
-        prospectingWeeks(week, "leads_promoted", [1, 2, 0, 4, 2, 3]),
+        prospectingWeeks(week, "leads_qualified", [1, 2, 0, 4, 2, 3]),
       ),
       { seat: "sdr", template: "sales" },
     );
     const lead = await results();
     expect(lead.getByText("Leads qualified")).toBeVisible();
     expect(lead.queryByText("Accepted handoffs")).toBeNull();
-    expect(lead.getByText(/^Of 11 leads that arrived /)).toBeVisible();
+    expect(lead.queryByText(/^Of 11 leads that arrived /)).toBeNull();
+    expect(lead.getByText("Leads qualified")).toBeVisible();
   });
 
-  it("names no qualified figure for a week nobody arrived in, as its column does", async () => {
+  it("shows a measured zero without requiring arrivals in the same week", async () => {
     open(
       ADDRESS,
       weekAnd(
         prospectingEvaluation([
-          metric("leads_promoted", 0, { denominator: 0 }),
+          metric("leads_qualified", 0, { denominator: 0 }),
         ]),
-        prospectingWeeks(week, "leads_promoted", [1, 2, 0, 4, 2, null]),
+        prospectingWeeks(week, "leads_qualified", [1, 2, 0, 4, 2, null]),
       ),
       { seat: "sdr", template: "sales" },
     );
     const lead = await results();
     expect(
-      lead.getByText("—", { selector: ".analytics-hero-value" }),
+      lead.getByText("0", { selector: ".analytics-hero-value" }),
     ).toBeVisible();
-    expect(lead.getByText(/^No lead arrived /)).toBeVisible();
+    expect(lead.queryByText(/^No lead arrived /)).toBeNull();
     const columns = await lead.findAllByRole("button", {
       name: /, Leads qualified: /,
     });
@@ -102,7 +103,7 @@ describe("My prospecting's results", () => {
   it("dates the week's figure and the month's targets apart, and divides neither by the other", async () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
-    expect(lead.getByText(/^Handoffs accepted into a deal, /)).toBeVisible();
+    expect(lead.queryByText(/^Handoffs accepted into a deal, /)).toBeNull();
     expect(lead.getByText(/^Monthly targets, 1 Sept/)).toBeVisible();
     // The month's own actual against the month's target, never the week's 4.
     expect(lead.getByText("Meetings held: 18 of 24")).toBeVisible();
