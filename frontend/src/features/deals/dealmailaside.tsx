@@ -29,11 +29,11 @@ import { QueryStates } from "../../design-system/querystates";
 import { activityAgo } from "../../format/activitywhen";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { boardMail } from "./boarddeal";
 import "./dealmailaside.css";
 import { useNow } from "../../format/now";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Activity = components["schemas"]["Activity"];
 type Deal = components["schemas"]["Deal"];
@@ -78,7 +78,7 @@ export function DealMailAside({
   const { locale } = useLocale();
   const query = useDealMail(dealId);
   const now = useNow(60_000);
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const when = (mail: Activity) => {
     const moment = { at: mail.occurred_at, precision: mail.occurred_precision };
     const ago = activityAgo(moment, now, t, locale, zone);

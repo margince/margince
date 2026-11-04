@@ -7,7 +7,7 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { categoryNames } from "../../lib/provider-categories";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useBoughtSource } from "./boughtmarks";
 import type { Profile } from "./contactprovider";
 
@@ -21,12 +21,12 @@ import type { Profile } from "./contactprovider";
 function RunReceipt({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const run = profile.latest_run;
   if (!run || !profile.retrieved_at) {
     return null;
   }
-  const at = formatDateAbbrev(profile.retrieved_at, locale, recordZone);
+  const at = formatDateAbbrev(profile.retrieved_at, locale, readerZone);
   const silent = profile.categories_without_answer;
   if (!silent) {
     // The server did not say what went unanswered: an older backend, or an

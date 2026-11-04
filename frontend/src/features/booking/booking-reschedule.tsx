@@ -6,7 +6,11 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { MeetingSlots } from "../../design-system/meetingslots";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime } from "../../format/format";
-import { dayInZone, startOfDayInZone, viewerZone } from "../../format/timezone";
+import {
+  browserZone,
+  dayInZone,
+  startOfDayInZone,
+} from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { BookingZone } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
@@ -24,7 +28,7 @@ export function BookingReschedule({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [zone, setZone] = useState(viewerZone);
+  const [zone, setZone] = useState(browserZone);
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [selected, setSelected] = useState<{
     start: string;

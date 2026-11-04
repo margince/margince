@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,7 +22,7 @@ function row(id: string, status: Status) {
     id,
     status,
     scheduled_at: "2026-09-01T07:00:00Z",
-    scheduled_tz: viewerZone(),
+    scheduled_tz: browserZone(),
     subject: `Message ${id}`,
     to: ["ceo@acme.example"],
     version: 1,

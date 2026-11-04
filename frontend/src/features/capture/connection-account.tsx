@@ -20,7 +20,6 @@ import {
   isMailbox,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
@@ -40,6 +39,7 @@ import {
   serviceReason,
 } from "../../lib/connector-status";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ImportPastEmailDialog } from "./backfill";
 import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
 import { AccountServices } from "./connection-service";
@@ -372,6 +372,7 @@ function AccountMenu({
 
 /** What the account brings in, and since when. */
 function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const { mail, calendar } = account;
@@ -398,7 +399,7 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
       {createdAt && (
         <span>
           {t("connectors.account.connectedOn", {
-            date: formatDateTime(createdAt, locale, viewerZone()),
+            date: formatDateTime(createdAt, locale, readerZone),
           })}
         </span>
       )}

@@ -22,8 +22,8 @@ import { Chip } from "../../design-system/readings";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useSavedViews } from "../../lib/savedviews.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { useProjectCreateForm } from "./projects.create";
 import {
@@ -139,7 +139,7 @@ export function ProjectsScreen() {
   const t = useT();
   const pageName = usePageName("projects");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
   const ownerChips = useOwnerChips();
@@ -239,7 +239,7 @@ export function ProjectsScreen() {
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),
-          lastActivityColumn<Project>(t, locale, recordZone),
+          lastActivityColumn<Project>(t, locale, readerZone),
         ]}
         saveView={<SaveViewAction resource="projects" query={state.query} />}
         rowKey={(project) => project.id}

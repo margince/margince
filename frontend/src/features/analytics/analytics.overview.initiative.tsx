@@ -10,7 +10,7 @@ import { formatAnalyticsPercent } from "../../format/format";
 import { formatDateTime } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { BoardChart } from "./analytics.overview.board";
 import { metricOf } from "./analytics.overview.readings";
 import { InitiativeDrawer } from "./reporting.initiativedrawer";
@@ -42,7 +42,7 @@ export function InitiativePanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const initiatives = useSalesInitiatives();
   const canEdit = useCanWrite("sales_initiative", "update");
   const [editing, setEditing] = useState(false);

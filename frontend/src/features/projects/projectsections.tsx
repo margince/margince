@@ -26,8 +26,8 @@ import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { projectRoleLabel } from "../records/record360";
 import { CONTRACT_STATUS_LABEL } from "./contractlifecycle";
 import {
@@ -148,10 +148,10 @@ function useStageName(stageId: string | null): string | undefined {
 function ProjectDealRow({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const stage = useStageName(deal.stage_id);
   const closed = deal.closed_at
-    ? formatDayMonth(deal.closed_at, locale, recordZone)
+    ? formatDayMonth(deal.closed_at, locale, readerZone)
     : undefined;
   let sub = t(DEAL_STATUS_LABEL[deal.status]);
   if (deal.status === "open" && stage) {
@@ -324,7 +324,7 @@ export function ProjectContractsCard({
 function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const signed = contract.signed_on
     ? formatDayMonth(contract.signed_on, locale, zone)
     : undefined;
@@ -436,7 +436,7 @@ function CommitmentRow({
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
   // deadline the team agreed, so the day it names cannot depend on where the
   // reader is sitting.
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The server's `overdue` is the verdict; the days only word it.
   const late = commitment.due_at
     ? daysPast(Date.parse(commitment.due_at), Date.parse(asOf)).days
@@ -446,7 +446,7 @@ function CommitmentRow({
     who,
     commitment.due_at &&
       t("project.standing.event.due", {
-        date: formatDayMonth(commitment.due_at, locale, recordZone),
+        date: formatDayMonth(commitment.due_at, locale, readerZone),
       }),
   ].filter(Boolean);
   return (

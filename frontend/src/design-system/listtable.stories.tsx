@@ -7,7 +7,7 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
@@ -97,7 +97,8 @@ const columns = [
     key: "created",
     header: "Created",
     holds: "date" as const,
-    cell: (row: Company) => formatDateAbbrev(row.createdAt, "en", viewerZone()),
+    cell: (row: Company) =>
+      formatDateAbbrev(row.createdAt, "en", browserZone()),
   },
 ];
 

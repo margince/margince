@@ -3,7 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
@@ -346,7 +346,7 @@ describe("a row's place on the axis", () => {
 it("shows commitment review counts on a thread without exposing private readings", () => {
   render(
     <GroupedTimelineList
-      zone={viewerZone()}
+      zone={browserZone()}
       groups={[
         thread([
           entry({ id: "visible", commitmentReviewCount: 2 }),

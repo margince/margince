@@ -6,7 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { dealRangeChips } from "./deals.rangefilters";
 
 const meta: Meta = {
@@ -28,7 +28,7 @@ function Bar({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [chosen, setChosen] = useState(initial);
   return (
     <div style={{ blockSize: "34rem" }}>

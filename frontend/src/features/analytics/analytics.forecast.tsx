@@ -17,9 +17,9 @@ import {
   formatDayRange,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   currentParams,
   replaceDial,
@@ -276,7 +276,7 @@ function forecastPeriod(
 export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {

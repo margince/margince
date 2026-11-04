@@ -17,9 +17,10 @@ import { SettingRow } from "../../design-system/settingrow";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { INTL_LOCALE } from "../../format/intllocale";
-import { viewerZone, zoneNameAndOffset } from "../../format/timezone";
+import { zoneNameAndOffset } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
@@ -27,6 +28,7 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 export function HistoryBaselineRow({
   conn,
 }: Readonly<{ conn: CaptureConnection }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const save = useSetHistoryBaseline(conn.provider);
@@ -65,7 +67,7 @@ export function HistoryBaselineRow({
               pending={save.isPending}
               onClick={(event) => {
                 if (!refuseUnreadableField(event.currentTarget)) {
-                  save.mutate({ date: draft, timezone: viewerZone() });
+                  save.mutate({ date: draft, timezone: readerZone });
                 }
               }}
             >

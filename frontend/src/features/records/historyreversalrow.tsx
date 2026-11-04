@@ -5,7 +5,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { historyValue } from "../../lib/historyvalues";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { entryFieldChanges } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { netChanges, type PairRow } from "./historyreversal";
@@ -61,7 +61,7 @@ function SettledFace({
 }: Readonly<{ row: PairRow; currency: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const values = { currency, locale, zone };
   return (
     <>
@@ -96,7 +96,7 @@ function ResidualFace({
 }: Readonly<{ row: PairRow; currency: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const values = { currency, locale, zone };
   return (
     <>
@@ -135,7 +135,7 @@ export function ReversalPairRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [open, setOpen] = useState(false);
   const regionId = useId();
   const words = {
@@ -149,7 +149,7 @@ export function ReversalPairRow({
         <span className="tl-meta">
           {/* The REVERSAL's time: the pair sits where its newest member sits,
               so nothing appears to have happened earlier than it did. */}
-          <span>{formatDateTime(row.atIso, locale, recordZone)}</span>
+          <span>{formatDateTime(row.atIso, locale, readerZone)}</span>
         </span>
         {row.whollyUndone ? (
           <SettledFace row={row} currency={currency} />

@@ -11741,9 +11741,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.baseLanguage": "Ngôn ngữ cơ sở",
   "setup.baseLanguageHint":
     "Ngôn ngữ AI dùng khi viết nội dung cả nhóm cùng đọc. Mỗi thành viên tự chọn ngôn ngữ hiển thị, và thư trả lời khách hàng theo ngôn ngữ của chuỗi thư.",
-  "setup.timezone": "Múi giờ báo cáo",
+  "setup.timezone": "Múi giờ công ty",
   "setup.timezoneHint":
-    "Tên múi giờ IANA. Mọi kỳ báo cáo đều tính theo múi giờ này. Đoán từ trình duyệt này; đổi nếu nhóm làm việc ở nơi khác.",
+    "Tên múi giờ IANA. Kỳ báo cáo, tác vụ định kỳ và tài liệu gửi đi dùng múi giờ này. Đoán từ trình duyệt này; đổi nếu công ty làm việc ở nơi khác. Mỗi tài khoản tự đặt múi giờ cho thời gian hiển thị.",
   "setup.adminName": "Tên của bạn",
   "setup.adminEmail": "Email của bạn",
   "setup.adminPassword": "Mật khẩu",
@@ -14019,9 +14019,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.timeFormat.locale": "Theo ngôn ngữ giao diện",
   "installationSettings.timeFormat.24h": "24 giờ · 17:30",
   "installationSettings.timeFormat.12h": "12 giờ · 05:30 CH",
-  "installationSettings.timezone": "Múi giờ báo cáo",
+  "installationSettings.timezone": "Múi giờ công ty",
   "installationSettings.timezoneHint":
-    "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ dùng múi giờ này cho cả nhóm; mỗi người dùng vẫn giữ múi giờ hiển thị riêng.",
+    "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo, tác vụ định kỳ và tài liệu gửi đi dùng múi giờ này cho cả công ty. Mỗi tài khoản xem thời gian theo múi giờ riêng, đặt trong Cài đặt → Tài khoản.",
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
     "Báo cáo được tổng hợp theo năm và quý này. Thay đổi sẽ đổi nhãn mọi báo cáo. Một kỳ đã lưu như 2026 giữ nguyên các tháng của nó.",

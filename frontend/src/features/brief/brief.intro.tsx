@@ -11,7 +11,7 @@ import {
   formatTimeOfDay,
   hourInZone,
 } from "../../format/format";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { dayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import type { Worklist } from "../worklist/worklist.queries";
@@ -21,6 +21,7 @@ import { useMorningDigest } from "./brief.queries";
 import { meetingsReading } from "./brief.readings.meetings";
 
 import "./brief.intro.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 /** How long the greeting stands when the page under it is never ready. */
 export const SHOW_MS = 4500;
@@ -51,7 +52,7 @@ export function BriefIntro({
   now: Date;
 }>) {
   const reduced = usePrefersReducedMotion();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const today = dayInZone(now.getTime(), zone);
   const [due] = useState(
     () => readStored(STORAGE_KEYS.briefIntroShown) !== today,
@@ -126,7 +127,9 @@ function IntroCurtain({
   const t = useT();
   const { locale } = useLocale();
   const digest = useMorningDigest();
-  const emails = digest.data?.capture.messages_synced;
+  // A body without its capture figures shows no count rather than failing
+  // the whole curtain.
+  const emails = digest.data?.capture?.messages_synced;
   const greeting = greetingText(firstName, hourInZone(now, zone), t);
   return (
     // Named by its own text, so a screen reader hears the greeting and its

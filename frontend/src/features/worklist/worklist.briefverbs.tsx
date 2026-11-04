@@ -13,9 +13,9 @@ import type { ReactNode } from "react";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { BriefMarkRequest } from "../brief/brief.queries";
 import { useBriefItemMark } from "../brief/brief.queries";
 import type { WorklistItem } from "./worklist.queries";
@@ -151,6 +151,7 @@ export function BriefSetAsides({
   item,
   brief,
 }: Readonly<{ item: WorklistItem; brief: BriefAnswer }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const toast = useToast();
@@ -166,7 +167,7 @@ export function BriefSetAsides({
     brief.answer({ itemId: item.id, mark: "snooze", snoozedUntil: until }, () =>
       toast.show(
         t("brief.snooze.done", {
-          at: formatDateTime(until, locale, viewerZone()),
+          at: formatDateTime(until, locale, readerZone),
         }),
         {
           action: {

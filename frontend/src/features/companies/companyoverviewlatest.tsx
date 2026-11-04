@@ -15,7 +15,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
 import { latestExchanges } from "./companyoverviewrows";
 import { activityHeadline } from "./companyrecent";
@@ -44,7 +44,7 @@ export function LatestCard({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
-  const rows = latestExchanges(view, useRecordZone());
+  const rows = latestExchanges(view, useViewerZone());
   const hidden = view.sections_omitted.includes("activities");
   return (
     <OverviewCard
@@ -83,7 +83,7 @@ function LatestRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const who = useWhoOf(activity, view);
   const title = activityHeadline(activity, t);
   const email = activity.email_summary;

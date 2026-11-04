@@ -14,8 +14,8 @@ import type {
 } from "../../design-system/resolvesheet";
 import { formatAnalyticsMoneyOrAbsent, formatDate } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { OutOfDateBadge } from "./analytics.forecast.freshness";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
@@ -43,7 +43,7 @@ export function CheckTable({
   title,
 }: Readonly<{ checks: InputCheck[]; locale: Locale; title: string }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
   // A door from a finding names it; a door from a group names its type.
   const focus = params.get("finding");

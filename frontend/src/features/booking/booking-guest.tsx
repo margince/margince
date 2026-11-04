@@ -13,7 +13,7 @@ import {
   formatDayLong,
   formatTimeOfDay,
 } from "../../format/format";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -61,7 +61,7 @@ export function BookingGuestScreen({
 }: Readonly<{ hostSlug: string; proposalToken?: string; preview?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [zone, setZone] = useState(viewerZone);
+  const [zone, setZone] = useState(browserZone);
   const intent = useBookingIntent();
   const client = useQueryClient();
   const [now] = useState(() => Date.now());

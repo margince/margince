@@ -30,10 +30,10 @@ import {
 import { EmailEntry } from "../../../design-system/emailentry";
 import { formatActivityWhen } from "../../../format/activitywhen";
 import { useLocale } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.
 import "../../companies/company360.css";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 /**
  * One line of an action's basis, in the shape this component draws.
@@ -93,7 +93,7 @@ export function EvidenceSources({
   ) => string | undefined;
 }>) {
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const cited = sources.flatMap((source) =>
     source.kind === "cited" ? [source.cited] : [],
   );
@@ -111,7 +111,7 @@ export function EvidenceSources({
           source.summary.occurred_at,
           source.summary.occurred_precision,
           locale,
-          recordZone,
+          readerZone,
         );
         // The withheld branch states its reason rather than passing an
         // undefined opener: EmailEntry refuses to be silently unopenable, and

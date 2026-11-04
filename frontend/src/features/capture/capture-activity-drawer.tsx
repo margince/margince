@@ -11,10 +11,10 @@ import { Heading } from "../../design-system/heading";
 import { PipelineLadder } from "../../design-system/pipelineladder";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 
@@ -50,6 +50,7 @@ export function CaptureActivityDrawer({
   onOpenEmail?: (activityId: string) => void;
   onClose: () => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const providerLabel = useProviderLabel();
@@ -104,7 +105,7 @@ export function CaptureActivityDrawer({
               occurredAt={formatDateTime(
                 message.occurred_at,
                 locale,
-                viewerZone(),
+                readerZone,
               )}
               onOpen={openerFor(message, onOpenEmail)}
             />

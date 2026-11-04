@@ -22,8 +22,8 @@ import { EmailEntry } from "../../design-system/emailentry";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type HiddenBacklog,
   type HiddenRule,
@@ -286,6 +286,7 @@ function HiddenRows({
   measured: boolean;
   onOpenEmail: (activityId: string) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const rows = useHiddenBacklogRows(rule, open);
@@ -314,13 +315,12 @@ function HiddenRows({
             {row.email_summary ? (
               <EmailEntry
                 summary={row.email_summary}
-                timestamp={formatDateTime(row.since, locale, viewerZone())}
+                timestamp={formatDateTime(row.since, locale, readerZone)}
                 onOpen={() => onOpenEmail(row.activity_id)}
               />
             ) : (
               <span className="t-body">
-                {row.subject} ·{" "}
-                {formatDateTime(row.since, locale, viewerZone())}
+                {row.subject} · {formatDateTime(row.since, locale, readerZone)}
               </span>
             )}
           </li>

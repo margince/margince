@@ -2,12 +2,62 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+} from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
+import { browserZone, isRenderableZone } from "../format/timezone";
 import { useT } from "../i18n";
-import { unwrap } from "./problem";
+import { logUnexpectedError, unwrap } from "./problem";
+
+/**
+ * The signed-in user's own clock. Every time a signed-in screen shows is
+ * read in it: a note saved at 16:03 in Berlin shows 16:03 to a reader in
+ * Berlin, whatever zone the installation uses. `format/timezone.ts` states
+ * which screens keep the company zone instead.
+ *
+ * Null when no provider is mounted, which only a story or a test does. Those
+ * read the browser's zone, as every signed-in screen did before this.
+ */
+const ViewerZoneContext = createContext<string | null>(null);
+
+/** The zone this reader's times are shown in. */
+export function useViewerZone(): string {
+  return useContext(ViewerZoneContext) ?? browserZone();
+}
+
+/**
+ * The zone the user stored, or the browser's when none is stored or this
+ * browser cannot render the stored one. A zone the formatters would refuse
+ * must not take the application down, so it falls back and reports.
+ */
+export function renderableViewerZone(stored: string | undefined): string {
+  if (stored === undefined || stored === "") return browserZone();
+  if (isRenderableZone(stored)) return stored;
+  logUnexpectedError(
+    new Error(
+      `the user's time zone is not one this browser can render: "${stored}" — times fall back to the browser's zone`,
+    ),
+  );
+  return browserZone();
+}
+
+/** Serves one reader's zone to every screen under it. */
+export function ViewerZoneProvider({
+  zone,
+  children,
+}: Readonly<{ zone: string; children: ReactNode }>) {
+  return (
+    <ViewerZoneContext.Provider value={zone}>
+      {children}
+    </ViewerZoneContext.Provider>
+  );
+}
 
 type Me = components["schemas"]["MeResponse"];
 type TimezoneSource = components["schemas"]["SaveMyTimezoneRequest"]["source"];
@@ -57,7 +107,7 @@ export function useBrowserZoneOnFirstSignIn(me: Me | undefined) {
       return;
     sentFor.current = userID;
     mutate(
-      { timezone: viewerZone(), source: "browser" },
+      { timezone: browserZone(), source: "browser" },
       {
         onError: () => {
           if (sentFor.current === userID) sentFor.current = null;
