@@ -2464,6 +2464,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.lifecycle_change": "Aktualisierung des Lebenszyklus",
   "agentJob.offer_drafting": "Angebotsentwurf",
   "agentJob.overnight": "Nacht-Agent",
+  "agentJob.project_health": "Projektzustand-Prüfung",
   "agentJob.propose_roles": "Analyse des Einkaufsteams",
   "agentJob.rate_refresh": "Aktualisierung der Wechselkurse",
   "agentJob.scrape": "Website-Erfassung",
@@ -3408,6 +3409,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.display": "Darstellung",
   "table.density": "Dichte",
   "table.compact": "Kompakt",
+  "table.columnHandle": "{name} verschieben, {position} von {total}",
+  "table.columnMoved": "{name} auf {position} von {total} verschoben",
   "table.sort": "Sortieren",
   "table.sortNamed": "Sortierung: {column}",
   "table.sortMenu": "Sortieren nach",
@@ -4671,6 +4674,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachmentWithheld":
     "Nicht gespeichert, da die E-Mail privat ist.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
+  "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
+  "readerRendering.show": "In meiner Sprache zeigen",
+  "readerRendering.pending": "Wird in deiner Sprache geschrieben",
+  "readerRendering.showOriginal": "Original zeigen",
+  "readerRendering.label": "In deiner Sprache",
+  "readerRendering.disclaimer":
+    "Von KI aus dem Original geschrieben, nur für dich. Nichts wird gespeichert.",
+  "readerRendering.alreadyYours": "Das ist schon in deiner Sprache.",
+  "readerRendering.noModel":
+    "Dafür braucht es ein KI-Modell. Ein Admin kann es unter Einstellungen → KI verbinden.",
+  "readerRendering.tooLong":
+    "Der Text ist zu lang, um ihn auf einmal in deiner Sprache zu zeigen. Lies das Original.",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",
   "email.detail.from": "Von",
@@ -9705,6 +9720,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
   "jobs.kind.notification_email": "Benachrichtigungs-E-Mail",
   "jobs.kind.privacy_retention": "Anwendung der Aufbewahrungsregeln",
+  "jobs.kind.project_health_scan": "Projektzustand-Prüfung",
   "jobs.kind.provider_lookup_sweep": "Anreicherung bestehender Kontakte",
   "jobs.kind.provider_run_poll_sweep": "Abruf der Anreicherungsergebnisse",
   "jobs.kind.provider_run_submit": "Anfrage an den Anreicherungsdienst",
@@ -10157,6 +10173,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Freigaben, die auf dich warten",
   "notifications.class.approval_pending.help":
     "Jemand braucht deine Entscheidung, damit seine Arbeit weitergehen kann.",
+  "notifications.class.project_health.label": "Projektzustand von der KI",
+  "notifications.class.project_health.help":
+    "Die KI hat ein Projekt von dir als gefährdet, außer Plan oder wieder im Plan markiert, mit Grund und einer Möglichkeit, das rückgängig zu machen.",
   "notifications.class.automation.label": "Ausgeführte Automatisierungen",
   "notifications.class.automation.help":
     "Eine Regel dieses Unternehmens wurde ausgelöst oder konnte nicht ausgelöst werden.",
@@ -16093,6 +16112,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Projekt in andere Phase verschoben",
   "webhooks.event.project.phase_changed.when":
     "Ein Projekt wechselt in eine neue Phase.",
+  "webhooks.event.project.health_assessed.label": "Projektzustand erfasst",
+  "webhooks.event.project.health_assessed.when":
+    "Jemand oder die KI erfasst, wie ein Projekt läuft, korrigiert eine Einschätzung oder nimmt die der KI zurück.",
   "webhooks.event.project.archived.label": "Projekt archiviert",
   "webhooks.event.project.archived.when": "Ein Projekt wird archiviert.",
   "webhooks.eventGroup.contracts": "Verträge",
@@ -17278,10 +17300,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.switch.body.leads":
     "Die Bedingungen werden gelöscht, da sie Lead-Felder nennen.",
   "filters.switch.confirm": "Wechseln und löschen",
-  "filters.showMore": "Bis zu 100 anzeigen",
   "filters.save": "Speichern",
   "filters.unsavedFilter": "Nicht gespeicherter Filter",
-  "filters.footMore": "Mehr zu diesem Filter",
   "filters.exporting": "Wird exportiert…",
   "filters.saveAsNew": "Als neue Ansicht speichern",
   "filters.saveTitle": "Diesen Filter speichern",
@@ -17855,6 +17875,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.state.offTrack": "Außer Plan",
   "projectHealth.record": "Bewertung erfassen",
   "projectHealth.correct": "Bewertung korrigieren",
+  "projectHealth.undoAI": "KI-Einschätzung zurücknehmen",
   "projectHealth.recordTitle": "Zustand der Umsetzung erfassen",
   "projectHealth.correctTitle": "Diese Bewertung korrigieren",
   "projectHealth.stateLabel": "Zustand",

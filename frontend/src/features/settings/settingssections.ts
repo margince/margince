@@ -63,6 +63,7 @@ export const SETTINGS_SECTIONS = {
     "notifications.browser.label",
     "delivery.panelTitle",
     "notifications.class.approval_pending.label",
+    "notifications.class.project_health.label",
     "notifications.class.coach.label",
     "notifications.class.lead_sla.label",
     "notifications.class.automation.label",

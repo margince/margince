@@ -487,7 +487,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(textlang.MessageOpening(fields.Body, 1200), fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.OfMessage(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),

@@ -3,9 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { OverflowMenu } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { useT } from "../../i18n";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
@@ -13,11 +11,11 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ExportFilterItems, useFilterExport } from "./filterexport";
+import "./filters.css";
 
-// Exporting what a filter selects: one item per format, in the menu of the
-// band the filter is kept from. A success hands the browser a file and leaves
-// the page looking exactly as it did, so the states worth capturing are the
-// items on offer and the export refused.
+// Exporting what a filter selects: one button per format, beside the count of
+// what it exports. A success hands the browser a file and leaves the page as
+// it was. So the states to show are the buttons on offer and a refusal.
 const meta: Meta = {
   title: "Patterns/Filter export",
   parameters: { layout: "padded" },
@@ -35,39 +33,21 @@ type Story = StoryObj;
 
 const COMPLETE = newGroup("and", [newLeaf("city", "eq", "Berlin")]);
 
-/** The items as a page holds them: the run outlives the menu that closes. */
-function ExportMenu() {
-  const t = useT();
+/** The buttons as the results head holds them, with the run's refusal. */
+function ExportButtons() {
   const run = useFilterExport();
   return (
-    <>
-      <OverflowMenu label={t("filters.footMore")}>
-        <ExportFilterItems run={run} resource="contact" tree={COMPLETE} />
-      </OverflowMenu>
+    <span className="filters-result-head">
+      <ExportFilterItems run={run} resource="contact" tree={COMPLETE} />
       <ErrorLine inline error={run.error} />
-    </>
+    </span>
   );
-}
-
-type User = ReturnType<typeof userEvent.setup>;
-
-/** The menu's items are portalled to the body, outside the story's root. */
-async function openMenu(user: User, canvasElement: HTMLElement) {
-  await user.click(
-    within(canvasElement).getByRole("button", {
-      name: "More for this filter",
-    }),
-  );
-  return within(canvasElement.ownerDocument.body);
 }
 
 export const Offered: Story = {
   render: () => {
     installFetchStub({});
-    return <ExportMenu />;
-  },
-  play: async ({ canvasElement }) => {
-    await openMenu(userEvent.setup(), canvasElement);
+    return <ExportButtons />;
   },
 };
 
@@ -88,12 +68,12 @@ export const Refused: Story = {
           403,
         ),
     });
-    return <ExportMenu />;
+    return <ExportButtons />;
   },
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
-    const page = await openMenu(user, canvasElement);
-    await user.click(page.getByRole("button", { name: "Export CSV" }));
-    await within(canvasElement).findByRole("alert");
+    const canvas = within(canvasElement);
+    await user.click(canvas.getByRole("button", { name: "Export CSV" }));
+    await canvas.findByRole("alert");
   },
 };

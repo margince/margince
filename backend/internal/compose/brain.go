@@ -172,6 +172,9 @@ type ModelPath struct {
 	// floor: a sentence has no deterministic reading, so its endpoint answers
 	// 409 without a lane rather than guessing one.
 	NlSearch completer
+	// ReaderRendering shows one activity in its reader's language. No floor:
+	// without it the endpoint answers 409 rather than the original unchanged.
+	ReaderRendering completer
 	// ReportInterpret writes the Sales review's assessment over measured
 	// figures. Its floor is the page's own deterministic summary, so a role
 	// without this lane still answers the panel.
@@ -335,6 +338,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		NlSearch:                      brain(ai.TaskNlSearch),
+		ReaderRendering:               brain(ai.TaskReaderRendering),
 		ReportInterpret:               brain(ai.TaskReportInterpret),
 		ReportSetup:                   brain(ai.TaskReportSetup),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
