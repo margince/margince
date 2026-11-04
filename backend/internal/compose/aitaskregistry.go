@@ -45,6 +45,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
 	oneShot(ai.TaskOwedVerdict, "owed", owedVerdictCases{})
 	oneShot(ai.TaskRequestSettlement, "request_settle", requestSettleCases{})
+	oneShot(ai.TaskDealVerdict, "deal_verdict", dealVerdictCases{})
 	oneShot(ai.TaskTagSuggest, "interest", tagSuggestCases{})
 	oneShot(ai.TaskCaptureCounterpartyVerdict, "verdict", counterpartyVerdictCases{})
 	oneShot(ai.TaskCaptureConfidentialityVerdict, "thread", confidentialityCases{})

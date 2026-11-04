@@ -327,3 +327,40 @@ components:
 		t.Errorf("3.0 has one example; the rest must not survive:\n%s", got)
 	}
 }
+
+// oapi-codegen drops uniqueItems from the Go type; the tag is how the request
+// decoders still learn that the list refuses a repeated item.
+func TestUniqueItemsTagsTheGeneratedField(t *testing.T) {
+	src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        ids: { type: array, uniqueItems: true, items: { type: string } }
+        free: { type: array, uniqueItems: false, items: { type: string } }
+`
+	out, err := Bytes([]byte(src))
+	if err != nil {
+		t.Fatalf("Bytes: %v", err)
+	}
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]map[string]any `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(out, &doc); err != nil {
+		t.Fatal(err)
+	}
+	props := doc.Components.Schemas["Thing"].Properties
+	tags, ok := props["ids"]["x-oapi-codegen-extra-tags"].(map[string]any)
+	if !ok || tags[UniqueItemsTag] != "items" {
+		t.Fatalf("ids carries %v, want the %q tag", props["ids"], UniqueItemsTag)
+	}
+	if _, tagged := props["free"]["x-oapi-codegen-extra-tags"]; tagged {
+		t.Fatalf("free carries a tag though it allows repeats: %v", props["free"])
+	}
+}
