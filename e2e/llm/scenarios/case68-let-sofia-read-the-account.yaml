@@ -1,0 +1,34 @@
+# CASE 68 — A share runs through change_access.
+name: case68_let_sofia_read_the_account
+criteria: [1]
+writes: true
+
+prompt: |
+  Give Sofia Meier read access to Nordholz Anlagenbau GmbH. She takes over their service calls next week.
+
+must_call:
+  - change_access
+
+must_call_with:
+  - change_access.action=share
+
+must_call_matching:
+  - share_record~"access": "read"
+
+must_not_call_with:
+  - share_record~"access": "write"
+
+may_call:
+  - find_records
+  - search_records
+  - list_records
+  - read_record
+  - read_workspace
+  - whoami
+  - list_colleagues
+
+must_mention:
+  - "Sofia"
+
+runs: 3
+pass_at: 2

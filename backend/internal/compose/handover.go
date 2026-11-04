@@ -74,10 +74,11 @@ func newHandoverSeam(engine *bulkEngine) handoverSeam {
 }
 
 // admit is the gate the count and the move both pass, in their own transaction.
-// It admits a human whom the member verbs would let act on this member. Every
-// record moved after it is still gated by its own write check.
+// It admits a human whom the member verbs would let act on this member, or an
+// agent acting for one. Every record moved after it is still gated by its own
+// write check.
 func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	return identity.AdmitMemberHandover(ctx, tx, ids.From[ids.UserKind](member))
@@ -155,6 +156,9 @@ func (s handoverSeam) HandOver(ctx context.Context, member, receiver ids.UUID) (
 		}
 		if member == receiver {
 			return &handoverSameUserError{}
+		}
+		if err := identity.RefuseAgentOwnReceiver(ctx, receiver); err != nil {
+			return err
 		}
 		if err := auth.EnsureAssignee(ctx, tx, receiver); err != nil {
 			if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
