@@ -41,6 +41,7 @@ export const SETTINGS_SECTIONS = {
     "settings.voice.start.addTitle",
     "settings.voice.addFirstLabel",
     "settings.voice.pasteLabel",
+    "settings.voice.sentMailLabel",
   ],
   agents: [
     "aiAccess.connect.title",

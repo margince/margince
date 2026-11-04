@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -92,11 +93,11 @@ function OutcomeNotice({ outcome }: Readonly<{ outcome: Outcome }>) {
   const { locale } = useLocale();
   if (outcome.kind === "failed") {
     return (
-      <p className="vdna-notice-warning" role="alert">
+      <ErrorLine>
         {t("settings.voice.sentMailFailed", {
           detail: problemMessageOf(outcome.problem, t),
         })}
-      </p>
+      </ErrorLine>
     );
   }
   const { read, added, no_own_words: noOwnWords } = outcome.learned;
@@ -108,7 +109,7 @@ function OutcomeNotice({ outcome }: Readonly<{ outcome: Outcome }>) {
   const count = (n: number) => ({ count: formatNumber(n, locale) });
   return (
     <ul className="vdna-notices">
-      <li className={added > 0 ? "vdna-notice-ok" : "vdna-notice-warning"}>
+      <li className={added > 0 ? undefined : "vdna-notice-warning"}>
         {added > 0
           ? plural("settings.voice.sentMailLearned", added, count(added))
           : t("settings.voice.sentMailNothingNew")}
