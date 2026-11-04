@@ -99,6 +99,12 @@ type Rules struct {
 	// declare one requires consent rather than silently permitting a send.
 	MarketingExceptions []MarketingException
 
+	// ConsentOnly says advertising to a recipient here needs their prior
+	// consent and nothing else: no one-message exception a sender or an admin
+	// records stands in for it. False keeps that exception, which is the
+	// default.
+	ConsentOnly bool
+
 	// Disclosures are what a first message to somebody must carry.
 	//
 	// The send path renders them into the message footer. Held by

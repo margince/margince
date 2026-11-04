@@ -34,7 +34,9 @@ func (e *resolveEnv) seatCtx(user ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			Objects: map[string]principal.ObjectGrant{
+				"contact": {Read: true, Update: true}, "deal": {Read: true},
+			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -185,23 +187,80 @@ func TestACallbackOrAnEnquirySupportsAFollowUp(t *testing.T) {
 	}
 }
 
-// A quote resting on a request alone, with no deal or offer behind it, is still
-// stopped by a broad marketing objection. A narrow one names a marketing list
-// the quote is not on.
+// suppressAt records one live suppression against the env's contact, dated
+// when the contact said it.
+func (e *resolveEnv) suppressAt(t *testing.T, kind string, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO communication_suppression
+		    (contact_id, kind, source, captured_by, decided_by_level, recorded_at)
+		VALUES ($1, $2, 'test', 'human:x', 'subject', $3)`, e.contact, kind, at); err != nil {
+		t.Fatalf("recording the %s: %v", kind, err)
+	}
+}
+
+// A quote resting on a request alone, to somebody who opted out of marketing
+// after asking, is refused with its own reason. Nobody sends past it, an admin
+// included; the rep confirms with the contact first.
 //
 // Mutation: drop objectionBindsResolution from decideResolved and the quote is
 // allowed past the objection.
-func TestAMarketingObjectionBindsAQuoteWithNoDealBehindIt(t *testing.T) {
+func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 	e := setupResolve(t)
-	e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour), true)
-	e.suppress(t, "marketing_objection")
+	now := clocktest.Now(t)
+	e.recordRequest(t, now.Add(-48*time.Hour), true)
+	e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
 
 	d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryPrecontractQuote})
-	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonObjection {
-		t.Fatalf("decision = %s %q, want a refusal for the marketing objection", d.Verdict, d.ReasonCode)
+	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonOptedOutAfterRequest {
+		t.Fatalf("decision = %s %q, want a refusal for the opt-out after the request", d.Verdict, d.ReasonCode)
 	}
-	if d.Resolved != commsauthz.CategoryPrecontractQuote {
-		t.Errorf("resolved %q, want the quote it is", d.Resolved)
+	if d.Resolved != commsauthz.CategoryPrecontractQuote || d.Suppression != commsauthz.ReasonObjection {
+		t.Errorf("resolved %q under %q, want the quote it is under the objection", d.Resolved, d.Suppression)
+	}
+	if (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception answers the opt-out after the request")
+	}
+}
+
+// A request newer than the opt-out carries the quote: the contact asked again
+// after they opted out, or the rep confirmed with them and recorded it.
+//
+// Mutation: make objectionBindsResolution ignore RequestedAt and both cases are
+// refused.
+func TestARequestNewerThanTheOptOutCarriesTheQuote(t *testing.T) {
+	for name, record := range map[string]func(e *resolveEnv, now time.Time){
+		"recorded by the rep": func(e *resolveEnv, now time.Time) { e.recordRequest(t, now.Add(-time.Hour), true) },
+		"recorded at acquiring": func(e *resolveEnv, now time.Time) {
+			e.acquisition(t, "requested_quote_or_meeting", now.Add(-time.Hour))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			now := clocktest.Now(t)
+			e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
+			record(e, now)
+
+			d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryPrecontractQuote})
+			if d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryPrecontractQuote {
+				t.Fatalf("decision = %s/%s %q, want the quote allowed on the newer request", d.Verdict, d.Resolved, d.ReasonCode)
+			}
+		})
+	}
+}
+
+// The objection still binds marketing to the contact whose newer request
+// carries a quote. The request reaches the quote and nothing else.
+func TestANewerQuoteRequestDoesNotLiftTheObjectionForMarketing(t *testing.T) {
+	e := setupResolve(t)
+	now := clocktest.Now(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+	e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
+	e.recordRequest(t, now.Add(-time.Hour), true)
+
+	d := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
+	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonObjection {
+		t.Fatalf("decision = %s %q, want marketing refused for the objection", d.Verdict, d.ReasonCode)
 	}
 }
 
@@ -435,6 +494,206 @@ func TestAnAdminOnlyRefusalIsAnsweredOnlyByAnAdminsException(t *testing.T) {
 			if ticket.ConsentRefused != tc.givenByAdmin {
 				t.Errorf("consentRefused = %v, want %v: only an admin's exception answers a bounce",
 					ticket.ConsentRefused, tc.givenByAdmin)
+			}
+		})
+	}
+}
+
+// An open deal the contact is a stakeholder on is not, alone, their request: a
+// deal we created is no permission. Picked as the reason, it is refused with
+// its own reason, which the rep answers by recording what the contact asked.
+// Filed under, it supports nothing on its own.
+//
+// Mutation: drop the requestedNegotiation check from validateDealFollowup, or let
+// resolveCategory read liveDealInLinks again, and a case here is supported.
+func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
+	e := setupResolve(t)
+	deal := e.openDeal(t, "open", true)
+
+	picked := e.resolve(t, commsauthz.Request{
+		Context: commsauthz.CategoryActiveDealFollowup, Evidence: commsauthz.Evidence{DealID: deal},
+	})
+	if picked.Supported || picked.Reason != commsauthz.ReasonDealNotRequested {
+		t.Fatalf("picked deal: supported=%v reason=%q, want deal_not_requested", picked.Supported, picked.Reason)
+	}
+	if filed := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}}); filed.Supported {
+		t.Fatalf("a deal nobody asked about supported the message as %q", filed.Category)
+	}
+}
+
+// recordRequestAbout writes the rep's confirmation that the contact asked
+// about a deal, through the door the review form answers with.
+func (e *resolveEnv) recordRequestAbout(t *testing.T, deal ids.UUID, when time.Time, asksForQuote bool) {
+	t.Helper()
+	if _, err := e.store.RecordQualifyingEvent(e.seatCtx(e.user), e.contact, RecordQualifyingEventInput{
+		Kind: KindRequestedBySubject, Note: "Asked about this deal on the phone.", OccurredAt: when,
+		AsksForQuote: asksForQuote, AboutDeal: deal,
+	}); err != nil {
+		t.Fatalf("recording the request about the deal: %v", err)
+	}
+}
+
+// A deal follow-up rests on a request about THAT deal. An enquiry filed on deal
+// A does not carry deal B, a request that names no deal carries neither, an
+// enquiry filed on B carries B, and a request the rep confirmed about B is
+// reused for every later message about B.
+//
+// Mutation: drop the deal test from any arm of requestedNegotiation (filing,
+// about_deal_id) and the matching case is supported for the wrong deal.
+func TestADealFollowUpRestsOnARequestAboutThatDeal(t *testing.T) {
+	followUp := func(deal ids.UUID) []commsauthz.Request {
+		return []commsauthz.Request{
+			{Context: commsauthz.CategoryActiveDealFollowup, Evidence: commsauthz.Evidence{DealID: deal}},
+			{Links: []ids.UUID{deal}},
+		}
+	}
+	for name, tc := range map[string]struct {
+		seed   func(e *resolveEnv, a, b ids.UUID)
+		carryB bool
+	}{
+		"an enquiry about A":       {func(e *resolveEnv, a, _ ids.UUID) { e.enquiredAbout(t, a) }, false},
+		"a request naming no deal": {func(e *resolveEnv, _, _ ids.UUID) { e.recordRequest(t, clocktest.Now(t).Add(-time.Hour), false) }, false},
+		"a request confirmed about A": {func(e *resolveEnv, a, _ ids.UUID) {
+			e.recordRequestAbout(t, a, clocktest.Now(t).Add(-time.Hour), false)
+		}, false},
+		"an enquiry filed on B":       {func(e *resolveEnv, _, b ids.UUID) { e.enquiredAbout(t, b) }, true},
+		"a request confirmed about B": {func(e *resolveEnv, _, b ids.UUID) { e.recordRequestAbout(t, b, clocktest.Now(t).Add(-twoYears), false) }, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			a, b := e.openDeal(t, "open", true), e.openDeal(t, "open", true)
+			tc.seed(e, a, b)
+
+			for _, req := range followUp(b) {
+				d := e.decide(t, req)
+				carried := d.Verdict == commsauthz.VerdictAllow && d.Resolved == commsauthz.CategoryActiveDealFollowup
+				if carried != tc.carryB {
+					t.Fatalf("follow-up on B = %s/%s %q, want carried=%v", d.Verdict, d.Resolved, d.ReasonCode, tc.carryB)
+				}
+			}
+		})
+	}
+}
+
+// A newer request for one quote does not lift the objection for another. The
+// contact asked for quote A, then objected, then asked for quote B: B goes,
+// and A stays refused until they ask for A again.
+//
+// Mutation: drop the about_deal_id test from latestRequest and quote A goes on
+// B's date.
+func TestANewerRequestForOneQuoteDoesNotCarryItsSibling(t *testing.T) {
+	e := setupResolve(t)
+	now := clocktest.Now(t)
+	a, b := e.openDeal(t, "open", true), e.openDeal(t, "open", true)
+	e.recordRequestAbout(t, a, now.Add(-48*time.Hour), true)
+	e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
+	e.recordRequestAbout(t, b, now.Add(-time.Hour), true)
+
+	quote := func(deal ids.UUID) commsauthz.Decision {
+		return e.decide(t, commsauthz.Request{
+			Context: commsauthz.CategoryPrecontractQuote, Evidence: commsauthz.Evidence{DealID: deal},
+		})
+	}
+	if d := quote(b); d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("quote B = %s %q, want it carried by the request after the opt-out", d.Verdict, d.ReasonCode)
+	}
+	if d := quote(a); d.Verdict == commsauthz.VerdictAllow || d.ReasonCode != commsauthz.ReasonOptedOutAfterRequest {
+		t.Fatalf("quote A = %s %q, want opted_out_after_request", d.Verdict, d.ReasonCode)
+	}
+	e.recordRequestAbout(t, a, now.Add(-time.Minute), true)
+	if d := quote(a); d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("quote A after they asked again = %s %q, want it allowed", d.Verdict, d.ReasonCode)
+	}
+}
+
+// meetingOnDeal plants a meeting the contact attended a day ago, filed on the
+// deal, captured by capturedBy with the given status.
+func (e *resolveEnv) meetingOnDeal(t *testing.T, deal ids.UUID, capturedBy, status string) {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status)
+		VALUES ($1, 'meeting', 'gcal', $2, $3, NULLIF($4, ''))`,
+		id, clocktest.Now(t).Add(-24*time.Hour), capturedBy, status); err != nil {
+		t.Fatalf("planting the meeting: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`,
+		id, e.contact); err != nil {
+		t.Fatalf("planting the attendee: %v", err)
+	}
+	e.fileOnDeal(t, id, deal)
+}
+
+// mailOnDeal plants mail from the contact filed on the deal, captured by
+// capturedBy, from a sender the receiving server did or did not authenticate.
+func (e *resolveEnv) mailOnDeal(t *testing.T, deal ids.UUID, capturedBy string, authenticated bool) {
+	t.Helper()
+	mail := e.inboundFrom(t, "mail-on-"+deal.String(), e.address, clocktest.Now(t).Add(-24*time.Hour))
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE activity SET captured_by = $2, inbound_sender_authenticated = $3 WHERE id = $1`,
+		mail, capturedBy, authenticated); err != nil {
+		t.Fatalf("marking the mail: %v", err)
+	}
+	e.fileOnDeal(t, mail, deal)
+}
+
+// requestAboutDealAt plants a request about the deal dated at, as a row the
+// recording door would refuse when at is in the future.
+func (e *resolveEnv) requestAboutDealAt(t *testing.T, deal ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_qualifying_event (contact_id, kind, note, occurred_at, source, captured_by, about_deal_id)
+		VALUES ($1, 'requested_by_subject', 'asked', $2, 'human', 'human:x', $3)`,
+		e.contact, at, deal); err != nil {
+		t.Fatalf("planting the request: %v", err)
+	}
+}
+
+// acquiredAboutDealAt plants the acquisition request citing the deal, dated at.
+func (e *resolveEnv) acquiredAboutDealAt(t *testing.T, deal ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, source_entity_type, source_entity_id)
+		VALUES ($1, 'requested_quote_or_meeting', $2, 'human:x', 'deal', $3)`, e.contact, at, deal); err != nil {
+		t.Fatalf("planting the acquisition request: %v", err)
+	}
+}
+
+// Evidence on a deal is the contact's own act. A meeting a connector captured,
+// or authenticated mail from them, carries the deal; a meeting or mail a rep
+// typed by hand, a canceled meeting and an unauthenticated sender do not. A
+// request dated in the future is not a memory and carries nothing.
+//
+// Mutation: replace capturedMeetingSQL or AuthenticatedInboundSQL in
+// requestedNegotiation with the bare kind or direction, or drop either
+// occurred_at bound, and the matching case carries the deal.
+func TestOnlyTheContactsOwnActOnTheDealCarriesIt(t *testing.T) {
+	future := func() time.Time { return clocktest.Now(t).Add(2 * time.Hour) }
+	past := func() time.Time { return clocktest.Now(t).Add(-time.Hour) }
+	for name, tc := range map[string]struct {
+		seed    func(e *resolveEnv, deal ids.UUID)
+		carries bool
+	}{
+		"a captured meeting":           {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "connector:gcal", "") }, true},
+		"a hand-logged meeting":        {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "human:x", "") }, false},
+		"a canceled captured meeting":  {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "connector:gcal", "canceled") }, false},
+		"authenticated captured mail":  {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "connector:gmail", true) }, true},
+		"hand-typed mail":              {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "human:x", true) }, false},
+		"an unauthenticated sender":    {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "connector:gmail", false) }, false},
+		"a past request":               {func(e *resolveEnv, d ids.UUID) { e.requestAboutDealAt(t, d, past()) }, true},
+		"a future request":             {func(e *resolveEnv, d ids.UUID) { e.requestAboutDealAt(t, d, future()) }, false},
+		"a past acquisition request":   {func(e *resolveEnv, d ids.UUID) { e.acquiredAboutDealAt(t, d, past()) }, true},
+		"a future acquisition request": {func(e *resolveEnv, d ids.UUID) { e.acquiredAboutDealAt(t, d, future()) }, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			deal := e.openDeal(t, "open", true)
+			tc.seed(e, deal)
+
+			got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
+			if got.Supported != tc.carries {
+				t.Fatalf("supported = %v as %q, want %v", got.Supported, got.Category, tc.carries)
 			}
 		})
 	}

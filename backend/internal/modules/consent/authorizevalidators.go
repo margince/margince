@@ -168,8 +168,10 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
-// the picked deal through liveDealInLinks. So "an open deal the recipient is a
-// stakeholder on" is asked one way for the links and for the picked deal.
+// the picked deal through liveDealInLinks and requestedNegotiation, so the
+// links and the picked deal are asked one way. A live deal the contact never
+// asked about gets its own reason: the deal is there, their request about it
+// is not.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
@@ -180,6 +182,13 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	}
 	if !live {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	asked, err := requestedNegotiation(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !asked {
+		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonDealNotRequested}, nil
 	}
 	return resolution{
 		Category:  commsauthz.CategoryActiveDealFollowup,
@@ -240,14 +249,15 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 // offer, and it needs no newsletter consent. Correspondence alone is not a
 // request for a quote; a reply in the enquiry's own thread is a reply.
 //
-// The request arm is the weaker ground, so a marketing objection still binds
-// it (MarketingStopsBind).
+// The request arm is the weaker ground, so a marketing objection recorded
+// after the request binds it (MarketingStopsBind). Only a request about this
+// quote's deal, or naming no deal, is read for it.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	res, err := quoteOnDeal(ctx, tx, req, subject)
 	if err != nil || res.Supported {
 		return res, err
 	}
-	asked, err := requestOnRecord(ctx, tx, subject, quoteRequests)
+	askedAt, asked, err := latestRequest(ctx, tx, subject, quoteRequests, req.Evidence.DealID)
 	if err != nil || !asked {
 		return res, err
 	}
@@ -256,6 +266,7 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 		Basis:              commsauthz.BasisPrecontractRequest,
 		Supported:          true,
 		MarketingStopsBind: true,
+		RequestedAt:        askedAt,
 	}, nil
 }
 

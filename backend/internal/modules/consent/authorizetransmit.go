@@ -273,7 +273,11 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, req, d, phase, country)
+		d, err = g.decideLead(ctx, tx, r, req, d, phase, country)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		return requireConsentWhereNothingStandsIn(d, country), nil
 	}
 	parsed, err := ids.Parse(contactID)
 	if err != nil {
@@ -311,6 +315,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// snapshots (aStopThatBindsTheMessage, reviewcontext.go).
 	d.PurposeID = sendPurpose
 	d = applySuppression(d, stops, sendPurpose)
+	d = requireConsentWhereNothingStandsIn(d, country)
 	// A STANDING OVERRIDE OUTRANKS ONLY A MACHINE, NEVER A SUBJECT.
 	//
 	// Reached AFTER applySuppression and AFTER the absolute early-exit above, and

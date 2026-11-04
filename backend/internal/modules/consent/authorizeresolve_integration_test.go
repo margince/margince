@@ -218,6 +218,30 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 	return dealID
 }
 
+// enquiredAbout plants the subject's own inbound enquiry ten days ago, captured
+// by a connector from an authenticated sender and filed on the deal, which
+// makes that deal a negotiation they asked for.
+func (e *resolveEnv) enquiredAbout(t *testing.T, deal ids.UUID) {
+	t.Helper()
+	enquiry := e.inboundFrom(t, "their-enquiry-"+deal.String(), e.address, clocktest.Now(t).Add(-10*24*time.Hour))
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE activity SET captured_by = 'connector:gmail', inbound_sender_authenticated = true
+		 WHERE id = $1`, enquiry); err != nil {
+		t.Fatalf("marking the enquiry captured: %v", err)
+	}
+	e.fileOnDeal(t, enquiry, deal)
+}
+
+// fileOnDeal files an activity on a deal.
+func (e *resolveEnv) fileOnDeal(t *testing.T, activity, deal ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id)
+		VALUES ($1, 'deal', $2)`, activity, deal); err != nil {
+		t.Fatalf("filing the activity on the deal: %v", err)
+	}
+}
+
 // seedPurpose plants a legacy consent purpose of a named class.
 func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 	t.Helper()
@@ -437,11 +461,12 @@ func TestAMissingAnchorSupportsNothing(t *testing.T) {
 	}
 }
 
-// A live deal the recipient is a stakeholder on supports an unprompted
-// follow-up.
+// A live deal the recipient is a stakeholder on, and asked about, supports an
+// unprompted follow-up.
 func TestALiveDealTheRecipientIsAStakeholderOnSupportsAFollowUp(t *testing.T) {
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
+	e.enquiredAbout(t, deal)
 
 	got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
 

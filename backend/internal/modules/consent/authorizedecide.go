@@ -89,26 +89,30 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 }
 
 // objectionBindsResolution reports whether a broad marketing objection binds a
-// resolution that asked for it (resolution.MarketingStopsBind). A narrow one
-// names a marketing purpose, which a quote does not have.
+// resolution that asked for it (resolution.MarketingStopsBind). It binds when
+// it is no older than the request the quote rests on: the contact opted out
+// after asking. A request recorded after the objection carries the quote. A
+// narrow objection names a marketing purpose, which a quote does not have.
 func objectionBindsResolution(res resolution, stops []liveStop) bool {
 	if !res.MarketingStopsBind {
 		return false
 	}
 	for _, s := range stops {
-		if s.Kind == commsauthz.ReasonObjection && s.PurposeID == nil {
+		if s.Kind == commsauthz.ReasonObjection && s.PurposeID == nil &&
+			!s.RecordedAt.Before(res.RequestedAt) {
 			return true
 		}
 	}
 	return false
 }
 
-// denyByObjection is the refusal objectionBindsResolution asks for, recorded
-// the way applySuppression records an objection.
+// denyByObjection is the refusal objectionBindsResolution asks for. The
+// suppression is the objection; the reason says it came after the request, so
+// the send screen asks the rep to confirm with the contact first.
 func denyByObjection(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.Resolved = res.Category
 	d.Verdict = commsauthz.VerdictDeny
-	d.ReasonCode = commsauthz.ReasonObjection
+	d.ReasonCode = commsauthz.ReasonOptedOutAfterRequest
 	d.Suppression = commsauthz.ReasonObjection
 	return d
 }

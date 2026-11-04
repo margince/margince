@@ -108,6 +108,9 @@ type RecordQualifyingEventInput struct {
 	// request the subject made may say so. Only such a request bears out a
 	// quote; a request to be called back does not.
 	AsksForQuote bool
+	// AboutDeal names the deal the request was about; zero names none. A deal
+	// follow-up and a quote on a deal rest only on a request about that deal.
+	AboutDeal ids.UUID
 }
 
 // RecordInquiry records that this contact asked for a meeting themselves.
@@ -247,6 +250,11 @@ func (s *Store) RecordQualifyingEvent(
 		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
+		if !in.AboutDeal.IsZero() {
+			if err := auth.EnsureLinkTarget(ctx, tx, "deal", in.AboutDeal); err != nil {
+				return err
+			}
+		}
 		// The same exchange, re-sent, is one exchange. A retry — a double click,
 		// a client that resends on a timeout — must not stack a second row
 		// claiming a second meeting happened, because the rows ARE the legal
@@ -258,17 +266,18 @@ func (s *Store) RecordQualifyingEvent(
 		// it answers the row as it stands and does not bring it back.
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
-				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote)
-			SELECT $1, $2, $3, $4, $7, $5, $6
+				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote, about_deal_id)
+			SELECT $1, $2, $3, $4, $7, $5, $6, $8
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
-				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
+				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
+				   AND about_deal_id IS NOT DISTINCT FROM $8)
 			RETURNING id::text`,
-			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx)).Scan(&out.ID); err != nil {
+			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx), zeroUUIDAsNull(in.AboutDeal)).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Already on file. Nothing was written twice, so there is
 				// nothing to audit, and the answer is the standing row.
-				return standingExchange(ctx, tx, contactID, &out)
+				return standingExchange(ctx, tx, contactID, in.AboutDeal, &out)
 			}
 			return fmt.Errorf("consent: recording the exchange: %w", err)
 		}
@@ -285,6 +294,7 @@ func (s *Store) RecordQualifyingEvent(
 			"qualifying_event": in.Kind,
 			fieldNote:          note,
 			fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
+			"about_deal":       zeroUUIDAsNull(in.AboutDeal),
 		})
 		return err
 	})
@@ -296,11 +306,12 @@ func (s *Store) RecordQualifyingEvent(
 
 // standingExchange fills out with the row a retried record matched, retracted
 // or not.
-func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *QualifyingEvent) error {
+func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, deal ids.UUID, out *QualifyingEvent) error {
 	if err := tx.QueryRow(ctx, `
 		SELECT id::text, asks_for_quote, retracted_at IS NOT NULL FROM consent_qualifying_event
 		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt).
+		   AND about_deal_id IS NOT DISTINCT FROM $5
+		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt, zeroUUIDAsNull(deal)).
 		Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}

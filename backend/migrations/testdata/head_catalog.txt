@@ -3240,6 +3240,7 @@ public.consent_purpose.requires_double_opt_in boolean NOT NULL gen=- def=false
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_qualifying_event.about_deal_id uuid gen=- def=-
 public.consent_qualifying_event.asks_for_quote boolean NOT NULL gen=- def=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE

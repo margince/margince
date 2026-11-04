@@ -39,8 +39,8 @@ func TestNobodySendsPastASubjectsStop(t *testing.T) {
 			t.Errorf("%q is the subject's own stop and lists %v; nobody may send past it", reason, got)
 		}
 	}
-	if stops != 4 {
-		t.Errorf("found %d subject-level stops, want the four: objection, withdrawal, restriction, request to stop", stops)
+	if stops != 5 {
+		t.Errorf("found %d subject-level stops, want the five: objection, withdrawal, restriction, request to stop, opt-out after a request", stops)
 	}
 }
 
@@ -51,6 +51,7 @@ func TestNoAnswerOrFactSuppliesConsentOrLiftsAStop(t *testing.T) {
 	for _, reason := range []string{
 		ReasonNoMarketingConsent, ReasonObjection, ReasonRestricted, ReasonSubjectRequest,
 		ReasonConsentWithdrawn, ReasonHardBounce, ReasonUnconfirmedDOI, ReasonFrequencyCapReached,
+		ReasonOptedOutAfterRequest, ReasonMarketingConsentRequired,
 	} {
 		if HasRemedy(reason, RemedyAnswer) || HasRemedy(reason, RemedyFact) {
 			t.Errorf("%q must not be resolvable by an answer or a recorded fact", reason)
@@ -100,5 +101,24 @@ func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
 	}
 	if !(DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(true) {
 		t.Error("an admin's exception does not answer a hard bounce")
+	}
+}
+
+// Where the recipient's country requires prior consent, nobody records an
+// exception in its place, and the country's advertising ceiling is not lifted
+// for one message either.
+func TestNoExceptionStandsInForConsentWhereTheCountryRequiresIt(t *testing.T) {
+	t.Parallel()
+	for _, reason := range []string{ReasonMarketingConsentRequired, ReasonFrequencyCapReached, ReasonOptedOutAfterRequest} {
+		if got := RemediesFor(reason); len(got) != 0 {
+			t.Errorf("%q lists %v; nobody may send past it, an admin included", reason, got)
+		}
+		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
+		if set.ExceptionMayAnswer(true) {
+			t.Errorf("an admin's exception answers %q", reason)
+		}
+	}
+	if !HasRemedy(ReasonNoMarketingConsent, RemedyException) {
+		t.Error("outside such a country missing marketing consent keeps the exception")
 	}
 }

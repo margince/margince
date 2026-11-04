@@ -93,8 +93,8 @@ func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
 }
 
 // stakeADeal gives the fixture's subject real transactional evidence: an
-// open deal with them staked on it, relinked onto c.activityID (a reply
-// inherits its links from the anchor). Opt in for the same reason
+// open deal with them staked on it and their own captured enquiry filed on
+// it, relinked onto c.activityID (a reply inherits its links from the anchor). Opt in for the same reason
 // preflightEnv.stakeADeal is: resolveCategory's live-deal arm runs before
 // any purpose is asked about, so baking this into setupConsent would
 // silently change the basis every OTHER test in this file — most of which
@@ -109,6 +109,7 @@ func (c *consentEnv) stakeADeal(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("relink the anchor onto the deal → %d", status)
 	}
+	askedAboutTheDeal(t, c.AppEnv, c.contactID, "subject@consent.test", c.dealID)
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
