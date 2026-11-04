@@ -7,7 +7,7 @@ import {
   TaskCompleteCheck,
   type useTaskUpdate,
 } from "../../components/taskactions";
-import { TaskAssignee } from "../../components/taskassignee";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import {
@@ -164,13 +164,15 @@ function TaskRow({
     (step.linked_deal_id && nameOf("deal", step.linked_deal_id)) ||
     (step.linked_contact_id && nameOf("contact", step.linked_contact_id)) ||
     undefined;
-  const sub = [
+  const holder = useTaskHolder(step.assignee_id, step.assignee_name);
+  const sub = taskLine([
+    holder,
     step.due_at &&
       t("co.next.due", {
         when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
       }),
     linked && t("co.overview.for", { name: linked }),
-  ].filter(Boolean);
+  ]);
   return (
     <OverviewRow
       lead={
@@ -191,12 +193,7 @@ function TaskRow({
           {step.subject}
         </button>
       }
-      sub={
-        <>
-          <TaskAssignee id={step.assignee_id} name={step.assignee_name} />
-          {sub.length > 0 && ` · ${sub.join(" · ")}`}
-        </>
-      }
+      sub={sub}
       right={<TaskStandingMark step={step} asOf={view.as_of} />}
     />
   );

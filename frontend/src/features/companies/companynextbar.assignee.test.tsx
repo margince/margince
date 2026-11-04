@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -53,6 +53,14 @@ function show(step: NextStep) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
+}
+
+// "You" depends on the session read, so a check that it is absent waits for it.
+async function sessionRead(client: QueryClient) {
+  await waitFor(() =>
+    expect(client.getQueryState(["me"])?.status).toBe("success"),
+  );
 }
 
 const task = (over: Partial<NextStep>): NextStep => ({
@@ -63,10 +71,21 @@ const task = (over: Partial<NextStep>): NextStep => ({
 });
 
 describe("the company's Next bar", () => {
-  it("names a colleague who holds the task", () => {
-    show(task({ assignee_id: "u-sam", assignee_name: "Sam Holder" }));
+  it("names a colleague who holds the task", async () => {
+    await sessionRead(
+      show(task({ assignee_id: "u-sam", assignee_name: "Sam Holder" })),
+    );
     expect(screen.getByText("Sam Holder")).toBeInTheDocument();
     expect(screen.queryByText("You")).toBeNull();
+  });
+
+  it("names nobody when the server withholds the holder's name", async () => {
+    await sessionRead(
+      show(task({ assignee_id: "u-left", assignee_name: null })),
+    );
+    expect(screen.queryByText("u-left")).toBeNull();
+    expect(screen.queryByText("You")).toBeNull();
+    expect(screen.queryByText("Unassigned")).toBeNull();
   });
 
   it("says You when the reader holds it", async () => {
