@@ -134,6 +134,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.clearSearch": "Suche löschen",
   "users.resultCount": "{matching} von {total} Mitgliedern",
   "users.noSearchResults": "Keine Mitglieder passen zu dieser Suche.",
+  "teams.searchMembers": "Teammitglieder suchen",
   "users.edit": "Mitglied bearbeiten",
   "users.editTitle": "{name} bearbeiten",
   "users.saved": "Mitglied gespeichert.",
