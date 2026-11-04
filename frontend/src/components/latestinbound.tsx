@@ -211,16 +211,20 @@ type NextBarProps = ComponentProps<typeof NextBar>;
  * when nothing more urgent is next. So the page never says there is nothing to
  * do under a mail that asks for something. Otherwise it is one line above the
  * bar. `urgent` defaults to the bar saying it is late. A bar whose move cites
- * the item (`about`) already says it, so it draws alone.
+ * the item (`about`) already says it, so it draws alone. With nothing next,
+ * the last exchange is a history line above the bar, unless the page shows
+ * that exchange elsewhere on its Overview (`lastExchange={false}`).
  */
 export function RecordNextBar({
   urgent,
   about = [],
+  lastExchange = true,
   ...bar
 }: NextBarProps &
   Readonly<{
     urgent?: boolean;
     about?: readonly (string | null | undefined)[];
+    lastExchange?: boolean;
   }>) {
   const t = useT();
   const scope = useContext(JustInContext);
@@ -232,7 +236,7 @@ export function RecordNextBar({
   if (!latest || about.includes(latest.activity.id)) {
     // With nothing next, the last exchange shows as history above the bar.
     // It is never the bar's own content: a past meeting is not a next step.
-    return bar.title === undefined ? (
+    return bar.title === undefined && lastExchange ? (
       <>
         <LastExchangeLine scope={scope} />
         <NextBar {...bar} />

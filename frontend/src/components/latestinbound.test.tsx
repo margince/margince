@@ -413,6 +413,14 @@ describe("the Next bar with nothing next", () => {
     expect(openSource).toHaveBeenCalledWith("lunch");
   });
 
+  it("leaves the exchange out where the page shows it elsewhere", () => {
+    const asked = serveLatest([], { activity: sent, whose_move: "them" });
+    withProviders(scoped(undefined, <RecordNextBar lastExchange={false} />));
+    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    expect(screen.queryByText(/^Last email/)).toBeNull();
+    expect(asked).toHaveLength(0);
+  });
+
   it("keeps a bar that has something next", async () => {
     const asked = serveLatest([], { activity: sent, whose_move: "them" });
     withProviders(scoped(undefined, <RecordNextBar {...TASK_BAR} />));

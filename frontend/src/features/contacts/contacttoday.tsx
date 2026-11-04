@@ -315,6 +315,8 @@ function AnswerBar({
   }
   return (
     <RecordNextBar
+      // "What was said" already shows the last exchange, of every kind.
+      lastExchange={false}
       empty={t("standing.next.noTask")}
       action={
         onAddTask && (
