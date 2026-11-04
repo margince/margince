@@ -93,7 +93,7 @@ func (t advanceDeal) Spec() mcp.ToolSpec {
 			"if_version":{"type":"integer"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved a won/lost move"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[wireRecord](),
+		OutputSchema: schemaFor[AdvancedDealRecord](),
 	}
 }
 
@@ -134,7 +134,7 @@ func (t advanceDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	ref, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
+	moved, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
 		WonWithoutContractReason: args.WonWithoutContractReason,
 		WonWithoutContractDetail: args.WonWithoutContractDetail,
 		DealID:                   args.DealID,
@@ -147,7 +147,11 @@ func (t advanceDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	return readBack(ctx, t.p, ref)
+	record, err := readBackRecord(ctx, t.p, moved.Ref)
+	if err != nil {
+		return nil, err
+	}
+	return marshalResult(AdvancedDealRecord{wireRecord: record, ProbabilityNote: moved.ProbabilityNote}, nil)
 }
 
 // readBack answers every write with the resulting record — the agent

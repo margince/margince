@@ -37,7 +37,7 @@ const (
 const (
 	MethodStageWeighting = "stage_weighting"
 	MethodSelfCorrecting = "self_correcting_weighting"
-	MethodCommitEvidence = "commit_evidence"
+	MethodLikely         = "likely"
 	MethodRange          = "range_central_80"
 	MethodOpenClosure    = "candidate_open_closure"
 )

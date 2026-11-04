@@ -858,30 +858,6 @@ func (e DealCommercialMotion) Valid() bool {
 	}
 }
 
-// Defines values for DealForecastCategory.
-const (
-	BestCase DealForecastCategory = "best_case"
-	Commit   DealForecastCategory = "commit"
-	Omitted  DealForecastCategory = "omitted"
-	Pipeline DealForecastCategory = "pipeline"
-)
-
-// Valid indicates whether the value is a known member of the DealForecastCategory enum.
-func (e DealForecastCategory) Valid() bool {
-	switch e {
-	case BestCase:
-		return true
-	case Commit:
-		return true
-	case Omitted:
-		return true
-	case Pipeline:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DealLostReasonBasis.
 const (
 	Mapped   DealLostReasonBasis = "mapped"
@@ -954,6 +930,27 @@ func (e DealStatus) Valid() bool {
 	case DealStatusOpen:
 		return true
 	case DealStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealWinProbabilitySource.
+const (
+	DealWinProbabilitySourceHuman    DealWinProbabilitySource = "human"
+	DealWinProbabilitySourceMargince DealWinProbabilitySource = "margince"
+	DealWinProbabilitySourceStage    DealWinProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealWinProbabilitySource enum.
+func (e DealWinProbabilitySource) Valid() bool {
+	switch e {
+	case DealWinProbabilitySourceHuman:
+		return true
+	case DealWinProbabilitySourceMargince:
+		return true
+	case DealWinProbabilitySourceStage:
 		return true
 	default:
 		return false
@@ -1277,25 +1274,25 @@ func (e PartnerStageMeaning) Valid() bool {
 
 // Defines values for PrincipalAttributionActorType.
 const (
-	Agent     PrincipalAttributionActorType = "agent"
-	Buyer     PrincipalAttributionActorType = "buyer"
-	Connector PrincipalAttributionActorType = "connector"
-	Human     PrincipalAttributionActorType = "human"
-	System    PrincipalAttributionActorType = "system"
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
 )
 
 // Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
 func (e PrincipalAttributionActorType) Valid() bool {
 	switch e {
-	case Agent:
+	case PrincipalAttributionActorTypeAgent:
 		return true
-	case Buyer:
+	case PrincipalAttributionActorTypeBuyer:
 		return true
-	case Connector:
+	case PrincipalAttributionActorTypeConnector:
 		return true
-	case Human:
+	case PrincipalAttributionActorTypeHuman:
 		return true
-	case System:
+	case PrincipalAttributionActorTypeSystem:
 		return true
 	default:
 		return false
@@ -2349,7 +2346,7 @@ type Deal struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.
+	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.
 	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
 	ClosedAt             *time.Time `json:"closed_at,omitempty"`
 
@@ -2379,9 +2376,8 @@ type Deal struct {
 	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
-	ExpectedCloseDate *string               `json:"expected_close_date,omitempty"`
-	ForecastCategory  *DealForecastCategory `json:"forecast_category,omitempty"`
-	FxRateDate        *string               `json:"fx_rate_date,omitempty"`
+	ExpectedCloseDate *string `json:"expected_close_date,omitempty"`
+	FxRateDate        *string `json:"fx_rate_date,omitempty"`
 
 	// FxRateToBase Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
@@ -2433,6 +2429,9 @@ type Deal struct {
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *string `json:"stage_id"`
 
+	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
@@ -2448,6 +2447,12 @@ type Deal struct {
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *string `json:"wait_until,omitempty"`
 
+	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	WinProbability *int `json:"win_probability,omitempty"`
+
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
+
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
@@ -2462,9 +2467,6 @@ type Deal struct {
 // DealCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 type DealCommercialMotion string
 
-// DealForecastCategory defines model for Deal.ForecastCategory.
-type DealForecastCategory string
-
 // DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
 type DealLostReasonBasis string
 
@@ -2476,6 +2478,9 @@ type DealPriority string
 
 // DealStatus defines model for Deal.Status.
 type DealStatus string
+
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+type DealWinProbabilitySource string
 
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
@@ -5541,14 +5546,6 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "expected_close_date")
 	}
 
-	if raw, found := object["forecast_category"]; found {
-		err = json.Unmarshal(raw, &a.ForecastCategory)
-		if err != nil {
-			return fmt.Errorf("error reading 'forecast_category': %w", err)
-		}
-		delete(object, "forecast_category")
-	}
-
 	if raw, found := object["fx_rate_date"]; found {
 		err = json.Unmarshal(raw, &a.FxRateDate)
 		if err != nil {
@@ -5717,6 +5714,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "stage_id")
 	}
 
+	if raw, found := object["stage_win_probability"]; found {
+		err = json.Unmarshal(raw, &a.StageWinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_win_probability': %w", err)
+		}
+		delete(object, "stage_win_probability")
+	}
+
 	if raw, found := object["stalled"]; found {
 		err = json.Unmarshal(raw, &a.Stalled)
 		if err != nil {
@@ -5763,6 +5768,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
+	if raw, found := object["win_probability_source"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySource)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_source': %w", err)
+		}
+		delete(object, "win_probability_source")
 	}
 
 	if raw, found := object["won_without_contract_detail"]; found {
@@ -5930,13 +5951,6 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.ForecastCategory != nil {
-		object["forecast_category"], err = json.Marshal(a.ForecastCategory)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'forecast_category': %w", err)
-		}
-	}
-
 	if a.FxRateDate != nil {
 		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
 		if err != nil {
@@ -6074,6 +6088,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'stage_id': %w", err)
 	}
 
+	if a.StageWinProbability != nil {
+		object["stage_win_probability"], err = json.Marshal(a.StageWinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stage_win_probability': %w", err)
+		}
+	}
+
 	if a.Stalled != nil {
 		object["stalled"], err = json.Marshal(a.Stalled)
 		if err != nil {
@@ -6109,6 +6130,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySource != nil {
+		object["win_probability_source"], err = json.Marshal(a.WinProbabilitySource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_source': %w", err)
 		}
 	}
 

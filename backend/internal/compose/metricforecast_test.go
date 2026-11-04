@@ -21,7 +21,7 @@ func TestForecastContributionsKeepWonSupportedAndUpsideDisjoint(t *testing.T) {
 		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true, InBestCase: true},
 		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InBestCase: true},
 	}
-	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureCommitEvidence}, &call)
+	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureLikely}, &call)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 	readings := forecasting.Readings{Contributions: []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: ids.NewV7().String(), BaseMinor: &amount, InWon: true},
 	}}
-	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureCommitEvidence}
+	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureLikely}
 	var original []reporting.Fact
 	var originalChart crmcontracts.ReportingChart
 	for _, lang := range []string{"en", "de", "vi"} {

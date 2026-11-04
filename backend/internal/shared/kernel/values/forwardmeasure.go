@@ -18,12 +18,13 @@ import "fmt"
 type ForwardMeasure string
 
 const (
-	// MeasureCommitEvidence adds the commit-category deals with confirmed close
-	// dates. The strictest reading: a provisional date is a guess and stays out.
-	MeasureCommitEvidence ForwardMeasure = "commit_evidence"
-	// MeasureQualifiedCommitEvidence is commit evidence over the deals the
-	// customer still supports: the qualified forecast's strictest reading.
-	MeasureQualifiedCommitEvidence ForwardMeasure = "qualified_commit_evidence"
+	// MeasureLikely adds the open deals at or above the Likely threshold with
+	// confirmed close dates. The strictest reading: a provisional date is a
+	// guess and stays out.
+	MeasureLikely ForwardMeasure = "likely"
+	// MeasureQualifiedLikely is Likely over the deals the customer still
+	// supports: the qualified forecast's strictest reading.
+	MeasureQualifiedLikely ForwardMeasure = "qualified_likely"
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted ForwardMeasure = "weighted"
 	// MeasureQualifiedWeighted is the weighted reading over the deals the
@@ -47,19 +48,28 @@ const (
 // reorder every other caller's chooser.
 func ForwardMeasures() []ForwardMeasure {
 	return []ForwardMeasure{
-		MeasureCommitEvidence, MeasureQualifiedCommitEvidence,
+		MeasureLikely, MeasureQualifiedLikely,
 		MeasureWeighted, MeasureQualifiedWeighted, MeasureManagerCall,
 	}
 }
 
+// legacyForwardMeasures are the spellings snapshots frozen before Likely
+// replaced commit evidence still hold.
+var legacyForwardMeasures = map[string]ForwardMeasure{
+	"commit_evidence":           MeasureLikely,
+	"qualified_commit_evidence": MeasureQualifiedLikely,
+}
+
 // ParseForwardMeasure turns a stored or wire value into a measure.
 //
-// The default is deliberate: an ABSENT measure is commit evidence, which is
-// what every installation's landing was computed from before the setting
-// existed, so one that never touches it sees no change.
+// The default is deliberate: an ABSENT measure is Likely, the strictest
+// reading, so an installation that never touches the setting sees no change.
 func ParseForwardMeasure(raw *string, field string) (ForwardMeasure, error) {
 	if raw == nil || *raw == "" {
-		return MeasureCommitEvidence, nil
+		return MeasureLikely, nil
+	}
+	if measure, ok := legacyForwardMeasures[*raw]; ok {
+		return measure, nil
 	}
 	for _, known := range ForwardMeasures() {
 		if ForwardMeasure(*raw) == known {

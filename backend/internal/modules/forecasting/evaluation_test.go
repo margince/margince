@@ -156,8 +156,8 @@ func TestTheFrozenFiguresAreScoredWithoutTheOutcomeChangingThem(t *testing.T) {
 	if row.Money.SignedErrorMinor != -100_00 || row.Money.AbsErrorPerActual != "0.2000" {
 		t.Fatalf("a landing 100 short of 500 won: %+v", row.Money)
 	}
-	commit := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodCommitEvidence, WindowValidation, "0-29")
-	if commit.Money.PredictedMinor != 450_00 || commit.Calibration.Bins[1].Bin != "committed" {
+	commit := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodLikely, WindowValidation, "0-29")
+	if commit.Money.PredictedMinor != 450_00 || commit.Calibration.Bins[1].Bin != "likely" {
 		t.Fatalf("b2 commits won 200 plus evidence 250: %+v %+v", commit.Money, commit.Calibration)
 	}
 }

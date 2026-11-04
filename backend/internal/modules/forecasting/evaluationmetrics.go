@@ -93,7 +93,7 @@ type CalibrationBin struct {
 
 // calibrate sums the vintages' tallies. Stage weighting bins by tenths of the
 // typed chance, and self-correcting weighting by the applied chance in use.
-// Commit evidence bins by whether a deal was committed. The candidate and the
+// Likely bins by whether a deal counted in Likely. The candidate and the
 // range state nothing per deal and have no calibration.
 func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibration {
 	if method == MethodOpenClosure || method == MethodRange {
@@ -104,8 +104,8 @@ func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibrat
 	var brier int64
 	for _, v := range vintages {
 		out.Deals += v.Tallies.Labelled
-		if method == MethodCommitEvidence {
-			for i, t := range v.Tallies.Commit {
+		if method == MethodLikely {
+			for i, t := range v.Tallies.Likely {
 				bins[i] = addTally(bins[i], t)
 			}
 			continue
@@ -120,7 +120,7 @@ func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibrat
 			bins[i] = addTally(bins[i], t)
 		}
 	}
-	perDeal := method != MethodCommitEvidence
+	perDeal := method != MethodLikely
 	binned := int64(0)
 	for bin, t := range bins {
 		if t.Deals == 0 {
@@ -192,8 +192,8 @@ func addTally(a, b Tally) Tally {
 }
 
 func calibrationBinName(method string, bin int) string {
-	if method == MethodCommitEvidence {
-		return [2]string{"not_committed", "committed"}[bin]
+	if method == MethodLikely {
+		return [2]string{"not_likely", "likely"}[bin]
 	}
 	if bin == 9 {
 		return "90-100"

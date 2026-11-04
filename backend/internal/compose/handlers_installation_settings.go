@@ -145,6 +145,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// the floor carry in the same transaction.
 		Country:      req.Country,
 		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)
@@ -265,6 +266,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		CallZalo:                   s.CallZalo,
 		IndividualPerformance:      s.IndividualPerformance,
 		ForecastSelfCorrecting:     s.ForecastSelfCorrecting,
+		ForecastLikelyThreshold:    s.ForecastLikelyThreshold,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),

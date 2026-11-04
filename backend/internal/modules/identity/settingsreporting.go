@@ -60,7 +60,7 @@ var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
 	Key:     "installation.forecast_forward_measure",
 	Env:     "MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE",
 	Type:    config.String,
-	Default: config.Some(string(values.MeasureCommitEvidence)),
+	Default: config.Some(string(values.MeasureLikely)),
 	Validate: func(measure string) error {
 		if _, err := values.ParseForwardMeasure(&measure, "forecast_forward_measure"); err != nil {
 			return err

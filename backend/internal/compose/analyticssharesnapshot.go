@@ -86,7 +86,6 @@ func ReadSharedSnapshot(
 		SELECT
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_won AND %[1]s), 0),
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_evidence AND %[1]s), 0),
-		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_best_case AND %[1]s), 0),
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_open AND %[1]s), 0),
 		  COALESCE(sum(c.weighted_minor) FILTER (WHERE c.in_open AND %[1]s), 0),
 		  count(*) FILTER (WHERE %[1]s),
@@ -115,7 +114,7 @@ func ReadSharedSnapshot(
 	var r forecasting.Readings
 	var withheld bool
 	if err := tx.QueryRow(ctx, sql, args...).Scan(
-		&r.WonMinor, &r.EvidenceMinor, &r.BestCaseMinor, &r.OpenMinor, &r.WeightedMinor,
+		&r.WonMinor, &r.EvidenceMinor, &r.OpenMinor, &r.WeightedMinor,
 		&r.EligibleCount, &r.PricedCount, &r.ConfirmedDateCount, &r.FxMissingCount,
 		&withheld,
 	); err != nil {
@@ -203,17 +202,17 @@ func sharedVisibilityClause(ctx context.Context, tx pgx.Tx, arg func(any) int) (
 
 // SharedContribution is one deal's row as one recipient may read it.
 type SharedContribution struct {
-	DealID          ids.UUID
-	DealName        string
-	Owner           *ids.UUID
-	AmountMinor     *int64
-	Currency        string
-	BaseMinor       *int64
-	EffectiveClose  *time.Time
-	Category        string
-	InWon           bool
-	InOpen          bool
-	ExclusionReason string
+	DealID            ids.UUID
+	DealName          string
+	Owner             *ids.UUID
+	AmountMinor       *int64
+	Currency          string
+	BaseMinor         *int64
+	EffectiveClose    *time.Time
+	ProbabilitySource string
+	InWon             bool
+	InOpen            bool
+	ExclusionReason   string
 	// What the deal's weight was made of when frozen; nil on a row frozen
 	// before it was kept.
 	WeightedMinor    *int64
@@ -249,7 +248,7 @@ func SharedSnapshotRows(
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.deal_id, d.name, c.owner_id, c.amount_minor, c.currency,
-		       c.base_minor, c.effective_close_date, c.category,
+		       c.base_minor, c.effective_close_date, c.probability_source,
 		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, ''),
 		       c.weighted_minor, c.typed_probability, c.stage_probability, c.evidence_n,
 		       c.risk_signals, c.risk_signal_facts::text, c.risk_effect, c.stage_id
@@ -264,10 +263,10 @@ func SharedSnapshotRows(
 
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (SharedContribution, error) {
 		var c SharedContribution
-		var currency, category *string
+		var currency, source *string
 		var stage *ids.UUID
 		err := row.Scan(&c.DealID, &c.DealName, &c.Owner, &c.AmountMinor, &currency,
-			&c.BaseMinor, &c.EffectiveClose, &category,
+			&c.BaseMinor, &c.EffectiveClose, &source,
 			&c.InWon, &c.InOpen, &c.ExclusionReason,
 			&c.WeightedMinor, &c.TypedProbability, &c.ChanceInUse, &c.EvidenceN, &c.Signals, &c.SignalFacts, &c.Effect, &stage)
 		if stage != nil {
@@ -276,8 +275,8 @@ func SharedSnapshotRows(
 		if currency != nil {
 			c.Currency = *currency
 		}
-		if category != nil {
-			c.Category = *category
+		if source != nil {
+			c.ProbabilitySource = *source
 		}
 		return c, err
 	})

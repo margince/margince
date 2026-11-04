@@ -379,10 +379,20 @@ type QualifyLeadResult struct {
 // and the note it left if it left one.
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
 	// NoteActivityID is absent when the call carried no note. It is a pointer
 	// rather than a zero uuid because "no note was asked for" and "a note whose
 	// id is all zeroes" are different claims, and only one of them is true.
 	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
+}
+
+// AdvancedDealRecord is what advance_deal answers: the deal as it now stands
+// and the probability the move set from the new stage.
+type AdvancedDealRecord struct {
+	wireRecord
+	ProbabilityNote string `json:"probability_note,omitempty"`
 }
 
 // SlippingEvidence is one reason a deal is reported as slipping, named by the
