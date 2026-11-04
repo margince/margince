@@ -304,7 +304,7 @@ describe("the webhook subscription drawer", () => {
       expect(calls.some((c) => c.method === "PATCH")).toBe(true),
     );
     const patch = calls.find((c) => c.method === "PATCH");
-    expect((patch?.body as { owner_id?: string }).owner_id).toBe("user-2");
+    expect(patch?.body).toMatchObject({ owner_id: "user-2" });
   });
 
   it("offers no owner to a caller who may not act for members", async () => {

@@ -17610,6 +17610,11 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AttachmentReadRequest'}
       responses:
         '202':
           description: The reading is queued; poll it with `getAttachmentExtraction`.
@@ -30032,9 +30037,15 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists.
-      required: [id, status, stalled, fields, omitted, created_at]
+      required: [id, question, status, stalled, fields, omitted, created_at]
       properties:
         id: {type: string, format: uuid, description: This reading's own id.}
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          description: |-
+            What the file was read for. `deal_facts` grounds the four deal fields;
+            `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
         status:
           type: string
           enum: [queued, running, done, failed]
@@ -30057,6 +30068,21 @@ components:
         omitted: {type: array, items: {$ref: '#/components/schemas/OmittedExtractionField'}}
         created_at: {type: string, format: date-time}
         finished_at: {type: [string, 'null'], format: date-time}
+        other_counterparty:
+          type: [string, 'null']
+          description: |-
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+    AttachmentReadRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          default: deal_facts
+          description: What to read the file for. `chat_capture` is accepted only on an image.
     AttachmentReadStarted:
       type: object
       description: The reading `readAttachmentForFields` started, or the one already in flight it joined.

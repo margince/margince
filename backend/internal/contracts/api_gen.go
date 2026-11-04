@@ -2494,6 +2494,24 @@ func (e AttachmentEntityType) Valid() bool {
 	}
 }
 
+// Defines values for AttachmentExtractionQuestion.
+const (
+	AttachmentExtractionQuestionChatCapture AttachmentExtractionQuestion = "chat_capture"
+	AttachmentExtractionQuestionDealFacts   AttachmentExtractionQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentExtractionQuestion enum.
+func (e AttachmentExtractionQuestion) Valid() bool {
+	switch e {
+	case AttachmentExtractionQuestionChatCapture:
+		return true
+	case AttachmentExtractionQuestionDealFacts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachmentExtractionStatus.
 const (
 	AttachmentExtractionStatusDone    AttachmentExtractionStatus = "done"
@@ -2512,6 +2530,24 @@ func (e AttachmentExtractionStatus) Valid() bool {
 	case AttachmentExtractionStatusQueued:
 		return true
 	case AttachmentExtractionStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttachmentReadRequestQuestion.
+const (
+	AttachmentReadRequestQuestionChatCapture AttachmentReadRequestQuestion = "chat_capture"
+	AttachmentReadRequestQuestionDealFacts   AttachmentReadRequestQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentReadRequestQuestion enum.
+func (e AttachmentReadRequestQuestion) Valid() bool {
+	switch e {
+	case AttachmentReadRequestQuestionChatCapture:
+		return true
+	case AttachmentReadRequestQuestionDealFacts:
 		return true
 	default:
 		return false
@@ -32653,6 +32689,16 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
+	// number the chat header shows when neither agrees with that contact. Null when
+	// they agree, when the header shows neither, and for every other reading.
+	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+	OtherCounterparty *string `json:"other_counterparty,omitempty"`
+
+	// Question What the file was read for. `deal_facts` grounds the four deal fields;
+	// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+	Question AttachmentExtractionQuestion `json:"question"`
+
 	// Stalled true when a live reading has aged past the lease its worker holds: the worker
 	// died, timed out, or never claimed it, and nothing will move the reading on its
 	// own. Derived at read time, never stored. Asking for the file to be read again
@@ -32668,6 +32714,10 @@ type AttachmentExtraction struct {
 	// does not explain itself reads as a broken feature.
 	StatusDetail *string `json:"status_detail,omitempty"`
 }
+
+// AttachmentExtractionQuestion What the file was read for. `deal_facts` grounds the four deal fields;
+// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+type AttachmentExtractionQuestion string
 
 // AttachmentExtractionStatus queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
 type AttachmentExtractionStatus string
@@ -32702,6 +32752,15 @@ type AttachmentOrigin struct {
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
 }
+
+// AttachmentReadRequest defines model for AttachmentReadRequest.
+type AttachmentReadRequest struct {
+	// Question What to read the file for. `chat_capture` is accepted only on an image.
+	Question *AttachmentReadRequestQuestion `json:"question,omitempty"`
+}
+
+// AttachmentReadRequestQuestion What to read the file for. `chat_capture` is accepted only on an image.
+type AttachmentReadRequestQuestion string
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
 type AttachmentReadStarted struct {
@@ -45252,6 +45311,29 @@ type FieldHistoryEntryEntityType string
 type FieldHistoryListResponse struct {
 	Data []FieldHistoryEntry `json:"data"`
 	Page PageInfo            `json:"page"`
+}
+
+// FileChatCaptureRequest defines model for FileChatCaptureRequest.
+type FileChatCaptureRequest struct {
+	// Body The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
+	Body *string `json:"body,omitempty"`
+
+	// ChannelProvider The messaging app the chat happened in.
+	ChannelProvider ProviderRef `json:"channel_provider"`
+
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+	// is refused with 409.
+	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
+
+	// ExtractionId The `chat_capture` reading the caller was shown.
+	ExtractionId openapi_types.UUID `json:"extraction_id"`
+}
+
+// FiledChatCapture defines model for FiledChatCapture.
+type FiledChatCapture struct {
+	// ActivityId The message activity the chat is filed as.
+	ActivityId openapi_types.UUID `json:"activity_id"`
 }
 
 // FilterPreview What a candidate filter would select for this caller (LVS-EXT-9).
@@ -73716,8 +73798,14 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
+// ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
+type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
+
 // AcceptAttachmentExtractionJSONRequestBody defines body for AcceptAttachmentExtraction for application/json ContentType.
 type AcceptAttachmentExtractionJSONRequestBody = AcceptExtractionRequest
+
+// FileChatCaptureJSONRequestBody defines body for FileChatCapture for application/json ContentType.
+type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
@@ -87737,6 +87825,12 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// (POST /attachments/{id}/extraction:file-chat)
+	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
+	// One named reading of this attachment, for a screen polling the reading it started.
+	// (GET /attachments/{id}/extractions/{extraction_id})
+	GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID)
 	// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
 	// (PATCH /attachments/{id}/metadata)
 	UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id)
@@ -91304,6 +91398,18 @@ func (_ Unimplemented) ReadAttachmentForFields(w http.ResponseWriter, r *http.Re
 // Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 // (POST /attachments/{id}/extraction:accept)
 func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// File a chat screenshot on its contact as one message activity, with the image attached.
+// (POST /attachments/{id}/extraction:file-chat)
+func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One named reading of this attachment, for a screen polling the reading it started.
+// (GET /attachments/{id}/extractions/{extraction_id})
+func (_ Unimplemented) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104132,6 +104238,79 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AcceptAttachmentExtraction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FileChatCapture operation middleware
+func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FileChatCapture(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAttachmentExtractionReading operation middleware
+func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "extraction_id" -------------
+	var extractionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "extraction_id", chi.URLParam(r, "extraction_id"), &extractionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extraction_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAttachmentExtractionReading(w, r, id, extractionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140821,6 +141000,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments/{id}/extraction:accept", wrapper.AcceptAttachmentExtraction)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/{id}/extraction:file-chat", wrapper.FileChatCapture)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/attachments/{id}/extractions/{extraction_id}", wrapper.GetAttachmentExtractionReading)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/attachments/{id}/metadata", wrapper.UpdateAttachmentMetadata)

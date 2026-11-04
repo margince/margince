@@ -1579,6 +1579,7 @@ public.attachment_extraction.attachment_extraction_attachment_id_fkey FOREIGN KE
 public.attachment_extraction.attachment_extraction_attempt_check CHECK ((attempt >= 1))
 public.attachment_extraction.attachment_extraction_fields_shape CHECK ((jsonb_typeof(fields) = 'array'::text))
 public.attachment_extraction.attachment_extraction_pkey PRIMARY KEY (id)
+public.attachment_extraction.attachment_extraction_question_check CHECK ((question = ANY (ARRAY['deal_facts'::text, 'chat_capture'::text])))
 public.attachment_extraction.attachment_extraction_started_shape CHECK ((((status = 'queued'::text) AND (started_at IS NULL)) OR ((status <> 'queued'::text) AND (started_at IS NOT NULL))))
 public.attachment_extraction.attachment_extraction_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
 public.attachment_extraction.attachment_extraction_terminal_shape CHECK ((((status = ANY (ARRAY['done'::text, 'failed'::text])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text])) AND (finished_at IS NULL))))
@@ -1589,6 +1590,7 @@ public.attachment_extraction.created_at timestamp with time zone NOT NULL gen=- 
 public.attachment_extraction.fields jsonb NOT NULL gen=- def='[]'::jsonb
 public.attachment_extraction.finished_at timestamp with time zone gen=- def=-
 public.attachment_extraction.id uuid NOT NULL gen=- def=uuidv7()
+public.attachment_extraction.question text NOT NULL gen=- def='deal_facts'::text
 public.attachment_extraction.requested_by text NOT NULL gen=- def=-
 public.attachment_extraction.started_at timestamp with time zone gen=- def=-
 public.attachment_extraction.status text NOT NULL gen=- def='queued'::text

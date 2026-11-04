@@ -6970,6 +6970,31 @@ export const en = {
   "docs.reading.show": "Show extracted fields",
   "docs.reading.hide": "Hide extracted fields",
 
+  // Capturing a chat from a screenshot pasted on a contact.
+  "chatCapture.action": "Capture a chat",
+  "chatCapture.title": "Capture a chat",
+  "chatCapture.drop": "Screenshot",
+  "chatCapture.dropEmpty":
+    "Paste a screenshot of the chat, drop it here, or click to choose it",
+  "chatCapture.reading": "Reading the chat",
+  "chatCapture.startFailed": "The screenshot could not be read",
+  "chatCapture.storedUnread":
+    "The screenshot was stored, but the answer did not say which file it is. You find it under Documents.",
+  "chatCapture.discard": "Discard",
+  "chatCapture.discardFailed": "The screenshot could not be removed",
+  "chatCapture.unread": "The chat could not be read",
+  "chatCapture.nothingRead": "No chat was found to copy",
+  "chatCapture.header": "The chat header shows {who}.",
+  "chatCapture.otherCounterparty": "This chat shows {shows}, not {contact}.",
+  "chatCapture.confirmOther": "File it on {contact} anyway",
+  "chatCapture.text": "What was said",
+  "chatCapture.textHint":
+    "Type or paste what was said. You can also file the screenshot without text.",
+  "chatCapture.readBadge": "Copied from the screenshot by AI",
+  "chatCapture.channel": "Chat app",
+  "chatCapture.file": "File on this contact",
+  "chatCapture.fileFailed": "The chat could not be filed",
+
   // Adding one. The "About" wording is doing real work: it decides whether the
   // file becomes evidence in a deal or a paper about the account, and only the
   // first can be read for deal fields — so the hint says so rather than leaving

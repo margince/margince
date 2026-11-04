@@ -65,10 +65,18 @@ const (
 	ExtractionReadFailed  = "failed"
 )
 
+// The questions a reading answers. A chat capture reads only an image, the
+// screenshot a user pasted; the deal facts read any document.
+const (
+	ExtractionQuestionDealFacts   = "deal_facts"
+	ExtractionQuestionChatCapture = "chat_capture"
+)
+
 // ExtractionRead is one reading of one attached document.
 type ExtractionRead struct {
 	ID           ids.UUID
 	AttachmentID ids.UUID
+	Question     string
 	Status       string
 	StatusDetail *string
 	// Fields is what the reading grounded and what it honestly omitted. It is
@@ -120,13 +128,13 @@ func (r ExtractionRead) Abandoned(now time.Time) bool {
 	return r.Live() && now.Sub(r.liveSince()) > ExtractionReadLease
 }
 
-const extractionReadColumns = `id, attachment_id, status, status_detail, fields,
+const extractionReadColumns = `id, attachment_id, question, status, status_detail, fields,
 	requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanExtractionRead(r pgx.Row) (ExtractionRead, error) {
 	var read ExtractionRead
 	var raw []byte
-	err := r.Scan(&read.ID, &read.AttachmentID, &read.Status, &read.StatusDetail, &raw,
+	err := r.Scan(&read.ID, &read.AttachmentID, &read.Question, &read.Status, &read.StatusDetail, &raw,
 		&read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt, &read.Attempt, &read.AttemptAt)
 	if err != nil {
 		return read, err
@@ -154,6 +162,15 @@ type ExtractionReadEnqueue func(ctx context.Context, tx pgx.Tx, read ExtractionR
 func (s *Store) StartExtractionReadQueued(
 	ctx context.Context, attachmentID ids.UUID, requestedBy string, enqueue ExtractionReadEnqueue,
 ) (ExtractionRead, bool, error) {
+	return s.StartExtractionReadFor(ctx, attachmentID, ExtractionQuestionDealFacts, requestedBy, enqueue)
+}
+
+// StartExtractionReadFor is StartExtractionReadQueued for a named question.
+// A join answers only a reading in flight for the same question. One in flight
+// for another question is a conflict: its result answers what was not asked.
+func (s *Store) StartExtractionReadFor(
+	ctx context.Context, attachmentID ids.UUID, question, requestedBy string, enqueue ExtractionReadEnqueue,
+) (ExtractionRead, bool, error) {
 	var out ExtractionRead
 	var joined bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -166,17 +183,20 @@ func (s *Store) StartExtractionReadQueued(
 		if err := refuseWithheldBytes(ctx, tx, attachmentID); err != nil {
 			return err
 		}
+		if err := refuseUnaskableQuestion(ctx, tx, attachmentID, question); err != nil {
+			return err
+		}
 		readID := ids.NewV7()
 		// In-flight uniqueness is arbitrated by uq_attachment_extraction_inflight
 		// itself: DO NOTHING rather than catching the violation keeps the
 		// transaction alive, so the join SELECT below sees the winning row in the
 		// same tx, with no second-transaction gap for it to finish in.
 		inserted := tx.QueryRow(ctx, `
-			INSERT INTO attachment_extraction (id, attachment_id, requested_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO attachment_extraction (id, attachment_id, question, requested_by)
+			VALUES ($1, $2, $3, $4)
 			ON CONFLICT DO NOTHING
 			RETURNING `+extractionReadColumns,
-			readID, attachmentID, requestedBy)
+			readID, attachmentID, question, requestedBy)
 		// `out` is the closure's, not this block's, so the pair is assigned
 		// rather than declared — `:=` here would shadow it and the caller would
 		// receive a zero reading.
@@ -216,6 +236,10 @@ func (s *Store) StartExtractionReadQueued(
 		}
 		if err != nil {
 			return fmt.Errorf("join in-flight extraction reading: %w", err)
+		}
+		if out.Question != question {
+			return fmt.Errorf("%w: this file is already being read for another question; ask again when it finishes",
+				apperrors.ErrConflict)
 		}
 		return s.rearmIfAbandonedExtraction(ctx, tx, &out, enqueue)
 	})
