@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -101,9 +102,47 @@ it("writes the types a listed activity field shows on", async () => {
   expect(onKinds).toHaveBeenCalledWith(visit, ["meeting", "call"]);
 });
 
-it("sends the kinds in the server's order and drops a word it does not take", () => {
+it("drops a word the contract does not take from the kinds it sends", () => {
   expect(activityKindsOf(["meeting", "visit", "call"])).toEqual([
-    "call",
     "meeting",
+    "call",
   ]);
+});
+
+it("shows an email-only field as Email and lets the admin clear it", async () => {
+  const user = userEvent.setup();
+  const onKinds = vi.fn();
+  const mailed: CustomField = {
+    id: "mailed",
+    object: "activity",
+    label: "Mail category",
+    slug: "mail_category",
+    type: "text",
+    status: "active",
+    column_name: "cf_mail_category",
+    show_in_create: true,
+    reportable: false,
+    activity_kinds: ["email"],
+    created_by: "u1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  render(
+    <LocaleProvider initial="en">
+      <FieldTable
+        object="activity"
+        fields={[mailed]}
+        canEdit
+        meUserId="u1"
+        onRename={noop}
+        onArchive={noop}
+        onSetting={noop}
+        onKinds={onKinds}
+      />
+    </LocaleProvider>,
+  );
+  const control = screen.getByLabelText("Types “Mail category” shows on");
+  expect(control).toHaveTextContent("Email");
+  await toggleOptions(user, control, ["Email"]);
+  expect(onKinds).toHaveBeenCalledWith(mailed, []);
 });

@@ -10,6 +10,7 @@ import type { components } from "../../api/schema";
 import { MultiSelect } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type CustomField = components["schemas"]["CustomField"];
@@ -18,30 +19,25 @@ type ActivityKind = NonNullable<
   components["schemas"]["RenameCustomFieldRequest"]["activity_kinds"]
 >[number];
 
-// Every kind the server takes, so a stored kind the form does not log survives.
-const ACTIVITY_KINDS: readonly ActivityKind[] = [
-  "call",
-  "email",
-  "meeting",
-  "message",
-  "note",
-  "task",
-];
+// Every kind the contract takes, by its label. Keyed by the generated kind
+// union, so a kind the contract adds fails the build until it has a label.
+const KIND_LABEL = {
+  note: "timeline.kind.note",
+  task: "timeline.kind.task",
+  call: "timeline.kind.call",
+  meeting: "timeline.kind.meeting",
+  email: "timeline.kind.email",
+  message: "timeline.kind.message",
+} as const satisfies Record<ActivityKind, MessageKey>;
 
-/** The chosen values as the wire's kind list, in the server's order. */
-export function activityKindsOf(values: readonly string[]): ActivityKind[] {
-  return ACTIVITY_KINDS.filter((kind) => values.includes(kind));
+function isActivityKind(value: string): value is ActivityKind {
+  return Object.hasOwn(KIND_LABEL, value);
 }
 
-// The types the Log activity form logs, the ones an admin narrows a field to.
-const LOGGED_KINDS = ["note", "task", "call", "meeting"] as const;
-
-const KIND_LABEL = {
-  note: "log.kindNote",
-  task: "log.kindTask",
-  call: "log.kindCall",
-  meeting: "log.kindMeeting",
-} as const;
+/** The chosen values as the wire's kind list, without a word it does not take. */
+export function activityKindsOf(values: readonly string[]): ActivityKind[] {
+  return values.filter(isActivityKind);
+}
 
 export function ActivityKindsSelect({
   values,
@@ -61,10 +57,9 @@ export function ActivityKindsSelect({
   return (
     <MultiSelect
       {...aria}
-      options={LOGGED_KINDS.map((kind) => ({
-        value: kind,
-        label: t(KIND_LABEL[kind]),
-      }))}
+      options={Object.keys(KIND_LABEL)
+        .filter(isActivityKind)
+        .map((kind) => ({ value: kind, label: t(KIND_LABEL[kind]) }))}
       values={values}
       onChange={onChange}
       disabled={disabled}
