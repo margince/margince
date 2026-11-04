@@ -96,8 +96,11 @@ export const FromTheOfferDark: Story = {
 };
 
 // The editor opens in a dialog portalled to the body.
-async function openEditor(canvasElement: HTMLElement) {
-  await userEvent.click(
+async function openEditor(
+  canvasElement: HTMLElement,
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await user.click(
     await within(canvasElement).findByRole("button", { name: "Set products" }),
   );
   return within(canvasElement.ownerDocument.body).findByRole("dialog", {
@@ -109,7 +112,7 @@ async function openEditor(canvasElement: HTMLElement) {
 export const EditingTheOffer: Story = {
   render: () => card(FROM_OFFER),
   play: async ({ canvasElement }) => {
-    const editor = await openEditor(canvasElement);
+    const editor = await openEditor(canvasElement, userEvent.setup());
     await expect(
       within(editor).getByText(/The accepted offer set these products/),
     ).toBeTruthy();
@@ -125,9 +128,7 @@ export const EditingTheOffer: Story = {
 export const EditingAnEmptyList: Story = {
   render: () => card([]),
   play: async ({ canvasElement }) => {
-    const editor = await openEditor(canvasElement);
-    await expect(
-      within(editor).getByText(/If you save an empty list/),
-    ).toBeTruthy();
+    const editor = await openEditor(canvasElement, userEvent.setup());
+    await expect(within(editor).getByText(/Saving an empty list/)).toBeTruthy();
   },
 };

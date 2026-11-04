@@ -9,6 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { reloadReportingFigures } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
 import { dealProductsKey } from "./deal360/dealproducts";
 import type { Offer } from "./offers";
@@ -74,7 +75,8 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
 // Accept is human-only. The server syncs the deal's amount and currency on
 // acceptance, and derives the deal's products from the offer. So the deal
-// screen's ["deal", id], ["deal-offers", id] and ["deal-products", id] refetch.
+// screen's ["deal", id], ["deal-offers", id] and ["deal-products", id] refetch,
+// and so do the report figures that read the amount and the products.
 // setQueryData alone would leave stale figures when the reader goes back.
 export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
@@ -101,6 +103,7 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       queryClient.invalidateQueries({
         queryKey: dealProductsKey(offer.deal_id),
       });
+      void reloadReportingFigures(queryClient);
       setOpen(false);
     },
   });
