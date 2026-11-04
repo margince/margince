@@ -34,6 +34,13 @@ const CloseLostCorrection = "close_lost"
 // DealCloseLostKind is the owner's switch for Margince closing their deals.
 const DealCloseLostKind = "deal_close_lost"
 
+// IsCorrectionReceiptKind reports whether a receipt of this kind is a
+// correction Margince applied to a deal. A correction carries its own Undo; a
+// decided approval does not.
+func IsCorrectionReceiptKind(kind string) bool {
+	return kind == CloseDateCorrectionKind || kind == DealCloseLostKind
+}
+
 // LossReasonWentSilent is the catalog key a close for silence records.
 const LossReasonWentSilent = "went_silent"
 

@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // closeFacts is what a close reads besides the input check's evidence.
@@ -27,6 +28,18 @@ type closeFacts struct {
 	// reply keeps a deal open without its content reaching any report.
 	anyProgressAt *time.Time
 	refusalAt     *time.Time
+	// waitUntil is the day the customer asked us to wait until; meetingAhead
+	// is a meeting still to come that a customer guest accepted.
+	waitUntil    *time.Time
+	meetingAhead bool
+	// mailboxes are the mail connections that delivered the deal's mail, of
+	// every audience, in dealMailboxesSQL's form.
+	mailboxes []string
+}
+
+// deferredAt reports a wait or an accepted meeting still ahead at now.
+func (f closeFacts) deferredAt(now time.Time) bool {
+	return f.meetingAhead || (f.waitUntil != nil && now.Before(*f.waitUntil))
 }
 
 // keptOpenAt is when a colleague last said the deal is alive, after an Undo. Nil
@@ -47,7 +60,14 @@ var closeFactsSQL = `
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
-	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[2]s)
+	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[2]s),
+	       d.wait_until,
+	       EXISTS (SELECT 1 FROM activity a JOIN activity_link al ON al.activity_id = a.id
+	                WHERE al.deal_id = d.id AND a.archived_at IS NULL AND a.kind = 'meeting' AND %[3]s
+	                  AND EXISTS (SELECT 1 FROM activity_participant p
+	                               WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL
+	                                 AND p.response = 'accepted')),
+	       %[4]s
 	  FROM deal d
 	  LEFT JOIN LATERAL (SELECT max(c.reversed_at) AS undone_at FROM deal_correction c
 	                      WHERE c.deal_id = d.id AND c.correction = $3) u ON true
@@ -60,7 +80,8 @@ func closeFactsFor(
 	for _, subject := range subjects {
 		dealIDs = append(dealIDs, subject.DealID)
 	}
-	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", "$2"), customerRefusalAnyAudienceSQL("a", "$2"))
+	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", "$2"), customerRefusalAnyAudienceSQL("a", "$2"),
+		relstrength.MeetingAheadSQL("a", "$2"), dealMailboxesAnyAudienceSQL("d"))
 	rows, err := tx.Query(ctx, query, dealIDs, now, deals.CloseLostCorrection,
 		activities.OriginHuman, principal.HumanIDPrefix)
 	if err != nil {
@@ -71,7 +92,8 @@ func closeFactsFor(
 	for rows.Next() {
 		var deal string
 		var f closeFacts
-		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &f.refusalAt); err != nil {
+		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &f.refusalAt,
+			&f.waitUntil, &f.meetingAhead, &f.mailboxes); err != nil {
 			return nil, fmt.Errorf("compose: reading what keeps a deal open: %w", err)
 		}
 		out[deal] = f

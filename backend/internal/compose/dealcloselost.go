@@ -41,7 +41,6 @@ const marginceActorID = "agent:margince"
 type silentDealCloser struct {
 	pool       *pgxpool.Pool
 	deals      *deals.Store
-	approvals  *approvals.Service
 	users      *identity.Service
 	activities *activities.Store
 	now        func() time.Time
@@ -52,7 +51,6 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 	return silentDealCloser{
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		approvals:  NewApprovalsService(InstallationDB(pool)),
 		users:      identity.NewService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		now:        func() time.Time { return time.Now().UTC() },
@@ -97,8 +95,8 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 	return closed, nil
 }
 
-// closeOne closes one deal as its owner's agent. The owner's switch must be on,
-// and the deal must still be due under its row lock.
+// closeOne closes one deal as its owner's agent. Under the deal row lock the
+// owner's switch must be on and the deal still due.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	ownerCtx, err := ownersAgent(ctx, c.users, decision.owner, marginceActorID)
 	if errors.Is(err, apperrors.ErrNotFound) {
@@ -107,13 +105,13 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 	if err != nil {
 		return false, err
 	}
-	mode, err := c.approvals.AutoApplyMode(ownerCtx, deals.DealCloseLostKind)
-	if err != nil || mode != approvals.ModeAuto {
-		return false, err
-	}
 	return c.deals.CloseAsLost(ownerCtx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
+			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
+			if err != nil || mode != approvals.ModeAuto {
+				return false, err
+			}
 			again, err := closeDecisions(ctx, tx, now, []ids.UUID{decision.deal.UUID})
 			return len(again) == 1 && again[0] == decision, err
 		},
@@ -151,7 +149,8 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 	if err != nil {
 		return nil, err
 	}
-	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), only)
+	coverage := AssuranceCoverage(ctx, tx, now)
+	subjects, err := assuranceSubjects(ctx, tx, now, coverage, only)
 	if err != nil {
 		return nil, err
 	}
@@ -159,18 +158,44 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 	if err != nil {
 		return nil, err
 	}
+	mailRead, err := closeMailRead(ctx, tx, now, coverage)
+	if err != nil {
+		return nil, err
+	}
 	var out []closeDecision
 	for _, subject := range subjects {
-		if decision, ok := decideClose(subject, facts[subject.DealID], threshold, now, zone); ok {
+		dealFacts := facts[subject.DealID]
+		owner, err := ids.Parse(subject.Owner)
+		if err != nil || !mailRead(&owner, dealFacts.mailboxes) {
+			continue
+		}
+		if decision, ok := decideClose(subject, dealFacts, threshold, now, zone); ok {
 			out = append(out, decision)
 		}
 	}
 	return out, nil
 }
 
-// decideClose is the rule; it needs the owner's mail read on time. A deal
-// closes when the customer refused. It also closes after more than threshold
-// days of silence, with no wait or confirmed meeting running.
+// closeMailRead answers whether every mailbox a deal's customer mail came
+// through was read on time. The close counts mail of every audience, so a
+// broken mailbox that carried a private thread blocks it too.
+func closeMailRead(
+	ctx context.Context, tx pgx.Tx, now time.Time, coverage []assurance.SourceCoverage,
+) (func(owner *ids.UUID, mailboxes []string) bool, error) {
+	byOwner, err := mailCoverageByOwner(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	byConnection, err := mailCoverageByConnection(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	return dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection), nil
+}
+
+// decideClose is the rule; it needs the owner's mail read on time. With no
+// wait or accepted meeting ahead, a deal closes when the customer refused, or
+// after more than threshold days of silence.
 func decideClose(
 	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location,
 ) (closeDecision, bool) {
@@ -185,15 +210,17 @@ func decideClose(
 	}
 	decision := closeDecision{deal: ids.From[ids.DealKind](deal), owner: owner}
 	keptOpen := facts.keptOpenAt()
+	silentDays := min(assessed.SilentDays, daysSince(facts.anyProgressAt, now, zone))
 	switch {
+	case facts.deferredAt(now):
+		return closeDecision{}, false
 	case slices.Contains(assessed.Reasons, viability.ReasonCustomerDeclined) &&
 		after(facts.refusalAt, keptOpen) && after(facts.refusalAt, facts.anyProgressAt):
 		decision.code, decision.reason = deals.LossReasonOther, "The customer wrote that they will not go ahead"
 		return decision, true
-	case silentReason(assessed.Reasons) && assessed.SilentDays > threshold &&
-		daysSince(facts.anyProgressAt, now, zone) > threshold && daysSince(keptOpen, now, zone) > threshold:
+	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
-		decision.reason = fmt.Sprintf("No word from the customer for %d days", assessed.SilentDays)
+		decision.reason = fmt.Sprintf("No word from the customer for %d days", silentDays)
 		return decision, true
 	}
 	return closeDecision{}, false

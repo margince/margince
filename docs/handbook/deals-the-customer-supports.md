@@ -59,6 +59,8 @@ Margince closes a deal only when all of these hold:
 
 - The deal has an owner who still works in the workspace.
 - The owner's mailbox was read in the last two days.
+- Every mailbox that brought in mail on the deal was read in the last two days,
+  a colleague's included.
 - The deal is not on legal hold.
 - No wait the customer asked for, and no meeting they accepted, is still to come.
 
