@@ -42,9 +42,9 @@ import (
 // on when it goes out under the existing-customer route.
 type ExistingCustomerGround = commsauthz.ExistingCustomerGround
 
-// noticeCoversFromSQL is the first moment a sale counts under declaration n:
-// its start, but no earlier than its proof's date, and without proof no
-// earlier than the day it was declared. The route and the list both read it.
+// noticeCoversFromSQL is the first moment a sale counts under declaration n.
+// That is its start, but no earlier than its proof's date. Without proof it is
+// no earlier than the day it was declared. The route and the list both read it.
 const noticeCoversFromSQL = `greatest(n.effective_from, coalesce(n.evidence_dated_at, n.created_at))`
 
 // buyerRoles are the deal roles that make a stakeholder the one who bought.
