@@ -59,6 +59,8 @@ type ConfidentialityVerdictEngine struct {
 	contacts *contacts.Store
 	brain    completer
 	log      *slog.Logger
+	// released ends the contact holds a thread that clears no longer justifies.
+	released *heldContactReleaser
 }
 
 // NewConfidentialityVerdictEngine builds the engine over the pool and the model
@@ -72,6 +74,7 @@ func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *s
 		contacts: contacts.NewStore(InstallationDB(pool)),
 		brain:    brain,
 		log:      log,
+		released: newHeldContactReleaser(pool, log),
 	}
 }
 
@@ -239,12 +242,16 @@ func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture
 func (e *ConfidentialityVerdictEngine) apply(
 	ctx context.Context, row capture.PendingThread, status, kind string, confidence float64,
 ) error {
+	won := false
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := capture.LockThreadHoldTx(ctx, tx, row.ThreadKey); err != nil {
+			return err
+		}
 		seen, err := threadAddressesTx(ctx, tx, row)
 		if err != nil {
 			return err
 		}
-		won, err := e.threads.ResolveAs(ctx, tx, row, status, kind, confidence, seen, confidentialityReason)
+		won, err = e.threads.ResolveAs(ctx, tx, row, status, kind, confidence, seen, confidentialityReason)
 		if err != nil || !won {
 			// Lost the claim race. Somebody else answered this thread, and
 			// their answer stands: two workers writing different verdicts over
@@ -283,6 +290,9 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// own timeline; the model's answer is not, so the error names what was
 		// attempted without echoing content.
 		return fmt.Errorf("confidentiality: applying %s to a thread: %w", status, err)
+	}
+	if won && status == capture.VerdictCleared {
+		e.released.releaseThread(ctx, row.ThreadKey)
 	}
 	return nil
 }
@@ -417,20 +427,27 @@ func (e *ConfidentialityVerdictEngine) finishSettledThreadsInto(ctx context.Cont
 			tally.processed++
 		}
 	}
-	return nil
+	// After the threads: a contact whose hold ended with one of them is
+	// released on this pass rather than the next.
+	released, err := e.released.reconcileWorkspace(ctx)
+	tally.processed += released
+	return err
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.
 func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 	ctx context.Context, t capture.SettledThread,
 ) (bool, error) {
-	done := false
+	done, cleared := false, false
 	// The pass's own provenance, and every write inside the transaction runs
 	// under it: an audit row is written from the actor on the context, so a
 	// stage that opened its transaction with one context and wrote with another
 	// fails at the first audited write.
 	wsCtx := e.workspaceCtx(ctx)
 	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := capture.LockThreadHoldTx(wsCtx, tx, t.ThreadKey); err != nil {
+			return err
+		}
 		// Re-read under the lock: the sweep has no claim, so the answer this
 		// pass applies must be the one the row still holds rather than the one
 		// the listing read.
@@ -448,10 +465,14 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 			return err
 		}
 		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
+		cleared = locked.Status == capture.VerdictCleared
 		return nil
 	})
 	if err != nil {
 		return false, fmt.Errorf("confidentiality: finishing a settled thread: %w", err)
+	}
+	if done && cleared {
+		e.released.releaseThread(wsCtx, t.ThreadKey)
 	}
 	return done, nil
 }

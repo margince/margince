@@ -7,7 +7,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDueCompact } from "../../format/format.dates";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { daysLate } from "./companynextbar";
@@ -106,7 +106,9 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
       key: "due",
       header: t("co.next.col.due"),
       render: (step) =>
-        step.due_at ? formatDayMonth(step.due_at, locale, zone) : "",
+        step.due_at
+          ? formatDueCompact(step.due_at, step.due_has_time, locale, zone)
+          : "",
     },
     {
       key: "owner",

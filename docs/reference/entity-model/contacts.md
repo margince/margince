@@ -631,6 +631,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `contact_confidentiality_hold_ix`: `btree (id) WHERE (narrowing_reason = 'confidentiality_hold')`
 - `contact_pkey`: `unique, btree (id)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`

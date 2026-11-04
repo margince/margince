@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -62,13 +63,16 @@ type ThreadAudienceOutcome struct {
 type ThreadAudienceSetter struct {
 	pool    *pgxpool.Pool
 	threads *capture.ThreadVerdictStore
+	// released ends the contact holds a shared thread no longer justifies.
+	released *heldContactReleaser
 }
 
 // NewThreadAudienceSetter builds the setter over one database.
 func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 	return &ThreadAudienceSetter{
-		pool:    pool,
-		threads: capture.NewThreadVerdictStore(InstallationDB(pool)),
+		pool:     pool,
+		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
+		released: newHeldContactReleaser(pool, slog.Default()),
 	}
 }
 
@@ -172,6 +176,9 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 	})
 	if err != nil {
 		return ThreadAudienceOutcome{}, err
+	}
+	if outcome.Shared {
+		s.released.releaseThread(ctx, threadKey)
 	}
 	return outcome, nil
 }

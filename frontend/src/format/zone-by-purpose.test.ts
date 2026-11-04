@@ -142,6 +142,22 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "components/bulktask.test.tsx",
+    why: "Proves the bulk writer mints the day's end on the RECORD's clock: only a named record zone that differs from the runner's and the fallback's tells that apart from the viewer's zone.",
+  },
+  {
+    file: "components/followuptaskfields.test.tsx",
+    why: "The hour the clocks skip exists only in a named zone with daylight saving; the runner's zone may have none, and then the field has nothing to warn about.",
+  },
+  {
+    file: "mcp-apps/attention/main.test.ts",
+    why: "The card prints a promise's day in the installation zone the answer names. Only named zones east and west of UTC show that a late-evening due date stays on its own day.",
+  },
+  {
+    file: "components/logactivity.followup.test.tsx",
+    why: "A callback time is a wall-clock time on the record's clock: the posted due_at only differs from UTC, and so only proves the conversion, under a named zone with an offset. A runner zone of UTC would pass a form that ignores the record zone.",
+  },
+  {
     file: "components/logactivity.openmeeting.test.tsx",
     why: "A date-only meeting is stored at noon UTC. Only a zone well east of UTC puts an instant from the evening before nearer the day's start than that noon, which is the case the closest-meeting pick must get right.",
   },
