@@ -37,9 +37,9 @@ export function zoomStart(
 const WIDENING: readonly TimelineZoom[] = ["quarter", "year"];
 
 /**
- * The zoom a line opens at: the narrowest from a quarter up that still holds
- * every event the record names, so the default never cuts a named event and
- * never shows less than three months.
+ * The zoom a line opens at: the narrowest from a quarter up that holds every
+ * event the record names. The default never cuts a named event, and never
+ * shows less than three months.
  */
 export function defaultZoom(
   today: number,
