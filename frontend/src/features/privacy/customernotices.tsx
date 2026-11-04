@@ -48,9 +48,8 @@ type Draft = Readonly<{
   purposes: string[];
 }>;
 
-// The day a reader picks starts at midnight in their own zone; the end day is
-// inclusive on screen and exclusive on the wire, so it is sent as the next
-// day's first second.
+// A picked day starts at midnight in the reader's own zone. The end day counts
+// on screen but not on the wire, so it is sent as the next day's first second.
 function startOf(day: string, zone: string): string {
   return dueInstant(day, zone, "00:00");
 }

@@ -45,7 +45,7 @@ const (
 	ClassTransactional Class = "transactional"
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
 	// feedback requests. Express consent with double-opt-in proof, or the
-	// §7(3) existing-customer route where the pack grants it.
+	// existing-customer route where the pack grants it.
 	ClassMarketing Class = "marketing"
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.

@@ -16,8 +16,8 @@ import (
 )
 
 // A vouch recorded before vouches named an entity goes to the entity of the
-// seat that first recorded it, read from the stamp the writer really leaves:
-// a human's user, or the user an agent's passport works for. A carried row
+// seat that first recorded it. That seat is read from the stamp the writer
+// leaves: a human's user, or the user an agent's passport works for. A carried row
 // follows its chain's first recorder. A row whose recorder nobody can name is
 // revoked, never handed to the default entity.
 func TestTheVouchEntityBackfillFollowsTheRecorderAndRevokesTheUnnamed(t *testing.T) {

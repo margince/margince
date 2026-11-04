@@ -5,12 +5,12 @@
 
 package consent
 
-// Row 8 of the approved send rules: the existing-customer route (UWG §7(3)).
-// A marketing send without consent to a customer goes out, where the
-// recipient's country grants the route, when the
-// customer bought from the sending entity, an admin declared the notice given
-// when that sale collected the address, the declaration names the purpose,
-// and the customer has not objected. Each case below takes one condition away.
+// Row 8 of the approved send rules: the existing-customer route. Where the
+// recipient's country grants it, a marketing send without consent goes out to
+// a customer when four things hold. The customer bought from the sending
+// entity. An admin declared the notice given when that sale collected the
+// address. The declaration names the purpose. The customer has not objected.
+// Each case below takes one condition away.
 
 import (
 	"context"
@@ -196,9 +196,8 @@ func TestEachExistingCustomerConditionIsNeeded(t *testing.T) {
 	}
 }
 
-// The sale is an accepted offer of the sending entity. A won deal with no
-// such offer, an offer another entity issued, an offer that names no issuer,
-// and a stakeholder added after the acceptance each carry nothing.
+// The sale is an accepted offer of the sending entity. No case below has one
+// that counts.
 func TestASaleIsAnAcceptedOfferOfTheSendingEntity(t *testing.T) {
 	for name, plant := range map[string]func(t *testing.T, e *resolveEnv, at time.Time){
 		"a won deal with no accepted offer": func(t *testing.T, e *resolveEnv, at time.Time) {

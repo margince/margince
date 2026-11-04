@@ -4,12 +4,12 @@
 package consent
 
 // An admin's declaration that one group of customers was told at collection
-// that they may object to advertising: the evidence the existing-customer
-// route reads for that condition (existingcustomerroute.go).
+// that they may object to advertising. The existing-customer route reads it
+// as the evidence for that condition (existingcustomerroute.go).
 //
-// A declaration is never edited. It states what happened in a past period, so
-// a correction is a withdrawal with a reason and a new declaration, and the
-// audit log keeps both.
+// A declaration is never edited, because it states what happened in a past
+// period. A correction is a withdrawal with a reason plus a new declaration.
+// The audit log keeps both.
 
 import (
 	"context"

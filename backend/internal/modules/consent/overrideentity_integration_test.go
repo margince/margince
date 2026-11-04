@@ -5,9 +5,9 @@
 
 package consent
 
-// Row 11 of the approved send rules: a standing vouch serves every rep of the
-// sending legal entity whose rep recorded it, does not lapse for age or an
-// owner change, and never reaches a send for another entity.
+// Row 11 of the approved send rules. A standing vouch serves every rep of the
+// legal entity whose rep recorded it. It does not lapse for age or an owner
+// change. It never reaches a send for another entity.
 
 import (
 	"context"
