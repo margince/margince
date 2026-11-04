@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 38,
+    "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 24519,
-    "median_tool_tokens": 532,
-    "mean_tool_tokens": 644
+    "tokens": 32117,
+    "median_tool_tokens": 593,
+    "mean_tool_tokens": 713
   },
   "agents": [
     {
@@ -46,12 +46,12 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 38,
-      "tokens": 4309,
-      "listing_tokens": 2144,
+      "of_served_tools": 45,
+      "tokens": 4281,
+      "listing_tokens": 2117,
       "step_schema_tokens": 1572,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18901,
+      "headroom_tokens": 18929,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 38,
-      "tokens": 6383,
-      "listing_tokens": 3371,
-      "step_schema_tokens": 2419,
+      "of_served_tools": 45,
+      "tokens": 6364,
+      "listing_tokens": 3348,
+      "step_schema_tokens": 2424,
       "percent_of_ceiling": 19,
-      "headroom_tokens": 16827,
+      "headroom_tokens": 16846,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,23 +85,31 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 1958
+      "tokens": 2310
     },
     {
       "name": "find_records",
       "tokens": 1854
     },
     {
-      "name": "change_state",
-      "tokens": 1484
+      "name": "change_activities",
+      "tokens": 1840
     },
     {
-      "name": "change_activities",
-      "tokens": 1467
+      "name": "change_state",
+      "tokens": 1762
+    },
+    {
+      "name": "read_workspace",
+      "tokens": 1681
+    },
+    {
+      "name": "read_details",
+      "tokens": 1461
     },
     {
       "name": "send_outbound",
-      "tokens": 1014
+      "tokens": 1314
     },
     {
       "name": "read_view",
@@ -121,19 +129,35 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 821
+      "tokens": 798
+    },
+    {
+      "name": "change_attention",
+      "tokens": 781
+    },
+    {
+      "name": "create_record",
+      "tokens": 776
     },
     {
       "name": "read_lists",
       "tokens": 773
     },
     {
-      "name": "create_record",
-      "tokens": 755
-    },
-    {
       "name": "change_reports",
       "tokens": 710
+    },
+    {
+      "name": "change_settings",
+      "tokens": 706
+    },
+    {
+      "name": "change_access",
+      "tokens": 656
+    },
+    {
+      "name": "change_offers",
+      "tokens": 628
     },
     {
       "name": "change_record_parts",
@@ -152,16 +176,16 @@
       "tokens": 593
     },
     {
-      "name": "read_workspace",
-      "tokens": 590
-    },
-    {
       "name": "change_tags",
-      "tokens": 548
+      "tokens": 562
     },
     {
       "name": "draft_outbound",
       "tokens": 517
+    },
+    {
+      "name": "change_relationships",
+      "tokens": 494
     },
     {
       "name": "decide_approvals",
@@ -170,6 +194,10 @@
     {
       "name": "annotate_brief",
       "tokens": 417
+    },
+    {
+      "name": "read_context",
+      "tokens": 413
     },
     {
       "name": "schedule_meeting",
@@ -181,10 +209,6 @@
     },
     {
       "name": "enrich",
-      "tokens": 395
-    },
-    {
-      "name": "read_context",
       "tokens": 395
     },
     {
@@ -200,12 +224,20 @@
       "tokens": 342
     },
     {
+      "name": "list_documents",
+      "tokens": 331
+    },
+    {
       "name": "read_attention",
       "tokens": 326
     },
     {
       "name": "read_record",
-      "tokens": 307
+      "tokens": 324
+    },
+    {
+      "name": "run_research",
+      "tokens": 312
     },
     {
       "name": "archive_record",
@@ -222,10 +254,6 @@
     {
       "name": "read_import",
       "tokens": 220
-    },
-    {
-      "name": "list_documents",
-      "tokens": 216
     },
     {
       "name": "read_approval",

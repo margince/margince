@@ -4,8 +4,6 @@
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
 
-Measured record totals offer their supporting records. Forecast totals open Forecast, where the parts and their evidence are shown.
-
 ## Common reporting tasks
 
 ### Where can I see my forecast?
@@ -21,7 +19,6 @@ To see your team's pipeline in Margince, open **Analytics** and pick the team in
 Every seat is offered **Whole company**, every live team and its own records; a seat whose scope is its teams also gets **My teams** first.
 Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name.
 A rep opens on their own records.
-Also called: team forecast, my team's deals, manager view, team report.
 
 ### How do I see my pipeline report?
 1. Click **Analytics**, then the **Pipeline** tab.
@@ -67,7 +64,7 @@ A link also stops on its own after 30 days, or when you lose forecast access. Al
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
-To get deal rows out, open **Filters and views** → **New filter** → **Deals** and make a filter. Then choose **⋯** (**More for this filter**) → **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+To get deal rows out, open **Filters and views** → **New filter** → **Deals** and make a filter. Then press **Export CSV** or **Export JSON** beside the count of **Matching records**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 
@@ -89,9 +86,11 @@ Analytics opens on **Overview**. The opening view follows your work and the view
 
 **All open pipeline** follows these words and decisions, then the open pipeline by stage and sales won by team member, in name order. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
-**My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. Three readings follow: **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
+**My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
 
-A zero, a hidden figure, a failed one and a day that cannot be read each say so in their own words. **Do next** sits beside your results, and **Open** on a Worklist item goes to its record, where you complete it. **Handoffs waiting on others** names each recipient, how long the handoff has waited since it was last sent, and whether the recipient can still act. A handoff sent back to you shows the reason given; without SDR handoffs, **Meetings to prepare** lists your booked meetings instead. Lower down, **How your outcomes developed** shows each week, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
+A zero, a hidden figure, a failed one and a day that cannot be read each say so in their own words. **Do next** sits beside your results and shows lead follow-ups, replies and meetings to prepare. Each item opens its record, where you complete it. **Handoffs waiting on others** names each recipient, how long the handoff has waited since it was last sent, and whether the recipient can still act. A handoff sent back to you shows the reason given; without SDR handoffs, **Meetings to prepare** lists your booked meetings instead.
+
+Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
 **Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
@@ -195,7 +194,9 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 **Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
-The **SDR outcomes** tab shows held meetings, accepted opportunities, leads qualified, first response time and the leads still waiting for a first reply. **Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
+The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
+
+**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 
@@ -245,9 +246,7 @@ unread one would read as "checked up to then" when nothing was read at all.
 A source missing from the list is one the run did not try. That is different
 from one it tried and could not read.
 
-If no check has ever run, the page says so rather than showing a healthy blank:
-"No check has run yet. An unchecked installation is not the same as a healthy
-one."
+Before the first check, the page links to **Forecast**, where you choose **Start checking**.
 
 Problems with single records are shown in the review of the Forecast section.
 

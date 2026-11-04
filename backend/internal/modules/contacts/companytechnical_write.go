@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,7 +45,7 @@ func readTechnicalFacts(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, fields []string,
 ) ([]heldFact, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT field, value_key, value, captured_by LIKE 'human:%'
+		SELECT field, value_key, value, `+storekit.StampForAUserSQL("captured_by")+`
 		  FROM company_fact
 		 WHERE company_id = $1 AND category = 'signal' AND field = ANY($2)`,
 		companyID, fields)
@@ -282,7 +283,7 @@ var singleValuedTechnicalFields = map[string]bool{
 }
 
 // replacedValue reports the value a single-valued field held before, when the
-// row that held it was not a human's.
+// row that held it was not a user's or their agent's.
 func replacedValue(held []heldFact, field string) (heldFact, bool) {
 	if !singleValuedTechnicalFields[field] {
 		return heldFact{}, false

@@ -127,8 +127,10 @@ func isTokenReplyLocalpart(local string) bool {
 		(local[0] >= 'a' && local[0] <= 'z' || local[0] >= 'A' && local[0] <= 'Z')
 }
 
-// machineShape is the one rule for "this address belongs to a sending system":
-// a marker local part, a token reply address, or a notification host.
+// machineShape is the one rule for "this address belongs to a sending
+// system". It matches a marker local part, a token reply address or a
+// notification host. It also matches a technical destination host, such as a
+// CRM's BCC logging address.
 func machineShape(address string) bool {
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
@@ -136,12 +138,29 @@ func machineShape(address string) bool {
 	}
 	local, host := address[:at], strings.ToLower(address[at+1:])
 	return IsMachineLocalpart(local) || HasMachineMarker(local) ||
-		isTokenReplyLocalpart(local) || notificationHosts[host]
+		isTokenReplyLocalpart(local) || notificationHosts[host] || technicalDestinationHost(host)
+}
+
+// technicalDestinationHosts are the registrable domains whose `bcc` host logs
+// mail into a CRM. Only that host is technical: a human at the domain itself,
+// such as anna@hubspot.com, is not.
+var technicalDestinationHosts = map[string]bool{"hubspot.com": true}
+
+// technicalDestinationHost matches a host whose leftmost label is `bcc` under a
+// technical destination domain: bcc.hubspot.com and bcc.eu1.hubspot.com, not
+// hubspot.com. The local part is never read, so a numeric one decides nothing.
+func technicalDestinationHost(host string) bool {
+	first, rest, ok := strings.Cut(host, ".")
+	if !ok || first != "bcc" {
+		return false
+	}
+	return technicalDestinationHosts[freemail.Registrable(rest)]
 }
 
 // HasMachineLocalpart reports whether an address names a sending system rather
-// than a human, by its local part or its notification host. No domain
-// allowlist overrules it: nobody answers at noreply@ on any domain.
+// than a human, by its local part, its notification host or a technical
+// destination host. No domain allowlist overrules it: nobody answers at
+// noreply@ on any domain.
 func HasMachineLocalpart(address string) bool { return machineShape(address) }
 
 // IsMachineAddress reports mail infrastructure and machine-only sender addresses.

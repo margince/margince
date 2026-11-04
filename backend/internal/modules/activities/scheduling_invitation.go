@@ -171,7 +171,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.invitationRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, in, intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}

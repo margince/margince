@@ -81,7 +81,7 @@ type commitmentTask struct {
 	ClaimID   *ids.UUID
 	ClaimIDs  []ids.UUID
 	PrivateTo *ids.UUID
-	// Origin is activities.OriginHuman when a colleague took the promise over.
+	// Origin is the taker's when a colleague or their agent took the promise over.
 	Origin string
 }
 

@@ -116,12 +116,10 @@ func For(code jurisdiction.Code) (Rules, bool) {
 // Strictest folds the applicable jurisdictions into the one rule set the
 // engine applies, taking the STRICTEST answer for each obligation.
 //
-// Several jurisdictions can apply at once — the installation's own country and
-// the recipient's — and the answer is not "pick one". A message lawful where
-// the sender sits and unlawful where the recipient does is unlawful, so each
-// obligation resolves independently to whichever position permits less:
-// the shortest non-zero window, every declared disclosure, the tightest cap,
-// and an exception only where EVERY applicable jurisdiction grants it.
+// The engine's marketing selector names one code per recipient. When a caller
+// names several, each obligation resolves to whichever position permits less.
+// That is the shortest non-zero window, every declared disclosure, the
+// tightest cap, and an exception only where every jurisdiction grants it.
 //
 // An unknown jurisdiction contributes nothing to fold, which is why the caller
 // must treat "no rules at all" as the consent-only floor rather than as
@@ -168,9 +166,8 @@ type Applied struct {
 	// more than one means the fold zeroed it and these are the answer.
 	Codes []jurisdiction.Code
 
-	// Unknown are the codes named that no pack declares. They bound nothing —
-	// recorded so an installation naming a country the product does not carry
-	// is visible rather than silently ungoverned.
+	// Unknown are the codes named that no pack declares. They bound nothing;
+	// the baseline applies to them.
 	Unknown []jurisdiction.Code
 }
 

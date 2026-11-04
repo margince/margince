@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -384,17 +383,8 @@ func (s *Sink) upsertActivity(
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	// Attested outbound is the ONLY write that turns "does this workspace
-	// correspond with them" from no to yes, and a verdict acts on that answer
-	// inside its own transaction — so the two serialize here rather than racing.
-	// Taken only for the attested row: inbound mail cannot change the answer,
-	// and locking every capture insert on its sender would serialize a busy
-	// address against itself for nothing.
-	if rec.Counterparty.SentByOwner() {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			mailidentity.CorrespondenceLockKey(rec.Counterparty.Email)); err != nil {
-			return ids.ActivityID{}, false, err
-		}
+	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {
+		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
 	query, args := capturedActivityInsert(ctx, rec, fields, birth)
@@ -487,7 +477,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(textlang.MessageOpening(fields.Body, 1200), fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.OfMessage(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),

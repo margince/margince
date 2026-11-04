@@ -215,7 +215,7 @@ func (e *Estimator) priceObserved(ctx context.Context, task ai.Task, slices []ai
 			return 0, 0, false, false, rerr
 		}
 		if rate != nil {
-			pricedCost += ai.PriceCall(usageOf(s), *rate)
+			pricedCost += ai.PriceCalls(usageOf(s), s.Calls, *rate)
 			// Completed calls only: a metering_failed retry's spend already rode
 			// PriceCall (its tokens are in the slice sums), but it completed no
 			// fresh unit, so it must not inflate the denominator below.
@@ -282,7 +282,7 @@ func (e *Estimator) priceFloor(ctx context.Context, task ai.Task, units int64, t
 		CachedTokens:     floor.CachedTokens * int(units),
 		CacheWriteTokens: floor.CacheWriteTokens * int(units),
 	}
-	return ai.PriceCall(scaled, *rate), inputTokens, true, nil
+	return ai.PriceCalls(scaled, units, *rate), inputTokens, true, nil
 }
 
 // expectedUnits maps this preview's scanned-message count to a task's expected

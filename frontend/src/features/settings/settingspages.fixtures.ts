@@ -8,7 +8,7 @@ import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { allowance, status } from "../../testing/ai-admin.testkit";
 import { bookingProfile } from "../../testing/book.testkit";
 import { formatFixture } from "../../testing/import.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE, type GrantSpec } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { jsonResponse, type RouteMap } from "../../testing/story-utils";
@@ -32,6 +32,7 @@ const NOTIFICATION_PREFERENCES: Schemas["NotificationPreferenceList"] = {
     { class: "approval_pending", delivery: "email", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
+    { class: "project_health", delivery: "in_app", chosen: false },
     { class: "capture", delivery: "in_app", chosen: false },
     { class: "system", delivery: "in_app", chosen: false },
     { class: "coach", delivery: "in_app", chosen: false },
@@ -68,7 +69,7 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   date_format: "dmy",
   time_format: "24h",

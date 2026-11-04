@@ -589,6 +589,69 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReaderRenderingSourceLanguage.
+const (
+	ActivityReaderRenderingSourceLanguageDe ActivityReaderRenderingSourceLanguage = "de"
+	ActivityReaderRenderingSourceLanguageEn ActivityReaderRenderingSourceLanguage = "en"
+	ActivityReaderRenderingSourceLanguageVi ActivityReaderRenderingSourceLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingSourceLanguage enum.
+func (e ActivityReaderRenderingSourceLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingSourceLanguageDe:
+		return true
+	case ActivityReaderRenderingSourceLanguageEn:
+		return true
+	case ActivityReaderRenderingSourceLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingTargetLanguage.
+const (
+	ActivityReaderRenderingTargetLanguageDe ActivityReaderRenderingTargetLanguage = "de"
+	ActivityReaderRenderingTargetLanguageEn ActivityReaderRenderingTargetLanguage = "en"
+	ActivityReaderRenderingTargetLanguageVi ActivityReaderRenderingTargetLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingTargetLanguage enum.
+func (e ActivityReaderRenderingTargetLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingTargetLanguageDe:
+		return true
+	case ActivityReaderRenderingTargetLanguageEn:
+		return true
+	case ActivityReaderRenderingTargetLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingRequestLocale.
+const (
+	ActivityReaderRenderingRequestLocaleDe ActivityReaderRenderingRequestLocale = "de"
+	ActivityReaderRenderingRequestLocaleEn ActivityReaderRenderingRequestLocale = "en"
+	ActivityReaderRenderingRequestLocaleVi ActivityReaderRenderingRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingRequestLocale enum.
+func (e ActivityReaderRenderingRequestLocale) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingRequestLocaleDe:
+		return true
+	case ActivityReaderRenderingRequestLocaleEn:
+		return true
+	case ActivityReaderRenderingRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityReferenceContentState.
 const (
 	ActivityReferenceContentStateAvailable ActivityReferenceContentState = "available"
@@ -905,6 +968,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReaderRendering               AiActivityKind = "reader_rendering"
 	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
 	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
@@ -965,6 +1029,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReaderRendering:
 		return true
 	case AiActivityKindReportInterpret:
 		return true
@@ -1489,6 +1555,7 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReaderRendering               AiTask = "reader_rendering"
 	AiTaskReportInterpret               AiTask = "report_interpret"
 	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
@@ -1546,6 +1613,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReaderRendering:
 		return true
 	case AiTaskReportInterpret:
 		return true
@@ -10720,6 +10789,27 @@ func (e EmailDeliveryState) Valid() bool {
 	}
 }
 
+// Defines values for EmailPresentationLanguage.
+const (
+	EmailPresentationLanguageDe EmailPresentationLanguage = "de"
+	EmailPresentationLanguageEn EmailPresentationLanguage = "en"
+	EmailPresentationLanguageVi EmailPresentationLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the EmailPresentationLanguage enum.
+func (e EmailPresentationLanguage) Valid() bool {
+	switch e {
+	case EmailPresentationLanguageDe:
+		return true
+	case EmailPresentationLanguageEn:
+		return true
+	case EmailPresentationLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailPresentationLifecycle.
 const (
 	EmailPresentationLifecycleDelivered EmailPresentationLifecycle = "delivered"
@@ -16136,6 +16226,7 @@ const (
 	NotificationClassCapture         NotificationClass = "capture"
 	NotificationClassCoach           NotificationClass = "coach"
 	NotificationClassLeadSla         NotificationClass = "lead_sla"
+	NotificationClassProjectHealth   NotificationClass = "project_health"
 	NotificationClassSystem          NotificationClass = "system"
 )
 
@@ -16151,6 +16242,8 @@ func (e NotificationClass) Valid() bool {
 	case NotificationClassCoach:
 		return true
 	case NotificationClassLeadSla:
+		return true
+	case NotificationClassProjectHealth:
 		return true
 	case NotificationClassSystem:
 		return true
@@ -18733,6 +18826,7 @@ const (
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
+	ReportingMetricIDLeadsAwaitingResponseNow      ReportingMetricID = "leads_awaiting_response_now"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
@@ -18770,6 +18864,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadStatusMoves:
 		return true
 	case ReportingMetricIDLeadsAwaitingResponse:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponseNow:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -19687,6 +19783,24 @@ func (e SaveMyLocaleRequestLocale) Valid() bool {
 	case SaveMyLocaleRequestLocaleEn:
 		return true
 	case SaveMyLocaleRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SaveMyTimezoneRequestSource.
+const (
+	SaveMyTimezoneRequestSourceBrowser SaveMyTimezoneRequestSource = "browser"
+	SaveMyTimezoneRequestSourceChosen  SaveMyTimezoneRequestSource = "chosen"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyTimezoneRequestSource enum.
+func (e SaveMyTimezoneRequestSource) Valid() bool {
+	switch e {
+	case SaveMyTimezoneRequestSourceBrowser:
+		return true
+	case SaveMyTimezoneRequestSourceChosen:
 		return true
 	default:
 		return false
@@ -24116,6 +24230,7 @@ const (
 	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
 	WorklistFilterLeads             WorklistFilter = "leads"
 	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterProspecting       WorklistFilter = "prospecting"
 	WorklistFilterRelationships     WorklistFilter = "relationships"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
@@ -24141,6 +24256,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
+		return true
+	case WorklistFilterProspecting:
 		return true
 	case WorklistFilterRelationships:
 		return true
@@ -28610,6 +28727,7 @@ const (
 	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
 	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
 	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterProspecting       GetWorklistParamsFilter = "prospecting"
 	GetWorklistParamsFilterRelationships     GetWorklistParamsFilter = "relationships"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
@@ -28635,6 +28753,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterLeads:
 		return true
 	case GetWorklistParamsFilterMeetings:
+		return true
+	case GetWorklistParamsFilterProspecting:
 		return true
 	case GetWorklistParamsFilterRelationships:
 		return true
@@ -29098,6 +29218,9 @@ type Activity struct {
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -29127,7 +29250,7 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
@@ -29205,7 +29328,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -29259,6 +29382,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
+	DueHasTime *bool               `json:"due_has_time,omitempty"`
 	Subject    string              `json:"subject"`
 }
 
@@ -29294,6 +29418,49 @@ type ActivityListResponse struct {
 	Data []Activity `json:"data"`
 	Page PageInfo   `json:"page"`
 }
+
+// ActivityReaderRendering One activity's text in one reader's language, written for this reader and stored
+// nowhere.
+type ActivityReaderRendering struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Body The text in the target language, null when the activity has none.
+	Body        *string   `json:"body,omitempty"`
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// ModelUsed The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
+	ModelUsed *string `json:"model_used,omitempty"`
+
+	// SourceLanguage The language the original is written in, null when it could not be told.
+	SourceLanguage *ActivityReaderRenderingSourceLanguage `json:"source_language,omitempty"`
+
+	// Subject The subject in the target language, null when the activity has none.
+	Subject        *string                               `json:"subject,omitempty"`
+	TargetLanguage ActivityReaderRenderingTargetLanguage `json:"target_language"`
+
+	// Unchanged True when the original is already in the target language. `subject` and `body`
+	// are then the original text.
+	Unchanged bool `json:"unchanged"`
+}
+
+// ActivityReaderRenderingSourceLanguage The language the original is written in, null when it could not be told.
+type ActivityReaderRenderingSourceLanguage string
+
+// ActivityReaderRenderingTargetLanguage defines model for ActivityReaderRendering.TargetLanguage.
+type ActivityReaderRenderingTargetLanguage string
+
+// ActivityReaderRenderingRequest defines model for ActivityReaderRenderingRequest.
+type ActivityReaderRenderingRequest struct {
+	// Locale The language to show the text in, normally the reader's interface language.
+	// Absent means the language the reader chose for their seat, else the
+	// installation's base language.
+	Locale *ActivityReaderRenderingRequestLocale `json:"locale,omitempty"`
+}
+
+// ActivityReaderRenderingRequestLocale The language to show the text in, normally the reader's interface language.
+// Absent means the language the reader chose for their seat, else the
+// installation's base language.
+type ActivityReaderRenderingRequestLocale string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -29596,18 +29763,21 @@ type AgentClientSecret struct {
 
 // AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
 type AgentCommitment struct {
-	About            []AgentCommitmentSubject `json:"about"`
-	AssigneeId       *openapi_types.UUID      `json:"assignee_id,omitempty"`
-	AssigneeName     *string                  `json:"assignee_name,omitempty"`
-	ClaimId          *openapi_types.UUID      `json:"claim_id,omitempty"`
-	DaysOverdue      *int                     `json:"days_overdue,omitempty"`
-	DueAt            *string                  `json:"due_at,omitempty"`
-	Quote            *string                  `json:"quote,omitempty"`
-	Source           string                   `json:"source"`
-	SourceActivityId *openapi_types.UUID      `json:"source_activity_id,omitempty"`
-	State            string                   `json:"state"`
-	Subject          string                   `json:"subject"`
-	TaskId           *openapi_types.UUID      `json:"task_id,omitempty"`
+	About        []AgentCommitmentSubject `json:"about"`
+	AssigneeId   *openapi_types.UUID      `json:"assignee_id,omitempty"`
+	AssigneeName *string                  `json:"assignee_name,omitempty"`
+	ClaimId      *openapi_types.UUID      `json:"claim_id,omitempty"`
+	DaysOverdue  *int                     `json:"days_overdue,omitempty"`
+	DueAt        *string                  `json:"due_at,omitempty"`
+
+	// DueHasTime True when due_at is an agreed time of day.
+	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	Quote            *string             `json:"quote,omitempty"`
+	Source           string              `json:"source"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	State            string              `json:"state"`
+	Subject          string              `json:"subject"`
+	TaskId           *openapi_types.UUID `json:"task_id,omitempty"`
 }
 
 // AgentCommitmentSubject A record a commitment is about.
@@ -30514,10 +30684,15 @@ type AiModelRate struct {
 	// where the embeddings lane binds and a `decisions` one where the decision lane
 	// binds, and a zero output price cannot tell them apart — every local chat row
 	// carries one too.
-	Lane          AiModelRateLane `json:"lane"`
-	ModelId       string          `json:"model_id"`
-	OutputPerMtok string          `json:"output_per_mtok"`
-	Provider      string          `json:"provider"`
+	Lane AiModelRateLane `json:"lane"`
+
+	// LongContext The second price band of a model that charges more for a call whose prompt is longer than
+	// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+	// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+	LongContext   *AiModelRateLongContext `json:"long_context,omitempty"`
+	ModelId       string                  `json:"model_id"`
+	OutputPerMtok string                  `json:"output_per_mtok"`
+	Provider      string                  `json:"provider"`
 
 	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
 	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
@@ -30544,6 +30719,17 @@ type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
 }
 
+// AiModelRateLongContext The second price band of a model that charges more for a call whose prompt is longer than
+// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+type AiModelRateLongContext struct {
+	AboveTokens       int    `json:"above_tokens"`
+	CacheReadPerMtok  string `json:"cache_read_per_mtok"`
+	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+	InputPerMtok      string `json:"input_per_mtok"`
+	OutputPerMtok     string `json:"output_per_mtok"`
+}
+
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
 	// Added Models priced for the first time today.
@@ -30566,6 +30752,10 @@ type AiModelRateProviderRefresh struct {
 
 	// Provider The provider as the routing document spells it.
 	Provider string `json:"provider"`
+
+	// Review Model ids whose price carries a long-context band the catalogue does not publish, and
+	// whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+	Review *[]string `json:"review,omitempty"`
 
 	// Unchanged Models already at the catalogue price.
 	Unchanged int `json:"unchanged"`
@@ -32964,6 +33154,9 @@ type AttentionItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
@@ -36534,8 +36727,11 @@ type Company360NextStep struct {
 	// Body The task's own words, as written. Only a task whose content this reader may read is
 	// listed here, so a task read out of a message the reader may not open never reaches
 	// this field.
-	Body            *string             `json:"body,omitempty"`
-	DueAt           *time.Time          `json:"due_at,omitempty"`
+	Body  *string    `json:"body,omitempty"`
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
+	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	Overdue         bool                `json:"overdue"`
@@ -41040,8 +41236,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -42084,6 +42283,9 @@ type CreateTaskRequest struct {
 
 	// DueAt When it is due. Optional — a task without a date is still a task.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -44061,6 +44263,11 @@ type EmailPresentation struct {
 	From           []EmailParty       `json:"from"`
 	Id             openapi_types.UUID `json:"id"`
 
+	// Language The language the message is written in, as `Activity.language` records it. Null
+	// when withheld, and when it could not be told. A client offers the reader's own
+	// language beside a message in another one or in an unknown one.
+	Language *EmailPresentationLanguage `json:"language,omitempty"`
+
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the
 	// frame when the reads that serve them land, and they are not listed until then.
@@ -44093,6 +44300,11 @@ type EmailPresentation struct {
 	// Version The activity's version, for the If-Match its own actions send.
 	Version RowVersion `json:"version"`
 }
+
+// EmailPresentationLanguage The language the message is written in, as `Activity.language` records it. Null
+// when withheld, and when it could not be told. A client offers the reader's own
+// language beside a message in another one or in an unknown one.
+type EmailPresentationLanguage string
 
 // EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
 // correspondence. A scheduled send and a draft awaiting approval will borrow the
@@ -44692,17 +44904,21 @@ type FilterPreview struct {
 	// length of `rows`. This is the number a builder shows a human while
 	// they decide whether the filter is right, so it is a full count rather
 	// than a page size dressed up as one.
-	MatchCount int                   `json:"match_count"`
+	MatchCount int `json:"match_count"`
+
+	// NextCursor Opaque cursor for the next page, or null if none.
+	NextCursor *string               `json:"next_cursor,omitempty"`
 	Resource   FilterPreviewResource `json:"resource"`
 
-	// Rows Up to `limit` matching rows as column→value maps, ordered by id.
+	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
+	// after the request's `cursor` when it names one.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.
 	Rows []map[string]interface{} `json:"rows"`
 
-	// Truncated Whether `match_count` exceeds the rows returned — so a caller can say
-	// "showing 25 of 812" without comparing lengths and guessing.
+	// Truncated Whether more rows follow this page. It is true exactly when
+	// `next_cursor` is set.
 	Truncated bool `json:"truncated"`
 }
 
@@ -44711,6 +44927,10 @@ type FilterPreviewResource string
 
 // FilterPreviewRequest A candidate filter to evaluate without saving it.
 type FilterPreviewRequest struct {
+	// Cursor Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+	// page after it. Absent reads the first page.
+	Cursor *string `json:"cursor,omitempty"`
+
 	// Filter The canonical filter tree — the same representation a dynamic list's
 	// `definition` and a saved view's `query` carry, and untyped here for
 	// the same reason they are. The grammar's authority is the predicate
@@ -44721,8 +44941,8 @@ type FilterPreviewRequest struct {
 	// one a list or view accepts.
 	Filter map[string]interface{} `json:"filter"`
 
-	// Limit How many rows to sample. The COUNT is unaffected by this — it is the
-	// full match count for the caller, not the size of the page.
+	// Limit The page size. The COUNT is unaffected by this — it is the full match
+	// count for the caller on every page, not the size of the page.
 	Limit    *int                         `json:"limit,omitempty"`
 	Resource FilterPreviewRequestResource `json:"resource"`
 }
@@ -44752,7 +44972,8 @@ type FilterProposalResource string
 // FilterProposalRequest A list described in plain words, to be turned into filter clauses.
 type FilterProposalRequest struct {
 	// Locale The reader's interface language, which the reasons in `unsupported` are
-	// written in. Absent means the installation's base language.
+	// written in. Absent means the language the reader chose for their seat, else the
+	// installation's base language.
 	Locale   *FilterProposalRequestLocale  `json:"locale,omitempty"`
 	Resource FilterProposalRequestResource `json:"resource"`
 
@@ -44761,7 +44982,8 @@ type FilterProposalRequest struct {
 }
 
 // FilterProposalRequestLocale The reader's interface language, which the reasons in `unsupported` are
-// written in. Absent means the installation's base language.
+// written in. Absent means the language the reader chose for their seat, else the
+// installation's base language.
 type FilterProposalRequestLocale string
 
 // FilterProposalRequestResource defines model for FilterProposalRequest.Resource.
@@ -52009,6 +52231,9 @@ type OnboardingStateStep string
 type OpenCommitments struct {
 	AsOf        string            `json:"as_of"`
 	Commitments []AgentCommitment `json:"commitments"`
+
+	// TimeZone The installation zone, where a due date is a day.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 // OpenDealRoomThreadRequest defines model for OpenDealRoomThreadRequest.
@@ -53235,7 +53460,7 @@ type ProjectHealthAssessment struct {
 	Note      *string            `json:"note,omitempty"`
 	ProjectId openapi_types.UUID `json:"project_id"`
 
-	// Source What recorded this assessment.
+	// Source What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
 	Source *string `json:"source,omitempty"`
 
 	// SourceAuthor Who is on record as having judged it, when that is not whoever typed it in.
@@ -55526,9 +55751,11 @@ type ReportingEvidenceRow struct {
 	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerLabel        *string             `json:"owner_label,omitempty"`
 	Restricted        bool                `json:"restricted"`
 	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
 	SourceType        *string             `json:"source_type,omitempty"`
+	StageLabel        *string             `json:"stage_label,omitempty"`
 	Value             *float64            `json:"value"`
 }
 
@@ -55580,6 +55807,10 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenCount Open deals eligible for this forecast period.
+	OpenCount    *int64                `json:"open_count,omitempty"`
+	OpenEvidence *ReportingEvidenceRef `json:"open_evidence,omitempty"`
 
 	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
 	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
@@ -56500,6 +56731,36 @@ type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
 
+// RouterActions The actions of one MCP router whose actions run REST routes.
+type RouterActions struct {
+	Actions []struct {
+		// Action The value the router's action argument takes.
+		Action string `json:"action"`
+
+		// AskUserFirst Whether the app asks its user to confirm it first.
+		AskUserFirst *bool `json:"ask_user_first,omitempty"`
+
+		// Body The JSON schema of its body argument.
+		Body *map[string]interface{} `json:"body,omitempty"`
+
+		// Does The route's summary.
+		Does string `json:"does"`
+
+		// Ids The path ids the action takes as arguments.
+		Ids *[]string `json:"ids,omitempty"`
+
+		// IfVersion Whether it takes if_version: the version you last read.
+		IfVersion *bool `json:"if_version,omitempty"`
+
+		// Query The query parameters it takes as arguments.
+		Query *[]string `json:"query,omitempty"`
+
+		// Route The method and route, for example POST /v1/record-grants.
+		Route string `json:"route"`
+	} `json:"actions"`
+	Router string `json:"router"`
+}
+
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
 // assignment — who applied it, when — comes from the record's own tags read, because a
 // page of fifty rows does not need fifty assignments to draw a chip.
@@ -56579,9 +56840,14 @@ type SalesAssessmentConfidence string
 
 // SalesAssessmentCell defines model for SalesAssessmentCell.
 type SalesAssessmentCell struct {
+	// Display Locale-formatted quantity for reader text.
+	Display *string `json:"display,omitempty"`
+
 	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
+
+	// Value Raw source quantity with its unit.
 	Value string `json:"value"`
 }
 
@@ -56862,6 +57128,39 @@ type SaveMyLocaleRequest struct {
 // (`en-GB`, `fr`) is refused rather than approximated, because a locale
 // with no catalog renders as raw message keys.
 type SaveMyLocaleRequestLocale string
+
+// SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
+type SaveMyTimezoneRequest struct {
+	// Source `browser` is the app's guess from the browser, stored only while no
+	// zone is stored. `chosen` is the user's own pick, always stored.
+	Source SaveMyTimezoneRequestSource `json:"source"`
+
+	// Timezone An IANA zone name, such as `Europe/Berlin`.
+	Timezone string `json:"timezone"`
+}
+
+// SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
+// zone is stored. `chosen` is the user's own pick, always stored.
+type SaveMyTimezoneRequestSource string
+
+// SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
+// own time zone, set through `saveMyTimezone`.
+type SaveWorkingHoursRequest struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` means until midnight.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone An older client's way to set the caller's time zone with the hours. When
+	// present it is stored as the caller's own chosen zone, in the same
+	// transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Timezone *string `json:"timezone,omitempty"`
+}
 
 // SavedView A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow.
 type SavedView struct {
@@ -58114,6 +58413,10 @@ type SetAiModelRateRequest struct {
 
 	// CacheWritePerMtok USD per 1M cache-write tokens.
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+
+	// ClearLongContext True drops the model's long-context band, so every call pays the prices above. Omitted
+	// or false keeps the band the model already carries.
+	ClearLongContext *bool `json:"clear_long_context,omitempty"`
 
 	// EffectiveDate A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
@@ -60021,6 +60324,9 @@ type UpdateActivityRequest struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
 
@@ -61439,9 +61745,12 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone IANA name.
-	Timezone  *string    `json:"timezone,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	Timezone *string `json:"timezone,omitempty"`
+
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -61879,6 +62188,17 @@ type VoiceReviewReason struct {
 	Code   string             `json:"code"`
 	Text   string             `json:"text"`
 	Values map[string]float64 `json:"values"`
+}
+
+// VoiceSentMailLearned The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+// each of them is `added`, `already_present` (a source already, left as it is), or
+// `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+type VoiceSentMailLearned struct {
+	Added          int                `json:"added"`
+	AlreadyPresent int                `json:"already_present"`
+	NoOwnWords     int                `json:"no_own_words"`
+	Read           int                `json:"read"`
+	Summary        VoiceCorpusSummary `json:"summary"`
 }
 
 // WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
@@ -62884,10 +63204,11 @@ type WorkingHours struct {
 	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
 	StartTime string `json:"start_time"`
 
-	// Timezone The IANA zone the two times are read on. A contact who has never
-	// chosen one is read on the installation's reporting timezone, which
-	// is what makes the unset case work rather than scheduling everybody
-	// on UTC.
+	// Timezone The IANA zone the two times are read on: the caller's own time zone.
+	// A contact with no stored zone is read on the installation's
+	// reporting timezone, which is what makes the unset case work rather
+	// than scheduling everybody on UTC. Read-only here; it is set through
+	// `saveMyTimezone`.
 	Timezone string `json:"timezone"`
 }
 
@@ -63819,6 +64140,9 @@ type WorklistItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -70707,6 +71031,30 @@ type CorrectProjectHealthAssessmentParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// UndoProjectHealthAssessmentParams defines parameters for UndoProjectHealthAssessment.
+type UndoProjectHealthAssessmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
 	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
@@ -71396,6 +71744,12 @@ type SetRoleObjectGrantParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// DescribeRouterActionsParams defines parameters for DescribeRouterActions.
+type DescribeRouterActionsParams struct {
+	// Router The router whose actions to describe.
+	Router string `form:"router" json:"router"`
 }
 
 // ListScheduledSendsParams defines parameters for ListScheduledSends.
@@ -72151,6 +72505,30 @@ type IngestVoiceCorpusSourceParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// LearnVoiceFromSentMailParams defines parameters for LearnVoiceFromSentMail.
+type LearnVoiceFromSentMailParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // DeleteVoiceCorpusSourceParams defines parameters for DeleteVoiceCorpusSource.
 type DeleteVoiceCorpusSourceParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -72668,6 +73046,9 @@ type DraftEmailJSONRequestBody = DraftSteering
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
+
+// RenderActivityForReaderJSONRequestBody defines body for RenderActivityForReader for application/json ContentType.
+type RenderActivityForReaderJSONRequestBody = ActivityReaderRenderingRequest
 
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
@@ -73455,8 +73836,11 @@ type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 // SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
 type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
+// SaveMyTimezoneJSONRequestBody defines body for SaveMyTimezone for application/json ContentType.
+type SaveMyTimezoneJSONRequestBody = SaveMyTimezoneRequest
+
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
-type SaveMyWorkingHoursJSONRequestBody = WorkingHours
+type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -74064,6 +74448,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -74499,6 +74891,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -76650,6 +77049,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -76900,6 +77307,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -82986,6 +83400,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
@@ -83071,6 +83493,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -85395,7 +85824,7 @@ type ServerInterface interface {
 	// Update an activity (e.g. complete a task).
 	// (PATCH /activities/{id})
 	UpdateActivity(w http.ResponseWriter, r *http.Request, id Id, params UpdateActivityParams)
-	// Limit (or re-open) who may read this activity's content.
+	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
 	// Pick the message back up — the undo behind every set-aside verb.
@@ -85422,6 +85851,9 @@ type ServerInterface interface {
 	// Undo filing this activity under a project. Requires a stated reason; audited.
 	// (POST /activities/{id}/project-filing/undo)
 	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
+	// Show one note, mail or meeting in the reader's own language.
+	// (POST /activities/{id}/reader-rendering)
+	RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -85440,7 +85872,7 @@ type ServerInterface interface {
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
-	// Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
+	// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 	// (POST /activities/{id}/transcript-proposals)
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
@@ -85754,7 +86186,7 @@ type ServerInterface interface {
 	// The records behind one cell of a question card.
 	// (POST /analytics/reports/{id}/questions/{card_id}/explain)
 	ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams)
-	// Evaluate a saved report as a seat holding one role would read it. Human-only.
+	// Evaluate a saved report as a seat holding one role would see it.
 	// (GET /analytics/reports/{id}/reader-preview)
 	PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams)
 	// List reporting report revisions
@@ -85869,7 +86301,7 @@ type ServerInterface interface {
 	// The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 	// (GET /attachments/{id}/extraction)
 	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
+	// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 	// (POST /attachments/{id}/extraction)
 	ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id)
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
@@ -86295,7 +86727,7 @@ type ServerInterface interface {
 	// This is not a company — archive it and refuse its domain as one (admin/ops).
 	// (POST /companies/{id}/reject)
 	RejectCompany(w http.ResponseWriter, r *http.Request, id Id, params RejectCompanyParams)
-	// What this account needs, as the model last read it for this reader.
+	// What this account needs, as the model last judged it for this reader.
 	// (GET /companies/{id}/scan)
 	GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
 	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
@@ -86334,7 +86766,7 @@ type ServerInterface interface {
 	// The installation's own company (the anchor company).
 	// (GET /company)
 	GetAnchorCompany(w http.ResponseWriter, r *http.Request)
-	// Save the installation's own company — the human's confirm-first write.
+	// Save the installation's own company.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
 	// The deterministic, typed context assembled from the anchor company.
@@ -86901,7 +87333,7 @@ type ServerInterface interface {
 	// Start an admin's consent to an extension unit's OAuth app.
 	// (POST /ext-oauth/{provider}/connect)
 	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
-	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
+	// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
 	// Read what the core does with a unit's feed. Needs the extension_access read grant.
@@ -87228,13 +87660,13 @@ type ServerInterface interface {
 	// Link a lead to a company.
 	// (POST /leads/{id}/link-company)
 	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
-	// List current and superseded human-provided qualification signals.
+	// List current and superseded manual qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
-	// Enter or replace a human-provided scoring factor (S-E13.6).
+	// Enter or replace a manual scoring factor.
 	// (PUT /leads/{id}/manual-signals)
 	SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id)
-	// Withdraw a human-provided scoring factor.
+	// Withdraw a manual scoring factor.
 	// (DELETE /leads/{id}/manual-signals/{factor})
 	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor)
 	// Accept a lead for the partner that referred it.
@@ -87453,6 +87885,9 @@ type ServerInterface interface {
 	// End one of your sessions.
 	// (DELETE /me/sessions/{sessionId})
 	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Set the time zone your own times are shown in.
+	// (PUT /me/timezone)
+	SaveMyTimezone(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -87687,6 +88122,9 @@ type ServerInterface interface {
 	// Correct one reading, keeping when it was said.
 	// (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
 	CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams)
+	// Undo a reading the health job wrote.
+	// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+	UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams)
 	// List a project's stakeholders (project↔contact relationships).
 	// (GET /projects/{id}/stakeholders)
 	ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -87807,10 +88245,10 @@ type ServerInterface interface {
 	// List manual per-record grants, filtered by record or by subject (ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
-	// Share one record with a user or team (human-only).
+	// Share one record with a user or team.
 	// (POST /record-grants)
 	CreateRecordGrant(w http.ResponseWriter, r *http.Request, params CreateRecordGrantParams)
-	// Revoke a manual record grant (human-only).
+	// Revoke a manual record grant.
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
 	// List responsibility roles, active and retired, in display order.
@@ -87921,7 +88359,7 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
-	// List the workspace's roles with their object grants and row scope. Human-only.
+	// List the workspace's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
 	// Create a role by copying an existing one. Human-only.
@@ -87939,6 +88377,9 @@ type ServerInterface interface {
 	// Restore an archived role. Human-only.
 	// (POST /roles/{key}/restore)
 	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
+	// What each action of one MCP router takes, as its own route defines it.
+	// (GET /router-actions)
+	DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams)
 	// The caller's own messages waiting to be sent.
 	// (GET /scheduled-sends)
 	ListScheduledSends(w http.ResponseWriter, r *http.Request, params ListScheduledSendsParams)
@@ -88116,7 +88557,7 @@ type ServerInterface interface {
 	// List workspace members (roster) — cursor-paginated. Read-only.
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
-	// Invite a new member. Admin-only, human-only.
+	// Invite a new member. Admin-only.
 	// (POST /users)
 	InviteUser(w http.ResponseWriter, r *http.Request)
 	// What a seat with this role and these teams will see and may do.
@@ -88146,13 +88587,13 @@ type ServerInterface interface {
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
-	// Deactivate a member and revoke their live access. Admin-only, human-only.
+	// Deactivate a member and revoke their live access. Admin-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
-	// Count the live records a member still owns. Member administration, human-only.
+	// Count the live records a member still owns.
 	// (GET /users/{id}/handover)
 	GetUserHandover(w http.ResponseWriter, r *http.Request, id Id)
-	// Move every live record a member owns to a colleague. Member administration, human-only.
+	// Move every live record a member owns to a colleague. Member administration.
 	// (POST /users/{id}/handover)
 	HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams)
 	// Merge a duplicate into the selected surviving member.
@@ -88164,7 +88605,7 @@ type ServerInterface interface {
 	// Mint a single-use set-password link for a member. Admin-only, human-only.
 	// (POST /users/{id}/password-link)
 	IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, id Id)
-	// Reactivate a deactivated member. Admin-only, human-only.
+	// Reactivate a deactivated member. Admin-only.
 	// (POST /users/{id}/reactivate)
 	ReactivateUser(w http.ResponseWriter, r *http.Request, id Id)
 	// Retire an account while preserving historical attribution.
@@ -88176,7 +88617,7 @@ type ServerInterface interface {
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
-	// Set a member's system role. Admin-only, human-only.
+	// Set a member's system role. Admin-only.
 	// (PATCH /users/{id}/role)
 	ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id)
 	// The sessions open under a member's account. Admin-only, human-only.
@@ -88242,6 +88683,9 @@ type ServerInterface interface {
 	// Dry-run one candidate source; detect its shape and speakers without storing anything.
 	// (POST /voice-profiles/{id}/sources/preview)
 	PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id)
+	// Learn the owner's voice from their own most recent sent mail, once, on request.
+	// (POST /voice-profiles/{id}/sources/sent-mail)
+	LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams)
 	// Permanently remove one retained source and mark any active artifact stale.
 	// (DELETE /voice-profiles/{id}/sources/{sourceId})
 	DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams)
@@ -88476,7 +88920,7 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Limit (or re-open) who may read this activity's content.
+// Limit (or re-open) who may see this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88530,6 +88974,12 @@ func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Show one note, mail or meeting in the reader's own language.
+// (POST /activities/{id}/reader-rendering)
+func (_ Unimplemented) RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 // (POST /activities/{id}/relink)
 func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams) {
@@ -88566,7 +89016,7 @@ func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
+// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 // (POST /activities/{id}/transcript-proposals)
 func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -89186,7 +89636,7 @@ func (_ Unimplemented) ExplainReportingQuestionCard(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Evaluate a saved report as a seat holding one role would read it. Human-only.
+// Evaluate a saved report as a seat holding one role would see it.
 // (GET /analytics/reports/{id}/reader-preview)
 func (_ Unimplemented) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -89412,7 +89862,7 @@ func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
+// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 // (POST /attachments/{id}/extraction)
 func (_ Unimplemented) ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -90264,7 +90714,7 @@ func (_ Unimplemented) RejectCompany(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What this account needs, as the model last read it for this reader.
+// What this account needs, as the model last judged it for this reader.
 // (GET /companies/{id}/scan)
 func (_ Unimplemented) GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -90342,7 +90792,7 @@ func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Save the installation's own company — the human's confirm-first write.
+// Save the installation's own company.
 // (PUT /company)
 func (_ Unimplemented) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -91476,7 +91926,7 @@ func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
+// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92130,19 +92580,19 @@ func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List current and superseded human-provided qualification signals.
+// List current and superseded manual qualification signals.
 // (GET /leads/{id}/manual-signals)
 func (_ Unimplemented) ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Enter or replace a human-provided scoring factor (S-E13.6).
+// Enter or replace a manual scoring factor.
 // (PUT /leads/{id}/manual-signals)
 func (_ Unimplemented) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Withdraw a human-provided scoring factor.
+// Withdraw a manual scoring factor.
 // (DELETE /leads/{id}/manual-signals/{factor})
 func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92577,6 +93027,12 @@ func (_ Unimplemented) ListMySessions(w http.ResponseWriter, r *http.Request) {
 // End one of your sessions.
 // (DELETE /me/sessions/{sessionId})
 func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the time zone your own times are shown in.
+// (PUT /me/timezone)
+func (_ Unimplemented) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93048,6 +93504,12 @@ func (_ Unimplemented) CorrectProjectHealthAssessment(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Undo a reading the health job wrote.
+// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+func (_ Unimplemented) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List a project's stakeholders (project↔contact relationships).
 // (GET /projects/{id}/stakeholders)
 func (_ Unimplemented) ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
@@ -93288,13 +93750,13 @@ func (_ Unimplemented) ListRecordGrants(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Share one record with a user or team (human-only).
+// Share one record with a user or team.
 // (POST /record-grants)
 func (_ Unimplemented) CreateRecordGrant(w http.ResponseWriter, r *http.Request, params CreateRecordGrantParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Revoke a manual record grant (human-only).
+// Revoke a manual record grant.
 // (DELETE /record-grants/{id})
 func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -93516,7 +93978,7 @@ func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's roles with their object grants and row scope. Human-only.
+// List the workspace's roles with their object grants and row scope.
 // (GET /roles)
 func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -93549,6 +94011,12 @@ func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request
 // Restore an archived role. Human-only.
 // (POST /roles/{key}/restore)
 func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What each action of one MCP router takes, as its own route defines it.
+// (GET /router-actions)
+func (_ Unimplemented) DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93906,7 +94374,7 @@ func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Invite a new member. Admin-only, human-only.
+// Invite a new member. Admin-only.
 // (POST /users)
 func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -93966,19 +94434,19 @@ func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Deactivate a member and revoke their live access. Admin-only, human-only.
+// Deactivate a member and revoke their live access. Admin-only.
 // (POST /users/{id}/deactivate)
 func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Count the live records a member still owns. Member administration, human-only.
+// Count the live records a member still owns.
 // (GET /users/{id}/handover)
 func (_ Unimplemented) GetUserHandover(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Move every live record a member owns to a colleague. Member administration, human-only.
+// Move every live record a member owns to a colleague. Member administration.
 // (POST /users/{id}/handover)
 func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -94002,7 +94470,7 @@ func (_ Unimplemented) IssueUserPasswordLink(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Reactivate a deactivated member. Admin-only, human-only.
+// Reactivate a deactivated member. Admin-only.
 // (POST /users/{id}/reactivate)
 func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -94026,7 +94494,7 @@ func (_ Unimplemented) PreviewMemberRetirement(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set a member's system role. Admin-only, human-only.
+// Set a member's system role. Admin-only.
 // (PATCH /users/{id}/role)
 func (_ Unimplemented) ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -94155,6 +94623,12 @@ func (_ Unimplemented) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Re
 // Dry-run one candidate source; detect its shape and speakers without storing anything.
 // (POST /voice-profiles/{id}/sources/preview)
 func (_ Unimplemented) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Learn the owner's voice from their own most recent sent mail, once, on request.
+// (POST /voice-profiles/{id}/sources/sent-mail)
+func (_ Unimplemented) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94485,6 +94959,8 @@ func (siw *ServerInterfaceWrapper) CreateAcquisitionSource(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -94540,6 +95016,8 @@ func (siw *ServerInterfaceWrapper) UpdateAcquisitionSource(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -94905,6 +95383,8 @@ func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95088,6 +95568,8 @@ func (siw *ServerInterfaceWrapper) SetThreadAudience(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95290,6 +95772,8 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95346,6 +95830,8 @@ func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95393,6 +95879,8 @@ func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95560,6 +96048,8 @@ func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95591,6 +96081,8 @@ func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95630,6 +96122,38 @@ func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenderActivityForReader operation middleware
+func (siw *ServerInterfaceWrapper) RenderActivityForReader(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenderActivityForReader(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -95876,6 +96400,8 @@ func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95984,6 +96510,8 @@ func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -96115,6 +96643,8 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -96513,6 +97043,8 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96742,6 +97274,8 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96817,6 +97351,8 @@ func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96879,6 +97415,8 @@ func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -96983,6 +97521,8 @@ func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97267,6 +97807,8 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97327,6 +97869,8 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97346,6 +97890,8 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97495,6 +98041,8 @@ func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97607,6 +98155,8 @@ func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97627,6 +98177,8 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97646,6 +98198,8 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97710,6 +98264,8 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97758,6 +98314,8 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97864,6 +98422,8 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97908,6 +98468,8 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99196,6 +99758,8 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiatives(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -99263,6 +99827,8 @@ func (siw *ServerInterfaceWrapper) GetSalesInitiative(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99407,6 +99973,8 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiativeMembers(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100238,6 +100806,8 @@ func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWr
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100342,6 +100912,8 @@ func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100562,6 +101134,8 @@ func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100635,6 +101209,8 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100782,6 +101358,8 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100804,6 +101382,8 @@ func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100856,6 +101436,8 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100947,6 +101529,8 @@ func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101051,6 +101635,8 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101674,6 +102260,8 @@ func (siw *ServerInterfaceWrapper) AcknowledgeApprovalFailure(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101740,6 +102328,8 @@ func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101771,6 +102361,8 @@ func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101944,6 +102536,8 @@ func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101975,6 +102569,8 @@ func (siw *ServerInterfaceWrapper) DownloadAttachment(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102008,6 +102604,8 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102039,6 +102637,8 @@ func (siw *ServerInterfaceWrapper) ReadAttachmentForFields(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102072,6 +102672,8 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102104,6 +102706,8 @@ func (siw *ServerInterfaceWrapper) UpdateAttachmentMetadata(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102135,6 +102739,8 @@ func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102817,6 +103423,8 @@ func (siw *ServerInterfaceWrapper) ListAutomationRuns(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103081,6 +103689,8 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103135,6 +103745,8 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103166,6 +103778,8 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103199,6 +103813,8 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103230,6 +103846,8 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103451,6 +104069,8 @@ func (siw *ServerInterfaceWrapper) ListMyCaptureActivity(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103503,6 +104123,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103551,6 +104173,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseW
 func (siw *ServerInterfaceWrapper) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103627,6 +104251,8 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103662,6 +104288,8 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103850,6 +104478,8 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104008,6 +104638,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceEmailDomains(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104079,6 +104711,8 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspaceEmailDomain(w http.ResponseWri
 func (siw *ServerInterfaceWrapper) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104460,6 +105094,8 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104572,6 +105208,8 @@ func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104711,6 +105349,8 @@ func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104742,6 +105382,8 @@ func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -105576,6 +106218,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyForAddress(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105904,6 +106548,8 @@ func (siw *ServerInterfaceWrapper) AskAboutCompany(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105935,6 +106581,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyBrief(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -105984,6 +106632,8 @@ func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106031,6 +106681,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106165,6 +106817,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyContracts(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106436,6 +107090,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyDossier(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106467,6 +107123,8 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyDossier(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106583,6 +107241,8 @@ func (siw *ServerInterfaceWrapper) GetClaimEvidence(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107110,6 +107770,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyGrowthFit(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107141,6 +107803,8 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyGrowthFit(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107297,6 +107961,8 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107329,6 +107995,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyLinkCandidates(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107360,6 +108028,8 @@ func (siw *ServerInterfaceWrapper) LinkCompanyContacts(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107417,6 +108087,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107449,6 +108121,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107480,6 +108154,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107608,6 +108284,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108127,6 +108805,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyScan(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108158,6 +108838,8 @@ func (siw *ServerInterfaceWrapper) EnsureCompanyScan(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108302,6 +108984,8 @@ func (siw *ServerInterfaceWrapper) RestoreCompanySuggestion(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108349,6 +109033,8 @@ func (siw *ServerInterfaceWrapper) DismissCompanySuggestion(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108484,6 +109170,8 @@ func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108536,6 +109224,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108555,6 +109245,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108578,6 +109270,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContext(w http.ResponseWriter
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108615,6 +109309,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108634,6 +109330,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.Re
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108674,6 +109372,8 @@ func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogo(w http.ResponseWriter
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108774,6 +109474,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteRead(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108805,6 +109507,8 @@ func (siw *ServerInterfaceWrapper) ConfirmAnchorCompanySiteRead(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108894,6 +109598,8 @@ func (siw *ServerInterfaceWrapper) MessageAnchorCompanySiteRead(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108916,6 +109622,8 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109023,6 +109731,8 @@ func (siw *ServerInterfaceWrapper) ResolveConfirmSubmission(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListConnectors(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109283,6 +109993,8 @@ func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109843,6 +110555,8 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudges(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110222,6 +110936,8 @@ func (siw *ServerInterfaceWrapper) GetContactBrief(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110254,6 +110970,8 @@ func (siw *ServerInterfaceWrapper) RegenerateContactBrief(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110285,6 +111003,8 @@ func (siw *ServerInterfaceWrapper) RecordConversationClaim(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -110929,6 +111649,8 @@ func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111026,6 +111748,8 @@ func (siw *ServerInterfaceWrapper) GetContactEnrichmentRun(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111092,6 +111816,8 @@ func (siw *ServerInterfaceWrapper) DraftIntroNote(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111123,6 +111849,8 @@ func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111156,6 +111884,8 @@ func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111187,6 +111917,8 @@ func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111297,6 +112029,8 @@ func (siw *ServerInterfaceWrapper) RestoreContactMoment(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111357,6 +112091,8 @@ func (siw *ServerInterfaceWrapper) DismissContactMoment(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111424,6 +112160,8 @@ func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111455,6 +112193,8 @@ func (siw *ServerInterfaceWrapper) GetRelationshipNudge(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111488,6 +112228,8 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111519,6 +112261,8 @@ func (siw *ServerInterfaceWrapper) GetContactProfileFields(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111560,6 +112304,8 @@ func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111609,6 +112355,8 @@ func (siw *ServerInterfaceWrapper) PublishCapturedContact(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111641,6 +112389,8 @@ func (siw *ServerInterfaceWrapper) RunContactResearch(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111672,6 +112422,8 @@ func (siw *ServerInterfaceWrapper) SaveContactResearch(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111829,6 +112581,8 @@ func (siw *ServerInterfaceWrapper) CreateContract(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111885,6 +112639,8 @@ func (siw *ServerInterfaceWrapper) ArchiveContract(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111917,6 +112673,8 @@ func (siw *ServerInterfaceWrapper) GetContract(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111948,6 +112706,8 @@ func (siw *ServerInterfaceWrapper) UpdateContract(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112005,6 +112765,8 @@ func (siw *ServerInterfaceWrapper) CancelContract(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112061,6 +112823,8 @@ func (siw *ServerInterfaceWrapper) RenewContract(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112116,6 +112880,8 @@ func (siw *ServerInterfaceWrapper) ChangeContractStatus(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112930,6 +113696,8 @@ func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113020,6 +113788,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113076,6 +113846,8 @@ func (siw *ServerInterfaceWrapper) GetDealRoomBrief(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113107,6 +113879,8 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113174,6 +113948,8 @@ func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113214,6 +113990,8 @@ func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113280,6 +114058,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113335,6 +114115,8 @@ func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113442,6 +114224,8 @@ func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113482,6 +114266,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113524,6 +114310,8 @@ func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113565,6 +114353,8 @@ func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113596,6 +114386,8 @@ func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113660,6 +114452,8 @@ func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113829,6 +114623,8 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113851,6 +114647,8 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113991,6 +114789,8 @@ func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -114022,6 +114822,8 @@ func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -114078,6 +114880,8 @@ func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115046,6 +115850,8 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115105,6 +115911,8 @@ func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115328,6 +116136,8 @@ func (siw *ServerInterfaceWrapper) UnhideDealDocument(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115369,6 +116179,8 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115400,6 +116212,8 @@ func (siw *ServerInterfaceWrapper) ListDealLegalReviews(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115433,6 +116247,8 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115464,6 +116280,8 @@ func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115512,6 +116330,8 @@ func (siw *ServerInterfaceWrapper) DismissDealMove(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115713,6 +116533,8 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115745,6 +116567,8 @@ func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115776,6 +116600,8 @@ func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115886,6 +116712,8 @@ func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115960,6 +116788,8 @@ func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116173,6 +117003,8 @@ func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116545,6 +117377,8 @@ func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116564,6 +117398,8 @@ func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116645,6 +117481,8 @@ func (siw *ServerInterfaceWrapper) GetEmailSignatureTemplate(w http.ResponseWrit
 func (siw *ServerInterfaceWrapper) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116734,6 +117572,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116753,6 +117593,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116794,6 +117636,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116813,6 +117657,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116834,6 +117680,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116853,6 +117701,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117036,6 +117886,8 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -117067,6 +117919,8 @@ func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117122,6 +117976,8 @@ func (siw *ServerInterfaceWrapper) GetFieldHistory(w http.ResponseWriter, r *htt
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117325,6 +118181,8 @@ func (siw *ServerInterfaceWrapper) GetFinanceSource(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -117367,6 +118225,8 @@ func (siw *ServerInterfaceWrapper) ListFinanceSourceCustomers(w http.ResponseWri
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117616,6 +118476,8 @@ func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.Respon
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -117805,6 +118667,8 @@ func (siw *ServerInterfaceWrapper) WaitInputCheck(w http.ResponseWriter, r *http
 func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118025,6 +118889,8 @@ func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118057,6 +118923,8 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118076,6 +118944,8 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118148,6 +119018,8 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118270,6 +119142,8 @@ func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118415,6 +119289,8 @@ func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118579,6 +119455,8 @@ func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119262,6 +120140,8 @@ func (siw *ServerInterfaceWrapper) CancelIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119293,6 +120173,8 @@ func (siw *ServerInterfaceWrapper) CompleteIntroRequest(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119326,6 +120208,8 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119345,6 +120229,8 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119429,6 +120315,8 @@ func (siw *ServerInterfaceWrapper) ReadCorpus(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119526,6 +120414,8 @@ func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119622,6 +120512,8 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119666,6 +120558,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadDisqualifyReason(w http.ResponseWri
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119723,6 +120617,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadDisqualifyReason(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119754,6 +120650,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadDisqualifyReason(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119824,6 +120722,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadOrigin(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119880,6 +120780,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadOrigin(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119911,6 +120813,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadOrigin(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119956,6 +120860,8 @@ func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120000,6 +120906,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120057,6 +120965,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120088,6 +120998,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120564,6 +121476,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSettings(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120865,6 +121779,8 @@ func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120897,6 +121813,8 @@ func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120928,6 +121846,8 @@ func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120970,6 +121890,8 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121001,6 +121923,8 @@ func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121134,6 +122058,8 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121273,6 +122199,8 @@ func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121328,6 +122256,8 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121394,6 +122324,8 @@ func (siw *ServerInterfaceWrapper) ListLegalEntities(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121430,6 +122362,8 @@ func (siw *ServerInterfaceWrapper) CreateLegalEntity(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121462,6 +122396,8 @@ func (siw *ServerInterfaceWrapper) GetLegalEntity(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121493,6 +122429,8 @@ func (siw *ServerInterfaceWrapper) UpdateLegalEntity(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121550,6 +122488,8 @@ func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121605,6 +122545,8 @@ func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121718,6 +122660,8 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121749,6 +122693,8 @@ func (siw *ServerInterfaceWrapper) ListLegalEntityMembers(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121782,6 +122728,8 @@ func (siw *ServerInterfaceWrapper) AssignLegalEntityMember(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121804,6 +122752,8 @@ func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121867,6 +122817,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121886,6 +122838,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121919,6 +122873,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReview(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121951,6 +122907,8 @@ func (siw *ServerInterfaceWrapper) DecideLegalReview(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121982,6 +122940,8 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122615,6 +123575,8 @@ func (siw *ServerInterfaceWrapper) CreateLossReason(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -122661,6 +123623,8 @@ func (siw *ServerInterfaceWrapper) ListLegacyLossReasons(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122730,6 +123694,8 @@ func (siw *ServerInterfaceWrapper) DecideLegacyLossReason(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -122786,6 +123752,8 @@ func (siw *ServerInterfaceWrapper) UpdateLossReason(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -122832,6 +123800,8 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122893,6 +123863,8 @@ func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122959,6 +123931,8 @@ func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123010,6 +123984,8 @@ func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123066,6 +124042,8 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123161,6 +124139,8 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123298,6 +124278,8 @@ func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123317,6 +124299,8 @@ func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123358,6 +124342,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123377,6 +124363,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123420,6 +124408,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123557,6 +124547,8 @@ func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWr
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123635,6 +124627,26 @@ func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RevokeMySession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveMyTimezone operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyTimezone(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123785,6 +124797,8 @@ func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123834,6 +124848,8 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123853,6 +124869,8 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123885,6 +124903,8 @@ func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -124431,6 +125451,8 @@ func (siw *ServerInterfaceWrapper) AcceptOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -124607,6 +125629,8 @@ func (siw *ServerInterfaceWrapper) DownloadOfferPdf(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -124638,6 +125662,8 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -124695,6 +125721,8 @@ func (siw *ServerInterfaceWrapper) RejectOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -124751,6 +125779,8 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -124806,6 +125836,8 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -124869,6 +125901,8 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -125766,6 +126800,8 @@ func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -127522,6 +128558,71 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// UndoProjectHealthAssessment operation middleware
+func (siw *ServerInterfaceWrapper) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "assessment_id" -------------
+	var assessmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "assessment_id", chi.URLParam(r, "assessment_id"), &assessmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assessment_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoProjectHealthAssessmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoProjectHealthAssessment(w, r, id, assessmentId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -127685,6 +128786,8 @@ func (siw *ServerInterfaceWrapper) RemoveProjectStakeholder(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListProviderConnections(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -128927,6 +130030,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -128982,6 +130087,8 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129052,6 +130159,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordRole(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129107,6 +130216,8 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129477,6 +130588,8 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129542,6 +130655,8 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129583,6 +130698,8 @@ func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129623,6 +130740,8 @@ func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129689,6 +130808,8 @@ func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129729,6 +130850,8 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129771,6 +130894,8 @@ func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129811,6 +130936,8 @@ func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129919,6 +131046,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -130356,6 +131485,8 @@ func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) ListRetentionPolicies(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -130850,6 +131981,8 @@ func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Requ
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131086,6 +132219,47 @@ func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeRouterActions operation middleware
+func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DescribeRouterActionsParams
+
+	// ------------- Required query parameter "router" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "router", r.URL.Query(), &params.Router, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "router"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "router", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeRouterActions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListScheduledSends operation middleware
 func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *http.Request) {
 
@@ -131093,6 +132267,8 @@ func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131142,6 +132318,8 @@ func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131173,6 +132351,8 @@ func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131230,6 +132410,8 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131252,6 +132434,8 @@ func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131403,6 +132587,8 @@ func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131434,6 +132620,8 @@ func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131506,6 +132694,8 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131525,6 +132715,8 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131548,6 +132740,8 @@ func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131587,6 +132781,8 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132873,6 +134069,8 @@ func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132905,6 +134103,8 @@ func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132936,6 +134136,8 @@ func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133305,6 +134507,8 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133500,6 +134704,8 @@ func (siw *ServerInterfaceWrapper) CreateTeam(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133531,6 +134737,8 @@ func (siw *ServerInterfaceWrapper) UpdateTeam(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133573,6 +134781,8 @@ func (siw *ServerInterfaceWrapper) RemoveTeamMember(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133613,6 +134823,8 @@ func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133727,6 +134939,8 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133798,6 +135012,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133944,6 +135160,8 @@ func (siw *ServerInterfaceWrapper) GetMember(w http.ResponseWriter, r *http.Requ
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133975,6 +135193,8 @@ func (siw *ServerInterfaceWrapper) UpdateMember(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134040,6 +135260,8 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134072,6 +135294,8 @@ func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134103,6 +135327,8 @@ func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134301,6 +135527,8 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134332,6 +135560,8 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134460,6 +135690,8 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134555,6 +135787,8 @@ func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134669,6 +135903,8 @@ func (siw *ServerInterfaceWrapper) GetSavedView(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134744,6 +135980,8 @@ func (siw *ServerInterfaceWrapper) UpdateSavedView(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) ListVoiceProfiles(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134879,6 +136117,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceProfile(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135033,6 +136273,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceBuild(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135139,6 +136381,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileDeltas(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135257,6 +136501,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceLearningSummary(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135288,6 +136534,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135383,6 +136631,62 @@ func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewVoiceCorpusSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LearnVoiceFromSentMail operation middleware
+func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LearnVoiceFromSentMailParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LearnVoiceFromSentMail(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135538,6 +136842,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileVersions(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135824,6 +137130,8 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135923,6 +137231,8 @@ func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136365,6 +137675,8 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136396,6 +137708,8 @@ func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136429,6 +137743,8 @@ func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136460,6 +137776,8 @@ func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136493,6 +137811,8 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136512,6 +137832,8 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136533,6 +137855,8 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136552,6 +137876,8 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136585,6 +137911,8 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136604,6 +137932,8 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136627,6 +137957,8 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136666,6 +137998,8 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136740,6 +138074,8 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136855,6 +138191,8 @@ func (siw *ServerInterfaceWrapper) MarkWorklistRowsDone(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136875,6 +138213,8 @@ func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136894,6 +138234,8 @@ func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136917,6 +138259,8 @@ func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -136954,6 +138298,8 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -136986,6 +138332,8 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -137008,6 +138356,8 @@ func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -137057,6 +138407,8 @@ func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -137217,6 +138569,8 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -137255,6 +138609,8 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -137490,6 +138846,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/project-filing/undo", wrapper.UndoActivityProjectFiling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/reader-rendering", wrapper.RenderActivityForReader)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
@@ -139511,6 +140870,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/timezone", wrapper.SaveMyTimezone)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
@@ -139743,6 +141105,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/corrections", wrapper.CorrectProjectHealthAssessment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/undo", wrapper.UndoProjectHealthAssessment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/stakeholders", wrapper.ListProjectStakeholders)
@@ -139995,6 +141360,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/router-actions", wrapper.DescribeRouterActions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduled-sends", wrapper.ListScheduledSends)
@@ -140298,6 +141666,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/preview", wrapper.PreviewVoiceCorpusSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/sent-mail", wrapper.LearnVoiceFromSentMail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/voice-profiles/{id}/sources/{sourceId}", wrapper.DeleteVoiceCorpusSource)

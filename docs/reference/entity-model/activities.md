@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-69 columns · primary key `(id)` · referenced by 43 foreign keys
+70 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -31,6 +31,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `direction` | `text` |  | inbound/outbound for email/call; null for note/task. |
 | `done_at` | `timestamp with time zone` |  |  |
 | `due_at` | `timestamp with time zone` |  | Task only. |
+| `due_has_time` | `boolean`, default `false` | yes | Task only. |
 | `duration_seconds` | `integer` |  | Meeting/call only. |
 | `foreign_link` | `boolean` |  |  |
 | `guests_left_out` | `integer`, default `0` | yes | Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. |
@@ -40,7 +41,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `invitation_sender` | `uuid` |  | Points at `app_user.id`. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
-| `language` | `text` |  | What language this message is written in, read from its own text when it was captured. |
+| `language` | `text` |  | What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `occurred_precision` | `text`, default `'instant'::text` | yes | How to read `occurred_at`. |
@@ -165,6 +166,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
+- `activity_due_time_follows_due_at`: `BEFORE INSERT OR UPDATE OF due_at, due_has_time FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()`
 - `activity_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_last_activity()`
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_project_last_activity()`

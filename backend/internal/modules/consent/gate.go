@@ -70,22 +70,19 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// Unknown purpose ⇒ nothing can be granted under it.
 			return fmt.Errorf("consent: purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
 		}
-		// The window a qualifying event still supports an unprompted message
-		// within, resolved once for the whole set so two recipients of one
-		// message cannot be judged against different spans.
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return err
-		}
-		since := time.Now().Add(-w.reply)
-		// The legacy gate is asked about a purpose key and never about the
-		// message, so it can make no similarity claim — and an exception whose
-		// pack requires similarity therefore refuses here. That is the honest
-		// answer for a caller that cannot say what it advertises, and it is
-		// only reached where the engine defers to this gate.
-		marketing := MarketingContext{Exception: w.marketingException}
 		for _, r := range recipients {
-			granted, err := grantedForRecipient(ctx, tx, r, purpose, since, marketing)
+			// Each recipient's own country sets the window a qualifying event
+			// still supports an unprompted message within.
+			country, err := recipientCountryOf(ctx, tx, r)
+			if err != nil {
+				return err
+			}
+			w := packRulesFor(country)
+			// The legacy gate is asked about a purpose key and never about the
+			// message, so it can make no similarity claim. An exception whose
+			// pack requires similarity therefore refuses here.
+			marketing := MarketingContext{Exception: w.marketingException}
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
 			if err != nil {
 				return err
 			}
@@ -113,17 +110,29 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // question are two questions, and the one that stops matching looks exactly
 // like the one that still does.
 //
-// A recipient that resolves only to an unpromoted LEAD falls through to the
-// grant predicate below. A lead carries no qualifying events and no §7(3) flag
-// — those hang off a contact — so for a lead the class model has nothing extra
-// to say and the recorded grant IS the whole answer.
+// A recipient that resolves only to an unpromoted LEAD is answered by its
+// recorded grant. Any stop that binds the purpose refuses it. resolveLead
+// finds the lead, as it does for the send engine.
 func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time, marketing MarketingContext) (bool, error) {
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		return false, err
 	}
 	if !found {
-		return grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
+		leadID, found, err := resolveLead(ctx, tx, r)
+		if err != nil || !found {
+			return false, err
+		}
+		granted, err := grantedForLead(ctx, tx, leadID, purpose.ID, purpose.RequiresDOI)
+		if err != nil || !granted {
+			return false, err
+		}
+		stops, err := liveSuppression(ctx, tx, leadID, r)
+		if err != nil {
+			return false, err
+		}
+		_, stopped, err := stopBindingPurpose(stops, purpose)
+		return !stopped, err
 	}
 	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, since, marketing)
 	if err != nil {
@@ -134,9 +143,8 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if verdict.State != VerdictAllowed {
 		return false, nil
 	}
-	// false: this is the legacy gate's own path, which reads contact_consent and
-	// never looks at communication_suppression, so it has no suppression to
-	// report. The engine's arms pass their own answer.
+	// false: VerdictForContact allowed, so no stop binds this purpose. The
+	// engine's arms pass their own answer.
 	if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
 		return false, err
 	}
@@ -251,24 +259,20 @@ func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (stri
 // authorizes nothing. A lead carries no qualifying
 // events and no §7(3) flag, so there is nothing here for the class model to
 // add.
-func grantedForLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purposeID string, requiresDOI bool) (bool, error) {
-	if r.Channel != nil {
-		return false, nil
-	}
+func grantedForLead(ctx context.Context, tx pgx.Tx, leadID, purposeID string, requiresDOI bool) (bool, error) {
 	var granted bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1
-		  FROM lead l
-		  JOIN contact_consent pc ON pc.lead_id = l.id AND pc.purpose_id = $2
-		  WHERE `+sameAddressSQL("l.email", "$1")+` AND l.archived_at IS NULL
+		  FROM contact_consent pc
+		  WHERE pc.lead_id = $1 AND pc.purpose_id = $2
 		    AND pc.state = 'granted'
 		    AND (NOT $3::boolean OR EXISTS (
 		      SELECT 1 FROM consent_event ce
-		      WHERE ce.lead_id = l.id AND ce.purpose_id = $2
+		      WHERE ce.lead_id = pc.lead_id AND ce.purpose_id = $2
 		        AND ce.new_state = 'granted' AND ce.double_opt_in_confirmed_at IS NOT NULL
 		        AND ce.issuance_trigger IS NOT NULL))
-		)`, r.Email, purposeID, requiresDOI).Scan(&granted)
+		)`, leadID, purposeID, requiresDOI).Scan(&granted)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the lead's grant: %w", err)
 	}

@@ -39,6 +39,7 @@ components:
         - project.created
         - project.updated
         - project.phase_changed
+        - project.health_assessed
         - project.archived
         - list.created
         - list.updated
@@ -137,6 +138,7 @@ components:
         - consent.override_lifted
         - email_signature.changed
         - user_locale.changed
+        - user_timezone.changed
         - user_display_name.changed
         - user_greeting_name.changed
         - linkedin_account.changed
@@ -821,6 +823,39 @@ components:
         reason:
           type: string
           description: Why it moved; required by the API when to_phase is `closed`.
+      additionalProperties: false
+
+    PublicEventProjectHealthAssessed:
+      type: object
+      x-event-type: project.health_assessed
+      x-entity-type: project
+      x-version: 1
+      description: >-
+        Payload for project.health_assessed: a reading of how the project is
+        going was appended to its history. Every row counts: a new reading, a
+        correction or the undo of an AI reading, by a user or the health job.
+        The project row itself is not written, so no project.updated goes with
+        it.
+      required:
+        - assessment_id
+        - state
+        - source
+      properties:
+        assessment_id:
+          type: string
+          format: uuid
+          description: The appended reading.
+        state:
+          type: string
+          description: >-
+            on_track, at_risk or off_track. On an undo row it is the reading the
+            undo restored, or on_track when the project reads as not judged
+            again.
+        source:
+          type: string
+          description: >-
+            human for a user, ai for the health job, undo for a user undoing an AI
+            reading.
       additionalProperties: false
 
     PublicEventProjectArchived:
@@ -2252,10 +2287,20 @@ components:
           type: string
           format: date-time
           description: The activity's new due_at (absent when this update did not touch it).
+        due_has_time:
+          type: boolean
+          description: >-
+            Whether the new due_at names a time of day (true) or only a day (false). Carried
+            whenever this update names due_at.
         remind_at:
           type: string
           format: date-time
-          description: The activity's new remind_at (absent when this update did not touch it).
+          description: The activity's new remind_at (absent when this update did not set it).
+        remind_at_cleared:
+          type: boolean
+          description: >-
+            True when this update cleared the reminder: named as null by the caller, or ended
+            because the due date moved. A reminder a consumer mirrors stops firing then.
         assignee_id:
           type: string
           format: uuid
@@ -3390,6 +3435,29 @@ components:
           description: >-
             Which settings moved. Never empty: this event fires on a change, and
             a save that moved nothing writes nothing and publishes nothing.
+      additionalProperties: false
+    PublicEventUserTimezoneChanged:
+      type: object
+      x-event-type: user_timezone.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_timezone.changed. A member's own time zone was stored
+        by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from
+        the browser on first sign-in, or the member's own pick. Booking reads
+        the member's working hours on it, and mail sent to them is timed by it.
+      required:
+        - timezone
+        - chosen
+      properties:
+        timezone:
+          type: string
+          description: The IANA name now stored, such as Europe/Berlin.
+        chosen:
+          type: boolean
+          description: >-
+            True when the member picked the zone themselves. A later browser
+            guess never replaces a chosen zone.
       additionalProperties: false
     PublicEventUserLocaleChanged:
       type: object

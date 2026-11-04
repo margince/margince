@@ -258,6 +258,10 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// therefore the easiest to transpose undetected.
 	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]) != flip)
 	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]) != flip)
+	// Answered on a task alone, and the sentinel row is no task.
+	if got.DueHasTime != nil {
+		t.Errorf("a.due_has_time served on a %q row", got.Kind)
+	}
 }
 
 // boolFor answers what the row wrote for the boolean at this column, by
@@ -281,7 +285,7 @@ func boolFor(at int) bool {
 // before one exists.
 func isBoolColumn(sql string) bool {
 	switch sql {
-	case "a.is_done", "a.bulk_mail_attested", "":
+	case "a.is_done", "a.bulk_mail_attested", "a.due_has_time", "":
 		return true
 	}
 	return false
@@ -557,5 +561,16 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// A task says whether its due date has a time; the column's value reaches it.
+func TestATaskSaysWhetherItsDueDateHasATime(t *testing.T) {
+	for _, want := range []bool{true, false} {
+		scan := activityScan{contentAvailable: true, kind: "task", dueHasTime: want}
+		got := scan.record()
+		if got.DueHasTime == nil || *got.DueHasTime != want {
+			t.Errorf("a task scanned with due_has_time %t reads %v", want, got.DueHasTime)
+		}
 	}
 }

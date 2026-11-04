@@ -58,6 +58,7 @@ import {
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
+import { useBrowserZoneOnFirstSignIn } from "./lib/viewerzone";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -212,7 +213,7 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
-  // The signed-in person's own language, handed up to the provider that sits
+  // The signed-in user's own language, handed up to the provider that sits
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
@@ -223,6 +224,9 @@ function AuthedApp({
       adoptLocale(chosen);
     }
   }, [me.data, adoptLocale]);
+  // A user with no stored zone gets the browser's as a first guess. They
+  // change it under Settings → Account.
+  useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
     const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {

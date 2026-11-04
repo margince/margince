@@ -68,11 +68,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
-	// Human-only in the STORE as well as the router table. The route is
-	// declared human-only today, but a store that relies on the routing
-	// declaration alone is one x-mcp-tool away from being agent-reachable
-	// without anybody revisiting this function.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Checked in the STORE as well as the router table. The user or their agent
+	// records a promise; passportless work never does.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

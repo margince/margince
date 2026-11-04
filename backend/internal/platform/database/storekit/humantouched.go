@@ -23,8 +23,8 @@ func AuditNotFromAnImport(alias string) string {
 	return fmt.Sprintf(`(%[1]s.batch_id IS NULL OR NOT EXISTS (SELECT 1 FROM import_run ir WHERE ir.id = %[1]s.batch_id))`, alias)
 }
 
-// HumanActedSince reports whether a human has acted on one record after `at`.
-// Acting is any human-actor audit row on the entity, not only an update. A
+// HumanActedSince reports whether a user or their agent has acted on one record
+// after `at`. Acting is any such audit row on the entity, not only an update. A
 // narrower filter would reverse the act of somebody who archived an imported
 // row themselves.
 //
@@ -36,7 +36,7 @@ func HumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.U
 		SELECT EXISTS (
 			SELECT 1 FROM audit_log a
 			 WHERE a.entity_type = $1 AND a.entity_id = $2
-			   AND a.actor_type = 'human' AND a.occurred_at > $3
+			   AND `+AuditForAUser("a")+` AND a.occurred_at > $3
 			   AND `+AuditNotFromAnImport("a")+`)`,
 		entityType, id, at).Scan(&touched); err != nil {
 		return false, fmt.Errorf("checking whether a colleague has acted on this %s: %w", entityType, err)
@@ -45,10 +45,11 @@ func HumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.U
 }
 
 // MachineCreatedUntouched requires retained creation proof; missing audit history
-// cannot authorize an automatic repair of work a colleague may have adopted.
+// cannot authorize an automatic repair of work a colleague may have adopted. A
+// record a user's agent created or touched is that user's work.
 func MachineCreatedUntouched(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (bool, error) {
 	var pristine bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND action='create' AND actor_type IN ('system','agent'))
- AND NOT EXISTS (SELECT 1 FROM audit_log WHERE entity_type=@kind AND entity_id=@id AND actor_type='human')`, pgx.NamedArgs{"kind": entityType, "id": id}).Scan(&pristine)
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log made WHERE made.entity_type=@kind AND made.entity_id=@id AND made.action='create' AND made.actor_type IN ('system','agent') AND made.passport_id IS NULL)
+ AND NOT EXISTS (SELECT 1 FROM audit_log worked WHERE worked.entity_type=@kind AND worked.entity_id=@id AND `+AuditForAUser("worked")+`)`, pgx.NamedArgs{"kind": entityType, "id": id}).Scan(&pristine)
 	return pristine, err
 }

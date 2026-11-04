@@ -86,7 +86,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `supersedes_assessment_id` | `uuid` |  | The reading this one corrects, when it is a correction. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | What recorded this assessment. |
+| `source` | `text` | yes | What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. |
 
 **Points at**
 

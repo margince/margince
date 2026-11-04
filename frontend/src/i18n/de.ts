@@ -841,8 +841,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Organisiert von",
   "approval.preview.intendedAttendee":
     "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
-  "approval.preview.hostNamedAttendee":
-    "Nur per Adresse eingeladen (ohne Einwilligungsprüfung)",
+  "approval.preview.hostNamedAttendee": "Eingegebene Adresse",
   "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
@@ -926,6 +925,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
   "reporting.periodMonth": "Startmonat",
+  "reporting.expectedCloseOn": "Erwarteter Abschluss",
+  "reporting.qualifiedOn": "Qualifiziert am",
+  "reporting.owner": "Verantwortlich",
   "reporting.closedOn": "Abgeschlossen am",
   "reporting.meetingOn": "Termindatum",
   "reporting.acceptedOn": "Angenommen am",
@@ -1030,6 +1032,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pausedSchedules_other": "Pausierte Zeitpläne: {count}",
   "reporting.moreMetrics": "Alle Kennzahlen",
   "reporting.selectedValue": "Gesamt",
+  "reporting.pageRecordsOf_one": "{count} von {total} Datensätzen angezeigt",
+  "reporting.pageRecordsOf_other": "{count} von {total} Datensätzen angezeigt",
   "reporting.pageRecords_one": "{count} Eintrag angezeigt",
   "reporting.pageRecords_other": "{count} Einträge angezeigt",
   "reporting.currentState": "Aktueller Stand",
@@ -2345,6 +2349,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.assign_owner_release": "Freigabe der Verantwortung",
   "systemJob.assurance": "Prognoseprüfung",
   "systemJob.audience_rescope": "Aktualisierung der Zielgruppe",
+  "systemJob.voice_copy_recheck": "Bereinigung der Schreibproben",
   "systemJob.authz_disagreement": "Prüfung der Versandberechtigung",
   "systemJob.auto_apply": "Automatische Freigabe",
   "systemJob.automation": "Automatisierung",
@@ -2465,6 +2470,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.lifecycle_change": "Aktualisierung des Lebenszyklus",
   "agentJob.offer_drafting": "Angebotsentwurf",
   "agentJob.overnight": "Nacht-Agent",
+  "agentJob.project_health": "Projektzustand-Prüfung",
   "agentJob.propose_roles": "Analyse des Einkaufsteams",
   "agentJob.rate_refresh": "Aktualisierung der Wechselkurse",
   "agentJob.scrape": "Website-Erfassung",
@@ -2753,6 +2759,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
+  "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.remind_at": "Erinnerung",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
@@ -3409,6 +3416,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.display": "Darstellung",
   "table.density": "Dichte",
   "table.compact": "Kompakt",
+  "table.columnHandle": "{name} verschieben, {position} von {total}",
+  "table.columnMoved": "{name} auf {position} von {total} verschoben",
   "table.sort": "Sortieren",
   "table.sortNamed": "Sortierung: {column}",
   "table.sortMenu": "Sortieren nach",
@@ -3635,6 +3644,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Beleg",
   "stat.evidence.rests": "Worauf das beruht",
   "stat.open": "Öffnen",
+  "stat.forecast": "Prognose",
   "stat.records": "Datensätze anzeigen",
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
@@ -4175,6 +4185,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
+  "deal.products.emptyTakesOffer":
+    "Speicherst du eine leere Liste, gelten die Produkte eines angenommenen Angebots, falls es eines gibt.",
+  "deal.products.title": "Produkte",
+  "deal.products.denied": "Du darfst die Produkte dieses Deals nicht sehen.",
+  "deal.products.empty":
+    "Noch keine Produkte. Das angenommene Angebot legt sie fest, oder du legst sie selbst fest.",
+  "deal.products.edit": "Produkte festlegen",
+  "deal.products.editTitle": "Produkte dieses Deals festlegen",
+  "deal.products.save": "Produkte speichern",
+  "deal.products.intro":
+    "Produktberichte zählen diesen Deal unter den hier aufgeführten Produkten.",
+  "deal.products.replacesOffer":
+    "Diese Produkte stammen aus dem angenommenen Angebot. Speichern ersetzt sie, und ein später angenommenes Angebot lässt deine Liste unverändert.",
+  "deal.products.amount": "Betrag für {name}",
+  "deal.products.remove": "{name} entfernen",
+  "deal.products.add": "Produkt hinzufügen",
+  "deal.products.alreadyListed": "Bereits aufgeführt",
+  "deal.products.fromOffer": "Aus dem Angebot",
+  "deal.products.setByHand": "Selbst festgelegt",
   "deal.commitments.title": "Zusagen des Kunden",
   "deal.commitments.empty":
     "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
@@ -4653,6 +4682,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachmentWithheld":
     "Nicht gespeichert, da die E-Mail privat ist.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
+  "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
+  "readerRendering.show": "In meiner Sprache zeigen",
+  "readerRendering.pending": "Wird in deiner Sprache geschrieben",
+  "readerRendering.showOriginal": "Original zeigen",
+  "readerRendering.label": "In deiner Sprache",
+  "readerRendering.disclaimer":
+    "Von KI aus dem Original geschrieben, nur für dich. Nichts wird gespeichert.",
+  "readerRendering.alreadyYours": "Das ist schon in deiner Sprache.",
+  "readerRendering.noModel":
+    "Dafür braucht es ein KI-Modell. Ein Admin kann es unter Einstellungen → KI verbinden.",
+  "readerRendering.tooLong":
+    "Der Text ist zu lang, um ihn auf einmal in deiner Sprache zu zeigen. Lies das Original.",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",
   "email.detail.from": "Von",
@@ -5176,6 +5217,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
+  "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.createNamed": "Tag {name} erstellen",
+  "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
+  "tags.manage": "Tags verwalten",
+  "tags.createdNotApplied":
+    "{name} wurde angelegt, aber nicht zu diesem Datensatz hinzugefügt: {reason} Wähle es in der Liste, um es erneut hinzuzufügen.",
+  "tags.whoAdds":
+    "Ein weiteres Tag nötig? Admins und Operations können es unter Einstellungen → Tags anlegen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":
@@ -7044,6 +7093,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
+  "log.dueTime": "Uhrzeit (optional)",
+  "log.dueTimeSkipped":
+    "An diesem Tag wird die Uhr vorgestellt, {time} gibt es nicht. Die Aufgabe ist um {actual} fällig.",
   "log.date": "Datum",
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
@@ -7584,10 +7636,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
   "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
-  "analytics.overview.quarterOnlyTitle":
-    "Das erwartete Ergebnis gilt für dieses Quartal",
-  "analytics.overview.quarterOnlyBody":
-    "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
@@ -7634,7 +7682,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahl unbeantworteter Leads ist für dich verborgen",
   "analytics.prospect.unansweredFailed":
     "Unbeantwortete Leads konnten nicht gezählt werden",
-  "analytics.prospect.tooFew": "Zu wenige",
   "analytics.prospect.tooFewResponses":
     "Zu wenige beantwortete Leads für eine typische Zeit.",
   "analytics.prospect.upcoming": "Gebuchte Termine",
@@ -7706,6 +7753,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.count": "Anzahl",
   "analytics.team.membersWithheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
+  "analytics.team.viewMeetings": "Gebuchte Termine ansehen",
+  "analytics.team.memberRecords": "{name}: Datensätze für {metric} ansehen",
   "analytics.team.members": "Mitglieder",
   "analytics.team.member": "Mitglied",
   "analytics.team.meetings": "Gehaltene Termine",
@@ -7741,6 +7790,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Lead wartet noch auf eine erste Antwort",
   "analytics.team.unansweredRow_other":
     "{count} Leads warten noch auf eine erste Antwort",
+  "analytics.team.currentUnansweredBasis":
+    "Offene Leads ohne erste Antwort, unabhängig vom Eingangsdatum",
   "analytics.team.unansweredBasis":
     "In diesem Zeitraum geschrieben, noch ohne Antwort",
   "analytics.team.unansweredHidden":
@@ -7768,7 +7819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.waitingListBasis":
     "Wartet jetzt, die älteste zuerst. Jede Zeile nennt den Interessenten und auf wen er wartet.",
   "analytics.team.qualified": "Qualifiziert",
-  "analytics.team.unanswered": "Unbeantwortet",
+  "analytics.team.unanswered": "Eingänge im Zeitraum ohne Antwort",
   "analytics.team.target": "Monatsziel",
   "analytics.team.targetOf": "{actual} von {target}",
   "analytics.team.noTarget": "Kein Ziel",
@@ -8199,12 +8250,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.source.contracts": "Verträge",
   "review.source.incumbent": "Altsystem",
   "analytics.coverageNeverRun":
-    "Noch keine Prüfung gelaufen. Eine ungeprüfte Installation ist nicht dasselbe wie eine fehlerfreie.",
+    "Starte die Eingabeprüfung unter „Prognose“, um die Quellenabdeckung zu sehen.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht geprüft: {sources}. Die Befunde unten decken nur ab, was geprüft wurde.",
-  "review.notCheckedYet":
-    "Noch nichts geprüft: Die erste Prüfung wurde noch nicht ausgeführt. Die Werte oben geben die aktuellen Datensätze wieder.",
   "review.firstCheck.title": "Eingabeprüfung starten",
   "review.firstCheck.body":
     "Startet nächtliche Prüfungen und erstellt eine Aufgabe pro betroffenem Deal.",
@@ -9687,6 +9736,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
   "jobs.kind.notification_email": "Benachrichtigungs-E-Mail",
   "jobs.kind.privacy_retention": "Anwendung der Aufbewahrungsregeln",
+  "jobs.kind.project_health_scan": "Projektzustand-Prüfung",
   "jobs.kind.provider_lookup_sweep": "Anreicherung bestehender Kontakte",
   "jobs.kind.provider_run_poll_sweep": "Abruf der Anreicherungsergebnisse",
   "jobs.kind.provider_run_submit": "Anfrage an den Anreicherungsdienst",
@@ -10139,6 +10189,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Freigaben, die auf dich warten",
   "notifications.class.approval_pending.help":
     "Jemand braucht deine Entscheidung, damit seine Arbeit weitergehen kann.",
+  "notifications.class.project_health.label": "Projektzustand von der KI",
+  "notifications.class.project_health.help":
+    "Die KI hat ein Projekt von dir als gefährdet, außer Plan oder wieder im Plan markiert, mit Grund und einer Möglichkeit, das rückgängig zu machen.",
   "notifications.class.automation.label": "Ausgeführte Automatisierungen",
   "notifications.class.automation.help":
     "Eine Regel dieses Unternehmens wurde ausgelöst oder konnte nicht ausgelöst werden.",
@@ -12781,7 +12834,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.confirm.deadlines":
     "Fristen für Anfragen folgen dem neuen Rechtsraum. Ein Anfragetyp ohne eigene Frist behält die Monatsfrist der DSGVO.",
   "jurisdiction.confirm.messaging":
-    "Ausgehende Nachrichten folgen den Nachrichtenregeln des neuen Rechtsraums.",
+    "Werberegeln richten sich nach dem Land der Empfangenden. Die Änderung wendet sie auf Empfangende im neuen Land an.",
   "jurisdiction.floor.none": "keine Frist",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd": "{period} ab Ende des Kalenderjahres",
@@ -12797,10 +12850,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.effects.carriedValue":
     "{floor}, für E-Mails vor dem {before}, bis {until}",
   "jurisdiction.effects.deadline": "Frist: {kind}",
-  "jurisdiction.effects.messaging": "Nachrichtenregeln",
+  "jurisdiction.effects.messaging": "Werberegeln für Empfangende hier",
   "jurisdiction.effects.messagingValue": "Regelwerk Version {version}",
   "jurisdiction.effects.messagingNone":
-    "Keine. Jede Werbenachricht braucht eine Einwilligung.",
+    "Keine. Werbung an Empfangende hier braucht eine Einwilligung.",
   "jurisdiction.effects.class": "Aufbewahrungsklasse",
   "jurisdiction.deadline.fromReceipt": "{period} ab Eingang",
   "jurisdiction.rule.gdpr": "DSGVO, ein Kalendermonat",
@@ -13478,6 +13531,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus deinem Schreibstil herausgenommen",
   "settings.voice.exclusion.ownerRemoved": "Entfernt",
   "settings.voice.exclusion.corpusCleared": "Beim Leeren der Proben entfernt",
+  "settings.voice.sentMailLabel": "Aus gesendeten Mails lernen",
+  "settings.voice.sentMailConsent":
+    "Margince liest bis zu deinen 200 neuesten gesendeten Mails, nur aus deinem eigenen Postfach, nur jetzt und nur, weil du den Button drückst. Zitierte Antworten, Weiterleitungen und Signaturen bleiben außen vor, ebenso Mails, die nur für die Beteiligten bestimmt oder als vertraulich markiert sind. Deine eigenen Worte werden als Schreibproben gespeichert und beim Aufbau deiner Voice DNA an das KI-Modell gesendet. Du kannst einzelne Mails jederzeit entfernen oder alle Proben leeren.",
+  "settings.voice.sentMailButton": "Aus Mails lernen",
+  "settings.voice.sentMailReading": "Gesendete Mails werden gelesen…",
+  "settings.voice.sentMailLearned_one":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailLearned_other":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailNothingNew":
+    "Nichts Neues zu lernen. Jede gefundene Mail ist schon eine Probe oder wurde von dir entfernt.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} Mail wurde ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthält.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} Mails wurden ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthalten.",
+  "settings.voice.sentMailNone":
+    "Keine gesendete Mail zum Lernen gefunden. Es zählen nur Mails aus deinem eigenen verbundenen Postfach; private oder vertrauliche Mails bleiben außen vor.",
+  "settings.voice.sentMailFailed":
+    "Gesendete Mails wurden nicht gelesen. {detail}",
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
@@ -14911,7 +14983,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // end polish: setup-popover
   "account.profileCard": "Profil",
   "account.signInCard": "Anmeldung",
-  "account.languageCard": "Sprache",
+  "account.timezoneLabel": "Zeitzone",
+  "account.timezoneHelp":
+    "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
+  "workingHours.changeZone": "Zeitzone ändern",
+  "account.languageCard": "Sprache und Zeitzone",
   "account.browserCard": "Dieser Browser",
   "account.passwordHelp":
     "Für die Anmeldung als {email}. Eine Änderung meldet dich überall sonst ab und trennt die Apps und Agenten, die für dich handeln.",
@@ -15219,9 +15296,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
     "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
-  "workingHours.timezone": "Zeitzone",
-  "workingHours.browserZone":
-    "Dein Browser ist auf {zone} eingestellt. Die Verfügbarkeit nutzt die hier gewählte Zeitzone.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -16075,6 +16149,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Projekt in andere Phase verschoben",
   "webhooks.event.project.phase_changed.when":
     "Ein Projekt wechselt in eine neue Phase.",
+  "webhooks.event.project.health_assessed.label": "Projektzustand erfasst",
+  "webhooks.event.project.health_assessed.when":
+    "Jemand oder die KI erfasst, wie ein Projekt läuft, korrigiert eine Einschätzung oder nimmt die der KI zurück.",
   "webhooks.event.project.archived.label": "Projekt archiviert",
   "webhooks.event.project.archived.when": "Ein Projekt wird archiviert.",
   "webhooks.eventGroup.contracts": "Verträge",
@@ -16299,6 +16376,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.user_greeting_name.changed.label": "Rufname geändert",
   "webhooks.event.user_greeting_name.changed.when":
     "Der Rufname eines Mitglieds wird gespeichert oder bei der ersten Anmeldung über einen Anbieter ausgefüllt.",
+  "webhooks.event.user_timezone.changed.label": "Zeitzone geändert",
+  "webhooks.event.user_timezone.changed.when":
+    "Die eigene Zeitzone eines Mitglieds wird gespeichert oder geändert.",
   "webhooks.event.user_locale.changed.label": "Sprache der Oberfläche geändert",
   "webhooks.event.user_locale.changed.when":
     "Ein Mitglied wählt die Sprache der eigenen Oberfläche.",
@@ -17260,10 +17340,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.switch.body.leads":
     "Die Bedingungen werden gelöscht, da sie Lead-Felder nennen.",
   "filters.switch.confirm": "Wechseln und löschen",
-  "filters.showMore": "Bis zu 100 anzeigen",
   "filters.save": "Speichern",
   "filters.unsavedFilter": "Nicht gespeicherter Filter",
-  "filters.footMore": "Mehr zu diesem Filter",
   "filters.exporting": "Wird exportiert…",
   "filters.saveAsNew": "Als neue Ansicht speichern",
   "filters.saveTitle": "Diesen Filter speichern",
@@ -17837,6 +17915,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.state.offTrack": "Außer Plan",
   "projectHealth.record": "Bewertung erfassen",
   "projectHealth.correct": "Bewertung korrigieren",
+  "projectHealth.undoAI": "KI-Einschätzung zurücknehmen",
   "projectHealth.recordTitle": "Zustand der Umsetzung erfassen",
   "projectHealth.correctTitle": "Diese Bewertung korrigieren",
   "projectHealth.stateLabel": "Zustand",
@@ -18425,6 +18504,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
   "worklist.view.total.system_one": "{count} ungelöstes Problem",
   "worklist.view.total.system_other": "{count} ungelöste Probleme",
+  "worklist.filter.linked.prospecting":
+    "Nachfassaktionen und Terminarbeit für die Akquise.",
   "worklist.filter.linked.urgent": "Nur dringende Arbeit.",
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
@@ -20226,6 +20307,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
     "Pipeline mit Abschluss in diesem Quartal",
+  "analytics.outlook.selectedSales": "Vertriebsausblick",
   "analytics.outlook.sales": "Quartalsausblick",
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",

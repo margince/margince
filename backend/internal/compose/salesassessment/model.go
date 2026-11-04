@@ -26,7 +26,7 @@ import (
 
 // PromptVersion changes when the prompt or the reply shape changes, so a
 // cached assessment written under an older prompt is not served as current.
-const PromptVersion = "2026-11-03.3"
+const PromptVersion = "2026-11-04.1"
 
 // Bounds apply before grounding, so malformed replies cannot grow the reading.
 const (
@@ -74,6 +74,7 @@ type FrameIn struct {
 // CellIn is one measured figure. Value is the figure as text, which is what
 // a sentence may quote.
 type CellIn struct {
+	Display        string `json:"display,omitempty"`
 	CoverageDetail string `json:"coverage_detail,omitempty"`
 	ID             string `json:"id"`
 	Label          string `json:"label"`
@@ -109,7 +110,7 @@ Every next action must come from "actions". You may prioritise them through "act
 Return ONLY a JSON object with these keys:
 {"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
 Each paragraph has at most six sentences of at most 240 characters. Each sentence cites the cell ids it rests on in "cells". Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
-Every number you write must appear in a cited cell's "value". Never add, divide or round figures into a number no cell carries. Never write an id in "text".
+Write each quantity as {{cell id}}, for example {{metric:bookings_won}}, and cite that cell. The application substitutes its whole-number display. Never write count as a unit, raw basis/status codes, an assurance that you checked something, or a list of clean checks. Do not add, divide or round figures yourself. Literal numbers must match a cited value. Never write a record id in text.
 "next_decision" names the one deal to act on, from "candidate_deals" only, with that deal's "owner_id", and says in one sentence what to decide. Return null when no candidate deal supports a decision.
 "decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them before you recommend again, and never recommend what an open decision already covers.
 Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that cell. Do not turn this into boilerplate caveats. Partial coverage permits only the stated covered population. "not measured" is never zero.
@@ -176,8 +177,10 @@ type replyShape struct {
 	Confidence string `json:"confidence"`
 }
 
-var sentenceKinds = map[string]bool{"observation": true, "claim": true, "hypothesis": true}
-var confidences = map[string]bool{"low": true, "medium": true, "high": true}
+var (
+	sentenceKinds = map[string]bool{"observation": true, "claim": true, "hypothesis": true}
+	confidences   = map[string]bool{"low": true, "medium": true, "high": true}
+)
 
 // Parse reads the reply and keeps what the figures carry. A sentence citing
 // no known cell, or quoting a number no cited cell holds, is dropped. A next
@@ -256,13 +259,16 @@ func Parse(reply string, in Input) (Written, error) {
 
 func keepSentence(text, kind string, cited []string, cells map[string]CellIn, known map[string]bool) (Sentence, bool, error) {
 	text = strings.TrimSpace(text)
+	if machineWording(text) {
+		return Sentence{}, false, nil
+	}
 	if text == "" {
 		return Sentence{}, false, nil
 	}
 	if len([]rune(text)) > maxSentenceRune {
 		return Sentence{}, false, errors.New("a sentence exceeds the assessment's bounds")
 	}
-	if err := refuseIDs(text, known); err != nil {
+	if err := refuseIDs(factToken.ReplaceAllString(text, ""), known); err != nil {
 		return Sentence{}, false, err
 	}
 	if !sentenceKinds[kind] {
@@ -277,10 +283,17 @@ func keepSentence(text, kind string, cited []string, cells map[string]CellIn, kn
 			kept = append(kept, id)
 		}
 	}
-	if len(kept) == 0 || !numbersCarried(text, kept, cells) {
+	raw, displayed, valid := renderQuantities(text, kept, cells)
+	if !valid {
 		return Sentence{}, false, nil
 	}
-	return Sentence{Text: text, Kind: kind, Cells: kept}, true, nil
+	if len([]rune(displayed)) > maxSentenceRune {
+		return Sentence{}, false, errors.New("formatted sentence exceeds the assessment bounds")
+	}
+	if len(kept) == 0 || !numbersCarried(raw, kept, cells) {
+		return Sentence{}, false, nil
+	}
+	return Sentence{Text: displayed, Kind: kind, Cells: kept}, true, nil
 }
 
 // keepDecision keeps a decision on a candidate deal, for that deal's owner,
@@ -288,7 +301,7 @@ func keepSentence(text, kind string, cited []string, cells map[string]CellIn, kn
 // the one thing the reader would act on without a check.
 func keepDecision(dealID, ownerID, text string, in Input, known map[string]bool) *NextDecision {
 	text = strings.TrimSpace(text)
-	if text == "" || len([]rune(text)) > maxDecisionRune || refuseIDs(text, known) != nil {
+	if text == "" || len([]rune(text)) > maxDecisionRune || refuseIDs(factToken.ReplaceAllString(text, ""), known) != nil {
 		return nil
 	}
 	cells := map[string]CellIn{}
@@ -297,7 +310,8 @@ func keepDecision(dealID, ownerID, text string, in Input, known map[string]bool)
 		cells[cell.ID] = cell
 		every = append(every, cell.ID)
 	}
-	if !numbersCarried(text, every, cells) {
+	raw, displayed, valid := renderQuantities(text, every, cells)
+	if !valid || machineWording(text) || len([]rune(displayed)) > maxDecisionRune || !numbersCarried(raw, every, cells) {
 		return nil
 	}
 	for _, candidate := range in.Candidates {
@@ -310,7 +324,7 @@ func keepDecision(dealID, ownerID, text string, in Input, known map[string]bool)
 		if ownerID != candidate.OwnerID {
 			return nil
 		}
-		return &NextDecision{DealID: dealID, OwnerID: ownerID, Text: text}
+		return &NextDecision{DealID: dealID, OwnerID: ownerID, Text: displayed}
 	}
 	return nil
 }

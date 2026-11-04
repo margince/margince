@@ -72,13 +72,13 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 			applied[field] = nil
 			continue
 		}
-		// A human-typed value has no snippet to quote — the human IS the
-		// evidence, which is what source=human + captured_by=human:<id> record.
+		// A typed value has no snippet to quote: its author is the evidence,
+		// which is what source and captured_by record.
 		// The last argument is the precedence flag upsertCompanyProfileField gates
 		// on: a contact's answer always lands, including over their own earlier
 		// one, which is the half a read-back never gets.
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
-			companyID, field, trimmed, "", "", humanAuthoredConfidence, CompanySourceHuman, by, true); err != nil {
+			companyID, field, trimmed, "", "", humanAuthoredConfidence, companyAuthorSource(ctx), by, true); err != nil {
 			return nil, fmt.Errorf("save company field %s: %w", field, err)
 		}
 		applied[field] = trimmed

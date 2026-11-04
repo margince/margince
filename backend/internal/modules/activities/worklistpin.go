@@ -241,7 +241,7 @@ func pinEntityID(row WorklistRowRef) ids.UUID {
 // every agent shared.
 func pinReader(ctx context.Context) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return ids.UUID{}, apperrors.ErrPermissionDenied
 	}
 	return actor.UserID, nil

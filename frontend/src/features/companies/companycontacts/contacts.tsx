@@ -167,6 +167,8 @@ export function CompanyContactsList({
       <ListTable
         state={state}
         unit="unit.contacts"
+        // The contacts screen keeps its own layout under the same unit.
+        layoutKey="company-contacts"
         searchable
         showArchivedToggle={false}
         action={

@@ -33,7 +33,8 @@ const answerWalkOwner = "internal/platform/database/storekit/answered.go:threadA
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
+	"internal/modules/capture/senderstanding.go:WithheldUnansweredOutboundTx": "asks whether the address the owner wrote to has answered the workspace at all, through capture's addressAnswered (the reply evidence the verdict and the reply promotion share). It decides whether a released contact stays outbound_no_answer, never a needs-reply badge",
+	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL":     "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL":                "the waiting-replies lane query; it lists rows through awaitingTheirAnswerSQL and asks the same mirror question about our outbound",
 	"internal/modules/activities/emailmove.go:EmailStatesFor":                        "the email row's page read; its move is moveSQL, and it asks no answer question of its own",

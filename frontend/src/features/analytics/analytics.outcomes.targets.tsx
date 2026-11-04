@@ -4,10 +4,11 @@ import { EmptyState, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import {
   type ReportingEvaluation,
   type ReportingMetricID,
@@ -71,7 +72,7 @@ function TargetReadings({
   const t = useT();
   const metricName = useMetricNames();
   const query = useQuery({
-    queryKey: ["reporting-evaluation", "my-targets", self, metrics],
+    queryKey: [...REPORTING_EVALUATION_KEY, "my-targets", self, metrics],
     queryFn: async (): Promise<Readings> => {
       const [fiscal_quarter, month] = await Promise.all([
         evaluate(self, "fiscal_quarter", metrics),
@@ -179,7 +180,7 @@ export function targetCard(
     metric.attainment == null
       ? null
       : t("reporting.attainment", {
-          percent: formatNumber(Math.round(metric.attainment), locale),
+          percent: formatAnalyticsNumber(Math.round(metric.attainment), locale),
         });
   return {
     key: metric.id,

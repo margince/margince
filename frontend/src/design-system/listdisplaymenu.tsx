@@ -1,15 +1,18 @@
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { Button, Checkbox } from "./atoms";
 import type { ListColumn } from "./listcolumn";
 import { Menu } from "./listsurface";
+import { useSortableRows } from "./sortablelist";
 
 /**
- * Everything that decides how the grid is drawn rather than what is in it:
- * how tight the rows are, and which optional columns stand. It is one menu
- * because the two are one question to a reader. Density and a hidden column
- * both answer "show me more of this at once". A toolbar that spends a trigger
- * on each spends its right half on dials with nothing grouping them.
+ * Everything that decides how the grid is drawn rather than what is in it.
+ * That is how tight the rows are, and which optional columns stand where.
+ * It is one menu because these are one question to a reader. Density, a
+ * hidden column and a moved one all answer "show me more of this at once". A
+ * toolbar that spends a trigger on each spends its right half on dials with
+ * nothing grouping them.
  *
  * It goes in the surface's `displayMenu` slot, which hands it the row's own
  * open state. The surface knows nothing of a column or a density. It knows
@@ -19,20 +22,49 @@ export function DisplayMenu<Row>({
   optional,
   hidden,
   onToggleColumn,
+  onReorder,
   dense,
   onDense,
   open,
   onToggle,
 }: Readonly<{
+  /** The optional columns in the order the grid draws them. */
   optional: readonly ListColumn<Row>[];
   hidden: ReadonlySet<string>;
   onToggleColumn: (key: string) => void;
+  /** The reader moved a column; receives every optional key in its new order. */
+  onReorder?: (keys: string[]) => void;
   dense: boolean;
   onDense: () => void;
   open: boolean;
   onToggle: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const place = (position: number, count: number) => ({
+    position: formatNumber(position, locale),
+    total: formatNumber(count, locale),
+  });
+  // A hidden column keeps its row, so it keeps its place when it is shown again.
+  const sortable = useSortableRows(
+    optional,
+    columnKey,
+    onReorder && {
+      onReorder: (keys) => onReorder(keys),
+      labels: {
+        handle: (column, position, count) =>
+          t("table.columnHandle", {
+            name: column.header,
+            ...place(position, count),
+          }),
+        moved: (column, position, count) =>
+          t("table.columnMoved", {
+            name: column.header,
+            ...place(position, count),
+          }),
+      },
+    },
+  );
   return (
     <span className="lt-menu-wrap">
       <Button aria-expanded={open} onClick={onToggle}>
@@ -55,18 +87,35 @@ export function DisplayMenu<Row>({
         {optional.length > 0 && (
           <>
             <div className="lt-mgroup t-caption">{t("table.shownColumns")}</div>
-            {optional.map((column) => (
-              <Checkbox
-                key={column.key}
-                className="lt-mi"
-                checked={!hidden.has(column.key)}
-                label={column.header}
-                onChange={() => onToggleColumn(column.key)}
-              />
-            ))}
+            <div
+              className={sortable.sorting ? "lt-mcols is-sorting" : "lt-mcols"}
+            >
+              {sortable.shown.map((column) => (
+                <div
+                  key={column.key}
+                  ref={sortable.rowRef(column.key)}
+                  className={
+                    sortable.lifted === column.key
+                      ? "lt-mcol is-lifted"
+                      : "lt-mcol"
+                  }
+                >
+                  {sortable.grip(column)}
+                  <Checkbox
+                    className="lt-mi"
+                    checked={!hidden.has(column.key)}
+                    label={column.header}
+                    onChange={() => onToggleColumn(column.key)}
+                  />
+                </div>
+              ))}
+            </div>
+            {sortable.live}
           </>
         )}
       </Menu>
     </span>
   );
 }
+
+const columnKey = <Row,>(column: ListColumn<Row>) => column.key;

@@ -1670,6 +1670,9 @@ type Activity struct {
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -1699,7 +1702,7 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
@@ -1777,7 +1780,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -1831,6 +1834,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *string    `json:"assignee_id,omitempty"`
 	Body       *string    `json:"body,omitempty"`
 	DueAt      *time.Time `json:"due_at,omitempty"`
+	DueHasTime *bool      `json:"due_has_time,omitempty"`
 	Subject    string     `json:"subject"`
 }
 
@@ -2176,8 +2180,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -3286,6 +3293,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -3721,6 +3736,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -4808,6 +4830,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -5058,6 +5088,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 

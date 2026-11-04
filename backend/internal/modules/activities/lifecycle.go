@@ -41,9 +41,12 @@ type UpdateActivityInput struct {
 	OccurredPrecision *string
 	DurationSeconds   *int
 	DueAt             *time.Time
-	RemindAt          *time.Time
-	AssigneeID        *ids.UserID
-	IsDone            *bool
+	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
+	// a DueAt without it is a day (admitPatchTime).
+	DueHasTime *bool
+	RemindAt   *time.Time
+	AssigneeID *ids.UserID
+	IsDone     *bool
 	// Clear names the fields sent as an explicit JSON null, which a nil pointer
 	// cannot tell from a field not mentioned.
 	Clear []string
@@ -129,28 +132,27 @@ func updateActivityInTx(
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
+		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
 		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
-		  -- The language was READ from the text, so an edit to the text retires
-		  -- it. Cleared rather than recomputed: detection lives in Go, and a
-		  -- label that outlived the words it described would send a reply in
-		  -- the language the message used to be in. Cleared, the drafting
-		  -- ladder reads the new text instead, which is the honest answer.
+		  -- The language was READ from the text, so an edit to the text reads
+		  -- it again, from the words as they now stand.
 		  language = CASE
-		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN NULL
+		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
 		    ELSE language END,
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END%[15]s
+		    ELSE done_at END%[16]s
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg))
+		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -217,6 +219,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	}
 	if in.DueAt != nil {
 		p.Set("due_at", current.DueAt, *in.DueAt)
+	}
+	if in.DueHasTime != nil {
+		p.Set(fieldDueHasTime, current.DueHasTime, *in.DueHasTime)
 	}
 	if in.RemindAt != nil {
 		p.Set("remind_at", current.RemindAt, *in.RemindAt)
@@ -330,6 +335,9 @@ func admitActivityPatch(
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
+		if err := in.admitPatchTime(current.Kind); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
 	}
 	if !held {
 		if err := validateActivityDuration(in.DurationSeconds); err != nil {
@@ -346,28 +354,10 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
+		in.followReminder(current)
 		endPassedReminder(current, in)
 	}
 	return current, held, nil
-}
-
-// renormalizeTranscriptPatch re-runs ADR-0058's normalizer on a body PATCH
-// when the target row is transcript-marked. A transcript's normalized form
-// is only ever produced on ingest (LogActivityInputFrom) — without this, a
-// PATCH could leave a transcript-marked row holding un-normalized text (raw
-// CRLFs, trailing whitespace), which is exactly the row the
-// activity/transcript retention selector and any future line citation both
-// assume is already canonical.
-func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivityInput) error {
-	if in.Body == nil || current.SourceSystem == nil || *current.SourceSystem != transcriptSourceSystem {
-		return nil
-	}
-	normalized, err := normalizeTranscript(*in.Body)
-	if err != nil {
-		return err
-	}
-	in.Body = &normalized
-	return nil
 }
 
 // RefuseArchiveActivity answers every authority refusal ArchiveActivity would
