@@ -125,6 +125,15 @@ func ensureActiveDisqualifyReason(ctx context.Context, tx pgx.Tx, id ids.UUID) e
 	return err
 }
 
+// CheckDisqualifyReason answers whether a caller who may disqualify a lead could
+// record this reason, before a governed call is put to a user.
+func (s *Store) CheckDisqualifyReason(ctx context.Context, id ids.UUID) error {
+	if err := auth.Require(ctx, entityLead, principal.ActionDelete); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error { return ensureActiveDisqualifyReason(ctx, tx, id) })
+}
+
 // ListLeadDisqualifyReasons answers the whole list in display order.
 func (s *Store) ListLeadDisqualifyReasons(ctx context.Context) ([]crmcontracts.LeadDisqualifyReason, error) {
 	if err := auth.Require(ctx, leadVocabularyObject, principal.ActionRead); err != nil {

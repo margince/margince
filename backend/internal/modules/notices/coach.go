@@ -7,10 +7,9 @@ package notices
 // raises under the system principal.
 //
 // The difference is the whole of this file. Create takes no gate because only
-// compose-wired workflows reach it and their authority is the engine's; a
-// human-raised notice is words placed in a colleague's queue, so it carries
-// both halves of an authority question: may this seat coach at all, and may it
-// coach THIS contact.
+// compose-wired workflows reach it and their authority is the engine's. A
+// colleague-raised notice is words placed in a colleague's queue. So it asks both
+// halves of an authority question: may this seat coach, and may it coach this contact.
 
 import (
 	"context"
@@ -69,17 +68,15 @@ var coachSubjects = map[crmcontracts.NoticeKind]string{
 func (s *Store) RaiseCoachNotice(
 	ctx context.Context, mates Teammates, recipient ids.UserID, kind crmcontracts.NoticeKind, note string,
 ) (Notice, error) {
-	// May this seat coach at all. Refuses an agent, a system pass and a buyer
-	// as well as a rep: coaching is a thing a lead does, and a background flow
-	// raising one would be writing in a contact's voice.
+	// May this seat coach at all. Refuses a system pass and a buyer as well as a
+	// rep: coaching is a thing a lead or their agent does.
 	if err := auth.RequireCoach(ctx); err != nil {
 		return Notice{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// RequireCoach admits only a human principal, so this is the seated
-		// identity behind it — needed for the self-coaching check below, and
-		// unreachable through the gate above.
+		// RequireCoach admits a user or their agent, so this is the seated
+		// identity behind it, needed for the self-coaching check below.
 		return Notice{}, apperrors.ErrPermissionDenied
 	}
 	if !kind.Valid() {

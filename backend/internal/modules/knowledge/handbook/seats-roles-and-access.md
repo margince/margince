@@ -334,8 +334,8 @@ Rules worth knowing:
 - Sharing the same record again **replaces** the whole share. Anything you leave out
   is cleared.
 - Taking back a share counts from the next request of the user it was shared with. There is no undo.
-- An agent cannot share at all, and cannot ask a colleague to approve a share
-  for it.
+- An agent you connected can share a record and take a share back, within your
+  rights. It cannot ask a colleague to approve a share for it.
 
 There are no levels of shares, no sharing by rules, and no way to give someone else the right to share. A share is made by hand, with one exception: a contact merge makes a share for the owner of a merged-away contact. Every share and every end of a share goes into the audit log.
 
@@ -361,7 +361,7 @@ Turning **Shared merge reviews** off again stops new merges of that kind. Merges
 
 ## Inviting and removing colleagues: the rules
 
-To invite and remove colleagues you need the permission to manage users. Only the Admin role holds it by default, and only a human may use it: an agent may never create an account for a human.
+To invite and remove colleagues you need the permission to manage users. Only the Admin role holds it by default. An agent acting for someone who holds it can invite and remove colleagues too. It cannot give the Admin role, act on an Admin, or change its own user's seat or teams.
 
 Inviting, deactivating and the **Members** settings list all answer to that permission. So a custom role that holds it manages colleagues without being called Admin.
 

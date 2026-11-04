@@ -111,7 +111,7 @@ A held Margince message carries a reason, so you can see why it is held:
 A later verdict clears some of these and not others:
 
 - **Held until checked** clears once Margince has sorted the thread.
-- **Kept private** stays. Only a human's own decision sets it, and nothing
+- **Kept private** stays. Only your decision or your agent's sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later
   verdict. A model that finds a thread to be plain business says nothing about whether you

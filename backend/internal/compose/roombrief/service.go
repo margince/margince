@@ -48,9 +48,9 @@ func (s *Service) WithLane(lane Completer) *Service {
 
 // Get writes the brief for one room.
 func (s *Service) Get(ctx context.Context, roomID ids.DealRoomID) (crmcontracts.DealRoomBrief, error) {
-	// A reading aid for a human reader; an agent reading through a passport has
-	// the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A reading aid for the reader, or for their agent; automatic work with no
+	// passport has the records themselves.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomBrief{}, err
 	}
 	in, err := s.assemble(ctx, roomID)
@@ -58,7 +58,8 @@ func (s *Service) Get(ctx context.Context, roomID ids.DealRoomID) (crmcontracts.
 		return crmcontracts.DealRoomBrief{}, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	sentences, by := Write(ai.WithSubject(ctx, roomID.Ref(), in.Title), s.lane, in, lang)
+	lane, _ := ai.ReadLane(ctx, s.lane)
+	sentences, by := Write(ai.WithSubject(ctx, roomID.Ref(), in.Title), lane, in, lang)
 	return crmcontracts.DealRoomBrief{
 		RoomId:      openapi_types.UUID(roomID.UUID),
 		GeneratedAt: s.now().UTC(),
