@@ -144,7 +144,7 @@ func TestAttributionFailureDoesNotDiscardABuyersAccessLink(t *testing.T) {
 		return "", "", errors.New("company settings unavailable")
 	})
 	invitation := IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
-	if err := handler.sendInvite(httptest.NewRequest(http.MethodPost, "/", nil), invitation); err != nil {
+	if err := handler.sendInvite(context.Background(), invitation); err != nil {
 		t.Fatal(err)
 	}
 	if relay.to != "buyer@example.test" || !strings.Contains(relay.body, "https://example.test/#/room?c=fictional") || !strings.Contains(relay.subject, "Northstar proposal") {
@@ -157,4 +157,53 @@ type invitationMailCapture struct{ to, subject, body string }
 func (m *invitationMailCapture) Send(_ context.Context, to, subject, body string) error {
 	m.to, m.subject, m.body = to, subject, body
 	return nil
+}
+
+// heldRelay holds every send until the test releases it.
+type heldRelay struct {
+	taken   chan struct{}
+	release chan struct{}
+}
+
+func (m heldRelay) Send(ctx context.Context, _, _, _ string) error {
+	close(m.taken)
+	select {
+	case <-m.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// The relay holds its answer until the test releases it, so the invite can
+// answer only if the send runs off the request.
+func TestAnInviteAnswersBeforeTheRelayDoes(t *testing.T) {
+	relay := heldRelay{taken: make(chan struct{}), release: make(chan struct{})}
+	finished := make(chan struct{})
+	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
+	handler.sendDone = func() { close(finished) }
+	invitation := IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
+
+	body := handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), invitation)
+	if !body.Queued {
+		t.Error("an invitation handed to the sender reads as not queued")
+	}
+	<-relay.taken
+	select {
+	case <-finished:
+		t.Fatal("the send finished before the relay answered")
+	default:
+	}
+	close(relay.release)
+	<-finished
+}
+
+// With no relay nothing is handed over, and the answer says so.
+func TestAnInviteWithNoRelayReadsAsNotQueued(t *testing.T) {
+	handler := Handlers{}.WithInviteLinkBase("https://example.test")
+	handler.sendDone = func() { t.Error("a send started with no relay configured") }
+	invitation := IssuedInvitation{Credential: "fictional", Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
+	if handler.issuedBody(httptest.NewRequest(http.MethodPost, "/", nil), invitation).Queued {
+		t.Error("an installation with no relay reads as queued")
+	}
 }

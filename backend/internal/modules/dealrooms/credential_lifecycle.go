@@ -99,14 +99,12 @@ func lockParticipant(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomP
 
 // RecordInvitationSend stamps the outcome of handing an invitation to the relay.
 //
-// It writes only the standing credential's row, and only the two columns that
-// say what the relay did — so a resend that has already superseded this
-// invitation is untouched, and a late-arriving outcome cannot resurrect a
-// retired link's delivery state.
+// It writes only the row of the credential that was mailed, while it stands.
+// The answer can arrive after a resend, so the row is found by the credential's
+// digest. A late outcome then cannot mark the newer invitation.
 //
-// Deliberately NOT audited or evented: nothing about the record changed, and
-// nobody gained or lost access. This is the mail server's answer written down.
-func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, sendErr error) error {
+// Not audited or evented: nobody gained or lost access.
+func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, credential string, sendErr error) error {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -127,8 +125,9 @@ func (s *Store) RecordInvitationSend(ctx context.Context, participantID ids.Deal
 		// a value off a request.
 		if _, err := tx.Exec(ctx,
 			`UPDATE deal_room_invitation SET `+column+` = now(), failure_reason = $2
-			  WHERE participant_id = $1 AND consumed_at IS NULL AND superseded_at IS NULL`,
-			participantID, reason); err != nil {
+			  WHERE participant_id = $1 AND token_hash = $3
+			    AND consumed_at IS NULL AND superseded_at IS NULL`,
+			participantID, reason, digestOfCredential(credential)); err != nil {
 			return fmt.Errorf("record deal room invitation delivery: %w", err)
 		}
 		return nil

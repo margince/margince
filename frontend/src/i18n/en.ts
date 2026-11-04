@@ -3907,6 +3907,10 @@ export const en = {
   "access.state.signedInBadge": "Signed in",
   "access.state.invitedBadge": "Invited",
   "access.state.linkRequestedBadge": "Link requested",
+  "access.state.mailFailedBadge": "Email failed",
+  "access.mail.sent": "email sent",
+  "access.mail.failed":
+    "The invitation email failed. Issue a new link and send it yourself.",
   "access.lastSeen": "last seen {when}",
   "access.downloads_one": "{count} document downloaded",
   "access.downloads_other": "{count} documents downloaded",
@@ -3925,7 +3929,8 @@ export const en = {
   "access.inviteNote":
     "The link is shown for you to copy. If a mail relay is configured, it is also emailed, but delivery is not guaranteed.",
   "access.issued.title": "Link for {name}",
-  "access.issued.mailed": "Sent to {email}. You can also copy it below.",
+  "access.issued.mailed":
+    "Queued for {email}. The list shows when it is sent, or if it fails. You can also copy it below.",
   "access.issued.notMailed":
     "The link was not mailed. Copy it and send it yourself.",
   "access.issued.mailedTitle": "Invitation email queued",
@@ -19852,7 +19857,8 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
-  "aiTask.name.deal_verdict": "Checking the dates, amount and chances of a deal",
+  "aiTask.name.deal_verdict":
+    "Checking the dates, amount and chances of a deal",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",

@@ -3833,6 +3833,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "access.state.signedInBadge": "Đã đăng nhập",
   "access.state.invitedBadge": "Đã mời",
   "access.state.linkRequestedBadge": "Đã xin liên kết",
+  "access.state.mailFailedBadge": "Email gửi không thành công",
+  "access.mail.sent": "đã gửi email",
+  "access.mail.failed":
+    "Email mời gửi không thành công. Tạo liên kết mới rồi tự gửi.",
   "access.lastSeen": "truy cập lần cuối {when}",
   "access.downloads_one": "Đã tải xuống {count} tài liệu",
   "access.downloads_other": "Đã tải xuống {count} tài liệu",
@@ -3852,7 +3856,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết hiện ra để sao chép. Nếu đã cấu hình máy chủ chuyển tiếp thư, hệ thống cũng gửi liên kết qua email, nhưng không đảm bảo email đến nơi.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
-    "Đã gửi tới {email}. Cũng có thể sao chép liên kết bên dưới.",
+    "Đã xếp hàng gửi tới {email}. Danh sách sẽ hiện khi email đã gửi hoặc gửi lỗi. Cũng có thể sao chép liên kết bên dưới.",
   "access.issued.notMailed":
     "Chưa gửi liên kết qua email. Sao chép rồi tự gửi.",
   "access.issued.mailedTitle": "Email mời đang chờ gửi",

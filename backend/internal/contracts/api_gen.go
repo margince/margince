@@ -43504,8 +43504,8 @@ type DealRoomCredentialRequest struct {
 // apart from access. A bounced invitation and a revoked one look identical
 // otherwise, and a seller chasing silence needs to tell them apart.
 //
-// `pending` was minted but not handed to a mail relay (the installation may have
-// none configured). `sent` left the building. `delivered` was accepted by the
+// `pending` was minted and the relay has not answered yet, or the installation
+// has no relay configured. `sent` left the building. `delivered` was accepted by the
 // recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 // they are in. `superseded` was retired by a later resend. `none` means no
 // credential currently stands, which is what a revoked participant shows.
@@ -43579,16 +43579,17 @@ type DealRoomInvitationIssued struct {
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
 
-	// Queued Whether a mail relay accepted the invitation for sending. False when the
-	// installation has no outbound mail configured, or the relay refused it — the
-	// participant and the credential are recorded either way, and the caller is
-	// expected to pass the link on themselves rather than being told the
-	// invitation failed.
+	// Queued Whether the invitation was handed to the mail sender. False when the
+	// installation has no outbound mail configured: the participant and the
+	// credential are recorded either way, and the caller is expected to pass the
+	// link on themselves rather than being told the invitation failed.
 	//
-	// Deliberately not `delivered`: a relay accepting a message is not a mailbox
-	// receiving it, and an address that hard-bounces a second later was `queued`
-	// all the same. The one attempt is stamped onto the invitation, which the
-	// roster reports; nothing revises it afterwards.
+	// The answer does not wait for the relay. The participant's
+	// `delivery_state` reads `pending` until the relay answers, then `sent` or
+	// `failed`. Deliberately not `delivered`: a relay accepting a message is not a
+	// mailbox receiving it, and an address that hard-bounces a second later was
+	// `sent` all the same. The one attempt is stamped onto the invitation;
+	// nothing revises it afterwards.
 	Queued bool `json:"queued"`
 }
 
@@ -43627,8 +43628,8 @@ type DealRoomParticipant struct {
 	// apart from access. A bounced invitation and a revoked one look identical
 	// otherwise, and a seller chasing silence needs to tell them apart.
 	//
-	// `pending` was minted but not handed to a mail relay (the installation may have
-	// none configured). `sent` left the building. `delivered` was accepted by the
+	// `pending` was minted and the relay has not answered yet, or the installation
+	// has no relay configured. `sent` left the building. `delivered` was accepted by the
 	// recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 	// they are in. `superseded` was retired by a later resend. `none` means no
 	// credential currently stands, which is what a revoked participant shows.

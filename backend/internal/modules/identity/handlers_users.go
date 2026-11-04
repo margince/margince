@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -388,7 +389,7 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		if done != nil {
 			defer done()
 		}
-		defer recoverDetached("invite send")
+		defer httpserver.RecoverDetached("invite send")
 		current, live, err := h.svc.InviteMailRecipient(workCtx, inviter, rawToken)
 		if err != nil {
 			slog.Error("reading an invitation before mailing it failed", "err", err)

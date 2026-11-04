@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
@@ -72,27 +74,77 @@ func (h Handlers) buyerLink(credential string) string {
 // take, and the contact that is recorded about is told so before they do it —
 // in the invitation rather than on the room screen, so it reaches them before
 // the first act rather than at the moment of it.
-func (h Handlers) sendInvite(r *http.Request, issued IssuedInvitation) error {
+func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error {
 	language := "en"
 	if h.mailLanguage != nil {
-		language = h.mailLanguage(r.Context())
+		language = h.mailLanguage(ctx)
 	}
 	words := mailcopy.For(language)
 	inviter, company := "", ""
 	if h.inviteContext != nil {
 		var err error
-		inviter, company, err = h.inviteContext(r.Context())
+		inviter, company, err = h.inviteContext(ctx)
 		if err != nil {
-			slog.WarnContext(r.Context(), "invitation attribution unavailable; sending the access link", "cause", err)
+			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
 	}
 	body := words.RoomMessage(issued.RoomTitle, inviter, company, h.buyerLink(issued.Credential), issued.ExpiresAt.UTC())
 
-	if err := mailer.SendProduct(r.Context(), h.inviteMailer, string(issued.Participant.Email),
+	if err := mailer.SendProduct(ctx, h.inviteMailer, string(issued.Participant.Email),
 		body.Title, body); err != nil {
 		return fmt.Errorf("send deal room invitation: %w", err)
 	}
 	return nil
+}
+
+// inviteSendTimeout bounds one invitation's lookups and relay exchange, so a
+// stuck relay cannot pin a goroutine.
+const inviteSendTimeout = 2 * time.Minute
+
+// inviteOutcomeTimeout bounds writing the relay's answer onto the invitation,
+// apart from the send's own budget, which a timed-out send has already spent.
+const inviteOutcomeTimeout = 10 * time.Second
+
+// inviteSendBudget is the time one invitation send may take.
+func (h Handlers) inviteSendBudget() time.Duration {
+	if h.sendBudget > 0 {
+		return h.sendBudget
+	}
+	return inviteSendTimeout
+}
+
+// sendInviteDetached mails the invitation off the request, so a slow relay does
+// not hold the seller's Invite. It reports whether it handed the mail over.
+//
+// A goroutine and not a queued job: a job table stores its arguments verbatim,
+// and the raw credential must not enter it. The relay's answer is stamped on
+// the invitation, where the roster reads it as `sent` or `failed`; until then
+// the roster reads `pending`.
+func (h Handlers) sendInviteDetached(r *http.Request, issued IssuedInvitation) bool {
+	if !h.canSendInvite() {
+		return false
+	}
+	// releaseSend runs in the goroutine, which outlives this handler.
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
+	done := h.sendDone // test seam; nil in production
+	go func() {
+		defer releaseSend()
+		if done != nil {
+			defer done()
+		}
+		defer httpserver.RecoverDetached("deal room invitation send")
+		sendErr := h.sendInvite(workCtx, issued)
+		if sendErr != nil {
+			slog.ErrorContext(workCtx, "deal room invitation email failed",
+				"participant_id", issued.Participant.Id, "err", sendErr)
+		}
+		// Its own budget: a send that ran out of time has spent workCtx, and the
+		// refusal must still land on the invitation.
+		outcomeCtx, releaseOutcome := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
+		defer releaseOutcome()
+		h.recordSendOutcome(outcomeCtx, issued, sendErr)
+	}()
+	return true
 }
 
 // WithMailLanguage supplies the fallback language for external recipients.

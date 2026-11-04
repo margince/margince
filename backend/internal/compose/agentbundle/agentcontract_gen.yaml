@@ -38859,11 +38859,10 @@ components:
         queued:
           type: boolean
           description: |-
-            Whether a mail relay accepted the invitation for sending. False when the
-            installation has no outbound mail configured, or the relay refused it — the
-            participant and the credential are recorded either way, and the caller is
-            expected to pass the link on themselves rather than being told the
-            invitation failed.
+            Whether the invitation was handed to the mail sender. False when the
+            installation has no outbound mail configured: the participant and the
+            credential are recorded either way, and the caller is expected to pass the
+            link on themselves rather than being told the invitation failed.
       additionalProperties: false
     DealRoomBrief:
       type: object
