@@ -4,9 +4,9 @@
 package contacts
 
 // The address-variant lane. Two contacts whose addresses differ only by a plus
-// tag (`ab@` and `ab+accounting@`) are likely one mailbox owner. The exact
-// email lane compares whole addresses, and the fuzzy tier needs a name that a
-// tagged address usually does not carry.
+// tag (`ab@` and `ab+accounting@`) or a Gmail spelling are likely one owner.
+// The exact email lane compares whole addresses, and the fuzzy tier needs a
+// name that a tagged address usually does not carry.
 //
 // It is a review lane and never an exact key, because a tag can be shared. A
 // team alias such as `sales+partner@` reaches several humans, and routing on
@@ -25,13 +25,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// addressBaseSQL is the SQL side of correspondence.BaseAddress. It removes
-// everything from the first `+` of the local part to the `@`, and keeps a local
-// part that starts with `+` whole. The migration that builds
-// idx_contact_email_base spells the same expression.
-// TestTheAddressBaseAgreesInGoAndSQL holds the two to one answer.
+// addressBaseSQL is the SQL side of correspondence.BaseAddress. The anchored
+// pattern admits one `@` only, as the Go cut at the first `@` does. The
+// migration that builds idx_contact_email_mailbox_base spells the same
+// expression, and TestTheAddressVariantLaneReadsTheMailboxBaseIndex holds it.
 func addressBaseSQL(expr string) string {
-	return storekit.SQLf(`regexp_replace(lower(%s), '^([^+@]+)\+[^@]*@', '\1@')`, expr)
+	untagged := storekit.SQLf(`regexp_replace(lower(%s), '^([^+@]+)\+[^@]*@', '\1@')`, expr)
+	return storekit.SQLf(
+		`CASE WHEN %[1]s ~ '^[^@]*@(gmail|googlemail)\.com$' THEN replace(regexp_replace(%[1]s, '@(gmail|googlemail)\.com$', ''), '.', '') || '@gmail.com' ELSE %[1]s END`,
+		untagged)
 }
 
 // addressBases is the candidate's addresses in the two forms the lane compares.
@@ -67,6 +69,20 @@ func lockAddressBaseLane(ctx context.Context, tx pgx.Tx, emails []string) error 
 	return nil
 }
 
+// addressVariantQuery takes the bases, the folded addresses, the contact to
+// leave out and the row limit, in that order.
+var addressVariantQuery = `
+		SELECT e.contact_id, array_agg(e.email)
+		  FROM contact_email e
+		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
+		 WHERE ` + addressBaseSQL("e.email") + ` = ANY($1)
+		   AND lower(e.email) <> ALL($2)
+		   AND e.archived_at IS NULL
+		   AND ($3::uuid IS NULL OR e.contact_id <> $3)
+		 GROUP BY e.contact_id
+		 ORDER BY e.contact_id
+		 LIMIT $4`
+
 // addressVariantContacts finds every live contact holding an address with the
 // same base as one of the candidate's and a different full address. They come
 // lowest contact id first. Each one is a pair of its own. Three contacts on one
@@ -76,17 +92,7 @@ func addressVariantContacts(ctx context.Context, tx pgx.Tx, c ContactCandidate) 
 	if len(bases) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT e.contact_id, array_agg(e.email)
-		  FROM contact_email e
-		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
-		 WHERE `+addressBaseSQL("e.email")+` = ANY($1)
-		   AND lower(e.email) <> ALL($2)
-		   AND e.archived_at IS NULL
-		   AND ($3::uuid IS NULL OR e.contact_id <> $3)
-		 GROUP BY e.contact_id
-		 ORDER BY e.contact_id
-		 LIMIT $4`, bases, folded, c.ExcludeID, dedupeRivalLimit)
+	rows, err := tx.Query(ctx, addressVariantQuery, bases, folded, c.ExcludeID, dedupeRivalLimit)
 	if err != nil {
 		return nil, fmt.Errorf("dedupe contact address variant: %w", err)
 	}

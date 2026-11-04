@@ -120,6 +120,41 @@ func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
 	}
 }
 
+// Two contacts stored under two Gmail spellings of one mailbox before the rule
+// folded them get one pair. Dots at another host still name two mailboxes.
+func TestTheGmailScanTaskFilesStoredSpellingsOnceAndReplaysSafely(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	for name, email := range map[string]string{
+		"Ab": "ab@gmail.com", "Anna Beispiel": "a.b@googlemail.com",
+		"Cd": "cd@outlook.com", "Carla Dorn": "c.d@outlook.com",
+	} {
+		if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+			FullName: name, Source: "manual",
+			Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		}); err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+	}
+	e.WsExec(t, `DELETE FROM dedupe_candidate`)
+
+	task := gmailDedupeScanDataTask()
+	task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
+	runMachineAddressTask(ctx, t, e, task)
+	if got := scannedPairs(t, e); got != 1 {
+		t.Fatalf("the task filed %d pairs, want the one Gmail pair", got)
+	}
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		out, err := gmailDedupeScanDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
+		if err == nil && out.Changed != 0 {
+			t.Errorf("a replay from a nil cursor filed %d pairs", out.Changed)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // The nightly job files the pairs of records changed since its last pass, and
 // only after the open queue has been re-checked.
 func TestTheNightlyDuplicateJobFilesThePairsOfChangedRecords(t *testing.T) {
