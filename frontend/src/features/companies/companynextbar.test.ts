@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { translate, translatePlural } from "../../i18n";
 import {
-  daysLate,
-  lateness,
+  nextBarLateness,
   nextBarTask,
   otherTasks,
   promisedTask,
@@ -79,26 +78,6 @@ describe("the Next bar's task", () => {
   });
 });
 
-describe("daysLate", () => {
-  it("counts whole days past the due date at as_of", () => {
-    expect(daysLate(PROMISE, "2026-08-13T09:00:00Z", "UTC")).toBe(19);
-  });
-
-  it("says nothing for a task that is not overdue", () => {
-    expect(daysLate(OTHER, "2026-08-13T09:00:00Z", "UTC")).toBeUndefined();
-  });
-
-  it("counts midnights in the reader's zone, not elapsed 24-hour spans", () => {
-    const due = { ...PROMISE, due_at: "2026-08-11T21:00:00Z" };
-    // 35 hours later: one elapsed day, two midnights in Berlin.
-    expect(daysLate(due, "2026-08-13T08:00:00Z", "Europe/Berlin")).toBe(2);
-    expect(daysLate(due, "2026-08-13T08:00:00Z", "UTC")).toBe(2);
-    // Hours past a date due late tonight in UTC is yesterday in Berlin.
-    expect(daysLate(due, "2026-08-11T22:30:00Z", "UTC")).toBe(0);
-    expect(daysLate(due, "2026-08-11T22:30:00Z", "Europe/Berlin")).toBe(1);
-  });
-});
-
 const words = {
   t: (key: Parameters<typeof translate>[1]) => translate("en", key),
   plural: (
@@ -109,27 +88,34 @@ const words = {
   locale: "en" as const,
 };
 
-describe("lateness", () => {
-  it("gives the badge and the sentence the same count across midnight", () => {
-    const due = { ...PROMISE, due_at: "2026-08-11T21:00:00Z" };
-    const late = daysLate(due, "2026-08-13T08:00:00Z", "Europe/Berlin");
-    expect(late).toBeDefined();
-    expect(lateness(late ?? -1, words)).toEqual({
+describe("nextBarLateness", () => {
+  it("counts the calendar days the drawn task is past its date at as_of", () => {
+    const drawn = view({ moment: moment("overdue_promise", "t-promise") });
+    expect(nextBarLateness(drawn, "UTC", words)).toEqual({
+      badge: "19 days late",
+      sentence: "Due 19 days ago and still open.",
+    });
+  });
+
+  it("says nothing for a task that is not overdue", () => {
+    const drawn = view({ moment: moment("nothing_needed", "t-promise") });
+    expect(nextBarLateness(drawn, "UTC", words)).toBeUndefined();
+  });
+
+  it("counts midnights in the reader's zone, not elapsed 24-hour spans", () => {
+    // Due 23:00 Berlin on the 11th, read at 10:00 Berlin on the 13th: 35 hours.
+    const late = { ...PROMISE, due_at: "2026-08-11T21:00:00Z" };
+    const drawn = view({
+      as_of: "2026-08-13T08:00:00Z",
+      moment: moment("overdue_promise", "t-promise"),
+      next_steps: {
+        data: [late],
+        page: { has_more: false, next_cursor: null },
+      },
+    });
+    expect(nextBarLateness(drawn, "Europe/Berlin", words)).toEqual({
       badge: "2 days late",
       sentence: "Due 2 days ago and still open.",
-    });
-  });
-
-  it("says one day in both places", () => {
-    expect(lateness(1, words)).toEqual({
-      badge: "1 day late",
-      sentence: "Due one day ago and still open.",
-    });
-  });
-
-  it("shows no badge for a task due earlier today", () => {
-    expect(lateness(0, words)).toEqual({
-      sentence: "Due earlier today and still open.",
     });
   });
 });

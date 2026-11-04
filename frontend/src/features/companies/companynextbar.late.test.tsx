@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
+import { CompanyHowItStands } from "./companyhowitstands";
 import { CompanyNextBar } from "./companynextbar";
 
 afterEach(cleanup);
@@ -65,5 +67,29 @@ describe("the Next bar's late promise", () => {
     expect(screen.getByText("2 days late")).toBeTruthy();
     expect(screen.getByText("Due 2 days ago and still open.")).toBeTruthy();
     expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
+  });
+
+  it("gives How it stands the bar's sentence, not the server's", async () => {
+    installFetchStub({ "GET /me": meRoute({}) });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <ViewerZoneProvider zone="Europe/Berlin">
+            <CompanyHowItStands
+              companyId="o-1"
+              // Health withheld, so the card's sentence is what is owed.
+              view={{ ...VIEW, sections_omitted: ["health"] }}
+              loading={false}
+              failed={false}
+            />
+          </ViewerZoneProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText("Due 2 days ago and still open."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
