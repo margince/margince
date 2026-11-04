@@ -12,6 +12,7 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { STORAGE_KEYS } from "../lib/storage";
 import { setThemeChoice } from "../lib/theme";
+import { bookingProfile } from "../testing/book.testkit";
 import { meFixture } from "../testing/mefixture";
 import { AccountMenu } from "./account";
 
@@ -136,6 +137,37 @@ describe("AccountMenu", () => {
         .filter((item) => item.getAttribute("href") === "/#/settings"),
     ).toHaveLength(1);
   });
+
+  // The booking link row carries the guest-facing state: a page switched off,
+  // or one whose calendar cannot take bookings, is paused for every guest.
+  it.each([
+    [{ enabled: false, blocker: "none" }, true],
+    [{ enabled: true, blocker: "calendar_read_only" }, true],
+    [{ enabled: true, blocker: "none" }, false],
+  ] as const)(
+    "marks the booking link paused for %o: %s",
+    async (state, paused) => {
+      const user = userEvent.setup();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      client.setQueryData(["me"], meFixture());
+      client.setQueryData(["scheduling-profile"], {
+        ...bookingProfile,
+        ...state,
+      });
+      rtlRender(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <AccountMenu />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await openMenu(user, railTrigger());
+      const link = screen.getByRole("menuitem", { name: /My booking link/ });
+      expect(link.textContent?.includes("Paused")).toBe(paused);
+    },
+  );
 
   // The appearance choice IS a destination now: it lives where the reader can
   // see the document repaint under the open panel, rather than on a form two

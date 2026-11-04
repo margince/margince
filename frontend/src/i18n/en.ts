@@ -895,6 +895,9 @@ export const en = {
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
+  "reporting.movement.excluded": "Left out after review",
+  "reporting.movement.reinstated": "Counted again after review",
+  "reporting.movement.not_checked": "Not checked",
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
@@ -1467,6 +1470,10 @@ export const en = {
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.commit_evidence": "commit evidence",
   "reporting.compare.basis.weighted": "the weighted pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "supported commit evidence",
+  "reporting.compare.basis.qualified_weighted":
+    "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
@@ -1865,8 +1872,13 @@ export const en = {
   "scheduling.openCalendar": "Open in calendar",
   "scheduling.cancel": "Cancel meeting",
   "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
+  "scheduling.calendarDisconnectedTitle": "Your calendar refused Margince",
+  "scheduling.calendarDisconnectedHelp":
+    "Every invitation waiting on this calendar is paused. Reconnect it with permission to add events, and they go out on their own.",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
+  "scheduling.pausedUnavailable":
+    "{host} is not taking bookings through this page right now.",
   "scheduling.unavailable":
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
@@ -2076,6 +2088,7 @@ export const en = {
   "brief.coverage.source.calendar": "Calendar connection",
   "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
+  "brief.coverage.source.deal_review": "Customer support reviews",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
   "brief.coverage.source.conversation_claim": "Customer commitments",
@@ -5550,6 +5563,24 @@ export const en = {
   "deals.confirm": "Confirm",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
+  "deals.viability.title": "Customer support",
+  "deals.viability.standing": "Supported-deals forecast",
+  "deals.viability.enforced":
+    "The forecast counts only deals the customer supports.",
+  "deals.viability.notEnforced":
+    "The forecast counts every deal; this is shown for reference.",
+  "deals.viability.qualification.eligible": "Counted",
+  "deals.viability.qualification.excluded": "Left out for review",
+  "deals.viability.qualification.unsupported": "Left out: no support",
+  "deals.viability.qualification.unknown": "Not checked",
+  "deals.viability.qualification.closed": "Closed: not in the forecast",
+  "deals.viability.checkOutOfDate":
+    "This check no longer counts, so the deal is not checked.",
+  "deals.viability.assessed": "Last checked",
+  "deals.viability.review": "Customer support review",
+  "deals.viability.reviewOpenedOn": "Opened {date}",
+  "deals.viability.reviewOpen": "Open",
+  "deals.viability.taskDoneReviewOpen": "Task done, still open",
 
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
@@ -6156,6 +6187,12 @@ export const en = {
   "offer.buyerCompany": "Buyer company",
   "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",
+  "offer.legalEntity": "Issued by",
+  "offer.legalEntityHint":
+    "The legal entity whose name, address, VAT ID, bank details and logo the offer prints.",
+  "offer.language": "Language",
+  "offer.languageHint":
+    "Two letters, for example de. Lines added from now on take product names in this language.",
   "offer.validUntil": "Valid until",
   "offer.introText": "Intro text",
   "offer.termsText": "Terms text",
@@ -6411,6 +6448,10 @@ export const en = {
   "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "From supported commit evidence",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
   "brief.weekly.bridge": "Weekly change",
   "brief.weekly.bridge.opening": "Monday",
@@ -6422,6 +6463,9 @@ export const en = {
   "brief.weekly.bar.created": "Created",
   "brief.weekly.bar.advanced": "Advanced",
   "brief.weekly.bar.slipped": "Slipped",
+  "brief.weekly.bar.excluded": "Left after review",
+  "brief.weekly.bar.reinstated": "Back after review",
+  "brief.weekly.bar.not_checked": "Not checked",
   "brief.weekly.bar.won": "Won",
   "brief.weekly.bar.lost": "Lost",
   "brief.weekly.bar.other": "Rates and definitions",
@@ -7539,14 +7583,8 @@ export const en = {
   "analytics.overview.prospecting": "My prospecting",
   "analytics.overview.readings": "Opening readings",
   "analytics.overview.charts": "Charts",
-  "analytics.overview.expectedFinish": "Expected finish",
-  "analytics.overview.coverage": "Coverage",
   "analytics.overview.allOpen": "All open pipeline",
   "analytics.overview.openClosing": "Open pipeline closing this quarter",
-  "analytics.overview.quarterOnly": "This quarter only",
-  "analytics.overview.winRateBasis": "Of the deals closed in this period",
-  "analytics.overview.summary": "Summary",
-  "analytics.overview.notCompared": "Not compared",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
   "analytics.overview.saveViewNote":
@@ -7557,8 +7595,6 @@ export const en = {
     "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
   "analytics.overview.pipelineDefault": "Use the default pipeline",
   "analytics.overview.pipelineAll": "Use all pipelines",
-  "analytics.overview.salesNothing":
-    "No forecast check is open for this scope.",
   "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
   "analytics.overview.quarterOnlyBody":
     "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
@@ -7596,11 +7632,6 @@ export const en = {
   "analytics.prospect.failed": "Could not be read",
   "analytics.prospect.failedDetail":
     "The source did not answer. Try again later.",
-  "analytics.prospect.basisAccepted": "Handoffs accepted into a deal, {period}",
-  "analytics.prospect.noArrivals":
-    "No lead arrived {period}, so none could be qualified",
-  "analytics.prospect.basisQualified":
-    "Of {arrived} leads that arrived {period}",
   "analytics.prospect.weeksFailed": "The recent weeks could not be read.",
   "analytics.prospect.noMeetingsWeek": "No meetings recorded as held this week",
   "analytics.prospect.noMeetingsPeriod":
@@ -7647,7 +7678,6 @@ export const en = {
   "analytics.doNext.all_other": "All {count} items in your Worklist",
   "analytics.doNext.open": "Open",
   "analytics.doNext.openNamed": "Open {title}",
-  "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.overview.team": "Team prospecting",
   "analytics.team.chooseTeam": "Choose a team",
   "analytics.team.chooseTeamBody":
@@ -7693,11 +7723,6 @@ export const en = {
     "{rate} of these {rounds} rounds were accepted.",
   "analytics.team.tooFewForRate":
     "Fewer than {below} is too few for a rate, so none is shown.",
-  "analytics.team.qualifiedOf_one":
-    "{qualified} of the {count} lead that arrived in this period is qualified so far. The others are still open or were disqualified.",
-  "analytics.team.qualifiedOf_other":
-    "{qualified} of the {count} leads that arrived in this period are qualified so far. The others are still open or were disqualified.",
-  "analytics.team.qualifiedRate": "That is {rate} of the leads that arrived.",
   "analytics.team.waitingRow_one": "{count} handoff waits for a decision",
   "analytics.team.waitingRow_other": "{count} handoffs wait for a decision",
   "analytics.team.waitingBasis": "Waiting now",
@@ -7726,7 +7751,6 @@ export const en = {
   "analytics.team.handoffsHidden": "Handoffs are hidden from you.",
   "analytics.team.hiddenBasis":
     "Your role does not include this. Nothing here says it is zero.",
-  "analytics.team.nothingWaits": "Nothing waits on the team in this period.",
   "analytics.team.showHandoffs": "Show handoffs",
   "analytics.team.showReasons": "Show reasons",
   "analytics.team.showLeads": "Show leads",
@@ -7745,12 +7769,14 @@ export const en = {
   "analytics.team.target": "Monthly target",
   "analytics.team.targetOf": "{actual} of {target}",
   "analytics.team.noTarget": "No target",
+  "analytics.team.eventCredit":
+    "Credit: owner at first qualification. Each lead counts once.",
   "analytics.team.qualificationBasis":
-    "Qualified counts the leads that arrived in this period and are qualified so far. Unanswered counts the leads that wrote in during this period and have no reply yet. Both count for each lead’s owner now, so a reassigned lead counts for its new owner.",
+    "Qualified counts first qualifications in this period, credited to the owner at that time. Unanswered follows current ownership.",
   "analytics.team.handoffBasis":
     "Submitted, returned and rejected count what happened in this period. Accepted counts each deal once, in the period it was first accepted. Waiting now is as of today. Each counts for whoever handed it on at the time.",
   "analytics.team.targetBasis":
-    "Targets are monthly. Each compares the qualified leads that arrived {month} so far with that member’s own target.",
+    "Targets are monthly and compare first qualifications in {month} with that member’s target.",
   "analytics.team.meetingsHidden": "Meetings are hidden from you.",
   "analytics.team.leadsHidden":
     "Qualified and unanswered leads are hidden from you.",
@@ -8023,6 +8049,7 @@ export const en = {
   "analytics.myPipeline": "My open deals",
   "analytics.sdrLeads": "My leads this month",
   "analytics.sdrReading.leads_promoted": "Leads qualified",
+  "analytics.sdrReading.leads_qualified": "Leads qualified",
   "analytics.sdrReading.lead_first_response":
     "First reply time, answered leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -8322,7 +8349,7 @@ export const en = {
   "forecast.confirmed": "Close date confirmed",
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
-  "analytics.shareOfOpenPipeline": "Share of open pipeline",
+  "analytics.shareOfOpenPipeline": "Share of pipeline in this currency",
   "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
   "analytics.closeMonth": "Close month",
   "analytics.noCloseDate": "No close date",
@@ -13175,6 +13202,28 @@ export const en = {
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set model price",
   "settings.rates.notSaved": "Rate not saved",
+  "taxRates.title": "Tax rates",
+  "taxRates.withheld": "Only an Admin or Ops can see the tax rates.",
+  "taxRates.intro":
+    "The standard and reduced tax rate of each country, each from the day it takes effect. A rate is never changed: record a new one from a later day.",
+  "taxRates.empty": "No tax rates yet.",
+  "taxRates.add": "Record a rate",
+  "taxRates.modalTitle": "Record a tax rate",
+  "taxRates.colCountry": "Country",
+  "taxRates.colCategory": "Category",
+  "taxRates.colRate": "Rate",
+  "taxRates.colFrom": "From",
+  "taxRates.category.standard": "Standard",
+  "taxRates.category.reduced": "Reduced",
+  "taxRates.category.exempt": "Exempt",
+  "taxRates.countryPlaceholder": "Choose a country",
+  "taxRates.rateHint": "Percent, for example 19 or 7.7.",
+  "taxRates.fromHint":
+    "Today or later. A day before the country’s first rate extends its history.",
+  "taxRates.notSaved": "Rate not saved",
+  "taxRates.save": "Record rate",
+  "taxRates.recorded_one": "Rate recorded. It classified {count} product.",
+  "taxRates.recorded_other": "Rate recorded. It classified {count} products.",
   "settings.rates.setRate": "Save",
   "settings.rates.refresh": "Refresh from sources",
   "settings.rates.refreshEnqueued":
@@ -13550,6 +13599,7 @@ export const en = {
   "roles.object.import_run": "Data imports",
   "roles.object.finance": "Finance data",
   "roles.object.fx_rate": "Currency rates",
+  "roles.object.tax_rate": "Tax rates",
   "roles.object.data_coverage": "Data coverage",
   "roles.object.knowledge_corpus": "Knowledge sources",
   "roles.object.knowledge_document": "Knowledge documents",
@@ -13753,6 +13803,7 @@ export const en = {
   "users.reactivate": "Reactivate",
   "users.status.active": "Active",
   "users.status.invited": "Invited",
+  "users.status.inviteMailFailed": "Invitation email failed",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
   "users.handover.action": "Hand over work",
@@ -13788,6 +13839,8 @@ export const en = {
     "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
   "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
+  "users.resendInvite": "Resend invitation",
+  "users.inviteResent": "Invitation sent again to {name}",
   "users.link.title": "Set-password link for {name}",
   "users.link.pending": "Creating link…",
   // Two sentences, no dash (VOICE-RULE-5).
@@ -13897,6 +13950,20 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.taxCategory": "Tax category",
+  "product.taxCategoryUnset": "Not classified",
+  "product.taxCategoryFilter": "Tax category",
+  "product.taxCategoryFilterAll": "All tax categories",
+  "product.translations": "Translations",
+  "product.translationsTitle": "{name} in other languages",
+  "product.translationsHint":
+    "An offer in one of these languages names the product this way. A line already on an offer keeps the name it was added with.",
+  "product.translationsEmpty": "No other languages yet.",
+  "product.translationRemove": "Remove {language}",
+  "product.translationLanguage": "Language",
+  "product.translationLanguageHint":
+    "Two letters, for example de. Saving a language that is already listed replaces it.",
+  "product.translationSave": "Save language",
   "product.archive": "Archive product",
   "product.archiveConfirm":
     "Archive this product? Existing offer lines keep their snapshot.",
@@ -14203,6 +14270,10 @@ export const en = {
     "Commit evidence: confirmed close dates only",
   "installationSettings.forwardMeasure.weighted":
     "Weighted: every open deal at its stage probability",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Supported commit evidence: confirmed close dates the customer still supports",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Supported weighted: open deals the customer still supports, at their stage probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
   "forecast.landing": "Landing",
@@ -14210,6 +14281,9 @@ export const en = {
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.commit_evidence": "Won + confirmed commit",
   "forecast.basis.weighted": "Won + weighted open deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Won + supported confirmed commit",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
@@ -14239,6 +14313,8 @@ export const en = {
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows commit evidence.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":
     "The call is below the amount already won. It is shown as recorded, not corrected.",
   "forecast.pipelineNeeded": "Deal value needed",
@@ -17897,6 +17973,8 @@ export const en = {
     "This lead is waiting for a first answer. Get in touch before its response time runs out.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
+  "worklist.ask.deal_review":
+    "The customer may no longer support this deal. Open it and answer the review.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
   "worklist.ask.relationship_decay":
     "Nobody has been in touch with this contact for a while. Get in touch, or set it aside for a month.",
@@ -18290,6 +18368,7 @@ export const en = {
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
   "worklist.untitled.lead_response": "Untitled lead",
   "worklist.untitled.deal_at_risk": "Deal drifting",
+  "worklist.untitled.deal_review": "Customer support review",
   "worklist.untitled.meeting": "Untitled meeting",
   "worklist.untitled.meeting_outcome": "Meeting outcome",
   "worklist.untitled.relationship_decay": "Relationship going quiet",
@@ -19126,7 +19205,6 @@ export const en = {
   "magic.consequence.capture_history_incomplete": "History import incomplete.",
   "scheduling.linksTitle": "Booking links",
   "scheduling.status.paused": "Paused",
-  "scheduling.status.attention": "Needs attention",
   "scheduling.acceptBookings": "Accept bookings",
   "scheduling.acceptBookingsHelp":
     "Anyone with your link can pick a free time. Turn off to pause bookings; the link stays the same.",
@@ -19141,8 +19219,6 @@ export const en = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Actions",
   "scheduling.videoCall": "Video call",
-  "scheduling.row.live": "Live",
-  "scheduling.row.noInvitations": "No invitations",
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",
@@ -19933,33 +20009,19 @@ export const en = {
   "analytics.hero.attainment": "Sales won against the quarter’s target",
   "analytics.hero.attained": "{percent}% of the {target} target",
   "analytics.hero.remaining": "{amount} still to win",
-  "analytics.hero.shortfall":
-    "Projected shortfall {amount}, from an expected finish of {landing}",
-  "analytics.hero.surplus":
-    "Projected surplus {amount}, from an expected finish of {landing}",
+  "analytics.hero.shortfall": "Projected shortfall {amount}",
+  "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
-  "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
-  "analytics.assessment.title": "Assessment",
-  "analytics.assessment.pending": "Reading the figures",
+  "analytics.outlook.valuedCount": "{included} of {eligible} valued",
+  "analytics.outlook.periodPipeline": "Pipeline due this quarter",
+  "analytics.outlook.sales": "Quarter outlook",
+  "analytics.outlook.team": "Team prospecting outlook",
+  "analytics.outlook.prospecting": "Prospecting outlook",
+  "analytics.outlook.records": "View supporting records",
   "analytics.assessment.refresh": "Refresh assessment",
   "analytics.assessment.retry": "Retry",
-  "analytics.assessment.noSales": "No measured sales in this selection.",
-  "analytics.assessment.deterministic":
-    "Written from the figures alone. An AI model would add its reading here once one is set up.",
-  "analytics.assessment.nextDecision": "Next decision",
-  "analytics.assessment.noDecision": "No supported decision.",
-  "analytics.assessment.viewEvidence": "View evidence",
   "analytics.assessment.evidenceTitle": "What the assessment rests on",
-  "analytics.assessment.evidencePurpose":
-    "Each sentence names the figures it reads. Open a figure to see its records.",
-  "analytics.assessment.confidence": "Confidence: {level}",
-  "analytics.assessment.kind.observation": "Observation",
-  "analytics.assessment.kind.claim": "Reported",
-  "analytics.assessment.kind.hypothesis": "Hypothesis",
-  "analytics.assessment.level.low": "low",
-  "analytics.assessment.level.medium": "medium",
-  "analytics.assessment.level.high": "high",
   "analytics.decisions.title": "Decisions from the last review",
   "analytics.decisions.purpose":
     "Each decision is a task on its deal with an owner and a review date. Completing it records the work, not a sale.",
@@ -19995,8 +20057,6 @@ export const en = {
   "analytics.overview.profileCompany": "Company sales",
   "analytics.overview.profileProduct": "Product sales",
   "analytics.overview.removeFilter": "Remove {filter}",
-  "analytics.overview.winRate": "Closed win rate",
-  "analytics.overview.coverageNotCompared": "The note under Sales won says why",
   "analytics.intervention.scope":
     "These checks cover every pipeline and close date in this scope.",
   "analytics.intervention.viewAll": "View all checks",
@@ -20019,8 +20079,6 @@ export const en = {
     "1 data source could not be read in the last check.",
   "analytics.intervention.maintenanceBody_other":
     "{count} data sources could not be read in the last check.",
-  "analytics.decision.composition": "What the expected finish is made of",
-  "analytics.decision.won": "Won",
   "analytics.decision.included":
     "Counts {included} of the {eligible} open deals the forecast considered.",
   "analytics.decision.excluded": "Left out: {parts}.",
@@ -20041,8 +20099,6 @@ export const en = {
   "reporting.writtenChecksDeals_other": "{count} deals",
   "analytics.intervention.notPermitted":
     "Forecast checks are not available to you.",
-  "analytics.decision.part.commit_evidence": "Confirmed commit",
-  "analytics.decision.part.weighted": "Weighted open deals",
   "health.needsFix": "Needs fixing",
   "health.needsReview": "Review needed",
   "health.actionsNeeded_one": "Problem needing action: {count}",
@@ -20298,6 +20354,20 @@ export const en = {
     "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
   "health.impact.automatic":
     "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
+  "analytics.outlook.calledAt": "Called {at}",
+  "analytics.prospect.weeksByQualification":
+    "Each lead counts in the week it was first qualified.",
+  "analytics.team.atLeast": "At least {value}",
+  "analytics.team.arrivalQualified": "Arriving leads qualified",
+  "analytics.team.arrivalTarget": "Arrival-cohort target",
+  "analytics.team.arrivalCredit":
+    "Arrival cohort: leads arriving in the period, credited to their current owner.",
+  "analytics.outlook.dealCount_one": "{count} deal",
+  "analytics.outlook.dealCount_other": "{count} deals",
+  "analytics.team.qualificationUnattributed_one":
+    "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
+  "analytics.team.qualificationUnattributed_other":
+    "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
 } as const;
 
 export type MessageKey = keyof typeof en;

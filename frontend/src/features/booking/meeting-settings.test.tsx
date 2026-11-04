@@ -307,6 +307,9 @@ it("says bookings are live with nothing landing in an expired calendar, and paus
   ).toBeTruthy();
   expect(screen.getByText(/The connection has expired/)).toBeTruthy();
   expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
+  // The link says what its guests see: the page is paused.
+  const links = screen.getByRole("region", { name: "Booking links" });
+  expect(within(links).getAllByText("Paused").length).toBeGreaterThan(0);
   expect(
     await screen.findByText(
       /You can save this while the calendar is being reconnected/,

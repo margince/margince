@@ -17,7 +17,7 @@ var contextSurfaceBySource = map[crmcontracts.WorklistItemSource]string{
 	"task": "activity", "meeting": "activity", "meeting_outcome": "activity",
 	"conversation_claim": "source", "awaiting_reply": "source", "meeting_follow_up": "source",
 	"customer_waiting": "record", "lead_response": "record", "brief_item": "record",
-	"deal_at_risk": "record", "relationship_decay": "record", "bounce": "record",
+	"deal_at_risk": "record", "relationship_decay": "record", "bounce": "record", "deal_review": "record",
 	"undelivered": "record", "notice_case": "record", "introduction_request": "record",
 	"approval": "inline", "dedupe_candidate": "inline", "contact_case": "inline", "deal_suggestion": "inline",
 	"tag_suggestion": "inline", "failed_approval": "inline", "domain_question": "inline",
@@ -41,6 +41,7 @@ func TestProducedWorklistSourcesKeepTheirContext(t *testing.T) {
 	rows = append(rows, meeting)
 	rows = append(rows, planRowsOf([]PlanWork{{ID: ids.NewV7(), Label: "Confirm scope", DueAt: day.AsOf}}, day.AsOf)...)
 	rows = append(rows, batchRow("uncertain_contact", "", rows[:1], false))
+	rows = foldDealReviews(rows, []DealReview{{ID: ids.NewV7(), DealID: ids.NewV7(), DealName: "Reviewed", OpenedAt: day.AsOf}})
 	reached := map[crmcontracts.WorklistItemSource]bool{}
 	for _, produced := range rows {
 		row := produced.item
