@@ -130,9 +130,8 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 		return err
 	}
 	q := fmt.Sprintf(`
-		SELECT d.id, s.win_probability, %s, d.expected_close_date
+		SELECT d.id, %s, %s, d.expected_close_date
 		FROM deal d
-		JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'
 		  AND NOT EXISTS (
 			SELECT 1 FROM brief_item bi
@@ -156,7 +155,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- one here would return deals whose card can say nothing.
 				  AND %s
 				  AND %s) END)`,
-		baseValue, userPos, asOfPos,
+		deals.WinProbabilitySQL("d"), baseValue, userPos, asOfPos,
 		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
 		occurredday.HappenedSQL("a", fmt.Sprintf("$%d", asOfPos)), readable)
 	if scope != "" {

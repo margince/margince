@@ -87,14 +87,9 @@ function readingsCard(answer: Record<string, unknown>): HTMLElement {
       picture: bars([
         { label: "Won", value: amount("won_minor"), shown: shown("won_minor") },
         {
-          label: "With evidence",
+          label: "Likely",
           value: amount("evidence_minor"),
           shown: shown("evidence_minor"),
-        },
-        {
-          label: "Best case",
-          value: amount("best_case_minor"),
-          shown: shown("best_case_minor"),
         },
         {
           label: "Open",

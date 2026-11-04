@@ -139,7 +139,7 @@ func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasti
 		if contribution.InEvidence {
 			contexts = append(contexts, "forecast_supported")
 		}
-		if contribution.InBestCase && !contribution.InEvidence {
+		if contribution.InOpen && !contribution.InEvidence {
 			contexts = append(contexts, "forecast_upside")
 		}
 		if contribution.InOpen {

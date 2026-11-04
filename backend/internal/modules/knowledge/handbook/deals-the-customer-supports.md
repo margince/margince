@@ -77,6 +77,6 @@ is on:
   its own. That happens when the mailbox could not be read, when the deal is
   new, or when something on it changed after the check.
 - The other figures do not change.
-- The nightly close-date sweep stops lowering forecast categories.
+- The nightly close-date sweep stops lowering the probability of quiet deals.
 
 Turning it off removes the extra line at once. The reviews and their tasks stay.

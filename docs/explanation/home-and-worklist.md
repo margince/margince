@@ -272,7 +272,7 @@ A stalled deal keeps its future date while its forecast category drops one step.
 date still needs enough observed history before it can be replaced. Only a replaced date is
 provisional; a future date a human set stays theirs.
 
-`setCloseDate` and `setForecastCategory` in `closedatecorrect.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
+`setCloseDate` in `closedatecorrect.go` and `setWinProbability` in `winprobability.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
 
 **Accept** (`acceptAppliedDealChange`, `changeacceptance.go`) records an audited review of a close date

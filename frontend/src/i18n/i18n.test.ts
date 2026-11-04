@@ -166,9 +166,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "approval.field.email",
   // And naming the kind of evidence a tag suggestion cites.
   "tagSuggestion.kind.email",
-  // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
-  // keeps "Email". German translates it, and does.
-  "deal.forecast.pipeline",
   "room.create.defaultTitle",
   // These slots receive category counts and action names already translated by their owners.
   "brief.agenda.summary",
@@ -223,7 +220,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "board.count_one",
   "lead.boardCount_one",
   "deals.pipeline",
-  "deal.fcPipeline",
   "filters.field.pipeline_id",
   "analytics.field.pipeline_id",
   "analytics.sectionPipeline",
@@ -251,10 +247,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contracts.renew.deal",
   "contracts.deal",
 
-  // The forecast categories Commit and Best case keep their English names.
-  "deal.fcCommit",
-  "deal.fcBestCase",
-  "brief.weekly.outlook.bestCase",
+  // A bare percentage, written the same way in Vietnamese.
+  "deal.winProbability.band.zero",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",

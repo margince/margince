@@ -323,6 +323,7 @@ func Settings() []config.Any {
 		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
 		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients,
 		CallWhatsApp, CallTelegram, CallZalo, IndividualPerformance, ForecastSelfCorrecting,
+		ForecastLikelyThreshold,
 	}
 	for _, s := range ScheduleSettings() {
 		out = append(out, s)

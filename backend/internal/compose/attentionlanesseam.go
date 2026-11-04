@@ -292,7 +292,7 @@ func (f attentionDealFacts) Figures(
 			Currency:             figures.Currency,
 			ExpectedCloseDate:    figures.ExpectedCloseDate,
 			CloseDateProvisional: figures.CloseDateProvisional,
-			ForecastCategory:     figures.ForecastCategory,
+			WinProbability:       figures.WinProbability,
 			CloseOverdue:         figures.CloseOverdue,
 		}
 	}

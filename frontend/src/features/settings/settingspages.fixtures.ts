@@ -68,7 +68,7 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   date_format: "dmy",
@@ -79,6 +79,7 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   call_zalo: true,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
 };
 
 // A fresh installation's port, read from its default.

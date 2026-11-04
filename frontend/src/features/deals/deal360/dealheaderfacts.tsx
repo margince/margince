@@ -26,7 +26,6 @@ import {
   translatePlural,
   useT,
 } from "../../../i18n";
-import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { writtenByLabel } from "../../../lib/leadorigins";
 import {
@@ -57,7 +56,6 @@ export type DealIdentity = Partial<
     | "expected_close_date"
     | "closed_at"
     | "close_date_provisional"
-    | "forecast_category"
     | "wait_until"
     | "fx_rate_to_base"
     | "fx_rate_date"
@@ -255,9 +253,6 @@ export function closeWords(
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
-  if (deal.forecast_category) {
-    parts.push(forecastLabel(deal.forecast_category, t));
-  }
   if (waitHolds(deal.wait_until, zone, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
@@ -273,26 +268,6 @@ export function closeWords(
       Boolean(deal.close_date_provisional) ||
       (daysLeft !== undefined && daysLeft < 0),
   };
-}
-
-// The forecast words, in the reader's language. An unmapped value renders as
-// itself: the category is a wire enum, and a newer server naming a fifth is
-// still telling this reader something.
-const FORECAST_LABELS: Record<string, MessageKey> = {
-  commit: "deal.forecast.commit",
-  best_case: "deal.forecast.bestCase",
-  pipeline: "deal.forecast.pipeline",
-  omitted: "deal.forecast.omitted",
-};
-
-export function forecastLabel(
-  value: string,
-  t: (key: MessageKey) => string,
-): string {
-  const key = Object.hasOwn(FORECAST_LABELS, value)
-    ? FORECAST_LABELS[value]
-    : undefined;
-  return key === undefined ? value.replaceAll("_", " ") : t(key);
 }
 
 // The amount, converted into the installation's base currency at the frozen

@@ -145,15 +145,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// the floor carry in the same transaction.
 		Country:      req.Country,
 		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold,
 	}
-	if req.DateFormat != nil {
-		value := string(*req.DateFormat)
-		patch.DateFormat = &value
-	}
-	if req.TimeFormat != nil {
-		value := string(*req.TimeFormat)
-		patch.TimeFormat = &value
-	}
+	patch.DateFormat = enumText(req.DateFormat)
+	patch.TimeFormat = enumText(req.TimeFormat)
 	if req.BaseLanguage != nil {
 		// The generated enum refuses an unknown value at the edge, so a code
 		// that reaches here is one the contract admits. The entry validates it
@@ -183,10 +178,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// quoting the value. Converted to a plain string because the patch carries
 	// what was ASKED for, and the generated enum type would claim it had already
 	// been checked against the vocabulary the projection enforces.
-	if req.ForecastForwardMeasure != nil {
-		measure := string(*req.ForecastForwardMeasure)
-		patch.ForecastForwardMeasure = &measure
-	}
+	patch.ForecastForwardMeasure = enumText(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -265,6 +257,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		CallZalo:                   s.CallZalo,
 		IndividualPerformance:      s.IndividualPerformance,
 		ForecastSelfCorrecting:     s.ForecastSelfCorrecting,
+		ForecastLikelyThreshold:    s.ForecastLikelyThreshold,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
@@ -335,4 +328,12 @@ func (h installationSettingsHandlers) clock() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+func enumText[T ~string](value *T) *string {
+	if value == nil {
+		return nil
+	}
+	text := string(*value)
+	return &text
 }

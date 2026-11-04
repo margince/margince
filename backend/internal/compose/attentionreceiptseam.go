@@ -119,8 +119,8 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if slices.Contains(c.Fields, "expected_close_date") {
 		summary = fmt.Sprintf("Changed the close date on %q: %s → %s", c.DealName, correctionDate(c.BeforeClose), correctionDate(c.AfterClose))
 	}
-	if slices.Contains(c.Fields, "forecast_category") {
-		summary += ". Forecast category also changed"
+	if correctionMovedForecast(c) {
+		summary += ". Win probability also lowered"
 	}
 	if c.Basis != "" {
 		summary += " — " + c.Basis
