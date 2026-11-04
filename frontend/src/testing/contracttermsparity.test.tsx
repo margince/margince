@@ -23,17 +23,21 @@ afterEach(cleanup);
 // agreements. Each reads an agreement's payment term and yearly value, in the
 // same words, from one fixture.
 
+// An active agreement with no dates is under contract: the server derives the
+// flag from the status and the dates.
 const BASE: Contract = {
-  id: "k-1",
+  id: "k-base",
   company_id: "o-1",
   project_id: "pr-1",
-  title: "Platform subscription",
-  status: "draft",
+  title: "Base",
+  status: "active",
   version: 1,
   value_basis: "total",
   currency: "EUR",
+  arr_minor: null,
+  payment_term_days: null,
   auto_renew: false,
-  under_contract: false,
+  under_contract: true,
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-01-01T00:00:00Z",
@@ -41,22 +45,46 @@ const BASE: Contract = {
 };
 
 // 1,000,000 minor units does not divide by twelve, so the monthly reading
-// carries its approximation mark on both surfaces.
-const WITH_TERMS: Contract = {
-  ...BASE,
-  arr_minor: 1_000_000,
-  payment_term_days: 30,
-};
-const NO_TERMS: Contract = {
-  ...BASE,
-  id: "k-2",
-  title: "Pilot agreement",
-  arr_minor: null,
-  payment_term_days: null,
-};
-
-const NET = "Net 30";
+// carries its approximation mark.
 const ARR = "€10,000.00/year (approx. €833.33/month)";
+
+type Case = { contract: Contract; terms: string[] };
+
+function agreement(id: string, fields: Partial<Contract>): Contract {
+  return { ...BASE, id, title: `Agreement ${id}`, ...fields };
+}
+
+const CASES: Case[] = [
+  {
+    contract: agreement("term", { payment_term_days: 30 }),
+    terms: ["Net 30"],
+  },
+  {
+    contract: agreement("receipt", { payment_term_days: 0 }),
+    terms: ["Due on receipt"],
+  },
+  { contract: agreement("arr", { arr_minor: 1_000_000 }), terms: [ARR] },
+  {
+    contract: agreement("both", {
+      payment_term_days: 30,
+      arr_minor: 1_000_000,
+    }),
+    terms: ["Net 30", ARR],
+  },
+  { contract: agreement("neither", {}), terms: [] },
+  {
+    // Its cancellation took effect, so the server reads it as no longer under
+    // contract. The terms it was agreed on still read.
+    contract: agreement("cancelled", {
+      status: "cancelled",
+      payment_term_days: 45,
+      arr_minor: 1_000_000,
+      cancellation_effective_on: "2026-03-31",
+      under_contract: false,
+    }),
+    terms: ["Net 45", ARR],
+  },
+];
 
 function drawProject(contracts: Contract[]) {
   const view = project360({
@@ -78,36 +106,16 @@ function projectRow(title: string): HTMLElement {
   return row;
 }
 
-function captions(row: HTMLElement, selector: string): string[] {
+function captions(row: Element, selector: string): string[] {
   return [...row.querySelectorAll(selector)].map((el) => el.textContent ?? "");
 }
 
-it("shows an agreement's payment term and yearly value on the project card", () => {
-  drawProject([WITH_TERMS]);
-  const row = projectRow(WITH_TERMS.title);
-  expect(within(row).getByText(NET)).toBeTruthy();
-  expect(within(row).getByText(ARR)).toBeTruthy();
-});
-
-it("adds no line to a project card row whose agreement has neither term", () => {
-  drawProject([
-    NO_TERMS,
-    { ...NO_TERMS, id: "k-3", title: "Dated pilot", ends_on: "2026-12-31" },
-  ]);
-  expect(
-    projectRow(NO_TERMS.title).querySelector(".overviewrow-sub"),
-  ).toBeNull();
-  expect(
-    projectRow("Dated pilot").querySelector(".overviewrow-sub")?.textContent,
-  ).toBe("Runs to 31 Dec 2026");
-});
-
-it("reads the terms in the same words as the company's Contracts panel", async () => {
+async function companyCaptions(): Promise<Map<string, string[]>> {
   installFetchStub({
     "GET /me": meRoute({ contract: ["read"] }),
     "GET /companies/o-1/contracts": () =>
       jsonResponse({
-        data: [WITH_TERMS],
+        data: CASES.map(({ contract }) => contract),
         page: { next_cursor: null, has_more: false },
       }),
   });
@@ -116,18 +124,61 @@ it("reads the terms in the same words as the company's Contracts panel", async (
       <CompanyContractsCard companyId="o-1" />
     </StoryProviders>,
   );
-  const companyRow = (await company.findByText(WITH_TERMS.title)).closest(
-    ".rec-row",
-  );
-  if (!(companyRow instanceof HTMLElement)) throw new Error("no company row");
-  const companyTerms = captions(companyRow, ".rec-meta > .t-caption");
+  const read = new Map<string, string[]>();
+  for (const { contract } of CASES) {
+    const row = (await company.findByText(contract.title)).closest(".rec-row");
+    if (!row) throw new Error(`no company row for ${contract.title}`);
+    read.set(contract.title, captions(row, ".rec-meta > .t-caption"));
+  }
   cleanup();
+  return read;
+}
 
-  drawProject([WITH_TERMS]);
-  const projectTerms = captions(
-    projectRow(WITH_TERMS.title),
-    ".project-contract-sub > .t-caption",
-  );
-  expect(companyTerms).toEqual([NET, ARR]);
-  expect(projectTerms).toEqual(companyTerms);
+it("reads every kind of terms in the same words as the company's Contracts panel", async () => {
+  const company = await companyCaptions();
+  drawProject(CASES.map(({ contract }) => contract));
+  for (const { contract, terms } of CASES) {
+    const project = captions(
+      projectRow(contract.title),
+      ".project-contract-sub > .t-caption",
+    );
+    expect({ title: contract.title, project }).toEqual({
+      title: contract.title,
+      project: terms,
+    });
+    expect({
+      title: contract.title,
+      company: company.get(contract.title),
+    }).toEqual({
+      title: contract.title,
+      company: terms,
+    });
+  }
+});
+
+it("adds no line to a project card row whose agreement has neither term", () => {
+  const neither = agreement("neither", {});
+  drawProject([
+    neither,
+    agreement("dated", { title: "Dated pilot", ends_on: "2026-12-31" }),
+  ]);
+  expect(
+    projectRow(neither.title).querySelector(".overviewrow-sub"),
+  ).toBeNull();
+  expect(
+    projectRow("Dated pilot").querySelector(".overviewrow-sub")?.textContent,
+  ).toBe("Runs to 31 Dec 2026");
+});
+
+it("shows the terms beside the dates on the project card", () => {
+  drawProject([
+    agreement("dated", {
+      title: "Dated subscription",
+      ends_on: "2026-12-31",
+      payment_term_days: 30,
+    }),
+  ]);
+  const row = projectRow("Dated subscription");
+  expect(within(row).getByText("Runs to 31 Dec 2026")).toBeTruthy();
+  expect(within(row).getByText("Net 30")).toBeTruthy();
 });
