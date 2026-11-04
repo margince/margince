@@ -18592,6 +18592,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.category.deals_at_risk": "Deal gefährdet",
   "worklist.category.meetings": "Termin",
   "worklist.category.tasks": "Aufgabe",
+  "worklist.category.upcoming": "Anstehend",
   "worklist.category.decisions": "Freigabe",
   "worklist.category.relationships": "Ruhende Beziehung",
   "worklist.category.system": "System",

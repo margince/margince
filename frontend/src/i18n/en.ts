@@ -18416,6 +18416,7 @@ export const en = {
   "worklist.category.deals_at_risk": "Deal at risk",
   "worklist.category.meetings": "Meeting",
   "worklist.category.tasks": "Task",
+  "worklist.category.upcoming": "Upcoming",
   "worklist.category.decisions": "Approval",
   "worklist.category.relationships": "Quiet relationship",
   "worklist.category.system": "System",
