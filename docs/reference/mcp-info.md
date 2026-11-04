@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.6 KB |
+| Tool catalog | 190.7 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50097 |
+| Approx. wire tokens | 50144 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.7 KB | 24% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 41.5 KB | 21% | Yes, every step |
+| Descriptions (incl. governance clause) | 41.6 KB | 21% | Yes, every step |
 | Input schemas | 91.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **132.8 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **133.0 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,7 +67,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1840 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1856 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 781 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
@@ -79,7 +79,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 776 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 794 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
@@ -105,8 +105,8 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 312 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1314 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1309 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 611 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -1373,7 +1373,7 @@ yes before calling, unless they asked for this call themselves; requires passpor
       "type": "string"
     },
     "attendee_user_ids": {
-      "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused.",
+      "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused.",
       "items": {
         "format": "uuid",
         "type": "string"
@@ -1519,6 +1519,16 @@ yes before calling, unless they asked for this call themselves; requires passpor
         "type": "object"
       },
       "type": "array"
+    },
+    "meeting_status": {
+      "description": "log only: held only if the user says it happened",
+      "enum": [
+        "booked",
+        "held",
+        "no_show",
+        "canceled"
+      ],
+      "type": "string"
     },
     "occurred_at": {
       "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
@@ -3461,20 +3471,21 @@ Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipel
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
 CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No
-occurred_at means now; a past day with no time: its date, occurred_precision "day". Record a signed
-contract with change_offers action record_contract, never as a deal. Search first when the record
-might already exist — a second copy of a contact or company is a problem that then needs
-resolve_duplicates to undo. A record that shares only a name, with a different email, phone or
-employer, is not proof of a duplicate. When the search finds a contact with the same name at the
-same employer, ask the human whether it is the same contact before you link anything to it; two
-colleagues can share a name. Giving a contact its employer by creating an employment relationship
-files any same-name contact at that employer for review: the result carries it as
-duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides.
-Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import,
-which checks every row and writes nothing; creating them one by one skips that check. The new
-record's id comes back in the result; keep it for anything that links to it. When the user says
-where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags
-still needs their yes. (Runs immediately; requires passport scope "write".)
+occurred_at means now; a past day with no time: its date, occurred_precision "day". Set
+meeting_status held only when the user says the meeting took place. Record a signed contract with
+change_offers action record_contract, never as a deal. Search first when the record might already
+exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to
+undo. A record that shares only a name, with a different email, phone or employer, is not proof of a
+duplicate. When the search finds a contact with the same name at the same employer, ask the human
+whether it is the same contact before you link anything to it; two colleagues can share a name.
+Giving a contact its employer by creating an employment relationship files any same-name contact at
+that employer for review: the result carries it as duplicate_candidates, and you report the pair as
+filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a
+pasted list, a CSV — go through preview_import, which checks every row and writes nothing;
+creating them one by one skips that check. The new record's id comes back in the result; keep it for
+anything that links to it. When the user says where they met the contact, pass that word as
+offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately;
+requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -10978,7 +10989,7 @@ themselves; requires passport scope "send".)
     },
     "evidence": {
       "additionalProperties": false,
-      "description": "chat_reply, email_new, email_reply only: The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one",
+      "description": "chat_reply, email_new, email_reply only: The record that bears out the category: required for invoice_or_payment and contract_notice, which cannot be allowed without one",
       "properties": {
         "contract_id": {
           "format": "uuid",
@@ -11095,11 +11106,12 @@ names each change so a human can Undo it. It names the record by id; when a name
 records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning
 moves the record onto someone else's book and can take it off the owner's. An activity moved to
 another day keeps its time of day unless the user names one; moving a date-only one, send
-occurred_precision "day" again, or it reads as a time. Use change_state with action=move_deal to
-move a deal between stages, and change_activities with action=relink to change what an activity is
-about; neither is a field edit. Send if_version with the version you read. If the call comes back
-staged, keep its approval id to retry the same change once a human has released it. (Runs
-immediately; requires passport scope "write".)
+occurred_precision "day" again, or it reads as a time. Set meeting_status held only when the user
+says the meeting took place. Use change_state with action=move_deal to move a deal between stages,
+and change_activities with action=relink to change what an activity is about; neither is a field
+edit. Send if_version with the version you read. If the call comes back staged, keep its approval id
+to retry the same change once a human has released it. (Runs immediately; requires passport scope
+"write".)
 ```
 
 Renders its result in [`ui://margince/update.html`](#update_view), visible to `model`, `app`.
