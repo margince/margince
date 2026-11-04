@@ -72,7 +72,7 @@ type mailCounts struct {
 func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 	switch {
 	case m.live == 0:
-		// Never configured, or every mailbox disconnected by a person. Either
+		// Never configured, or every mailbox disconnected by its user. Either
 		// way there is nothing to fix, only something to decide. Both route to
 		// other contacts than a broken connector does.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
