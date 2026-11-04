@@ -120,7 +120,15 @@ const assuranceSubjectsSQL = `
 		               AND e.deal_id = d.id
 		               AND e.met
 		               AND e.refuted_at IS NULL
-		               AND %[5]s)) AS unmet_exit_criteria
+		               AND %[5]s)) AS unmet_exit_criteria,
+		       ARRAY(SELECT DISTINCT ci.user_id::text
+		          FROM capture_import ci
+		          JOIN activity a ON a.id = ci.activity_id
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.kind = 'email'
+		           AND a.archived_at IS NULL
+		         ORDER BY 1) AS mail_users
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
@@ -196,7 +204,7 @@ func assuranceSubjects(
 }
 
 func scanAssuranceSubject(
-	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID) bool,
+	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID, mailUsers []string) bool,
 ) (assurance.Subject, error) {
 	var out assurance.Subject
 	var dealID ids.UUID
@@ -205,13 +213,14 @@ func scanAssuranceSubject(
 	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
+	var mailUsers []string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailUsers)
 	if err != nil {
 		return out, err
 	}
@@ -232,7 +241,7 @@ func scanAssuranceSubject(
 		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
-	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner)
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailUsers)
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
@@ -439,9 +448,9 @@ func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 // mailCoverageByOwner grades each user's own live mailboxes, keyed by user.
 // A user with no live mailbox has no entry.
 //
-// It is what a deal's silence is judged on. A colleague's broken mailbox says
-// nothing about whether the owner's mail was read, so it does not make the
-// owner's deals coverage_unknown.
+// It is what a deal's silence is judged on (dealMailCovered). A broken mailbox
+// of a user the deal's mail never reached does not make that deal
+// coverage_unknown.
 func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids.UUID]assurance.SourceCoverage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT c.user_id, `+mailCountsSQL+`
@@ -466,23 +475,46 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 	return out, rows.Err()
 }
 
-// dealMailCovered answers, for one deal's owner, whether the mail a silence
-// would be read from was read on time.
+// dealMailCovered answers, for one deal, whether the mail a silence would be
+// read from was read on time.
 //
-// The run's own grade covers every mailbox, so when it is checked every owner
-// is. Otherwise the owner's own mailboxes decide. A deal with no owner, or an
-// owner with no live mailbox of their own, keeps the run's grade: there is no
-// narrower set of mailboxes to judge it on.
-func dealMailCovered(runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage) func(owner *ids.UUID) bool {
-	return func(owner *ids.UUID) bool {
-		if runCovered || owner == nil {
-			return runCovered
+// The run's own grade covers every mailbox, so when it is checked every deal
+// is. Otherwise the deal is covered only when every user its mail could reach
+// has mailboxes that were read on time: the owner, and each user whose mailbox
+// captured an email linked to the deal. A customer may answer any of them, so
+// one broken mailbox among them leaves the deal unknown. A relevant user with
+// no live mailbox fails it too. A deal with no owner and no captured mail has
+// no narrower set of mailboxes and keeps the run's grade.
+//
+// mailUsers are user ids as text, the way the subjects query returns them. An
+// id that does not parse fails closed.
+func dealMailCovered(
+	runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage,
+) func(owner *ids.UUID, mailUsers []string) bool {
+	return func(owner *ids.UUID, mailUsers []string) bool {
+		if runCovered {
+			return true
 		}
-		own, ok := byOwner[*owner]
-		if !ok {
+		users := make([]ids.UUID, 0, len(mailUsers)+1)
+		if owner != nil {
+			users = append(users, *owner)
+		}
+		for _, raw := range mailUsers {
+			user, err := ids.Parse(raw)
+			if err != nil {
+				return false
+			}
+			users = append(users, user)
+		}
+		if len(users) == 0 {
 			return false
 		}
-		return own.State == assurance.CoverageChecked
+		for _, user := range users {
+			if own, ok := byOwner[user]; !ok || own.State != assurance.CoverageChecked {
+				return false
+			}
+		}
+		return true
 	}
 }
 

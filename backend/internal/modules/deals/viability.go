@@ -33,8 +33,8 @@ type ViabilityInput struct {
 	CloseProvisional   bool
 	HasNextStep        bool
 	// MailCovered is true when the mail this deal's silence is read from was
-	// read on time: the owner's own mailboxes, or every mailbox when the owner
-	// has none. Without it no silence is observed, because "nothing arrived"
+	// read on time: the mailboxes of the owner and of every user whose mailbox
+	// captured mail on the deal, or every mailbox when there is no such user. Without it no silence is observed, because "nothing arrived"
 	// would mean "nothing was read".
 	MailCovered bool
 	// OpenReview is true while a viability review on this deal is open. Only

@@ -394,3 +394,43 @@ func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 		t.Fatalf("the run reads %q, want %q: a broken mailbox still makes the run incomplete", got, assurance.StatusIncomplete)
 	}
 }
+
+// A DEAL WHOSE MAIL REACHED A BROKEN MAILBOX STAYS UNKNOWN. The owner's mailbox
+// was read on time, but a colleague's mailbox captured mail on the deal and
+// needs re-authorising. A customer answer may sit unread in that mailbox, so
+// the deal's silence is not observed and no review is raised.
+//
+// Mutation: drop the capture_import users from dealMailCovered (judge the owner
+// alone) and the silent deal gets a review.
+func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
+	v := setupViability(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	integration.SeedIDRow(t, owner, `
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, 'imap', $2, 'reauth_required')`, v.Rep2)
+	// Our own earlier mail on the deal, captured by the colleague's mailbox.
+	// Ours, so it is no customer progress and the deal is still silent.
+	mail := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, direction, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'outbound', now() - interval '200 days', 'imap', 'connector:imap:' || $2::text)`, v.Rep2)
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, mail, v.silent); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, v.Rep2); err != nil {
+		t.Fatal(err)
+	}
+
+	v.check(t)
+
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
+		t.Fatalf("the silent deal got %d viability reviews though a mailbox its mail reached is broken, want none", got)
+	}
+	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
+		FROM assurance_deal_receipt WHERE deal_id = $1`, v.silent); got != "unknown:coverage_unknown" {
+		t.Fatalf("the silent deal reads %q, want unknown:coverage_unknown", got)
+	}
+}
