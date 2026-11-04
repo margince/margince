@@ -261,6 +261,11 @@ export function ChartPanel({
       }
     >
       <PanelBody>
+        {/* A chart drawn from the reader's own figures alone says so above its
+            bars: one bar on a team chart otherwise reads as a team of one. */}
+        {drawn && chart.coverage.withheld && chart.coverage.reason && (
+          <p className="t-caption">{chart.coverage.reason}</p>
+        )}
         {drawn ? (
           <ChartBody
             chart={chart}
