@@ -45,8 +45,11 @@ nightly session fixes it, so it does not need a `claim: main-red` pull request.
 4. Open or update the pull request from `develop` into `main`. Merge it with `gh pr merge <n> --merge`
    once `ci` and `cla` are green and every review thread is resolved.
 
-Both sync merges use `--merge`. A squash would give `main` commits that `develop` lacks, and the next
-sync would conflict on every line the two copies share.
+The pull request into `main` runs every lane under the usual path filters, and CodeRabbit reviews it.
+Answer its findings with a fix on `develop`, through a pull request of its own.
+
+Both sync merges use `--merge`. A squash leaves the commits of `develop` out of the history of `main`.
+The next sync then merges them a second time, and conflicts wherever later work changed the same lines.
 
 ## When `develop` needs a `main` change before the night
 

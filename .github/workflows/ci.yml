@@ -961,6 +961,8 @@ jobs:
     # aggregate deliberately omits sonarcloud from its own needs, so nothing waits
     # on this job to reach a verdict — the queue merges on `ci` alone and this scan
     # may finish after the merge.
+    # A pull request into develop skips the scan: develop's pull request into
+    # main is scanned before any of it reaches main.
     needs: [ci, changes, deterministic-gates, integration, frontend, extension-reference]
     if: >-
       !cancelled()
