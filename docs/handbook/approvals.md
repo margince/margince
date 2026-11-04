@@ -217,8 +217,9 @@ raises it.
 Automatic changes are the exception to everything below: some proposals do not
 wait.
 
-Three kinds of change can apply on their own, without an approval being
-decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
+Four kinds of change can apply on their own, with no approval. They are
+**Close dates**, **Close silent deals as lost**, **Company names** and
+**Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches

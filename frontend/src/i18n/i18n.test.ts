@@ -52,6 +52,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
+  // The product's own name, as the agent that made a change.
+  "agentJob.margince",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.

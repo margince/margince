@@ -54373,7 +54373,7 @@ export interface components {
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
             /** @enum {string} */
-            kind: "close_date" | "stage";
+            kind: "close_date" | "close_lost" | "stage";
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */

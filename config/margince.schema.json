@@ -870,6 +870,16 @@
           ],
           "default": true
         },
+        "silent_close_days": {
+          "description": "Days without word from the customer after which Margince closes an open deal as lost.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 60,
+          "maximum": 730,
+          "default": 120
+        },
         "stage_autopilot_enabled": {
           "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
           "type": [

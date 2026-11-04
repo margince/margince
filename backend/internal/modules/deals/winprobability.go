@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
@@ -109,6 +110,10 @@ func sameString(a, b *string) bool {
 type AdvancedDeal struct {
 	crmcontracts.Deal
 	Probability *ProbabilitySet
+	// AuditLogID and HistoryID are the audit row and the stage history row the
+	// move wrote. Both are zero when the deal already held the target stage.
+	AuditLogID ids.UUID
+	HistoryID  ids.UUID
 }
 
 // ProbabilitySet is what a stage move did to the deal's probability: it now
