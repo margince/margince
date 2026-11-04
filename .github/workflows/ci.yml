@@ -117,6 +117,10 @@ jobs:
       # docs/explanation/ci-pipeline.md rather than left to be inferred from
       # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
+      # A pull request into `develop` takes the fast lanes only. The slow ones run
+      # each night on develop's tip, before develop is merged into main: see
+      # docs/how-to/land-through-develop.md.
+      full_lane: ${{ github.event_name != 'pull_request' || github.base_ref != 'develop' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -785,7 +789,7 @@ jobs:
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.
   integration:
     needs: [changes]
-    if: needs.changes.outputs.backend_db == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-integration.yml
 
   vuln:
@@ -957,9 +961,10 @@ jobs:
     # aggregate deliberately omits sonarcloud from its own needs, so nothing waits
     # on this job to reach a verdict — the queue merges on `ci` alone and this scan
     # may finish after the merge.
-    needs: [ci, deterministic-gates, integration, frontend, extension-reference]
+    needs: [ci, changes, deterministic-gates, integration, frontend, extension-reference]
     if: >-
       !cancelled()
+      && needs.changes.outputs.full_lane == 'true'
       && (needs.deterministic-gates.result == 'success' || needs.deterministic-gates.result == 'skipped')
       && (needs.integration.result == 'success' || needs.integration.result == 'skipped')
       && (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
@@ -1106,7 +1111,7 @@ jobs:
     name: live-boot (compose + seed + verify)
     timeout-minutes: 20
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1231,7 +1236,7 @@ jobs:
     # every frontend change. What the order saved was this job's runner minutes
     # on a change biome would have refused, which is cheaper than the wait.
     needs: [changes]
-    if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1339,6 +1344,7 @@ jobs:
     needs: [changes]
     if: >-
       needs.changes.outputs.images == 'true'
+      && needs.changes.outputs.full_lane == 'true'
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
