@@ -2088,6 +2088,7 @@ export const en = {
   "brief.coverage.source.calendar": "Calendar connection",
   "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
+  "brief.coverage.source.deal_review": "Customer support reviews",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
   "brief.coverage.source.conversation_claim": "Customer commitments",
@@ -17972,6 +17973,8 @@ export const en = {
     "This lead is waiting for a first answer. Get in touch before its response time runs out.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
+  "worklist.ask.deal_review":
+    "The customer may no longer support this deal. Open it and answer the review.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
   "worklist.ask.relationship_decay":
     "Nobody has been in touch with this contact for a while. Get in touch, or set it aside for a month.",
@@ -18365,6 +18368,7 @@ export const en = {
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
   "worklist.untitled.lead_response": "Untitled lead",
   "worklist.untitled.deal_at_risk": "Deal drifting",
+  "worklist.untitled.deal_review": "Customer support review",
   "worklist.untitled.meeting": "Untitled meeting",
   "worklist.untitled.meeting_outcome": "Meeting outcome",
   "worklist.untitled.relationship_decay": "Relationship going quiet",

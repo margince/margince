@@ -221,6 +221,9 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
+	// dealReviews is OPTIONAL; reviews is one read's answer on the request copy.
+	dealReviews DealReviews
+	reviews     []DealReview
 	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage
