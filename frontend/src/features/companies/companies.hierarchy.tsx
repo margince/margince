@@ -7,8 +7,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { Stack } from "../../design-system/stack";
 import { formatDateTime, formatMoney, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   type RollupPeriod,
   RollupPeriodControl,
@@ -49,7 +49,7 @@ export function HierarchyRollupPanel({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const [period, setPeriod] = useState<RollupPeriod | null>(null);
   const rollupQuery = useQuery({
     queryKey: ["rollup", companyId, period],

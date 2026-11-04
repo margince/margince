@@ -10,7 +10,7 @@ import { Panel, PanelBody } from "../../../design-system/panel";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { changeSentence } from "../relationshipchange";
 
 type RelationshipMoments = Pick<
@@ -55,7 +55,7 @@ export function MomentsPanel({
 }: Readonly<{ view: RelationshipMoments }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const changes = view.relationship_changes ?? [];
   // The section is withholdable. A reader without the grant is served no
   // changes, and "nothing has moved" would be a fact the page does not have.
@@ -85,7 +85,7 @@ export function MomentsPanel({
             {changes.map((change, index) => (
               <li key={`${change.kind}-${change.at}`} className="pn-moment">
                 <time className="pn-moment-when t-caption" dateTime={change.at}>
-                  {formatDate(change.at, locale, recordZone)}
+                  {formatDate(change.at, locale, readerZone)}
                 </time>
                 <p>
                   {changeSentence(change, t)}

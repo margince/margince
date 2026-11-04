@@ -27,12 +27,10 @@ import {
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates, WriteRefused } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { usePassports } from "../../lib/passports.queries";
 import { throwProblem } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { resetToSignedOut } from "../../lib/session";
 import {
   PassportUsageLine,
@@ -40,6 +38,7 @@ import {
 } from "../automations/agentusage";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
 import "./settings.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./settings-agents.css";
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
@@ -260,16 +259,16 @@ function PassportName({
 // When a passport was last used is a record of something that happened, so it
 // reads on the record zone. Its expiry is the holder's own deadline.
 function usePassportDates() {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const lastUsed = (passport: PassportSummary) =>
     passport.last_used_at
-      ? formatDate(passport.last_used_at, locale, recordZone)
+      ? formatDate(passport.last_used_at, locale, readerZone)
       : t("settings.passportNeverUsed");
   const expires = (passport: PassportSummary) =>
     passport.expires_at
-      ? formatDate(passport.expires_at, locale, viewerZone())
+      ? formatDate(passport.expires_at, locale, readerZone)
       : t("settings.passportNoExpiry");
   const caption = (passport: PassportSummary) =>
     [

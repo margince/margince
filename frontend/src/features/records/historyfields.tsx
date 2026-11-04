@@ -27,7 +27,6 @@ import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { HistoryValueCtx } from "../../lib/historyvalues";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import {
   type ActorFacet,
@@ -38,6 +37,7 @@ import {
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import "./history.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./historyfields.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -139,8 +139,8 @@ function FieldGroupSection({
 }: Readonly<{ group: FieldGroup; currency: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
+  const readerZone = useViewerZone();
+  const valueCtx: HistoryValueCtx = { currency, locale, zone: readerZone };
   return (
     <div className="fgroup">
       <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
@@ -154,7 +154,7 @@ function FieldGroupSection({
               values={valueCtx}
             />
             <span className="tl-meta">
-              {formatDateTime(change.changed_at, locale, recordZone)}
+              {formatDateTime(change.changed_at, locale, readerZone)}
             </span>
             <ChangeWho change={change} />
           </li>

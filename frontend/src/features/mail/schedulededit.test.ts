@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   dropsOperatorReason,
   editSeedOf,
@@ -15,7 +15,7 @@ const SEND: ScheduledSend = {
   id: "send-1",
   status: "scheduled",
   scheduled_at: "2026-09-01T07:00:00Z",
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The quote",
   to: ["ceo@acme.test"],
   bcc: ["boss@acme.test"],

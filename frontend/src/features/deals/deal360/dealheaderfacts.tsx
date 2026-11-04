@@ -33,9 +33,9 @@ import {
   lostReasonWords,
   useLossReasons,
 } from "../../../lib/lossreasons.queries";
-import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { useViewerZone } from "../../../lib/viewerzone";
 import {
   LostReasonFact,
   type WonWithoutContract,
@@ -128,7 +128,7 @@ export function DealRecordRows({
   locale: Locale;
 }>): ReactNode {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const viewerId = useViewerId();
   // The installation's own reporting currency: an unnamed base is not a euro
   // base.
@@ -317,7 +317,7 @@ export function FxLine({
   locale: Locale;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
@@ -326,7 +326,7 @@ export function FxLine({
       {t("deal.fxBase", {
         value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
         rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
+        date: fxRateDate ? formatDate(fxRateDate, locale, readerZone) : "—",
       })}
     </p>
   );

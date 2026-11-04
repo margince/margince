@@ -12,9 +12,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
@@ -99,7 +99,7 @@ function SalesReviewBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
   const filters = useOverviewFilters(pipelines, "this_quarter");
   const { metrics, blocks } = viewRequest("sales", catalog, filters.period);

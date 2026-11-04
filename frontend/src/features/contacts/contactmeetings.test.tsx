@@ -16,10 +16,9 @@ import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { formatDayMonth } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   bookingProfile,
   bookingProposals,
@@ -95,9 +94,9 @@ function mount(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone="UTC">
+        <ViewerZoneProvider zone="UTC">
           <ContactMeetingsTab view={shown} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -113,7 +112,7 @@ it("lists the invitations still waiting on the contact, between upcoming and hel
   // A link that offers no times says what it is instead.
   const intro = screen.getByText("Intro call").closest("article");
   expect(intro?.textContent).toContain("Personal link");
-  const zone = viewerZone();
+  const zone = "UTC";
   // Each offered time is its own label, so a reader scans them as a set.
   for (const slot of bookingSlots)
     expect(
@@ -217,7 +216,7 @@ it("resends an invitation through the composer with the email it was sent with",
     (key, params) => translate("en", key, params),
     { description: "", options: proposed.options, url: proposed.url },
     "en",
-    viewerZone(),
+    "UTC",
   );
   expect(composer.querySelector("pre")?.textContent).toBe(body);
   expect(body).toContain(proposed.url);

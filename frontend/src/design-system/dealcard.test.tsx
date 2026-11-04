@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import ages from "../../../backend/internal/shared/kernel/elapsed/testdata/ages.json";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { DealCard } from "./dealcard";
 import type { BoardDeal } from "./pipelineboard";
@@ -31,7 +31,7 @@ function closes(closeDate: string): string {
   };
   render(
     <LocaleProvider initial="en">
-      <DealCard deal={deal} href="#/deals/d1" zone={viewerZone()} />
+      <DealCard deal={deal} href="#/deals/d1" zone={browserZone()} />
     </LocaleProvider>,
   );
   return screen.getByText(/^closes /).textContent ?? "";

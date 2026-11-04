@@ -4,11 +4,16 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
-import { useBrowserZoneOnFirstSignIn } from "./viewerzone";
+import {
+  renderableViewerZone,
+  useBrowserZoneOnFirstSignIn,
+  useViewerZone,
+  ViewerZoneProvider,
+} from "./viewerzone";
 
 type Me = components["schemas"]["MeResponse"];
 
@@ -52,7 +57,7 @@ it("stores the browser's zone once, as a guess, when no zone is stored", async (
   view.rerender(wrap(<Probe me={{ ...unset }} />));
   await vi.waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toEqual({
-    timezone: viewerZone(),
+    timezone: browserZone(),
     source: "browser",
   });
 });
@@ -112,4 +117,37 @@ it("reads /me again after the write instead of writing the answer into it", asyn
     expect(client.getQueryState(["me"])?.isInvalidated).toBe(true),
   );
   expect(client.getQueryData<Me>(["me"])?.user.timezone).toBeUndefined();
+});
+
+it("serves the zone its provider names, over the browser's", () => {
+  let seen = "";
+  function Reader() {
+    seen = useViewerZone();
+    return null;
+  }
+  render(
+    <ViewerZoneProvider zone="America/New_York">
+      <Reader />
+    </ViewerZoneProvider>,
+  );
+  expect(seen).toBe("America/New_York");
+});
+
+it("reads the browser's zone when no provider is mounted", () => {
+  let seen = "";
+  function Reader() {
+    seen = useViewerZone();
+    return null;
+  }
+  render(<Reader />);
+  expect(seen).toBe(browserZone());
+});
+
+it("takes the stored zone, or the browser's when none is stored or it cannot be rendered", () => {
+  expect(renderableViewerZone("America/New_York")).toBe("America/New_York");
+  expect(renderableViewerZone(undefined)).toBe(browserZone());
+  expect(renderableViewerZone("")).toBe(browserZone());
+  const report = vi.spyOn(console, "error").mockImplementation(() => {});
+  expect(renderableViewerZone("Etc/GMT-1")).toBe(browserZone());
+  report.mockRestore();
 });

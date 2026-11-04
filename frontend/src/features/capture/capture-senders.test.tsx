@@ -8,7 +8,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { translate, translatePlural } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -278,7 +278,7 @@ it("links a sender to its contact beside its mail count and newest message", asy
   const row = within(rowOf(link));
   expect(row.getByText("1,204")).toBeVisible();
   expect(
-    row.getByText(formatDateTime(LAST_SEEN, "en", viewerZone())),
+    row.getByText(formatDateTime(LAST_SEEN, "en", browserZone())),
   ).toBeVisible();
   expect(read.filter((path) => path.startsWith("/contacts/"))).toEqual([]);
 });

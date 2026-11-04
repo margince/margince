@@ -12,7 +12,6 @@ import {
   VENDOR_SERVICES,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { ImportWindow } from "../../lib/connect-account";
 import { SERVICE_ICON, SERVICE_WORDS } from "../../lib/connect-services";
@@ -22,6 +21,7 @@ import {
 } from "../../lib/connector-status";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { usePastEmail } from "./connection-past-email";
 
 // One thing an account brings in (new mail, past email, the calendar) as a line
@@ -136,6 +136,7 @@ function PastEmailService({
 }
 
 function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (conn.last_success_at === undefined) {
@@ -143,7 +144,7 @@ function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
   }
   return conn.last_success_at
     ? t("connectors.lastSynced", {
-        at: formatDateTime(conn.last_success_at, locale, viewerZone()),
+        at: formatDateTime(conn.last_success_at, locale, readerZone),
       })
     : t("connectors.neverSynced");
 }
