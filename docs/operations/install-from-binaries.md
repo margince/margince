@@ -32,6 +32,21 @@ go build -C backend -o ../bin/margince-worker  ./cmd/worker
 `bin/` is not in the repository, so a clean checkout has to be told to make it.
 `go build -C` reads the module in `backend/` without moving the shell.
 
+Those three are the server. They do not carry the web application: that is a
+Vite build served as static files, which
+[how-to/deploy-margince.md](../how-to/deploy-margince.md) covers.
+
+With anything under `extensions/`, build through the composed workspace
+instead, or the binaries resolve the committed stub and leave every enabled
+extension out:
+
+```sh
+make -C backend build
+```
+
+A vanilla installation composes the empty set, and its output is the same
+either way.
+
 `migrate` writes the schema. `api` answers HTTP. `worker` runs what happens on
 a schedule or off the bus. Nothing else is needed on the host.
 
@@ -61,7 +76,14 @@ sources are read.
 
 `migrate` needs a Postgres role that may create objects. It reads
 `--dsn`, `MARGINCE_OWNER_DSN` or `MARGINCE_DSN`, and refuses to start without
-one:
+one.
+
+Two roles are in play, and the serving one has to exist first. The baseline
+grants to `margince_app` only when that role is already there.
+
+A database that lacks it gets a schema the api and the worker cannot read.
+[explanation/self-hosting.md](../explanation/self-hosting.md) says what each
+role holds.
 
 ```sh
 MARGINCE_OWNER_DSN=postgres://... ./bin/margince-migrate up --config margince.yaml
