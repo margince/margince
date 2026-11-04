@@ -96,14 +96,14 @@ func (h Handlers) UpdateDealRoomParticipant(w http.ResponseWriter, r *http.Reque
 // issuedBody renders a freshly minted credential and hands it to the sender.
 //
 // Sending never fails the write. A relay outage leaves the seller a link to
-// pass on by hand. `queued` says whether the mail was handed to the sender.
-// The relay's answer lands on the roster later, as sent or failed.
+// pass on by hand. `queued` says whether the relay took the mail within
+// inviteRelayWait; its answer also lands on the roster, as sent or failed.
 func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontracts.DealRoomInvitationIssued {
 	return crmcontracts.DealRoomInvitationIssued{
 		Participant:         issued.Participant,
 		Credential:          credentialFor(r, issued.Credential),
 		CredentialExpiresAt: issued.ExpiresAt,
-		Queued:              h.sendInviteDetached(r, issued),
+		Queued:              h.sendInviteAndWait(r, issued),
 	}
 }
 

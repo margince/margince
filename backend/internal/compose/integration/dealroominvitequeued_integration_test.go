@@ -7,9 +7,9 @@ package integration
 
 // What a deal room invitation says about the mail it sent.
 //
-// The invite answers without waiting for the relay. `queued` says the mail was
-// handed to the sender. The roster reads `pending` until the relay answers,
-// then `sent` or `failed`, so a seller learns of a refusal on the row.
+// The invite waits a short while for the relay. `queued` says the relay took
+// the mail in that time; otherwise the seller copies the link. The relay's
+// answer also lands on the roster as `sent` or `failed`.
 
 import (
 	"context"
@@ -36,44 +36,29 @@ func (refusingMailer) Send(context.Context, string, string, string) error {
 	return errRelayRefused
 }
 
-// heldMailer holds every send until the test releases it.
-type heldMailer struct{ release chan struct{} }
+// silentMailer never answers, and gives up when the send's deadline passes, as
+// the SMTP relay does.
+type silentMailer struct{}
 
-func (m heldMailer) Send(ctx context.Context, _, _, _ string) error {
-	select {
-	case <-m.release:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+func (silentMailer) Send(ctx context.Context, _, _, _ string) error {
+	<-ctx.Done()
+	return ctx.Err()
 }
 
-// The relay holds its answer, so the invite can answer only if the send runs
-// off the request. The roster reads pending while the relay holds the mail and
-// sent once it takes it.
-func TestAnInviteAnswersBeforeASlowRelayAndTheRosterCatchesUp(t *testing.T) {
-	relay := heldMailer{release: make(chan struct{})}
+// A relay that does not answer holds the invite for the wait and no longer:
+// the invite then reads as not emailed, and the roster as failed.
+func TestAnInviteStopsWaitingForASilentRelay(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithDealRoomInviteMail(relay),
+		compose.WithDealRoomInviteMail(silentMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
 	e.BootstrapWorkspace(t)
-	defer func() {
-		select {
-		case <-relay.release:
-		default:
-			close(relay.release)
-		}
-	}()
 
 	room := openRoomWithABuyer(t, e)
-	if !room.queued {
-		t.Error("an invitation handed to the sender reads as not queued")
+	if room.queued {
+		t.Error("an invitation the relay never answered reads as emailed, so the seller " +
+			"waits for mail that did not go")
 	}
-	if state := deliveryStateOf(t, e, room); state != "pending" {
-		t.Errorf("while the relay holds the mail the roster reads %q, want pending", state)
-	}
-	close(relay.release)
-	waitForDeliveryState(t, e, room, "sent")
+	waitForDeliveryState(t, e, room, "failed")
 }
 
 // A relay that accepts the message reads as queued, and the roster as sent.
@@ -132,8 +117,8 @@ func TestAResentInvitationReportsQueuedTheSameWay(t *testing.T) {
 	if !present {
 		t.Fatalf("the resent invitation carries no boolean `queued`: %v", resent)
 	}
-	if !queued {
-		t.Error("a resent invitation handed to the sender reads as not queued")
+	if queued {
+		t.Error("a resent invitation the relay refused reads as emailed")
 	}
 	waitForDeliveryState(t, e, room, "failed")
 }
@@ -174,8 +159,8 @@ func soleParticipant(t *testing.T, e *apptest.AppEnv, room buyerRoom) (string, s
 }
 
 // waitForDeliveryState reads the roster until the relay's answer lands on it.
-// The send runs off the request, so the answer arrives a moment after the
-// invite does. Bounded by a number of reads rather than one fixed sleep.
+// The outcome is recorded just after the invite answers, so it may land a
+// moment later. Bounded by a number of reads rather than one fixed sleep.
 func waitForDeliveryState(t *testing.T, e *apptest.AppEnv, room buyerRoom, want string) {
 	t.Helper()
 	const reads, pause = 500, 20 * time.Millisecond
@@ -190,8 +175,8 @@ func waitForDeliveryState(t *testing.T, e *apptest.AppEnv, room buyerRoom, want 
 	t.Fatalf("the roster reads %q after %d reads, want %q", got, reads, want)
 }
 
-// A relay that REFUSES the message was still handed over, so the invitation
-// reads as queued, and the refusal lands on the roster as failed.
+// A relay that REFUSES the message reads as not emailed, so the seller copies
+// the link, and the refusal lands on the roster as failed.
 func TestARefusedInvitationShowsAsFailedOnTheRoster(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(refusingMailer{}),
@@ -199,14 +184,14 @@ func TestARefusedInvitationShowsAsFailedOnTheRoster(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	room := openRoomWithABuyer(t, e)
-	if !room.queued {
-		t.Error("an invitation handed to the sender reads as not queued")
+	if room.queued {
+		t.Error("an invitation the relay refused reads as emailed")
 	}
 	waitForDeliveryState(t, e, room, "failed")
 }
 
 // roomSenderContext holds deal_room update on the installation's workspace,
-// the authority the detached send reads and stamps the invitation under.
+// the authority the invitation send reads and stamps the invitation under.
 func roomSenderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
@@ -220,7 +205,7 @@ func roomSenderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 	})
 }
 
-// The detached send mails a link only while it still admits its bearer and
+// The invitation send mails a link only while it still admits its bearer and
 // the participant still has the address it was issued to.
 func TestAnInvitationIsMailableOnlyWhileItStandsAtItsAddress(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithPublicBaseURL("https://rooms.example.test"))

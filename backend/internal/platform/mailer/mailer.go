@@ -213,7 +213,7 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mailer: relay %s unreachable: %w", addr, err)
 	}
-	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err := conn.SetDeadline(exchangeDeadline(ctx)); err != nil {
 		closeQuietly(conn)
 		return nil, fmt.Errorf("mailer: relay %s deadline setup failed: %w", addr, err)
 	}
@@ -250,6 +250,18 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 		}
 	}
 	return client, nil
+}
+
+// exchangeDeadline is when the relay exchange must end: 30 seconds from now,
+// or the caller's own deadline when that comes first. A caller that stops
+// waiting for the relay also stops the exchange, so the relay cannot take the
+// message after the caller reported it as not taken.
+func exchangeDeadline(ctx context.Context) time.Time {
+	deadline := time.Now().Add(30 * time.Second)
+	if callerDeadline, ok := ctx.Deadline(); ok && callerDeadline.Before(deadline) {
+		return callerDeadline
+	}
+	return deadline
 }
 
 // isLoopback reports whether the relay lives on this machine — the one

@@ -3930,8 +3930,7 @@ export const en = {
   "access.inviteNote":
     "The link is shown for you to copy. If a mail relay is configured, it is also emailed, but delivery is not guaranteed.",
   "access.issued.title": "Link for {name}",
-  "access.issued.mailed":
-    "Queued for {email}. The list shows when it is sent, or if it fails. You can also copy it below.",
+  "access.issued.mailed": "Sent to {email}. You can also copy it below.",
   "access.issued.notMailed":
     "The link was not mailed. Copy it and send it yourself.",
   "access.issued.mailedTitle": "Invitation email queued",

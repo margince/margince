@@ -39000,10 +39000,12 @@ components:
         queued:
           type: boolean
           description: |-
-            Whether the invitation was handed to the mail sender. False when the
-            installation has no outbound mail configured: the participant and the
-            credential are recorded either way, and the caller is expected to pass the
-            link on themselves rather than being told the invitation failed.
+            Whether the mail relay took the invitation. The answer waits for the relay
+            for at most 10 seconds. False when the installation has no outbound mail
+            configured, when the relay refused the mail, or when it did not answer in
+            time; the send stops then too. The participant and the credential are
+            recorded either way, and the caller is expected to pass the link on
+            themselves rather than being told the invitation failed.
       additionalProperties: false
     DealRoomBrief:
       type: object

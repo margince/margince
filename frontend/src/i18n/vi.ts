@@ -3857,7 +3857,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết hiện ra để sao chép. Nếu đã cấu hình máy chủ chuyển tiếp thư, hệ thống cũng gửi liên kết qua email, nhưng không đảm bảo email đến nơi.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
-    "Đã xếp hàng gửi tới {email}. Danh sách sẽ hiện khi email đã gửi hoặc gửi lỗi. Cũng có thể sao chép liên kết bên dưới.",
+    "Đã gửi tới {email}. Cũng có thể sao chép liên kết bên dưới.",
   "access.issued.notMailed":
     "Chưa gửi liên kết qua email. Sao chép rồi tự gửi.",
   "access.issued.mailedTitle": "Email mời đang chờ gửi",
