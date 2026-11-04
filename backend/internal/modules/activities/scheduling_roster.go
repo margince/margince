@@ -66,10 +66,10 @@ func furtherAttendees(in crmcontracts.MeetingInvitationRequest) ([]string, error
 	return normalizedAttendees(raw, string(in.AttendeeEmail))
 }
 
-// invitationRoster resolves the invitation's addresses: what each one is to the host.
+// resolveRoster resolves the invitation's addresses: what each one is to the host.
 // The primary is the invitee the request names; it was checked against its
 // own record already, so only the further addresses are resolved here.
-func (s *Store) invitationRoster(ctx context.Context, host ids.UserID, in crmcontracts.MeetingInvitationRequest, intent invitationIntent) ([]connector.CalendarAttendee, error) {
+func (s *Store) resolveRoster(ctx context.Context, host ids.UserID, in crmcontracts.MeetingInvitationRequest, intent invitationIntent) ([]connector.CalendarAttendee, error) {
 	primary := connector.CalendarAttendee{Address: string(in.AttendeeEmail), Basis: connector.AttendeeContact, ID: ids.UUID(in.ContactId), AskConsent: true}
 	if !intent.Lead.IsZero() {
 		primary.Basis, primary.ID = connector.AttendeeLead, intent.Lead.UUID
@@ -168,5 +168,5 @@ func (s *Store) InvitationRoster(ctx context.Context, in crmcontracts.MeetingInv
 	if err != nil {
 		return nil, err
 	}
-	return s.invitationRoster(ctx, host, in, invitationIntent{})
+	return s.resolveRoster(ctx, host, in, invitationIntent{})
 }
