@@ -34,7 +34,7 @@ import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemFieldErrorsOf } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { useMeetingOutcome } from "./taskactions";
@@ -256,7 +256,7 @@ function MeetingOutcomeDialog({
   const toast = useToast();
   const titleId = useId();
   const formId = useId();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
@@ -272,7 +272,7 @@ function MeetingOutcomeDialog({
     const day = activityDate(
       meeting.data.occurred_at,
       meeting.data.occurred_precision,
-      recordZone,
+      readerZone,
     );
     setDraft({
       status: "held",
@@ -289,7 +289,7 @@ function MeetingOutcomeDialog({
       version: meeting.data.version,
     });
   }
-  const days = heldDays(seed, recordZone);
+  const days = heldDays(seed, readerZone);
   const save = useMutation({
     // Fields travel as variables: a closure would read the last committed render.
     mutationFn: async (input: {
@@ -356,7 +356,7 @@ function MeetingOutcomeDialog({
               try {
                 moved = managed
                   ? undefined
-                  : movedStart(seed, draft.day, recordZone, new Date());
+                  : movedStart(seed, draft.day, readerZone, new Date());
               } catch (error) {
                 // A day the record zone skipped has no start to keep, so
                 // nothing is sent and the reader picks another date.

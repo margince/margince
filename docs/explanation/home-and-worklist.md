@@ -96,9 +96,21 @@ The deal store applies these owners and the caller's visibility rules before lim
 An empty set reads no owners. No set means the visible workspace view.
 Team reads keep work from former team members and work with no owner.
 
-Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
+Company and lead duplicate pairs and tag suggestions have no requested decider.
 **Mine** and chosen member views skip those sources before building the decision page and counts.
 **Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+A deal suggestion (source `deal_suggestion`, `attention/suggestionlane.go`) belongs to its company's owner.
+Its list and count take the same owner set as the deal risk read.
+So each view reads only the suggestions for companies its owners hold.
+The row names the company's current owner as its requested decider, read at request time.
+
+A change of company owner moves the suggestion with no write to it.
+A suggestion for a company with no owner shows under **Unassigned** and in team views.
+`GET /attention` answers for the acting reader, so its suggestion lane and count hold only the reader's own companies.
+An owner who may not read all of a suggestion's evidence does not get the row, and no other reader gets it in their place.
+The suggestion ranks as a possible deal, at the level of a held customer send.
+It sits below customer replies, promises, deal risk and agreed tasks, and above routine work on records.
 
 Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
 A case is a group of contacts joined by open pairs, and its row id is the lowest member id.
@@ -170,6 +182,11 @@ Three sources are read on in the tail today:
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
+
+Mail that carried a List-Unsubscribe header (`bulk_mail_attested`) waits only once a human took it on as a request.
+An `asks_us` verdict from the classifier alone does not put a newsletter on the lane (`owedSQL` in
+`modules/activities/answered.go`). Our own newsletter waits on no reply, and a newsletter on a thread answers nothing,
+because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
 
 Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
 still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,

@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-33 columns · primary key `(id)` · referenced by 0 foreign keys
+37 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -95,6 +95,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `in_won` | `boolean`, default `false` | yes |  |
 | `owner_id` | `uuid` |  |  |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
+| `qualification_complete` | `boolean` |  |  |
+| `qualified_policy_version` | `text` |  |  |
 | `risk_effect` | `numeric` |  |  |
 | `risk_signal_facts` | `jsonb` |  |  |
 | `risk_signals` | `text[]` |  |  |
@@ -102,6 +104,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
 | `typed_probability` | `integer` |  | The chance typed on the deal's stage, in percent. |
+| `viability_assessed_at` | `timestamp with time zone` |  |  |
+| `viability_disposition` | `text` |  | One of `none`, `open_review`, `override`, `unsupported`. |
 | `weighted_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -130,6 +134,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
 - `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `forecast_contribution_viability_disposition_known`: `CHECK (((viability_disposition IS NULL) OR (viability_disposition = ANY (ARRAY['none', 'open_review', 'override', 'unsupported']))))`
 - `forecast_contribution_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base`: `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
 - `uq_forecast_contribution_deal`: `UNIQUE (snapshot_id, deal_id)`
@@ -160,11 +165,11 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `eligible_count` | `integer` | yes |  |
 | `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
-| `forward_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
+| `forward_measure` | `text` |  | One of `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted`, `manager_call`. |
 | `fx_missing_count` | `integer` | yes |  |
 | `input_fingerprint` | `text` |  |  |
 | `landing_call_minor` | `bigint` |  |  |
-| `landing_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
+| `landing_measure` | `text` |  | One of `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted`, `manager_call`. |
 | `local_day` | `date` | yes |  |
 | `open_minor` | `bigint` | yes |  |
 | `period_end` | `date` | yes |  |
@@ -203,10 +208,10 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_counts_are_tallies`: `CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))`
 - `forecast_snapshot_evidence_minor_js_safe`: `CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))`
-- `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
+- `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
 - `forecast_snapshot_landing_call_is_the_landing`: `CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'))))`
 - `forecast_snapshot_landing_call_minor_js_safe`: `CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))`
-- `forecast_snapshot_landing_measure_known`: `CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
+- `forecast_snapshot_landing_measure_known`: `CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
 - `forecast_snapshot_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_period_ordered`: `CHECK ((period_end >= period_start))`
 - `forecast_snapshot_qualified_policy_present`: `CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> '')))`

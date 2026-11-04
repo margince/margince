@@ -102,7 +102,16 @@ const clientToolCeiling = 100
 // change_reports raises it to 38, by a maintainer decision: the slot holds the
 // write-scope reporting router, so later report writes join it as actions. The
 // user keeps 62 of the client's 100 slots for other servers.
-const publishedToolCeiling = 38
+//
+// The UI-parity routers raise it to 44, by a maintainer decision: an agent may
+// do what its user does in the app. Six routers carry that work, each one
+// topic's actions behind one listing: change_access, change_attention,
+// change_offers, change_relationships, change_settings and read_details. The
+// user keeps 56 of the client's 100 slots.
+//
+// run_research raises it to 45, by a maintainer decision: AI work an agent starts
+// spends the enrich scope, and one router spends one scope.
+const publishedToolCeiling = 45
 
 type mcpInfoFile struct {
 	Totals struct {

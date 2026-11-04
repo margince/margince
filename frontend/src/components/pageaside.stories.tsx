@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { InlineText } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -223,16 +223,22 @@ export const DraftProtected: Story = {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
     await user.click(
-      await canvas.findByRole("button", { name: "Change Name" }),
+      await canvas.findByRole("button", { name: /^Change Name/ }),
     );
     // The pane is open, so the switch offers to hide it — and refuses while a
     // field in it holds an unsaved edit.
     const details = () =>
       canvas.getByRole("button", { name: en["record.panel.hideDetails"] });
     await expect(details()).toBeEnabled();
-    await user.type(canvas.getByRole("textbox", { name: "Name" }), " revised");
+    await user.type(
+      await screen.findByRole("textbox", { name: "Name" }),
+      " revised",
+    );
     await expect(details()).toBeDisabled();
     await user.keyboard("{Escape}");
-    await expect(details()).toBeEnabled();
+    await user.click(
+      await screen.findByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() => expect(details()).toBeEnabled());
   },
 };

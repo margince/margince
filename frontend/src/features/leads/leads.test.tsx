@@ -495,10 +495,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
   });
 
-  it("edits a lead field in place, sending If-Match", async () => {
-    // The Edit modal is four clicks and a context switch to fix a misspelled
-    // company name. It stays for wholesale edits; the fields a rep corrects
-    // while reading are corrected while reading.
+  it("edits a lead field from its row, sending If-Match", async () => {
     type Patched = { body: unknown; ifMatch: string | null };
     const patched: Patched[] = [];
     stubFetch(async (_url: string, method: string, request) => {
@@ -513,9 +510,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // The row reads as its value; pressing it opens the field.
+    // The row reads as its value; pressing it opens the field's dialog.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Company" }),
+      await screen.findByRole("button", { name: /^Change Company/ }),
     );
     const field = await screen.findByDisplayValue("Nordwind Logistik");
     await userEvent.clear(field);
@@ -543,14 +540,15 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(
       (await screen.findAllByText("Nordwind Logistik")).length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
     expect(screen.queryByDisplayValue("Nordwind Logistik")).toBeNull();
   });
 
-  // `writable` is what the server's write gate would answer on a mutation. A
-  // rep holding lead.update on the OBJECT was offered Edit, Promote and the
-  // inline rows on a colleague's lead, and learned from the 403 after filling
-  // the form in that it was never theirs to save.
+  // `writable` is what the server's write gate would answer on a mutation.
+  // Holding lead.update on the object must not offer Edit, Promote or field
+  // edits on a colleague's lead.
   it("refuses every write on a live lead this caller may not change, from the one sentence it prints", async () => {
     stubFetch(async () =>
       jsonResponse({ ...lead, owner_id: "u-other", writable: false }),
@@ -559,8 +557,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
     const sentence =
       "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.";
-    // The band says it once for the page; the inline rows each carry the same
-    // sentence beside their own value, as they do on a closed lead.
+    // The band says it once for the page. Each row carries the same sentence
+    // on its own value, as on a closed lead.
     expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
     // Each verb is refused in place, and the id it describes itself by
     // resolves to that one sentence — a disabled button whose reason is
@@ -574,9 +572,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           ?.textContent,
       ).toBe(sentence);
     }
-    // The inline rows read as text with no control to press, the same shape a
+    // The rows read as text with no control to press, the same shape a
     // closed lead takes.
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {

@@ -25,7 +25,7 @@ import { stable } from "../../format/collate";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import "./customfields.css";
@@ -97,7 +97,7 @@ export function FieldTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
 
   const typeWord = (field: CustomField): string => {
     // A type this build does not know prints its own name.
@@ -163,7 +163,7 @@ export function FieldTable({
             <EntityRef kind="user" id={field.created_by} />
           )}
           <span className="t-caption">
-            {formatDate(field.created_at, locale, recordZone)}
+            {formatDate(field.created_at, locale, readerZone)}
           </span>
         </CellStack>
       ),

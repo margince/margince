@@ -54,7 +54,7 @@ var readRecordCopy = toolCopy{
 	Limits: "It returns that record and nothing around it: no timeline, no related contacts, no " +
 		"deals on the company.",
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +
-		"than what it currently says.",
+		"than what it currently says, and read_details for a company's dossier, growth fit, scan or brief.",
 	Retain: "Keep the version from the result and pass it back as if_version on a later update, " +
 		"so a write is refused rather than silently overwriting a change made in between. Its " +
 		"`owner` says who holds it. " + sayWhoseItIs,
@@ -68,7 +68,8 @@ var createRecordCopy = toolCopy{
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
 		"the same as one a human types in." + pastDayNeedsATime,
-	Instead: "Search first when the record might already exist — a second copy of a contact or " +
+	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
+		"Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
 		"search finds a contact with the same name at the same employer, ask the human whether " +
@@ -187,8 +188,7 @@ var bulkUpdateRecordsCopy = toolCopy{
 	Purpose: "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add " +
 		"them to or take them off a Shortlist, put a tag on or take it off, or file one task under " +
 		"each, in one change; or mark up to 500 of the user's Worklist tasks done " +
-		"(record_type worklist_item, verb complete) — or undo such a change. A Worklist " +
-		"commitment is not yours to mark done: it is skipped as commitment_needs_the_user.",
+		"(record_type worklist_item, verb complete) — or undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +
@@ -288,7 +288,8 @@ var promoteLeadCopy = toolCopy{
 var disqualifyLeadCopy = toolCopy{
 	Purpose: "Close out a lead that is not going anywhere, so it stops appearing as live work.",
 	Limits: "It is the lead's own terminal state and keeps the record and its history; it is not " +
-		"a deletion and not an archive.",
+		"a deletion and not an archive. A reason is optional: reason_id must be an active one from " +
+		"read_view lead_disqualify_reasons, and note says it in words.",
 	Instead: "Use promote_lead when engagement says the opposite, and qualify_lead when the lead " +
 		"is only missing information.",
 	Retain: "By default the lead is disqualified when this call answers; where an installation " +

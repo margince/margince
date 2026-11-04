@@ -65,6 +65,8 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 		h.ChangeUserRole(rec, req, id)
 	case actionIssuePasswordLink:
 		h.IssueUserPasswordLink(rec, req, id)
+	case actionResendInvite:
+		h.ResendUserInvite(rec, req, id)
 	case actionDeactivate:
 		h.DeactivateUser(rec, req, id)
 	case actionReactivate:

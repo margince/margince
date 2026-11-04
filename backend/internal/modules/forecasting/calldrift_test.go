@@ -204,6 +204,11 @@ func TestEveryReadingIsComparedForACall(t *testing.T) {
 					continue
 				}
 				declared++
+				// A qualified reading restricts a baseline one; its change reaches a
+				// call as QualificationChanges, not as a second net.
+				if _, qualified := baselineOf(Reading(strings.Trim(basic.Value, `"`))); qualified {
+					continue
+				}
 				if !slices.Contains(everyReading, Reading(strings.Trim(basic.Value, `"`))) {
 					t.Errorf("reading %s is declared and not compared for a call", basic.Value)
 				}

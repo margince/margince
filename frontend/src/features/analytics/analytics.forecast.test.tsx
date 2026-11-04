@@ -9,7 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDateAbbrev, formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney, formatDateAbbrev } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
@@ -97,6 +97,15 @@ function forecastStub(opts: StubOpts = {}) {
     if (url.includes("/forecast/assurance/exceptions")) {
       return jsonResponse({ data: [] });
     }
+    if (url.includes("/forecast/assurance/preview")) {
+      return jsonResponse({
+        started: false,
+        eligible_deals: 12,
+        findings: [],
+        readiness: "needs_review",
+        sources: [{ source: "mail", state: "checked" }],
+      });
+    }
     if (url.includes("/forecast/assurance")) {
       if (opts.assuranceStatus === 404) {
         // What the contract says a fresh installation gets: "no run has
@@ -157,7 +166,7 @@ describe("ForecastView", () => {
       .getByText("Modelled quarter finish")
       .closest("section");
     expect(model?.textContent).toContain(
-      `${formatMoneyCompact(90_000, "EUR", "en")} to ${formatMoneyCompact(210_000, "EUR", "en")}`,
+      `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
     );
     const landing = screen.getByText("Landing").closest("section");
     expect(landing?.textContent).not.toContain("80%");
@@ -211,14 +220,11 @@ describe("ForecastView", () => {
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/Manager forecast:/i);
-    expect(answer.textContent).toContain("2,000.00");
-    expect(answer.textContent).toContain("1,600.00");
+    expect(answer.textContent).toContain("2,000 EUR");
+    expect(answer.textContent).toContain("1,600 EUR");
   });
 
-  // The gap between a call and its evidence has a DIRECTION, and one sentence
-  // cannot carry both: a signed figure in "… over evidence" printed a call
-  // twenty thousand short of its evidence as "-€200.00 over evidence", which is
-  // the wrong direction stated twice. Three arms, and the magnitude unsigned.
+  // A signed gap needs its own direction rather than an unconditional "over".
   describe("how far the call sits from the evidence", () => {
     function withCall(amountMinor: number, baseline?: string) {
       vi.stubGlobal(
@@ -257,7 +263,7 @@ describe("ForecastView", () => {
 
       const detail = await screen.findByText(/above won \+ confirmed commits$/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(40_000, "EUR", "en"),
+        formatAnalyticsMoney(40_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
       expect(detail.textContent).not.toContain(
@@ -270,13 +276,13 @@ describe("ForecastView", () => {
 
       const detail = await screen.findByText(/below won \+ confirmed commits$/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(60_000, "EUR", "en"),
+        formatAnalyticsMoney(60_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
       expect(screen.queryByText(/above won \+ confirmed commits/)).toBeNull();
     });
 
-    // Its own arm rather than a zero: "±€0 over evidence" is a difference
+    // Its own arm rather than a zero: "±0 EUR over evidence" is a difference
     // nobody has.
     it("says a call that matches its evidence carries no gap at all", async () => {
       withCall(160_000);
@@ -296,7 +302,7 @@ describe("ForecastView", () => {
   });
 
   // Nobody having called is a real answer, and a different one from a call of
-  // zero. It must not render as "the current call is €0".
+  // zero. It must not render as "the current call is 0 EUR".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
@@ -437,19 +443,14 @@ describe("ForecastView", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
-  // A fresh installation has been checked by nobody, and the panel must say so.
-  //
-  // 404 is this endpoint's ANSWER — the contract spells it "no run has
-  // completed yet" — so rendering it through the error gate told a reader the
-  // screen was broken when nothing had looked yet. Those are opposite
-  // instructions about whether to trust the readings above, which is why the
-  // wrong one is worth a test rather than a glance.
-  it("says nothing has been checked when no run has completed", async () => {
+  it("offers the input check when no run has completed", async () => {
     vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
-    expect(await screen.findByText(/Nothing checked yet/)).toBeTruthy();
-    // And NOT the broken-view state, which is what shipped.
+    expect(
+      await screen.findByRole("button", { name: "Start checking" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
     expect(screen.queryByText(/not found/)).toBeNull();
   });
@@ -486,7 +487,7 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
   );
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   const answer = await screen.findByText(/the customer still supports/i);
-  expect(answer.textContent).toContain("600.00");
+  expect(answer.textContent).toContain("600 EUR");
   expect(
     (await screen.findByText(/while their reviews are open/i)).textContent,
   ).toContain("3 deals (");
@@ -519,11 +520,11 @@ it("says apart deals left out for a weak date or no next step", async () => {
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   expect(
     (await screen.findByText(/while their reviews are open/i)).textContent,
-  ).toContain("2 deals (€600.00)");
+  ).toContain("2 deals (600 EUR)");
   expect(
     (await screen.findByText(/no confirmed close date or no next step/i))
       .textContent,
-  ).toContain("1 deal (€400.00)");
+  ).toContain("1 deal (400 EUR)");
 });
 
 // While enforcement is off the server sends no qualified block, and the screen
@@ -578,7 +579,7 @@ describe("SharedForecastView", () => {
       .getByText("Modelled quarter finish")
       .closest("section");
     expect(model?.textContent).toContain(
-      `${formatMoneyCompact(90_000, "EUR", "en")} to ${formatMoneyCompact(210_000, "EUR", "en")}`,
+      `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
     );
   });
 

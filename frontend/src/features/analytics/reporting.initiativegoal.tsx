@@ -3,11 +3,15 @@
 
 import type { components } from "../../api/schema";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
-import { Field, TextInput } from "../../design-system/field";
+import { Field, Textarea, TextInput } from "../../design-system/field";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { SalesInitiative } from "./reporting.initiatives";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
+import {
+  type SetupProposal,
+  SetupProposalStep,
+} from "./reporting.setupproposal";
 
 export type Input = components["schemas"]["SalesInitiativeInput"];
 export type Members = components["schemas"]["SalesInitiativeMembers"];
@@ -26,6 +30,7 @@ export type Step = "goal" | "members" | "review";
 
 export type Goal = Readonly<{
   name: string;
+  description: string;
   objective: MetricID;
   target: string;
   deadline: string;
@@ -57,6 +62,7 @@ export function predicateOf(rule: Rule, recordType: "lead" | "deal") {
 export function goalOf(initiative?: SalesInitiative): Goal {
   return {
     name: initiative?.name ?? "",
+    description: initiative?.description ?? "",
     objective:
       initiative?.objective_metric ?? "qualified_opportunities_created",
     target:
@@ -83,6 +89,8 @@ export function ruleOf(initiative?: SalesInitiative): Rule {
 export function bodyOf(goal: Goal, rule: Rule): Input {
   return {
     name: goal.name.trim(),
+    description:
+      goal.description.trim() === "" ? null : goal.description.trim(),
     objective_metric: goal.objective,
     target_value: goal.target.trim() === "" ? null : Number(goal.target),
     deadline: goal.deadline,
@@ -95,7 +103,14 @@ export function bodyOf(goal: Goal, rule: Rule): Input {
 export function GoalFields({
   goal,
   onChange,
-}: Readonly<{ goal: Goal; onChange: (goal: Goal) => void }>) {
+  onProposal,
+}: Readonly<{
+  goal: Goal;
+  onChange: (goal: Goal) => void;
+  // A proposal read from the description, for the drawer to apply to the
+  // goal and the rule together.
+  onProposal: (proposal: SetupProposal) => void;
+}>) {
   const t = useT();
   const catalog = useReportingCatalog();
   const metricName = useMetricNames();
@@ -116,6 +131,27 @@ export function GoalFields({
           />
         )}
       </Field>
+      <Field
+        label={t("reporting.describeInitiative")}
+        hint={t("reporting.describeInitiativeHint")}
+      >
+        {(field) => (
+          <Textarea
+            {...field}
+            value={goal.description}
+            rows={3}
+            maxLength={2000}
+            onChange={(event) =>
+              onChange({ ...goal, description: event.target.value })
+            }
+          />
+        )}
+      </Field>
+      <SetupProposalStep
+        site="initiative_setup"
+        description={goal.description}
+        onApply={onProposal}
+      />
       <Field label={t("reporting.objective")}>
         {(field) => (
           <Select

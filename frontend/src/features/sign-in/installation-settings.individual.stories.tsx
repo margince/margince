@@ -8,7 +8,7 @@ import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { IndividualPerformanceRows } from "./installation-settings.individual";
@@ -27,7 +27,7 @@ const FULL: InstallationSettings = {
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   base_currency_locked: false,
   call_whatsapp: true,

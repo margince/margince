@@ -6,26 +6,19 @@
 // module so the tests and the stories describe one server.
 
 import type { components } from "../../api/schema";
-import { dayInZone, startOfDayInZone } from "../../format/timezone";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
   reportingMetricNames,
   reportingStoryEvaluation,
-  reportingStoryFramework,
 } from "../../testing/reporting.fixtures";
-import {
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-} from "../../testing/story-utils";
 import type { ReportingEvaluation } from "./reporting.model";
 
 type Metric = ReportingEvaluation["metrics"][number];
 type MetricID = Metric["id"];
 type Definition = components["schemas"]["ReportingMetricDefinition"];
 type Comparison = NonNullable<Metric["target_comparison"]>;
-type GrantSpec = Parameters<typeof meRoute>[0];
 
 export const SELF = "00000000-0000-4000-8000-0000000000a1";
 export const TEAM = {
@@ -33,7 +26,7 @@ export const TEAM = {
   id: "11111111-1111-4111-8111-111111111111",
   label: "DACH",
 } as const;
-const MINE = { kind: "owner", id: SELF, label: "Riley Rep" } as const;
+export const MINE = { kind: "owner", id: SELF, label: "Riley Rep" } as const;
 
 const UNITS: Readonly<Record<MetricID, string>> = {
   bookings_won: "money",
@@ -46,8 +39,10 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   accepted_opportunities: "count",
   leads_created: "count",
   lead_status_moves: "count",
+  leads_qualified: "count",
   leads_promoted: "count",
   lead_first_response: "hours",
+  leads_awaiting_response_now: "count",
   leads_awaiting_response: "count",
   partner_pipeline: "money",
   partner_won: "money",
@@ -68,15 +63,17 @@ const SALES_METRICS: readonly MetricID[] = [
 const SDR_METRICS: readonly MetricID[] = [
   "meetings_held",
   "accepted_opportunities",
-  "leads_promoted",
+  "leads_qualified",
   "lead_first_response",
+  "leads_awaiting_response_now",
   "leads_awaiting_response",
 ];
 
 const TEAM_METRICS: readonly MetricID[] = [
   "meetings_held",
   "accepted_opportunities",
-  "leads_promoted",
+  "leads_qualified",
+  "leads_awaiting_response_now",
   "leads_awaiting_response",
 ];
 
@@ -187,6 +184,12 @@ export function landingBasis(
       ...shape,
     },
     period: SALES_QUARTER,
+    open_pipeline_minor: 136_000_000,
+    open_count: 18,
+    open_evidence: {
+      metric: "forecast_landing",
+      context_id: "forecast_period_deals",
+    },
     eligible_count: 18,
     priced_count: 18,
     fx_missing_count: 0,
@@ -246,9 +249,10 @@ export function prospectingEvaluation(
       attainment: 75,
     }),
     metric("accepted_opportunities", 2, { target: 8, target_actual: 6 }),
-    metric("leads_promoted", 3, { denominator: 11 }),
+    metric("leads_qualified", 3, { denominator: 11 }),
     metric("lead_first_response", 1.7),
     metric("leads_awaiting_response", 3),
+    metric("leads_awaiting_response_now", 3),
   ],
 ): ReportingEvaluation {
   return {
@@ -285,8 +289,9 @@ export function teamEvaluation(): ReportingEvaluation {
   const week = prospectingEvaluation([
     metric("meetings_held", 7),
     metric("accepted_opportunities", 3),
-    metric("leads_promoted", 5),
+    metric("leads_qualified", 5),
     metric("leads_awaiting_response", 2),
+    metric("leads_awaiting_response_now", 2),
   ]);
   return {
     ...week,
@@ -347,6 +352,7 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         label: "Riley Rep",
         meetings_held: 4,
         qualified: 3,
+        qualified_events: 3,
         unanswered: 1,
         submitted: 4,
         accepted: 2,
@@ -360,6 +366,7 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         label: "Sam SDR",
         meetings_held: 4,
         qualified: 2,
+        qualified_events: 2,
         unanswered: 1,
         submitted: 2,
         accepted: 1,
@@ -422,7 +429,7 @@ export const QUIET_DAY: components["schemas"]["Worklist"] = {
   },
 };
 
-const CONTEXTS: Readonly<Record<Seat, unknown>> = {
+export const CONTEXTS: Readonly<Record<Seat, unknown>> = {
   leader: {
     default_scope: TEAM,
     allowed_scopes: [TEAM, MINE],
@@ -447,7 +454,7 @@ const CONTEXTS: Readonly<Record<Seat, unknown>> = {
   },
 };
 
-const READS: GrantSpec = {
+export const READS: GrantSpec = {
   report_definition: ["read"],
   reporting_framework: ["read"],
   sales_target: ["read"],
@@ -475,7 +482,7 @@ export const ADMIN_GRANTS: GrantSpec = {
  * Every read the Overview makes but the evaluation, which the caller answers
  * by its query. `template` is the framework the workspace runs.
  */
-const SALES_PIPELINE = {
+export const SALES_PIPELINE = {
   id: "sales",
   name: "Sales",
   is_default: true,
@@ -491,110 +498,3 @@ export const RENEWALS_PIPELINE = {
   position: 1,
   stages: [],
 };
-
-function pipelinePage(pipelines: readonly (typeof SALES_PIPELINE)[]) {
-  return jsonResponse({
-    data: pipelines,
-    page: { next_cursor: null, has_more: false },
-  });
-}
-
-/** `GET /pipelines` with the default pipeline and Renewals beside it. */
-export const twoPipelines = () =>
-  pipelinePage([SALES_PIPELINE, RENEWALS_PIPELINE]);
-
-/** The fourteen days the summary counts booked meetings in, from `asOf`. */
-export function upcomingWindow(asOf: string) {
-  // Fourteen days from the reporting zone's day, ending at its midnight.
-  const day = dayInZone(Date.parse(asOf), REPORTING_FIXTURE_ZONE);
-  return {
-    start_at: asOf,
-    end_at: startOfDayInZone(day, REPORTING_FIXTURE_ZONE, 14),
-    timezone: REPORTING_FIXTURE_ZONE,
-  };
-}
-
-export function overviewRoutes(
-  over: Readonly<{
-    seat?: Seat;
-    template?: "sales" | "sdr";
-    grants?: GrantSpec;
-    summary?: () => Response | Promise<Response>;
-    checks?: () => Response | Promise<Response>;
-    coverage?: () => Response | Promise<Response>;
-    framework?: () => Response | Promise<Response>;
-    team?: () => Response | Promise<Response>;
-    worklist?: () => Response | Promise<Response>;
-    handoffs?: () => Response | Promise<Response>;
-    meetings?: () => Response | Promise<Response>;
-    // The handoffs sent back: the waiting route asked with state=returned,
-    // which the route map cannot tell apart, so openOverview answers it.
-    returned?: () => Response;
-    pipelines?: () => Response | Promise<Response>;
-    evidence?: () => Response | Promise<Response>;
-  }> = {},
-): RouteMap {
-  const seat = over.seat ?? "leader";
-  const template = over.template ?? (seat === "sdr" ? "sdr" : "sales");
-  return {
-    "GET /me": meRoute(over.grants ?? READS),
-    "GET /analytics/context": () => jsonResponse(CONTEXTS[seat]),
-    "GET /analytics/metrics": () =>
-      jsonResponse({ ...overviewCatalog, schedule_ready: true }),
-    "GET /analytics/framework":
-      over.framework ??
-      (() =>
-        jsonResponse({
-          ...reportingStoryFramework,
-          definition: { ...reportingStoryFramework.definition, template },
-        })),
-    "GET /pipelines": over.pipelines ?? (() => pipelinePage([SALES_PIPELINE])),
-    "GET /forecast/assurance/exceptions":
-      over.checks ?? (() => jsonResponse({ data: [] })),
-    "GET /analytics/coverage":
-      over.coverage ??
-      (() =>
-        jsonResponse({
-          run_id: "00000000-0000-4000-8000-0000000000c1",
-          as_of: interval.end_at,
-          sources: [],
-        })),
-    "GET /analytics/sdr-summary":
-      over.summary ??
-      (() =>
-        jsonResponse({
-          as_of: interval.end_at,
-          scope: MINE,
-          workflow: template === "sdr" ? "handoff" : "qualification",
-          handoffs:
-            template === "sdr"
-              ? { waiting: 2, unassigned: 0, blocked: 0, returned: 0 }
-              : undefined,
-          upcoming_meetings: 0,
-          upcoming_window: upcomingWindow(interval.end_at),
-        })),
-    "GET /analytics/sdr-summary/handoffs":
-      over.handoffs ??
-      (() => jsonResponse({ as_of: interval.end_at, rows: [] })),
-    "GET /analytics/sdr-summary/meetings":
-      over.meetings ??
-      (() =>
-        jsonResponse({
-          as_of: interval.end_at,
-          window: upcomingWindow(interval.end_at),
-          rows: [],
-        })),
-    "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
-    "GET /worklist": over.worklist ?? (() => jsonResponse(QUIET_DAY)),
-    // The records behind a figure: none, unless the case lists some.
-    "GET /analytics/evidence":
-      over.evidence ??
-      (() =>
-        jsonResponse({
-          context: salesEvaluation().context,
-          metric: "bookings_won",
-          rows: [],
-          truncated: false,
-        })),
-  };
-}

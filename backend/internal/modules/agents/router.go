@@ -159,6 +159,7 @@ const (
 	schemaMinimum     = "minimum"
 	schemaMaximum     = "maximum"
 	schemaItems       = "items"
+	schemaFormat      = "format"
 )
 
 // argument is one property of a JSON schema, member by member.
@@ -326,12 +327,18 @@ func uniteArgument(seen, next argument) (argument, bool) {
 		delete(out, schemaMinimum)
 		delete(out, schemaMaximum)
 		delete(out, schemaItems)
+		delete(out, schemaFormat)
 		return out
 	}
 	if !maps.EqualFunc(shape(seen), shape(next), func(a, b json.RawMessage) bool { return string(a) == string(b) }) {
 		return nil, false
 	}
 	united := maps.Clone(seen)
+	// A format is a hint one action gives; it holds for the router only when
+	// every action that takes the argument gives the same one.
+	if string(seen[schemaFormat]) != string(next[schemaFormat]) {
+		delete(united, schemaFormat)
+	}
 	// A list's items unite by the same rule, so two lists of words admit both.
 	if seen[schemaItems] != nil || next[schemaItems] != nil {
 		var seenItems, nextItems argument

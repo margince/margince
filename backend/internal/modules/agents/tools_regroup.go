@@ -166,15 +166,15 @@ type scheduleMeeting struct{ routed }
 
 func (scheduleMeeting) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "schedule_meeting", Title: "Book or invite to a meeting", Version: toolVersionV1,
+		Name: "schedule_meeting", Title: "Invite to a meeting", Version: toolVersionV1,
 		Description: scheduleMeetingCopy.render(), Instead: scheduleMeetingCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"book: put a meeting on the calendar; invite: send the invitation to the attendees"}}}`),
+			"action":{"description":"invite: put the meeting on the host's calendar and send the invitation to every attendee"}}}`),
 	}
 }
 
 func (scheduleMeeting) routeField() string { return actionArg }
 
 func (scheduleMeeting) routeTargets() map[string]string {
-	return map[string]string{"book": "book_meeting", "invite": "invite_meeting"}
+	return map[string]string{"invite": "invite_meeting"}
 }

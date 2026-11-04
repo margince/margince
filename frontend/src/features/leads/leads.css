@@ -35,18 +35,6 @@
   gap: var(--space-2);
 }
 
-/* The owner row is one line, like every details row: the name gives way,
-   the Assign verb never drops under it. */
-.lead-owner-line {
-  flex-wrap: nowrap;
-  min-inline-size: 0;
-}
-.lead-owner-line > :first-child {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* A list of sentences, not of bullets: these are reasons a reader scans, and
    a marker before each would make three of them look like a form. */
 .lead-plainlist {
@@ -82,18 +70,8 @@
   color: var(--textPrimary);
 }
 
-/* The email row: the address and its copy glyph on one line, cut with an
-   ellipsis, and its edit verb only while the row is pointed at or holds
-   focus. A verb with no room beside the address drops under it, so the
-   address keeps the column's width. */
-.lead-row-value {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 var(--space-2);
-  min-inline-size: 0;
-}
-
+/* The email row: the address and its copy glyph on one line, the address
+   cut with an ellipsis so the glyph keeps its place. */
 .lead-row-email {
   display: flex;
   align-items: center;
@@ -113,24 +91,11 @@
   white-space: nowrap;
 }
 
-.lead-row-verb {
-  flex: none;
-  max-inline-size: 0;
-  max-block-size: 0;
-  overflow: hidden;
-}
-
 /* The offer's label names a company, so a second line reads from the left. */
 .lead-company-offer.btn {
   justify-content: flex-start;
   padding-inline: 0;
   text-align: start;
-}
-
-.factlist-row:hover .lead-row-verb,
-.lead-row-verb:focus-within {
-  max-inline-size: none;
-  max-block-size: none;
 }
 
 @media (max-width: 720px) {

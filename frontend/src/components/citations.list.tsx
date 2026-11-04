@@ -5,7 +5,7 @@ import { formatActivityWhen } from "../format/activitywhen";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import type {
   BriefSentence,
   Cited,
@@ -56,7 +56,7 @@ export function Citations({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const named = evidence.map((cited) =>
     cited.name || !nameOf
       ? cited
@@ -99,7 +99,7 @@ export function Citations({
               summary.occurred_at,
               summary.occurred_precision,
               locale,
-              recordZone,
+              readerZone,
             )}
             withheld={withheld}
             onOpen={
@@ -169,8 +169,8 @@ function CitationWithReceipt({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const dated = chip.at ? formatDate(chip.at, locale, recordZone) : undefined;
+  const readerZone = useViewerZone();
+  const dated = chip.at ? formatDate(chip.at, locale, readerZone) : undefined;
   const provenance = [chip.origin, dated].filter(Boolean).join(" · ");
   return (
     <Popover onHover className="co-brief-cite co-cite-receipted" label={label}>

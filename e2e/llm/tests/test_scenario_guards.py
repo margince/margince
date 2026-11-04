@@ -130,5 +130,25 @@ class FairLeadsTest(GuardCase):
         self.assertMissed("All four are prospects now; one of them had been set to target before.", "Emsland")
 
 
+class SortTheQueueTest(GuardCase):
+    scenario = "case40-sort-the-queue.yaml"
+    answer = (
+        "- **Ines Waldner**, promoted. She replied, so she is now a contact.\n"
+        "- **Bruno Kellner**, %s. His email bounced and the phone rings out.\n"
+        "- **Piet Brandsma** stays a lead. I took the company name Brandsma Koeltechniek from his domain. "
+        "His job title is still missing.\n"
+    )
+
+    def test_closed_as_the_recorded_reason(self):
+        self.assertGreen(self.answer % 'closed as "Not reachable"')
+
+    def test_an_answer_that_never_says_he_closed_still_fails(self):
+        self.assertMissed(self.answer % "still waiting", "disqualif")
+
+    def test_closing_the_one_who_replied_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "Ines Waldner is closed as Not reachable.\n")
+        self.assertTrue(fired, "closing Ines as a reason passed the wrong-lead guard")
+
+
 if __name__ == "__main__":
     unittest.main()

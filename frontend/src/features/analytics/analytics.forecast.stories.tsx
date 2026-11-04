@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -47,6 +47,7 @@ function readings(over: Partial<Readings> = {}): Readings {
     period_start: "2026-07-01",
     period_end: "2026-09-30",
     scope_kind: "workspace",
+    qualification_mode: "off",
     won_minor: 92_000_00,
     evidence_minor: 148_000_00,
     best_case_minor: 260_000_00,
@@ -60,7 +61,7 @@ function readings(over: Partial<Readings> = {}): Readings {
     // The zone the period's days were cut in. Nothing this section draws reads
     // it, and the reader's own is what the field would carry on a real
     // installation — so the fixture names no zone of its own.
-    timezone: viewerZone(),
+    timezone: browserZone(),
     base_currency: "EUR",
     current_call: {
       id: "22222222-2222-4222-8222-222222222222",

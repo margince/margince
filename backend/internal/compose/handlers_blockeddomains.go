@@ -35,8 +35,8 @@ type blockedDomainHandlers struct {
 }
 
 func (h blockedDomainHandlers) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
-	// Human-only (x-agent-access): capture posture, not record data.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	// Capture posture, read by a human or by their agent at their word.
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

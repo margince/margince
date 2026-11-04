@@ -316,8 +316,8 @@ func TestEveryBucketNameIsDrawn(t *testing.T) {
 	}
 	for _, name := range []string{
 		BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-		BucketStageWeight, BucketRecordChanged, BucketWon, BucketLost, BucketArchived, BucketFx,
-		BucketDefinition, BucketModel,
+		BucketStageWeight, BucketRecordChanged, BucketExcluded, BucketReinstated, BucketNotChecked,
+		BucketWon, BucketLost, BucketArchived, BucketFx, BucketDefinition, BucketModel,
 	} {
 		if !drawn[name] {
 			t.Errorf("bucket %q exists and is never drawn — a deal classified into it "+

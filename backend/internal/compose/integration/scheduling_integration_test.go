@@ -5,10 +5,10 @@
 
 package integration
 
-// Scheduling (features/07 §5c): availability proposes business-hour
-// slots minus the host's existing meetings; booking commits one slot,
-// lands a meeting on the linked timeline, and a taken slot answers
-// slot_taken instead of double-booking.
+// Scheduling: availability proposes business-hour slots
+// minus the host's existing meetings. Booking commits one slot, queues its
+// calendar invitation and lands a meeting on the linked timeline. A taken slot
+// answers slot_taken instead of double-booking.
 
 import (
 	"context"
@@ -16,13 +16,31 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-func TestAvailabilityAndBooking(t *testing.T) {
-	e := setupRelationships(t)
+// setupBooking is a workspace whose admin has a booking page on a connected
+// calendar, and one contact with an address to invite.
+func setupBooking(t *testing.T) *relEnv {
+	t.Helper()
+	e := apptest.SetupBookingApp(t)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Edge Contact",
+		"emails": []AnyMap{{"email": "edge@buyer.example", "email_type": "work", "is_primary": true}},
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
+	}
+	return &relEnv{AppEnv: e, contactID: contact.ID}
+}
 
-	// A Tuesday-to-Wednesday window keeps the fixture off weekends.
-	from := time.Date(2026, 7, 7, 8, 0, 0, 0, time.UTC)
+func TestAvailabilityAndBooking(t *testing.T) {
+	e := setupBooking(t)
+
+	from := apptest.NextBookableMorning().Add(-2 * time.Hour)
 	to := from.Add(24 * time.Hour)
 	window := fmt.Sprintf("from=%s&to=%s&duration_minutes=60",
 		from.Format(time.RFC3339), to.Format(time.RFC3339))
@@ -104,15 +122,16 @@ func TestAvailabilityAndBooking(t *testing.T) {
 // happened: logging claims nothing on anyone's calendar, so the guard does not
 // read those rows at all.
 func TestOnlyABookingClaimsTheHostsHour(t *testing.T) {
-	e := setupRelationships(t)
+	e := setupBooking(t)
 	at := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
 	link := []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}}
 
 	var booked struct {
 		ID string `json:"id"`
 	}
+	slot := apptest.NextBookableMorning()
 	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
-		"start": at.Add(4 * time.Hour), "end": at.Add(5 * time.Hour),
+		"start": slot, "end": slot.Add(time.Hour),
 		"subject": "Discovery call", "links": link,
 	}, nil, &booked); status != http.StatusCreated {
 		t.Fatalf("booking → %d", status)
@@ -156,4 +175,40 @@ func claimsHostSlot(t *testing.T, e *relEnv, activityID string) bool {
 		t.Fatalf("reading the slot claim of %s: %v", activityID, err)
 	}
 	return claims
+}
+
+// The booking door hands every attendee to the invitation it queues: one
+// calendar event with the contact first, and nothing left behind on the request.
+func TestABookingQueuesItsInvitationWithEveryAttendee(t *testing.T) {
+	e := setupBooking(t)
+	slot := apptest.NextBookableMorning()
+	var booked struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
+		"start": slot, "end": slot.Add(30 * time.Minute),
+		"attendee_emails": []string{"omar@buyer.example", "edge@buyer.example"},
+		"links":           []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}},
+	}, nil, &booked); status != http.StatusCreated {
+		t.Fatalf("booking → %d", status)
+	}
+	var attendees []string
+	var status string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT ARRAY(SELECT jsonb_array_elements_text(appointment->'Attendees')), status FROM meeting_invitation WHERE activity_id = $1`,
+		booked.ID).Scan(&attendees, &status); err != nil {
+		t.Fatalf("reading the queued invitation: %v", err)
+	}
+	if fmt.Sprint(attendees) != "[edge@buyer.example omar@buyer.example]" || status != "pending" {
+		t.Errorf("queued invitation = %v %s, want the contact then the further attendee, pending", attendees, status)
+	}
+
+	var refused problemBody
+	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
+		"start": slot.Add(2 * time.Hour), "end": slot.Add(150 * time.Minute),
+		"attendee_emails": []string{"stranger@elsewhere.example"},
+		"links":           []AnyMap{{"entity_type": "company", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
+	}, nil, &refused); status != http.StatusUnprocessableEntity || !namesField(refused, "links") {
+		t.Fatalf("a booking naming no invitee → %d %+v, want 422 naming links", status, refused.Details.Errors)
+	}
 }

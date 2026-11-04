@@ -34,8 +34,12 @@ type ForwardMeasure = values.ForwardMeasure
 const (
 	// MeasureCommitEvidence is the strictest reading and the default.
 	MeasureCommitEvidence = values.MeasureCommitEvidence
+	// MeasureQualifiedCommitEvidence is commit evidence over supported deals.
+	MeasureQualifiedCommitEvidence = values.MeasureQualifiedCommitEvidence
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted = values.MeasureWeighted
+	// MeasureQualifiedWeighted is the weighted reading over supported deals.
+	MeasureQualifiedWeighted = values.MeasureQualifiedWeighted
 	// MeasureManagerCall takes the authored call as the whole period's landing.
 	MeasureManagerCall = values.MeasureManagerCall
 )
@@ -79,6 +83,10 @@ const (
 	// stated belief and this code does not get to overrule it, but a landing
 	// below what is already banked is a number nobody should read past.
 	CaveatCallBelowActual LandingCaveat = "call_below_actual"
+	// CaveatQualifiedUnavailable means a qualified measure was asked of a read
+	// with no qualified block, so the baseline reading stands in under its own
+	// name. Never the baseline under the qualified label.
+	CaveatQualifiedUnavailable LandingCaveat = "qualified_unavailable"
 )
 
 // ProjectLanding answers where the period finishes.
@@ -93,6 +101,8 @@ func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Lan
 		return remainingLanding(readings, measure, readings.EvidenceMinor)
 	case MeasureWeighted:
 		return remainingLanding(readings, measure, readings.WeightedMinor)
+	case MeasureQualifiedCommitEvidence, MeasureQualifiedWeighted:
+		return qualifiedLanding(readings, measure)
 	case MeasureManagerCall:
 		if call == nil {
 			// The commit measure, and SAID so. Falling back silently would show
@@ -148,4 +158,24 @@ func remainingLanding(
 		WonMinor:       readings.WonMinor,
 		RemainingMinor: remaining,
 	}, nil
+}
+
+// qualifiedLanding is Won plus the qualified remaining reading. With no
+// qualified block it is the baseline reading, named as such and caveated.
+func qualifiedLanding(readings Readings, measure ForwardMeasure) (Landing, error) {
+	baseline, baselineMinor := MeasureCommitEvidence, readings.EvidenceMinor
+	if measure == MeasureQualifiedWeighted {
+		baseline, baselineMinor = MeasureWeighted, readings.WeightedMinor
+	}
+	q := readings.Qualified
+	if q == nil {
+		out, err := remainingLanding(readings, baseline, baselineMinor)
+		out.Caveat = CaveatQualifiedUnavailable
+		return out, err
+	}
+	remaining := q.EvidenceMinor
+	if measure == MeasureQualifiedWeighted {
+		remaining = q.WeightedMinor
+	}
+	return remainingLanding(readings, measure, remaining)
 }

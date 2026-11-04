@@ -1,11 +1,14 @@
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import {
+  calendarDaysBetween,
+  formatDueCompact,
+} from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -96,7 +99,7 @@ export function CompanyNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deferOf } = useCompanySetAside(view.company.id);
   const fallback = momentFallbackVerb({
     view,
@@ -176,7 +179,12 @@ export function CompanyNextBar({
       sub={
         task?.due_at
           ? t("co.next.due", {
-              when: formatDayMonth(task.due_at, locale, zone),
+              when: formatDueCompact(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+              ),
             })
           : undefined
       }

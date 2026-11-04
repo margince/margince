@@ -84,7 +84,7 @@ func (m magicPendingDecisions) PendingApprovals(
 	ctx context.Context, limit int,
 ) ([]crmcontracts.Approval, error) {
 	status := stagedAndUndecided
-	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit, RequestedForReader: true})
+	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Actionable: true, Limit: limit, RequestedForReader: true})
 	return rows, err
 }
 

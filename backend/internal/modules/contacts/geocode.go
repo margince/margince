@@ -24,6 +24,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -415,7 +416,9 @@ func namesAPlace(address *crmcontracts.Address) bool {
 // changed is the apply's changed-columns image, so the audit row and the
 // lookup answer "did the address move" from one source.
 func (s *Store) locateLandedAddress(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, changed map[string]any) error {
-	if line, moved := changed[fieldRegisteredAddress]; !moved || line == nil {
+	if !movedAddress(changed) || !slices.ContainsFunc(companyAddressColumns, func(column string) bool {
+		return changed[column] != nil
+	}) {
 		return nil
 	}
 	if err := s.enqueueGeocode(ctx, tx, companyID); err != nil {

@@ -86,12 +86,19 @@ it("describes the name field by its hint, the key in the code face", async () =>
   );
 });
 
-function Name({ onClose }: Readonly<{ onClose: () => void }>) {
+function Name({
+  onClose,
+  onDirtyChange,
+}: Readonly<{
+  onClose: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
+}>) {
   return (
     <LocaleProvider initial="en">
       <NameDialog
         open
         onClose={onClose}
+        onDirtyChange={onDirtyChange}
         title="Rename"
         label="Name"
         initial="Berlin"
@@ -112,6 +119,17 @@ it("asks before Escape drops a changed name", async () => {
     screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
   ).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
+});
+
+it("reports a changed name as unsaved until it reads as it started", async () => {
+  const onDirtyChange = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(<Name onClose={() => undefined} onDirtyChange={onDirtyChange} />);
+  const field = screen.getByRole("textbox", { name: "Name" });
+  await user.type(field, "er");
+  expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+  await user.type(field, "{Backspace}{Backspace} ");
+  expect(onDirtyChange).toHaveBeenLastCalledWith(false);
 });
 
 it("closes on Escape at once while the name is unchanged", async () => {
@@ -149,4 +167,35 @@ it("writes nothing for an unchanged name and sends the typed one", async () => {
   await user.clear(field);
   await user.type(field, "Eingehende Anfragen{Enter}");
   expect(onSave).toHaveBeenCalledExactlyOnceWith("Eingehende Anfragen");
+});
+
+function Titled({ title, label }: Readonly<{ title: string; label: string }>) {
+  return (
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title={title}
+        label={label}
+        initial="Berlin"
+        confirmLabel="Save"
+        onSave={() => undefined}
+      />
+    </LocaleProvider>
+  );
+}
+
+it("prints a label that repeats the title once and keeps it as the field name", () => {
+  render(<Titled title="Deal name" label="Deal name" />);
+  const printed = screen
+    .getAllByText("Deal name")
+    .filter((node) => !node.classList.contains("sr-only"));
+  expect(printed).toHaveLength(1);
+  expect(screen.getByRole("textbox", { name: "Deal name" })).toBeVisible();
+});
+
+it("prints both when the label differs from the title", () => {
+  render(<Titled title="Rename deal" label="Deal name" />);
+  expect(screen.getByText("Rename deal")).toBeVisible();
+  expect(screen.getByText("Deal name")).not.toHaveClass("sr-only");
 });

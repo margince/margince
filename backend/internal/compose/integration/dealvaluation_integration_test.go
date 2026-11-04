@@ -35,7 +35,7 @@ type valuationFixture struct {
 func setupValuation(t *testing.T) valuationFixture {
 	t.Helper()
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return valuationDate })
+	e.Deals.SetClock(func() time.Time { return valuationDate })
 	pipeline, open, won := DealFixture(t, e)
 	if _, err := e.Deals.UpdateStage(e.Admin(), open, deals.UpdateStageInput{WinProbability: new(60)}); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func setupValuation(t *testing.T) valuationFixture {
 
 func (f valuationFixture) rate(t *testing.T, currency, rate string, date time.Time) {
 	t.Helper()
-	f.e.Deals.WithClock(func() time.Time { return date })
+	f.e.Deals.SetClock(func() time.Time { return date })
 	if _, err := f.e.Deals.SetFxRate(f.e.Admin(), deals.SetFxRateInput{FromCurrency: currency, Rate: rate, EffectiveDate: date}); err != nil {
 		t.Fatal(err)
 	}

@@ -30,14 +30,13 @@ var agentActsEnglish = agentActVocabulary{operations: opPhrases}
 
 //nolint:goconst // the keys are the contract's own tool verbs, and a constant per verb would be a second spelling of the generated policy table.
 var agentActsGerman = agentActVocabulary{
-	verbs: map[string]string{
+	verbs: withRouteVerbs(routeVerbsGerman, map[string]string{
 		"advance_deal":             "Deal weiterbringen",
 		"advance_project_phase":    "Projekt in die nächste Phase bringen",
 		"annotate_brief":           "Anmerkung zum Morgenbericht hinzufügen",
 		"apply_tag":                "Tag vergeben",
 		"attach_document":          "Datei an einen Datensatz anhängen",
 		"decide_duplicate":         "Über ein markiertes Duplikatpaar entscheiden",
-		"book_meeting":             "Termin buchen",
 		"invite_meeting":           "Kalendereinladung senden",
 		"commit_import":            "Import übernehmen",
 		"compose_analytics_report": "Analysebericht erstellen",
@@ -68,7 +67,7 @@ var agentActsGerman = agentActVocabulary{
 		"update_tag":               "Tag ändern",
 		"archive_tag":              "Tag stilllegen",
 		"change_record_parts":      "Teile eines Datensatzes ändern",
-	},
+	}),
 	recordFrames: map[string]string{
 		toolCreateRecord:  "%s erstellen",
 		toolUpdateRecord:  "%s ändern",
@@ -85,14 +84,13 @@ var agentActsGerman = agentActVocabulary{
 }
 
 var agentActsVietnamese = agentActVocabulary{
-	verbs: map[string]string{
+	verbs: withRouteVerbs(routeVerbsVietnamese, map[string]string{
 		"advance_deal":             "Chuyển giai đoạn của deal",
 		"advance_project_phase":    "Chuyển dự án sang giai đoạn kế tiếp",
 		"annotate_brief":           "Thêm ghi chú vào bản tóm tắt",
 		"apply_tag":                "Gắn thẻ",
 		"attach_document":          "Đính kèm tệp vào một bản ghi",
 		"decide_duplicate":         "Quyết định một cặp trùng lặp",
-		"book_meeting":             "Đặt một lịch họp",
 		"invite_meeting":           "Gửi lời mời họp",
 		"commit_import":            "Xác nhận nhập dữ liệu",
 		"compose_analytics_report": "Soạn báo cáo phân tích",
@@ -123,7 +121,7 @@ var agentActsVietnamese = agentActVocabulary{
 		"update_tag":               "Cập nhật thẻ",
 		"archive_tag":              "Ngừng dùng thẻ",
 		"change_record_parts":      "Thay đổi các phần của hồ sơ",
-	},
+	}),
 	recordFrames: map[string]string{
 		toolCreateRecord:  "Tạo %s",
 		toolUpdateRecord:  "Cập nhật %s",

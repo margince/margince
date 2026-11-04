@@ -18,6 +18,8 @@ export const SETTINGS_SECTIONS = {
     "auth.signOut",
     "mfa.title",
     "locale.switchLabel",
+    "account.languageCard",
+    "account.timezoneLabel",
     "settings.appearance",
   ],
   meetings: [
@@ -35,12 +37,12 @@ export const SETTINGS_SECTIONS = {
     "scheduling.yourName",
     "scheduling.reminderRow",
     "scheduling.acceptBookings",
-    "workingHours.timezone",
   ],
   voice: [
     "settings.voice.start.addTitle",
     "settings.voice.addFirstLabel",
     "settings.voice.pasteLabel",
+    "settings.voice.sentMailLabel",
   ],
   agents: [
     "aiAccess.connect.title",
@@ -63,6 +65,7 @@ export const SETTINGS_SECTIONS = {
     "notifications.browser.label",
     "delivery.panelTitle",
     "notifications.class.approval_pending.label",
+    "notifications.class.project_health.label",
     "notifications.class.coach.label",
     "notifications.class.lead_sla.label",
     "notifications.class.automation.label",
@@ -100,6 +103,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.companyTitle",
     "legalEntities.title",
     "settings.rates.fxTitle",
+    "taxRates.title",
     "followUpSettings.title",
     "signatureTemplate.title",
     "installationSettings.timezone",

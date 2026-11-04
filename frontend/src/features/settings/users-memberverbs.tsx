@@ -29,6 +29,41 @@ function deactivateBodyKey(member: User) {
     : "users.deactivateConfirmBody";
 }
 
+// Mails an invited member a new link after the relay refused the first one.
+// Draws nothing unless the server offers it.
+function ResendInvite({
+  member,
+  pending,
+}: Readonly<{ member: User; pending: boolean }>) {
+  const t = useT();
+  const toast = useToast();
+  const refresh = useMemberRefresh();
+  const resend = useMutation({
+    mutationKey: memberMutationKey(member.id, "resend_invite"),
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.POST("/users/{id}/resend-invite", {
+          params: { path: { id } },
+        }),
+      );
+    },
+    onSuccess: async () => {
+      await refresh();
+      toast.show(t("users.inviteResent", { name: member.email }));
+    },
+    onError: (error) =>
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true }),
+  });
+  if (!offers(member, "resend_invite")) {
+    return null;
+  }
+  return (
+    <Button disabled={pending} onClick={() => resend.mutate(member.id)}>
+      {t("users.resendInvite")}
+    </Button>
+  );
+}
+
 // A member's verbs behind one menu. Nothing to offer draws nothing: a trigger
 // over an empty panel is a promise the row cannot keep.
 export function MemberVerbs({
@@ -108,6 +143,7 @@ export function MemberVerbs({
   const canMerge = offers(member, "merge");
   const canRemove = offers(member, "remove");
   const canMintLink = offers(member, "issue_password_link");
+  const canResendInvite = offers(member, "resend_invite");
   const canRemoveFactor = offers(member, "remove_mfa");
   const canDeactivate = offers(member, "deactivate");
   const canReactivate = offers(member, "reactivate");
@@ -123,6 +159,7 @@ export function MemberVerbs({
       editOpen,
       retirement,
       canMintLink,
+      canResendInvite,
       canRemoveFactor,
       canDeactivate,
       canReactivate,
@@ -154,6 +191,7 @@ export function MemberVerbs({
             {t("users.remove")}
           </Button>
         )}
+        <ResendInvite member={member} pending={pending} />
         {canMintLink && (
           <Button disabled={pending} onClick={openLink}>
             {t("users.link.action")}

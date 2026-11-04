@@ -84,6 +84,7 @@ func setupConfigEnv(t *testing.T) *configEnv {
 	// the real rule is proven through installseam in compose/integration.
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
 		ContractVisible: func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
+		AuthorEntity:    defaultEntityAuthor, IssuerEntity: defaultEntityIssuer,
 	})
 	return e
 }

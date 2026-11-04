@@ -26,8 +26,6 @@ src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="edit"] { backgrou
 src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="reject"] { background: linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated) }
 src/design-system/filechip.css: .file-chip { background: var(--bgElevated) }
 src/design-system/filterpills.css: .filterpill { background: var(--bgElevated) }
-src/design-system/inlinechoice.css: .inlinechoice-edit [aria-busy="true"] { background: var(--bgElevated) }
-src/design-system/inlinechoice.css: .inlinetext-edit [aria-busy="true"] { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-bulkbar { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-frow { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-perpage .select-control { background: var(--bgElevated) }

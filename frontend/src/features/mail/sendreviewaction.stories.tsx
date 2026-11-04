@@ -11,6 +11,7 @@ import { ReviewReference, SendReviewActions } from "./sendreviewaction";
 const review: SendReview = {
   reviewId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
   actions: ["overrule"],
+  refusals: [],
   overrulable: [
     {
       contactId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002",

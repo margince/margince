@@ -58,7 +58,6 @@ export function ComposeBlockers({
   send,
   anchorActivity,
   contactOf,
-  contactId,
   bodyKey,
   permission: drawPermission,
 }: Readonly<{
@@ -68,7 +67,6 @@ export function ComposeBlockers({
   anchorActivity: Activity | undefined;
   /** The contact an address belongs to, where the records behind the draft say. */
   contactOf: (address: string) => string | undefined;
-  contactId: string | undefined;
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
    *  reason pick this band offers where a reason may be recorded. */
@@ -91,31 +89,31 @@ export function ComposeBlockers({
         onContextChange={fields.setContext}
       />
       {!isChannelReply && (
-        <>
-          <MailSendNotices
-            to={fields.to}
-            cc={fields.cc}
-            context={send.claimedContext}
-          />
-          {!(whyMissing && unproven) &&
-            drawPermission(
-              target && (
-                <ContactReasonPick
-                  key={`${target.contactId}:${target.category}`}
-                  target={target}
-                  chosen={send.claimedContext}
-                />
-              ),
-              asksWhy(anchorActivity),
-            )}
-        </>
+        <MailSendNotices
+          to={fields.to}
+          cc={fields.cc}
+          context={send.claimedContext}
+        />
       )}
+      {/* A channel reply asks no preview, so its status is only ever a
+          refused Send. */}
+      {(!isChannelReply || send.permission.refusal) &&
+        !(whyMissing && unproven) &&
+        drawPermission(
+          target && (
+            <ContactReasonPick
+              key={`${target.contactId}:${target.category}`}
+              target={target}
+              chosen={send.claimedContext}
+            />
+          ),
+          asksWhy(anchorActivity),
+        )}
       <ComposeOutcome
         isChannelReply={isChannelReply}
         bodyKey={bodyKey}
         sendUnavailable={fields.sendUnavailable}
         send={send}
-        contactId={contactId}
       />
     </div>
   );

@@ -116,7 +116,7 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 
-	req, err = admitAsk(req)
+	req, err = admitAsk(ctx, req)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -189,9 +189,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 // honestly have made.
 func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// Asking a colleague for a favour is a human's act. An agent holding
-		// a human's id is not that human deciding to spend their goodwill.
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+		// Asking a colleague for a favour is a human's act, made by them or by
+		// their agent at their word; automatic work spends nobody's goodwill.
 		return principal.Principal{}, fmt.Errorf(
 			"introductions: asking for an introduction needs an authenticated contact: %w",
 			apperrors.ErrPermissionDenied)
@@ -450,48 +450,4 @@ func nullIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
-}
-
-// admitAsk defaults an unstated enum and refuses a stated one the contract does
-// not admit. Unstated is a contact typing with no fallback.
-func admitAsk(req NewRequest) (NewRequest, error) {
-	if req.NoteGeneratedBy == "" {
-		req.NoteGeneratedBy = "human"
-	}
-	if req.FallbackPolicy == "" {
-		req.FallbackPolicy = "none"
-	}
-	return req, validateAsk(req)
-}
-
-// validateAsk refuses what the contract does not admit. The enums are
-// refused rather than defaulted: an unknown note origin recorded as `human`
-// would disclose model prose as typed.
-func validateAsk(req NewRequest) error {
-	if req.InternalReason == "" {
-		return &values.ParseError{Field: "internal_reason", Code: "required", Message: "internal_reason is required"}
-	}
-	if err := tooLong("internal_reason", req.InternalReason, reasonBound); err != nil {
-		return err
-	}
-	if err := tooLong("value_for_target", req.ValueForTarget, reasonBound); err != nil {
-		return err
-	}
-	if err := tooLong("forwardable_note", req.ForwardableNote, noteBound); err != nil {
-		return err
-	}
-	if !crmcontracts.IntroNoteOrigin(req.NoteGeneratedBy).Valid() {
-		return notAllowed("note_generated_by", "human, model or deterministic")
-	}
-	if !crmcontracts.IntroFallbackPolicy(req.FallbackPolicy).Valid() {
-		return notAllowed("fallback_policy", "none, name_drop or next_route")
-	}
-	return nil
-}
-
-func notAllowed(field, allowed string) error {
-	return &values.ParseError{
-		Field: field, Code: "value_not_allowed",
-		Message: fmt.Sprintf("%s must be %s", field, allowed),
-	}
 }

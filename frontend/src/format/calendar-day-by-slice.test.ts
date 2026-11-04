@@ -24,7 +24,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // CUT rather than a length.
 //
 // `format/calendarday.ts` is where the question is answered — in a named zone,
-// from the parts — and `viewerZone()` / `useRecordZone()` say whose calendar the
+// from the parts — and `browserZone()` / `useCompanyZone()` say whose calendar the
 // answer belongs to.
 //
 // WHAT IT CANNOT SEE: an ISO string sliced through a variable

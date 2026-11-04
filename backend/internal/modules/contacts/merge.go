@@ -337,7 +337,7 @@ func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		return 0, err
 	}
 	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
-	if _, err := mergeEdgeWrite(ctx, tx, `archived_at = @archived`, mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
+	if err := archiveDuplicatesKeepingPrimarySlot(ctx, tx, true, mergeContactEdgeSource+` AND `+mergeContactEdgeDuplicate, args); err != nil {
 		return 0, err
 	}
 	relinked, err := mergeEdgeWrite(ctx, tx, `contact_id = @target, is_current_primary = `+mergeContactEdgePrimary, mergeContactEdgeSource, args)

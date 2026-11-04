@@ -77,14 +77,18 @@ type userRow struct {
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
 	Unused       bool
-	UpdatedAt    time.Time
-	MergedFrom   []crmcontracts.SeatName
+	// InviteMailState is nil unless the read asked and an invitation was mailed.
+	InviteMailState *string
+	UpdatedAt       time.Time
+	MergedFrom      []crmcontracts.SeatName
 	// ServiceExtension names the extension unit a service member serves; nil
 	// for every other seat.
 	ServiceExtension *string
 	// Assignable is whether the caller may make this member a record's owner;
 	// nil when the read did not ask.
 	Assignable *bool
+	// ConnectedMailboxes counts live capture connections; nil when not read.
+	ConnectedMailboxes *int
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -119,7 +123,8 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	  ELSE NULL::timestamptz END`
 
 var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user")
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
+	`, ` + inviteMailState
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -188,7 +193,8 @@ var listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused)
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
+		&u.InviteMailState)
 	return u, err
 }
 
@@ -284,26 +290,13 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 			return err
 		}
 		withholdActivity(ctx, in.Actor, rows, grants)
+		if err := s.markConnectedMailboxesTx(ctx, tx, rows); err != nil {
+			return err
+		}
 		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows, grants)
 		return err
 	})
 	return RosterPage{Users: rows, Page: page, Management: true, Actions: actions}, err
-}
-
-// markAssignable answers, per row, the owner-change check the write would run
-// for this caller, so a picker offers the owners the write accepts.
-func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		eligible, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
-		if err != nil {
-			return err
-		}
-		for i := range rows {
-			assignable := eligible[rows[i].ID]
-			rows[i].Assignable = &assignable
-		}
-		return nil
-	})
 }
 
 // withholdActivity clears last-active wherever the caller could not list the member's sessions:

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   catalogs,
   type Locale,
@@ -20,7 +20,7 @@ type BaseCurrencyLock = components["schemas"]["BaseCurrencyLock"];
 
 const SETTINGS: InstallationSettings = {
   name: "Brandt Automotive GmbH",
-  timezone: viewerZone(),
+  timezone: browserZone(),
   base_currency: "EUR",
   base_language: "en",
   fiscal_year_start_month: 1,

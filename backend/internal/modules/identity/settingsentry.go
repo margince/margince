@@ -163,18 +163,15 @@ func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock
 	})
 }
 
-// Country is where this installation is established, as a lower-case ISO
-// 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
-// rather than a permissive one: with no country to resolve, the outbound
-// authorization engine falls back to the floor every jurisdiction shares —
-// consent, with no exception — instead of picking a lenient default nobody
-// chose.
+// Country is where this installation's default legal entity is established, as
+// a lower-case ISO 3166-1 alpha-2 code. Empty means unstated.
 //
-// It is the input to jurisdiction resolution, not a display field. Which
-// messaging rules bind an outbound message follows from where the CONTROLLER
-// is established as well as where the recipient is, and this names the first
-// half. A wrong value here is a compliance fact, not a cosmetic one, which is
-// why it validates as a code rather than accepting free text.
+// It selects the data-protection rules: request deadlines, the controller and
+// privacy-contact disclosures of mail the default entity sends, and the
+// retention floor. Marketing rules do not follow it; they follow each
+// recipient's country (consent/ruleselectors.go). A wrong value here is a
+// compliance fact, not a cosmetic one, which is why it validates as a code
+// rather than accepting free text.
 //
 // Lower-case because that is the spelling jurisdiction.Code carries and a pack
 // declares; accepting either case here would make "DE" and "de" two
@@ -200,12 +197,10 @@ var Country = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none.",
-	// MachineryApplied because the outbound authorization engine reads it while
-	// applying the posture to its OWN write — the case that declaration exists
-	// for, and its doc's own words: "the posture must bind whoever the acting
-	// principal happens to be". A send runs under whatever credential asked for
-	// it, and which jurisdiction's rules bind that message is not a fact the
-	// asker's read grants may vary.
+	// MachineryApplied because the send path reads it while applying the
+	// posture to its own write, the case that declaration exists for. A send
+	// runs under whatever credential asked for it. Which rules bind that
+	// message is not a fact the asker's read grants may vary.
 	//
 	// Without it CountryOf's settings.ApplyTx refuses, and every send job fails
 	// with "installation.country is not declared MachineryApplied" — which is

@@ -248,5 +248,5 @@ func workspaceID(ctx context.Context) ids.WorkspaceID {
 	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
 }
 
-// WithClock keeps event timestamps reproducible for reporting attribution.
-func (s *Store) WithClock(clock func() time.Time) *Store { s.clock = clock; return s }
+// SetClock keeps event timestamps reproducible for reporting attribution.
+func (s *Store) SetClock(clock func() time.Time) *Store { s.clock = clock; return s }

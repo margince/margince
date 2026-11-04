@@ -33,9 +33,9 @@ import {
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
@@ -207,7 +207,7 @@ export function DealsScreen({
   const t = useT();
   const pageName = usePageName("deals");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const cf = useObjectCustomFields("deal", "create");
   const pipelinesQuery = usePipelines();
   const ownerChips = useOwnerChips();
@@ -405,7 +405,7 @@ export function DealsScreen({
         title={pageName}
         state={listState}
         unit="deals.unit"
-        columns={dealColumns(t, locale, recordZone, stageName)}
+        columns={dealColumns(t, locale, readerZone, stageName)}
         rowKey={(deal) => deal.id}
         rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
         action={

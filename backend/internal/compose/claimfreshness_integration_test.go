@@ -31,7 +31,7 @@ func TestPreviouslyAdmittedClaimsNeedCurrentSourceOrHumanAdoption(t *testing.T) 
 				e := integration.Setup(t)
 				now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
 				old := now.AddDate(-2, 0, 0)
-				e.Contacts.WithClock(func() time.Time { return now })
+				e.Contacts.SetClock(func() time.Time { return now })
 				contact := ids.From[ids.ContactKind](e.SeedContact(t, "Promise contact", &e.AdminUser))
 				company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Promise account", &e.AdminUser))
 				if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &contact, CompanyID: &company, IsCurrentPrimary: new(true), Source: "manual"}); err != nil {

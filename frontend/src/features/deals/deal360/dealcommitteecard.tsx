@@ -8,7 +8,7 @@ import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { AddRelationshipAction } from "../../records/relationships";
 import { type AddSeat, CommitteeReading, committeeFoot } from "./dealcommittee";
 import { committeeTeam } from "./dealcommitteeteam";
@@ -45,7 +45,7 @@ export function DealCommitteeCard({
   const t = useT();
   const canCreate = useCanWrite("relationship", "create");
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const assignments = useRecordAssignments("deal", dealId);
   const ownerName =
     useMemberName(ownerId).data ??

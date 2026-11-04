@@ -87,17 +87,13 @@ export function ConfirmModal({
   const t = useT();
   const headingId = useId();
   const body = Children.toArray(children).length > 0 || Boolean(error);
-  // Escape, the backdrop and the corner X all wait for a write in flight.
-  const close = () => {
-    if (!pending) onClose();
-  };
   const confirm = (event: MouseEvent<HTMLButtonElement>) => {
     if (!refuseUnreadableField(event.currentTarget)) onConfirm();
   };
   return (
     <Modal
       open={open}
-      onClose={close}
+      onClose={onClose}
       labelledBy={headingId}
       intent={intent}
       closeDisabled={pending}

@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { CompanyZoneProvider } from "../../lib/companyzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { ActorTag, AuditEntryLine, humanizeToken } from "./audit";
 
 afterEach(() => {
@@ -12,17 +14,6 @@ afterEach(() => {
   // what the next one reads.
   vi.restoreAllMocks();
 });
-
-// The viewer's zone as a screen asks for it. The formatters take their zone as
-// an argument and never consult resolvedOptions, so this redirects only a
-// screen's own lookup — which is exactly what a test of the zone CHOICE needs.
-function pretendViewerZone(timeZone: string): void {
-  const real = Intl.DateTimeFormat().resolvedOptions();
-  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
-    ...real,
-    timeZone,
-  });
-}
 
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 
@@ -43,8 +34,14 @@ const entry = (over: Partial<AuditLogEntry> = {}): AuditLogEntry => ({
   ...over,
 });
 
-const wrap = (ui: React.ReactNode) =>
-  render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+// The reader's own zone is named, so the day a line claims does not move with
+// the machine the suite runs on.
+const wrap = (ui: React.ReactNode, zone = "Europe/Berlin") =>
+  render(
+    <LocaleProvider initial="en">
+      <ViewerZoneProvider zone={zone}>{ui}</ViewerZoneProvider>
+    </LocaleProvider>,
+  );
 
 describe("humanizeToken", () => {
   it("de-underscores an enum data value into a readable phrase", () => {
@@ -359,22 +356,21 @@ describe("AuditEntryLine", () => {
     expect(screen.queryByText("Fleet size")).toBeNull();
   });
 
-  it("dates an entry on the company's clock, not the reader's", () => {
+  it("dates an entry on the reader's own clock", () => {
     // 18:00Z on 21 August is 20:00 the same day in Berlin and 01:00 the NEXT
-    // day in Ho Chi Minh City. An audit line is a fact in the shared book, so
-    // two investigators must be able to quote it by the same day: reading it on
-    // the viewer's clock is how one of them ends up quoting 22 August.
-    pretendViewerZone("Asia/Ho_Chi_Minh");
+    // day in Ho Chi Minh City. Every time is shown in the reader's own zone
+    // (#7894), and the line keeps the instant for anyone quoting another zone.
     wrap(
       <AuditEntryLine
         entry={entry({ occurred_at: "2026-08-21T18:00:00Z" })}
         meUserId={ME}
       />,
+      "Asia/Ho_Chi_Minh",
     );
     // en-GB renders DD/MM/YYYY (format.ts INTL_LOCALE), so the day is the first
     // field and the assertion is about which calendar day is claimed.
-    expect(screen.getByText(/^21\/08\/2026/)).toBeTruthy();
-    expect(screen.queryByText(/22\/08\/2026/)).toBeNull();
+    expect(screen.getByText(/^22\/08\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/21\/08\/2026/)).toBeNull();
   });
 
   it("keeps the machine-readable instant on the line it dates", () => {
@@ -387,4 +383,31 @@ describe("AuditEntryLine", () => {
       occurredAt,
     );
   });
+});
+
+// One instant, a company in Ho Chi Minh City and a reader in New York: a
+// signed-in screen prints the New York day. 18:00Z on 21 August is 14:00 on
+// the 21st in New York and 01:00 on the 22nd in Ho Chi Minh City.
+it("shows a history line on the reader's day, not the company's", () => {
+  render(
+    <LocaleProvider initial="en">
+      <CompanyZoneProvider zone="Asia/Ho_Chi_Minh">
+        <ViewerZoneProvider zone="America/New_York">
+          <AuditEntryLine
+            entry={{
+              id: "a1",
+              actor_type: "human",
+              actor_id: "human:someone",
+              action: "create",
+              entity_type: "custom_field",
+              entity_id: "cf-1",
+              occurred_at: "2026-08-21T18:00:00Z",
+            }}
+          />
+        </ViewerZoneProvider>
+      </CompanyZoneProvider>
+    </LocaleProvider>,
+  );
+  expect(screen.getByText(/21\/08\/2026/)).toBeTruthy();
+  expect(screen.queryByText(/22\/08\/2026/)).toBeNull();
 });

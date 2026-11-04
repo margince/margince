@@ -59,7 +59,7 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 	// The importing mailbox is the connector boundary; source and task use their real writers.
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, e.rep)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'to', $2)`, id, "rep-"+e.rep.String()+"@load.test")
-	if _, err := store.SetCaptureLabel(asClassifier(e), id, label); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, id, label); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.SetOwedVerdict(asClassifier(e), id, verdict, "prompts-test", dbNow(t, e)); err != nil {

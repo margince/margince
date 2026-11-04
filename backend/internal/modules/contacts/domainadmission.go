@@ -241,7 +241,7 @@ func reopenWithheldDispositionTx(
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
-		   SET pending_reason = NULL,
+		   SET pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,
 		       attempts = 0,
 		       next_attempt_at = now(),
 		       owner_id = COALESCE(owner_id, @owner),
@@ -320,7 +320,7 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET status = $4,
-		       pending_reason = NULL,
+		       pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,
 		       evidence = NULL,
 		       attempts = 0,
 		       next_attempt_at = now(),

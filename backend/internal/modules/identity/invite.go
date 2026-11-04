@@ -33,6 +33,9 @@ type InviteUserInput struct {
 	// TeamIDs are the teams the member joins on arrival, in the same
 	// transaction as the seat and the role.
 	TeamIDs []ids.UUID
+	// Mailed marks the set-password link as handed to the mail sender, which
+	// the roster reads as an invitation mail on its way.
+	Mailed bool
 }
 
 // InviteUser provisions a new INVITED member with the one target system role and
@@ -122,9 +125,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
-			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,
-			newUserID, tokenHash, inviteTokenTTL.String()); err != nil {
+			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at, mail_queued_at)
+			 VALUES ($1, 'password_reset', $2, now() + $3::interval, CASE WHEN $4 THEN now() END)`,
+			newUserID, tokenHash, inviteTokenTTL.String(), in.Mailed); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,

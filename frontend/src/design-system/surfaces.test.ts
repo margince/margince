@@ -34,7 +34,7 @@ import {
 import { blocks, resolve, themes } from "./tokens-testing";
 
 // A rule outside surfaces.css that names a rung or paints a member overrules the ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
-const LEDGER_CEILING = { spellings: 78, states: 6 };
+const LEDGER_CEILING = { spellings: 76, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
 const LADDER_SIZE = { surfaces: 80, overlays: 18 };
