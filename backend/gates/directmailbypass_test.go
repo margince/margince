@@ -390,6 +390,8 @@ func relayCall(name string, arity int) bool {
 		return arity == 4
 	case "SendAlternative":
 		return arity == 6
+	case "SendRelated":
+		return arity == 7
 	default:
 		return false
 	}
