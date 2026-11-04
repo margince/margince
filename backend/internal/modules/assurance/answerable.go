@@ -67,7 +67,7 @@ func answerableBesideDeals(ctx context.Context, tx pgx.Tx, found []Exception, ou
 				return nil, err
 			}
 		case SubjectKindForecastCall:
-			if auth.Require(ctx, "forecast", principal.ActionCreate) != nil {
+			if !auth.Allows(ctx, "forecast", principal.ActionCreate) {
 				continue
 			}
 			if out[e.ID], err = admitted(ensureCallAnswerable(ctx, tx, e.SubjectID)); err != nil {

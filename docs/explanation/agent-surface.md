@@ -138,9 +138,14 @@ choice. `internal/modules/ai/` owns it:
   workflow engine itself is in [who reads the events](write-backbone.md#5-the-consumer-side--groups--dedupe).)
 - **MCP** serves the tool surface at `/mcp` on the api: one registry, one admission gate, one audit
   stream, one transport.
-  `tools/list` is filtered on **scope** per caller. So the list shows the passport's scopes,
-  and does not promise that every listed tool will run. The seat limit and object RBAC are checked
-  again at each call, so either one can still refuse a listed tool.
+  `tools/list` is filtered per caller on the passport's **scopes**, the **seat** of its user and
+  that user's **grants**. A read seat is offered only read tools. A tool, or one action of a router,
+  is offered only when the user holds every check its call was measured to ask
+  ([mcp-tool-roles.md](../reference/mcp-tool-roles.md#what-each-call-needs)).
+
+  A router's `action` list, tier and description are cut to the actions left. A router with none
+  left is not listed. The gate still checks each call: its grants again, row scope and the
+  arguments.
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
   making the passport: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).

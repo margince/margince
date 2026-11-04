@@ -60,7 +60,16 @@ func WithImportJobWorkersForTest(into *ImportJobWorkers, failed *error) Option {
 // would only spend the bound.
 func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.previewWait = agents.WithImportWait(clock, within)
+		s.registryForTest = append(s.registryForTest, agents.WithImportWait(clock, within))
+		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithToolChecksRecordedForTest hands sink, after each tool call, the verb that
+// ran and the authority checks the gates asked of the caller on its way.
+func WithToolChecksRecordedForTest(sink func(verb string, checks []string)) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.registryForTest = append(s.registryForTest, agents.WithChecksRecordedForTest(sink))
 		s.rebuildToolRegistry(pool)
 	}
 }

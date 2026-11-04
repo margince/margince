@@ -79,7 +79,7 @@ func TagFilterClause(ctx context.Context, taggableType, idColumn string, tagIDs 
 	// words must not be able to learn which records carry one by watching a
 	// page shrink. Rendering nothing would WIDEN the answer, so the refusal is
 	// a predicate that selects no rows.
-	if auth.Require(ctx, "tag", principal.ActionRead) != nil {
+	if !auth.Allows(ctx, "tag", principal.ActionRead) {
 		return "FALSE"
 	}
 	switch mode {
@@ -181,7 +181,7 @@ func AttachRowTags[T any](
 	// not the words gets rows with no chips — the same withholding the
 	// record's own tags read performs, which a list that handed the words out
 	// anyway would make pointless.
-	if auth.Require(ctx, "tag", principal.ActionRead) != nil {
+	if !auth.Allows(ctx, "tag", principal.ActionRead) {
 		return nil
 	}
 	recordIDs := make([]ids.UUID, len(rows))

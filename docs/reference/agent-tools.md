@@ -194,13 +194,16 @@ parent in the path. The record tools take the same parent as a filter or a field
 
 The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The running server has the last word**, and what a live server shows can differ from the tables:
 
-- **`tools/list` is filtered by scope for each caller.** The dispatcher drops each tool whose `RequiredScope` the
-  passport does not hold (`invocableByCaller` in `backend/internal/modules/agents/dispatch.go`). So an agent made with
-  `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
-  list never shows what the gate will refuse.
+- **`tools/list` is filtered for each caller.** `invocableByCaller` in
+  `backend/internal/modules/agents/toollist.go` drops each tool whose `RequiredScope` the passport
+  does not hold, and each tool past the read scope for a read seat. `Registry.grantedTo` in
+  `backend/internal/modules/agents/toolchecks.go` then drops each tool, and each router action, whose
+  measured checks the user lacks ([mcp-tool-roles.md](mcp-tool-roles.md#what-each-call-needs)). So an
+  agent made with `["read"]` sees the read tools and nothing else, and a rep's agent is not offered
+  the admin's settings actions.
 
-  It answers **only for scope**. Each call checks the seat limit and object RBAC of the human who gave the
-  passport. They can still refuse a tool the list showed.
+  The list never shows what the gate refuses on the role alone. Each call still checks the user's grants,
+  row scope and the call's arguments, and they can refuse a call the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
   declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A

@@ -64,7 +64,7 @@ func (s *Store) relatedViaLinks(ctx context.Context, tx pgx.Tx, anchorType strin
 		// a neighbor is context the caller did not ask for by name, so a type
 		// they hold no grant on is absent rather than a 403 on a read they did
 		// not make. Search's branch admission takes the same posture.
-		if auth.Require(ctx, hop.entity, principal.ActionRead) != nil {
+		if !auth.Allows(ctx, hop.entity, principal.ActionRead) {
 			continue
 		}
 		items, err := hopNeighbors(ctx, tx, hop, anchorID, activityIDs)

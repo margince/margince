@@ -25,7 +25,7 @@ func (r Review) DirectableBy(ctx context.Context) bool {
 }
 
 func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
-	if auth.Require(ctx, entityCommunicationException, principal.ActionCreate) != nil {
+	if !auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
 		return false
 	}
 	for _, refusal := range refusals {
@@ -33,7 +33,7 @@ func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
 			continue
 		}
 		if commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyAdminException) &&
-			auth.RequireAdmin(ctx) == nil {
+			auth.AdminGranted(ctx) {
 			continue
 		}
 		return false

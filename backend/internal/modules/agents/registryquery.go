@@ -152,16 +152,20 @@ func outsideToolName(c rune) bool {
 // it will be refused for, and every one of them rides in a system prompt that
 // elision never touches.
 //
-// It answers the SCOPE axis only. Invoke remains the authority on the seat
-// ceiling and object RBAC, which are re-derived per call — this narrows what is
-// advertised and enforces nothing. An Unlisted tool is never offered.
+// It narrows by the passport's scopes, the seat and the checks each verb was
+// measured to ask (grantedTo). Invoke remains the authority on every one of
+// them: this narrows what is advertised and enforces nothing. An Unlisted tool
+// is never offered.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
 	words := r.lister()
 	for _, spec := range all {
-		if !spec.Unlisted && invocableByCaller(ctx, spec) {
-			out = append(out, words.listed(r.asSeenBy(ctx, spec)))
+		if spec.Unlisted || !invocableByCaller(ctx, spec) {
+			continue
+		}
+		if granted, ok := r.grantedTo(ctx, spec); ok {
+			out = append(out, words.listed(r.asSeenBy(ctx, granted)))
 		}
 	}
 	return out
@@ -174,8 +178,11 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if invocableByCaller(ctx, spec) {
-			out = append(out, r.asSeenBy(ctx, spec))
+		if !invocableByCaller(ctx, spec) {
+			continue
+		}
+		if granted, ok := r.grantedTo(ctx, spec); ok {
+			out = append(out, r.asSeenBy(ctx, granted))
 		}
 	}
 	return out

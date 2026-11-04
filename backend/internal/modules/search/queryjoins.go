@@ -230,7 +230,7 @@ func joinRelations(ctx context.Context, schema *schemaReads, entity string) ([]R
 		// caller who may not read this edge sees the same surface as one for
 		// whom the hop never existed — the existence-hiding every other refusal
 		// on this path keeps.
-		if join.object != "" && auth.Require(ctx, join.object, principal.ActionRead) != nil {
+		if join.object != "" && !auth.Allows(ctx, join.object, principal.ActionRead) {
 			continue
 		}
 		stored, err := schema.ofTable(ctx, join.table)

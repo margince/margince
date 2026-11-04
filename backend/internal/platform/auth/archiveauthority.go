@@ -75,7 +75,7 @@ func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {
 // object grant and the row's own arm only. The caller still asks the row write
 // gate, which keeps a colleague's record out of reach.
 func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID) error {
-	refusal := Require(ctx, r.object, principal.ActionDelete)
+	refusal := probe(ctx, r.object, principal.ActionDelete)
 	if refusal == nil || !Allows(ctx, r.object, principal.ActionUpdate) {
 		return refusal
 	}

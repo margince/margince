@@ -40,10 +40,9 @@ import (
 // tidy separation. A third surface needing this rule should lift the predicate
 // rather than copy it a third time.
 //
-// It answers the SCOPE axis only, which is what §5.7 promises. The seat
-// ceiling and object RBAC are re-derived per call through the authority seam
-// and are a named follow-up (§10.2); this filter must not pretend to enforce
-// them, and Registry.Invoke remains the authority for every one of them.
+// It answers the scope axis and the seat ceiling, the two Admit refuses a tool
+// on whatever its arguments; Registry.grantedTo answers the object grants. The
+// principal's seat is the one authentication loaded for this request.
 //
 // A ctx with no principal shows nothing rather than everything: the caller of
 // a tools/list that never authenticated has no scopes, and an empty surface is
@@ -75,6 +74,11 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if spec.HumanOnly {
 		return false
 	}
+	// Admit refuses a read seat every tool past the read scope, outright.
+	if spec.RequiredScope != principal.ScopeRead && !p.SeatType.CanMutate() {
+		return false
+	}
+	// Admit refuses a read seat every tool past the read scope, outright.
 	// A tool answering who the caller is stays offered whatever the passport
 	// is scoped to do; mcp.ToolSpec.SelfDescribing says why, and the
 	// admission gate reads the same flag so the listing cannot offer what the

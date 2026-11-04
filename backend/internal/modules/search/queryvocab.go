@@ -231,7 +231,7 @@ func (r *VocabularyResolver) Resolve(ctx context.Context, targets ...string) (Vo
 		if len(targets) > 0 && !slices.Contains(targets, branch.entity) {
 			continue
 		}
-		if auth.Require(ctx, branch.entity, principal.ActionRead) != nil {
+		if !auth.Allows(ctx, branch.entity, principal.ActionRead) {
 			continue
 		}
 		target, err := r.resolveTarget(ctx, schema, branch.entity)
@@ -328,7 +328,7 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 // result count would disclose what the row scope hides.
 func (r *VocabularyResolver) admittedRelations(ctx context.Context, relations []Relation) []Relation {
 	return slices.DeleteFunc(relations, func(rel Relation) bool {
-		return auth.Require(ctx, rel.Target, principal.ActionRead) != nil
+		return !auth.Allows(ctx, rel.Target, principal.ActionRead)
 	})
 }
 

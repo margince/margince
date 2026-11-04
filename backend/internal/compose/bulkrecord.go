@@ -185,7 +185,7 @@ func mayReadBatch(ctx context.Context, requester batchRequester) bool {
 	case requester.human != nil && humanBehind(actor) == *requester.human:
 		return true
 	}
-	return auth.RequireAdmin(ctx) == nil
+	return auth.AdminGranted(ctx)
 }
 
 // Status answers one bulk change as GET /v1/bulk/{id} reads it.

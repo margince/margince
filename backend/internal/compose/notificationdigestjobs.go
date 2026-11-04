@@ -214,7 +214,7 @@ func (w *notificationDigestWorker) digestFor(
 	if err != nil {
 		return err
 	}
-	if routineCombines(settings) && auth.Require(seatCtx, "deal", principal.ActionRead) == nil && (settings.MorningBrief == nil || *settings.MorningBrief != identity.DeliveryNone) {
+	if routineCombines(settings) && auth.Allows(seatCtx, "deal", principal.ActionRead) && (settings.MorningBrief == nil || *settings.MorningBrief != identity.DeliveryNone) {
 		return nil
 	}
 	clock := w.now
@@ -236,7 +236,7 @@ func (w *notificationDigestWorker) digestFor(
 	}); err != nil {
 		return err
 	}
-	if routineCombines(settings) && auth.Require(seatCtx, "deal", principal.ActionRead) == nil {
+	if routineCombines(settings) && auth.Allows(seatCtx, "deal", principal.ActionRead) {
 		return w.combinedDigestFor(seatCtx, seat, address, window, personal, settings, clock())
 	}
 
