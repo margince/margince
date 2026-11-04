@@ -184,10 +184,9 @@ Opening meeting settings from a booking draft opens another tab; coming back loa
 
 ### How do I change my time zone?
 <!-- opens: settings/account -->
-To change your own time zone in Margince, open Settings → **Account** and choose a place in the **Time zone** list under **Language and time zone**. Then choose **Save**.
-On your first sign-in, Margince sets it to your browser's time zone. A zone you pick yourself stays, whichever browser you sign in on.
-Your time zone is yours alone. It decides when customers can book time with you and when mail is sent to you.
-The company's reporting time zone is a separate setting; see the next question.
+To change your own time zone in Margince, open Settings → **Account**, pick a place in the **Time zone** list and choose **Save**.
+On your first sign-in, Margince uses your browser's time zone. A zone you pick stays on every browser.
+It decides when customers can book time with you and when mail is sent to you. The company's reporting time zone is separate; see the next question.
 Also called: change time zone, my time zone, local time.
 
 ### How do I change the company's reporting time zone?
