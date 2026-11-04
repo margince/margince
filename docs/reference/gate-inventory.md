@@ -205,6 +205,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
@@ -370,7 +371,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
 | `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT rather than by a sentinel. |
-| `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds a generated field cannot carry, because the bounded value is no struct field: an array item, a map value, one branch of a oneOf, a named scalar a field reaches through $ref. |
+| `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds no generated field can carry. |
 | `occurredatcompare_test.go` | H2 | Whether an activity has happened by a moment, or falls in a period, is asked of occurredday. |
 | `occurredprecisioncontract_test.go` | H2 | Every activity time on the wire says how precisely it is known. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the caller wrote is one number, declared in platform/database as CallerPredicateBudget. |
@@ -451,7 +452,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
-| `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
 | `usertimezonewriters_test.go` | H2 | A user's time zone has one writer after their row exists: writeTimezoneTx in identity/usertimezone.go. |

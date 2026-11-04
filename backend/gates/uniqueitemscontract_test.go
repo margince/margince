@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H3
+//gate:kind parity H3
 
 package gates
 
