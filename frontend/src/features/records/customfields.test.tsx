@@ -49,17 +49,25 @@ function builder(
   // The real region, not a spy standing where it goes: what the builder owes a
   // reader is a sentence on screen without a completion mark beside it, and a
   // `vi.fn()` in its place proves only that a function was called.
+  // The kinds an installed extension declared, seeded where the directory reads
+  // them so the builder offers the record type without a request.
+  const kinds = new QueryClient();
+  kinds.setQueryData(["record-kinds"], {
+    data: [{ name: "ext:alpha:visit", display_name: "Visit" }],
+  });
   wrap(
-    <ToastProvider>
-      <FieldBuilder
-        object="company"
-        pending={false}
-        onSubmit={onSubmit}
-        onCancel={onCancel}
-        {...overrides}
-      />
-      <ToastRegion />
-    </ToastProvider>,
+    <QueryClientProvider client={kinds}>
+      <ToastProvider>
+        <FieldBuilder
+          object="company"
+          pending={false}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          {...overrides}
+        />
+        <ToastRegion />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
   return { onSubmit, onCancel };
 }
@@ -140,6 +148,26 @@ describe("FieldBuilder", () => {
         label: "Renewal date",
         type: "date",
       }),
+    );
+  });
+
+  it("submits a record field with the one kind it points at", async () => {
+    const { onSubmit } = builder();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/Label/i), "Last visit");
+    await user.click(
+      screen.getByRole("button", { name: en["cf.type.record"] }),
+    );
+    const add = screen.getByRole("button", { name: "Add field" });
+    expect(add).toBeDisabled();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["cf.recordKind"] }),
+      "Visit",
+    );
+    await user.click(add);
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "record", options: ["ext:alpha:visit"] }),
     );
   });
 
@@ -228,6 +256,29 @@ describe("FieldTable", () => {
     expect(screen.queryByText("deal.cf_renewal_date")).toBeNull();
     expect(screen.getByText(/Date/)).toBeInTheDocument();
     expect(screen.getByText("You")).toBeInTheDocument();
+  });
+
+  it("names a record field's type, and a type this build does not know by its own name", () => {
+    wrap(
+      <FieldTable
+        object="deal"
+        fields={[
+          field({ id: "f-record", label: "Visit", type: "record" }),
+          field({
+            id: "f-newer",
+            label: "Newer",
+            type: "geopoint" as CustomField["type"],
+          }),
+        ]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(screen.getByText(en["cf.type.record"])).toBeInTheDocument();
+    expect(screen.getByText("geopoint")).toBeInTheDocument();
   });
 
   it("offers a live field's verbs in its row menu", async () => {

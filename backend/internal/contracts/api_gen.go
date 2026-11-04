@@ -9003,6 +9003,7 @@ const (
 	CreateCustomFieldRequestTypeMultiselect CreateCustomFieldRequestType = "multiselect"
 	CreateCustomFieldRequestTypeNumber      CreateCustomFieldRequestType = "number"
 	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
+	CreateCustomFieldRequestTypeRecord      CreateCustomFieldRequestType = "record"
 	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
 )
 
@@ -9020,6 +9021,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeNumber:
 		return true
 	case CreateCustomFieldRequestTypePicklist:
+		return true
+	case CreateCustomFieldRequestTypeRecord:
 		return true
 	case CreateCustomFieldRequestTypeText:
 		return true
@@ -9747,6 +9750,7 @@ const (
 	CustomFieldTypeMultiselect CustomFieldType = "multiselect"
 	CustomFieldTypeNumber      CustomFieldType = "number"
 	CustomFieldTypePicklist    CustomFieldType = "picklist"
+	CustomFieldTypeRecord      CustomFieldType = "record"
 	CustomFieldTypeText        CustomFieldType = "text"
 )
 
@@ -9764,6 +9768,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeNumber:
 		return true
 	case CustomFieldTypePicklist:
+		return true
+	case CustomFieldTypeRecord:
 		return true
 	case CustomFieldTypeText:
 		return true
@@ -11532,6 +11538,7 @@ const (
 	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
 	FilterVocabularyFieldTypeNumber      FilterVocabularyFieldType = "number"
 	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
+	FilterVocabularyFieldTypeRecord      FilterVocabularyFieldType = "record"
 	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
 )
 
@@ -11555,6 +11562,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeNumber:
 		return true
 	case FilterVocabularyFieldTypePicklist:
+		return true
+	case FilterVocabularyFieldTypeRecord:
 		return true
 	case FilterVocabularyFieldTypeText:
 		return true
@@ -42626,7 +42635,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved.
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -42643,7 +42652,7 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved.
 type CustomFieldStatus string
 
-// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
 type CustomFieldType string
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.

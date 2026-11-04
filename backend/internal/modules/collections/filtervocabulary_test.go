@@ -133,7 +133,11 @@ func TestEveryReportedOperatorCompilesAndEveryOmittedOneIsRefused(t *testing.T) 
 	// The loop above is only as good as the types it reached, so it says which.
 	// Silence here would let the catalogue stub stop working and leave a test
 	// named for the whole matrix quietly proving three sevenths of it.
-	for _, declared := range append(fieldcatalog.Types(), string(storekit.FieldID)) {
+	reported := []string{string(storekit.FieldID)}
+	for _, declared := range fieldcatalog.Types() {
+		reported = append(reported, string(customFieldTypes[declared]))
+	}
+	for _, declared := range reported {
 		if !seenTypes[declared] {
 			t.Errorf("no field of type %q was reported by any resource, so the operator check never covered that type", declared)
 		}

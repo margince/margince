@@ -401,4 +401,5 @@ var customFieldKinds = map[string]FieldKind{
 	fieldcatalog.TypeMultiselect: KindMultiselect,
 	fieldcatalog.TypePicklist:    KindText,
 	fieldcatalog.TypeBoolean:     KindBoolean,
+	fieldcatalog.TypeRecord:      KindText,
 }

@@ -102,6 +102,16 @@ describe("customFieldToFormField", () => {
     ]);
   });
 
+  it("renders a record field as a text control that keeps the record id", () => {
+    const record = cf({ type: "record", options: ["ext:alpha:visit"] });
+    expect(customFieldToFormField(record, BOOL_LABELS, TOO_PRECISE).type).toBe(
+      "text",
+    );
+    expect(customFieldsToBody({ cf_field: " 0f9e " }, [record])).toEqual({
+      cf_field: "0f9e",
+    });
+  });
+
   it("renders a boolean as a Yes/No select using the supplied labels", () => {
     const field = customFieldToFormField(
       cf({ type: "boolean" }),
