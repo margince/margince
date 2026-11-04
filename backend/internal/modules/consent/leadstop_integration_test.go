@@ -29,12 +29,16 @@ func TestTheSendCheckReadsStopsRecordedOnALead(t *testing.T) {
 			pressLeadLink(t, e, WithdrawalRef{LeadID: e.lead, Address: e.leadEmail, Scope: WithdrawalScopeAllMarketing})
 		}},
 		{name: "a press for the sent purpose refuses", refused: true, stop: func(t *testing.T, e *leadConsentEnv) {
-			pressLeadLink(t, e, WithdrawalRef{LeadID: e.lead, Address: e.leadEmail,
-				Scope: WithdrawalScopeNamedPurpose, PurposeID: e.newsletter.UUID})
+			pressLeadLink(t, e, WithdrawalRef{
+				LeadID: e.lead, Address: e.leadEmail,
+				Scope: WithdrawalScopeNamedPurpose, PurposeID: e.newsletter.UUID,
+			})
 		}},
 		{name: "a press for another purpose leaves this one sending", stop: func(t *testing.T, e *leadConsentEnv) {
-			pressLeadLink(t, e, WithdrawalRef{LeadID: e.lead, Address: e.leadEmail,
-				Scope: WithdrawalScopeNamedPurpose, PurposeID: e.doiNews.UUID})
+			pressLeadLink(t, e, WithdrawalRef{
+				LeadID: e.lead, Address: e.leadEmail,
+				Scope: WithdrawalScopeNamedPurpose, PurposeID: e.doiNews.UUID,
+			})
 		}},
 		{name: "a stop recorded on the lead under its earlier address refuses", refused: true, stop: func(t *testing.T, e *leadConsentEnv) {
 			pressLeadLink(t, e, WithdrawalRef{LeadID: e.lead, Address: "earlier-" + e.leadEmail, Scope: WithdrawalScopeAllMarketing})
