@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // commandBody decodes the buffered body into one decoder's view of it.
@@ -57,6 +58,9 @@ func commandBody[T any](body []byte) (T, error) {
 	}
 	if err := json.Unmarshal(body, &into); err != nil {
 		return into, httperr.Validation("body", "malformed_json", "the request body is not readable JSON")
+	}
+	if repeated := datasource.RejectRepeatedItems(&into); repeated != nil {
+		return into, httperr.Validation(repeated.Field, "duplicate", repeated.Error())
 	}
 	return into, nil
 }

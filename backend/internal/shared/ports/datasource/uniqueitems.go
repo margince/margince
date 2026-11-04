@@ -4,6 +4,7 @@
 package datasource
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -72,8 +73,8 @@ func repeatedInFields(value reflect.Value, path string) *FieldShapeError {
 }
 
 // repeatedItem refuses a list holding one item twice, naming both positions.
-// Generated item types are strings, UUIDs and enums, which a map can key; an
-// item that is not comparable falls back to a deep comparison.
+// Items are compared as JSON, the equality `uniqueItems` is defined by, so a
+// pointer or struct item counts by its value and never by its address.
 func repeatedItem(list reflect.Value, field string) *FieldShapeError {
 	for list.Kind() == reflect.Pointer && !list.IsNil() {
 		list = list.Elem()
@@ -81,35 +82,43 @@ func repeatedItem(list reflect.Value, field string) *FieldShapeError {
 	if list.Kind() != reflect.Slice {
 		return nil
 	}
-	seen := make(map[any]int, list.Len())
+	seen := make(map[string]int, list.Len())
 	for i := range list.Len() {
-		item := list.Index(i)
-		first, found := firstEqual(list, item, i, seen)
+		first, found := firstEqual(list, i, seen)
 		if found {
-			return &FieldShapeError{
-				Field: field,
-				Want:  "a list that names each item once",
-				Got:   fmt.Sprintf("a list whose item [%d] repeats item [%d]", i, first),
-			}
+			return RepeatedItemRefusal(field, first, i)
 		}
 	}
 	return nil
 }
 
-func firstEqual(list, item reflect.Value, at int, seen map[any]int) (int, bool) {
-	if item.Comparable() {
-		key := item.Interface()
-		if first, found := seen[key]; found {
-			return first, true
+// RepeatedItemRefusal is the one wording of a repeated item, for every decoder
+// that finds one.
+func RepeatedItemRefusal(field string, first, at int) *FieldShapeError {
+	return &FieldShapeError{
+		Field: field,
+		Want:  "a list that names each item once",
+		Got:   fmt.Sprintf("a list whose item [%d] repeats item [%d]", at, first),
+	}
+}
+
+func firstEqual(list reflect.Value, at int, seen map[string]int) (int, bool) {
+	item := list.Index(at).Interface()
+	wire, err := json.Marshal(item)
+	if err != nil {
+		// An item whose own MarshalJSON fails has no wire form to compare, so
+		// it is compared by value against every earlier item instead.
+		for earlier := range at {
+			if reflect.DeepEqual(list.Index(earlier).Interface(), item) {
+				return earlier, true
+			}
 		}
-		seen[key] = at
 		return 0, false
 	}
-	for earlier := range at {
-		if reflect.DeepEqual(list.Index(earlier).Interface(), item.Interface()) {
-			return earlier, true
-		}
+	if first, found := seen[string(wire)]; found {
+		return first, true
 	}
+	seen[string(wire)] = at
 	return 0, false
 }
 

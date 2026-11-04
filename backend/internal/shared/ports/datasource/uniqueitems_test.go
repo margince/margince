@@ -12,7 +12,13 @@ type uniqueRecipient struct {
 	IDs []string `json:"ids" unique:"items"`
 }
 
+type uniqueContact struct {
+	Name string `json:"name"`
+}
+
 type uniqueBody struct {
+	People     []uniqueContact   `json:"people" unique:"items"`
+	Pointers   []*string         `json:"pointers" unique:"items"`
 	Scopes     *[]string         `json:"scopes,omitempty" unique:"items"`
 	Recipients []uniqueRecipient `json:"recipients"`
 	Free       []string          `json:"free"`
@@ -24,13 +30,17 @@ func TestRejectRepeatedItemsNamesTheListThatRepeatsAnItem(t *testing.T) {
 		body uniqueBody
 		want string
 	}{
-		"omitted list":          {body: uniqueBody{}},
-		"each item once":        {body: uniqueBody{Scopes: &[]string{"read", "write"}}},
-		"one item twice":        {body: uniqueBody{Scopes: &[]string{"read", "write", "read"}}, want: "scopes"},
-		"inside a nested list":  {body: uniqueBody{Recipients: []uniqueRecipient{{IDs: []string{"a"}}, {IDs: []string{"b", "b"}}}}, want: "recipients[1].ids"},
-		"list without the tag":  {body: uniqueBody{Free: []string{"x", "x"}}},
-		"items no map can key":  {body: uniqueBody{Pairs: [][]int{{1, 2}, {1, 2}}}, want: "pairs"},
-		"distinct uncomparable": {body: uniqueBody{Pairs: [][]int{{1, 2}, {2, 1}}}},
+		"omitted list":               {body: uniqueBody{}},
+		"each item once":             {body: uniqueBody{Scopes: &[]string{"read", "write"}}},
+		"one item twice":             {body: uniqueBody{Scopes: &[]string{"read", "write", "read"}}, want: "scopes"},
+		"inside a nested list":       {body: uniqueBody{Recipients: []uniqueRecipient{{IDs: []string{"a"}}, {IDs: []string{"b", "b"}}}}, want: "recipients[1].ids"},
+		"list without the tag":       {body: uniqueBody{Free: []string{"x", "x"}}},
+		"items no map can key":       {body: uniqueBody{Pairs: [][]int{{1, 2}, {1, 2}}}, want: "pairs"},
+		"distinct uncomparable":      {body: uniqueBody{Pairs: [][]int{{1, 2}, {2, 1}}}},
+		"equal structs":              {body: uniqueBody{People: []uniqueContact{{Name: "Ana"}, {Name: "Ana"}}}, want: "people"},
+		"distinct structs":           {body: uniqueBody{People: []uniqueContact{{Name: "Ana"}, {Name: "Bo"}}}},
+		"one value, two pointers":    {body: uniqueBody{Pointers: []*string{new("x"), new("x")}}, want: "pointers"},
+		"two values behind pointers": {body: uniqueBody{Pointers: []*string{new("x"), new("y")}}},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
