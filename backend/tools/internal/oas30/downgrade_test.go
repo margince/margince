@@ -422,3 +422,21 @@ components:
 		t.Fatalf("Bytes = %v, want a refusal naming the minimum", err)
 	}
 }
+
+// An exclusive bound has no decoder behind it, so the contract cannot state one.
+func TestAnExclusiveBoundFailsTheDowngrade(t *testing.T) {
+	for _, keyword := range []string{"exclusiveMinimum", "exclusiveMaximum"} {
+		src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        limit: { type: integer, ` + keyword + `: 0 }
+`
+		if _, err := Bytes([]byte(src)); err == nil || !strings.Contains(err.Error(), keyword) {
+			t.Errorf("Bytes = %v, want a refusal naming %s", err, keyword)
+		}
+	}
+}

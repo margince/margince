@@ -37,3 +37,20 @@ func TestDecodeRefusesAnEmploymentBackfillLimitOutsideItsRange(t *testing.T) {
 		}
 	}
 }
+
+// The home repair preview requires a limit of at least 1, as a plain int. A
+// sent 0 is refused; a body that leaves the limit out is the handler's.
+func TestDecodeRefusesAHomeRepairPreviewOfZeroRecords(t *testing.T) {
+	for body, refused := range map[string]bool{`{"limit":0}`: true, `{"limit":1}`: false, `{}`: false} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/v1/admin/home-repair/preview", strings.NewReader(body))
+		var into crmcontracts.PreviewHomeRepairJSONBody
+		if Decode(rec, req, &into) == refused {
+			t.Errorf("%s: decoded = %v, want refused = %v (%d %s)", body, !refused, refused, rec.Code, rec.Body)
+			continue
+		}
+		if refused && (rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), `"field":"limit"`)) {
+			t.Errorf("%s answered %d %s, want 422 naming limit", body, rec.Code, rec.Body)
+		}
+	}
+}

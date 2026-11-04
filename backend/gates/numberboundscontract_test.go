@@ -22,27 +22,37 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// untaggableBounds are the bounds no generated field can carry. Each bounded
-// value is no struct field: an array item, a map value, a oneOf branch, or a
-// named scalar. No decoder holds them, so each says who does instead.
+// untaggableBounds are the bounds no generated field carries: an array item, a
+// map value, a oneOf branch, an inline response. No decoder holds them, so each
+// says who does instead.
 var untaggableBounds = gatekit.Waive(map[string]string{
-	"components.schemas.RowVersion":                                                        "readOnly: the server writes it and no request decodes it",
-	"components.schemas.WorkingHours.properties.days.items":                                "a response; the request twin is SaveWorkingHoursRequest",
-	"components.schemas.SaveWorkingHoursRequest.properties.days.items":                     "identity.validWorkingHours refuses a weekday outside 1..7",
-	"components.schemas.ApprovalEvidence.properties.source_lines.items":                    "a response; the server numbers the lines",
-	"components.schemas.AiDecisionSummary.properties.fallbacks.additionalProperties":       "a response map the server fills; no request decodes it",
-	"components.schemas.ProviderCredits.properties.pools.additionalProperties":             "a response map the server fills; no request decodes it",
-	"components.schemas.ProviderCategoryCost.properties.cost.additionalProperties":         "a response map the server fills; no request decodes it",
-	"components.schemas.VoiceCorpusSummary.properties.register_words.additionalProperties": "a response map the server fills; no request decodes it",
-	"components.schemas.AiOpenRouterProvider.properties.preferred_min_throughput.oneOf.0":  "ai.nonNegative refuses a negative one when routing is saved",
-	"components.schemas.AiOpenRouterProvider.properties.preferred_max_latency.oneOf.0":     "ai.nonNegative refuses a negative one when routing is saved",
+	"components.schemas.WorkingHours.properties.days.items":                                                  "a response; the request twin is SaveWorkingHoursRequest",
+	"components.schemas.SaveWorkingHoursRequest.properties.days.items":                                       "identity.validWorkingHours refuses a weekday outside 1..7",
+	"components.schemas.ApprovalEvidence.properties.source_lines.items":                                      "a response; the server numbers the lines",
+	"components.schemas.AiDecisionSummary.properties.fallbacks.additionalProperties":                         "a response map the server fills; no request decodes it",
+	"components.schemas.ProviderCredits.properties.pools.additionalProperties":                               "a response map the server fills; no request decodes it",
+	"components.schemas.ProviderCategoryCost.properties.cost.additionalProperties":                           "a response map the server fills; no request decodes it",
+	"components.schemas.VoiceCorpusSummary.properties.register_words.additionalProperties":                   "a response map the server fills; no request decodes it",
+	"components.schemas.AiOpenRouterProvider.properties.preferred_min_throughput.oneOf.0":                    "ai.nonNegative refuses a negative one when routing is saved",
+	"components.schemas.AiOpenRouterProvider.properties.preferred_max_latency.oneOf.0":                       "ai.nonNegative refuses a negative one when routing is saved",
+	"components.parameters.VoiceProfileVersionNumber.schema":                                                 "a path parameter; a number below 1 names no version and answers 404",
+	"paths./analytics/reports/{id}/revisions/{revision}/restore.parameters.1.schema":                         "a path parameter; a number below 1 names no revision and answers 404",
+	"paths./contacts/{id}/research/save.post.responses.200.content.application/json.schema.properties.saved": "an inline response; no request decodes it",
+	// A property typed through a one-branch allOf keeps none of the referenced
+	// schema's tags, so these fields are named rather than declarations.
+	"AttentionItem.version":      "a response; the row version is the server's",
+	"Company360NextStep.version": "a response; the row version is the server's",
+	"EmailPresentation.version":  "a response; the row version is the server's",
+	"EmailSummary.version":       "a response; the row version is the server's",
+	"WorklistItem.version":       "a response; the row version is the server's",
 })
 
-// Every `minimum` or `maximum` on a schema property or a request body field
-// must reach a generated field tagged with the same bounds. The tags are all
-// that datasource.RejectOutOfBoundsNumbers reads. A parameter's bound is held
-// by the router (queryMinimumTable). An inline response is never decoded.
-// Both sit outside this scan.
+// The generated fields that carry a bound are the fields the contract bounds,
+// no more and no fewer. The expected set comes from walking the contract as the
+// generator does. It covers named schemas, allOf merges, $ref'd scalars, inline
+// request bodies and query parameters. The two sets must match, bound for bound.
+// Every bounded schema in the contract must also be reached by that walk or be
+// waived, so a bound the generator drops cannot hide.
 func TestEveryNumberBoundIsTaggedForTheDecoders(t *testing.T) {
 	t.Parallel()
 	defer untaggableBounds.AssertAllMatched(t)
@@ -54,51 +64,208 @@ func TestEveryNumberBoundIsTaggedForTheDecoders(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
-	declared := map[string]string{}
-	boundDeclarations(&doc, nil, declared)
-	if len(declared) < 100 {
-		t.Fatalf("found %d bounded numbers in the contract; the scan no longer reads it", len(declared))
-	}
+	census := newBoundCensus(t, doc.Content[0])
+	census.walkContract()
 	tagged := boundTaggedFields(t, "internal/contracts/api_gen.go")
-	operations := operationIDsByPath(&doc)
+	for _, field := range sortedKeys(census.expected) {
+		if got := tagged[field]; got != census.expected[field] {
+			t.Errorf("the contract bounds %s to %q but the generated field carries %q; the decoders hold the field's",
+				field, census.expected[field], got)
+		}
+	}
+	for _, field := range sortedKeys(tagged) {
+		if _, ok := census.expected[field]; !ok {
+			t.Errorf("the generated field %s carries bounds %q that the contract walk does not place there", field, tagged[field])
+		}
+	}
+	declared := map[string]*yaml.Node{}
+	boundDeclarations(&doc, nil, declared)
 	for _, site := range sortedKeys(declared) {
-		if boundOutsideDecoders(strings.Split(site, ".")) {
-			continue
-		}
-		field, ok := boundFieldSite(strings.Split(site, "."), operations)
-		if !ok {
-			if !untaggableBounds.Waived(t, site) {
-				t.Errorf("%s declares a number bound that no generated field can carry; "+
-					"move it onto a property, or add it to untaggableBounds with who holds it", site)
-			}
-			continue
-		}
-		if got := tagged[field]; got != declared[site] {
-			t.Errorf("%s declares bounds %q but the generated field %s carries %q; the decoders hold the field's",
-				site, declared[site], field, got)
+		if !census.reached[declared[site]] && !untaggableBounds.Waived(t, site) {
+			t.Errorf("%s declares a number bound that no generated field carries; "+
+				"move it onto a property, or add it to untaggableBounds with who holds it", site)
 		}
 	}
 }
 
-func boundOutsideDecoders(path []string) bool {
-	if len(path) > 1 && path[0] == "components" && path[1] == "parameters" {
-		return true
+// boundCensus is the walk of the contract that names each field a bound lands on.
+type boundCensus struct {
+	t          *testing.T
+	schemas    *yaml.Node
+	parameters *yaml.Node
+	paths      *yaml.Node
+	expected   map[string]string
+	reached    map[*yaml.Node]bool
+}
+
+func newBoundCensus(t *testing.T, root *yaml.Node) *boundCensus {
+	components := mappingChild(root, "components")
+	if components == nil {
+		t.Fatal("the contract has no components")
 	}
-	return path[0] == "paths" && (slices.Contains(path, "parameters") || slices.Contains(path, "responses"))
+	return &boundCensus{
+		t: t, schemas: mappingChild(components, "schemas"), parameters: mappingChild(components, "parameters"),
+		paths: mappingChild(root, "paths"), expected: map[string]string{}, reached: map[*yaml.Node]bool{},
+	}
+}
+
+func (c *boundCensus) walkContract() {
+	for i := 0; i+1 < len(c.schemas.Content); i += 2 {
+		c.walkObject(c.schemas.Content[i+1], c.schemas.Content[i].Value)
+	}
+	for i := 0; i+1 < len(c.paths.Content); i += 2 {
+		item := c.paths.Content[i+1]
+		shared := mappingChild(item, "parameters")
+		for j := 0; j+1 < len(item.Content); j += 2 {
+			id := mappingScalar(item.Content[j+1], "operationId")
+			if id == "" {
+				continue
+			}
+			c.walkOperation(item.Content[j+1], strings.ToUpper(id[:1])+id[1:], shared)
+		}
+	}
+}
+
+// walkOperation places a query or header parameter's bound on OpParams and an
+// inline JSON body's on OpJSONBody. A path parameter is a handler argument.
+func (c *boundCensus) walkOperation(op *yaml.Node, name string, shared *yaml.Node) {
+	for _, list := range []*yaml.Node{shared, mappingChild(op, "parameters")} {
+		if list == nil {
+			continue
+		}
+		for _, param := range list.Content {
+			param = c.resolve(param)
+			if in := mappingScalar(param, "in"); in != "query" && in != "header" {
+				continue
+			}
+			if schema := mappingChild(param, "schema"); schema != nil {
+				c.expectBound(c.resolve(schema), name+"Params."+mappingScalar(param, "name"))
+			}
+		}
+	}
+	body := mappingChild(op, "requestBody")
+	if body == nil {
+		return
+	}
+	if content := mappingChild(body, "content"); content != nil {
+		if media := mappingChild(content, "application/json"); media != nil {
+			if schema := mappingChild(media, "schema"); schema != nil && mappingScalar(schema, "$ref") == "" {
+				c.walkObject(schema, name+"JSONBody")
+			}
+		}
+	}
+}
+
+// walkObject places the bounds of an object's properties under prefix; allOf
+// branches merge into the same struct.
+func (c *boundCensus) walkObject(schema *yaml.Node, prefix string) {
+	schema = deref(schema)
+	if all := mappingChild(schema, "allOf"); all != nil {
+		for _, branch := range all.Content {
+			c.walkObject(c.resolve(branch), prefix)
+		}
+	}
+	props := mappingChild(schema, "properties")
+	if props == nil {
+		return
+	}
+	for i := 0; i+1 < len(props.Content); i += 2 {
+		c.walkProperty(props.Content[i+1], prefix+"."+props.Content[i].Value)
+	}
+}
+
+func (c *boundCensus) walkProperty(prop *yaml.Node, field string) {
+	prop = deref(prop)
+	if mappingScalar(prop, "$ref") != "" {
+		c.expectBound(c.resolve(prop), field)
+		return
+	}
+	if ref := c.wrappedRef(prop); ref != nil {
+		if bounded(ref) && !untaggableBounds.Waived(c.t, field) {
+			c.t.Errorf("%s reaches a bounded schema through a one-branch allOf, which drops its tags; "+
+				"use a plain $ref, or add the field to untaggableBounds with who holds it", field)
+		}
+		return
+	}
+	c.expectBound(prop, field)
+	if items := mappingChild(prop, "items"); items != nil && mappingScalar(deref(items), "$ref") == "" {
+		c.walkObject(deref(items), field)
+	}
+	c.walkObject(prop, field)
+}
+
+// wrappedRef is the schema a property names as the one branch of an allOf.
+// The generator types the field as that schema without its extra tags.
+func (c *boundCensus) wrappedRef(prop *yaml.Node) *yaml.Node {
+	if all := mappingChild(prop, "allOf"); all != nil && len(all.Content) == 1 && mappingScalar(all.Content[0], "$ref") != "" {
+		return c.resolve(all.Content[0])
+	}
+	return nil
+}
+
+func bounded(schema *yaml.Node) bool {
+	return mappingScalar(schema, "minimum") != "" || mappingScalar(schema, "maximum") != ""
+}
+
+// deref follows a YAML alias to the node it repeats.
+func deref(node *yaml.Node) *yaml.Node {
+	for node.Kind == yaml.AliasNode {
+		node = node.Alias
+	}
+	return node
+}
+
+func (c *boundCensus) expectBound(schema *yaml.Node, field string) {
+	low, high := mappingScalar(schema, "minimum"), mappingScalar(schema, "maximum")
+	if low == "" && high == "" {
+		return
+	}
+	c.reached[schema] = true
+	if earlier, seen := c.expected[field]; seen && earlier != low+","+high {
+		c.t.Errorf("the contract walk places two bounds on %s: %q and %q", field, earlier, low+","+high)
+	}
+	c.expected[field] = low + "," + high
+}
+
+// resolve follows a local $ref to the schema or parameter it names.
+func (c *boundCensus) resolve(node *yaml.Node) *yaml.Node {
+	for range 8 {
+		node = deref(node)
+		ref := mappingScalar(node, "$ref")
+		if ref == "" {
+			return node
+		}
+		var into *yaml.Node
+		name := ""
+		switch {
+		case strings.HasPrefix(ref, "#/components/schemas/"):
+			into, name = c.schemas, strings.TrimPrefix(ref, "#/components/schemas/")
+		case strings.HasPrefix(ref, "#/components/parameters/"):
+			into, name = c.parameters, strings.TrimPrefix(ref, "#/components/parameters/")
+		default:
+			c.t.Fatalf("the contract walk cannot follow %s", ref)
+		}
+		next := mappingChild(into, name)
+		if next == nil {
+			c.t.Fatalf("%s names nothing", ref)
+		}
+		node = next
+	}
+	c.t.Fatal("a $ref chain longer than eight links")
+	return nil
 }
 
 // boundDeclarations records each schema declaring minimum or maximum under
-// its dotted document path, valued "min,max" with an absent end left empty.
-func boundDeclarations(node *yaml.Node, path []string, into map[string]string) {
+// its dotted document path.
+func boundDeclarations(node *yaml.Node, path []string, into map[string]*yaml.Node) {
 	switch node.Kind {
 	case yaml.DocumentNode:
 		for _, child := range node.Content {
 			boundDeclarations(child, path, into)
 		}
 	case yaml.MappingNode:
-		low, high := mappingScalar(node, "minimum"), mappingScalar(node, "maximum")
-		if low != "" || high != "" {
-			into[strings.Join(path, ".")] = low + "," + high
+		if mappingScalar(node, "minimum") != "" || mappingScalar(node, "maximum") != "" {
+			into[strings.Join(path, ".")] = node
 		}
 		for i := 0; i+1 < len(node.Content); i += 2 {
 			key, val := node.Content[i].Value, node.Content[i+1]
@@ -123,24 +290,6 @@ func mappingScalar(node *yaml.Node, key string) string {
 	return ""
 }
 
-// operationIDsByPath maps "paths.<path>.<method>" to its operationId.
-func operationIDsByPath(doc *yaml.Node) map[string]string {
-	out := map[string]string{}
-	paths := mappingChild(doc.Content[0], "paths")
-	if paths == nil {
-		return out
-	}
-	for i := 0; i+1 < len(paths.Content); i += 2 {
-		item := paths.Content[i+1]
-		for j := 0; j+1 < len(item.Content); j += 2 {
-			if id := mappingScalar(item.Content[j+1], "operationId"); id != "" {
-				out["paths."+paths.Content[i].Value+"."+item.Content[j].Value] = id
-			}
-		}
-	}
-	return out
-}
-
 func mappingChild(node *yaml.Node, key string) *yaml.Node {
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
@@ -148,47 +297,6 @@ func mappingChild(node *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
-}
-
-// boundFieldSite names the generated field a bounded schema becomes, as
-// Type.json[.json…]: a named schema's property, or a property of an inline
-// request body. allOf merges into one struct, so its branches add no
-// segment. A path through anything else, or ending on an array item, has no
-// field. A path's own segments may hold dots (a route), so a request body
-// is found by its tail.
-func boundFieldSite(path []string, operations map[string]string) (string, bool) {
-	var owner string
-	var rest []string
-	switch {
-	case len(path) > 3 && path[0] == "components" && path[1] == "schemas":
-		owner, rest = path[2], path[3:]
-	case path[0] == "paths":
-		body := slices.Index(path, "requestBody")
-		if body < 0 || len(path) < body+4 || path[body+3] != "schema" {
-			return "", false
-		}
-		id, ok := operations[strings.Join(path[:body], ".")]
-		if !ok {
-			return "", false
-		}
-		owner, rest = strings.ToUpper(id[:1])+id[1:]+"JSONBody", path[body+4:]
-	default:
-		return "", false
-	}
-	field := owner
-	for i := 0; i < len(rest); i++ {
-		switch {
-		case rest[i] == "properties" && i+1 < len(rest):
-			i++
-			field += "." + rest[i]
-		case rest[i] == "items" && i+1 < len(rest):
-		case rest[i] == "allOf" && i+1 < len(rest):
-			i++
-		default:
-			return "", false
-		}
-	}
-	return field, field != owner
 }
 
 // boundTaggedFields maps each generated field tagged with a bound, named

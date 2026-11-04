@@ -5,8 +5,10 @@ package datasource
 
 import (
 	"cmp"
+	"encoding/json"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 // MinimumTag and MaximumTag are the struct tags the contract generator puts on
@@ -20,21 +22,25 @@ const (
 // RejectOutOfBoundsNumbers names the first number sent outside its declared
 // range. Every decoder calls it, so no handler repeats a contract bound.
 //
-// A zero required number passes, as a zero time does in RejectOutOfRangeTimes.
-// It is also what an omitted field decodes to.
+// raw is the body the value was decoded from. A zero with no pointer is judged
+// only when raw holds its key. An omitted field decodes to the same zero, and
+// the handler refuses a required field the caller left out.
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
-func RejectOutOfBoundsNumbers(decoded any) *FieldShapeError {
-	return taggedFieldRefusal(reflect.ValueOf(decoded), "", outOfBounds)
+func RejectOutOfBoundsNumbers(decoded any, raw json.RawMessage) *FieldShapeError {
+	sent := sentKeys{raw: raw}
+	return taggedFieldRefusal(reflect.ValueOf(decoded), "", func(field reflect.StructField, value reflect.Value, name string) *FieldShapeError {
+		return outOfBounds(field, value, name, &sent)
+	})
 }
 
-func outOfBounds(field reflect.StructField, value reflect.Value, name string) *FieldShapeError {
+func outOfBounds(field reflect.StructField, value reflect.Value, name string, sent *sentKeys) *FieldShapeError {
 	low, hasLow := field.Tag.Lookup(MinimumTag)
 	high, hasHigh := field.Tag.Lookup(MaximumTag)
 	if !hasLow && !hasHigh {
 		return nil
 	}
-	if value.Kind() != reflect.Pointer && value.IsZero() {
+	if value.Kind() != reflect.Pointer && value.IsZero() && !sent.holds(name) {
 		return nil
 	}
 	for value.Kind() == reflect.Pointer {
@@ -101,4 +107,50 @@ func numberText(value reflect.Value) string {
 		return strconv.FormatUint(value.Uint(), 10)
 	}
 	return strconv.FormatFloat(value.Float(), 'g', -1, 64)
+}
+
+// sentKeys answers whether a body carried a value at a wire path such as
+// `items[1].weight`. The body is read once, on the first zero that asks.
+type sentKeys struct {
+	raw  json.RawMessage
+	tree any
+	read bool
+}
+
+func (k *sentKeys) holds(path string) bool {
+	if !k.read {
+		k.read = true
+		if len(k.raw) > 0 && json.Unmarshal(k.raw, &k.tree) != nil {
+			k.tree = nil
+		}
+	}
+	node := k.tree
+	for segment := range strings.SplitSeq(strings.ReplaceAll(path, "[", ".["), ".") {
+		if segment == "" {
+			continue
+		}
+		var found bool
+		if node, found = childAt(node, segment); !found {
+			return false
+		}
+	}
+	return node != nil
+}
+
+//craft:ignore naked-any a decoded JSON tree is maps, slices and scalars by construction
+func childAt(node any, segment string) (any, bool) {
+	if index, ok := strings.CutPrefix(segment, "["); ok {
+		list, isList := node.([]any)
+		at, err := strconv.Atoi(strings.TrimSuffix(index, "]"))
+		if !isList || err != nil || at < 0 || at >= len(list) {
+			return nil, false
+		}
+		return list[at], true
+	}
+	object, isObject := node.(map[string]any)
+	if !isObject {
+		return nil, false
+	}
+	child, found := object[segment]
+	return child, found
 }

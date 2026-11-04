@@ -4,6 +4,7 @@
 package datasource
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 )
@@ -20,11 +21,13 @@ type boundedBody struct {
 	Ceiling uint          `json:"ceiling" maximum:"10"`
 	Huge    *int64        `json:"huge,omitempty" maximum:"9007199254740992"`
 	Items   []boundedItem `json:"items"`
+	Pages   int           `json:"pages" minimum:"1"`
 }
 
 func TestRejectOutOfBoundsNumbersNamesTheNumberOutsideItsRange(t *testing.T) {
 	cases := map[string]struct {
 		body boundedBody
+		raw  string
 		want string
 	}{
 		"omitted optional number":   {body: boundedBody{}},
@@ -33,7 +36,10 @@ func TestRejectOutOfBoundsNumbersNamesTheNumberOutsideItsRange(t *testing.T) {
 		"below the minimum":         {body: boundedBody{Limit: new(pageSize(0))}, want: "limit"},
 		"above the maximum":         {body: boundedBody{Limit: new(pageSize(26))}, want: "limit"},
 		"a negative required count": {body: boundedBody{Days: -1}, want: "days"},
-		"an omitted required count": {body: boundedBody{Items: []boundedItem{{}}}},
+		"an omitted required count": {body: boundedBody{Items: []boundedItem{{}}}, raw: `{"items":[{}]}`},
+		"a required zero left out":  {body: boundedBody{}, raw: `{}`},
+		"a required zero sent":      {body: boundedBody{}, raw: `{"pages":0}`, want: "pages"},
+		"a zero sent in a list":     {body: boundedBody{Items: []boundedItem{{Weight: 1}, {}}}, raw: `{"items":[{"weight":1},{"weight":0}]}`, want: "items[1].weight"},
 		"an unsigned past its cap":  {body: boundedBody{Ceiling: 11}, want: "ceiling"},
 		"one past a bound 2^53":     {body: boundedBody{Huge: new(int64(9007199254740993))}, want: "huge"},
 		"a decimal bound in a list": {body: boundedBody{Items: []boundedItem{{Weight: 1}, {Weight: 0.25}}}, want: "items[1].weight"},
@@ -41,7 +47,7 @@ func TestRejectOutOfBoundsNumbersNamesTheNumberOutsideItsRange(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			got := RejectOutOfBoundsNumbers(&tc.body)
+			got := RejectOutOfBoundsNumbers(&tc.body, json.RawMessage(tc.raw))
 			switch {
 			case tc.want == "" && got != nil:
 				t.Fatalf("refused %q, want accepted", got.Field)
@@ -61,7 +67,7 @@ func TestAnOutOfBoundsRefusalNamesTheRangeAndTheValue(t *testing.T) {
 		"a floor only": {boundedBody{Days: -2}, "`days` must be a number of at least 0, not -2"},
 		"a cap only":   {boundedBody{Ceiling: 12}, "`ceiling` must be a number of at most 10, not 12"},
 	} {
-		got := RejectOutOfBoundsNumbers(&tc.body)
+		got := RejectOutOfBoundsNumbers(&tc.body, nil)
 		if got == nil || got.Error() != tc.want {
 			t.Errorf("%s: refusal %v, want %q", name, got, tc.want)
 		}

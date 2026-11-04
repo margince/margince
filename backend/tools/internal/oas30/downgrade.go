@@ -241,6 +241,9 @@ func rewriteKeyword(mapping, key, val *yaml.Node) (handled, drop bool, err error
 			addExtraTag(mapping, UniqueItemsTag, "items")
 		}
 		return true, false, nil
+	case "exclusiveMinimum", "exclusiveMaximum":
+		return false, false, fmt.Errorf("oas30: %s is not held by any request decoder or agent tool; "+
+			"state the bound as minimum or maximum instead", key.Value)
 	case MinimumTag, MaximumTag:
 		if _, err := strconv.ParseFloat(val.Value, 64); val.Kind != yaml.ScalarNode || err != nil {
 			return false, false, fmt.Errorf("oas30: %s %q is no number, so no decoder could hold it", key.Value, val.Value)
