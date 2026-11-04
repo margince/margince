@@ -197,6 +197,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		      JOIN activity_participant pp
 		        ON pp.activity_id = up.activity_id
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
+		       AND `+liveContactSQL("pp.contact_id")+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
@@ -244,7 +245,8 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
-		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
+		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
+		          AND `+liveContactSQL("pp.contact_id")+`)`,
 		users, contacts); err != nil {
 		return fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
 	}
@@ -443,6 +445,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		       AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		     WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		       AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
+		       AND `+liveContactSQL("pp.contact_id")+`
 		)
 		INSERT INTO graph_interaction_edge
 		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
@@ -480,6 +483,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		   AND `+graphCountedActivity+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
+		   AND `+liveContactSQL("pa.contact_id")+` AND `+liveContactSQL("pb.contact_id")+`
 		 GROUP BY pa.contact_id, pb.contact_id`); err != nil {
 		return fmt.Errorf("search: rebuilding the contact projection: %w", err)
 	}
