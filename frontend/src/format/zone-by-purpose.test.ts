@@ -230,6 +230,14 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/companies/companynextbar.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the badge and the sentence must both say two.",
+  },
+  {
+    file: "features/contacts/contacttoday.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the contact's badge and sentence must both say two.",
+  },
+  {
     file: "features/deals/deals.columns.test.tsx",
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },

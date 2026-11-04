@@ -336,10 +336,12 @@ Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#w
 Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,
 and a publish that still waits when a newer one comes gives up its place. That way only one
-publish runs at a time, but in no set order. The workflow does not check the order itself. The dist
-service does: `publish-release` is refused for a version that is not newer than the newest one it has
-published, and for the same version a second time. So a new run of an old build, or a dispatch of an
-older commit, fails at the publish step instead of landing after a newer release.
+publish runs at a time, but in no set order.
+
+The workflow does not check the order itself. The dist service does. It refuses `publish-release` for a
+version that is not newer than its newest published one. It also refuses the same version a second time.
+So a new run of an old build fails at the publish step. A dispatch of an older commit fails there too,
+instead of landing after a newer release.
 
 ## `release-tag.yml`
 

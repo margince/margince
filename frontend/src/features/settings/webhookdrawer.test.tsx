@@ -14,7 +14,7 @@ import { subscribableEventTypeValues } from "../../api/public-events";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
 // The subscription drawer, driven through the card the way an operator reaches
@@ -50,9 +50,18 @@ type Call = {
   body: unknown;
 };
 
+const WEBHOOKS_ONLY: GrantSpec = {
+  webhook_subscription: ["create", "update", "delete"],
+};
+const WEBHOOKS_AND_MEMBERS: GrantSpec = {
+  ...WEBHOOKS_ONLY,
+  user_admin: ["read", "update"],
+};
+
 function backend(
   subscriptions: unknown[],
   respond: (call: Call) => Response | undefined = () => undefined,
+  allow: GrantSpec = WEBHOOKS_AND_MEMBERS,
 ) {
   const calls: Call[] = [];
   const fetchMock = vi.fn(
@@ -63,9 +72,24 @@ function backend(
       if (path.endsWith("/v1/me")) {
         return jsonResponse(
           meFixture({
-            allow: { webhook_subscription: ["create", "update", "delete"] },
+            allow,
           }),
         );
+      }
+      if (path.endsWith("/v1/users") && req.method === "GET") {
+        return jsonResponse({
+          data: [
+            {
+              id: "user-2",
+              display_name: "Nia Next",
+              email: "nia@example.test",
+              status: "active",
+              is_agent: false,
+              roles: ["admin"],
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        });
       }
       if (path.endsWith("/webhook-subscriptions") && req.method === "GET") {
         return jsonResponse({
@@ -258,6 +282,39 @@ describe("the webhook subscription drawer", () => {
       body_template: null,
       body_content_type: null,
     });
+  });
+
+  // A subscription whose owner left delivers nothing. The row says so, and a
+  // new owner is picked in the drawer and sent alone with the edit.
+  it("marks a subscription whose owner left and hands it to a colleague", async () => {
+    const user = userEvent.setup();
+    const calls = backend([{ ...SUBSCRIPTION, owner_active: false }]);
+    render(<WebhooksCard />);
+
+    expect(
+      await screen.findByText(en["webhooks.row.ownerInactive"]),
+    ).toBeTruthy();
+    await user.click(await screen.findByTestId("edit-webhook-subscription"));
+    const owner = screen.getByRole("combobox", { name: /^Runs as/ });
+    expect(owner.textContent).toContain(en["webhooks.field.ownerInactive"]);
+    await pickOption(user, owner, "Nia Next");
+    await user.click(screen.getByTestId("save-webhook-subscription"));
+
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((c) => c.method === "PATCH");
+    expect((patch?.body as { owner_id?: string }).owner_id).toBe("user-2");
+  });
+
+  it("offers no owner to a caller who may not act for members", async () => {
+    const user = userEvent.setup();
+    backend([SUBSCRIPTION], undefined, WEBHOOKS_ONLY);
+    render(<WebhooksCard />);
+
+    await user.click(await screen.findByTestId("edit-webhook-subscription"));
+    expect(screen.getByRole("combobox", { name: /^State/ })).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: /^Runs as/ })).toBeNull();
   });
 
   it("sends a replaced value, keeps an abandoned Replace, and drops a removed header", async () => {
