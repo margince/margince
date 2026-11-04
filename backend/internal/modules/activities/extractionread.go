@@ -328,14 +328,16 @@ func (s *Store) GetExtractionRead(ctx context.Context, attachmentID, readID ids.
 	return out, err
 }
 
-// LatestExtractionRead answers "has this document been read, and how did it go".
-// ErrNotFound means never read, which the client renders as the offer to read
-// it — the honest difference between nobody asking and a reading that got
-// nothing.
+// LatestExtractionRead answers "has this document been read for this question,
+// and how did it go". ErrNotFound means never read for it. The client renders
+// that as the offer to read it, which differs from a reading that got nothing.
 //
 // A read of a record, so it carries the row-scope gate like every other one: a
 // reading of a document the caller cannot see does not exist.
-func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID) (ExtractionRead, error) {
+func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID, question string) (ExtractionRead, error) {
+	if err := refuseAgentChatReading(ctx, question); err != nil {
+		return ExtractionRead{}, err
+	}
 	var out ExtractionRead
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := resolveAttachmentParent(ctx, tx, attachmentID, principal.ActionRead); err != nil {
@@ -345,11 +347,11 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID)
 		out, err = scanExtractionRead(tx.QueryRow(ctx, `
 			SELECT `+extractionReadColumns+`
 			  FROM attachment_extraction
-			 WHERE attachment_id = $1
+			 WHERE attachment_id = $1 AND question = $2
 			 ORDER BY created_at DESC
-			 LIMIT 1`, attachmentID))
+			 LIMIT 1`, attachmentID, question))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%w: no extraction reading for attachment %s", apperrors.ErrNotFound, attachmentID)
+			return fmt.Errorf("%w: no %s reading for attachment %s", apperrors.ErrNotFound, question, attachmentID)
 		}
 		if err != nil {
 			return fmt.Errorf("read latest extraction reading: %w", err)
@@ -357,4 +359,18 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID)
 		return nil
 	})
 	return out, err
+}
+
+// refuseAgentChatReading keeps a chat reading from an agent. It is the model's
+// transcript of an image nobody checked, so an agent reading it would take a
+// suggestion for evidence. The filed message is what an agent may read.
+func refuseAgentChatReading(ctx context.Context, question string) error {
+	if question != ExtractionQuestionChatCapture {
+		return nil
+	}
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalAgent {
+		return fmt.Errorf("%w: a chat reading is unconfirmed until someone files it, so an agent cannot read it",
+			apperrors.ErrPermissionDenied)
+	}
+	return nil
 }

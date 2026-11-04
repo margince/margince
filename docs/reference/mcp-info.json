@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195042,
+    "tool_catalog_bytes": 195112,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50075,
+    "approx_wire_tokens_total": 50092,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93643,
+      "input_schema_bytes": 93713,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 136314
+      "description_plus_input_schema_bytes": 136384
     }
   },
   "tools": {
@@ -7351,6 +7351,10 @@
             },
             "provider": {
               "description": "scheduling_calendars only",
+              "type": "string"
+            },
+            "question": {
+              "description": "document_extraction only",
               "type": "string"
             },
             "record_type": {

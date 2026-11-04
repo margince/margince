@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 190.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50075 |
+| Approx. wire tokens | 50092 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 24% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
-| Input schemas | 91.4 KB | 48% | Yes, every step |
+| Input schemas | 91.5 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **133.1 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **133.2 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1489 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1507 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 880 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
@@ -8035,6 +8035,10 @@ own fields.
     },
     "provider": {
       "description": "scheduling_calendars only",
+      "type": "string"
+    },
+    "question": {
+      "description": "document_extraction only",
       "type": "string"
     },
     "record_type": {
