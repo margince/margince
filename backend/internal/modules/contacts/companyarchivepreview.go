@@ -32,11 +32,14 @@ func (s *Store) PreviewCompanyArchive(ctx context.Context, id ids.CompanyID, ver
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return out, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritableLive(ctx, tx, companyEntity, id.UUID); err != nil {
+			return err
+		}
+		if err := auth.EnsureArchivable(ctx, tx, auth.CompanyArchive, id.UUID); err != nil {
 			return err
 		}
 		if err := previewFieldsVisible(ctx, companyEntity, "domains", "relationship_types"); err != nil {

@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // RefuseArchiveContact answers every authority refusal ArchiveContact would
@@ -29,11 +28,14 @@ import (
 // refuse. No version probe: a version that is right at staging can be wrong by
 // the time the human answers, so the pin is the write's business.
 func (s *Store) RefuseArchiveContact(ctx context.Context, id ids.ContactID) error {
-	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, contactEntity, id.UUID)
+		if err := auth.EnsureWritable(ctx, tx, contactEntity, id.UUID); err != nil {
+			return err
+		}
+		return auth.EnsureArchivable(ctx, tx, auth.ContactArchive, id.UUID)
 	})
 }
 
@@ -46,7 +48,7 @@ func (s *Store) ArchiveContact(
 	ctx context.Context, id ids.ContactID, ifVersion *int64, opts ...WriteOption,
 ) (crmcontracts.Contact, error) {
 	options := collectWriteOptions(opts)
-	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	active, err := s.activeColumns(ctx, contactEntity)
@@ -69,7 +71,7 @@ func (s *Store) ArchiveContact(
 // ArchiveContact asks and answers nothing: the caller already knows which row
 // it archived.
 func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64) error {
-	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return err
 	}
 	return archiveContactInTx(ctx, tx, id, ifVersion, writeOptions{})
@@ -79,6 +81,9 @@ func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactI
 // ask: the row's write check, the caller's precondition, and the cascade.
 func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, options writeOptions) error {
 	if err := auth.EnsureWritable(ctx, tx, contactEntity, id.UUID); err != nil {
+		return err
+	}
+	if err := auth.EnsureArchivable(ctx, tx, auth.ContactArchive, id.UUID); err != nil {
 		return err
 	}
 	// The precondition, under the row lock the write takes: a caller that

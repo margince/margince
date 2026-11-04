@@ -6007,6 +6007,10 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
+  "contact.archiveRefused":
+    "Only the contact’s owner or a manager can archive this contact.",
+  "company.archiveRefused":
+    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",

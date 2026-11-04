@@ -48,6 +48,11 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
 		return err
 	}
+	if err := stampArchivable(ctx, tx, auth.CompanyArchive, companies,
+		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
+		func(o *crmcontracts.Company, may bool) { o.Archivable = &may }); err != nil {
+		return err
+	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Company, len(companies))
 	companyIDs := make([]ids.UUID, len(companies))
 	// The object grant comes first, as it does on the two lists themselves: a

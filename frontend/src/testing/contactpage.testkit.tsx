@@ -40,6 +40,8 @@ export const view: Contact360 = {
     // page asks for. Absent it the fixture describes a contact this reader
     // may not write, and the controls correctly disappear.
     writable: true,
+    // The server's per-row archive answer, which the Archive verb reads.
+    archivable: true,
     version: 1,
     primary_email: "dana@brandt.example",
     emails: [
