@@ -1,0 +1,63 @@
+/* Numbered reasons, the source as a quote, and what it costs to wait. */
+.worklist-why-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+  counter-reset: why-reason;
+}
+
+.worklist-why-reasons > li {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: baseline;
+  counter-increment: why-reason;
+}
+
+.worklist-why-reasons > li::before {
+  content: counter(why-reason);
+  display: grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgChip);
+  border: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+}
+
+.worklist-why-quote {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.worklist-why-quote blockquote {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgChip);
+  border: 1px solid var(--borderSubtle);
+  font-weight: var(--fontWeightMedium);
+}
+
+.worklist-why-if {
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+  color: var(--warningText);
+}
+
+.worklist-why-if {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.worklist-why-if > .t-caption {
+  color: var(--textSecondary);
+}

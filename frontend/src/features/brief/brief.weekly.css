@@ -219,3 +219,29 @@
 .brief-report-closing > p {
   margin: 0;
 }
+
+/* The weekly reads like the morning: cards on the page, each section headed
+   on a tinted band, Margince's own paragraph on the indigo one. */
+.brief-weekly-page.page-pane {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+.brief-weekly-page > .brief-report {
+  gap: var(--space-8);
+}
+.brief-report-section-head {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accentMed);
+  border-radius: var(--r-md);
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+.brief-report-narrative.card {
+  border-color: var(--aiMed);
+  background-image: linear-gradient(var(--aiLight), var(--aiLight));
+}
+.brief-report-section-head > :first-child {
+  color: inherit;
+}

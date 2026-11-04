@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { en } from "../../i18n/en";
 import {
@@ -76,11 +76,17 @@ test("a reminder an automation wrote says which one and what it asks", async () 
     await screen.findByText(en["tasks.origin.no_activity_reminder"]),
   ).toBeTruthy();
   expect(screen.getByText(en["worklist.why.title"])).toBeTruthy();
+  const reasons = screen.getByRole("list", {
+    name: en["worklist.why.reasons"],
+  });
   expect(
-    screen.getByText(
-      `${en["worklist.because.due_today"]} · ${en["worklist.because.unassigned"]}`,
-    ),
-  ).toBeTruthy();
+    within(reasons)
+      .getAllByRole("listitem")
+      .map((reason) => reason.textContent),
+  ).toEqual([
+    en["worklist.because.due_today"],
+    en["worklist.because.unassigned"],
+  ]);
   expect(screen.getByText(en["worklist.consequence.task_slips"])).toBeTruthy();
 });
 
@@ -117,5 +123,7 @@ test("a row with no reasons still says what it asks", async () => {
   openTask(QUIET_REMINDER, { ...ROW, because: [], consequence: "none" });
 
   expect(await screen.findByText(en["worklist.ask.task"])).toBeTruthy();
-  expect(screen.queryByText(en["worklist.why.reasons"])).toBeNull();
+  expect(
+    screen.queryByRole("list", { name: en["worklist.why.reasons"] }),
+  ).toBeNull();
 });

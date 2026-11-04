@@ -7,7 +7,6 @@
 // drawn nowhere on it. A details view that leaves both out shows a title and a
 // date. That says neither what the work is nor what to do about it.
 
-import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -16,6 +15,8 @@ import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { rowAnswer } from "./worklist.row.answer";
+
+import "./worklist.why.css";
 
 export function WorklistWhy({
   item,
@@ -27,13 +28,36 @@ export function WorklistWhy({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const facts = whyFacts(item, t, locale, viewerZone());
+  const reasons = whyReasons(item, t, locale, viewerZone());
   return (
-    <Panel title={t("worklist.why.title")}>
+    <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>
         <div className="form-stack">
           <p>{t(askKey(item))}</p>
-          {facts.length > 0 && <FactList facts={facts} />}
+          {reasons.length > 0 && (
+            <ol
+              className="worklist-why-reasons"
+              aria-label={t("worklist.why.reasons")}
+            >
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ol>
+          )}
+          {item.detail && (
+            <figure className="worklist-why-quote">
+              <figcaption className="t-caption">
+                {t("worklist.why.detail")}
+              </figcaption>
+              <blockquote>{item.detail}</blockquote>
+            </figure>
+          )}
+          {item.consequence !== "none" && (
+            <p className="worklist-why-if">
+              <span className="t-caption">{t("worklist.why.consequence")}</span>
+              {t(`worklist.consequence.${item.consequence}`)}
+            </p>
+          )}
           {answer && <RowVerbs item={item} />}
         </div>
       </PanelBody>
@@ -59,38 +83,14 @@ function RowVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   );
 }
 
-// A fact the row does not carry is left out, not drawn blank. An empty value
-// would claim the row has no reason.
-function whyFacts(
+// A reason with no words in this language is left out, not drawn blank.
+function whyReasons(
   item: WorklistItem,
   t: Translator,
   locale: Locale,
   zone: string,
-): Fact[] {
-  const reasons = item.because
+): string[] {
+  return item.because
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((text): text is string => text !== null);
-  const facts: Fact[] = [];
-  if (reasons.length > 0) {
-    facts.push({
-      key: "reasons",
-      term: t("worklist.why.reasons"),
-      value: reasons.join(" · "),
-    });
-  }
-  if (item.detail) {
-    facts.push({
-      key: "detail",
-      term: t("worklist.why.detail"),
-      value: item.detail,
-    });
-  }
-  if (item.consequence !== "none") {
-    facts.push({
-      key: "consequence",
-      term: t("worklist.why.consequence"),
-      value: t(`worklist.consequence.${item.consequence}`),
-    });
-  }
-  return facts;
 }

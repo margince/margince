@@ -89,7 +89,8 @@
   .ob-voice-building,
   .voicekind,
   .compose-reasons-card,
-  .page-pane
+  .page-pane,
+  .brief-main .brief-agent-section .magic-line
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -186,7 +187,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -268,7 +270,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -365,7 +368,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -447,7 +451,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -529,7 +534,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -626,7 +632,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -708,7 +715,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -790,7 +798,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -872,7 +881,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1024,7 +1034,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1141,7 +1152,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -1223,7 +1235,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1340,7 +1353,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -1422,7 +1436,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   )
   :where(
     .panel,
@@ -1504,7 +1519,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1640,7 +1656,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .brief-main .brief-agent-section .magic-line
   ) {
   background-color: var(--ground);
 }

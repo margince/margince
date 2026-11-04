@@ -33,7 +33,8 @@
   min-inline-size: var(--space-5);
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
-  background: var(--bgElevated);
+  corner-shape: round;
+  background: var(--ground);
   color: var(--accentText);
   text-align: center;
 }
@@ -313,7 +314,7 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgChip);
+  background-image: linear-gradient(var(--bgChip), var(--bgChip));
   font: var(--fontBodyLarge);
   font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
@@ -337,6 +338,7 @@
 .brief-task-tick .icon-action .btn.btn-icon {
   border-color: transparent;
   border-radius: var(--r-full);
+  corner-shape: round;
   background: none;
   box-shadow: none;
 }
