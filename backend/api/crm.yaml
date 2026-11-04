@@ -74261,7 +74261,7 @@ components:
         The changes Margince made to the caller's deals that are neither accepted nor undone.
         Every count is a number of deals; a deal with two kinds of change counts once in
         `deals` and once under each kind.
-      required: [as_of, deals, closed, redated, revalued, probabilities, moved, base_currency, bundles, truncated]
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, base_currency, bundles, truncated]
       properties:
         as_of: { type: string, format: date-time }
         deals: { type: integer, description: Deals with at least one open change. }
@@ -74270,6 +74270,7 @@ components:
         revalued: { type: integer, description: Deals given a new amount. }
         probabilities: { type: integer, description: Deals given a new probability. }
         moved: { type: integer, description: Deals Margince moved to a later stage. }
+        opened: { type: integer, description: Deals Margince opened from buying evidence. }
         base_currency: { type: string, description: The currency of every `value_base_minor`. }
         bundles:
           type: array
@@ -74294,7 +74295,7 @@ components:
           description: The changes, newest first.
         kinds:
           type: array
-          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move] }
+          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open] }
         value_base_minor:
           type: integer
           format: int64
@@ -74376,6 +74377,12 @@ components:
           maxItems: 50
           items: { type: string, format: uuid }
           description: The changes to take back, all on this deal.
+        archive_confirmed:
+          type: boolean
+          description: |
+            The owner confirmed archiving a deal Margince opened that the team has added notes,
+            tasks or edits to since. Without it such a deal is kept, with the reason
+            `needs_confirmation` and the counts.
 
     UndoMarginceChangeKept:
       type: object
@@ -74386,7 +74393,13 @@ components:
         kind: { type: string, description: The kind of change; absent when the change could not be read. }
         reason:
           type: string
-          enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew]
+          enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew, needs_confirmation]
+        team_notes:
+          type: integer
+          description: With `needs_confirmation`, the notes the team added to the opened deal.
+        team_tasks:
+          type: integer
+          description: With `needs_confirmation`, the tasks the team added to the opened deal.
 
     TeamMarginceChangeGroup:
       type: object

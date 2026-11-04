@@ -97,8 +97,8 @@ changes.
 since. After an Undo, Margince does not make that change on the deal again.
 That lasts until a new message, offer or stage move arrives on the deal.
 
-The switches are **Close dates**, **Deal amounts**, **Win probabilities** and
-**Stage moves** among the automatic changes. Margince checks the switch again
+The switches are **Close dates**, **Deal amounts**, **Win probabilities**,
+**Stage moves** and **New deals** among the automatic changes. Margince checks the switch again
 just before it writes.
 
 ## When the deal reached a later stage
@@ -108,3 +108,18 @@ and never to won or lost. It moves a deal only across stages that list
 criteria. A message, meeting or note on the deal must show each of the
 criteria of each stage the deal leaves. **Undo** moves the deal back, unless someone moved it since. An admin
 can stop all stage moves in the installation settings.
+
+## When the customer asks for an offer
+
+Margince looks for a company with no open deal where a customer asked for an
+offer or a proposal. If the company has an owner, Margince opens the
+deal for that owner at the first stage. It sets an amount only when the
+customer wrote a number and a currency. Home, the morning mail and the deal show
+what it read, and when.
+
+**Undo** archives the deal. Margince then does not open a deal on the same
+evidence; a new request opens one again. If your team added notes or tasks to
+the deal, Undo asks first.
+
+A company with no owner gets a suggestion instead, as does one whose owner
+switched **New deals** off or left.

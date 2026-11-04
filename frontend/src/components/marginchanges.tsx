@@ -15,6 +15,7 @@ import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { undoResultText } from "../lib/changecopy";
 import {
+  archiveQuestion,
   type MarginceChangeBundle,
   type MarginceChangeSummary,
   useUndoMarginceChanges,
@@ -30,6 +31,7 @@ const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_amount: "changes.kind.deal_amount",
   deal_probability: "changes.kind.deal_probability",
   stage_move: "changes.kind.stage_move",
+  deal_open: "changes.kind.deal_open",
 };
 
 /** What changed on one deal, in words. */
@@ -120,43 +122,74 @@ export function BundleUndo({
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
   const [answer, setAnswer] = useState<string | null>(null);
+  const [asking, setAsking] = useState<{ notes: number; tasks: number } | null>(
+    null,
+  );
   if (answer) {
     return <span role="status">{answer}</span>;
   }
   if (!writable || bundles.length === 0) {
     return null;
   }
+  const press = (archiveConfirmed: boolean) =>
+    undo.mutate(
+      { bundles, archiveConfirmed },
+      {
+        onSuccess: (results) => {
+          const only = results.length === 1 ? results[0] : undefined;
+          const question = only && !archiveConfirmed && archiveQuestion(only);
+          if (question) {
+            setAsking(question);
+            return;
+          }
+          setAsking(null);
+          if (only) {
+            setAnswer(undoResultText(only, t));
+            return;
+          }
+          const kept = results.filter((r) => r.outcome !== "undone").length;
+          setAnswer(
+            kept === 0
+              ? plural("changes.undoAllDone", results.length, {
+                  count: formatNumber(results.length, locale),
+                })
+              : t("changes.undoAllPartly", {
+                  undone: formatNumber(results.length - kept, locale),
+                  kept: formatNumber(kept, locale),
+                }),
+          );
+        },
+      },
+    );
   return (
     <>
-      <Button
-        variant="ghost"
-        pending={undo.isPending}
-        busyLabel={t("history.undo.busy")}
-        onClick={() =>
-          undo.mutate(bundles, {
-            onSuccess: (results) => {
-              const only = results.length === 1 ? results[0] : undefined;
-              if (only) {
-                setAnswer(undoResultText(only, t));
-                return;
-              }
-              const kept = results.filter((r) => r.outcome !== "undone").length;
-              setAnswer(
-                kept === 0
-                  ? plural("changes.undoAllDone", results.length, {
-                      count: formatNumber(results.length, locale),
-                    })
-                  : t("changes.undoAllPartly", {
-                      undone: formatNumber(results.length - kept, locale),
-                      kept: formatNumber(kept, locale),
-                    }),
-              );
-            },
-          })
-        }
-      >
-        {label}
-      </Button>
+      {asking ? (
+        <>
+          <span role="status">
+            {t("changes.undo.confirmArchive", {
+              notes: formatNumber(asking.notes, locale),
+              tasks: formatNumber(asking.tasks, locale),
+            })}
+          </span>
+          <Button
+            variant="ghost"
+            pending={undo.isPending}
+            busyLabel={t("history.undo.busy")}
+            onClick={() => press(true)}
+          >
+            {label}
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="ghost"
+          pending={undo.isPending}
+          busyLabel={t("history.undo.busy")}
+          onClick={() => press(false)}
+        >
+          {label}
+        </Button>
+      )}
       {undo.isError && <ErrorLine error={undo.error} />}
     </>
   );

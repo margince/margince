@@ -15352,6 +15352,9 @@ export const en = {
   "autonomy.kind.deal_stage_move.label": "Stage moves",
   "autonomy.kind.deal_stage_move.help":
     "Moves a deal to a later stage when the customer’s own words show it got there, such as a request for the contract draft. Never to Won and never back. Each move shows on Home with an Undo.",
+  "autonomy.kind.deal_open.label": "New deals",
+  "autonomy.kind.deal_open.help":
+    "Opens a deal for a company you own when the customer asks to buy, such as a request for an offer. It is yours, at the first stage. Each new deal shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18341,6 +18344,11 @@ export const en = {
   "changes.kind.deal_close_date": "New close date",
   "changes.kind.deal_amount": "New amount",
   "changes.kind.deal_probability": "New probability",
+  "changes.kind.deal_open": "Opened from buying evidence",
+  "changes.undo.confirmArchive":
+    "This deal now has {notes} notes and {tasks} tasks from your team. Archive it anyway?",
+  "changes.undo.archived":
+    "Archived. Margince will not open a deal for this again unless new buying evidence arrives.",
   "changes.kind.stage_move": "Moved to a later stage",
   "changes.summary_one": "Margince updated {count} of your deals: {parts}",
   "changes.summary_other": "Margince updated {count} of your deals: {parts}",

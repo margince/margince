@@ -62,6 +62,7 @@ function routes(pending: Bundle[], undo?: (body: unknown) => Response) {
         revalued: pending.filter((b) => b.kinds.includes("deal_amount")).length,
         probabilities: 0,
         moved: pending.filter((b) => b.kinds.includes("stage_move")).length,
+        opened: pending.filter((b) => b.kinds.includes("deal_open")).length,
         base_currency: "EUR",
         bundles: pending,
         truncated: false,
@@ -135,6 +136,74 @@ it("undoes one deal's bundle and names the field it kept", async () => {
       { deal_id: bundles[1]?.deal_id, version: 7, audit_log_ids: ["a2", "b2"] },
     ],
   });
+});
+
+it("asks before archiving an opened deal the team worked on, then archives it", async () => {
+  const opened = bundle(4, ["deal_open"], ["o4"]);
+  const bodies: unknown[] = [];
+  const calls = routes([...bundles, opened], (body) => {
+    bodies.push(body);
+    const confirmed = bodies.length > 1;
+    return jsonResponse({
+      results: [
+        confirmed
+          ? {
+              deal_id: opened.deal_id,
+              outcome: "undone",
+              undone: ["deal_open"],
+              kept: [],
+            }
+          : {
+              deal_id: opened.deal_id,
+              outcome: "refused",
+              undone: [],
+              kept: [
+                {
+                  audit_log_id: "o4",
+                  kind: "deal_open",
+                  reason: "needs_confirmation",
+                  team_notes: 2,
+                  team_tasks: 1,
+                },
+              ],
+            },
+      ],
+    });
+  });
+  const user = userEvent.setup();
+  render(<BriefChanges />);
+  const row = (await screen.findByText(en["changes.kind.deal_open"])).closest(
+    "li",
+  );
+  if (!row) throw new Error("no row for the opened deal");
+  await user.click(
+    await within(row).findByRole("button", { name: en["common.undo"] }),
+  );
+  expect(
+    await screen.findByText(
+      "This deal now has 2 notes and 1 tasks from your team. Archive it anyway?",
+    ),
+  ).toBeTruthy();
+  await user.click(
+    await within(row).findByRole("button", { name: en["common.undo"] }),
+  );
+  expect(await screen.findByText(en["changes.undo.archived"])).toBeTruthy();
+  const posted = writes(calls).filter(
+    (c) => c.path === "/deal-corrections/undo",
+  );
+  expect(posted.map((c) => c.body)).toEqual([
+    { items: [{ deal_id: opened.deal_id, version: 7, audit_log_ids: ["o4"] }] },
+    {
+      items: [
+        {
+          deal_id: opened.deal_id,
+          version: 7,
+          audit_log_ids: ["o4"],
+          archive_confirmed: true,
+        },
+      ],
+    },
+  ]);
 });
 
 it("undoes every deal at once and says how many", async () => {

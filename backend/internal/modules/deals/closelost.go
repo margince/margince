@@ -40,7 +40,7 @@ const DealCloseLostKind = "deal_close_lost"
 func IsCorrectionReceiptKind(kind string) bool {
 	switch kind {
 	case CloseDateCorrectionKind, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
-		DealStageMoveKind:
+		DealStageMoveKind, DealOpenKind:
 		return true
 	}
 	return false

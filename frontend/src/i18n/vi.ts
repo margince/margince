@@ -15047,6 +15047,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_stage_move.label": "Chuyển giai đoạn",
   "autonomy.kind.deal_stage_move.help":
     "Chuyển deal sang giai đoạn sau khi chính lời của khách cho thấy deal đã tới đó, ví dụ khách yêu cầu bản nháp hợp đồng. Không bao giờ chuyển sang Thắng và không bao giờ lùi lại. Mỗi lần chuyển hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_open.label": "Deal mới",
+  "autonomy.kind.deal_open.help":
+    "Mở một deal cho công ty bạn phụ trách khi khách muốn mua, ví dụ khách yêu cầu báo giá. Deal thuộc về bạn, ở giai đoạn đầu tiên. Mỗi deal mới hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -18053,6 +18056,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_close_date": "Ngày chốt mới",
   "changes.kind.deal_amount": "Giá trị mới",
   "changes.kind.deal_probability": "Xác suất mới",
+  "changes.kind.deal_open": "Mở từ dấu hiệu mua hàng",
+  "changes.undo.confirmArchive":
+    "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn lưu trữ?",
+  "changes.undo.archived":
+    "Đã lưu trữ. Margince sẽ không mở deal cho việc này nữa, trừ khi có dấu hiệu mua hàng mới.",
   "changes.kind.stage_move": "Chuyển sang giai đoạn sau",
   "changes.summary_one":
     "Margince đã cập nhật {count} giao dịch của bạn: {parts}",

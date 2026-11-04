@@ -15528,6 +15528,7 @@ const (
 	MarginceChangeBundleKindsCloseLost       MarginceChangeBundleKinds = "close_lost"
 	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
+	MarginceChangeBundleKindsDealOpen        MarginceChangeBundleKinds = "deal_open"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
 	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
@@ -15540,6 +15541,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealAmount:
 		return true
 	case MarginceChangeBundleKindsDealCloseDate:
+		return true
+	case MarginceChangeBundleKindsDealOpen:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
 		return true
@@ -22329,12 +22332,13 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 
 // Defines values for UndoMarginceChangeKeptReason.
 const (
-	UndoMarginceChangeKeptReasonAccepted      UndoMarginceChangeKeptReason = "accepted"
-	UndoMarginceChangeKeptReasonAlreadyUndone UndoMarginceChangeKeptReason = "already_undone"
-	UndoMarginceChangeKeptReasonChangedSince  UndoMarginceChangeKeptReason = "changed_since"
-	UndoMarginceChangeKeptReasonNotFound      UndoMarginceChangeKeptReason = "not_found"
-	UndoMarginceChangeKeptReasonNotPermitted  UndoMarginceChangeKeptReason = "not_permitted"
-	UndoMarginceChangeKeptReasonVersionSkew   UndoMarginceChangeKeptReason = "version_skew"
+	UndoMarginceChangeKeptReasonAccepted          UndoMarginceChangeKeptReason = "accepted"
+	UndoMarginceChangeKeptReasonAlreadyUndone     UndoMarginceChangeKeptReason = "already_undone"
+	UndoMarginceChangeKeptReasonChangedSince      UndoMarginceChangeKeptReason = "changed_since"
+	UndoMarginceChangeKeptReasonNeedsConfirmation UndoMarginceChangeKeptReason = "needs_confirmation"
+	UndoMarginceChangeKeptReasonNotFound          UndoMarginceChangeKeptReason = "not_found"
+	UndoMarginceChangeKeptReasonNotPermitted      UndoMarginceChangeKeptReason = "not_permitted"
+	UndoMarginceChangeKeptReasonVersionSkew       UndoMarginceChangeKeptReason = "version_skew"
 )
 
 // Valid indicates whether the value is a known member of the UndoMarginceChangeKeptReason enum.
@@ -22345,6 +22349,8 @@ func (e UndoMarginceChangeKeptReason) Valid() bool {
 	case UndoMarginceChangeKeptReasonAlreadyUndone:
 		return true
 	case UndoMarginceChangeKeptReasonChangedSince:
+		return true
+	case UndoMarginceChangeKeptReasonNeedsConfirmation:
 		return true
 	case UndoMarginceChangeKeptReasonNotFound:
 		return true
@@ -50916,6 +50922,9 @@ type MarginceChangeSummary struct {
 	// Moved Deals Margince moved to a later stage.
 	Moved int `json:"moved"`
 
+	// Opened Deals Margince opened from buying evidence.
+	Opened int `json:"opened"`
+
 	// Probabilities Deals given a new probability.
 	Probabilities int `json:"probabilities"`
 
@@ -60823,6 +60832,11 @@ type TransferProjectOwnershipResult struct {
 
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
 type UndoMarginceChangeItem struct {
+	// ArchiveConfirmed The owner confirmed archiving a deal Margince opened that the team has added notes,
+	// tasks or edits to since. Without it such a deal is kept, with the reason
+	// `needs_confirmation` and the counts.
+	ArchiveConfirmed *bool `json:"archive_confirmed,omitempty"`
+
 	// AuditLogIds The changes to take back, all on this deal.
 	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
 	DealId      openapi_types.UUID   `json:"deal_id"`
@@ -60838,6 +60852,12 @@ type UndoMarginceChangeKept struct {
 	// Kind The kind of change; absent when the change could not be read.
 	Kind   *string                      `json:"kind,omitempty"`
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
+
+	// TeamNotes With `needs_confirmation`, the notes the team added to the opened deal.
+	TeamNotes *int `json:"team_notes,omitempty"`
+
+	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened deal.
+	TeamTasks *int `json:"team_tasks,omitempty"`
 }
 
 // UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.

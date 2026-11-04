@@ -15441,6 +15441,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_stage_move.label": "Phasenwechsel",
   "autonomy.kind.deal_stage_move.help":
     "Margince verschiebt einen Deal in eine spätere Phase, wenn die Worte des Kunden zeigen, dass er dort ist, etwa eine Anfrage nach dem Vertragsentwurf. Nie auf Gewonnen und nie zurück. Jeder Wechsel erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_open.label": "Neue Deals",
+  "autonomy.kind.deal_open.help":
+    "Margince eröffnet einen Deal für ein Unternehmen, das dir gehört, wenn der Kunde kaufen will, etwa mit einer Anfrage nach einem Angebot. Der Deal gehört dir und steht in der ersten Phase. Jeder neue Deal erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18526,6 +18529,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_close_date": "Neues Abschlussdatum",
   "changes.kind.deal_amount": "Neuer Betrag",
   "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.kind.deal_open": "Aus Kaufsignalen eröffnet",
+  "changes.undo.confirmArchive":
+    "Dieser Deal hat jetzt {notes} Notizen und {tasks} Aufgaben von deinem Team. Trotzdem archivieren?",
+  "changes.undo.archived":
+    "Archiviert. Margince eröffnet dafür keinen Deal mehr, außer es kommen neue Kaufsignale.",
   "changes.kind.stage_move": "In eine spätere Phase verschoben",
   "changes.summary_one":
     "Margince hat {count} deiner Deals aktualisiert: {parts}",

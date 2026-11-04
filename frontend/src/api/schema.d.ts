@@ -55412,6 +55412,8 @@ export interface components {
             probabilities: number;
             /** @description Deals Margince moved to a later stage. */
             moved: number;
+            /** @description Deals Margince opened from buying evidence. */
+            opened: number;
             /** @description The currency of every `value_base_minor`. */
             base_currency: string;
             /** @description One per deal, the largest value first. */
@@ -55431,7 +55433,7 @@ export interface components {
             version: number;
             /** @description The changes, newest first. */
             audit_log_ids: string[];
-            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move")[];
+            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open")[];
             /**
              * Format: int64
              * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
@@ -55486,6 +55488,12 @@ export interface components {
             version: number;
             /** @description The changes to take back, all on this deal. */
             audit_log_ids: string[];
+            /**
+             * @description The owner confirmed archiving a deal Margince opened that the team has added notes,
+             *     tasks or edits to since. Without it such a deal is kept, with the reason
+             *     `needs_confirmation` and the counts.
+             */
+            archive_confirmed?: boolean;
         };
         /** @description One change an undo left in place, and why. */
         UndoMarginceChangeKept: {
@@ -55494,7 +55502,11 @@ export interface components {
             /** @description The kind of change; absent when the change could not be read. */
             kind?: string;
             /** @enum {string} */
-            reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew";
+            reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew" | "needs_confirmation";
+            /** @description With `needs_confirmation`, the notes the team added to the opened deal. */
+            team_notes?: number;
+            /** @description With `needs_confirmation`, the tasks the team added to the opened deal. */
+            team_tasks?: number;
         };
         TeamMarginceChangeGroup: {
             /** Format: uuid */

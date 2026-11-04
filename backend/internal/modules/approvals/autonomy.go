@@ -144,12 +144,17 @@ const (
 // own words. Never staged; its Undo moves the deal back.
 const kindDealStageMove = "deal_stage_move"
 
+// kindDealOpen is Margince opening a deal from Deal Scout's evidence for the
+// company's owner. Its Undo archives the deal.
+const kindDealOpen = "deal_open"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
 	kindDealAmount:           true,
 	kindDealProbability:      true,
 	kindDealStageMove:        true,
+	kindDealOpen:             true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
 }
