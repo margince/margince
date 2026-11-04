@@ -26,6 +26,7 @@ const (
 // instead of becoming a silent dead end.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
+	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
 	// Absolute for rollout modes (absoluteDenials), yet a sender's answer can
 	// correct the request that caused it. The two are different axes.

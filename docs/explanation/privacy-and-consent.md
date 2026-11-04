@@ -196,10 +196,15 @@ resolve it in `commsauthz.RemediesFor`.
 
 - A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
   no evidence and no marketing consent.
-- A reason that lists only the admin exception can be sent past only by an admin. Examples are a
-  hard bounce and a frequency cap.
+- A reason that lists only the admin exception can be sent past only by an admin. An example is a
+  hard bounce.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
-  objection, a withdrawal, a limit on processing and a request to stop.
+  objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
+  rests on a request alone when the contact opted out of marketing after that request
+  (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
+- A country's own limits list nothing either. A pack that sets `ConsentOnly` (Vietnam does) turns
+  marketing without consent into `marketing_consent_required`. No exception and no standing
+  override answers it. A pack's advertising ceiling (`frequency_cap_reached`) clears with time.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 The direction stores whether an admin gave it. Staging and the transmit check both ask
@@ -219,6 +224,11 @@ counts either. So a seat cannot make this ground by copying the contact.
 The rule reads the thread key and records its basis against that thread. So it never becomes
 standing permission for the contact. It never supports a message the sender calls marketing.
 `copiedOnThisMatter` holds the whole rule.
+
+An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
+asking. That is mail or a meeting from them inside the reply window, or a request of theirs on record
+at any age (`requestedNegotiation`). A deal we created is not their request. A picked deal with
+no request behind it is refused with `deal_not_requested`, and a recorded request answers it.
 
 ## Reaching the subject without the message that carried the link
 

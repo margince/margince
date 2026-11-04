@@ -333,6 +333,18 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 	return found, nil
 }
 
+// requestedNegotiation reports whether a filed-under deal is a negotiation the
+// recipient asked for: an open deal they are a stakeholder on, and the record
+// shows them asking (subjectAskedUs). A deal we created, with nothing from
+// them, is not their request.
+func requestedNegotiation(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject subjectRef) (bool, error) {
+	live, err := liveDealInLinks(ctx, tx, links, subject)
+	if err != nil || !live {
+		return false, err
+	}
+	return subjectAskedUs(ctx, tx, subject, packRulesFor(subject.Country))
+}
+
 // requestScope names which records count as a request for one kind of message.
 type requestScope struct {
 	acquisitionKinds []string

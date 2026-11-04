@@ -29,6 +29,8 @@ export function refusalKindOf(
   switch (reason) {
     case "no_compatible_evidence":
       return category === DEAL_FOLLOWUP ? "missingContext" : "missingEvidence";
+    case "deal_not_requested":
+      return "missingEvidence";
     case "unknown_purpose":
     case "claim_contradicts_resolution":
     case "legacy_transactional_unevidenced":
@@ -77,6 +79,8 @@ export function sendPermissionReasonKey(
         : recordable
           ? ("sendPermission.unprovenHint" as const)
           : ("sendPermission.unprovenRefuses" as const);
+    case "deal_not_requested":
+      return "sendPermission.reason.dealNotRequested" as const;
     case "no_marketing_consent":
       return picksReason
         ? ("sendPermission.reason.noMarketingConsent" as const)

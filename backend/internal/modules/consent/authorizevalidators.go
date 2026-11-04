@@ -90,7 +90,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
 		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
 	case commsauthz.CategoryActiveDealFollowup:
-		return validateDealFollowup(ctx, tx, req, subject)
+		return validateDealFollowup(ctx, tx, req, subject, w)
 	case commsauthz.CategoryInvoiceOrPayment:
 		return validateInvoice(ctx, tx, req, subject)
 	case commsauthz.CategoryContractNotice:
@@ -168,9 +168,10 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
-// the picked deal through liveDealInLinks. So "an open deal the recipient is a
-// stakeholder on" is asked one way for the links and for the picked deal.
-func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+// the picked deal through liveDealInLinks and requestedNegotiation, so the
+// links and the picked deal are asked one way. A live deal the contact never
+// asked about gets its own reason: the deal is there, their request is not.
+func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
 	}
@@ -180,6 +181,13 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	}
 	if !live {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	asked, err := subjectAskedUs(ctx, tx, subject, w)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !asked {
+		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonDealNotRequested}, nil
 	}
 	return resolution{
 		Category:  commsauthz.CategoryActiveDealFollowup,

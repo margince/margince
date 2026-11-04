@@ -218,6 +218,13 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 	return dealID
 }
 
+// enquired plants the subject's own inbound enquiry ten days ago, which makes an
+// open deal they are a stakeholder on a negotiation they asked for.
+func (e *resolveEnv) enquired(t *testing.T) {
+	t.Helper()
+	e.inboundFrom(t, "their-enquiry", e.address, time.Now().Add(-10*24*time.Hour))
+}
+
 // seedPurpose plants a legacy consent purpose of a named class.
 func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 	t.Helper()
@@ -437,11 +444,12 @@ func TestAMissingAnchorSupportsNothing(t *testing.T) {
 	}
 }
 
-// A live deal the recipient is a stakeholder on supports an unprompted
-// follow-up.
+// A live deal the recipient is a stakeholder on, and asked about, supports an
+// unprompted follow-up.
 func TestALiveDealTheRecipientIsAStakeholderOnSupportsAFollowUp(t *testing.T) {
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
+	e.enquired(t)
 
 	got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
 

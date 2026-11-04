@@ -209,14 +209,15 @@ func (s *Store) RecordContext(
 
 // requestAnswersClaim reports whether the claim's validator reads this
 // statement as a request with no age limit (requestOnRecord). That holds for a
-// request the subject made, answering a reply, a follow-up or a quote.
+// request the subject made, answering a reply, a follow-up, a quote or a deal
+// follow-up.
 func requestAnswersClaim(kind string, claim commsauthz.Category) bool {
 	if kind != KindRequestedBySubject {
 		return false
 	}
 	switch claim {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup,
-		commsauthz.CategoryPrecontractQuote:
+		commsauthz.CategoryPrecontractQuote, commsauthz.CategoryActiveDealFollowup:
 		return true
 	default:
 		return false

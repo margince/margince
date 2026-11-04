@@ -7491,6 +7491,8 @@ export const en = {
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
   "sendPermission.reason.consentRequired":
     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+  "sendPermission.reason.dealNotRequested":
+    "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
     "The recipient has reached the marketing message limit for now. This clears automatically.",
   "sendPermission.reason.ambiguous":

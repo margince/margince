@@ -66,6 +66,10 @@ const (
 	// confirms with them, and a request recorded after the objection carries
 	// the quote again.
 	ReasonOptedOutAfterRequest = "opted_out_after_request"
+	// ReasonDealNotRequested is a follow-up on an open deal the recipient is a
+	// stakeholder on, where nothing on record shows they asked for the
+	// negotiation. A deal we created is not their request.
+	ReasonDealNotRequested = "deal_not_requested"
 	// ReasonMarketingConsentRequired is marketing without consent to a
 	// recipient whose country's rules allow no exception in its place.
 	ReasonMarketingConsentRequired = "marketing_consent_required"

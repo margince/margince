@@ -7480,6 +7480,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
   "sendPermission.reason.consentRequired":
     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+  "sendPermission.reason.dealNotRequested":
+    "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
   "sendPermission.reason.tooMany":
     "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
   "sendPermission.reason.ambiguous":

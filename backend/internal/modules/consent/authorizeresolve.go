@@ -130,7 +130,7 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
-	live, err := liveDealInLinks(ctx, tx, req.Links, subject)
+	live, err := requestedNegotiation(ctx, tx, req.Links, subject)
 	if err != nil {
 		return resolution{}, err
 	}

@@ -496,3 +496,50 @@ func TestAnAdminOnlyRefusalIsAnsweredOnlyByAnAdminsException(t *testing.T) {
 		})
 	}
 }
+
+// An open deal the contact is a stakeholder on is not, alone, their request: a
+// deal we created is no permission. Picked as the reason, it is refused with
+// its own reason, which the rep answers by recording what the contact asked.
+// Filed under, it supports nothing on its own.
+//
+// Mutation: drop the subjectAskedUs check from validateDealFollowup, or let
+// resolveCategory read liveDealInLinks again, and a case here is supported.
+func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
+	e := setupResolve(t)
+	deal := e.openDeal(t, "open", true)
+
+	picked := e.resolve(t, commsauthz.Request{
+		Context: commsauthz.CategoryActiveDealFollowup, Evidence: commsauthz.Evidence{DealID: deal},
+	})
+	if picked.Supported || picked.Reason != commsauthz.ReasonDealNotRequested {
+		t.Fatalf("picked deal: supported=%v reason=%q, want deal_not_requested", picked.Supported, picked.Reason)
+	}
+	if filed := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}}); filed.Supported {
+		t.Fatalf("a deal nobody asked about supported the message as %q", filed.Category)
+	}
+}
+
+// A requested negotiation still flows: a request the rep records, at any age,
+// or the contact's own enquiry makes the deal one they asked for.
+func TestARequestedNegotiationFlows(t *testing.T) {
+	for name, ask := range map[string]func(e *resolveEnv){
+		"their enquiry":           func(e *resolveEnv) { e.enquired(t) },
+		"a request the rep noted": func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			deal := e.openDeal(t, "open", true)
+			ask(e)
+
+			for _, req := range []commsauthz.Request{
+				{Context: commsauthz.CategoryActiveDealFollowup, Evidence: commsauthz.Evidence{DealID: deal}},
+				{Links: []ids.UUID{deal}},
+			} {
+				d := e.decide(t, req)
+				if d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryActiveDealFollowup {
+					t.Fatalf("decision = %s/%s %q, want an allowed deal follow-up", d.Verdict, d.Resolved, d.ReasonCode)
+				}
+			}
+		})
+	}
+}

@@ -20,6 +20,7 @@ func TestOnlyTheReasonsAStatementResolvesOfferAContextAnswer(t *testing.T) {
 		held  int
 	}{
 		commsauthz.ReasonNoEvidence:                 {ReviewNeedsContext, 1},
+		commsauthz.ReasonDealNotRequested:           {ReviewNeedsContext, 1},
 		commsauthz.ReasonClaimContradictsResolution: {ReviewNeedsRepair, 0},
 		commsauthz.ReasonUnknownPurpose:             {ReviewNeedsRepair, 0},
 		commsauthz.ReasonObjection:                  {ReviewNeedsRepair, 0},

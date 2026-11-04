@@ -42,6 +42,8 @@ var refusalFacts = map[string]string{
 	commsauthz.ReasonClaimContradictsResolution: "this message says it is one kind of message and the " +
 		"record reads it as another; send it with the kind that fits",
 	commsauthz.ReasonNoEvidence: "nothing on record supports this message yet",
+	commsauthz.ReasonDealNotRequested: "nothing on record shows this contact asked for the negotiation " +
+		"on this deal; a deal we created is not their request",
 	commsauthz.ReasonOptedOutAfterRequest: "this contact opted out of marketing after asking for this " +
 		"quote; confirm with them that they still want it, and record their new request",
 	commsauthz.ReasonMarketingConsentRequired: "marketing to this recipient needs their prior consent " +
