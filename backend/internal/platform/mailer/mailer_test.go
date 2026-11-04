@@ -51,6 +51,26 @@ func TestSendSurfacesARefusedRecipient(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "refused the recipient") {
 		t.Fatalf("err = %v, want the refused-recipient wrap", err)
 	}
+	if !NotTaken(err) {
+		t.Fatalf("a recipient refused before the body counts as taken: %v", err)
+	}
+}
+
+// A refusal at the message's final line may follow a relay that kept it, so
+// it is never offered as safe to send again.
+func TestARefusalAtTheFinalLineIsNotANotTakenSend(t *testing.T) {
+	relay := startFakeRelay(t, false)
+	relay.RejectMessage = true
+	host, port := relay.Address(t)
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
+
+	err := s.Send(context.Background(), "ada@example.test", "s", "b")
+	if err == nil || !strings.Contains(err.Error(), "did not accept the message") {
+		t.Fatalf("err = %v, want the refused-message wrap", err)
+	}
+	if NotTaken(err) {
+		t.Fatalf("a refusal at the final line was offered as safe to resend: %v", err)
+	}
 }
 
 func TestSendRefusesAnUnreachableRelay(t *testing.T) {
@@ -67,8 +87,12 @@ func TestSendRefusesAnUnreachableRelay(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := SMTP{Host: "127.0.0.1", Port: tcp.Port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
-	if err := s.Send(context.Background(), "a@b.test", "s", "b"); err == nil || !strings.Contains(err.Error(), "unreachable") {
+	err = s.Send(context.Background(), "a@b.test", "s", "b")
+	if err == nil || !strings.Contains(err.Error(), "unreachable") {
 		t.Fatalf("err = %v, want the unreachable wrap", err)
+	}
+	if !NotTaken(err) {
+		t.Fatalf("an unreachable relay counts as having taken the message: %v", err)
 	}
 }
 

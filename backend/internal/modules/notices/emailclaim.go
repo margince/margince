@@ -3,14 +3,13 @@
 
 package notices
 
-// One notice's ONE attempt at leaving the product by mail.
+// One notice's one message by mail.
 //
-// The SAME shape the morning brief and the weekly retrospective take
-// (compose/briefs/briefmail.go): claim the attempt before dialling the relay,
-// never release it, record why it failed. There is no delivery ledger and no
-// receipt behind any of them, so a claim that could be cleared is a retry loop,
-// and a retry loop on a synchronous SMTP call is how one decision becomes three
-// messages in a colleague's inbox.
+// The morning brief and the weekly retrospective take the same shape
+// (compose/briefs/briefmail.go): claim the attempt before dialling the relay
+// and record why it failed. No receipt stands behind any of them. A claim
+// cleared after the relay may have taken the message sends a second copy.
+// Only a relay that never took it (mailer.NotTaken) is released.
 //
 // What differs is the trigger. A digest is claimed by a pass that runs on a
 // clock, so a duplicate needs two ticks; this is claimed by a River job, and
@@ -138,9 +137,8 @@ func auditEmailClaim(ctx context.Context, tx pgx.Tx, id ids.UUID, claimedAt time
 
 // EmailFailed records why the claimed attempt produced no message.
 //
-// It does NOT release the claim, and that is the point: the attempt is spent
-// either way, and a caller that could clear the stamp would have rebuilt the
-// retry loop this design refuses.
+// It does not release the claim: the attempt is spent. Only a relay that
+// never took the message is released, by ReleaseEmailAttempts.
 //
 // A SKIP is not a failure and never reaches here. A seat who moved the class
 // off email between the notice and the send, or one who is no longer live, is a
@@ -164,5 +162,51 @@ func (s *Store) EmailFailed(ctx context.Context, id ids.UUID, cause string) erro
 		_, err = storekit.Audit(ctx, tx, "update", "notice", id,
 			map[string]any{"email_error": nil}, map[string]any{"email_error": cause})
 		return err
+	})
+}
+
+// ReleaseEmailAttempts frees the claims of one send the relay never took, so
+// the job's next attempt can claim and send them. Its caller holds the proof
+// (mailer.NotTaken); a send the relay may have taken is never released. One
+// transaction frees all of them or none, so a retry never finds half its
+// message spent.
+func (s *Store) ReleaseEmailAttempts(ctx context.Context, notices []ids.UUID) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			WITH held AS (
+			       SELECT id, email_attempted_at, email_error FROM notice
+			        WHERE id = ANY($1::uuid[]) AND email_attempted_at IS NOT NULL
+			        FOR UPDATE)
+			UPDATE notice SET email_attempted_at = NULL, email_error = NULL
+			  FROM held WHERE notice.id = held.id
+			RETURNING notice.id, held.email_attempted_at, held.email_error`, notices)
+		if err != nil {
+			return fmt.Errorf("notices: releasing the mail attempts the relay never took: %w", err)
+		}
+		type release struct {
+			id    ids.UUID
+			at    time.Time
+			cause *string
+		}
+		var released []release
+		for rows.Next() {
+			var r release
+			if err := rows.Scan(&r.id, &r.at, &r.cause); err != nil {
+				rows.Close()
+				return fmt.Errorf("notices: reading a released mail attempt: %w", err)
+			}
+			released = append(released, r)
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		for _, r := range released {
+			if _, err := storekit.Audit(ctx, tx, "update", "notice", r.id,
+				map[string]any{"email_attempted_at": r.at, "email_error": r.cause},
+				map[string]any{"email_attempted_at": nil, "email_error": nil}); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
