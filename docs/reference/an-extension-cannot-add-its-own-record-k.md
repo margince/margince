@@ -19,7 +19,7 @@ are done.
 | 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) | done |
 | 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) | done |
 | 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) | done |
-| 5 | Extension signal types with structured evidence | Nothing yet. | None yet | planned |
+| 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) | done |
 | 6 | Panels and tabs on record pages | Nothing yet. | None yet | planned |
 | 7 | "Pick a record" field type | Nothing yet. | None yet | planned |
 | 8 | Record page with merged history for extension kinds | Nothing yet. | None yet | planned |
@@ -161,7 +161,59 @@ unit test.
 
 What this feature does not do yet:
 
-- A breakdown by a field of a signal's evidence is not offered. Evidence has no named fields until the extension signal
-  types feature gives it some.
+- A breakdown by a field of a signal's evidence is not offered. Evidence members are named now, but no report reads
+  them yet.
 - A report is not an entity of the analytics question builder, and has no drill-through.
 - A core population other than the deal's takes counts only.
+
+## Extension signal types with structured evidence
+
+An extension can add its own kinds of signal, each with an evidence layout declared as data. The steps to declare one
+are in [Declare a signal type](../how-to/add-an-extension.md#declare-a-signal-type).
+
+The maintainers chose one database kind per extension type, spelled `ext:<unit>:<kind>`, over one generic `ext` kind
+with the type inside the evidence. Every filter, count and screen already switches on `kind`, and the spelling matches
+record kinds and company types. The spelling is permanent once a row carries it.
+
+```mermaid
+flowchart LR
+    U[Unit calls Signals Create] --> C{Kind declared by this unit?}
+    C -- no --> R[Refused]
+    C -- yes --> L{Evidence fits the layout?}
+    L -- no --> R
+    L -- yes --> F{Fingerprint already filed?}
+    F -- yes --> E[Answer the signal already filed]
+    F -- no --> W[Write signal, audit row and event, with provenance]
+```
+
+| Part | What it does |
+|---|---|
+| `Extension.SignalTypes` | The unit declares each kind: a name, a label and the evidence members. The boot and `make gen` refuse a bad name, a duplicate member or an unknown type. |
+| Evidence layout | Each member has a name, a label, a type (`text`, `number` or `bool`), `Required` and `Personal`. A member the layout does not name, a missing required one or a wrong type is refused with `invalid_evidence`. |
+| `Signals().Create` | Files one signal about a deal, company, contact or project, under the caller's own rights. It writes the signal, its audit row and its `signal.detected` event in the unit's transaction. A scheduled job or a bus delivery is refused. |
+| Fingerprint | Required. The stored fingerprint is the kind plus the unit's value, so two kinds or two units cannot swallow each other's signals. The existing unique index on live fingerprints holds the repeat out, and the call answers the first signal with `created` false. The answer is a read, so a signal the caller cannot see is not found. |
+| Provenance | Core writes the `provenance` member of the evidence claim with the unit and the signed-in seat. A unit cannot set it. The `fields` and `provenance` members of a claim are also refused on a request to create or edit a signal. |
+| Only the unit files it | `POST /v1/signals` refuses an `ext:` kind with the field `kind`, because only the declaring unit's call checks the layout, the owner and the fingerprint. |
+| Evidence is fixed | The evidence of an extension signal cannot be replaced by `PATCH /v1/signals/{id}`, because a replacement would drop the layout members and the provenance. |
+| `signal_kind_check` | Keeps core's sixteen kinds as a closed list and also admits the `ext:<unit>:<kind>` spelling. Which names exist is decided by the composed set at boot. |
+| Contract | `kind` on a signal is a string that matches core's kinds or the extension spelling. A client must treat a kind it does not know as a kind of its own. The list filter `kind` keeps core's sixteen values. |
+| Screens | A kind with no catalog text shows its own name, without the `ext:<unit>:` prefix. |
+
+### Erase
+
+Erasing or anonymizing a contact rewrites the extension signals whose subject is the contact, and those the resolver
+attributed to them. The summary and each claim's snippet are
+free text a unit wrote, so both become `[erased]`. A layout member marked `Personal` is removed. A signal whose kind no
+unit declares loses all its members, because nothing says what is safe to keep. The provenance stays, because it names a
+unit and a seat and never the subject. Signals of core's own kinds are not rewritten by this path.
+
+What this feature does not do yet:
+
+- A report does not read evidence members. See [the reports section](#extension-report-breakdowns-and-counts).
+- Signals about a contact are not in the data-access export, as noted for the audited fix of evidence.
+- The list filter on `kind` does not take an extension kind.
+- Erase reaches the signals whose subject is the contact, and those the resolver attributed to the contact. A `Personal`
+  member on a signal about a company or deal that is not attributed to the contact is not reached, because nothing links
+  it to one.
+- An extension signal cannot be moved to another kind by an edit.
+- Subjects stay deal, company, contact and project.

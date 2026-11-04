@@ -315,7 +315,7 @@ var movedActivityDealsSQL = `SELECT DISTINCT d.id
 
 // companySignalsSQL is the buying signals resolved to each company.
 var companySignalsSQL = `SELECT id FROM signal
-	 WHERE resolved_company_id = ANY($1) AND kind = '` + string(crmcontracts.SignalKindNewOpportunity) + `'`
+	 WHERE resolved_company_id = ANY($1) AND kind = '` + string(crmcontracts.ListSignalsParamsKindNewOpportunity) + `'`
 
 // suggestionSignalsSQL is the buying signals each suggestion cites, found
 // through the audit row its event links to.

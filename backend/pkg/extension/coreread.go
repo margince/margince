@@ -126,10 +126,16 @@ type CompanyRepo interface {
 	SetExtensionTypes(ctx context.Context, id string, types []string) (crm.Company, error)
 }
 
-// SignalRepo reads signals.
+// SignalRepo reads signals and files the unit's own kinds.
 type SignalRepo interface {
 	Get(ctx context.Context, id string) (crm.Signal, error)
 	List(ctx context.Context, q SignalQuery) (Page[crm.Signal], error)
+	// Create files a signal of one of this unit's declared kinds about a deal,
+	// company, contact or project, under the caller's own rights. The same
+	// fingerprint records one signal: a repeat answers the signal already
+	// filed, with created false, whichever caller repeats it. An empty
+	// fingerprint is refused. Core stamps the provenance member.
+	Create(ctx context.Context, kind string, subject SignalSubject, evidence SignalEvidence, fingerprint string) (signal crm.Signal, created bool, err error)
 }
 
 // CustomFieldRepo reads which custom fields exist.

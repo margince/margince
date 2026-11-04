@@ -85,7 +85,7 @@ stale page.
 |---|:-:|:-:|:-:|:-:|:-:|
 | **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | · |
 | **Move** it to another stage | · | ✅ | · | · | · |
-| **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | · |
+| **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | ✅ |
 | **Read** and list it, as the user who asked | ✅ | ✅ | · | ✅ | ✅ |
 | **Find** it by the id from its own system | ✅ | ✅ | · | · | · |
 | **Filter** it by an admin's custom field | ✅ | ✅ | · | ✅ | · |
@@ -113,6 +113,7 @@ Every field of `Extension` that brings something to the core.
 | `RecordKinds` | Kinds of record this unit adds beside core's own, stored as `ext:<unit>:<kind>`. |
 | `ReportCounts` | Named numbers this unit adds to Reports and Home. |
 | `ReportBreakdowns` | Counts split by one field, added to Reports and Home. |
+| `SignalTypes` | Kinds of signal this unit adds beside core's own, each with an evidence layout declared as data. |
 | `FinanceSources` | Accounting systems this unit can read into the core's finance mirror. |
 | `Secrets` | Secret keys the unit declares it will use, by name and scope. |
 | `Jobs` | Scheduled background jobs the unit contributes: named cadenced passes that fan out over the fleet, one workspace per tick. |
