@@ -55592,6 +55592,8 @@ export interface components {
             revalued: number;
             /** @description Deals given a new probability. */
             probabilities: number;
+            /** @description Deals Margince moved to a later stage. */
+            moved: number;
             /** @description The currency of every `value_base_minor`. */
             base_currency: string;
             /** @description One per deal, the largest value first. */
@@ -55611,7 +55613,7 @@ export interface components {
             version: number;
             /** @description The changes, newest first. */
             audit_log_ids: string[];
-            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability")[];
+            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move")[];
             /**
              * Format: int64
              * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.

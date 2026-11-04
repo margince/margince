@@ -102,6 +102,7 @@ const DEFAULTS: Routes = {
       redated: 0,
       revalued: 0,
       probabilities: 0,
+      moved: 0,
       base_currency: "EUR",
       bundles: [],
       truncated: false,

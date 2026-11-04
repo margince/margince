@@ -39,11 +39,12 @@ const dealVerdictBatch = 50
 
 // dealVerdictRulesVersion moves when the rules in dealverdict change what
 // they let through, so every deal is read again under the new rules.
-const dealVerdictRulesVersion = "2"
+const dealVerdictRulesVersion = "3"
 
 // verdictCorrections are the corrections a verdict may make, in a fixed order.
 var verdictCorrections = []string{
 	deals.VerdictCloseDateCorrection, deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
+	deals.VerdictStageMoveCorrection,
 }
 
 // dealVerdictPass reads due deals and applies what the rules let through.

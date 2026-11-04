@@ -15351,6 +15351,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_probability.label": "Gewinnwahrscheinlichkeiten",
   "autonomy.kind.deal_probability.help":
     "Margince setzt die Gewinnwahrscheinlichkeit eines Deals, wenn die Belege sie klar verschieben, etwa eine mündliche Zusage oder ein Budgetstopp. Eine Wahrscheinlichkeit, die du selbst gesetzt hast, ändert Margince nie. Jede Änderung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_stage_move.label": "Phasenwechsel",
+  "autonomy.kind.deal_stage_move.help":
+    "Margince verschiebt einen Deal in eine spätere Phase, wenn die Worte des Kunden zeigen, dass er dort ist, etwa „bitte schicken Sie uns den Vertragsentwurf“. Nie auf Gewonnen und nie zurück. Jeder Wechsel erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18427,11 +18430,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.field.amount": "den Betrag",
   "changes.field.probability": "die Wahrscheinlichkeit",
   "changes.field.status": "den Status",
+  "changes.field.stage": "die Phase",
   "changes.fieldJoin": "{first} und {second}",
   "changes.kind.close_lost": "Als verloren geschlossen",
   "changes.kind.deal_close_date": "Neues Abschlussdatum",
   "changes.kind.deal_amount": "Neuer Betrag",
   "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.kind.stage_move": "In eine spätere Phase verschoben",
   "changes.summary_one":
     "Margince hat {count} deiner Deals aktualisiert: {parts}",
   "changes.summary_other":
@@ -18444,6 +18449,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.part.revalued_other": "{count} neu bewertet",
   "changes.part.probabilities_one": "{count} Wahrscheinlichkeit",
   "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
+  "changes.part.moved_one": "{count} verschoben",
+  "changes.part.moved_other": "{count} verschoben",
   "changes.viewAll": "Alle ansehen",
   "changes.undoAll": "Alle rückgängig machen",
   "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",

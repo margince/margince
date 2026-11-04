@@ -78,9 +78,13 @@ func morningChangeKinds(kinds []string, words mailcopy.Copy) string {
 		deals.VerdictCloseDateCorrection:   words.MorningChangeRedated,
 		deals.VerdictAmountCorrection:      words.MorningChangeRevalued,
 		deals.VerdictProbabilityCorrection: words.MorningChangeProbability,
+		deals.VerdictStageMoveCorrection:   words.MorningChangeMoved,
 	}
 	var out []string
-	for _, kind := range []string{deals.CloseLostCorrection, deals.VerdictCloseDateCorrection, deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection} {
+	for _, kind := range []string{
+		deals.CloseLostCorrection, deals.VerdictStageMoveCorrection, deals.VerdictCloseDateCorrection,
+		deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
+	} {
 		for _, have := range kinds {
 			if have == kind {
 				out = append(out, named[kind])

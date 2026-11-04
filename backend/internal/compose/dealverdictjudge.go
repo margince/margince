@@ -214,6 +214,8 @@ func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) str
 	switch change.Correction {
 	case deals.VerdictCloseDateCorrection:
 		return "Close date set to " + change.CloseDate.Format(time.DateOnly)
+	case deals.VerdictStageMoveCorrection:
+		return fmt.Sprintf("Moved to %v", change.Evidence["to_stage"])
 	case deals.VerdictAmountCorrection:
 		currency := change.Currency
 		if seen.Currency != nil {

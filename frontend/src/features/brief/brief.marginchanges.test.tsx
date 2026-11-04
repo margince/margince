@@ -37,7 +37,7 @@ function bundle(n: number, kinds: Bundle["kinds"], audit: string[]): Bundle {
 const bundles = [
   bundle(1, ["close_lost"], [automaticDateReceipt.undo?.audit_log_id ?? ""]),
   bundle(2, ["deal_close_date", "deal_amount"], ["a2", "b2"]),
-  bundle(3, ["deal_close_date"], ["a3"]),
+  bundle(3, ["deal_close_date", "stage_move"], ["a3"]),
 ];
 
 function routes(pending: Bundle[], undo?: (body: unknown) => Response) {
@@ -61,6 +61,7 @@ function routes(pending: Bundle[], undo?: (body: unknown) => Response) {
           .length,
         revalued: pending.filter((b) => b.kinds.includes("deal_amount")).length,
         probabilities: 0,
+        moved: pending.filter((b) => b.kinds.includes("stage_move")).length,
         base_currency: "EUR",
         bundles: pending,
         truncated: false,
@@ -73,8 +74,11 @@ it("groups three changed deals into one row, counting deals, and shows each chan
   routes(bundles);
   render(<BriefChanges />);
   expect(
+    await screen.findByText("New close date · Moved to a later stage"),
+  ).toBeTruthy();
+  expect(
     await screen.findByText(
-      "Margince updated 3 of your deals: 1 closed, 2 re-dated, 1 re-valued",
+      "Margince updated 3 of your deals: 1 closed, 1 moved, 2 re-dated, 1 re-valued",
     ),
   ).toBeTruthy();
   expect(screen.getByText("New close date · New amount")).toBeTruthy();

@@ -74507,7 +74507,7 @@ components:
         The changes Margince made to the caller's deals that are neither accepted nor undone.
         Every count is a number of deals; a deal with two kinds of change counts once in
         `deals` and once under each kind.
-      required: [as_of, deals, closed, redated, revalued, probabilities, base_currency, bundles, truncated]
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, base_currency, bundles, truncated]
       properties:
         as_of: { type: string, format: date-time }
         deals: { type: integer, description: Deals with at least one open change. }
@@ -74515,6 +74515,7 @@ components:
         redated: { type: integer, description: Deals given a new close date. }
         revalued: { type: integer, description: Deals given a new amount. }
         probabilities: { type: integer, description: Deals given a new probability. }
+        moved: { type: integer, description: Deals Margince moved to a later stage. }
         base_currency: { type: string, description: The currency of every `value_base_minor`. }
         bundles:
           type: array
@@ -74539,7 +74540,7 @@ components:
           description: The changes, newest first.
         kinds:
           type: array
-          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability] }
+          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move] }
         value_base_minor:
           type: integer
           format: int64

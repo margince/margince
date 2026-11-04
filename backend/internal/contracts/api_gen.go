@@ -15484,6 +15484,7 @@ const (
 	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
 
 // Valid indicates whether the value is a known member of the MarginceChangeBundleKinds enum.
@@ -15496,6 +15497,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealCloseDate:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
+		return true
+	case MarginceChangeBundleKindsStageMove:
 		return true
 	default:
 		return false
@@ -50713,6 +50716,9 @@ type MarginceChangeSummary struct {
 
 	// Deals Deals with at least one open change.
 	Deals int `json:"deals"`
+
+	// Moved Deals Margince moved to a later stage.
+	Moved int `json:"moved"`
 
 	// Probabilities Deals given a new probability.
 	Probabilities int `json:"probabilities"`

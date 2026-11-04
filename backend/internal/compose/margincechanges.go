@@ -66,7 +66,7 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 	}
 	out := crmcontracts.MarginceChangeSummary{
 		AsOf: h.now(), Deals: summary.Deals, Closed: summary.Closed, Redated: summary.Redated,
-		Revalued: summary.Revalued, Probabilities: summary.Probabilities,
+		Revalued: summary.Revalued, Probabilities: summary.Probabilities, Moved: summary.Moved,
 		BaseCurrency: summary.BaseCurrency, Truncated: summary.Truncated,
 		Bundles: make([]crmcontracts.MarginceChangeBundle, 0, len(summary.Bundles)),
 	}

@@ -140,11 +140,16 @@ const (
 	kindDealProbability = "deal_probability"
 )
 
+// kindDealStageMove is Margince moving a deal forward from the customer's
+// own words. Never staged; its Undo moves the deal back.
+const kindDealStageMove = "deal_stage_move"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
 	kindDealAmount:           true,
 	kindDealProbability:      true,
+	kindDealStageMove:        true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
 }
