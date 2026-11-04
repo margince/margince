@@ -21,4 +21,4 @@ ALTER TABLE ai_model_rate
         (long_context_above_tokens IS NULL) = (long_context_input_per_mtok_microusd IS NULL)
         AND (long_context_above_tokens IS NULL) = (long_context_output_per_mtok_microusd IS NULL)
         AND (long_context_above_tokens IS NULL) = (long_context_cache_read_per_mtok_microusd IS NULL)
-        AND (long_context_above_tokens IS NULL) = (long_context_cache_write_per_mtok_microusd IS NULL));
+        AND (long_context_above_tokens IS NULL) = (long_context_cache_write_per_mtok_microusd IS NULL)) NOT VALID;
