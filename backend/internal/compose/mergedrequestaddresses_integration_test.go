@@ -10,12 +10,18 @@ package compose
 // request to the other's addresses, in either direction.
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -104,4 +110,35 @@ func quoteVerdictFor(t *testing.T, e *integration.Env, gate *consent.Gate, addre
 		t.Fatalf("asked about one recipient, got %d decisions", len(set.Decisions))
 	}
 	return set.Decisions[0]
+}
+
+// The legacy correspondence verdict reads the same recorded request, so it is
+// bound the same way: the guard read and the purpose gate a send still asks.
+func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) {
+	e := integration.Setup(t)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return consent.SeedDefaultPurposesTx(context.Background(), tx)
+	}); err != nil {
+		t.Fatalf("seeding the purposes: %v", err)
+	}
+	store := consent.NewStore(InstallationDB(e.Pool))
+	asker := seedMergeContact(t, e, "Asker", askerAddress, contacts.Acquisition{})
+	other := seedMergeContact(t, e, "Other", otherAddress, contacts.Acquisition{})
+	if _, err := store.RecordQualifyingEvent(e.Admin(), ids.From[ids.ContactKind](asker), consent.RecordQualifyingEventInput{
+		Kind: consent.KindRequestedBySubject, Note: "Asked to hear from us.", OccurredAt: time.Now().Add(-time.Hour),
+	}); err != nil {
+		t.Fatalf("recording the request: %v", err)
+	}
+	merging := withContactMergeCarriers(InstallationDB(e.Pool), e.Contacts)
+	if _, err := merging.MergeContact(e.Admin(), ids.From[ids.ContactKind](other), ids.From[ids.ContactKind](asker), nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	gate := consent.NewGate(store)
+	if err := gate.RequireGrantedForEmails(e.Admin(), []string{askerAddress}, "business_correspondence"); err != nil {
+		t.Errorf("correspondence to the address that asked was refused: %v", err)
+	}
+	if err := gate.RequireGrantedForEmails(e.Admin(), []string{otherAddress}, "business_correspondence"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Errorf("correspondence to the other record's address = %v, want refused: it rests on a request that address never made", err)
+	}
 }

@@ -133,12 +133,12 @@ type PurposeRow struct {
 // purpose: the exception this installation's jurisdiction grants.
 //
 // Passed in for the reason `since` is passed in — resolving it needs a settings
-// read, and VerdictForContact is deliberately free of those.
+// read, and the verdict is deliberately free of those.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
 }
 
-// VerdictForContact is THE decision. Both the guard endpoint and the transmit
+// VerdictForRecipient is THE decision. Both the guard endpoint and the transmit
 // gate call it, so a preview and a send answer with the same code.
 //
 // The order of the checks is the ruling, and it is not rearrangeable: an
@@ -155,7 +155,23 @@ type MarketingContext struct {
 // is deliberately free of settings reads: a rep holds no settings-read grant
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
-func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+//
+// VerdictForRecipient is the form that authorizes: it names the address the
+// message goes to, so a request a merge carried over counts only for its own
+// addresses (requestCoversSQL). GuardVerdictForContact answers about the
+// contact as a whole and only feeds the advisory guard read.
+func VerdictForRecipient(ctx context.Context, tx pgx.Tx, contactID, address string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, &address, purpose, since, marketing)
+}
+
+// GuardVerdictForContact is the contact-wide answer the guard endpoint shows.
+// It never authorizes a send: every send path asks VerdictForRecipient.
+func GuardVerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, nil, purpose, since, marketing)
+}
+
+// verdictFor is the decision. address nil asks about the contact as a whole.
+func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
 	suppressed, at, err := objectionStands(ctx, tx, contactID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
@@ -194,7 +210,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, contactID, purpose, since)
+		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -223,7 +239,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of contacts, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since time.Time) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -241,7 +257,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 		// would let the timeline supply what the confirmation did not.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, nil)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, address)
 	if err != nil {
 		return Verdict{}, err
 	}

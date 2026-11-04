@@ -9,7 +9,7 @@ package consent
 // a composer can show the verdict before a word is typed. Two things about it
 // are load-bearing:
 //
-// It is computed by VerdictForContact — the SAME code the dispatcher runs at
+// It is computed by GuardVerdictForContact — the SAME code the dispatcher runs at
 // transmit — so a preview and the check that fires at send cannot drift.
 //
 // It never grants anything. The transmit-time recheck stays authoritative and
@@ -82,7 +82,7 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		// hand and is what actually decides.
 		marketing := MarketingContext{Exception: w.marketingException}
 		for _, purpose := range purposes {
-			verdict, err := VerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
+			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
 			if err != nil {
 				return err
 			}

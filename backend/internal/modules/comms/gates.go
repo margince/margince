@@ -296,7 +296,7 @@ func (d *Dispatcher) gateSeat(ctx context.Context, del Delivery) (Outcome, time.
 //
 // Nothing the legacy gate asked is now unasked. It read contact_consent for the
 // same recipient list this call passes; AuthorizeTransmit reads that through
-// VerdictForContact AND reads communication_suppression, which the old gate never
+// VerdictForRecipient AND reads communication_suppression, which the old gate never
 // looked at. It refused an empty recipient list; AuthorizeTransmit refuses one
 // too, and an empty decision set is not an allow.
 func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {

@@ -232,7 +232,7 @@ func TestAnExplicitYesOutlivesTheWindow(t *testing.T) {
 // it — a preview that is wrong in the permissive direction is worse than none,
 // because the rep only finds out after writing the mail.
 //
-// The pin is that the guard reports the SAME verdict as VerdictForContact for
+// The pin is that the guard reports the SAME verdict as GuardVerdictForContact for
 // the same contact under the same window, across the lapse boundary. Mutation:
 // replace the guard's `since` with a zero time and the lapsed case reports
 // allowed while the send path says unknown, failing the second assertion.

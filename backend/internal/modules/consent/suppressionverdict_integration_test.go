@@ -16,7 +16,7 @@ import (
 
 // suppress records a communication_suppression row the way suppress.go's
 // writer does, minus the write's own auth/audit machinery — this test is about
-// what VerdictForContact reads, not about who may write the row.
+// what GuardVerdictForContact reads, not about who may write the row.
 func (e *qualifyingEnv) suppress(t *testing.T, kind string) {
 	t.Helper()
 	seedLiveSuppression(e.ctx, t, e.owner, e.contact, kind, "phone call")
@@ -99,7 +99,7 @@ func TestAnAddressPinnedHardBounceDoesNotBlockTheContactLevelVerdict(t *testing.
 }
 
 // A revoked suppression is not a live one — liveSuppression's own WHERE
-// clause already excludes it, and this pins that VerdictForContact inherits
+// clause already excludes it, and this pins that GuardVerdictForContact inherits
 // that read rather than a second, looser one.
 func TestARevokedSuppressionDoesNotBlock(t *testing.T) {
 	e := setupQualifying(t)

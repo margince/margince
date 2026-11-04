@@ -573,7 +573,7 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 // The resolution above has said "not supported, and here is why" since the
 // escape hatch was closed, but the DECISION went on allowing: decideResolved
 // handed an unsupported transactional claim to legacyVerdictFor, which asked
-// VerdictForContact, whose ClassTransactional arm allows unconditionally. So the
+// GuardVerdictForContact, whose ClassTransactional arm allows unconditionally. So the
 // engine recorded its objection and sent the mail anyway, on nothing but the
 // purpose key — which is the hole the resolution change was supposed to close.
 //

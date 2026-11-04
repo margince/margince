@@ -103,7 +103,7 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 // contact_id and matches the bare-address arm of authorIsTheSubject.
 //
 // When no evidence supports a category, the legacy grant still answers, through
-// grantedForLead rather than VerdictForContact: the two ask about different
+// grantedForLead rather than VerdictForRecipient: the two ask about different
 // columns, and legacyVerdictFor would compare a lead id against contact_id and
 // find nothing.
 //
@@ -174,7 +174,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	// The evidence arms, before any purpose key is consulted, through the same
 	// helper the contact arm uses so the basis is recorded the same way.
 	//
-	// NOT decideResolved: its unsupported fallthrough asks VerdictForContact,
+	// NOT decideResolved: its unsupported fallthrough asks VerdictForRecipient,
 	// which would compare a lead id against contact_id. That is not merely a
 	// miss — ClassTransactional returns an unconditional allow without reading
 	// any grant, so a lead would take authority from a purpose row nobody

@@ -104,7 +104,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 
 // grantedForRecipient answers the one recipient's question.
 //
-// A recipient that resolves to a CONTACT is answered by VerdictForContact — the
+// A recipient that resolves to a CONTACT is answered by VerdictForRecipient — the
 // same code the guard endpoint serves, so the preview a composer shows and the
 // check that fires at transmit cannot drift. Two implementations of one
 // question are two questions, and the one that stops matching looks exactly
@@ -134,7 +134,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		_, stopped, err := stopBindingPurpose(stops, purpose)
 		return !stopped, err
 	}
-	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, since, marketing)
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, r.Email, purpose, since, marketing)
 	if err != nil {
 		return false, err
 	}
@@ -143,7 +143,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if verdict.State != VerdictAllowed {
 		return false, nil
 	}
-	// false: VerdictForContact allowed, so no stop binds this purpose. The
+	// false: VerdictForRecipient allowed, so no stop binds this purpose. The
 	// engine's arms pass their own answer.
 	if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
 		return false, err

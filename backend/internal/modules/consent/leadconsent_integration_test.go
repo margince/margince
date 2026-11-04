@@ -528,10 +528,10 @@ func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
 	}
 }
 
-// A LEAD NEVER TAKES AUTHORITY FROM VerdictForContact.
+// A LEAD NEVER TAKES AUTHORITY FROM GuardVerdictForContact.
 //
 // This holds a claim that otherwise lives only in a comment on decideLead.
-// VerdictForContact's ClassTransactional arm returns an unconditional allow
+// GuardVerdictForContact's ClassTransactional arm returns an unconditional allow
 // without reading any grant (verdict.go, "the contract itself is the basis").
 // Routing a lead through decideResolved's unsupported fallthrough would hand it
 // that allow from a purpose row never checked against lead grants. There is no
@@ -566,7 +566,7 @@ func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
 	}
 	if d.Verdict == commsauthz.VerdictAllow {
 		t.Fatalf("verdict = allow (%s) for a lead with no evidence and no grant: the lead arm is "+
-			"taking VerdictForContact's unconditional transactional allow, which was never "+
+			"taking GuardVerdictForContact's unconditional transactional allow, which was never "+
 			"checked against a lead grant", d.ReasonCode)
 	}
 }
