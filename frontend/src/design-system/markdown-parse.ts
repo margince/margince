@@ -430,30 +430,36 @@ function takeUnderscored(
   kind: "strong" | "em",
   scan: UnderscoreScan,
 ): { node: Inline; length: number } | null {
-  if (!rest.startsWith(fence) || WORD_CHAR.test(before)) return null;
-  const first = rest[fence.length] ?? "";
-  if (first === "" || /\s/.test(first) || first === "_") return null;
+  if (!opensUnderscore(rest, before, fence)) return null;
   const from = scan.at ?? 0;
   const exhausted = scan.exhausted.get(fence);
   if (exhausted !== undefined && from >= exhausted) return null;
   for (let at = fence.length + 1; at < rest.length; at++) {
-    if (!rest.startsWith(fence, at)) continue;
-    const end = at + fence.length;
-    const after = rest[end] ?? "";
-    if (
-      /\s/.test(rest[at - 1] ?? "") ||
-      WORD_CHAR.test(after) ||
-      after === "_"
-    ) {
-      continue;
-    }
+    if (!closesUnderscore(rest, at, fence)) continue;
     return {
       node: { kind, children: parseInline(rest.slice(fence.length, at)) },
-      length: end,
+      length: at + fence.length,
     };
   }
   scan.exhausted.set(fence, from);
   return null;
+}
+
+/** Whether `rest` opens with `fence` outside a word, before a non-space. */
+function opensUnderscore(rest: string, before: string, fence: string): boolean {
+  if (!rest.startsWith(fence) || WORD_CHAR.test(before)) return false;
+  const first = rest[fence.length] ?? "";
+  return first !== "" && !/\s/.test(first) && first !== "_";
+}
+
+/** Whether `fence` at `at` closes: no space before it, no letter, digit or
+ *  further underscore after it. It does not depend on the opener. */
+function closesUnderscore(rest: string, at: number, fence: string): boolean {
+  if (!rest.startsWith(fence, at)) return false;
+  const after = rest[at + fence.length] ?? "";
+  return (
+    !/\s/.test(rest[at - 1] ?? "") && !WORD_CHAR.test(after) && after !== "_"
+  );
 }
 
 function takeCode(rest: string): { node: Inline; length: number } | null {
