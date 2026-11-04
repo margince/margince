@@ -6113,52 +6113,6 @@
           "priced_count": {
             "type": "integer"
           },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "type": "object",
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ]
-          },
           "range_high_minor": {
             "type": "integer"
           },
@@ -6221,7 +6175,6 @@
           "period_end",
           "period_start",
           "priced_count",
-          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -13517,52 +13470,6 @@
           },
           "priced_count": {
             "type": "integer"
-          },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ],
-            "type": "object"
           },
           "range_high_minor": {
             "type": "integer"
