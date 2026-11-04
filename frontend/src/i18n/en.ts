@@ -10069,8 +10069,6 @@ export const en = {
   "notice.acq.crmMigration": "CRM migration",
   "notice.acq.mailboxHistory": "Mailbox history",
   "notice.acq.unknownLegacy": "Source unknown",
-  "notice.source.contactExplanation":
-    "The acquisition source needs review. Open the privacy case to check the evidence.",
   "notice.source.zoneHint":
     "Choose the timezone of the acquisition, which can differ from your location.",
   "notice.rule.none": "No separate notice duty",
@@ -10091,6 +10089,28 @@ export const en = {
   "notice.source.dateHint":
     "Use the actual acquisition date if known. Otherwise a confirmed duty keeps a latest possible deadline.",
   "notice.source.noDeadline": "No confirmed deadline",
+  "notice.source.question": "How did you receive their contact details?",
+  "notice.source.answer.contacted": "They got in touch first",
+  "notice.source.answer.asked": "They asked for a quote or a meeting",
+  "notice.source.answer.met": "Met face to face",
+  "notice.source.answer.introduced": "Someone introduced them",
+  "notice.source.answer.other": "Another source",
+  "notice.source.answer.unsure": "Not sure",
+  "notice.source.unsureHint": "The source stays unconfirmed. Nothing is saved.",
+  "notice.source.otherQuestion": "Which source was it?",
+  "notice.source.leave": "Leave unconfirmed",
+  "notice.source.evidenceHint":
+    "For example: their first email, or who introduced you.",
+  "notice.source.effect":
+    "Saving records where their details came from. If that source means a privacy notice is owed, the notice duty opens with its deadline. Saving sends no email and does not change whether you may email them.",
+  "notice.source.whyUnknown":
+    "Nothing on record says where this contact’s details came from.",
+  "notice.source.whyUnconfirmed":
+    "Nobody has confirmed the recorded source of this contact’s details yet.",
+  "notice.source.onRecord": "On record",
+  "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.contactExplanation":
+    "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",
   "notice.rule.art14": "Art. 14 notice",
   "notice.ruleHint.art13":

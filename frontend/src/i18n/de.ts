@@ -10061,8 +10061,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "CRM-Migration",
   "notice.acq.mailboxHistory": "Postfachverlauf",
   "notice.acq.unknownLegacy": "Quelle unbekannt",
-  "notice.source.contactExplanation":
-    "Die Herkunft der Daten muss geprüft werden. Den Datenschutzfall öffnen und die Nachweise prüfen.",
   "notice.source.zoneHint":
     "Wähle die Zeitzone der Erfassung, auch wenn du dich gerade woanders befindest.",
   "notice.rule.none": "Keine gesonderte Informationspflicht",
@@ -10083,6 +10081,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.source.dateHint":
     "Das tatsächliche Erfassungsdatum angeben, falls bekannt. Sonst bleibt eine bestätigte Pflicht mit einer spätestmöglichen Frist bestehen.",
   "notice.source.noDeadline": "Keine bestätigte Frist",
+  "notice.source.question": "Wie hast du die Kontaktdaten bekommen?",
+  "notice.source.answer.contacted": "Der Kontakt hat sich zuerst gemeldet",
+  "notice.source.answer.asked":
+    "Der Kontakt hat ein Angebot oder einen Termin angefragt",
+  "notice.source.answer.met": "Direkt getroffen",
+  "notice.source.answer.introduced": "Jemand hat den Kontakt vorgestellt",
+  "notice.source.answer.other": "Andere Quelle",
+  "notice.source.answer.unsure": "Nicht sicher",
+  "notice.source.unsureHint":
+    "Die Quelle bleibt unbestätigt. Es wird nichts gespeichert.",
+  "notice.source.otherQuestion": "Welche Quelle war es?",
+  "notice.source.leave": "Unbestätigt lassen",
+  "notice.source.evidenceHint":
+    "Zum Beispiel: die erste E-Mail des Kontakts oder wer den Kontakt vorgestellt hat.",
+  "notice.source.effect":
+    "Beim Speichern wird festgehalten, woher die Daten stammen. Verlangt diese Quelle einen Datenschutzhinweis, wird die Pflicht mit ihrer Frist angelegt. Es wird keine E-Mail gesendet, und ob du den Kontakt anschreiben darfst, ändert sich nicht.",
+  "notice.source.whyUnknown":
+    "Nirgends ist festgehalten, woher die Daten dieses Kontakts stammen.",
+  "notice.source.whyUnconfirmed":
+    "Die erfasste Quelle der Daten dieses Kontakts hat noch niemand bestätigt.",
+  "notice.source.onRecord": "Erfasst",
+  "notice.source.needsConfirmation": "Quelle muss bestätigt werden",
+  "notice.source.contactExplanation":
+    "Wer für den Datenschutz zuständig ist, bestätigt, woher die Daten stammen.",
   "notice.rule.art13": "Information nach Art. 13",
   "notice.rule.art14": "Information nach Art. 14",
   "notice.ruleHint.art13":

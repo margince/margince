@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
-import { provenanceLabel } from "../../design-system/provenance";
-import { provenanceOf } from "../../design-system/provenanceof";
-import { acquisitionKindLabel } from "../../format/acquisitionkind";
-import { formatDate } from "../../format/format";
-import { humanizeToken } from "../../format/humanizetoken";
-import type { Locale, Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import { provenanceLabel } from "../design-system/provenance";
+import { provenanceOf } from "../design-system/provenanceof";
+import { acquisitionKindLabel } from "../format/acquisitionkind";
+import { formatDate } from "../format/format";
+import { humanizeToken } from "../format/humanizetoken";
+import type { Locale, Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
-export { acquisitionKindLabel } from "../../format/acquisitionkind";
+export { acquisitionKindLabel } from "../format/acquisitionkind";
 
 export type NoticeAcquisition = NonNullable<
   components["schemas"]["NoticeAcquisition"]
