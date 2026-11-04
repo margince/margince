@@ -206,7 +206,7 @@ func (s *Service) worklistFrom(
 	rows = dropDealsAlreadyInHand(rows, day.AsOf)
 	// One review is one row: its task and its quiet-only at-risk row fold into
 	// it, before scope, filters, Focus and counts read the rows.
-	rows = foldDealReviews(rows, s.reviews)
+	rows = foldDealReviews(rows, s.reviews.open)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me

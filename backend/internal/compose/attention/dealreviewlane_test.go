@@ -33,7 +33,7 @@ func TestOneHomeActionPerReview(t *testing.T) {
 	reviews := []DealReview{
 		{ID: ids.NewV7(), DealID: silent, DealName: "Silent", Task: &task},
 		{ID: ids.NewV7(), DealID: overdue, DealName: "Overdue"},
-		{ID: ids.NewV7(), DealID: untasked, DealName: "Untasked", Owner: &owner, OpenedAt: time.Now()},
+		{ID: ids.NewV7(), DealID: untasked, DealName: "Untasked", Owner: &owner, OpenedAt: time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC)},
 	}
 	other := ids.NewV7()
 	rows := foldDealReviews([]ranked{

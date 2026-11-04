@@ -32,6 +32,13 @@ type DealReview struct {
 	OpenedAt time.Time
 }
 
+// reviewRead is the review reader, OPTIONAL, and on a request copy the open
+// reviews it answered.
+type reviewRead struct {
+	source DealReviews
+	open   []DealReview
+}
+
 // DealReviews reads the open reviews this reader may see.
 type DealReviews interface {
 	OpenDealReviews(context.Context) ([]DealReview, error)
@@ -39,20 +46,20 @@ type DealReviews interface {
 
 // WithDealReviews connects the open customer-support reviews to the worklist.
 func (s *Service) WithDealReviews(reviews DealReviews) *Service {
-	s.dealReviews = reviews
+	s.reviews.source = reviews
 	return s
 }
 
 // readingReviews carries this read's open reviews on a copy of the service.
 func (s *Service) readingReviews(ctx context.Context) (*Service, *crmcontracts.WorklistSourceUnavailable) {
 	scoped := *s
-	if s.dealReviews == nil {
+	if s.reviews.source == nil {
 		return &scoped, nil
 	}
 	var reviews []DealReview
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		reviews, err = s.dealReviews.OpenDealReviews(ctx)
+		reviews, err = s.reviews.source.OpenDealReviews(ctx)
 		return err
 	})
 	switch {
@@ -61,7 +68,7 @@ func (s *Service) readingReviews(ctx context.Context) (*Service, *crmcontracts.W
 	case err != nil:
 		return &scoped, reviewsUnavailable(crmcontracts.WorklistSourceUnavailableReasonFailed)
 	}
-	scoped.reviews = reviews
+	scoped.reviews.open = reviews
 	return &scoped, nil
 }
 
@@ -70,8 +77,8 @@ func reviewsUnavailable(reason crmcontracts.WorklistSourceUnavailableReason) *cr
 }
 
 // foldDealReviews makes each open review one row. The review's own task row and
-// its deal's quiet-only at-risk row leave their lanes and become that row, so
-// the reader sees one job, not three. A review whose task is done, or not yet
+// its deal's quiet-only at-risk row leave their lanes and become that row. The
+// reader sees one job, not three. A review whose task is done, or not yet
 // delivered, still gets its row.
 func foldDealReviews(rows []ranked, reviews []DealReview) []ranked {
 	if len(reviews) == 0 {
