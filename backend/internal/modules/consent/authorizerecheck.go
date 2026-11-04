@@ -12,7 +12,11 @@ package consent
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,10 +28,11 @@ var errRecheckComplete = errors.New("consent: the recheck reads and writes nothi
 
 // RecheckTransmit answers whether the issued ticket still holds.
 //
-// The same answer returns the issued ticket, and nothing is recorded, so an
-// ordinary send keeps one decision set per attempt. A different answer is
-// decided and recorded again through AuthorizeTransmit, and the new ticket is
-// what the dispatcher acts on.
+// An equal fingerprint returns the issued ticket, and nothing is recorded, so
+// an ordinary send keeps one decision set per attempt. Any change (a stop, a
+// country, a rule pack, a category, a purpose, a mode) is decided and recorded
+// again through AuthorizeTransmit. The new ticket and its set are what the
+// dispatcher and the requirement check use.
 func (g *Gate) RecheckTransmit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error) {
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
@@ -44,8 +49,36 @@ func (g *Gate) RecheckTransmit(ctx context.Context, req commsauthz.TransmitReque
 	if err != nil && !errors.Is(err, errRecheckComplete) {
 		return commsauthz.TransmitTicket{}, err
 	}
-	if fresh.Allowed == issued.Allowed && fresh.ConsentRefused == issued.ConsentRefused {
+	if fresh.Fingerprint != "" && fresh.Fingerprint == issued.Fingerprint {
 		return issued, nil
 	}
 	return g.AuthorizeTransmit(ctx, req)
+}
+
+// decisionFingerprint digests what a transmit ticket was decided on. The
+// requirement check reads the categories and rule packs, so both are in it.
+func decisionFingerprint(ticket commsauthz.TransmitTicket, set commsauthz.DecisionSet, countries []RecipientCountry) (string, error) {
+	type recipientInput struct {
+		Decision commsauthz.Decision
+		Country  RecipientCountry
+		Ruleset  rulesetStampValue
+	}
+	inputs := struct {
+		Allowed, ConsentRefused bool
+		Reason                  string
+		Recipients              []recipientInput
+	}{Allowed: ticket.Allowed, ConsentRefused: ticket.ConsentRefused, Reason: ticket.Reason}
+	for i, d := range set.Decisions {
+		in := recipientInput{Decision: d}
+		if i < len(countries) {
+			in.Country, in.Ruleset = countries[i], rulesetStamp(countries[i])
+		}
+		inputs.Recipients = append(inputs.Recipients, in)
+	}
+	encoded, err := json.Marshal(inputs)
+	if err != nil {
+		return "", fmt.Errorf("consent: fingerprinting the transmit decision: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	return hex.EncodeToString(digest[:]), nil
 }

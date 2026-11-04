@@ -274,6 +274,10 @@ type TransmitTicket struct {
 	// False on an allowed ticket, on a refusal about anything but consent, and
 	// on a refusal no exception answers (DecisionSet.ExceptionMayAnswer).
 	ConsentRefused bool
+	// Fingerprint digests everything the ticket was decided on: each
+	// recipient's decision, country and rule pack, and the ticket's answer. A
+	// recheck at the wire keeps the ticket only when its fingerprint is equal.
+	Fingerprint string
 }
 
 // Current reports whether this ticket authorizes THIS attempt of THIS

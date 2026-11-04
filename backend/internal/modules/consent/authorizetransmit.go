@@ -164,6 +164,10 @@ func (g *Gate) transmitVerdictTx(
 		return commsauthz.TransmitTicket{}, nil, err
 	}
 	applyWordingVerdict(&ticket, changed)
+	ticket.Fingerprint, err = decisionFingerprint(ticket, set, countries)
+	if err != nil {
+		return commsauthz.TransmitTicket{}, nil, err
+	}
 	return ticket, recorded, nil
 }
 
