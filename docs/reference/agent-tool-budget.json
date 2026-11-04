@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32127,
-    "median_tool_tokens": 593,
-    "mean_tool_tokens": 713
+    "tokens": 32319,
+    "median_tool_tokens": 613,
+    "mean_tool_tokens": 717
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 45,
-      "tokens": 6383,
-      "listing_tokens": 3358,
-      "step_schema_tokens": 2433,
-      "percent_of_ceiling": 19,
-      "headroom_tokens": 16827,
+      "tokens": 6651,
+      "listing_tokens": 3512,
+      "step_schema_tokens": 2547,
+      "percent_of_ceiling": 20,
+      "headroom_tokens": 16559,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -88,12 +88,12 @@
       "tokens": 2310
     },
     {
-      "name": "find_records",
-      "tokens": 1863
+      "name": "change_activities",
+      "tokens": 1957
     },
     {
-      "name": "change_activities",
-      "tokens": 1840
+      "name": "find_records",
+      "tokens": 1863
     },
     {
       "name": "change_state",
@@ -109,7 +109,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1314
+      "tokens": 1309
     },
     {
       "name": "read_view",
@@ -128,16 +128,16 @@
       "tokens": 908
     },
     {
+      "name": "create_record",
+      "tokens": 817
+    },
+    {
       "name": "bulk_update_records",
       "tokens": 798
     },
     {
       "name": "change_attention",
       "tokens": 781
-    },
-    {
-      "name": "create_record",
-      "tokens": 776
     },
     {
       "name": "read_lists",
@@ -156,6 +156,10 @@
       "tokens": 656
     },
     {
+      "name": "update_record",
+      "tokens": 633
+    },
+    {
       "name": "change_offers",
       "tokens": 628
     },
@@ -170,10 +174,6 @@
     {
       "name": "resolve_duplicates",
       "tokens": 613
-    },
-    {
-      "name": "update_record",
-      "tokens": 593
     },
     {
       "name": "change_tags",
