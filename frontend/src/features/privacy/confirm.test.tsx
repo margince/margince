@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { vi as VIETNAMESE } from "../../i18n/vi";
 import { ConfirmDetailsScreen } from "./confirm";
 
 // The public confirm page answers TWO bodies from one endpoint, and until the
@@ -295,5 +296,25 @@ describe("the page speaks the language the mail was sent in", () => {
     expect(
       await screen.findByText("Was wir über Sie gespeichert haben"),
     ).toBeInTheDocument();
+  });
+});
+
+const VI_INVALID_LINK = VIETNAMESE["prefs.invalidLink"];
+
+describe("an expired link still speaks the language its mail was sent in", () => {
+  afterEach(() => {
+    globalThis.location.hash = "";
+  });
+
+  it("answers a refused link in the language the link names", async () => {
+    globalThis.location.hash = "#/confirm/tok-gone?lang=vi";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ title: "Not found" }, 404),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-gone" />);
+
+    expect(await screen.findByText(VI_INVALID_LINK)).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("vi");
   });
 });
