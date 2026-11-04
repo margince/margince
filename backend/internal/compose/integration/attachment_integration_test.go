@@ -493,3 +493,31 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 		t.Errorf("a one-byte file was refused too: status %d, body %s", okRec.Code, okRec.Body.String())
 	}
 }
+
+// A seat that may read a record and not change it is told so when it tries to
+// archive or relabel a file on it. One that may not see the record learns
+// nothing, as before.
+func TestAReaderIsRefusedAChangeToAFileItCanSee(t *testing.T) {
+	e := Setup(t)
+	store, _ := attachmentStore(e)
+	contact := e.SeedContact(t, "Readable Contact", &e.Rep1)
+	uploaded, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
+		EntityType: "contact", EntityID: contact, Filename: "deck.pdf", Content: bytes.NewReader([]byte("deck")),
+	})
+	if err != nil {
+		t.Fatalf("seeding the attachment through the real writer: %v", err)
+	}
+	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true}}, RowScope: principal.RowScopeAll,
+	})
+	if err := store.ArchiveAttachment(reader, ids.UUID(uploaded.Id)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader archiving a file it sees: err = %v, want ErrPermissionDenied", err)
+	}
+	if _, err := store.UpdateAttachmentMetadata(reader, ids.UUID(uploaded.Id), activities.DocumentMetadata{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader relabelling a file it sees: err = %v, want ErrPermissionDenied", err)
+	}
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
+	if err := store.ArchiveAttachment(reader, ids.UUID(uploaded.Id)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a reader archiving a file it cannot see: err = %v, want ErrNotFound", err)
+	}
+}
