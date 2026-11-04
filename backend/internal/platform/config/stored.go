@@ -178,6 +178,20 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 	return settings.ApplyTx(ctx, tx, s.row)
 }
 
+// StoredApplyChosenTx is StoredApplyTx that also reports whether somebody
+// chose the value: a boot value or a stored row. False means the default
+// answered.
+func StoredApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, bool, error) {
+	var zero T
+	if err := requireMachinery(s); err != nil {
+		return zero, false, err
+	}
+	if v, _, ok := bootValue(c, s); ok {
+		return v, true, nil
+	}
+	return settings.ApplyStoredTx(ctx, tx, s.row)
+}
+
 // StoredApplyPairTx is StoredApplyTx for two settings a decision pairs. One
 // statement reads the rows no boot source sets, so a write that changes both
 // cannot commit between two reads. With both boot-set it reads no row.

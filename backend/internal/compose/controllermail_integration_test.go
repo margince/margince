@@ -193,7 +193,7 @@ func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
 	// The token itself, as it appears in the sealed link. Searching for it
 	// rather than for a URL shape is what makes this catch a leak into a
 	// column that stores the token alone.
-	_, token, found := lastCut(l.vault.sealed, "#/confirm/")
+	token, found := sealedConfirmToken(l.vault.sealed)
 	if !found {
 		t.Fatalf("the sealed value is not a confirm link: %q", l.vault.sealed)
 	}
@@ -232,6 +232,14 @@ func lastCut(s, sep string) (before, after string, found bool) {
 		return s, "", false
 	}
 	return s[:at], s[at+len(sep):], true
+}
+
+// sealedConfirmToken is the token inside a sealed confirm link, without the
+// language the link carries after it.
+func sealedConfirmToken(sealed string) (string, bool) {
+	_, fragment, found := lastCut(sealed, "#/confirm/")
+	token, _, _ := strings.Cut(fragment, "?")
+	return token, found
 }
 
 func lastIndex(s, sub string) int {

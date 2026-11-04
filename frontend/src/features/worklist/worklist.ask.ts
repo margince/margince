@@ -27,6 +27,7 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   dsr: "worklist.ask.dsr",
   notice_case: "worklist.ask.notice_case",
   capture_health: "worklist.ask.capture_health",
+  booking_health: "worklist.ask.booking_health",
   domain_question: "worklist.ask.domain_question",
   ai_work_health: "worklist.ask.ai_work_health",
   bounce: "worklist.ask.bounce",

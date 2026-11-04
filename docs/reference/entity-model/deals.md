@@ -264,7 +264,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `applied_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `asking` | `text` | yes |  |
 | `audit_log_id` | `uuid` | yes | Points at `audit_log.id`. |
-| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`, `deal_close_date`, `deal_amount` and 1 more. |
+| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`, `deal_close_date`, `deal_amount` and 2 more. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fields` | `text[]` | yes |  |
 | `remaining_open_stages` | `text` | yes |  |
@@ -294,7 +294,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_correction_audit_once`: `UNIQUE (audit_log_id)`
 - `deal_correction_moves_something`: `CHECK ((cardinality(fields) > 0))`
 - `deal_correction_reversal_is_whole`: `CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))`
-- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review', 'close_lost', 'deal_close_date', 'deal_amount', 'deal_probability'])))`
+- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review', 'close_lost', 'deal_close_date', 'deal_amount', 'deal_probability', 'stage_move'])))`
 - `deal_correction_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

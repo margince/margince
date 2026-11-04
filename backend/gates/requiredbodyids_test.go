@@ -81,6 +81,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"RelinkActivitiesRequest":           true,
 	"DraftCompanyEmailJSONBody":         true,
 	"AcceptExtractionRequest":           true,
+	"FileChatCaptureRequest":            true,
 	"CreateDealRoomRequest":             true,
 	"RaiseNoticeRequest":                true,
 }

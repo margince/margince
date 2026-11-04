@@ -113,6 +113,12 @@ type morningItem struct {
 func morningRefs(items []morningItem, digest digestLines) sendRefs {
 	refs := digestRefs(digest)
 	for _, item := range items {
+		if item.source == morningChangesWindow {
+			if since, err := time.Parse(time.RFC3339Nano, item.id); err == nil {
+				refs.changesSince = &since
+			}
+			continue
+		}
 		id, err := ids.Parse(item.id)
 		if err != nil {
 			continue
@@ -124,6 +130,10 @@ func morningRefs(items []morningItem, digest digestLines) sendRefs {
 			refs.ownTasks = append(refs.ownTasks, id)
 		case item.source == string(crmcontracts.WorklistItemSourceApproval):
 			refs.approvals = append(refs.approvals, id)
+		case item.source == morningChangeSource:
+			// Held at the version read: an Undo writes the deal, so the send
+			// reads the morning again rather than mail a change already taken back.
+			refs.records = append(refs.records, notices.Target{Type: string(recordTypeDeal), ID: id})
 		}
 	}
 	return refs

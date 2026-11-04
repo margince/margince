@@ -96,6 +96,8 @@ func decideOne(in Input, state State, action Action, rates Rates) (Decision, err
 		why = decideProbability(in, state, action, &change)
 	case KindSetAmount:
 		why, err = decideAmount(in, state, action, rates, &change)
+	case KindMoveStage:
+		why = decideMoveStage(in, action, &change)
 	}
 	if err != nil || why != "" {
 		return Decision{Action: action, Outcome: why}, err
@@ -193,6 +195,8 @@ func correctionOf(kind string) string {
 		return deals.VerdictCloseDateCorrection
 	case KindSetAmount:
 		return deals.VerdictAmountCorrection
+	case KindMoveStage:
+		return deals.VerdictStageMoveCorrection
 	default:
 		return deals.VerdictProbabilityCorrection
 	}

@@ -21,28 +21,39 @@ const UniqueItemsTag = "unique"
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func RejectRepeatedItems(decoded any) *FieldShapeError {
-	return repeatedWithin(reflect.ValueOf(decoded), "")
+	return taggedFieldRefusal(reflect.ValueOf(decoded), "", func(field reflect.StructField, value reflect.Value, name string) *FieldShapeError {
+		if field.Tag.Get(UniqueItemsTag) != "items" {
+			return nil
+		}
+		return repeatedItem(value, name)
+	})
 }
 
-func repeatedWithin(value reflect.Value, path string) *FieldShapeError {
+// fieldCheck judges one struct field of a decoded body; name is its wire path.
+type fieldCheck func(field reflect.StructField, value reflect.Value, name string) *FieldShapeError
+
+// taggedFieldRefusal runs check on every struct field reachable from value and
+// answers its first refusal. The contract rules a decode cannot see travel as
+// struct tags, so each rule is one check over this one walk.
+func taggedFieldRefusal(value reflect.Value, path string, check fieldCheck) *FieldShapeError {
 	switch value.Kind() {
 	case reflect.Pointer, reflect.Interface:
 		if value.IsNil() {
 			return nil
 		}
-		return repeatedWithin(value.Elem(), path)
+		return taggedFieldRefusal(value.Elem(), path, check)
 	case reflect.Struct:
-		return repeatedInFields(value, path)
+		return fieldsRefusal(value, path, check)
 	case reflect.Slice, reflect.Array:
 		for i := range value.Len() {
-			if refused := repeatedWithin(value.Index(i), path+"["+strconv.Itoa(i)+"]"); refused != nil {
+			if refused := taggedFieldRefusal(value.Index(i), path+"["+strconv.Itoa(i)+"]", check); refused != nil {
 				return refused
 			}
 		}
 	case reflect.Map:
 		iter := value.MapRange()
 		for iter.Next() {
-			if refused := repeatedWithin(iter.Value(), joinWirePath(path, iter.Key().String())); refused != nil {
+			if refused := taggedFieldRefusal(iter.Value(), joinWirePath(path, iter.Key().String()), check); refused != nil {
 				return refused
 			}
 		}
@@ -50,7 +61,7 @@ func repeatedWithin(value reflect.Value, path string) *FieldShapeError {
 	return nil
 }
 
-func repeatedInFields(value reflect.Value, path string) *FieldShapeError {
+func fieldsRefusal(value reflect.Value, path string, check fieldCheck) *FieldShapeError {
 	for i := range value.NumField() {
 		described := value.Type().Field(i)
 		if !described.IsExported() {
@@ -60,12 +71,10 @@ func repeatedInFields(value reflect.Value, path string) *FieldShapeError {
 		if wire := wireName(described); !described.Anonymous && wire != "" {
 			name = joinWirePath(path, wire)
 		}
-		if described.Tag.Get(UniqueItemsTag) == "items" {
-			if refused := repeatedItem(value.Field(i), name); refused != nil {
-				return refused
-			}
+		if refused := check(described, value.Field(i), name); refused != nil {
+			return refused
 		}
-		if refused := repeatedWithin(value.Field(i), name); refused != nil {
+		if refused := taggedFieldRefusal(value.Field(i), name, check); refused != nil {
 			return refused
 		}
 	}

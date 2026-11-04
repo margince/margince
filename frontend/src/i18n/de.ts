@@ -2164,6 +2164,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.undelivered": "Nicht gesendete E-Mails",
   "brief.coverage.source.bounce": "Unzustellbare E-Mails",
   "brief.coverage.source.ai_work_health": "Zustand der Automatisierungen",
+  "brief.coverage.source.booking_health": "Buchungsseite",
   "brief.coverage.source.capture_health": "Postfachverbindungen",
   "brief.coverage.source.failed_approval":
     "Fehlgeschlagene freigegebene Aktionen",
@@ -3942,6 +3943,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "access.state.signedInBadge": "Angemeldet",
   "access.state.invitedBadge": "Eingeladen",
   "access.state.linkRequestedBadge": "Link angefragt",
+  "access.state.mailFailedBadge": "E-Mail fehlgeschlagen",
+  "access.mail.sent": "E-Mail gesendet",
+  "access.mail.failed":
+    "Die Einladungs-E-Mail ist fehlgeschlagen. Stelle einen neuen Link aus und sende ihn selbst.",
   "access.lastSeen": "zuletzt gesehen am {when}",
   "access.downloads_one": "{count} Dokument heruntergeladen",
   "access.downloads_other": "{count} Dokumente heruntergeladen",
@@ -3961,7 +3966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wird dir zum Kopieren angezeigt. Ist ein Mail-Relay eingerichtet, wird der Link zusätzlich per E-Mail gesendet. Die Zustellung ist aber nicht garantiert.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
-    "An {email} gesendet. Du kannst den Link unten auch kopieren.",
+    "Für {email} vorgemerkt. Die Liste zeigt, wann sie gesendet wurde oder ob sie fehlgeschlagen ist. Du kannst den Link unten auch kopieren.",
   "access.issued.notMailed":
     "Der Link wurde nicht per E-Mail gesendet. Kopiere den Link und sende ihn selbst.",
   "access.issued.mailedTitle": "Einladungs-E-Mail zum Versand vorgemerkt",
@@ -6037,6 +6042,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
+  "contact.archiveRefused":
+    "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "company.archiveRefused":
+    "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
@@ -6930,6 +6939,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} ersetzte Dokumente sind unten aufgeführt.",
   "docs.reading.show": "Ausgelesene Felder einblenden",
   "docs.reading.hide": "Ausgelesene Felder ausblenden",
+
+  // Einen Chat aus einem Screenshot an einem Kontakt erfassen.
+  "chatCapture.action": "Chat erfassen",
+  "chatCapture.title": "Chat erfassen",
+  "chatCapture.drop": "Screenshot",
+  "chatCapture.dropEmpty":
+    "Füge einen Screenshot des Chats ein, zieh ihn hierher oder klicke, um ihn auszuwählen",
+  "chatCapture.reading": "Chat wird gelesen",
+  "chatCapture.startFailed": "Der Screenshot konnte nicht gelesen werden",
+  "chatCapture.storedUnread":
+    "Der Screenshot wurde gespeichert, aber die Antwort nannte die Datei nicht. Du findest ihn unter Dokumente.",
+  "chatCapture.discard": "Verwerfen",
+  "chatCapture.discardFailed": "Der Screenshot konnte nicht entfernt werden",
+  "chatCapture.unread": "Der Chat konnte nicht gelesen werden",
+  "chatCapture.nothingRead": "Kein Chat zum Übernehmen gefunden",
+  "chatCapture.header": "Im Kopf des Chats steht {who}.",
+  "chatCapture.otherCounterparty":
+    "Dieser Chat zeigt {shows}, nicht {contact}.",
+  "chatCapture.confirmOther": "Trotzdem bei {contact} ablegen",
+  "chatCapture.text": "Was gesagt wurde",
+  "chatCapture.textHint":
+    "Tippe oder füge ein, was gesagt wurde. Du kannst den Screenshot auch ohne Text ablegen.",
+  "chatCapture.readBadge": "Von der KI aus dem Screenshot übernommen",
+  "chatCapture.channel": "Chat-App",
+  "chatCapture.file": "Beim Kontakt ablegen",
+  "chatCapture.fileFailed": "Der Chat konnte nicht abgelegt werden",
 
   // Ein Dokument hinzufügen. Die Frage „Wozu gehört es?" trägt die eigentliche
   // Entscheidung: nur ein Dokument an einem Deal kann für Deal-Felder gelesen
@@ -10056,8 +10091,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "CRM-Migration",
   "notice.acq.mailboxHistory": "Postfachverlauf",
   "notice.acq.unknownLegacy": "Quelle unbekannt",
-  "notice.source.contactExplanation":
-    "Die Herkunft der Daten muss geprüft werden. Den Datenschutzfall öffnen und die Nachweise prüfen.",
   "notice.source.zoneHint":
     "Wähle die Zeitzone der Erfassung, auch wenn du dich gerade woanders befindest.",
   "notice.rule.none": "Keine gesonderte Informationspflicht",
@@ -10078,6 +10111,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.source.dateHint":
     "Das tatsächliche Erfassungsdatum angeben, falls bekannt. Sonst bleibt eine bestätigte Pflicht mit einer spätestmöglichen Frist bestehen.",
   "notice.source.noDeadline": "Keine bestätigte Frist",
+  "notice.source.question": "Wie hast du die Kontaktdaten bekommen?",
+  "notice.source.answer.contacted": "Der Kontakt hat sich zuerst gemeldet",
+  "notice.source.answer.asked":
+    "Der Kontakt hat ein Angebot oder einen Termin angefragt",
+  "notice.source.answer.met": "Direkt getroffen",
+  "notice.source.answer.introduced": "Jemand hat den Kontakt vorgestellt",
+  "notice.source.answer.other": "Andere Quelle",
+  "notice.source.answer.unsure": "Nicht sicher",
+  "notice.source.unsureHint":
+    "Die Quelle bleibt unbestätigt. Es wird nichts gespeichert.",
+  "notice.source.otherQuestion": "Welche Quelle war es?",
+  "notice.source.leave": "Unbestätigt lassen",
+  "notice.source.evidenceHint":
+    "Zum Beispiel: die erste E-Mail des Kontakts oder wer den Kontakt vorgestellt hat.",
+  "notice.source.effect":
+    "Beim Speichern wird festgehalten, woher die Daten stammen. Verlangt diese Quelle einen Datenschutzhinweis, wird die Pflicht mit ihrer Frist angelegt. Es wird keine E-Mail gesendet, und ob du den Kontakt anschreiben darfst, ändert sich nicht.",
+  "notice.source.whyUnknown":
+    "Nirgends ist festgehalten, woher die Daten dieses Kontakts stammen.",
+  "notice.source.whyUnconfirmed":
+    "Die erfasste Quelle der Daten dieses Kontakts hat noch niemand bestätigt.",
+  "notice.source.onRecord": "Erfasst",
+  "notice.source.needsConfirmation": "Quelle muss bestätigt werden",
+  "notice.source.contactExplanation":
+    "Wer für den Datenschutz zuständig ist, bestätigt, woher die Daten stammen.",
   "notice.rule.art13": "Information nach Art. 13",
   "notice.rule.art14": "Information nach Art. 14",
   "notice.ruleHint.art13":
@@ -10207,6 +10264,68 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Widersprechen Sie der Nutzung Ihrer Daten durch uns.",
   "privacynotice.right.complain":
     "Reichen Sie eine Beschwerde bei der für Sie zuständigen Datenschutzbehörde ein.",
+  "privacynotice.controller.title": "Wer verantwortlich ist",
+  "privacynotice.controller.contact": "Fragen zu Ihren Daten: {contact}",
+  "privacynotice.categories.title": "Was wir speichern",
+  "privacynotice.category.name": "Ihr Name",
+  "privacynotice.category.jobTitle": "Ihre Funktion",
+  "privacynotice.category.employer": "Das Unternehmen, für das Sie arbeiten",
+  "privacynotice.category.email": "Ihre E-Mail-Adresse",
+  "privacynotice.category.phone": "Ihre Telefonnummer",
+  "privacynotice.category.correspondence":
+    "E-Mails, Termine und Anrufe mit Ihnen",
+  "privacynotice.basis.consent":
+    "Nur mit Ihrer Einwilligung. Sie können sie jederzeit widerrufen.",
+  "privacynotice.basis.legitimateInterests":
+    "Unser berechtigtes Interesse an geschäftlichem Kontakt mit Ihnen und dem Unternehmen, für das Sie arbeiten, abgewogen gegen Ihre Interessen.",
+  "privacynotice.basis.contract":
+    "Nötig für einen Vertrag mit Ihnen oder dem Unternehmen, für das Sie arbeiten.",
+  "privacynotice.basis.precontractRequest":
+    "Sie haben uns um ein Angebot oder einen Termin gebeten.",
+  "privacynotice.basis.subjectInitiated": "Sie haben uns zuerst geschrieben.",
+  "privacynotice.basis.legalObligation": "Ein Gesetz verpflichtet uns dazu.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Nötig, um Sie oder Ihr Konto zu schützen.",
+  "privacynotice.basis.existingCustomer":
+    "Sie sind unser Kunde, und wir informieren Sie über Produkte wie die, die Sie gekauft haben. Sie können jederzeit widersprechen.",
+  "privacynotice.basis.vnAgreement":
+    "Sie haben zugestimmt, unsere Werbung zu erhalten.",
+  "privacynotice.category.postalAddress": "Ihre Postanschrift",
+  "privacynotice.category.socialProfile":
+    "Ihre Profile und Konten in sozialen Netzwerken und Chat-Diensten",
+  "privacynotice.category.customFields":
+    "Weitere Angaben, die wir über Sie erfassen",
+  "privacynotice.category.deals": "Geschäfte, an denen Sie beteiligt sind",
+  "privacynotice.category.preferences":
+    "Ihre Entscheidungen zu unseren Nachrichten",
+  "privacynotice.retention.keptByLaw":
+    "Laut Gesetz bewahren wir Nachrichten zu einer Bestellung oder einem Vertrag mindestens {period} auf, auch wo hier eine kürzere Frist steht.",
+  "privacynotice.recipients.title": "Wer die Daten sieht",
+  "privacynotice.recipient.colleagues":
+    "Mitarbeitende, die mit unserem CRM arbeiten.",
+  "privacynotice.recipient.serviceProviders":
+    "Unternehmen, die unser CRM betreiben und seine E-Mails für uns zustellen. Ein Vertrag verpflichtet sie, Ihre Daten nur nach unseren Weisungen zu nutzen.",
+  "privacynotice.retention.title": "Wie lange wir die Daten speichern",
+  "privacynotice.retention.archive":
+    "{scope}: nach {days} aus der täglichen Nutzung genommen.",
+  "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
+  "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
+  "privacynotice.retention.rest":
+    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
+  "privacynotice.retention.scope.activity":
+    "E-Mails, Termine und Anrufe mit Ihnen",
+  "privacynotice.retention.scope.activityTranscript":
+    "Abschriften von Anrufen mit Ihnen",
+  "privacynotice.retention.scope.rawCapture":
+    "Kopien von E-Mails, wie sie eingegangen sind",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Ihr Datensatz, wenn Sie keine Neuigkeiten wünschen und an keinem Geschäft beteiligt sind",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Ihre Angaben, wenn kein weiterer Kontakt folgte",
+  "privacynotice.objection.title": "Ihr Widerspruchsrecht",
+  "privacynotice.objection.body":
+    "Sie können der Nutzung Ihrer Daten, die auf unserem berechtigten Interesse beruht, jederzeit widersprechen. Wir hören dann damit auf, es sei denn, wir haben zwingende Gründe weiterzumachen. Widersprechen Sie Werbung, senden wir keine mehr, und Sie müssen keinen Grund nennen.",
+  "privacynotice.objection.how": "So widersprechen Sie: {route}",
   "notice.ownerOf": "Zuständig für {duty}",
   "notice.excuse": "Ohne Versand beenden",
   "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",
@@ -10281,6 +10400,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
   "privacy.erasureConfirm": "Löschen und sperren",
+  "privacy.resolutionErasureHint":
+    "Nur für eine Ablehnung. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureDraftReplaced":
+    "Deine eingegebene Antwort wird nicht gespeichert. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureAnswer.erased": "Gelöscht",
+  "privacy.erasureAnswer.nothing_held": "Nichts vorhanden (bereits gelöscht)",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",
@@ -15319,6 +15444,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_probability.label": "Gewinnwahrscheinlichkeiten",
   "autonomy.kind.deal_probability.help":
     "Margince setzt die Gewinnwahrscheinlichkeit eines Deals, wenn die Belege sie klar verschieben, etwa eine mündliche Zusage oder ein Budgetstopp. Eine Wahrscheinlichkeit, die du selbst gesetzt hast, ändert Margince nie. Jede Änderung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_stage_move.label": "Phasenwechsel",
+  "autonomy.kind.deal_stage_move.help":
+    "Margince verschiebt einen Deal in eine spätere Phase, wenn die Worte des Kunden zeigen, dass er dort ist, etwa eine Anfrage nach dem Vertragsentwurf. Nie auf Gewonnen und nie zurück. Jeder Wechsel erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18230,6 +18358,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Datenschutzanfrage hat eine gesetzliche Frist. Öffne sie und beantworte sie rechtzeitig.",
   "worklist.ask.notice_case":
     "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
+  "worklist.ask.booking_health":
+    "Deine Buchungsseite ist pausiert, Gäste können nicht buchen. Öffne die Buchungseinstellungen und verbinde einen Kalender, in den Margince Termine eintragen darf.",
   "worklist.ask.capture_health":
     "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.ask.domain_question":
@@ -18390,7 +18520,56 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.closeLostUndone":
     "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
   "worklist.handled.verdictUndone":
-    "Rückgängig gemacht. Margince ändert das nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+    "Rückgängig gemacht. Margince ändert {field} nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+  "changes.field.closeDate": "das Abschlussdatum",
+  "changes.field.amount": "den Betrag",
+  "changes.field.probability": "die Wahrscheinlichkeit",
+  "changes.field.status": "den Status",
+  "changes.field.stage": "die Phase",
+  "changes.fieldJoin": "{first} und {second}",
+  "changes.kind.close_lost": "Als verloren geschlossen",
+  "changes.kind.deal_close_date": "Neues Abschlussdatum",
+  "changes.kind.deal_amount": "Neuer Betrag",
+  "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.kind.stage_move": "In eine spätere Phase verschoben",
+  "changes.summary_one":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.summary_other":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.part.closed_one": "{count} geschlossen",
+  "changes.part.closed_other": "{count} geschlossen",
+  "changes.part.redated_one": "{count} neu datiert",
+  "changes.part.redated_other": "{count} neu datiert",
+  "changes.part.revalued_one": "{count} neu bewertet",
+  "changes.part.revalued_other": "{count} neu bewertet",
+  "changes.part.probabilities_one": "{count} Wahrscheinlichkeit",
+  "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
+  "changes.part.moved_one": "{count} verschoben",
+  "changes.part.moved_other": "{count} verschoben",
+  "changes.viewAll": "Alle ansehen",
+  "changes.undoAll": "Alle rückgängig machen",
+  "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",
+  "changes.undoAllDone_other": "Auf {count} Deals rückgängig gemacht.",
+  "changes.undoAllPartly":
+    "Auf {undone} Deals rückgängig gemacht. Bei {kept} blieb eine Änderung, die seitdem bearbeitet wurde.",
+  "changes.partly":
+    "Rückgängig gemacht, außer {field}, das seitdem geändert wurde.",
+  "changes.refused":
+    "Nicht rückgängig gemacht. Der Deal hat sich geändert, seit du die Seite geöffnet hast. Lade neu und versuche es noch einmal.",
+  "changes.alreadyAccepted":
+    "Du hast diese Änderung schon übernommen, sie bleibt.",
+  "changes.deal.title": "Änderungen durch Margince",
+  "changes.deal.loading": "Änderungen werden geladen…",
+  "changes.team.title": "Änderungen durch Margince in deinem Team",
+  "changes.team.empty":
+    "Margince hat diese Woche keine Deals deines Teams geändert.",
+  "changes.team.loading": "Teamänderungen werden geladen…",
+  "changes.team.owner": "Zuständig",
+  "changes.team.kind": "Änderung",
+  "changes.team.deals": "Deals",
+  "changes.team.value": "Wert",
+  "changes.team.undone": "Rückgängig",
+  "changes.team.truncated": "Liste gekürzt. Es gibt weitere Änderungen.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
@@ -18656,6 +18835,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.recorded": "Erfasst",
   "noticeDuty.rule": "Regel",
   "worklist.untitled.notice_case": "Datenschutzhinweis geschuldet",
+  "worklist.untitled.booking_health": "Deine Buchungsseite ist pausiert",
+  "worklist.untitled.booking_health_no_calendar":
+    "Deine Buchungsseite ist pausiert: Es ist kein Kalender für die Termine gewählt",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Deine Buchungsseite ist pausiert: Margince darf deinen Kalender lesen, aber keine Termine eintragen",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Deine Buchungsseite ist pausiert: Margince erreicht deinen Kalender nicht",
   "worklist.untitled.capture_health":
     "Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit muss geprüft werden",

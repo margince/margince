@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4234 |
+| Columns | 4236 |
 | Foreign keys | 585 |
 | Owning areas | 38 |
 
@@ -184,13 +184,13 @@ erDiagram
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
-| [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
+| [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 10 | 0 |
 | [`automation`](automation.md#automation) | automation | 15 | 0 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
 | [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
-| [`booking_page`](activities.md#booking_page) | activities | 6 | 1 |
+| [`booking_page`](activities.md#booking_page) | activities | 7 | 1 |
 | [`brief_item`](compose.md#brief_item) | compose | 15 | 0 |
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |

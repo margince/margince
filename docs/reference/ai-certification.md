@@ -90,7 +90,7 @@ Your data goes to: global cloud. 17 of 35 features ready (16 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, ❌ Not reliable yet · re-check pending</sub> | Right in 15 of 18 tries; one test case wrong too often · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (12 of 12) · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Right every time (27 of 27); answer quality below the bar in one test case · re-check pending |
@@ -185,7 +185,7 @@ Your data goes to: global cloud. 20 of 35 features ready (12 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (30 of 30) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending</sub> | Right in 9 of 12 tries · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending</sub> | Right every time (21 of 21) · re-check pending |
@@ -280,7 +280,7 @@ Your data goes to: EU-hosted cloud. 20 of 35 features ready (12 re-checks pendin
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (30 of 30) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.6-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right in 9 of 12 tries · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.6-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (21 of 21) · re-check pending |
@@ -375,7 +375,7 @@ Your data goes to: your own servers. 8 of 35 features ready (16 re-checks pendin
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemma4:12b · premium · no separate fallback</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Right in 23 of 24 tries · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right in 10 of 18 tries · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Right every time (15 of 15); answer quality below the bar in one test case · re-check pending |
@@ -470,7 +470,7 @@ Your data goes to: global cloud. 14 of 35 features ready (15 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 20 of 27 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready · re-check pending</sub> | Right every time (12 of 12); answer quality below the bar in 2 test cases · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care · re-check pending</sub> | Right every time (21 of 21); answer quality below the bar in one test case · re-check pending |
@@ -565,7 +565,7 @@ Your data goes to: EU-hosted cloud. 12 of 35 features ready (15 re-checks pendin
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, ✅ Ready</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ⚠️ Usable with care<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready · re-check pending</sub> | Right in 16 of 18 tries; answer quality below the bar in one test case · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ⚠️ Usable with care<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ⚠️ Usable with care · re-check pending</sub> | Right every time (24 of 24); answer quality below the bar in 2 test cases · re-check pending |
@@ -660,7 +660,7 @@ Your data goes to: global cloud. 21 of 35 features ready (15 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium → gpt-6-luna, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (15 of 15) · re-check pending |
@@ -755,7 +755,7 @@ Your data goes to: your own servers. 8 of 35 features ready (19 re-checks pendin
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 13 of 24 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Right every time (12 of 12) |
-| Checking a deal's dates, amount and chances <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Right in 6 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Company fit assessment <sub>`growth_fit`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right in 0 of 12 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
 | Deal status card <sub>`deal_health`</sub> | ❌ Not reliable yet<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Right every time (9 of 9); answer quality below the bar in one test case · re-check pending |
@@ -888,7 +888,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 167 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 168 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 25 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1277,7 +1277,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `partial` | 1 |
 | … best state `stale` | 16 |
 | … `absent` on every binding | 6 |
-| Scenarios in the corpus | 292 |
+| Scenarios in the corpus | 293 |
 | Committed records | 355 |
 | Bindings measured | 18 |
 
@@ -1361,7 +1361,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 13 |
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 11 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 13 |
-| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | - | - | - | `absent` | 3 | 0 |
+| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | - | - | - | `absent` | 4 | 0 |
 | [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.6-flash · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 1 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 2 |
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
@@ -2319,18 +2319,19 @@ Records (13):
 #### `deal_verdict`
 
 <details>
-<summary><code>deal_verdict/deal_verdict</code>: 3 scenario(s), 0 record(s), best state absent</summary>
+<summary><code>deal_verdict/deal_verdict</code>: 4 scenario(s), 0 record(s), best state absent</summary>
 
 ##### `deal_verdict/deal_verdict`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (3):
+Scenarios (4):
 
 | Scenario | Expects | Quality | Case |
 |---|---|---|---|
 | `a_friendly_check_in_changes_nothing` | `accepted` | judge | [small_talk_changes_nothing_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/small_talk_changes_nothing_01.yaml) |
 | `a_verbal_yes_names_the_price_and_moves_the_chances` | `accepted` | judge | [a_verbal_yes_and_a_price_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/a_verbal_yes_and_a_price_01.yaml) |
+| `the_buyer_asks_for_the_contract_and_the_deal_moves_on` | `accepted` | judge | [the_buyer_asks_for_the_contract_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/the_buyer_asks_for_the_contract_01.yaml) |
 | `the_customer_names_a_new_signing_date` | `accepted` | judge | [the_customer_moved_the_start_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/the_customer_moved_the_start_01.yaml) |
 
 No record: this site has never been certified on any binding.

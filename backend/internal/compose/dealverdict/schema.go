@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -24,9 +25,19 @@ type Action struct {
 	Currency    string            `json:"currency"`
 	QuotedWords string            `json:"quoted_words"`
 	Probability int               `json:"probability"`
+	StageID     string            `json:"stage_id"`
+	Criteria    []CriterionCite   `json:"criteria"`
 	Cited       []string          `json:"cited_activity_ids"`
 	Reason      string            `json:"reason"`
 	Confidence  schema.Confidence `json:"confidence"`
+}
+
+// CriterionCite is one exit criterion a stage move says the evidence meets:
+// the activity that meets it and the words in it that do.
+type CriterionCite struct {
+	CriterionID string `json:"criterion_id"`
+	ActivityID  string `json:"activity_id"`
+	QuotedWords string `json:"quoted_words"`
 }
 
 // Payload is the model's whole answer.
@@ -56,18 +67,34 @@ func responseSchema(in Input) json.RawMessage {
 	for _, activity := range in.Activities {
 		cited = append(cited, activity.ID)
 	}
+	// "" is the value of a field that does not apply to the kind.
+	stages := []string{""}
+	for _, stage := range in.Later {
+		stages = append(stages, stage.ID)
+	}
+	criteria := []string{""}
+	for _, criterion := range in.ExitCriteria {
+		criteria = append(criteria, criterion.ID)
+	}
 	return schema.Must(schema.Object(map[string]schema.Node{
 		"actions": schema.Array(schema.Object(map[string]schema.Node{
-			"kind":               schema.Enum(KindSetCloseDate, KindSetAmount, KindSetProbability),
-			"date":               schema.String(),
-			"amount":             schema.Integer(),
-			"currency":           schema.String(),
-			"quoted_words":       schema.String(),
-			"probability":        schema.Integer(),
+			"kind":         schema.Enum(KindSetCloseDate, KindSetAmount, KindSetProbability, KindMoveStage),
+			"date":         schema.String(),
+			"amount":       schema.Integer(),
+			"currency":     schema.String(),
+			"quoted_words": schema.String(),
+			"probability":  schema.Integer(),
+			"stage_id":     schema.Enum(stages...),
+			"criteria": schema.Array(schema.Object(map[string]schema.Node{
+				"criterion_id": schema.Enum(criteria...),
+				"activity_id":  schema.Enum(cited...),
+				"quoted_words": schema.String(),
+			}, "criterion_id", "activity_id", "quoted_words")),
 			"cited_activity_ids": schema.Array(schema.Enum(cited...)),
 			"reason":             schema.String(),
 			"confidence":         schema.Number(),
-		}, "kind", "date", "amount", "currency", "quoted_words", "probability", "cited_activity_ids", "reason", "confidence")),
+		}, "kind", "date", "amount", "currency", "quoted_words", "probability", "stage_id", "criteria",
+			"cited_activity_ids", "reason", "confidence")),
 	}, "actions"))
 }
 
@@ -102,14 +129,14 @@ func validatePayload(payload Payload, in Input) string {
 			return fmt.Sprintf("kind %q appears twice; propose at most one of each", action.Kind)
 		}
 		seen[action.Kind] = true
-		if msg := validateAction(action, known); msg != "" {
+		if msg := validateAction(action, known, in); msg != "" {
 			return msg
 		}
 	}
 	return ""
 }
 
-func validateAction(action Action, known map[string]Activity) string {
+func validateAction(action Action, known map[string]Activity, in Input) string {
 	switch action.Kind {
 	case KindSetCloseDate:
 		if _, err := time.Parse(time.DateOnly, action.Date); err != nil {
@@ -123,8 +150,12 @@ func validateAction(action Action, known map[string]Activity) string {
 		if action.Probability < 0 || action.Probability > 100 {
 			return fmt.Sprintf("probability %d is outside 0 to 100", action.Probability)
 		}
+	case KindMoveStage:
+		if msg := validateMove(action, in); msg != "" {
+			return msg
+		}
 	default:
-		return fmt.Sprintf("kind %q is not set_close_date, set_amount or set_probability", action.Kind)
+		return fmt.Sprintf("kind %q is not set_close_date, set_amount, set_probability or move_stage", action.Kind)
 	}
 	if len(action.Cited) == 0 {
 		return "every action cites at least one activity id"
@@ -136,6 +167,23 @@ func validateAction(action Action, known map[string]Activity) string {
 	}
 	if action.Confidence < 0 || action.Confidence > 1 {
 		return fmt.Sprintf("confidence %v is outside 0 to 1", action.Confidence)
+	}
+	return ""
+}
+
+// validateMove checks a stage move names a later stage and that each
+// criterion it claims cites one of the move's own activities.
+func validateMove(action Action, in Input) string {
+	if !slices.ContainsFunc(in.Later, func(stage StageOption) bool { return stage.ID == action.StageID }) {
+		return fmt.Sprintf("stage_id %q is not one of the later stages listed", action.StageID)
+	}
+	for _, cite := range action.Criteria {
+		if !slices.ContainsFunc(in.ExitCriteria, func(c ExitCriterion) bool { return c.ID == cite.CriterionID }) {
+			return fmt.Sprintf("criterion_id %q is not one of the exit criteria listed", cite.CriterionID)
+		}
+		if !slices.Contains(action.Cited, cite.ActivityID) {
+			return fmt.Sprintf("criterion %q rests on activity %q, which the move does not cite", cite.CriterionID, cite.ActivityID)
+		}
 	}
 	return ""
 }

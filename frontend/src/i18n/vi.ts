@@ -2106,6 +2106,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.undelivered": "Email chưa gửi",
   "brief.coverage.source.bounce": "Email bị trả về",
   "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
+  "brief.coverage.source.booking_health": "Trang đặt lịch",
   "brief.coverage.source.capture_health": "Kết nối hộp thư",
   "brief.coverage.source.failed_approval": "Hành động đã duyệt bị lỗi",
   "brief.coverage.source.relationship_decay": "Quan hệ im lặng",
@@ -3833,6 +3834,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "access.state.signedInBadge": "Đã đăng nhập",
   "access.state.invitedBadge": "Đã mời",
   "access.state.linkRequestedBadge": "Đã xin liên kết",
+  "access.state.mailFailedBadge": "Email gửi không thành công",
+  "access.mail.sent": "đã gửi email",
+  "access.mail.failed":
+    "Email mời gửi không thành công. Tạo liên kết mới rồi tự gửi.",
   "access.lastSeen": "truy cập lần cuối {when}",
   "access.downloads_one": "Đã tải xuống {count} tài liệu",
   "access.downloads_other": "Đã tải xuống {count} tài liệu",
@@ -3852,7 +3857,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết hiện ra để sao chép. Nếu đã cấu hình máy chủ chuyển tiếp thư, hệ thống cũng gửi liên kết qua email, nhưng không đảm bảo email đến nơi.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
-    "Đã gửi tới {email}. Cũng có thể sao chép liên kết bên dưới.",
+    "Đã xếp hàng gửi tới {email}. Danh sách sẽ hiện khi email đã gửi hoặc gửi lỗi. Cũng có thể sao chép liên kết bên dưới.",
   "access.issued.notMailed":
     "Chưa gửi liên kết qua email. Sao chép rồi tự gửi.",
   "access.issued.mailedTitle": "Email mời đang chờ gửi",
@@ -5886,6 +5891,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
   "deal.archiveRefused":
     "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
+  "contact.archiveRefused":
+    "Chỉ chủ sở hữu liên hệ hoặc quản lý mới có thể lưu trữ liên hệ này.",
+  "company.archiveRefused":
+    "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
@@ -6771,6 +6780,32 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} tài liệu đã bị thay thế có trong danh sách bên dưới.",
   "docs.reading.show": "Hiển thị trường đã trích xuất",
   "docs.reading.hide": "Ẩn trường đã trích xuất",
+
+  // Lưu cuộc trò chuyện từ ảnh chụp màn hình dán vào một liên hệ.
+  "chatCapture.action": "Lưu cuộc trò chuyện",
+  "chatCapture.title": "Lưu cuộc trò chuyện",
+  "chatCapture.drop": "Ảnh chụp màn hình",
+  "chatCapture.dropEmpty":
+    "Dán ảnh chụp màn hình cuộc trò chuyện, kéo thả vào đây hoặc bấm để chọn",
+  "chatCapture.reading": "Đang đọc cuộc trò chuyện",
+  "chatCapture.startFailed": "Không đọc được ảnh chụp màn hình",
+  "chatCapture.storedUnread":
+    "Ảnh đã được lưu nhưng phản hồi không cho biết đó là tệp nào. Bạn tìm thấy nó trong mục Tài liệu.",
+  "chatCapture.discard": "Bỏ",
+  "chatCapture.discardFailed": "Không xóa được ảnh chụp màn hình",
+  "chatCapture.unread": "Không đọc được cuộc trò chuyện",
+  "chatCapture.nothingRead": "Không tìm thấy cuộc trò chuyện nào để sao chép",
+  "chatCapture.header": "Phần đầu cuộc trò chuyện hiển thị {who}.",
+  "chatCapture.otherCounterparty":
+    "Cuộc trò chuyện này hiển thị {shows}, không phải {contact}.",
+  "chatCapture.confirmOther": "Vẫn lưu vào {contact}",
+  "chatCapture.text": "Nội dung trao đổi",
+  "chatCapture.textHint":
+    "Nhập hoặc dán nội dung đã trao đổi. Bạn cũng có thể lưu ảnh mà không có văn bản.",
+  "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
+  "chatCapture.channel": "Ứng dụng chat",
+  "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
   // liệu gắn với một deal mới được đọc để lấy các trường của deal.
@@ -9785,8 +9820,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "Chuyển từ CRM khác",
   "notice.acq.mailboxHistory": "Lịch sử hộp thư",
   "notice.acq.unknownLegacy": "Không rõ nguồn",
-  "notice.source.contactExplanation":
-    "Cần xác minh nguồn thông tin. Mở hồ sơ quyền riêng tư để xem bằng chứng.",
   "notice.source.zoneHint":
     "Chọn múi giờ nơi nhận thông tin. Múi giờ đó có thể khác nơi bạn đang ở.",
   "notice.rule.none": "Không có nghĩa vụ thông báo riêng",
@@ -9807,6 +9840,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.source.dateHint":
     "Nhập ngày thực tế nhận thông tin nếu biết. Nếu chưa rõ, nghĩa vụ đã xác nhận vẫn có thời hạn muộn nhất.",
   "notice.source.noDeadline": "Chưa có thời hạn được xác nhận",
+  "notice.source.question":
+    "Bạn nhận được thông tin liên hệ của họ bằng cách nào?",
+  "notice.source.answer.contacted": "Họ đã liên hệ trước",
+  "notice.source.answer.asked": "Họ đã yêu cầu báo giá hoặc một cuộc hẹn",
+  "notice.source.answer.met": "Gặp trực tiếp",
+  "notice.source.answer.introduced": "Được giới thiệu",
+  "notice.source.answer.other": "Nguồn khác",
+  "notice.source.answer.unsure": "Không chắc chắn",
+  "notice.source.unsureHint":
+    "Nguồn vẫn chưa được xác nhận. Không có gì được lưu.",
+  "notice.source.otherQuestion": "Đó là nguồn nào?",
+  "notice.source.leave": "Để chưa xác nhận",
+  "notice.source.evidenceHint":
+    "Ví dụ: email đầu tiên của họ, hoặc ai đã giới thiệu họ.",
+  "notice.source.effect":
+    "Khi lưu, hệ thống ghi lại thông tin của họ đến từ đâu. Nếu nguồn đó cần thông báo về quyền riêng tư, nghĩa vụ thông báo sẽ được mở cùng thời hạn. Việc lưu không gửi email và không thay đổi việc bạn có được gửi email cho họ hay không.",
+  "notice.source.whyUnknown":
+    "Không có ghi nhận nào cho biết thông tin của liên hệ này đến từ đâu.",
+  "notice.source.whyUnconfirmed":
+    "Chưa ai xác nhận nguồn đã ghi nhận của thông tin liên hệ này.",
+  "notice.source.onRecord": "Đã ghi nhận",
+  "notice.source.needsConfirmation": "Cần xác nhận nguồn",
+  "notice.source.contactExplanation":
+    "Bộ phận phụ trách quyền riêng tư sẽ xác nhận thông tin của họ đến từ đâu.",
   "notice.rule.art13": "Thông báo theo Điều 13",
   "notice.rule.art14": "Thông báo theo Điều 14",
   "notice.ruleHint.art13":
@@ -9930,6 +9987,68 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.right.objection": "Phản đối cách sử dụng thông tin.",
   "privacynotice.right.complain":
     "Khiếu nại với cơ quan bảo vệ dữ liệu cá nhân của quý khách.",
+  "privacynotice.controller.title": "Đơn vị chịu trách nhiệm",
+  "privacynotice.controller.contact": "Câu hỏi về dữ liệu: {contact}",
+  "privacynotice.categories.title": "Thông tin đang lưu",
+  "privacynotice.category.name": "Họ tên",
+  "privacynotice.category.jobTitle": "Chức danh",
+  "privacynotice.category.employer": "Công ty nơi quý khách làm việc",
+  "privacynotice.category.email": "Địa chỉ email",
+  "privacynotice.category.phone": "Số điện thoại",
+  "privacynotice.category.correspondence":
+    "Email, cuộc họp và cuộc gọi với quý khách",
+  "privacynotice.basis.consent":
+    "Chỉ khi quý khách đồng ý. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào.",
+  "privacynotice.basis.legitimateInterests":
+    "Lợi ích chính đáng của chúng tôi trong việc liên hệ công việc với quý khách và công ty nơi quý khách làm việc, đã cân nhắc với lợi ích của quý khách.",
+  "privacynotice.basis.contract":
+    "Cần cho hợp đồng với quý khách hoặc công ty nơi quý khách làm việc.",
+  "privacynotice.basis.precontractRequest":
+    "Quý khách đã yêu cầu báo giá hoặc cuộc hẹn.",
+  "privacynotice.basis.subjectInitiated":
+    "Quý khách đã liên hệ với chúng tôi trước.",
+  "privacynotice.basis.legalObligation":
+    "Pháp luật yêu cầu chúng tôi làm việc này.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Cần để bảo vệ quý khách hoặc tài khoản của quý khách.",
+  "privacynotice.basis.existingCustomer":
+    "Quý khách là khách hàng của chúng tôi, và chúng tôi giới thiệu sản phẩm tương tự sản phẩm đã mua. Quý khách có thể phản đối bất cứ lúc nào.",
+  "privacynotice.basis.vnAgreement":
+    "Quý khách đã đồng ý nhận quảng cáo của chúng tôi.",
+  "privacynotice.category.postalAddress": "Địa chỉ bưu chính",
+  "privacynotice.category.socialProfile":
+    "Hồ sơ và tài khoản của quý khách trên mạng xã hội và dịch vụ trò chuyện",
+  "privacynotice.category.customFields":
+    "Các thông tin khác chúng tôi ghi nhận về quý khách",
+  "privacynotice.category.deals": "Các deal quý khách tham gia",
+  "privacynotice.category.preferences":
+    "Lựa chọn của quý khách về thư của chúng tôi",
+  "privacynotice.retention.keptByLaw":
+    "Thư về đơn hàng hoặc hợp đồng được lưu ít nhất {period} theo luật, kể cả khi thời hạn ở đây ngắn hơn.",
+  "privacynotice.recipients.title": "Ai được xem thông tin",
+  "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
+  "privacynotice.recipient.serviceProviders":
+    "Các công ty vận hành CRM và gửi email thay mặt chúng tôi. Hợp đồng buộc họ chỉ dùng dữ liệu theo chỉ dẫn của chúng tôi.",
+  "privacynotice.retention.title": "Thời gian lưu",
+  "privacynotice.retention.archive":
+    "{scope}: ngừng dùng hằng ngày sau {days}.",
+  "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
+  "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
+  "privacynotice.retention.rest":
+    "Các thông tin khác được lưu khi còn dùng cho các mục đích trên. Khi quý khách yêu cầu xóa, chúng tôi xóa những gì pháp luật cho phép.",
+  "privacynotice.retention.scope.activity":
+    "Email, cuộc họp và cuộc gọi với quý khách",
+  "privacynotice.retention.scope.activityTranscript":
+    "Bản chép lời cuộc gọi với quý khách",
+  "privacynotice.retention.scope.rawCapture": "Bản sao email như khi nhận được",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Hồ sơ của quý khách, nếu quý khách chưa đăng ký nhận tin và không tham gia deal nào",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Thông tin của quý khách, nếu sau đó không có liên hệ thêm",
+  "privacynotice.objection.title": "Quyền phản đối",
+  "privacynotice.objection.body":
+    "Quý khách có thể phản đối bất cứ lúc nào việc dùng dữ liệu dựa trên lợi ích chính đáng của chúng tôi. Khi đó việc dùng dữ liệu sẽ dừng, trừ khi có lý do bắt buộc. Nếu quý khách phản đối quảng cáo, quảng cáo sẽ dừng mà không cần nêu lý do.",
+  "privacynotice.objection.how": "Cách phản đối: {route}",
   "notice.ownerOf": "Phụ trách {duty}",
   "notice.excuse": "Kết thúc mà không gửi",
   "notice.excuseTitle": "Kết thúc nghĩa vụ mà không gửi thông báo",
@@ -10004,6 +10123,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.erasureIrreversible":
     "Thao tác này xóa vĩnh viễn liên hệ trên toàn hệ thống: hồ sơ, hoạt động đã thu thập và các giá trị dẫn xuất. Không thể hoàn tác. Bản thân thao tác xóa cũng được ghi vào nhật ký hoạt động.",
   "privacy.erasureConfirm": "Xóa và chặn",
+  "privacy.resolutionErasureHint":
+    "Chỉ dùng khi từ chối. Khi hoàn tất, hệ thống ghi lại kết quả xóa: Đã xóa, hoặc Không có dữ liệu.",
+  "privacy.erasureDraftReplaced":
+    "Câu trả lời bạn đã nhập sẽ không được lưu. Khi hoàn tất, hệ thống ghi lại kết quả xóa: Đã xóa, hoặc Không có dữ liệu.",
+  "privacy.erasureAnswer.erased": "Đã xóa",
+  "privacy.erasureAnswer.nothing_held": "Không có dữ liệu (đã xóa trước đó)",
   "privacy.legalHoldTitle": "Bị chặn do lưu trữ pháp lý",
   "privacy.legalHold":
     "Liên hệ này đang trong thời hạn lưu trữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b)). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử xóa này đã được ghi vào nhật ký hoạt động.",
@@ -14925,6 +15050,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_probability.label": "Xác suất thắng",
   "autonomy.kind.deal_probability.help":
     "Đặt xác suất thắng của deal khi bằng chứng thay đổi rõ ràng, ví dụ khách đồng ý miệng hoặc ngân sách bị đóng băng. Xác suất do bạn tự đặt không bao giờ bị thay đổi. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_stage_move.label": "Chuyển giai đoạn",
+  "autonomy.kind.deal_stage_move.help":
+    "Chuyển deal sang giai đoạn sau khi chính lời của khách cho thấy deal đã tới đó, ví dụ khách yêu cầu bản nháp hợp đồng. Không bao giờ chuyển sang Thắng và không bao giờ lùi lại. Mỗi lần chuyển hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -17766,6 +17894,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một yêu cầu về quyền riêng tư có thời hạn pháp lý. Mở và trả lời kịp hạn.",
   "worklist.ask.notice_case":
     "Liên hệ này cần nhận thông báo về quyền riêng tư. Gửi thông báo, đề nghị xác nhận thông tin, hoặc kết thúc nghĩa vụ.",
+  "worklist.ask.booking_health":
+    "Trang đặt lịch của bạn đang tạm dừng nên khách không đặt được. Mở cài đặt đặt lịch và kết nối một lịch mà Margince được thêm cuộc họp vào.",
   "worklist.ask.capture_health":
     "Một hộp thư đã ngừng thu thập thư. Kết nối lại để thư được thu thập trở lại.",
   "worklist.ask.domain_question":
@@ -17917,7 +18047,56 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.closeLostUndone":
     "Đã hoàn tác. Hãy thêm ghi chú vì sao deal này vẫn còn hy vọng, nếu không Margince sẽ đóng lại ở lần kiểm tra tiếp theo.",
   "worklist.handled.verdictUndone":
-    "Đã hoàn tác. Margince sẽ không thay đổi điều này nữa cho đến khi deal có điều gì mới.",
+    "Đã hoàn tác. Margince sẽ không thay đổi {field} nữa cho đến khi deal có điều gì mới.",
+  "changes.field.closeDate": "ngày chốt",
+  "changes.field.amount": "giá trị",
+  "changes.field.probability": "xác suất",
+  "changes.field.status": "trạng thái",
+  "changes.field.stage": "giai đoạn",
+  "changes.fieldJoin": "{first} và {second}",
+  "changes.kind.close_lost": "Đã đóng, thua",
+  "changes.kind.deal_close_date": "Ngày chốt mới",
+  "changes.kind.deal_amount": "Giá trị mới",
+  "changes.kind.deal_probability": "Xác suất mới",
+  "changes.kind.stage_move": "Chuyển sang giai đoạn sau",
+  "changes.summary_one":
+    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
+  "changes.summary_other":
+    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
+  "changes.part.closed_one": "{count} đã đóng",
+  "changes.part.closed_other": "{count} đã đóng",
+  "changes.part.redated_one": "{count} đổi ngày",
+  "changes.part.redated_other": "{count} đổi ngày",
+  "changes.part.revalued_one": "{count} đổi giá trị",
+  "changes.part.revalued_other": "{count} đổi giá trị",
+  "changes.part.probabilities_one": "{count} xác suất",
+  "changes.part.probabilities_other": "{count} xác suất",
+  "changes.part.moved_one": "{count} chuyển giai đoạn",
+  "changes.part.moved_other": "{count} chuyển giai đoạn",
+  "changes.viewAll": "Xem tất cả",
+  "changes.undoAll": "Hoàn tác tất cả",
+  "changes.undoAllDone_one": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.undoAllDone_other": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.undoAllPartly":
+    "Đã hoàn tác trên {undone} giao dịch. {kept} giao dịch giữ một thay đổi đã được sửa sau đó.",
+  "changes.partly":
+    "Đã hoàn tác, trừ {field} đã được thay đổi sau khi Margince đặt.",
+  "changes.refused":
+    "Chưa hoàn tác. Giao dịch đã thay đổi từ khi bạn mở trang này. Hãy tải lại và thử lại.",
+  "changes.alreadyAccepted":
+    "Bạn đã chấp nhận thay đổi này nên nó được giữ lại.",
+  "changes.deal.title": "Thay đổi của Margince",
+  "changes.deal.loading": "Đang tải thay đổi…",
+  "changes.team.title": "Thay đổi của Margince trong nhóm",
+  "changes.team.empty":
+    "Tuần này Margince không thay đổi giao dịch nào của nhóm.",
+  "changes.team.loading": "Đang tải thay đổi của nhóm…",
+  "changes.team.owner": "Phụ trách",
+  "changes.team.kind": "Thay đổi",
+  "changes.team.deals": "Giao dịch",
+  "changes.team.value": "Giá trị",
+  "changes.team.undone": "Đã hoàn tác",
+  "changes.team.truncated": "Danh sách đã bị cắt bớt. Vẫn còn thay đổi khác.",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",
@@ -18183,6 +18362,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.recorded": "Ngày ghi nhận",
   "noticeDuty.rule": "Quy định",
   "worklist.untitled.notice_case": "Thông báo quyền riêng tư cần gửi",
+  "worklist.untitled.booking_health": "Trang đặt lịch của bạn đang tạm dừng",
+  "worklist.untitled.booking_health_no_calendar":
+    "Trang đặt lịch của bạn đang tạm dừng: chưa có lịch để thêm cuộc họp",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Trang đặt lịch của bạn đang tạm dừng: Margince chỉ được đọc lịch, không được thêm cuộc họp",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Trang đặt lịch của bạn đang tạm dừng: Margince không truy cập được lịch của bạn",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Tác vụ AI cần xem lại",
   "worklist.untitled.bounce": "Email bị trả lại",

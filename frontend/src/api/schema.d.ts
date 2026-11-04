@@ -5500,6 +5500,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/margince-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Every change Margince made to this deal, newest first.
+         * @description The deal's own list of what Margince changed on it: closed as lost, a new close date,
+         *     amount or probability, and the close-date checks. Accepted and undone changes stay in
+         *     the list and say so; a change still open carries its `undo`. Dismissing a change on
+         *     Home does not remove it here. Paged newest first; `next_cursor` continues the list.
+         *     A deal the caller may not see answers 404.
+         */
+        get: operations["listDealMarginceChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-corrections/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes Margince made to your deals that you have not accepted or undone.
+         * @description One bundle per deal: every open change Margince made to one of the caller's own deals,
+         *     newest first inside the bundle. The counts are deals, counted in SQL over every open
+         *     change, so a deal changed twice counts once and a cut list never shrinks a count.
+         *     Bundles are ordered by the deal's value in the base currency, the largest first. At
+         *     most 500 bundles; `truncated` says when more exist.
+         */
+        get: operations["getPendingMarginceChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-corrections/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo several changes Margince made, one deal at a time.
+         * @description Each item names one deal and the changes on it to take back. The changes of one item
+         *     are undone newest first through the same reversal the single Undo uses; the first is
+         *     checked against `version`, the version the caller read. Like the single Undo, it is
+         *     for a signed-in human only. Items are independent: one
+         *     refused deal does not stop the next. The answer reports each deal as `undone`,
+         *     `partly_undone` (some changes kept, each with its reason) or `refused`.
+         */
+        post: operations["undoMarginceChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/stage-progressions/{approvalId}/revert": {
         parameters: {
             query?: never;
@@ -7206,6 +7282,29 @@ export interface paths {
          */
         put: operations["putSchedulingAlias"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/profile/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that the caller shared their booking link.
+         * @description The app calls this after the caller copies their booking link. The first call marks the
+         *     caller's booking page as used; later calls change nothing. Home warns a host about a
+         *     paused booking page only once the page was used: somebody booked through it, or its host
+         *     shared its link. Answers 404 when the caller has no booking page.
+         */
+        post: operations["markBookingPageShared"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13279,6 +13378,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/team/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What Margince changed on your team's deals.
+         * @description Per teammate and kind of change: how many deals Margince changed since `since`, their
+         *     value in the base currency, and how many of those deals had the change undone. The
+         *     rows follow, newest first, at most 200; `truncated` says when more exist. The counts
+         *     are read over every change, so a cut list never shrinks them.
+         *
+         *     The teammates are the ones `/worklist/team` lists, and every deal is read under the
+         *     caller's own row scope. Requires a row scope of `team` or `all`; an own-scoped reader
+         *     is refused with 403.
+         */
+        get: operations["getTeamMarginceChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/handled": {
         parameters: {
             query?: never;
@@ -16218,7 +16344,12 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update a data-subject request's status / assignee / resolution. */
+        /**
+         * Update a data-subject request's status / assignee / resolution.
+         * @description Fulfilling an erasure runs the erasure and records its own answer, `erased` or
+         *     `nothing_held`. Text sent as `resolution` with it is refused with 422 before anything
+         *     is erased.
+         */
         patch: operations["updateDataSubjectRequest"];
         trace?: never;
     };
@@ -22978,6 +23109,10 @@ export interface paths {
          *     attachment can be read by someone who could never accept the result. That is
          *     deliberate — the read is valid for any entity_type and is worth having on its own —
          *     but it does mean a reading can be paid for and then have nowhere to land.
+         *
+         *     The optional body names the question. `chat_capture` reads a chat screenshot for
+         *     its messages and the name and number its header prints; it is refused with a 422
+         *     on a file that is not an image. A request with no body reads for the deal facts.
          */
         post: operations["readAttachmentForFields"];
         delete?: never;
@@ -23010,6 +23145,70 @@ export interface paths {
          *     authority on the target deal (object RBAC + row-scope visibility).
          */
         post: operations["acceptAttachmentExtraction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/{id}/extraction:file-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * File a chat screenshot on its contact as one message activity, with the image attached.
+         * @description The confirm step after a `chat_capture` reading of a screenshot uploaded to a
+         *     contact. It writes one `message` activity linked to that contact, on the channel
+         *     named, with `body` as its text, and moves the image from the contact onto the
+         *     activity. Nothing is written before this call: the reading never files anything.
+         *
+         *     When `body` is the reading's own text unchanged, the activity is written by the
+         *     reader on behalf of the caller, which is how the product marks text a model
+         *     read. A body the caller typed or changed is the caller's own. An empty body is
+         *     allowed, so a screenshot the model could not read is still filed.
+         *
+         *     Requires UPDATE on the contact and CREATE on activities. The reading named must
+         *     belong to this file, be a `chat_capture` reading, and be finished; otherwise
+         *     422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
+         *     A second call with the same reading answers the activity the first one wrote.
+         *     An agent files a chat through `log_activity` and `attach_document`.
+         */
+        post: operations["fileChatCapture"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/{id}/extractions/{extraction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                extraction_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One named reading of this attachment, for a screen polling the reading it started.
+         * @description The reading `readAttachmentForFields` answered with, by its id. Unlike
+         *     `getAttachmentExtraction`, which reports the newest reading of any question, this
+         *     reports exactly the one named. A reading of another attachment is 404. An agent
+         *     reads the newest reading through `get_attachment_extraction`.
+         */
+        get: operations["getAttachmentExtractionReading"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -30218,6 +30417,8 @@ export interface components {
             readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /** @description { linkedin, twitter, github, ... } */
             social?: {
                 [key: string]: unknown;
@@ -30755,6 +30956,8 @@ export interface components {
             readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /**
              * Format: uuid
              * @description Single-level hierarchy FK; no cycles.
@@ -37753,8 +37956,9 @@ export interface components {
             data: components["schemas"]["TransitionPolicy"][];
             /**
              * @description Whether this installation permits stage automation at all
-             *     (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-             *     off every transition is forced to `propose` regardless of its own rule.
+             *     (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
+             *     and while it is off every transition is forced to `propose` regardless of
+             *     its own rule.
              *
              *     A rule's `mode` therefore describes what was asked for, not what will
              *     happen: read both before telling somebody a transition moves deals by
@@ -39300,6 +39504,12 @@ export interface components {
              */
             id: string;
             /**
+             * @description What the file was read for. `deal_facts` grounds the four deal fields;
+             *     `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+             * @enum {string}
+             */
+            question: "deal_facts" | "chat_capture";
+            /**
              * @description queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
              * @enum {string}
              */
@@ -39324,6 +39534,46 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             finished_at?: string | null;
+            /**
+             * @description For a finished `chat_capture` reading of a screenshot on a contact: the name or
+             *     number the chat header shows when neither agrees with that contact. Null when
+             *     they agree, when the header shows neither, and for every other reading.
+             *     `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+             */
+            other_counterparty?: string | null;
+        };
+        AttachmentReadRequest: {
+            /**
+             * @description What to read the file for. `chat_capture` is accepted only on an image.
+             * @default deal_facts
+             * @enum {string}
+             */
+            question: "deal_facts" | "chat_capture";
+        };
+        FileChatCaptureRequest: {
+            /**
+             * Format: uuid
+             * @description The `chat_capture` reading the caller was shown.
+             */
+            extraction_id: string;
+            /** @description The messaging app the chat happened in. */
+            channel_provider: components["schemas"]["ProviderRef"];
+            /** @description The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone. */
+            body?: string | null;
+            /**
+             * @description The caller confirms the chat belongs on this contact although its header shows
+             *     someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+             *     is refused with 409.
+             * @default false
+             */
+            confirm_other_counterparty: boolean;
+        };
+        FiledChatCapture: {
+            /**
+             * Format: uuid
+             * @description The message activity the chat is filed as.
+             */
+            activity_id: string;
         };
         /** @description The reading `readAttachmentForFields` started, or the one already in flight it joined. */
         AttachmentReadStarted: {
@@ -49754,7 +50004,16 @@ export interface components {
              * @description null hands the request back to the unassigned pool.
              */
             assignee_id?: string | null;
-            /** @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft. */
+            /**
+             * @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+             *     the stored answer, is refused with 422. An open request takes any draft.
+             *
+             *     Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+             *     from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+             *     when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+             *     with 422 on `resolution`, before anything is erased, because typed prose could name the
+             *     subject the erasure removes. Rejecting an erasure still needs a written answer.
+             */
             resolution?: string | null;
             /**
              * @description How the requester's identity was checked, recorded in the proof the request keeps once
@@ -49946,6 +50205,25 @@ export interface components {
              * @enum {string}
              */
             kind: "privacy_notice";
+            controller?: components["schemas"]["PrivacyInformationController"];
+            /**
+             * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
+             *     purpose the reader agreed to, else the kind of a live communication basis.
+             */
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
+            /**
+             * @description The kinds of data held about the reader, read from the subject-access export's own
+             *     sections. Codes only: the page names each kind and never shows a value.
+             */
+            data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "postal_address" | "social_profile" | "custom_fields" | "correspondence" | "deals" | "preferences")[];
+            /** @description Who the data is shared with, as codes the page names in its reader's language. */
+            recipients: ("colleagues" | "service_providers")[];
+            /**
+             * @description The retention rules that act on the reader's data today, from the installation's own
+             *     retention settings, for the kinds of data the reader has. A rule switched off, or held
+             *     back by the retain-only setting, is not listed.
+             */
+            retention: components["schemas"]["PrivacyInformationRetention"][];
             /**
              * @description How this contact was obtained, in the closed vocabulary
              *     `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
@@ -49972,6 +50250,30 @@ export interface components {
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+        };
+        /**
+         * @description Who is responsible for the data, from the installation's own controller particulars, by the
+         *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
+         */
+        PrivacyInformationController: {
+            /** @description The legal name and postal address, as lines. Absent unless both are stated. */
+            identity?: string;
+            /** @description How to reach whoever answers questions about the data. */
+            privacy_contact?: string;
+            /** @description How to object, where the installation states a way of its own. */
+            objection_route?: string;
+        };
+        /** @description One retention rule that acts on the reader's data. */
+        PrivacyInformationRetention: {
+            scope: components["schemas"]["RetentionScope"];
+            retain_days: number;
+            action: components["schemas"]["RetentionAction"];
+            /**
+             * @description The statutory floor that keeps some of this data past `retain_days`: business
+             *     correspondence the law requires to be kept. Absent when the rule keeps the data or no
+             *     floor binds the scope.
+             */
+            kept_by_law?: components["schemas"]["JurisdictionRetentionClass"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.
@@ -50817,8 +51119,8 @@ export interface components {
          *     apart from access. A bounced invitation and a revoked one look identical
          *     otherwise, and a seller chasing silence needs to tell them apart.
          *
-         *     `pending` was minted but not handed to a mail relay (the installation may have
-         *     none configured). `sent` left the building. `delivered` was accepted by the
+         *     `pending` was minted and the relay has not answered yet, or the installation
+         *     has no relay configured. `sent` left the building. `delivered` was accepted by the
          *     recipient's server. `failed` bounced. `consumed` was exchanged for a session —
          *     they are in. `superseded` was retired by a later resend. `none` means no
          *     credential currently stands, which is what a revoked participant shows.
@@ -50936,16 +51238,17 @@ export interface components {
             /** Format: date-time */
             credential_expires_at: string;
             /**
-             * @description Whether a mail relay accepted the invitation for sending. False when the
-             *     installation has no outbound mail configured, or the relay refused it — the
-             *     participant and the credential are recorded either way, and the caller is
-             *     expected to pass the link on themselves rather than being told the
-             *     invitation failed.
+             * @description Whether the invitation was handed to the mail sender. False when the
+             *     installation has no outbound mail configured: the participant and the
+             *     credential are recorded either way, and the caller is expected to pass the
+             *     link on themselves rather than being told the invitation failed.
              *
-             *     Deliberately not `delivered`: a relay accepting a message is not a mailbox
-             *     receiving it, and an address that hard-bounces a second later was `queued`
-             *     all the same. The one attempt is stamped onto the invitation, which the
-             *     roster reports; nothing revises it afterwards.
+             *     The answer does not wait for the relay. The participant's
+             *     `delivery_state` reads `pending` until the relay answers, then `sent` or
+             *     `failed`. Deliberately not `delivered`: a relay accepting a message is not a
+             *     mailbox receiving it, and an address that hard-bounces a second later was
+             *     `sent` all the same. The one attempt is stamped onto the invitation;
+             *     nothing revises it afterwards.
              */
             queued: boolean;
         };
@@ -53017,6 +53320,17 @@ export interface components {
              */
             capture_health?: components["schemas"]["AttentionItem"][];
             /**
+             * @description The reader's OWN booking page when it takes no bookings: at most one card. A page
+             *     counts only when it is switched on and was used, meaning somebody booked through it
+             *     or its host copied its link. `kind` is the page's `blocker` (`no_calendar`,
+             *     `calendar_read_only` or `calendar_unavailable`). Fixing it lives on the booking
+             *     settings screen, so the card offers no verbs.
+             *
+             *     Withheld — named in `lanes_omitted` — for a caller with no human behind it. Absent —
+             *     not empty — on an installation whose feed does not read booking pages.
+             */
+            booking_health?: components["schemas"]["AttentionItem"][];
+            /**
              * @description Up to 100 undecided domains whose captured mail belongs to this reader.
              *     Each item names the domain, its typed reason, and the permitted answer
              *     or retry actions. Forwarded identity requires an explicit company match.
@@ -53170,12 +53484,12 @@ export interface components {
              */
             introductions?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "booking_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             /**
              * @description Lanes that could not be read. Separate from `lanes_omitted` because withheld and broken are different answers: one is this caller's access, the other is this installation's health, and only the second is worth an operator's attention.
              *     A lane named here is ABSENT from the answer rather than empty, and carries no count, so nothing about it reads as "there is none". A client MUST surface the day as partial when this is present. Rendering it as a quiet day is the one reading the field exists to prevent, and the reason the feed used to fail the whole request instead.
              */
-            lanes_failed?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
+            lanes_failed?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run" | "dsr" | "notice_case" | "capture_health" | "booking_health" | "domain_questions" | "ai_work_health" | "bounces" | "undelivered" | "automation_health" | "notices" | "introductions" | "meetings_unreported")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -53220,6 +53534,8 @@ export interface components {
             notice_cases?: number;
             /** @description How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page. */
             capture_health?: number;
+            /** @description How many paused booking pages need the reader's hand: zero or one. */
+            booking_health?: number;
             /** @description How many open domain questions the bounded reader returned. This is a lower bound when `domain_questions_more_available` is true. The paged domain review provides the remaining questions. */
             domain_questions?: number;
             /** @description How many troubled AI runs the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest failures. */
@@ -53324,7 +53640,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "booking_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /** @description On a meeting the reader attends, their own preparation for it. Absent otherwise. */
@@ -53993,7 +54309,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "booking_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
@@ -54951,7 +55267,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "booking_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -55452,6 +55768,130 @@ export interface components {
             version: number;
             /** @description Somebody already put this back. The row stays and says so rather than vanishing, which would leave a reader unsure their Undo landed. */
             reversed: boolean;
+        };
+        /**
+         * @description The changes Margince made to the caller's deals that are neither accepted nor undone.
+         *     Every count is a number of deals; a deal with two kinds of change counts once in
+         *     `deals` and once under each kind.
+         */
+        MarginceChangeSummary: {
+            /** Format: date-time */
+            as_of: string;
+            /** @description Deals with at least one open change. */
+            deals: number;
+            /** @description Deals Margince closed as lost. */
+            closed: number;
+            /** @description Deals given a new close date. */
+            redated: number;
+            /** @description Deals given a new amount. */
+            revalued: number;
+            /** @description Deals given a new probability. */
+            probabilities: number;
+            /** @description Deals Margince moved to a later stage. */
+            moved: number;
+            /** @description The currency of every `value_base_minor`. */
+            base_currency: string;
+            /** @description One per deal, the largest value first. */
+            bundles: components["schemas"]["MarginceChangeBundle"][];
+            /** @description True when more bundles exist than were returned. The counts are never cut. */
+            truncated: boolean;
+        };
+        /** @description Every open change Margince made to one deal. Its Undo takes them all back. */
+        MarginceChangeBundle: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * Format: int64
+             * @description The deal's version as read, for the first undo of the bundle.
+             */
+            version: number;
+            /** @description The changes, newest first. */
+            audit_log_ids: string[];
+            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move")[];
+            /**
+             * Format: int64
+             * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+             */
+            value_base_minor?: number;
+            /** Format: date-time */
+            latest_at: string;
+        };
+        UndoMarginceChangesRequest: {
+            items: components["schemas"]["UndoMarginceChangeItem"][];
+        };
+        UndoMarginceChangesResult: {
+            results: components["schemas"]["UndoMarginceChangeResult"][];
+        };
+        /**
+         * @description What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
+         *     change left in place and why.
+         */
+        UndoMarginceChangeResult: {
+            /** Format: uuid */
+            deal_id: string;
+            /** @enum {string} */
+            outcome: "undone" | "partly_undone" | "refused";
+            /** @description The kinds of change taken back. */
+            undone: string[];
+            kept: components["schemas"]["UndoMarginceChangeKept"][];
+        };
+        DealMarginceChanges: {
+            /** @description The deal's changes, newest first. */
+            changes: components["schemas"]["Receipt"][];
+            /** @description Where the next page starts; absent on the last page. */
+            next_cursor?: string;
+        };
+        TeamMarginceChanges: {
+            /** Format: date-time */
+            as_of: string;
+            /** Format: date-time */
+            since: string;
+            base_currency: string;
+            groups: components["schemas"]["TeamMarginceChangeGroup"][];
+            rows: components["schemas"]["TeamMarginceChangeRow"][];
+            /** @description True when more rows exist than were returned. The groups are never cut. */
+            truncated: boolean;
+        };
+        UndoMarginceChangeItem: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * Format: int64
+             * @description The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+             */
+            version: number;
+            /** @description The changes to take back, all on this deal. */
+            audit_log_ids: string[];
+        };
+        /** @description One change an undo left in place, and why. */
+        UndoMarginceChangeKept: {
+            /** Format: uuid */
+            audit_log_id: string;
+            /** @description The kind of change; absent when the change could not be read. */
+            kind?: string;
+            /** @enum {string} */
+            reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew";
+        };
+        TeamMarginceChangeGroup: {
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            kind: string;
+            /** @description Deals changed in this kind. */
+            deals: number;
+            /** @description Of those deals, how many had the change undone. */
+            undone: number;
+            /**
+             * Format: int64
+             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+             */
+            value_base_minor: number;
+        };
+        TeamMarginceChangeRow: {
+            /** Format: uuid */
+            owner_id: string;
+            change: components["schemas"]["Receipt"];
         };
         /**
          * @description Whether this change can be taken back, and why not when it cannot.
@@ -65126,6 +65566,85 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listDealMarginceChanges: {
+        parameters: {
+            query?: {
+                /** @description The `next_cursor` of the page before. A token this server did not mint is refused with 422. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the deal's changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealMarginceChanges"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getPendingMarginceChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open changes, one bundle per deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginceChangeSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    undoMarginceChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UndoMarginceChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per item, in the order asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoMarginceChangesResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     revertStageProgression: {
         parameters: {
             query?: never;
@@ -67832,6 +68351,34 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    markBookingPageShared: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The booking page is marked as used. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -77960,6 +78507,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getTeamMarginceChanges: {
+        parameters: {
+            query?: {
+                /** @description Where the window starts. Seven days before now when absent. */
+                since?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMarginceChanges"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -91345,7 +91918,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttachmentReadRequest"];
+            };
+        };
         responses: {
             /** @description The reading is queued; poll it with `getAttachmentExtraction`. */
             202: {
@@ -91408,6 +91985,73 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    fileChatCapture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileChatCaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description The activity the chat is filed as. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiledChatCapture"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getAttachmentExtractionReading: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                extraction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The named reading. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentExtraction"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     requestAttachmentAccess: {

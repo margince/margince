@@ -442,7 +442,7 @@ function PinLine({ item }: Readonly<{ item: WorklistItem }>) {
   );
   return (
     // A verb rather than a switch, so the menu closes on it. The row says
-    // "pinned by you" in its own captions.
+    // "pinned by you" in its reason line (`phrasedReasons`).
     <Button
       variant="ghost"
       ref={ref}

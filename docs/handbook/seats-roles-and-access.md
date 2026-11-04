@@ -253,7 +253,7 @@ To share one contact, company, lead, deal or project with a colleague or a team,
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
 You cannot share more access than you hold.
-Also called: give access, grant access, collaborate on a deal.
+Also called: give access, grant access, work together on a deal.
 
 ### How do I stop sharing a record?
 To take back a share in Margince, open the record and choose **Share**. Find the colleague or team under **Shared with** and choose **Revoke**. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.

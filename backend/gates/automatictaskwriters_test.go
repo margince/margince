@@ -96,6 +96,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/sendcore.go:SendPreparedTx":                       {writesNoTask},
 	"compose/controllermail.go:QueueConfirmationTx":                       {writesNoTask},
 	"compose/extractionaccept.go:auditAcceptedFieldsTx":                   {writesNoTask},
+	"modules/activities/chatcapture.go:writeChatActivity":                 {writesNoTask},
 	"modules/activities/channelsend.go:activity":                          {writesNoTask},
 	"modules/activities/extraction.go:RequestAttachmentAccess":            {writesNoTask},
 	"modules/activities/reviewresponse.go:WriteOutcomeReviewTx":           {writesNoTask},

@@ -14,6 +14,7 @@ const (
 	KindSetCloseDate   = "set_close_date"
 	KindSetAmount      = "set_amount"
 	KindSetProbability = "set_probability"
+	KindMoveStage      = "move_stage"
 )
 
 // Input is what one deal's verdict reads. Activities are only those every
@@ -34,10 +35,17 @@ type Input struct {
 	// StageProbability is the deal's stage's own probability, the most
 	// Margince may raise the deal's to.
 	StageProbability int
-	Offers           []Offer
-	StageMoves       []StageMove
-	Prior            []PriorAction
-	Activities       []Activity
+	// StagePosition is the deal's stage's place in its pipeline. Later is
+	// the open stages after it, the only ones a move may go to.
+	StagePosition int
+	Later         []StageOption
+	// ExitCriteria are the required exit criteria of the deal's stage and of
+	// every later open stage. A move must cover those of each stage it leaves.
+	ExitCriteria []ExitCriterion
+	Offers       []Offer
+	StageMoves   []StageMove
+	Prior        []PriorAction
+	Activities   []Activity
 }
 
 // Activity is one logged mail, meeting, call or note, newest last.
@@ -51,6 +59,24 @@ type Activity struct {
 	ArrivedAt time.Time
 	Subject   string
 	Body      string
+}
+
+// StageOption is one open stage after the deal's own.
+type StageOption struct {
+	ID          string
+	Name        string
+	Position    int
+	Probability int
+}
+
+// ExitCriterion is one required exit criterion of a stage.
+type ExitCriterion struct {
+	ID            string
+	StagePosition int
+	Stage         string
+	Label         string
+	Kind          string
+	Hint          string
 }
 
 // Offer is one offer on the deal.

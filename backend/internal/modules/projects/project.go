@@ -94,6 +94,9 @@ func createProjectTx(
 	ctx context.Context, tx pgx.Tx, in CreateProjectInput, by string,
 	active []fieldcatalog.Column, attachCompany AttachCompany, companies ProjectCompanies,
 ) (crmcontracts.Project, error) {
+	if err := refuseTargetEndBeforeStart(in.StartedAt, in.TargetEndDate, targetEndDateColumn); err != nil {
+		return crmcontracts.Project{}, err
+	}
 	var err error
 	in, err = admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(ctx))
 	if err != nil {

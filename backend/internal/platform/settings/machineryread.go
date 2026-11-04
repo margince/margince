@@ -47,6 +47,28 @@ func ApplyTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	return out, nil
 }
 
+// ApplyStoredTx is ApplyTx that also reports whether a row stands behind the
+// value, for machinery that must not act on the default alone.
+func ApplyStoredTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, error) {
+	var zero T
+	if !e.machineryApplied {
+		return zero, false, fmt.Errorf("settings: %s is not declared MachineryApplied — read it through Get/GetTx and its gate", e.Key())
+	}
+	stored, err := hasRow(ctx, tx, e.Key())
+	if err != nil {
+		return zero, false, err
+	}
+	raw, err := currentJSON(ctx, tx, e)
+	if err != nil {
+		return zero, false, err
+	}
+	var out T
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+	}
+	return out, stored, nil
+}
+
 // ApplyManyTx is ApplyTx over several entries in ONE statement, which is the
 // difference that matters: the values come from one snapshot.
 //
