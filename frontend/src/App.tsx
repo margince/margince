@@ -58,6 +58,7 @@ import {
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
+import { useBrowserZoneOnFirstSignIn } from "./lib/viewerzone";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -223,6 +224,9 @@ function AuthedApp({
       adoptLocale(chosen);
     }
   }, [me.data, adoptLocale]);
+  // A person with no stored zone gets the browser's as a first guess. They
+  // change it under Settings → Account.
+  useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
     const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {

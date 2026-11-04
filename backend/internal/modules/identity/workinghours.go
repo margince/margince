@@ -163,7 +163,10 @@ func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error
 	return hours, chosen, nil
 }
 
-// SaveMyWorkingHours records the CALLER's own hours, days and zone.
+// SaveMyWorkingHours records the CALLER's own hours and days. They are read on
+// the caller's own time zone. A non-empty in.Timezone, which an older client
+// still sends, is stored as the caller's chosen zone through writeTimezoneTx
+// in the same transaction. The answer carries the zone the hours are read on.
 //
 // Self-scoped from the authenticated principal, never from a body field: an id
 // on the request would be an admin's way to set a colleague's working hours,
@@ -177,18 +180,25 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 	if err != nil {
 		return WorkingHours{}, err
 	}
+	if in.Timezone != "" && values.ZoneName(in.Timezone) != nil {
+		return WorkingHours{}, &WorkingHoursError{
+			Field:   fieldWorkTimezone,
+			Message: "a timezone is an IANA name, such as Europe/Berlin",
+		}
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, _, err := WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](human))
 		if err != nil {
 			return err
 		}
+		normalized.Timezone = before.Timezone
 		days := weekdayColumn(normalized.Days)
 		tag, err := tx.Exec(ctx, `
 			UPDATE app_user
-			   SET work_start_minute = $2, work_end_minute = $3, work_days = $4, timezone = $5
+			   SET work_start_minute = $2, work_end_minute = $3, work_days = $4
 			 WHERE id = $1 AND `+LiveMemberSQL(""),
 			human, minuteColumn(normalized.StartMinute), minuteColumn(normalized.EndMinute),
-			days, normalized.Timezone)
+			days)
 		if err != nil {
 			return fmt.Errorf("identity: saving working hours: %w", err)
 		}
@@ -204,7 +214,12 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 			workingHoursImage(before), workingHoursImage(normalized)); err != nil {
 			return err
 		}
-		return nil
+		if in.Timezone == "" {
+			return nil
+		}
+		seat, err := writeTimezoneTx(ctx, tx, ids.From[ids.UserKind](human), in.Timezone, TimezoneChosen)
+		normalized.Timezone = seat.Timezone
+		return err
 	})
 	if err != nil {
 		return WorkingHours{}, err
@@ -282,16 +297,7 @@ func validWorkingHours(in WorkingHours) (WorkingHours, error) {
 		days = append(days, day)
 	}
 	sort.Ints(days)
-	if err := values.ZoneName(in.Timezone); err != nil {
-		return WorkingHours{}, &WorkingHoursError{
-			Field:   fieldWorkTimezone,
-			Message: "a timezone is an IANA name, such as Europe/Berlin",
-		}
-	}
-	return WorkingHours{
-		StartMinute: in.StartMinute, EndMinute: in.EndMinute,
-		Days: days, Timezone: in.Timezone,
-	}, nil
+	return WorkingHours{StartMinute: in.StartMinute, EndMinute: in.EndMinute, Days: days}, nil
 }
 
 // WorkingHoursError names the control a refusal is about, so a settings form

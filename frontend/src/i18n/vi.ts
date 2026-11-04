@@ -14573,7 +14573,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // end polish: setup-popover
   "account.profileCard": "Hồ sơ",
   "account.signInCard": "Đăng nhập",
-  "account.languageCard": "Ngôn ngữ",
+  "account.timezoneLabel": "Múi giờ",
+  "account.timezoneHelp":
+    "Thời gian trong Margince, giờ nhận đặt lịch của bạn và thư gửi cho bạn dùng múi giờ này. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
+  "workingHours.zoneIs": "Giờ của bạn tính theo {zone}.",
+  "workingHours.changeZone": "Đổi múi giờ",
+  "account.languageCard": "Ngôn ngữ và múi giờ",
   "account.browserCard": "Trình duyệt này",
   "account.passwordHelp":
     "Dùng để đăng nhập bằng {email}. Đổi mật khẩu sẽ đăng xuất bạn ở mọi nơi khác và ngắt kết nối các ứng dụng và agent thay mặt bạn.",
@@ -14878,9 +14883,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
     "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
-  "workingHours.timezone": "Múi giờ",
-  "workingHours.browserZone":
-    "Trình duyệt đang dùng {zone}. Thời gian trống tính theo múi giờ đã chọn ở đây.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
   "workingHours.day.1": "Thứ Hai",
@@ -15930,6 +15932,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.user_greeting_name.changed.label": "Đã đổi tên gọi",
   "webhooks.event.user_greeting_name.changed.when":
     "Tên gọi của thành viên được lưu, hoặc được điền ở lần đầu đăng nhập qua nhà cung cấp.",
+  "webhooks.event.user_timezone.changed.label": "Đã đổi múi giờ",
+  "webhooks.event.user_timezone.changed.when":
+    "Múi giờ riêng của một thành viên được lưu hoặc thay đổi.",
   "webhooks.event.user_locale.changed.label": "Đã đổi ngôn ngữ giao diện",
   "webhooks.event.user_locale.changed.when":
     "Thành viên chọn ngôn ngữ cho giao diện của chính mình.",

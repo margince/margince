@@ -2811,6 +2811,10 @@ func (stubs) RevokeMySession(w nethttp.ResponseWriter, r *nethttp.Request, sessi
 	httperr.NotImplemented(w, r, "RevokeMySession")
 }
 
+func (stubs) SaveMyTimezone(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyTimezone")
+}
+
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyWorkingHours")
 }

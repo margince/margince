@@ -11,8 +11,9 @@ meeting.
 ## Hours belong to the host
 
 The hours a host can be booked are a fact about one host, so each host sets their own. No setting for the whole
-installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday,
-in the installation timezone. An agent acting for someone else may not set them, because when a
+installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday.
+Hours are read in the host's own time zone, which is one setting per person under Settings → Account
+and is not part of the hours. A host with no stored zone is read in the installation timezone. An agent acting for someone else may not set them, because when a
 host can be booked is that host's call.
 
 ## A page with no calendar is paused, and says so
