@@ -4,10 +4,9 @@
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import {
   briefContextTitle,
@@ -49,6 +48,7 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
@@ -142,10 +142,10 @@ export function WorklistRow({
   RowDensity) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  // A task's deadline is the record's day; everything else on this row is a
-  // moment the reader is racing on their own clock.
-  const recordZone = useRecordZone();
+  const zone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock (B1),
+  // so the day comparison and the due-day text read that clock.
+  const companyZone = useCompanyZone();
   // Inside the drawer a row's record links carry the way back to it.
   const listed = useListed();
   const target = rowHref(item);
@@ -165,7 +165,7 @@ export function WorklistRow({
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
-  const when = whenText(item, t, locale, zone, recordZone, new Date());
+  const when = whenText(item, t, locale, zone, companyZone, new Date());
   // The supporting line, which every source sends as a sentence already.
   const sourceDetail = noticeDetail(item, viewer, t);
   const detail = sourceDetail === item.verdict?.line ? undefined : sourceDetail;

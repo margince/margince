@@ -16,7 +16,6 @@ import {
 } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge, formatInterval } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -29,6 +28,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { CaptureConnectionsHealth } from "./captureconnectionshealth";
 import { HealthCard } from "./healthcard";
 
@@ -189,6 +189,7 @@ function mailboxColumns(
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
+  zone: string,
 ): DataTableColumn<Mailbox>[] {
   const counted = (
     key: string,
@@ -246,23 +247,15 @@ function mailboxColumns(
       render: (box) =>
         box.unread_period
           ? t("captureHealth.unreadPeriod", {
-              from: formatDateTime(
-                box.unread_period.from,
-                locale,
-                viewerZone(),
-              ),
-              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+              from: formatDateTime(box.unread_period.from, locale, zone),
+              to: formatDateTime(box.unread_period.to, locale, zone),
             })
           : "",
       folded: (box) =>
         box.unread_period
           ? t("captureHealth.unreadPeriodFolded", {
-              from: formatDateTime(
-                box.unread_period.from,
-                locale,
-                viewerZone(),
-              ),
-              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+              from: formatDateTime(box.unread_period.from, locale, zone),
+              to: formatDateTime(box.unread_period.to, locale, zone),
             })
           : undefined,
     },
@@ -324,6 +317,7 @@ function CaptureHealthBody({
   health,
   zone,
 }: Readonly<{ health: Health; zone: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -339,7 +333,7 @@ function CaptureHealthBody({
             bleed
             fold
             label={t("captureHealth.mailboxes")}
-            columns={mailboxColumns(t, plural, locale)}
+            columns={mailboxColumns(t, plural, locale, readerZone)}
             rows={[...health.mailboxes]}
             rowKey={(box) => box.user_id}
           />
@@ -417,7 +411,7 @@ export function useCaptureHealth() {
 export function CaptureHealthCard() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useCaptureHealth();
 
   return (

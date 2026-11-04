@@ -10,8 +10,8 @@ import { Select } from "../../design-system/select";
 import { useNow } from "../../format/now";
 import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import { useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { useRecordZone } from "../../lib/recordzone";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { DimensionFilters } from "./reporting.dimensions";
@@ -54,7 +54,7 @@ export function ReportingFilters({
   onChange: (selection: ReportingSelection) => void;
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   // The day the period's bounds are counted in, not the viewer's own.
   const today = isoOrBlank(dayInZone(useNow(0), zone)) || undefined;
   const context = useAnalyticsContext();

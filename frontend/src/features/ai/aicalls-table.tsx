@@ -10,9 +10,9 @@ import { RowOpen } from "../../design-system/rowopen";
 import { formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   callCodeName,
   callCodeTone,
@@ -60,8 +60,8 @@ function callColumns(
   locale: Locale,
   now: number,
   onOpen: (call: CallSummary) => void,
+  zone: string,
 ): DataTableColumn<CallSummary>[] {
-  const zone = viewerZone();
   return [
     {
       key: "when",
@@ -147,12 +147,13 @@ export function CallTable({
   const t = useT();
   const { locale } = useLocale();
   const now = useNow(RELATIVE_TICK_MS);
+  const zone = useViewerZone();
   return (
     <DataTable
       bleed
       fold
       label={t("aicalls.callsLabel")}
-      columns={callColumns(t, locale, now, onOpen)}
+      columns={callColumns(t, locale, now, onOpen, zone)}
       rows={[...calls]}
       rowKey={(call) => call.id}
       rowTestId={(call) => `call-${call.id}`}

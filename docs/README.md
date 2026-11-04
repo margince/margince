@@ -96,6 +96,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
 - [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
+- [land-through-develop.md](how-to/land-through-develop.md): merge into `develop` on a shorter CI run, and how
+  `develop` reaches `main`.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.

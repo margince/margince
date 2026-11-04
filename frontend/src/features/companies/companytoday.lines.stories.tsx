@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { StoryProviders } from "../../testing/story-utils";
 import type { AccountScan } from "./accountscan";
 import { scanFoot } from "./companytoday.lines";
@@ -9,7 +9,7 @@ function ScanReceipt({ reason }: Readonly<{ reason: string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const scan: AccountScan = {
     company_id: "01a04298-1971-7076-8076-8064da20fdff",
     state: "queued",

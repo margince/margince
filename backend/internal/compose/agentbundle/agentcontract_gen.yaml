@@ -19048,7 +19048,7 @@ components:
         concern_since: {type: [string, 'null'], format: date-time, description: When the current concern began.}
         last_synced_at: {type: [string, 'null'], format: date-time, description: 'Last sync attempt; null before the first.'}
         last_success_at: {type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.'}
-        last_sync_error_class: {type: [string, 'null']}
+        last_sync_error_class: {type: [string, 'null'], description: '`forbidden`: the member''s role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.'}
         sync_failing_since: {type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.'}
         next_sync_due_at: {type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).'}
         backfill: {allOf: [{$ref: '#/components/schemas/BackfillStatus'}], description: 'Summary of the connection''s backfill run; state `none` when never run.'}
@@ -19619,6 +19619,27 @@ components:
           description: |-
             Whether a connect started right now would proceed, per provider a contact can choose
             between, so the connect screen can say so before the click rather than after a 501.
+        seat_capture: {$ref: '#/components/schemas/SeatCapture'}
+    SeatCapture:
+      type: object
+      additionalProperties: false
+      description: |-
+        Whether the caller's own role and seat let capture write, asked by the same check connect
+        and every sync ask. False hides every connect button; a connected mailbox stops at its
+        next sync.
+      required: [allowed]
+      properties:
+        allowed: {type: boolean}
+        reason:
+          type: [string, 'null']
+          enum: [role_cannot_capture, null]
+          description: Why `allowed` is false; null when it is true.
+        missing:
+          type: [string, 'null']
+          enum: [activity, contact, lead, seat, null]
+          description: |-
+            What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+            `lead`, or `seat` for a read seat. Null when `allowed` is true.
     CaptureProviderAvailability:
       type: object
       description: |-
@@ -19632,12 +19653,13 @@ components:
         provider: {type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between.}
         reason:
           type: string
-          enum: [ready, app_missing, app_unusable, unsupported]
+          enum: [ready, app_missing, app_unusable, unsupported, role_cannot_capture]
           description: |-
             `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
             app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
             is a different fix from registering one. `unsupported`: this deployment does not serve the
-            provider at all.
+            provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+            capture writes, for every provider alike (`seat_capture` says so once).
     PublicOriginStatus:
       type: object
       description: |-
@@ -29143,9 +29165,9 @@ components:
           type: string
           nullable: true
           readOnly: true
-          enum: [product, calendar, sending_system]
+          enum: [product, calendar, sending_system, bulk]
           description: >-
-            What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+            What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
         voice:
           allOf: [{$ref: '#/components/schemas/ActivityVoice'}]
           readOnly: true
@@ -34369,6 +34391,10 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        connected_mailboxes:
+          type: integer
+          readOnly: true
+          description: How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
         invite_email_state:
           type: [string, 'null']
           enum: [sending, sent, failed, null]
@@ -35985,6 +36011,10 @@ components:
         key: {type: string, description: The role key an invite or a role change sends.}
         name: {type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this.}
         is_system: {type: boolean, description: True for a role the product ships.}
+        captures_mail:
+          type: boolean
+          readOnly: true
+          description: Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
     ComposedExtension:
       type: object
       additionalProperties: false

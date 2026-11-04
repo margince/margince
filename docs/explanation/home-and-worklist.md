@@ -183,6 +183,11 @@ Mail a sending system wrote is left out of the waiting lane and its tail, unless
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
+Mail that carried a List-Unsubscribe header (`bulk_mail_attested`) waits only once a human took it on as a request.
+An `asks_us` verdict from the classifier alone does not put a newsletter on the lane (`owedSQL` in
+`modules/activities/answered.go`). Our own newsletter waits on no reply, and a newsletter on a thread answers nothing,
+because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
+
 Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
 still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
 because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.

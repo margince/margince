@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -16,7 +16,7 @@ import { OutboxButton } from "./outboxbutton";
 
 const base = {
   scheduled_at: "2026-09-01T07:00:00Z",
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The renewal quote",
   to: ["ceo@acme.test"],
   version: 1,

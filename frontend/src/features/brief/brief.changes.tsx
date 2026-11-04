@@ -15,11 +15,10 @@ import {
   formatDayMonth,
   formatTimeOfDay,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useHandledForYou } from "../../lib/handled";
 import { isReviewableReceipt } from "../../lib/receiptreview";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
 
@@ -29,8 +28,7 @@ import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
 export function BriefChanges() {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const zone = viewerZone();
+  const readerZone = useViewerZone();
   const query = useHandledForYou();
   const titleId = useId();
   const receipts = query.data?.receipts?.filter(isReviewableReceipt);
@@ -60,7 +58,7 @@ export function BriefChanges() {
               // claim about who acted, and the detail names that in words.
               <li className="magic-line" key={receipt.id}>
                 <p className="magic-line-text">
-                  {receiptSummary(receipt, t, locale, recordZone)}{" "}
+                  {receiptSummary(receipt, t, locale, readerZone)}{" "}
                   {receipt.subject?.type === "deal" && (
                     <span className="magic-line-subject">
                       <EntityRef kind="deal" id={receipt.subject.id} />
@@ -79,9 +77,13 @@ export function BriefChanges() {
                 <time
                   className="t-caption magic-line-when"
                   dateTime={receipt.occurred_at}
-                  title={formatDateTime(receipt.occurred_at, locale, zone)}
+                  title={formatDateTime(
+                    receipt.occurred_at,
+                    locale,
+                    readerZone,
+                  )}
                 >
-                  {changeWhen(receipt.occurred_at, asOf, locale, zone)}
+                  {changeWhen(receipt.occurred_at, asOf, locale, readerZone)}
                 </time>
               </li>
             ))}

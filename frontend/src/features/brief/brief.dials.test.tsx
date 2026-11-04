@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   meetingRow,
@@ -311,7 +311,7 @@ describe("the Brief's dials", () => {
     // moved on its own, and a substring read is what catches it coming back in
     // some other wording.
     expect(glance.textContent).not.toContain(
-      formatTimeOfDay(readingsDay({}).as_of, "en", viewerZone()),
+      formatTimeOfDay(readingsDay({}).as_of, "en", browserZone()),
     );
 
     cleanup();

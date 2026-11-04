@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,9 +7,11 @@ import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyActionBadges } from "./companyheader";
 import {
@@ -90,7 +93,9 @@ function renderInApp(ui: ReactNode) {
   });
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ViewerZoneProvider zone={UTC_ZONE}>{ui}</ViewerZoneProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }

@@ -4,7 +4,7 @@
 // Worklist copy names records, supported moves and concrete reasons.
 
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
 import { waitingEmailRow } from "../testing/brief.fixtures";
@@ -25,7 +25,7 @@ const t: Translator = (key, params) => translate("en", key, params);
 // The "still renders a full date" case below only asserts the year, so the
 // viewer's own zone stands in rather than a pinned literal
 // (format/zone-by-purpose.test.ts).
-const zone = viewerZone();
+const zone = browserZone();
 
 // The move that became performable.
 //

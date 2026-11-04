@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { zeroWeekCounts } from "../../testing/brief.fixtures";
 import {
   fleetDeal,
@@ -57,9 +57,9 @@ describe("BriefScreen — the weekly report", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
   };
 
@@ -215,9 +215,9 @@ describe("BriefScreen — the weekly report", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
     const user = userEvent.setup();
 

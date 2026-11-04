@@ -275,6 +275,27 @@ it("states a read-only calendar's saved choices and reconnects it back to Meetin
   ]);
 });
 
+it("dates the calendar's sync from its last success, not its last attempt", async () => {
+  const day = 24 * 60 * 60 * 1000;
+  mount(
+    { provider: "gcal" },
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              ...bookingConnection,
+              last_synced_at: new Date(Date.now()).toISOString(),
+              last_success_at: new Date(Date.now() - 3 * day).toISOString(),
+            },
+          ],
+        }),
+    },
+  );
+  expect(await screen.findByText("Synced 3 d ago")).toBeTruthy();
+  expect(screen.queryByText("Synced just now")).toBe(null);
+});
+
 it("explains a missing saved calendar and saves only once another is chosen", async () => {
   const user = userEvent.setup();
   const server = mount({ provider: "gcal", calendar_id: "deleted" });

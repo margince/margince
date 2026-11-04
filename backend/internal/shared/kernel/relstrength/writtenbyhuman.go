@@ -25,11 +25,14 @@ const (
 	// AutomaticSendingSystem is mail whose sender is a sending system: a
 	// file-share notice, a notification, a delivery report.
 	AutomaticSendingSystem AutomaticKind = "sending_system"
+	// AutomaticBulk is mail that carried a List-Unsubscribe header: a
+	// newsletter or a campaign, sent to a list rather than written to one contact.
+	AutomaticBulk AutomaticKind = "bulk"
 )
 
 // AutomaticKinds lists every automatic kind, for the contract enum check.
 func AutomaticKinds() []AutomaticKind {
-	return []AutomaticKind{AutomaticProduct, AutomaticCalendar, AutomaticSendingSystem}
+	return []AutomaticKind{AutomaticProduct, AutomaticCalendar, AutomaticSendingSystem, AutomaticBulk}
 }
 
 // systemOrigins are the activity origins that mean the product wrote the row.
@@ -43,6 +46,7 @@ type Evidence struct {
 	Origin          string
 	CalendarMethod  string
 	SenderIsMachine bool
+	BulkMail        bool
 }
 
 // Automatic is WrittenByHumanSQL for a reader holding the row in Go, naming
@@ -57,6 +61,8 @@ func (e Evidence) Automatic() AutomaticKind {
 		return AutomaticCalendar
 	case e.SenderIsMachine:
 		return AutomaticSendingSystem
+	case e.BulkMail:
+		return AutomaticBulk
 	}
 	return ""
 }
@@ -69,10 +75,11 @@ func OriginIsEngagementSQL(alias string) string {
 
 // WrittenByHumanSQL admits an activity row a human wrote. A call, meeting or
 // chat message passes unless the product wrote it. An email also needs no
-// calendar method, and a sender that is not a sending system.
+// calendar method, a sender that is not a sending system, and no
+// List-Unsubscribe header.
 func WrittenByHumanSQL(alias string) string {
 	return "(" + OriginIsEngagementSQL(alias) + " AND (" + alias + ".kind <> '" + kindEmail + "' OR (NOT " +
-		alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL)))"
+		alias + ".sender_is_machine AND " + alias + ".calendar_method IS NULL AND NOT " + alias + ".bulk_mail_attested)))"
 }
 
 // DirectionClockSQL admits a row to a "they last wrote" or "we last wrote"

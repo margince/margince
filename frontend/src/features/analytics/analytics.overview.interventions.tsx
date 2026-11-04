@@ -14,9 +14,9 @@ import {
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import type { UrlParams } from "../../lib/urlstate";
 import { type AttentionState, attentionState } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
@@ -179,7 +179,7 @@ function FindingRows({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const owners = useMemberNames(
     findings.flatMap((check) => check.owner_id ?? []),
   );

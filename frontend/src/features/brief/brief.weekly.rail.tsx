@@ -12,7 +12,7 @@ import {
 import { useNow } from "../../format/now";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
 import {
@@ -31,7 +31,7 @@ export function WeeklyRail({
 }: Readonly<{ constraints?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const [params] = useUrlParams();
   const asked = params.get("week") ?? undefined;
   const review = useWeeklyReview(asked).data ?? null;
@@ -83,7 +83,7 @@ function WeeksPanel({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params, setParams] = useUrlParams();
   const wins = new Map(
     (useWeeklyWins().data ?? []).map((entry) => [entry.week, entry.deals_won]),

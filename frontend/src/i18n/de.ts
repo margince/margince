@@ -3717,6 +3717,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.calendar": "Kalendereinladung",
   "timeline.automatic.sending_system": "Von einem System gesendet",
   "timeline.automatic.product": "Von Margince gesendet",
+  "timeline.automatic.bulk": "An einen Verteiler gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",
@@ -11128,8 +11129,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Änderungsverlauf des Anbieters ist abgelaufen. Die nächste Synchronisierung beginnt an einem neuen Punkt.",
   "connectors.errInternal":
     "Ein interner Fehler ist aufgetreten. Die Erfassung wurde gestoppt, um unvollständige Daten zu vermeiden.",
+  "connectors.errForbidden":
+    "Deine Rolle erlaubt Margince nicht mehr, deine E-Mails zu erfassen, darum ist die Erfassung pausiert. Sobald ein Admin deine Rolle ändert, läuft sie von selbst weiter.",
   "connectors.errUnknown":
     "Die Erfassung ist aus einem nicht zugeordneten Grund fehlgeschlagen. Es wird automatisch erneut versucht.",
+  "connectors.roleCannotCapture":
+    "Deine Rolle erlaubt Margince nicht, deine E-Mails zu erfassen. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
+  "connectors.roleCannotCapture.activity":
+    "Deine Rolle darf keine Aktivitäten anlegen, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
+  "connectors.roleCannotCapture.contact":
+    "Deine Rolle darf keine Kontakte anlegen, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
+  "connectors.roleCannotCapture.lead":
+    "Deine Rolle darf keine Leads anlegen, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
+  "connectors.roleCannotCapture.seat":
+    "Du hast einen Leseplatz, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um einen vollen Platz zu bekommen.",
 
   // Das OAuth-Rückkehrergebnis (Task 2): der Callback landet auf
   // #/settings/connections/{outcome} — ein schließbarer Hinweis, gesteuert
@@ -11146,6 +11159,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Anbieter hat die Verbindung abgelehnt. Erteile alle angefragten Berechtigungen und verbinde dann erneut.",
   "connectors.oauthMisconfigured":
     "Diese Installation kann die Verbindung nicht abschließen, da die API des Anbieters nicht aktiviert ist. Ein Admin muss die API aktivieren. Das Server-Log nennt die betroffene API.",
+  "connectors.oauthRoleCannotCapture":
+    "Deine Rolle erlaubt Margince nicht, deine E-Mails zu erfassen, darum wurde nichts verbunden. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
   "connectors.oauthBadClient":
     "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Admin muss Client-ID und Clientschlüssel in den Einstellungen unter Anmeldung und Apps prüfen. Erneutes Verbinden behebt das nicht.",
   "connectors.dismissOutcome": "Schließen",
@@ -12044,9 +12059,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.baseLanguage": "Basissprache",
   "setup.baseLanguageHint":
     "Die Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Jede Person wählt ihre eigene Anzeigesprache, und Antworten an Kontakte folgen der Sprache des Threads.",
-  "setup.timezone": "Zeitzone für Berichte",
+  "setup.timezone": "Zeitzone des Unternehmens",
   "setup.timezoneHint":
-    "IANA-Zeitzonenname. Alle Berichtszeiträume werden in dieser Zeitzone berechnet. Der Wert wurde aus diesem Browser ermittelt. Ändere die Zeitzone, wenn das Team anderswo arbeitet.",
+    "IANA-Zeitzonenname. Berichtszeiträume, geplante Abläufe und versendete Dokumente nutzen ihn. Der Wert wurde aus diesem Browser ermittelt. Ändere ihn, wenn das Unternehmen anderswo arbeitet. Alle legen ihre eigene Zeitzone für die angezeigten Zeiten fest.",
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort",
@@ -13645,6 +13660,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.system": "Vorgegeben",
   "roles.archived": "Archiviert",
   "roles.custom": "Angepasst",
+  "roles.cannotCapture":
+    "Mitglieder mit dieser Rolle können kein Postfach verbinden, und bereits verbundene Postfächer erfassen nichts mehr.",
   "roles.members_one": "{count} Mitglied",
   "roles.members_other": "{count} Mitglieder",
   "roles.empty": "Keine Rollen vorhanden.",
@@ -13890,6 +13907,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das ist der einzige Admin. Mache zuerst ein anderes Mitglied zum Admin.",
   "users.role.own": "Deine Rolle ändert ein anderer Admin.",
   "users.role.outside": "Diese Rolle liegt außerhalb deines Zugriffs.",
+  "users.role.stopsCapture_one":
+    "Das {count} verbundene Postfach oder der Kalender erfasst dann nichts mehr.",
+  "users.role.stopsCapture_other":
+    "Die {count} verbundenen Postfächer und Kalender erfassen dann nichts mehr.",
   "users.role.withheld": "Deine Rolle darf keine Rollen ändern.",
   "users.teamMemberCount_one": "{count} Mitglied",
   "users.teamMemberCount_other": "{count} Mitglieder",
@@ -14380,9 +14401,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.timeFormat.locale": "Sprache der Oberfläche verwenden",
   "installationSettings.timeFormat.24h": "24-Stunden-Format · 17:30",
   "installationSettings.timeFormat.12h": "12-Stunden-Format · 05:30 pm",
-  "installationSettings.timezone": "Zeitzone für Berichte",
+  "installationSettings.timezone": "Zeitzone des Unternehmens",
   "installationSettings.timezoneHint":
-    "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben gelten damit für das ganze Team. Jedes Nutzerkonto behält seine eigene Anzeigezeitzone.",
+    "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume, geplante Abläufe und versendete Dokumente nutzen sie für das ganze Unternehmen. Alle sehen Zeiten in ihrer eigenen Zeitzone, festgelegt unter Einstellungen → Konto.",
   "installationSettings.fiscalYearStart": "Beginn des Geschäftsjahres",
   "installationSettings.fiscalYearStartHint":
     "Berichte gruppieren nach diesem Jahr und Quartal. Eine Änderung benennt jeden Bericht neu. Ein gespeicherter Zeitraum wie 2026 behält seine Monate.",
@@ -19436,6 +19457,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.backfill": "Verlaufsimport fehlgeschlagen",
   "captureConcern.stalled": "Synchronisierung angehalten",
   "captureConcern.silent": "Keine neue E-Mail eingegangen",
+  "captureConcern.roleCannotCapture": "Rolle darf keine E-Mails erfassen",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Seit {since}",
   "captureConcern.more_one":

@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { StoryProviders } from "../testing/story-utils";
 import { TaskTimeField } from "./followuptaskfields";
 
@@ -18,9 +18,9 @@ const ZONE = "Europe/Berlin";
 function field(day: string, time: string) {
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={ZONE}>
+      <ViewerZoneProvider zone={ZONE}>
         <TaskTimeField day={day} value={time} onChange={() => {}} />
-      </RecordZoneProvider>
+      </ViewerZoneProvider>
     </StoryProviders>,
   );
 }

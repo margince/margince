@@ -48,7 +48,6 @@ import {
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
@@ -56,6 +55,7 @@ import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import "./logactivity.css";
 import { CALL_OUTCOME_LABEL } from "../lib/calloutcome";
+import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
@@ -141,7 +141,7 @@ export function LogActivityForm({
   const t = useT();
   const formId = useId();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),

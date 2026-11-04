@@ -8,8 +8,8 @@
 // date. That says neither what the work is nor what to do about it.
 
 import { Panel, PanelBody } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { partyName, reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
@@ -28,9 +28,10 @@ export function WorklistWhy({
   // Draws the row's own verbs, for a drawer that covers the row it opened from.
   answer?: boolean;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const reasons = whyReasons(item, t, locale, viewerZone());
+  const reasons = whyReasons(item, t, locale, readerZone);
   return (
     <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>

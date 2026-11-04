@@ -333,11 +333,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
-	// The calendar method and the sender stamp describe what a message is, so
-	// they travel with its content. The origin is the product's own fact.
+	// The calendar method, the sender stamp and the bulk stamp describe what a
+	// message is, so they travel with its content. The origin is the product's
+	// own fact.
 	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
 	if s.contentAvailable {
 		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+		evidence.BulkMail = s.bulkMailAttested
 	}
 	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { StoryProviders } from "../testing/story-utils";
 import { CommitmentReview } from "./commitmentreview";
 
@@ -38,11 +38,11 @@ const historical = {
   evaluated_at: "2026-10-18T10:00:00Z",
 };
 export const Historical: Story = {
-  args: { zone: viewerZone(), decisions: [historical] },
+  args: { zone: browserZone(), decisions: [historical] },
 };
 export const NeedsEvidence: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     decisions: [
       { ...historical, outcome: "later_context_not_read" },
       {
@@ -56,7 +56,7 @@ export const NeedsEvidence: Story = {
 };
 export const NoWithheldCommitments: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     decisions: [{ ...historical, current_work: true }],
   },
 };
@@ -73,7 +73,7 @@ export const NeedsEvidenceDark: Story = {
 
 export const ConditionalOffer: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     decisions: [
       {
         ...historical,
@@ -92,7 +92,7 @@ export const ConditionalOffer: Story = {
 };
 export const CompletedWork: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     decisions: [
       {
         ...historical,
@@ -114,7 +114,7 @@ export const CompletedWorkDark: Story = {
 };
 export const OtherNonActions: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     decisions: [
       {
         ...historical,

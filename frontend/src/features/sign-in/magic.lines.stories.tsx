@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { MagicLine } from "../../lib/magic.queries";
 import { StoryProviders } from "../../testing/story-utils";
 import { MagicLaneSection } from "./magic.lines";
@@ -51,7 +51,7 @@ function lane() {
           title="Needs restoring"
           rows={WATCHING}
           since="2026-09-12T18:00:00Z"
-          zone={viewerZone()}
+          zone={browserZone()}
           byDay={false}
         />
       </Panel>
@@ -85,7 +85,7 @@ export const UnsupportedReceipt: Story = {
     lane: "done",
     title: "Activity",
     since: "2026-09-12T18:00:00Z",
-    zone: viewerZone(),
+    zone: browserZone(),
     byDay: false,
     rows: [
       {

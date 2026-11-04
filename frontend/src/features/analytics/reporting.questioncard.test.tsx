@@ -5,7 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
   jsonResponse,
@@ -56,7 +56,7 @@ const withQuestionCard = {
 function draw(editionId?: string, rolePreview?: boolean, kept?: KeptQuestions) {
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+      <CompanyZoneProvider zone={REPORTING_FIXTURE_ZONE}>
         <ReportingCharts
           evaluation={withQuestionCard}
           editionId={editionId}
@@ -64,7 +64,7 @@ function draw(editionId?: string, rolePreview?: boolean, kept?: KeptQuestions) {
           onEvidence={() => {}}
           rolePreview={rolePreview}
         />
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
     </StoryProviders>,
   );
 }
@@ -378,13 +378,13 @@ const withBoundCard = {
 function drawBound() {
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+      <CompanyZoneProvider zone={REPORTING_FIXTURE_ZONE}>
         <ReportingCharts
           evaluation={withBoundCard}
           report={{ id: "report", revision: 3 }}
           onEvidence={() => {}}
         />
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
     </StoryProviders>,
   );
 }
@@ -431,7 +431,7 @@ it("shows the calendar a sent edition's bound card kept its periods in", async (
   installFetchStub(reportingStoryRoutes());
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+      <CompanyZoneProvider zone={REPORTING_FIXTURE_ZONE}>
         <ReportingCharts
           evaluation={withBoundCard}
           editionId="edition"
@@ -454,7 +454,7 @@ it("shows the calendar a sent edition's bound card kept its periods in", async (
           }}
           onEvidence={() => {}}
         />
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
     </StoryProviders>,
   );
   expect(

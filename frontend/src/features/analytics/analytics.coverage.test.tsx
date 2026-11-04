@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -24,7 +24,7 @@ it("explains a bookmarked coverage page without fetching a forbidden panel", asy
             default_scope: { kind: "workspace", label: "Workspace" },
             allowed_scopes: [{ kind: "workspace", label: "Workspace" }],
             capabilities: {},
-            timezone: viewerZone(),
+            timezone: browserZone(),
             base_currency: "EUR",
           }
         : { data: [] };

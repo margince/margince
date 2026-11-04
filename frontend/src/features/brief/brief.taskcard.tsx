@@ -30,7 +30,6 @@ import {
   formatDayMonthNearYear,
   formatNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type Translator,
@@ -40,8 +39,9 @@ import {
   type Words,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -141,7 +141,7 @@ export function TaskCard({
 }: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const viewer = useMe(false).data?.user;
   const line = taskLine(item, t, locale, zone);
   return (
@@ -170,12 +170,14 @@ export function TaskMeta({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock.
+  const companyZone = useCompanyZone();
   const when = cardWhen(
     item,
     { t, plural, locale },
-    viewerZone(),
-    recordZone,
+    readerZone,
+    companyZone,
     new Date(),
   );
   // The open card's title already carries the late badge.

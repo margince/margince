@@ -24,7 +24,7 @@ import { formatDate, formatMoney, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
@@ -339,7 +339,7 @@ function ClosedDeals({
 }: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const pipeline = review.pipeline;
   const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
   return (
@@ -399,7 +399,7 @@ function ClosedDeals({
 function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   return (
     <>
       {deals.map((deal) => (

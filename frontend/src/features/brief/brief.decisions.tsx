@@ -22,7 +22,6 @@ import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatCountdown } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -36,9 +35,9 @@ import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   resolveDisplay,
   stagedDayFormatter,
@@ -101,6 +100,7 @@ function deckLabels(
   t: (key: MessageKey, params?: Record<string, string>) => string,
   plural: PluralTranslator,
   locale: Parameters<typeof formatDateTime>[1],
+  zone: string,
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
     accept: t(DECK_KEY_WORDS.accept),
@@ -152,7 +152,7 @@ function deckLabels(
       }),
     clearedTime: (atMs) =>
       t("brief.deck.clearedTime", {
-        at: formatDateTime(new Date(atMs).toISOString(), locale, viewerZone()),
+        at: formatDateTime(new Date(atMs).toISOString(), locale, zone),
       }),
     empty: t("brief.deck.empty"),
     bundleSummary: (members) =>
@@ -191,11 +191,11 @@ export function DecisionsSection({
   onAlreadyDecided: () => void;
   expanded?: boolean;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const stagedDay = stagedDayFormatter(locale, recordZone);
+  const stagedDay = stagedDayFormatter(locale, readerZone);
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
@@ -312,7 +312,7 @@ export function DecisionsSection({
           </p>
         )}
         labels={{
-          ...deckLabels(t, plural, locale),
+          ...deckLabels(t, plural, locale, readerZone),
           ...(expanded ? { compactRow: undefined } : {}),
         }}
         state={state}
@@ -384,7 +384,7 @@ export function DecisionsSection({
             approval.assignee_inactive,
             approval.preview,
             locale,
-            recordZone,
+            readerZone,
           ),
         })}
       />
