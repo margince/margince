@@ -32387,7 +32387,10 @@ paths:
         `deal_viability` review with its task. The review is shown while it is open, even when
         its task is done: completing the task does not answer the review.
 
-        Needs the deal and `forecast:read`. Carries no amount, so nothing here needs masking.
+        Needs `forecast:read` and the deal under the caller's row scope, checked in the same
+        transaction as the read; a deal outside it answers 404. The review's task is shown only
+        while it is still linked to this deal and the caller may discover it. Carries no amount,
+        so nothing here needs masking.
         `qualification` is computed whether or not the installation enforces it;
         `qualification_mode` says whether the qualified forecast applies it.
       responses:
@@ -60246,11 +60249,12 @@ components:
           description: Whether the installation's qualified forecast applies `qualification`.
         qualification:
           type: string
-          enum: [eligible, excluded, unsupported, unknown]
+          enum: [eligible, excluded, unsupported, unknown, closed]
           description: >-
             The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies:
             `excluded` under an open review, `unsupported` judged unsupported with no review,
-            `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+            `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no
+            open reading counts.
         assessed_at:
           type: [string, 'null']
           format: date-time
@@ -60281,9 +60285,16 @@ components:
       type: object
       additionalProperties: false
       description: The input check's last answer about the deal. Absent when it never assessed it.
-      required: [outcome, reasons, valid_until]
+      required: [outcome, reasons, valid_until, policy_version, current]
       properties:
         outcome: { type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.' }
+        policy_version: { type: string, description: The viability policy the check applied. }
+        current:
+          type: boolean
+          description: >-
+            Whether the forecast still takes this receipt, by its rule: the current policy, an
+            outcome the check could judge, not past `valid_until`, and the deal's evidence
+            unchanged since. False makes the deal `unknown`.
         reasons:
           type: array
           items: { type: string }

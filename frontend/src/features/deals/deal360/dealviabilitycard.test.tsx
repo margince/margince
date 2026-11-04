@@ -56,4 +56,26 @@ describe("DealViabilityView", () => {
     ).toBeTruthy();
     expect(screen.queryByText(en["deals.viability.review"])).toBeNull();
   });
+
+  it("names a closed deal as outside the forecast", () => {
+    draw({ ...EXCLUDED, qualification: "closed", review: undefined });
+    expect(
+      screen.getByText(en["deals.viability.qualification.closed"]),
+    ).toBeTruthy();
+  });
+
+  it("says when the last check no longer counts", () => {
+    draw({
+      ...EXCLUDED,
+      qualification: "unknown",
+      receipt: {
+        outcome: "eligible",
+        reasons: [],
+        valid_until: "2026-11-02T08:00:00Z",
+        policy_version: "v1",
+        current: false,
+      },
+    });
+    expect(screen.getByText(en["deals.viability.checkOutOfDate"])).toBeTruthy();
+  });
 });

@@ -23,6 +23,7 @@ const QUALIFICATION_TONE = {
   excluded: "danger",
   unsupported: "warning",
   unknown: "default",
+  closed: "default",
 } as const;
 
 export function dealViabilityKey(dealId: string) {
@@ -80,6 +81,13 @@ export function DealViabilityView({
         {data.assessed_at && (
           <OverviewRow
             title={t("deals.viability.assessed")}
+            // The forecast stops taking a check once it lapses, its policy
+            // changes or the deal's evidence moves; the deal is then unknown.
+            sub={
+              data.receipt && !data.receipt.current
+                ? t("deals.viability.checkOutOfDate")
+                : undefined
+            }
             right={formatDateAbbrev(data.assessed_at, locale, zone)}
           />
         )}

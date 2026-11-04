@@ -10338,6 +10338,7 @@ func (e DealViabilityDisposition) Valid() bool {
 
 // Defines values for DealViabilityQualification.
 const (
+	DealViabilityQualificationClosed      DealViabilityQualification = "closed"
 	DealViabilityQualificationEligible    DealViabilityQualification = "eligible"
 	DealViabilityQualificationExcluded    DealViabilityQualification = "excluded"
 	DealViabilityQualificationUnknown     DealViabilityQualification = "unknown"
@@ -10347,6 +10348,8 @@ const (
 // Valid indicates whether the value is a known member of the DealViabilityQualification enum.
 func (e DealViabilityQualification) Valid() bool {
 	switch e {
+	case DealViabilityQualificationClosed:
+		return true
 	case DealViabilityQualificationEligible:
 		return true
 	case DealViabilityQualificationExcluded:
@@ -43316,7 +43319,7 @@ type DealViability struct {
 	ExpectedCloseDate *openapi_types.Date       `json:"expected_close_date,omitempty"`
 	PolicyVersion     *string                   `json:"policy_version,omitempty"`
 
-	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
 	Qualification DealViabilityQualification `json:"qualification"`
 
 	// QualificationMode Whether the installation's qualified forecast applies `qualification`.
@@ -43335,7 +43338,7 @@ type DealViability struct {
 // DealViabilityDisposition The review standing the qualification rests on.
 type DealViabilityDisposition string
 
-// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
 type DealViabilityQualification string
 
 // DealViabilityQualificationMode Whether the installation's qualified forecast applies `qualification`.
@@ -43343,8 +43346,14 @@ type DealViabilityQualificationMode string
 
 // DealViabilityReceipt The input check's last answer about the deal. Absent when it never assessed it.
 type DealViabilityReceipt struct {
+	// Current Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
+	Current bool `json:"current"`
+
 	// Outcome The check's outcome, such as `eligible` or `unsupported`.
 	Outcome string `json:"outcome"`
+
+	// PolicyVersion The viability policy the check applied.
+	PolicyVersion string `json:"policy_version"`
 
 	// Reasons The reason codes the check recorded.
 	Reasons    []string  `json:"reasons"`

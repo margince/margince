@@ -5569,6 +5569,9 @@ export const en = {
   "deals.viability.qualification.excluded": "Left out for review",
   "deals.viability.qualification.unsupported": "Left out: no support",
   "deals.viability.qualification.unknown": "Not checked",
+  "deals.viability.qualification.closed": "Closed: not in the forecast",
+  "deals.viability.checkOutOfDate":
+    "This check no longer counts, so the deal is not checked.",
   "deals.viability.assessed": "Last checked",
   "deals.viability.review": "Customer support review",
   "deals.viability.reviewOpenedOn": "Opened {date}",

@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,11 +20,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,13 +40,6 @@ func (h dealViabilityHandlers) GetDealViability(w http.ResponseWriter, r *http.R
 		return
 	}
 	deal := ids.UUID(id)
-	// The deal's own read admits the caller: its grant, row scope and
-	// archived state, so this answers 404 wherever the deal page does.
-	if _, err := deals.NewStore(InstallationDB(h.pool), DealsInstallation()).
-		GetDeal(ctx, ids.From[ids.DealKind](deal), storekit.LiveOnly); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
 	var out crmcontracts.DealViability
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
 		var err error
@@ -75,13 +68,26 @@ func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontra
 	}
 	args := []any{deal}
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The deal's row scope and the task's discovery scope, in this read's own
+	// transaction: a deal outside the scope is no row, so it answers 404.
+	dealScope, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
+	if err != nil {
+		return crmcontracts.DealViability{}, err
+	}
+	if dealScope == "" {
+		dealScope = "true"
+	}
+	taskScope, err := auth.ActivityDiscoverClause(ctx, "t", arg)
+	if err != nil {
+		return crmcontracts.DealViability{}, err
+	}
 	reviewType := arg(assurance.TypeDealViability)
 	today := arg(time.Now().In(zone).Format(time.DateOnly))
 	sql := fmt.Sprintf(`
-		SELECT d.expected_close_date, d.close_date_provisional,
+		SELECT d.status = 'open', d.expected_close_date, d.close_date_provisional,
 		       COALESCE(d.expected_close_date < $%[4]d::date, false), COALESCE(s.win_probability, 0),
 		       %[1]s, %[2]s,
-		       r.outcome, r.reasons, r.valid_until,
+		       r.outcome, r.reasons, r.valid_until, r.policy_version,
 		       x.id, x.first_seen_at, x.episode, x.delivery_state, t.id, t.is_done
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
@@ -92,15 +98,20 @@ func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontra
 		   WHERE vx.subject_kind = 'deal' AND vx.subject_id = d.id AND vx.type = $%[3]d AND vx.status = 'open'
 		   ORDER BY vx.first_seen_at DESC LIMIT 1) x ON true
 		LEFT JOIN activity t ON t.id = x.task_activity_id AND t.archived_at IS NULL AND %[5]s
-		WHERE d.id = $1`,
-		viabilityQualificationSQL("d", arg), viabilityBasisSQL("d", arg), reviewType, today, visibleToAllSQL("t"))
+		      AND EXISTS (SELECT 1 FROM activity_link tl WHERE tl.activity_id = t.id AND tl.deal_id = d.id)
+		WHERE d.id = $1 AND d.archived_at IS NULL AND %[6]s`,
+		viabilityQualificationSQL("d", arg), viabilityBasisSQL("d", arg), reviewType, today, taskScope, dealScope)
 	var v dealViabilityRow
-	if err := tx.QueryRow(ctx, sql, args...).Scan(
-		&v.close, &v.provisional, &v.overdue, &v.probability,
+	err = tx.QueryRow(ctx, sql, args...).Scan(
+		&v.open, &v.close, &v.provisional, &v.overdue, &v.probability,
 		&v.qualification, &v.policy, &v.assessed, &v.disposition, &v.complete,
-		&v.outcome, &v.reasons, &v.validUntil,
+		&v.outcome, &v.reasons, &v.validUntil, &v.receiptPolicy,
 		&v.review, &v.opened, &v.episode, &v.delivery, &v.task, &v.done,
-	); err != nil {
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return crmcontracts.DealViability{}, apperrors.ErrNotFound
+	}
+	if err != nil {
 		return crmcontracts.DealViability{}, fmt.Errorf("compose: reading a deal's viability: %w", err)
 	}
 	return v.wire(deal, policy), nil
@@ -109,17 +120,17 @@ func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontra
 // dealViabilityRow is the read's one row, nullable where the deal has no
 // receipt, no open review or no task.
 type dealViabilityRow struct {
-	close                          *time.Time
-	provisional, overdue, complete bool
-	probability                    int
-	qualification, policy          string
-	disposition                    string
-	assessed, validUntil, opened   *time.Time
-	outcome, delivery              *string
-	reasons                        []string
-	review, task                   *ids.UUID
-	episode                        *int
-	done                           *bool
+	close                                *time.Time
+	open, provisional, overdue, complete bool
+	probability                          int
+	qualification, policy                string
+	disposition                          string
+	assessed, validUntil, opened         *time.Time
+	outcome, delivery, receiptPolicy     *string
+	reasons                              []string
+	review, task                         *ids.UUID
+	episode                              *int
+	done                                 *bool
 }
 
 func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.DealViability {
@@ -129,7 +140,7 @@ func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.Deal
 	}
 	out := crmcontracts.DealViability{
 		DealId: openapi_types.UUID(deal), QualificationMode: mode,
-		Qualification: crmcontracts.DealViabilityQualification(v.qualification),
+		Qualification: v.standing(),
 		AssessedAt:    v.assessed, Complete: &v.complete, PolicyVersion: &v.policy,
 		Disposition:          (*crmcontracts.DealViabilityDisposition)(&v.disposition),
 		CloseDateProvisional: v.provisional, CloseDateOverdue: v.overdue, StageProbability: v.probability,
@@ -137,8 +148,13 @@ func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.Deal
 	if v.close != nil {
 		out.ExpectedCloseDate = &openapi_types.Date{Time: *v.close}
 	}
-	if v.outcome != nil && v.validUntil != nil {
-		out.Receipt = &crmcontracts.DealViabilityReceipt{Outcome: *v.outcome, Reasons: v.reasons, ValidUntil: *v.validUntil}
+	if v.outcome != nil && v.validUntil != nil && v.receiptPolicy != nil {
+		// The forecast takes a receipt exactly when the basis is complete; one
+		// it no longer takes leaves the deal unknown.
+		out.Receipt = &crmcontracts.DealViabilityReceipt{
+			Outcome: *v.outcome, Reasons: v.reasons, ValidUntil: *v.validUntil,
+			PolicyVersion: *v.receiptPolicy, Current: v.complete,
+		}
 	}
 	if v.review != nil && v.opened != nil && v.episode != nil {
 		review := &crmcontracts.DealViabilityReview{
@@ -151,4 +167,14 @@ func (v dealViabilityRow) wire(deal ids.UUID, enforced string) crmcontracts.Deal
 		out.Review = review
 	}
 	return out
+}
+
+// standing is the qualification as the qualified forecast counts the deal. A
+// won or lost deal is in no open reading, so it reads closed rather than the
+// eligible the qualification rule gives every deal that is not open.
+func (v dealViabilityRow) standing() crmcontracts.DealViabilityQualification {
+	if !v.open {
+		return crmcontracts.DealViabilityQualificationClosed
+	}
+	return crmcontracts.DealViabilityQualification(v.qualification)
 }

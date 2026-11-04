@@ -5476,6 +5476,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.viability.qualification.excluded": "Tạm loại để rà soát",
   "deals.viability.qualification.unsupported": "Bị loại: không được ủng hộ",
   "deals.viability.qualification.unknown": "Chưa kiểm tra",
+  "deals.viability.qualification.closed": "Đã đóng: không nằm trong dự báo",
+  "deals.viability.checkOutOfDate":
+    "Lần kiểm tra này không còn được tính, nên deal được xem là chưa kiểm tra.",
   "deals.viability.assessed": "Kiểm tra lần cuối",
   "deals.viability.review": "Rà soát sự ủng hộ",
   "deals.viability.reviewOpenedOn": "Mở ngày {date}",

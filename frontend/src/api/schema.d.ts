@@ -21932,7 +21932,10 @@ export interface paths {
          *     `deal_viability` review with its task. The review is shown while it is open, even when
          *     its task is done: completing the task does not answer the review.
          *
-         *     Needs the deal and `forecast:read`. Carries no amount, so nothing here needs masking.
+         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
+         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
+         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
+         *     so nothing here needs masking.
          *     `qualification` is computed whether or not the installation enforces it;
          *     `qualification_mode` says whether the qualified forecast applies it.
          */
@@ -43973,10 +43976,10 @@ export interface components {
              */
             qualification_mode: "off" | "enforcing";
             /**
-             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
              * @enum {string}
              */
-            qualification: "eligible" | "excluded" | "unsupported" | "unknown";
+            qualification: "eligible" | "excluded" | "unsupported" | "unknown" | "closed";
             /**
              * Format: date-time
              * @description When the input check last assessed the deal; null when it never did.
@@ -44004,6 +44007,10 @@ export interface components {
         DealViabilityReceipt: {
             /** @description The check's outcome, such as `eligible` or `unsupported`. */
             outcome: string;
+            /** @description The viability policy the check applied. */
+            policy_version: string;
+            /** @description Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`. */
+            current: boolean;
             /** @description The reason codes the check recorded. */
             reasons: string[];
             /** Format: date-time */

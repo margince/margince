@@ -5620,6 +5620,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.viability.qualification.excluded": "Zur Prüfung herausgenommen",
   "deals.viability.qualification.unsupported": "Herausgenommen: kein Rückhalt",
   "deals.viability.qualification.unknown": "Nicht geprüft",
+  "deals.viability.qualification.closed":
+    "Abgeschlossen: nicht in der Prognose",
+  "deals.viability.checkOutOfDate":
+    "Diese Prüfung zählt nicht mehr, daher ist der Deal nicht geprüft.",
   "deals.viability.assessed": "Zuletzt geprüft",
   "deals.viability.review": "Prüfung des Kundenrückhalts",
   "deals.viability.reviewOpenedOn": "Geöffnet am {date}",
