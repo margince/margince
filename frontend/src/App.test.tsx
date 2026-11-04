@@ -609,6 +609,14 @@ describe("password-reset deep link", () => {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
+    // No digest yet, as on a new install. The catch-all list body below is no
+    // digest, and the Brief's greeting reads one the moment it arrives.
+    if (url.endsWith("/v1/digest")) {
+      return new Response(JSON.stringify({ code: "no_digest_yet" }), {
+        status: 404,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    }
     if (url.endsWith("/v1/assistant/profile")) {
       return new Response(
         JSON.stringify({
@@ -714,15 +722,11 @@ describe("password-reset deep link", () => {
       screen.getByLabelText("Password"),
       "an entirely new password{enter}",
     );
-    // The rail proves the app reached the Brief, not merely that /v1/me now
-    // resolves. A stale reset hash would leave login re-rendered instead. This
-    // is the first case here to reach the shell, so it waits on that chunk too.
+    // The rail is proof the app reached the Brief, not proof merely that /v1/me
+    // now resolves — a stale reset hash would instead leave login re-rendered
+    // with nowhere for the post-login redirect to go.
     expect(
-      await screen.findByRole(
-        "navigation",
-        { name: "Primary navigation" },
-        { timeout: 3000 },
-      ),
+      await screen.findByRole("navigation", { name: "Primary navigation" }),
     ).toBeTruthy();
   });
 
