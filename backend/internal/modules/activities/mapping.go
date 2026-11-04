@@ -195,6 +195,7 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),
 		DueAt:             req.DueAt,
+		DueHasTime:        req.DueHasTime,
 		RemindAt:          req.RemindAt,
 		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
 		IsDone:            req.IsDone,
@@ -322,6 +323,7 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		Body:           req.Body,
 		OccurredAt:     req.OccurredAt,
 		DueAt:          req.DueAt,
+		DueHasTime:     req.DueHasTime != nil && *req.DueHasTime,
 		RemindAt:       req.RemindAt,
 		SourceSystem:   req.SourceSystem,
 		SourceID:       req.SourceId,

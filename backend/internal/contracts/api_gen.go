@@ -19786,6 +19786,24 @@ func (e SaveMyLocaleRequestLocale) Valid() bool {
 	}
 }
 
+// Defines values for SaveMyTimezoneRequestSource.
+const (
+	SaveMyTimezoneRequestSourceBrowser SaveMyTimezoneRequestSource = "browser"
+	SaveMyTimezoneRequestSourceChosen  SaveMyTimezoneRequestSource = "chosen"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyTimezoneRequestSource enum.
+func (e SaveMyTimezoneRequestSource) Valid() bool {
+	switch e {
+	case SaveMyTimezoneRequestSourceBrowser:
+		return true
+	case SaveMyTimezoneRequestSourceChosen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SavedViewSharedScope.
 const (
 	SavedViewSharedScopePrivate   SavedViewSharedScope = "private"
@@ -29161,6 +29179,9 @@ type Activity struct {
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -29322,6 +29343,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
+	DueHasTime *bool               `json:"due_has_time,omitempty"`
 	Subject    string              `json:"subject"`
 }
 
@@ -29702,18 +29724,21 @@ type AgentClientSecret struct {
 
 // AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
 type AgentCommitment struct {
-	About            []AgentCommitmentSubject `json:"about"`
-	AssigneeId       *openapi_types.UUID      `json:"assignee_id,omitempty"`
-	AssigneeName     *string                  `json:"assignee_name,omitempty"`
-	ClaimId          *openapi_types.UUID      `json:"claim_id,omitempty"`
-	DaysOverdue      *int                     `json:"days_overdue,omitempty"`
-	DueAt            *string                  `json:"due_at,omitempty"`
-	Quote            *string                  `json:"quote,omitempty"`
-	Source           string                   `json:"source"`
-	SourceActivityId *openapi_types.UUID      `json:"source_activity_id,omitempty"`
-	State            string                   `json:"state"`
-	Subject          string                   `json:"subject"`
-	TaskId           *openapi_types.UUID      `json:"task_id,omitempty"`
+	About        []AgentCommitmentSubject `json:"about"`
+	AssigneeId   *openapi_types.UUID      `json:"assignee_id,omitempty"`
+	AssigneeName *string                  `json:"assignee_name,omitempty"`
+	ClaimId      *openapi_types.UUID      `json:"claim_id,omitempty"`
+	DaysOverdue  *int                     `json:"days_overdue,omitempty"`
+	DueAt        *string                  `json:"due_at,omitempty"`
+
+	// DueHasTime True when due_at is an agreed time of day.
+	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	Quote            *string             `json:"quote,omitempty"`
+	Source           string              `json:"source"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	State            string              `json:"state"`
+	Subject          string              `json:"subject"`
+	TaskId           *openapi_types.UUID `json:"task_id,omitempty"`
 }
 
 // AgentCommitmentSubject A record a commitment is about.
@@ -33090,6 +33115,9 @@ type AttentionItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
@@ -36660,8 +36688,11 @@ type Company360NextStep struct {
 	// Body The task's own words, as written. Only a task whose content this reader may read is
 	// listed here, so a task read out of a message the reader may not open never reaches
 	// this field.
-	Body            *string             `json:"body,omitempty"`
-	DueAt           *time.Time          `json:"due_at,omitempty"`
+	Body  *string    `json:"body,omitempty"`
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
+	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	Overdue         bool                `json:"overdue"`
@@ -41166,8 +41197,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -42210,6 +42244,9 @@ type CreateTaskRequest struct {
 
 	// DueAt When it is due. Optional — a task without a date is still a task.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -52155,6 +52192,9 @@ type OnboardingStateStep string
 type OpenCommitments struct {
 	AsOf        string            `json:"as_of"`
 	Commitments []AgentCommitment `json:"commitments"`
+
+	// TimeZone The installation zone, where a due date is a day.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 // OpenDealRoomThreadRequest defines model for OpenDealRoomThreadRequest.
@@ -57039,6 +57079,39 @@ type SaveMyLocaleRequest struct {
 // with no catalog renders as raw message keys.
 type SaveMyLocaleRequestLocale string
 
+// SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
+type SaveMyTimezoneRequest struct {
+	// Source `browser` is the app's guess from the browser, stored only while no
+	// zone is stored. `chosen` is the person's own pick, always stored.
+	Source SaveMyTimezoneRequestSource `json:"source"`
+
+	// Timezone An IANA zone name, such as `Europe/Berlin`.
+	Timezone string `json:"timezone"`
+}
+
+// SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
+// zone is stored. `chosen` is the person's own pick, always stored.
+type SaveMyTimezoneRequestSource string
+
+// SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
+// own time zone, set through `saveMyTimezone`.
+type SaveWorkingHoursRequest struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` means until midnight.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone An older client's way to set the caller's time zone with the hours. When
+	// present it is stored as the caller's own chosen zone, in the same
+	// transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Timezone *string `json:"timezone,omitempty"`
+}
+
 // SavedView A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow.
 type SavedView struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -60201,6 +60274,9 @@ type UpdateActivityRequest struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
 
@@ -61610,9 +61686,12 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone IANA name.
-	Timezone  *string    `json:"timezone,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	// Timezone The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	Timezone *string `json:"timezone,omitempty"`
+
+	// TimezoneChosen Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -63055,10 +63134,11 @@ type WorkingHours struct {
 	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
 	StartTime string `json:"start_time"`
 
-	// Timezone The IANA zone the two times are read on. A contact who has never
-	// chosen one is read on the installation's reporting timezone, which
-	// is what makes the unset case work rather than scheduling everybody
-	// on UTC.
+	// Timezone The IANA zone the two times are read on: the caller's own time zone.
+	// A contact with no stored zone is read on the installation's
+	// reporting timezone, which is what makes the unset case work rather
+	// than scheduling everybody on UTC. Read-only here; it is set through
+	// `saveMyTimezone`.
 	Timezone string `json:"timezone"`
 }
 
@@ -63990,6 +64070,9 @@ type WorklistItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -73659,8 +73742,11 @@ type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 // SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
 type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
+// SaveMyTimezoneJSONRequestBody defines body for SaveMyTimezone for application/json ContentType.
+type SaveMyTimezoneJSONRequestBody = SaveMyTimezoneRequest
+
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
-type SaveMyWorkingHoursJSONRequestBody = WorkingHours
+type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -74268,6 +74354,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -74703,6 +74797,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -76854,6 +76955,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -77104,6 +77213,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -83190,6 +83306,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
@@ -83275,6 +83399,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -87660,6 +87791,9 @@ type ServerInterface interface {
 	// End one of your sessions.
 	// (DELETE /me/sessions/{sessionId})
 	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Set the time zone your own times are shown in.
+	// (PUT /me/timezone)
+	SaveMyTimezone(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -92796,6 +92930,12 @@ func (_ Unimplemented) ListMySessions(w http.ResponseWriter, r *http.Request) {
 // End one of your sessions.
 // (DELETE /me/sessions/{sessionId})
 func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the time zone your own times are shown in.
+// (PUT /me/timezone)
+func (_ Unimplemented) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124393,6 +124533,26 @@ func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SaveMyTimezone operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyTimezone(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -140549,6 +140709,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/timezone", wrapper.SaveMyTimezone)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)

@@ -35,6 +35,9 @@ const AVAILABLE: SettingsAvailability = {
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
 
+/** The zone the fixture person stores, for fixtures that need a zone string. */
+export const FIXTURE_TIMEZONE = "Europe/Berlin";
+
 /**
  * A /me response granting exactly `allow` and nothing else.
  *
@@ -92,7 +95,7 @@ export function meFixture({
       id: "00000000-0000-4000-8000-000000000001",
       email: "test@example.test",
       display_name: "Test User",
-      timezone: "Europe/Berlin",
+      timezone: FIXTURE_TIMEZONE,
       status: "active",
       is_agent: false,
     },

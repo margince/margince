@@ -16,7 +16,9 @@ import { RoleBadge } from "../../design-system/rbac";
 import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
+import { viewerZone } from "../../format/timezone";
 import {
   LOCALES,
   type Locale,
@@ -33,6 +35,7 @@ import {
   type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
+import { useSaveMyTimezone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
 import { reloadReaderLanguageReads } from "./languagereads";
@@ -139,6 +142,7 @@ function LanguagePanel() {
     <Panel title={t("account.languageCard")}>
       <SettingList bleed="settings">
         <LanguageSettingRow />
+        <TimeZoneSettingRow />
       </SettingList>
     </Panel>
   );
@@ -221,6 +225,60 @@ function LanguageSettingRow() {
           {/* The bar carries the summary; this names the field it is about. */}
           <ErrorLine id={refusalId}>
             {remember.isError ? problemMessageOf(remember.error, t) : null}
+          </ErrorLine>
+        </div>
+      )}
+    />
+  );
+}
+
+// The person's own time zone. Times on screen, booking hours and mail sent to
+// them follow it. Saving marks it as chosen, so a later browser guess never
+// replaces it.
+function TimeZoneSettingRow() {
+  const me = useMe();
+  // Drawn once /me has answered, so the row never shows a guess first.
+  if (!me.data) return null;
+  return (
+    <TimeZoneSettingControl stored={me.data.user.timezone ?? viewerZone()} />
+  );
+}
+
+function TimeZoneSettingControl({ stored }: Readonly<{ stored: string }>) {
+  const t = useT();
+  const save = useSaveMyTimezone();
+  const [draft, setDraft] = useState<string | null>(null);
+  const refusalId = useId();
+  const shown = draft ?? stored;
+  useSaveDraft({
+    dirty: shown !== stored,
+    save: async () => {
+      await save.mutateAsync({ timezone: shown, source: "chosen" });
+      setDraft(null);
+    },
+    discard: () => {
+      save.reset();
+      setDraft(null);
+    },
+  });
+  return (
+    <SettingRow
+      label={t("account.timezoneLabel")}
+      description={t("account.timezoneHelp")}
+      control={(control) => (
+        <div className="form-stack settingrow-measure">
+          <TimezoneSelect
+            {...control}
+            aria-describedby={describedByIds(
+              control["aria-describedby"],
+              save.isError && refusalId,
+            )}
+            className="settingrow-measure"
+            value={shown}
+            onChange={setDraft}
+          />
+          <ErrorLine id={refusalId}>
+            {save.isError ? problemMessageOf(save.error, t) : null}
           </ErrorLine>
         </div>
       )}

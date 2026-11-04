@@ -32,6 +32,9 @@ export type ActivityDraft = {
   // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
   // due date, otherwise the day the note or meeting happened.
   day: string;
+  // A task's callback time, `HH:MM` on the record's clock, "" for none. It
+  // means nothing without a day.
+  time: string;
   // A meeting's body is ordinary notes UNLESS this is explicitly checked —
   // otherwise "discussed pricing, follow up Tuesday" typed while logging a
   // meeting would silently carry source_system: transcript, which the
@@ -51,15 +54,32 @@ export type ActivityDraft = {
 
 export type TaskDraft = Pick<
   ActivityDraft,
-  "subject" | "body" | "day" | "assigneeId"
+  "subject" | "body" | "day" | "time" | "assigneeId"
 >;
 
 export function taskRequestFields(input: TaskDraft, recordZone: string) {
   return {
     subject: input.subject.trim(),
     body: outgoingBody(input.body, false),
-    ...(input.day ? { due_at: dueInstant(input.day, recordZone) } : {}),
+    ...(input.day ? taskDueFields(input.day, input.time, recordZone) : {}),
     ...(input.assigneeId ? { assignee_id: input.assigneeId } : {}),
+  };
+}
+
+/**
+ * The due fields of a task picked as a day and an optional time of day. The
+ * flag says which one it is; the server reads it, never the clock. A task with
+ * a time also reminds its assignee then, and that rule is the server's, for
+ * every writer, so this sends no reminder of its own.
+ */
+export function taskDueFields(
+  day: string,
+  time: string,
+  recordZone: string,
+): { due_at: string; due_has_time: boolean } {
+  return {
+    due_at: dueInstant(day, recordZone, time),
+    due_has_time: time !== "",
   };
 }
 
@@ -189,6 +209,7 @@ const EMPTY_DRAFT: ActivityDraft = {
   subject: "",
   body: "",
   day: "",
+  time: "",
   asTranscript: false,
   assigneeId: "",
 };

@@ -149,6 +149,7 @@ function taskDue(dueAt: string, overdue: boolean): WorklistItem {
     consequence: "task_slips",
     title: "Send the retrofit quote",
     due_at: dueAt,
+    due_has_time: true,
     overdue,
     because: [{ kind: overdue ? "overdue" : "due_today" }],
     actions: [],

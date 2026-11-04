@@ -2753,6 +2753,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
+  "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.remind_at": "Erinnerung",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
@@ -5209,6 +5210,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
+  "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.createNamed": "Tag {name} erstellen",
+  "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
+  "tags.manage": "Tags verwalten",
+  "tags.createdNotApplied":
+    "{name} wurde angelegt, aber nicht zu diesem Datensatz hinzugefügt: {reason} Wähle es in der Liste, um es erneut hinzuzufügen.",
+  "tags.whoAdds":
+    "Ein weiteres Tag nötig? Admins und Operations können es unter Einstellungen → Tags anlegen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":
@@ -7077,6 +7086,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
+  "log.dueTime": "Uhrzeit (optional)",
+  "log.dueTimeSkipped":
+    "An diesem Tag wird die Uhr vorgestellt, {time} gibt es nicht. Die Aufgabe ist um {actual} fällig.",
   "log.date": "Datum",
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
@@ -12818,7 +12830,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.confirm.deadlines":
     "Fristen für Anfragen folgen dem neuen Rechtsraum. Ein Anfragetyp ohne eigene Frist behält die Monatsfrist der DSGVO.",
   "jurisdiction.confirm.messaging":
-    "Ausgehende Nachrichten folgen den Nachrichtenregeln des neuen Rechtsraums.",
+    "Werberegeln richten sich nach dem Land der Empfangenden. Die Änderung wendet sie auf Empfangende im neuen Land an.",
   "jurisdiction.floor.none": "keine Frist",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd": "{period} ab Ende des Kalenderjahres",
@@ -12834,10 +12846,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.effects.carriedValue":
     "{floor}, für E-Mails vor dem {before}, bis {until}",
   "jurisdiction.effects.deadline": "Frist: {kind}",
-  "jurisdiction.effects.messaging": "Nachrichtenregeln",
+  "jurisdiction.effects.messaging": "Werberegeln für Empfangende hier",
   "jurisdiction.effects.messagingValue": "Regelwerk Version {version}",
   "jurisdiction.effects.messagingNone":
-    "Keine. Jede Werbenachricht braucht eine Einwilligung.",
+    "Keine. Werbung an Empfangende hier braucht eine Einwilligung.",
   "jurisdiction.effects.class": "Aufbewahrungsklasse",
   "jurisdiction.deadline.fromReceipt": "{period} ab Eingang",
   "jurisdiction.rule.gdpr": "DSGVO, ein Kalendermonat",
@@ -14946,7 +14958,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // end polish: setup-popover
   "account.profileCard": "Profil",
   "account.signInCard": "Anmeldung",
-  "account.languageCard": "Sprache",
+  "account.timezoneLabel": "Zeitzone",
+  "account.timezoneHelp":
+    "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
+  "workingHours.changeZone": "Zeitzone ändern",
+  "account.languageCard": "Sprache und Zeitzone",
   "account.browserCard": "Dieser Browser",
   "account.passwordHelp":
     "Für die Anmeldung als {email}. Eine Änderung meldet dich überall sonst ab und trennt die Apps und Agenten, die für dich handeln.",
@@ -15254,9 +15271,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
     "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
-  "workingHours.timezone": "Zeitzone",
-  "workingHours.browserZone":
-    "Dein Browser ist auf {zone} eingestellt. Die Verfügbarkeit nutzt die hier gewählte Zeitzone.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -16337,6 +16351,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.user_greeting_name.changed.label": "Rufname geändert",
   "webhooks.event.user_greeting_name.changed.when":
     "Der Rufname eines Mitglieds wird gespeichert oder bei der ersten Anmeldung über einen Anbieter ausgefüllt.",
+  "webhooks.event.user_timezone.changed.label": "Zeitzone geändert",
+  "webhooks.event.user_timezone.changed.when":
+    "Die eigene Zeitzone eines Mitglieds wird gespeichert oder geändert.",
   "webhooks.event.user_locale.changed.label": "Sprache der Oberfläche geändert",
   "webhooks.event.user_locale.changed.when":
     "Ein Mitglied wählt die Sprache der eigenen Oberfläche.",

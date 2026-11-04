@@ -38,6 +38,9 @@ type channelConsentEnv struct {
 	doiNews     ids.PurposeID
 	contact     ids.ContactID
 	account     string
+	// judgedUnder is the pack a planted decision records it was judged under;
+	// empty plants the baseline.
+	judgedUnder string
 }
 
 func setupChannelConsent(t *testing.T) *channelConsentEnv {

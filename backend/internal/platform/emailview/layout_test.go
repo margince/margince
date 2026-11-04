@@ -43,7 +43,7 @@ func TestNoElementCarriesTwoClassAttributes(t *testing.T) {
 	body.Facts(Fact{Label: "New deals", Value: "5"})
 	body.Note("Expires Friday.", Info)
 	body.Append(weekWithItems())
-	rendered := Render(body.Message("Week", "en", ""))
+	rendered := Render(body.Message("Week", "en", ""), Letterhead{})
 	doubled := regexp.MustCompile(`<[a-z0-9]+[^>]*\sclass="[^"]*"[^>]*\sclass="`)
 	if found := doubled.FindString(rendered); found != "" {
 		t.Fatalf("a second class attribute is ignored, so its dark or narrow rule never applies: %s", found)
@@ -88,7 +88,7 @@ func TestATrailingActionWithoutALinkLeavesTheButtonToTheLastLinkedOne(t *testing
 }
 
 func TestDarkReadersGetTheDarkShadow(t *testing.T) {
-	rendered := Render(weekWithItems().Message("Week", "en", ""))
+	rendered := Render(weekWithItems().Message("Week", "en", ""), Letterhead{})
 	if !strings.Contains(rendered, ".sh-shadow-rest{box-shadow:"+tokens[shadowRest].Dark) || !strings.Contains(rendered, `class="bg-pane bd-paneEdge sh-shadow-rest"`) {
 		t.Fatal("the card's shadow keeps its light value in dark mode")
 	}

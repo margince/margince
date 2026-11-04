@@ -340,7 +340,7 @@ func (s *Store) deliverability(
 	// German objection route and the Vietnamese advertiser contact — from
 	// exactly the sends that carry an unsubscribe surface and are therefore
 	// advertising by the product's own reckoning.
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()))
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), recipients)
 	if err != nil {
 		return sendDeliverability{}, err
 	}

@@ -2644,6 +2644,7 @@ export const en = {
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
+  "history.field.due_has_time": "Due at a set time",
   "history.field.remind_at": "Reminder",
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
@@ -5166,6 +5167,14 @@ export const en = {
   "tags.catalogTruncatedTitle": "List shortened",
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
+  "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.createNamed": "Create tag {name}",
+  "tags.shortlistInstead": "Add to a Shortlist instead",
+  "tags.manage": "Manage tags",
+  "tags.createdNotApplied":
+    "{name} was created but not added to this record: {reason} Pick it in the list to add it again.",
+  "tags.whoAdds":
+    "Need another tag? An administrator or operations user can add one in Settings → Tags.",
   "tags.noMatch":
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
@@ -7103,6 +7112,9 @@ export const en = {
   "log.fileUncertain":
     "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
   "log.dueAt": "Due date",
+  "log.dueTime": "Time (optional)",
+  "log.dueTimeSkipped":
+    "The clocks go forward that day, so there is no {time}. The task is due at {actual}.",
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
@@ -12814,7 +12826,7 @@ export const en = {
   "jurisdiction.confirm.deadlines":
     "Request deadlines follow the new jurisdiction. A request type it sets no deadline for keeps the GDPR month.",
   "jurisdiction.confirm.messaging":
-    "Outgoing messages follow the new jurisdiction’s messaging rules.",
+    "Marketing rules follow each recipient’s country, so this change applies them to recipients in the new country.",
   "jurisdiction.floor.none": "no floor",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd":
@@ -12831,10 +12843,10 @@ export const en = {
   "jurisdiction.effects.carriedValue":
     "{floor}, for mail from before {before}, until {until}",
   "jurisdiction.effects.deadline": "Deadline: {kind}",
-  "jurisdiction.effects.messaging": "Messaging rules",
+  "jurisdiction.effects.messaging": "Marketing rules for recipients here",
   "jurisdiction.effects.messagingValue": "Rule set version {version}",
   "jurisdiction.effects.messagingNone":
-    "None. Every advertising message needs consent.",
+    "None. Advertising to recipients here needs consent.",
   "jurisdiction.effects.class": "Retention class",
   "jurisdiction.deadline.fromReceipt": "{period} from receipt",
   "jurisdiction.rule.gdpr": "GDPR, one calendar month",
@@ -14878,7 +14890,12 @@ export const en = {
   // end polish: setup-popover
   "account.profileCard": "Profile",
   "account.signInCard": "Sign-in",
-  "account.languageCard": "Language",
+  "account.timezoneLabel": "Time zone",
+  "account.timezoneHelp":
+    "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "workingHours.zoneIs": "Your hours are read in {zone}.",
+  "workingHours.changeZone": "Change time zone",
+  "account.languageCard": "Language and time zone",
   "account.browserCard": "This browser",
   "account.passwordHelp":
     "For signing in as {email}. Changing it signs you out everywhere else and disconnects the apps and agents that act for you.",
@@ -15180,9 +15197,6 @@ export const en = {
   "workingHours.unsetTitle": "Not set yet",
   "workingHours.unset":
     "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
-  "workingHours.timezone": "Timezone",
-  "workingHours.browserZone":
-    "Your browser is on {zone}. Availability uses the timezone chosen here.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
   "workingHours.day.1": "Monday",
@@ -16211,6 +16225,9 @@ export const en = {
   "webhooks.event.user_greeting_name.changed.label": "Greeting name changed",
   "webhooks.event.user_greeting_name.changed.when":
     "A member’s greeting name is saved, or filled at their first provider sign-in.",
+  "webhooks.event.user_timezone.changed.label": "Time zone changed",
+  "webhooks.event.user_timezone.changed.when":
+    "A member’s own time zone is stored or changed.",
   "webhooks.event.user_locale.changed.label": "Interface language changed",
   "webhooks.event.user_locale.changed.when":
     "A member chooses the language of their own interface.",

@@ -48,11 +48,27 @@ type capEnv struct {
 	ws, user ids.UUID
 	activity ids.UUID
 	address  string
+	// capCountry is the country cappedGate put its ceiling in.
+	capCountry string
 	// decisionDelivery is the delivery the transmit decisions are recorded
 	// against. It is deliberately NOT one of the delivered rows the counter
 	// reads: a decision row must be able to exist for a delivery that has not
 	// been sent, which is the whole distinction under test.
 	decisionDelivery ids.UUID
+}
+
+// subjectLivesIn puts the address's contact in code's country, the way the
+// contacts writer stores one (upper case), and answers the contact.
+func (e *capEnv) subjectLivesIn(t *testing.T, code string) ids.UUID {
+	t.Helper()
+	var contactID ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		UPDATE contact SET address_country = upper($2)
+		 WHERE id = (SELECT contact_id FROM contact_email WHERE email = $1)
+		RETURNING id`, e.address, code).Scan(&contactID); err != nil {
+		t.Fatalf("placing the subject in %s: %v", code, err)
+	}
+	return contactID
 }
 
 // seedMarketingSubject gives the address a contact with a live marketing grant,
@@ -418,10 +434,9 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 		Jurisdiction: "zc", Version: 1,
 		FrequencyCap: &messagingrules.FrequencyCap{Messages: 3, Window: 24 * time.Hour},
 	})
-	gate := NewGate(e.store).WithInstallationCountry(
-		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-			return "zc", nil
-		}))
+	// The RECIPIENT is in the capped country; the installation states none.
+	e.subjectLivesIn(t, "zc")
+	gate := NewGate(e.store)
 
 	// Both halves of the answer: what the row records, and whether the
 	// dispatcher is actually allowed to send. Asserting only the row would pass
@@ -480,38 +495,53 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 	}
 }
 
-// A jurisdiction that declares no ceiling caps nothing, and an installation
-// with no country stated resolves no jurisdiction at all. Both must leave mail
-// exactly as it was, or this change would silently throttle every installation
-// that never asked for a cap.
+// A jurisdiction that declares no ceiling caps nothing, and a recipient with no
+// country stated resolves no jurisdiction at all. Both leave the mail alone.
+//
+// The sender's country is not the recipient's. An installation established in
+// the capped country does not cap a recipient whose record states no country.
 func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 	e := setupCap(t)
+	e.seedMarketingSubject(t)
 	for range 5 {
 		e.deliveredAdvertising(t, time.Now().Add(-time.Minute))
 	}
 	// Registered with no FrequencyCap: a real jurisdiction that imposes no
 	// ceiling, which must behave like no jurisdiction at all for this rule.
 	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zu", Version: 1})
-	allowed := commsauthz.Decision{
-		Verdict:   commsauthz.VerdictAllow,
-		Resolved:  commsauthz.CategoryMarketing,
-		Recipient: connector.Recipient{Email: e.address},
-	}
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: "zv", Version: 1,
+		FrequencyCap: &messagingrules.FrequencyCap{Messages: 3, Window: 24 * time.Hour},
+	})
 	for _, tc := range []struct {
-		name string
-		gate *Gate
+		name              string
+		sender, recipient jurisdiction.Code
 	}{
-		{"no country stated", NewGate(e.store)},
-		{"a jurisdiction that declares no ceiling", NewGate(e.store).WithInstallationCountry(
-			InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-				return "zu", nil
-			}))},
+		{"no country stated", "", ""},
+		{"a sender in a capped country", "zv", ""},
+		{"a recipient in a jurisdiction that declares no ceiling", "", "zu"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// WithInstallationCountry sets the reader on the shared store, so
+			// every case states its own sender.
+			gate := NewGate(e.store).WithInstallationCountry(
+				InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
+					return tc.sender, nil
+				}))
+			contactID := e.subjectLivesIn(t, string(tc.recipient))
+			allowed := commsauthz.Decision{
+				Verdict:     commsauthz.VerdictAllow,
+				Resolved:    commsauthz.CategoryMarketing,
+				Recipient:   connector.Recipient{Email: e.address},
+				SubjectKind: entityContact, SubjectID: contactID,
+			}
 			var out commsauthz.Decision
 			if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-				var err error
-				out, err = tc.gate.applyFrequencyCap(context.Background(), tx, allowed, time.Now())
+				country, err := recipientCountryOf(e.ctx, tx, allowed.Recipient)
+				if err != nil {
+					return err
+				}
+				out, err = gate.applyFrequencyCap(context.Background(), tx, allowed, time.Now(), country)
 				return err
 			}); err != nil {
 				t.Fatalf("applying the cap: %v", err)

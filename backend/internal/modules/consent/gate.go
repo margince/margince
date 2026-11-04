@@ -70,22 +70,19 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// Unknown purpose ⇒ nothing can be granted under it.
 			return fmt.Errorf("consent: purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
 		}
-		// The window a qualifying event still supports an unprompted message
-		// within, resolved once for the whole set so two recipients of one
-		// message cannot be judged against different spans.
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return err
-		}
-		since := time.Now().Add(-w.reply)
-		// The legacy gate is asked about a purpose key and never about the
-		// message, so it can make no similarity claim — and an exception whose
-		// pack requires similarity therefore refuses here. That is the honest
-		// answer for a caller that cannot say what it advertises, and it is
-		// only reached where the engine defers to this gate.
-		marketing := MarketingContext{Exception: w.marketingException}
 		for _, r := range recipients {
-			granted, err := grantedForRecipient(ctx, tx, r, purpose, since, marketing)
+			// Each recipient's own country sets the window a qualifying event
+			// still supports an unprompted message within.
+			country, err := recipientCountryOf(ctx, tx, r)
+			if err != nil {
+				return err
+			}
+			w := packRulesFor(country)
+			// The legacy gate is asked about a purpose key and never about the
+			// message, so it can make no similarity claim. An exception whose
+			// pack requires similarity therefore refuses here.
+			marketing := MarketingContext{Exception: w.marketingException}
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
 			if err != nil {
 				return err
 			}

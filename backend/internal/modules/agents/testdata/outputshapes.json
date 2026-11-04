@@ -9808,6 +9808,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -11615,6 +11618,9 @@
                   "format": "date-time",
                   "type": "string"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -11751,6 +11757,9 @@
           },
           "deals_scanned": {
             "type": "integer"
+          },
+          "time_zone": {
+            "type": "string"
           },
           "truncated": {
             "type": "boolean"
@@ -14367,6 +14376,9 @@
                       "type": "string",
                       "format": "date-time"
                     },
+                    "due_has_time": {
+                      "type": "boolean"
+                    },
                     "quote": {
                       "type": "string"
                     },
@@ -15920,6 +15932,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -15948,6 +15963,9 @@
                 "subject"
               ]
             }
+          },
+          "time_zone": {
+            "type": "string"
           }
         },
         "required": [

@@ -56,6 +56,15 @@
   flex-wrap: wrap;
 }
 
+/* An agreement's dates and its terms on one line under its name, spaced the
+   way the company's Contracts panel spaces the same terms. */
+.project-contract-sub {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .project-rowlink {
   background: none;
   border: none;

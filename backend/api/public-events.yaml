@@ -138,6 +138,7 @@ components:
         - consent.override_lifted
         - email_signature.changed
         - user_locale.changed
+        - user_timezone.changed
         - user_display_name.changed
         - user_greeting_name.changed
         - linkedin_account.changed
@@ -2286,10 +2287,20 @@ components:
           type: string
           format: date-time
           description: The activity's new due_at (absent when this update did not touch it).
+        due_has_time:
+          type: boolean
+          description: >-
+            Whether the new due_at names a time of day (true) or only a day (false). Carried
+            whenever this update names due_at.
         remind_at:
           type: string
           format: date-time
-          description: The activity's new remind_at (absent when this update did not touch it).
+          description: The activity's new remind_at (absent when this update did not set it).
+        remind_at_cleared:
+          type: boolean
+          description: >-
+            True when this update cleared the reminder: named as null by the caller, or ended
+            because the due date moved. A reminder a consumer mirrors stops firing then.
         assignee_id:
           type: string
           format: uuid
@@ -3424,6 +3435,29 @@ components:
           description: >-
             Which settings moved. Never empty: this event fires on a change, and
             a save that moved nothing writes nothing and publishes nothing.
+      additionalProperties: false
+    PublicEventUserTimezoneChanged:
+      type: object
+      x-event-type: user_timezone.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_timezone.changed. A member's own time zone was stored
+        by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from
+        the browser on first sign-in, or the member's own pick. Booking reads
+        the member's working hours on it, and mail sent to them is timed by it.
+      required:
+        - timezone
+        - chosen
+      properties:
+        timezone:
+          type: string
+          description: The IANA name now stored, such as Europe/Berlin.
+        chosen:
+          type: boolean
+          description: >-
+            True when the member picked the zone themselves. A later browser
+            guess never replaces a chosen zone.
       additionalProperties: false
     PublicEventUserLocaleChanged:
       type: object
