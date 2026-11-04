@@ -79,6 +79,22 @@ var (
 	CompanyArchive = ownerArchive(tableCompany)
 )
 
+// ArchiveRuleFor answers the archive rule for a record type, and whether that
+// type has one: a type without one is archived with the delete grant alone.
+func ArchiveRuleFor(table string) (ArchiveRule, bool) {
+	switch table {
+	case ActivityArchive.table:
+		return ActivityArchive, true
+	case tableDeal:
+		return DealArchive, true
+	case tableContact:
+		return ContactArchive, true
+	case tableCompany:
+		return CompanyArchive, true
+	}
+	return ArchiveRule{}, false
+}
+
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a
 // caller who could archive no row of the table at all, before a transaction.
 func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {

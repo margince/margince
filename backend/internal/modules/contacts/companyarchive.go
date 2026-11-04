@@ -46,8 +46,7 @@ func (s *Store) RefuseArchiveCompany(ctx context.Context, id ids.CompanyID) erro
 		if err := auth.EnsureArchivable(ctx, tx, auth.CompanyArchive, id.UUID); err != nil {
 			return err
 		}
-		return refuseIfAnchor(ctx, tx, id, "id",
-			"it cannot be archived. Archive a different company, or edit this one on the company page")
+		return companyArchiveAllowed(ctx, tx, id)
 	})
 }
 
@@ -70,10 +69,7 @@ func (s *Store) ArchiveCompany(
 	}
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
-			return err
-		}
-		if err := auth.EnsureArchivable(ctx, tx, auth.CompanyArchive, id.UUID); err != nil {
+		if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
 			return err
 		}
 		// The precondition, under the row lock the write takes: a caller that
@@ -105,10 +101,7 @@ func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return err
 	}
-	if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
-		return err
-	}
-	if err := auth.EnsureArchivable(ctx, tx, auth.CompanyArchive, id.UUID); err != nil {
+	if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
 		return err
 	}
 	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)

@@ -80,10 +80,7 @@ func (s *Store) ArchiveContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactI
 // archiveContactInTx is the archive itself, behind the object gate its callers
 // ask: the row's write check, the caller's precondition, and the cascade.
 func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, options writeOptions) error {
-	if err := auth.EnsureWritable(ctx, tx, contactEntity, id.UUID); err != nil {
-		return err
-	}
-	if err := auth.EnsureArchivable(ctx, tx, auth.ContactArchive, id.UUID); err != nil {
+	if err := lockThenEnsureArchivable(ctx, tx, contactEntity, auth.ContactArchive, id.UUID); err != nil {
 		return err
 	}
 	// The precondition, under the row lock the write takes: a caller that

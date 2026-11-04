@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,7 +24,22 @@ func companyArchiveAllowed(ctx context.Context, tx pgx.Tx, id ids.CompanyID) err
 	if err := refuseIfAnchor(ctx, tx, id, "id", "it cannot be archived. Archive a different company, or edit this one on the company page"); err != nil {
 		return err
 	}
-	return refuseIfSoleCompanyOnALiveProject(ctx, tx, id)
+	if err := refuseIfSoleCompanyOnALiveProject(ctx, tx, id); err != nil {
+		return err
+	}
+	// Admitted by owning it rather than by the delete grant: the archive
+	// reaches only the owner's own records.
+	if !auth.Allows(ctx, companyEntity, principal.ActionDelete) {
+		return refuseIfReferencedByOthers(ctx, tx, id)
+	}
+	return nil
+}
+
+// companyArchiveRefusal reports whether err is one of companyArchiveAllowed's
+// refusals, as opposed to a fault.
+func companyArchiveRefusal(err error) bool {
+	return errors.As(err, new(*AnchorProtectedError)) || errors.As(err, new(*SoleProjectCompanyError)) ||
+		errors.As(err, new(*StillReferencedError))
 }
 
 // PreviewCompanyArchive resolves authorized effects without applying the proposed change.
