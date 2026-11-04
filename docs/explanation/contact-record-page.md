@@ -10,6 +10,8 @@ The newest thing the contact sent in the last 7 days that nobody has answered is
 
 `RecordNextBar` (`frontend/src/components/latestinbound.tsx`) puts the item in the Next bar on every record type. It takes the bar when nothing urgent is next: a late item, a moment or a move the page marks urgent. Otherwise it is one line above the bar. A bar whose move already cites the item draws alone.
 
+With nothing next and no item, `RecordNextBar` draws the record's last exchange (`last_exchange` on the same read) as a history line above the bar. The bar never takes that exchange as its content: a past meeting is history, not a next step. A `whose_move` of `neither` adds nothing to the line, because a missing reply direction does not show that no work is left. On a contact, the empty bar says "No follow-up task recorded." only after the quiet rung, with the contact's tasks read and none withheld (`AnswerBar` in `contacttoday.tsx`). A reader who may log activity also gets **Add follow-up**, which opens the task form.
+
 **Create task** accepts a mail's request when the server says it can (`accepts_request`), so finishing the task settles it. Anything else becomes a task made from the item. "Noticed" hides it in this browser, and no older item takes its place. On the other tabs it is one line under the badges.
 
 After it, a moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.

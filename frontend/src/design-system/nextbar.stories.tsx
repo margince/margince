@@ -101,6 +101,22 @@ export const NothingNext: Story = {
   },
 };
 
+/** A caller that read every task says what it knows, and offers the verb. */
+export const NoTaskRecorded: Story = {
+  args: {
+    empty: "No follow-up task recorded.",
+    action: <Button variant="ghost">Add follow-up</Button>,
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("No follow-up task recorded."),
+    ).toBeVisible();
+    await expect(
+      within(canvasElement).queryByText("Nothing is due next."),
+    ).toBeNull();
+  },
+};
+
 /** "+2 tasks" names the two on hover and focus; a row opens the list. */
 export const MoreTasksNamed: Story = {
   args: {

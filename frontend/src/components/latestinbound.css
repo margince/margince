@@ -67,3 +67,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The last exchange above a Next bar with nothing next. It is history, not
+   something new, so it reads in the quiet surface and not the accent. */
+.latest-history {
+  align-items: center;
+  justify-content: space-between;
+  border-color: var(--borderSubtle);
+  background: var(--bgElevated);
+}
+.latest-history .latest-line-kind {
+  color: var(--textSecondary);
+}
