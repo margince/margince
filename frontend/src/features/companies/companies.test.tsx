@@ -112,6 +112,46 @@ describe("CompaniesScreen — what an account is to us", () => {
     expect(screen.getByText("Prospect")).toBeTruthy();
   });
 
+  it("names an extension's type by its declared label and offers it as a filter", async () => {
+    const user = userEvent.setup();
+    const { urls } = stubFetch(
+      async () =>
+        jsonResponse({
+          data: [
+            {
+              ...company,
+              relationship_types: ["supplier"],
+              extension_relationship_types: ["ext:acme:reseller"],
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      {
+        companyTypes: [
+          { value: "ext:acme:reseller", label: "Reseller", unit: "acme" },
+        ],
+      },
+    );
+    render(<CompaniesScreen />);
+    await waitFor(() => expect(screen.getByText("Reseller")).toBeTruthy());
+    expect(screen.getByText("Supplier")).toBeTruthy();
+    expect(screen.queryByText("ext:acme:reseller")).toBeNull();
+
+    await user.click(await screen.findByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("button", { name: "Relationship type" }));
+    await user.click(screen.getByRole("radio", { name: "Reseller" }));
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            new URL(url, window.location.origin).searchParams.get(
+              "extension_relationship_type",
+            ) === "ext:acme:reseller",
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("leaves the cell empty when the account carries none", async () => {
     stubFetch(async () =>
       jsonResponse({

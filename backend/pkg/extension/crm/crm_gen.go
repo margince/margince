@@ -2077,7 +2077,10 @@ type Company struct {
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
 	Email *string `json:"email,omitempty"`
-	Id    string  `json:"id"`
+
+	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+	Id                         string    `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -4322,6 +4325,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "email")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -4646,6 +4657,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["email"], err = json.Marshal(a.Email)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 

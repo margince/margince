@@ -118,6 +118,12 @@ type DealRepo interface {
 type CompanyRepo interface {
 	Get(ctx context.Context, id string) (crm.Company, error)
 	List(ctx context.Context, q CompanyQuery) (Page[crm.Company], error)
+
+	// SetExtensionTypes replaces the types the unit holds on the company, by the
+	// short names in Extension.CompanyTypes. Other units' types stay, and an empty
+	// list clears the unit's own. An undeclared name is ErrInvalid. A scheduled
+	// job gets ErrForbidden, as for any core write.
+	SetExtensionTypes(ctx context.Context, id string, types []string) (crm.Company, error)
 }
 
 // SignalRepo reads signals.

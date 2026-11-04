@@ -204,6 +204,9 @@ export type BackstopOptions = Readonly<{
   // page is the composer's or their mail client's. None unless a suite is
   // about writing to somebody.
   connectors?: unknown;
+  // The company types installed extensions declare: none unless a suite is
+  // about showing or filtering on one.
+  companyTypes?: unknown;
 }>;
 
 export function backstopAnswer(
@@ -227,6 +230,9 @@ export function backstopAnswer(
   }
   if (pathname.endsWith("/connectors")) {
     return jsonResponse(options?.connectors ?? { data: [] });
+  }
+  if (pathname.endsWith("/company-types")) {
+    return jsonResponse({ data: options?.companyTypes ?? [] });
   }
   if (pathname.endsWith("/activities/latest-inbound")) {
     return jsonResponse({ data: [] });

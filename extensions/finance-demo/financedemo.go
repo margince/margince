@@ -33,6 +33,9 @@ func New() extension.Extension {
 		Name:        "finance-demo",
 		Version:     "1.0.0",
 		Description: "Demonstration accounting data for the finance card, generated rather than read from a real system.",
+		// The reference for a company type: an account whose invoices this
+		// source's ledger holds.
+		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},
 		FinanceSources: []extension.FinanceSource{{
 			Provider:    "offline_demo",
 			Check:       check,

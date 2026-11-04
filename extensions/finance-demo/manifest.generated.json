@@ -8,6 +8,12 @@
       "provider": "offline_demo"
     }
   ],
+  "company_types": [
+    {
+      "type": "ledger_customer",
+      "label": "Ledger customer"
+    }
+  ],
   "oauth_apps": [
     {
       "provider": "offline_demo",

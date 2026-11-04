@@ -272,6 +272,11 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// CompanyTypes are the company types this unit adds beside core's own. A
+	// unit sets them only on a company, under its own name, through
+	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.
+	CompanyTypes []CompanyType
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.

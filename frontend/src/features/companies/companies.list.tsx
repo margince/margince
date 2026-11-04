@@ -55,6 +55,7 @@ import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 async function fetchCompaniesPage(
   query: ListQuery,
@@ -108,6 +109,7 @@ export function CompaniesScreen() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
   const tagChips = useTagChips();
+  const extensionTypes = useCompanyTypeDirectory().data?.data ?? [];
   const savedViews = useSavedViewTabs("companies");
   // The partner dials read the partner register, which the server refuses a
   // seat without the partner grant.
@@ -284,13 +286,19 @@ export function CompaniesScreen() {
             // is multi-valued (ADR-0079), because showing only the first type
             // would make the second look untrue.
             cell: (company: Company) =>
-              company.relationship_types?.length ? (
+              company.relationship_types?.length ||
+              company.extension_relationship_types?.length ? (
                 <CellStrip>
-                  {company.relationship_types.map((type) => (
+                  {(company.relationship_types ?? []).map((type) => (
                     <Badge key={type}>
                       {type === "partner"
                         ? partnerMarkText(company, t)
                         : t(RELATIONSHIP_TYPE_LABELS[type])}
+                    </Badge>
+                  ))}
+                  {(company.extension_relationship_types ?? []).map((type) => (
+                    <Badge key={type}>
+                      {companyTypeLabel(type, extensionTypes)}
                     </Badge>
                   ))}
                 </CellStrip>
@@ -318,10 +326,19 @@ export function CompaniesScreen() {
             key: "relationship_type",
             label: "company.relationshipTypes",
             allLabel: "company.filterRelTypeAll",
-            options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
-              value,
-              label: RELATIONSHIP_TYPE_LABELS[value],
-            })),
+            options: [
+              ...RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
+                value,
+                label: RELATIONSHIP_TYPE_LABELS[value],
+              })),
+              // An option value holding a colon reads as `param:value`. The
+              // extension filter is its own parameter, so naming it keeps the
+              // whole `ext:<unit>:<type>` value.
+              ...extensionTypes.map(({ value, label }) => ({
+                value: `extension_relationship_type:${value}`,
+                text: label,
+              })),
+            ],
           },
         ]}
         dataViews={savedViews}

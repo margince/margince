@@ -114,6 +114,23 @@ the one record. Each also works alone. `source_system` lists every record from t
 `source_id` matches that id in any system. An empty value, or one over 128 characters, is also `422`
 on the parameters.
 
+## Company types from an extension
+
+A company has core's `relationship_types`, a closed list. An installed extension can add types of its own,
+as `ext:<unit>:<type>`. They come back in the separate field `extension_relationship_types`, so the closed list
+never holds a value your client does not know.
+
+| Request | Answer |
+|---|---|
+| `PATCH /v1/companies/{id}` with `extension_relationship_types` | Replaces the extension types of the company. An empty array clears them. Leaving the field out changes nothing. |
+| A value no installed extension declares | `422` on `extension_relationship_types`, code `invalid_enum`. |
+| `GET /v1/company-types` | Every declared value with its `label` and `unit`, for any signed-in user. |
+| `GET /v1/companies?extension_relationship_type=ext:acme:reseller` | The companies that carry it. A value no extension declares is `422`. |
+| `GET /v1/companies?relationship_type=...` | Takes core types only, as before. An extension value is `422`. |
+
+A company keeps a value when its extension is later removed. A save that leaves it unchanged is still accepted.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-company-type).
+
 ## Events out
 
 Margince sends events to your system as signed webhooks. To register one, see

@@ -11,6 +11,7 @@ import { useT } from "../../i18n";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { CompanyTagsSection } from "./companyrailtags";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
@@ -37,15 +38,23 @@ export function CompanyProfileDetails({
 }>) {
   const t = useT();
   const { text, compound } = useRowBuilders(company, edit);
-  const types = company.relationship_types ?? [];
+  const extensionTypes = useCompanyTypeDirectory().data?.data ?? [];
+  // The in-place edit writes core's list only, so an extension's types are
+  // shown beside it and stay as they are.
+  const typeLabels = [
+    ...(company.relationship_types ?? []).map((type) =>
+      t(RELATIONSHIP_TYPE_LABELS[type]),
+    ),
+    ...(company.extension_relationship_types ?? []).map((type) =>
+      companyTypeLabel(type, extensionTypes),
+    ),
+  ];
   const rows = [
     text("legal_name", "create.legalName"),
     compound(
       "relationship_types",
       t("company.relationshipTypes"),
-      types.length > 0
-        ? types.map((type) => t(RELATIONSHIP_TYPE_LABELS[type])).join(", ")
-        : undefined,
+      typeLabels.length > 0 ? typeLabels.join(", ") : undefined,
     ),
     compound(
       "parent_company_id",
