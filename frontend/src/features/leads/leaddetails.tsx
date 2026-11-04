@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
@@ -23,7 +23,6 @@ import {
 } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { industryOptions, industryWords } from "../../format/industry";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -37,6 +36,7 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
@@ -59,7 +59,7 @@ function isBlank(value: string | null | undefined): boolean {
 }
 
 /**
- * One field of the lead, edited where it stands. Every row saves through
+ * One field of the lead, edited from its row. Every row saves through
  * the same independent-edit path the record form used, so two rows cannot
  * send a different If-Match or invalidate different caches. The record's head
  * renames the lead through it too.
@@ -82,8 +82,7 @@ export function useFieldSave(lead: Lead) {
     };
 }
 
-// The address as the door to writing to the lead. Its edit verb is drawn only
-// while the row is pointed at or focused, so the row reads as one line.
+// The address as the door to writing to the lead; its pill opens the edit.
 function EmailValue({
   lead,
   canEdit,
@@ -96,54 +95,33 @@ function EmailValue({
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
-  const [editing, setEditing] = useState(false);
-  // With no address there is nothing to follow, so the blank is the editor.
-  if (!lead.email) {
-    return (
-      <InlineText
-        label={t("create.email")}
-        value=""
-        type="email"
-        placeholder={t("field.unset")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={onSave}
-      />
-    );
-  }
   return (
-    <span className="lead-row-value">
-      {!editing && (
-        <span className="lead-row-email">
-          <ContactLink
-            kind="email"
-            value={lead.email}
-            record={{ entityType: "lead", entityId: lead.id }}
-            readOnly={Boolean(lead.archived_at)}
-            className="link-button lead-row-link"
-            textClassName="lead-row-link"
-          >
-            <EmailFace address={lead.email} />
-          </ContactLink>
-          <CopyEmail address={lead.email} />
-        </span>
-      )}
-      {canEdit && (
-        <span className={editing ? undefined : "lead-row-verb"}>
-          <InlineText
-            label={t("create.email")}
-            value={lead.email ?? ""}
-            verb
-            type="email"
-            placeholder={t("field.unset")}
-            canEdit={canEdit}
-            readOnlyReason={readOnlyReason}
-            onEditingChange={setEditing}
-            onSave={onSave}
-          />
-        </span>
-      )}
-    </span>
+    <InlineText
+      label={t("create.email")}
+      value={lead.email ?? ""}
+      type="email"
+      link={
+        lead.email && (
+          <span className="lead-row-email">
+            <ContactLink
+              kind="email"
+              value={lead.email}
+              record={{ entityType: "lead", entityId: lead.id }}
+              readOnly={Boolean(lead.archived_at)}
+              className="link-button lead-row-link"
+              textClassName="lead-row-link"
+            >
+              <EmailFace address={lead.email} />
+            </ContactLink>
+            <CopyEmail address={lead.email} />
+          </span>
+        )
+      }
+      placeholder={t("field.unset")}
+      canEdit={canEdit}
+      readOnlyReason={readOnlyReason}
+      onSave={onSave}
+    />
   );
 }
 
@@ -153,6 +131,7 @@ function useAboutRows(
   writer: LeadWriter,
   reasonId: string | undefined,
 ): DetailRow[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const origins = useLeadOrigins();
@@ -277,7 +256,7 @@ function useAboutRows(
     {
       key: "received",
       term: t("lead.aside.received"),
-      value: formatDateAbbrev(lead.created_at, locale, viewerZone()),
+      value: formatDateAbbrev(lead.created_at, locale, readerZone),
     },
     // The name heads the card; the row is only here to fill a blank one.
     ...(isBlank(lead.full_name)

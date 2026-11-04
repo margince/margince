@@ -67,7 +67,8 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// The twelve hard-coded "Europe/Berlin" literals on the frontend
 			// are what a caller does when no correct answer is served.
 			// margince/margince#26.
-			Timezone: optionalString(id.Timezone),
+			Timezone:       optionalString(id.Timezone),
+			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
 		},
 		Roles:                   roles,
 		Teams:                   teams,

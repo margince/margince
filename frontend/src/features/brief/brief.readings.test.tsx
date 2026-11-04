@@ -4,10 +4,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   boundedDecisions,
   boundedLeads,
@@ -43,11 +43,11 @@ function drawInZone(zone: string, ...args: Parameters<typeof readingsDay>) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <RecordZoneProvider zone={zone}>
+      <CompanyZoneProvider zone={zone}>
         <LocaleProvider initial="en">
           <BriefReadingsStrip day={readingsDay(...args)} />
         </LocaleProvider>
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
     </QueryClientProvider>,
   );
 }
@@ -331,7 +331,7 @@ describe("the brief readings strip", () => {
     );
     expect(meetingsCard().textContent).toContain(
       en["brief.readings.nextMeeting"]
-        .replace("{date}", formatDateAbbrev(startsAt, "en", viewerZone()))
+        .replace("{date}", formatDateAbbrev(startsAt, "en", browserZone()))
         .replace("{subject}", "Weber kickoff"),
     );
   });
@@ -673,8 +673,8 @@ describe("the leads reading", () => {
     // card must carry the earlier one's rendering and not the later one's. A
     // hard-coded hour would pin the test to the runner's own zone — the first
     // version of this line did, and read 09:00 as 16:00 under Asia/Ho_Chi_Minh.
-    const earlier = formatDateTime("2026-08-31T09:00:00Z", "en", viewerZone());
-    const later = formatDateTime("2026-08-31T18:00:00Z", "en", viewerZone());
+    const earlier = formatDateTime("2026-08-31T09:00:00Z", "en", browserZone());
+    const later = formatDateTime("2026-08-31T18:00:00Z", "en", browserZone());
     expect(leadsCard().textContent).toContain(earlier);
     expect(leadsCard().textContent).not.toContain(later);
   });

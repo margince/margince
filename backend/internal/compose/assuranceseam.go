@@ -245,6 +245,7 @@ func customerProgressSQL(alias, asOf string) string {
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
+		relstrength.NotCalledOffSQL(alias) + " AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 

@@ -99,3 +99,21 @@ func TestNoticeBodyBreaksOnlyBetweenSentences(t *testing.T) {
 		}
 	}
 }
+
+// Every language says "Powered by Margince" in its own words. Derived from
+// Languages(), so a language added later is held to it too.
+func TestThePoweredByLineSpeaksEveryLanguage(t *testing.T) {
+	english := For(string(Fallback)).PoweredBy
+	if english == "" {
+		t.Fatal("the attribution line is empty in the fallback language")
+	}
+	for _, language := range Languages() {
+		words := For(string(language)).PoweredBy
+		if words == "" {
+			t.Errorf("%s has no attribution line", language)
+		}
+		if language != Fallback && words == english {
+			t.Errorf("%s carries the English attribution line", language)
+		}
+	}
+}

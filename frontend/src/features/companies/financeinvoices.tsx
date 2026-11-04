@@ -11,7 +11,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];
@@ -34,7 +34,7 @@ export function RecentInvoices({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const invoices = summary.recent_invoices ?? [];
   if (invoices.length === 0) {
     return null;

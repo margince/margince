@@ -19,7 +19,7 @@ import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { TimelineList } from "../../design-system/timeline";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { TimelineActions } from "./timelineactions";
@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 function History() {
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const timeline = useRecordTimeline("company", "company-1");
   return (
     <TimelineList

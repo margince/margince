@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -380,18 +381,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 		args: func(primary, _ ids.UUID) string { return invitationDoorBody(primary) },
 	},
-	"bookMeeting": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/bookings", ids.UUID{},
-				`{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","subject":"Renewal review",`+
-					`"links":[{"entity_type":"deal","entity_id":"`+primary.String()+`"}]}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z",` +
-				`"subject":"Renewal review","links":[{"entity_type":"deal","entity_id":"` +
-				primary.String() + `"}]}`
-		},
-	},
 }
 
 // twinnedOperations is the subject set, derived: an operation whose declared
@@ -645,10 +634,6 @@ func (bothDoorsComms) Availability(context.Context, *ids.UUID, time.Time, time.T
 	return agents.AvailabilityResult{}, errBothDoorsExecuted
 }
 
-func (bothDoorsComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, errBothDoorsExecuted
-}
-
 // agentDoorCtx is a passport principal holding every cap, so admission turns on
 // the call's tier alone — which is the only thing this gate wants it to turn on.
 func agentDoorCtx() context.Context {
@@ -815,6 +800,11 @@ func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args
 
 func invitationDoorBody(contact ids.UUID) string {
 	return `{"contact_id":"` + contact.String() + `","attendee_email":"buyer@example.test","start":"2026-10-05T09:00:00Z","end":"2026-10-05T09:30:00Z","subject":"Discovery","description":"Project scope","location":"Video call"}`
+}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (bothDoorsComms) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
 }
 
 func (bothDoorsComms) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {

@@ -16,11 +16,11 @@ import { PanelNotices } from "../../design-system/panelnotices";
 import { useLastSubject } from "../../design-system/presence";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AgentClientMethodsCard } from "./agent-client-methods";
 import {
   AgentClientValuesDialog,
@@ -114,6 +114,7 @@ function useColumns(
     remove: (client: AgentClient) => void;
   }>,
 ): DataTableColumn<AgentClient>[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -155,7 +156,7 @@ function useColumns(
       header: t("agentClients.col.lastUsed"),
       render: (client) =>
         client.last_used_at
-          ? formatDate(client.last_used_at, locale, viewerZone())
+          ? formatDate(client.last_used_at, locale, readerZone)
           : t("agentClients.neverUsed"),
     },
     {

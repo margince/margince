@@ -16,7 +16,7 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	filters := []string{reportingScope, "period", "target_basis"}
 	switch out.Id {
 	case reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsCreated, reportingLeadStatusMoves,
-		reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingPartnerCommission, reportingPartnerActivity,
+		reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow, reportingPartnerCommission, reportingPartnerActivity,
 		reportingLeadCohortOutcomes:
 	case reportingPartnerPipeline, reportingPartnerWon, reportingStageConversion:
 		filters = append(filters, "pipeline")
@@ -60,7 +60,7 @@ func reportingRequiredFields(metric crmcontracts.ReportingMetricID) []string {
 		return reportingMeetingFields()
 	case reportingAcceptedOpportunities:
 		return []string{"accepted_credit"}
-	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadCohortOutcomes:
+	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow, reportingLeadCohortOutcomes:
 		return reportingLeadFields(metric)
 	case reportingPartnerActivity:
 		return []string{companyDisplayName, fieldOwnerID, partnerLastActivity, partnerCertStatus}

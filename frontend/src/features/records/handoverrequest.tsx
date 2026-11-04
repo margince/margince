@@ -11,12 +11,12 @@ import { Button } from "../../design-system/button";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format.dates";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import { problemMessageOf } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type TransferableRecordType,
   useOwnershipRequest,
@@ -76,6 +76,7 @@ function HandoverAsk({
   owner: string;
   expiresAt: string | undefined;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const toast = useToast();
@@ -87,7 +88,7 @@ function HandoverAsk({
         <p className="t-caption">
           {t("handover.requested", {
             owner,
-            date: formatDate(expiresAt, locale, viewerZone()),
+            date: formatDate(expiresAt, locale, readerZone),
           })}
         </p>
         <Button

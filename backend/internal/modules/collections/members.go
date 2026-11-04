@@ -273,13 +273,9 @@ func (s *Store) evaluateSegment(ctx context.Context, list listRow, read MemberRe
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	var after *ids.UUID
-	if read.Cursor != "" {
-		parsed, err := ids.Parse(read.Cursor)
-		if err != nil {
-			return nil, storekit.Page{}, &storekit.MalformedCursorError{}
-		}
-		after = &parsed
+	after, err := storekit.DecodeIDCursor(read.Cursor)
+	if err != nil {
+		return nil, storekit.Page{}, err
 	}
 	matched := read.Only
 	var more bool
@@ -313,10 +309,7 @@ func (s *Store) evaluateSegment(ctx context.Context, list listRow, read MemberRe
 	if read.Only != nil {
 		slices.SortFunc(out, func(a, b memberRow) int { return strings.Compare(a.ID.String(), b.ID.String()) })
 	}
-	if more {
-		return out, storekit.Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}, nil
-	}
-	return out, storekit.Page{}, nil
+	return out, storekit.IDPage(matched, more), nil
 }
 
 // MemberFilter resolves a list into the narrowing a record list read applies

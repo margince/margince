@@ -10,10 +10,10 @@ import { KeyedName } from "../../design-system/keyedname";
 import { Popover } from "../../design-system/popover";
 import { RowOpen } from "../../design-system/rowopen";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { ModelCatalogue, ModelLane } from "../../lib/ai-models";
 import { providerName } from "../../lib/ai-provider-names";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   TierCallsLine,
   TierSwitchedBadge,
@@ -344,7 +344,7 @@ function HealthDot({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const state = !rung ? "idle" : rung.healthy ? "ok" : "bad";
   const reading = !rung
     ? t("aiHealth.noCalls", {

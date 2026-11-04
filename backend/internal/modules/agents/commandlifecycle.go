@@ -125,15 +125,24 @@ func genuineTriggerNames() []string {
 // and the tool's own arguments carry nothing else either.
 type DisqualifyLeadCommand struct {
 	LeadID ids.UUID
+	// ReasonID is read by Guards, so a reason no rep could pick is refused before
+	// a user is asked to release the call.
+	ReasonID *ids.UUID
+}
+
+// DisqualifyReasons answers whether a reason is one a rep could pick.
+type DisqualifyReasons interface {
+	CheckDisqualifyReason(ctx context.Context, id ids.UUID) error
 }
 
 // NewDisqualifyLeadCall binds one retirement to the resolver that answers for
 // it.
 //
 //nolint:ireturn // the call IS the product: a resolver named concretely here is exactly the thing that must not leave this package
-func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd DisqualifyLeadCommand) GovernedCall {
+func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, reasons DisqualifyReasons, cmd DisqualifyLeadCommand) GovernedCall {
 	return bind[DisqualifyLeadCommand](&disqualifyLeadResolver{
 		language: language,
+		reasons:  reasons,
 		lead:     anchoredRecord{records: records, entityType: datasource.EntityLead},
 	}, cmd)
 }
@@ -141,6 +150,7 @@ func NewDisqualifyLeadCall(records datasource.SystemOfRecordProvider, language b
 type disqualifyLeadResolver struct {
 	lead     anchoredRecord
 	language baselanguage.Resolver
+	reasons  DisqualifyReasons
 }
 
 func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLeadCommand) (StageInfo, error) {
@@ -157,7 +167,13 @@ func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLead
 }
 
 func (r *disqualifyLeadResolver) Guards(ctx context.Context, cmd DisqualifyLeadCommand) error {
-	return r.lead.refuse(ctx, cmd.LeadID)
+	if err := r.lead.refuse(ctx, cmd.LeadID); err != nil {
+		return err
+	}
+	if cmd.ReasonID == nil || r.reasons == nil {
+		return nil
+	}
+	return r.reasons.CheckDisqualifyReason(ctx, *cmd.ReasonID)
 }
 
 // DemoteLeadCommand is one reversal of a promotion, whichever door asked for

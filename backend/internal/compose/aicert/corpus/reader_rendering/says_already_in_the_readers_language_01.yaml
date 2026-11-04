@@ -1,0 +1,22 @@
+name: reader_rendering_says_already_in_the_readers_language
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "note"
+  subject: "Kurz"
+  body: "Termin steht, Angebot folgt."
+  source: ""
+  target: "de"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: true
+    keeps: []
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The note is already German, so already_in_target is true and the subject and body come back unchanged."

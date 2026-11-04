@@ -43,8 +43,10 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsCreated, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsCreated].En}, string(recordTypeLead), readReportingLeadsCreated},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadStatusMoves, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadStatusMoves].En}, string(recordTypeLead), readReportingLeadStatusMoves},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsPromoted, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsPromoted].En}, string(recordTypeLead), readReportingLeadsPromoted},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsQualified, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsQualified].En}, string(recordTypeLead), readReportingLeadsQualified},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadFirstResponse, Version: "1", Unit: "hours", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadFirstResponse].En}, string(recordTypeLead), readReportingLeadFirstResponse},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsAwaitingResponse, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsAwaitingResponse].En}, string(recordTypeLead), readReportingLeadsAwaitingResponse},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsAwaitingResponseNow, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsAwaitingResponseNow].En}, string(recordTypeLead), readReportingCurrentUnanswered},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerPipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerPipeline].En}, string(recordTypeDeal), readReportingPartnerPipeline},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerWon, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerWon].En}, string(recordTypeDeal), readReportingPartnerWon},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerCommission, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerCommission].En}, objectCommission, readReportingPartnerCommission},
@@ -61,10 +63,10 @@ var reportingMetrics = []metricSpec{
 // reportingMetrics.
 var reportingPresets = []crmcontracts.ReportingPreset{
 	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated, reportingBookingsMix}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge, reportingBreakdown}},
-	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 	// A team's prospecting, counted once for the team: the handoff feedback
 	// beside it comes from GET /analytics/sdr-team.
-	{Id: crmcontracts.ReportingPresetIdTeam, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+	{Id: crmcontracts.ReportingPresetIdTeam, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 }
 
 // openingSelection answers a request that names no metrics: the sales preset,
@@ -142,6 +144,8 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 		}
 	}
 	out.Presets = readablePresets(out.Metrics)
+	views := []crmcontracts.SalesAssessmentView{crmcontracts.SalesAssessmentViewSales, crmcontracts.SalesAssessmentViewProspecting, crmcontracts.SalesAssessmentViewTeam}
+	out.AssessmentViews = &views
 	// Team prospecting reads handoffs beside its figures, so a seat that may
 	// not read them is not offered the view.
 	if !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
@@ -220,6 +224,8 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}
+	actions := reportingOverviewActions(out.Result, out.Facts)
+	out.Result.OverviewActions = &actions
 	return out, e.projectMovementCharts(ctx, tx, frame, &out)
 }
 

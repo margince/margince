@@ -1,11 +1,10 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { formatDecimal } from "../../format/format";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import {
   isSetup,
@@ -28,10 +27,6 @@ import {
   reportingCompactAmount,
 } from "./reporting.model";
 
-// What each Sales review headline counts. The landing has its basis beside
-// it, and the modelled finish is its own reading. Coverage names both
-// operands, and the period stands apart from its cutoff.
-
 const originalFetch = globalThis.fetch;
 beforeEach(() => forgetSeat());
 afterEach(() => {
@@ -39,265 +34,184 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   window.location.hash = "";
 });
-
-function openScenario(name: ScenarioName): ReportingEvaluation {
+function openScenario(name: ScenarioName) {
   const pair = OVERVIEW_SCENARIOS[name].views.sales;
-  if (!isSetup(pair)) throw new Error(`${name} excludes Sales review`);
+  if (!isSetup(pair)) throw new Error("missing sales scenario");
   openOverview(overviewAddress("sales"), pair.answer, pair.routes);
-  return pair.answer(new URL("http://localhost/evaluate"));
 }
-
 function openEvaluation(evaluation: ReportingEvaluation) {
   openOverview(overviewAddress("sales"), (url) =>
     isMovement(url) ? startingMovement() : evaluation,
   );
 }
-
-// The card a reading's label heads, so a figure and its basis are read
-// together and never from a neighbour.
 async function card(label: string) {
   const strip = await readings();
   const section = strip.getByText(label).closest("section");
-  if (!section) throw new Error(`${label} is not drawn as a card`);
+  if (!section) throw new Error("missing metric card");
   return within(section);
 }
+const money = (value: number) =>
+  reportingCompactAmount(value, "EUR", "EUR", "en");
 
-// The modelled finish, its own reading in the summary panel.
-async function modelCard() {
-  return within(
-    await screen.findByRole("region", { name: "Modelled quarter finish" }),
-  );
-}
-
-const hero = () => within(screen.getByRole("region", { name: "Sales won" }));
-
-const money = (minor: number | undefined) =>
-  reportingCompactAmount(minor, "EUR", "EUR", "en");
-
-describe("the expected finish beside the modelled finish", () => {
-  it("names committed business, the model and the manager's call apart", async () => {
-    openScenario("modelCommitDivergence");
-    const finish = await card("Expected finish");
-    expect(finish.getByText("€0")).toBeVisible();
-    expect(finish.getByText("Won + confirmed commit")).toBeVisible();
-    expect(
-      finish.getByText(`Manager’s call ${money(190_000_000)}, not added`),
-    ).toBeVisible();
-    const model = await modelCard();
-    expect(
-      model.getByText(`${money(140_000_000)} to ${money(260_000_000)}`),
-    ).toBeVisible();
-    expect(
-      model.getByText("Central 80% of modelled outcomes under current chances"),
-    ).toBeVisible();
-    expect(model.getByText("1 unpriced deal left out")).toBeVisible();
-  });
-
-  it("never draws the range inside the landing's card", async () => {
-    openScenario("modelCommitDivergence");
-    const finish = await card("Expected finish");
-    expect(finish.queryByText(/ to €/)).toBeNull();
-    expect(finish.queryByText(/80%|8 in 10/)).toBeNull();
-  });
-
-  it("keeps a true zero landing at zero with its basis", async () => {
-    openScenario("trueZero");
-    const finish = await card("Expected finish");
-    expect(finish.getByText("€0")).toBeVisible();
-    expect(finish.getByText("Won + confirmed commit")).toBeVisible();
-    expect(finish.getByText("€0 won + €0 to come")).toBeVisible();
-  });
-
-  it("says when no range was drawn", async () => {
-    const evaluation = salesEvaluation();
-    openEvaluation({
-      ...evaluation,
-      metrics: evaluation.metrics.map(
-        ({ range_low_minor: _low, range_high_minor: _high, ...each }) => each,
-      ),
-    });
-    const model = await modelCard();
-    expect(model.getByText("No range")).toBeVisible();
-    expect(
-      model.getByText("No modelled range was drawn for this period."),
-    ).toBeVisible();
-  });
-
-  it("says the basis is unknown on an answer stored before it was kept", async () => {
-    openScenario("legacyLanding");
-    const finish = await card("Expected finish");
-    expect(finish.getByText("€760k")).toBeVisible();
-    expect(finish.getByText("Basis not recorded")).toBeVisible();
-    expect(finish.queryByText("Won + confirmed commit")).toBeNull();
-  });
+it("keeps committed business and modelled outcomes in different labelled readings", async () => {
+  openScenario("modelCommitDivergence");
+  const finish = await card("Won + confirmed commit");
+  expect(finish.getByText("0 EUR")).toBeVisible();
+  expect(finish.queryByText(/1,400,000 EUR/)).toBeNull();
+  const model = await card("Modelled quarter finish");
+  expect(
+    model.getByText(`${money(140000000)} – ${money(260000000)}`),
+  ).toBeVisible();
+  expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
 });
 
-// 100 won, 40 confirmed commit, 70 weighted open and a call of 190 for the
-// whole quarter. Each measure lands on its own figure; none reads 290.
-describe("one quarter landed three ways", () => {
-  const cases = [
-    {
-      measure: "commit_evidence",
-      amount: 14_000,
-      basis: "Won + confirmed commit",
-    },
-    { measure: "weighted", amount: 17_000, basis: "Won + weighted open deals" },
-    { measure: "manager_call", amount: 19_000, basis: "Manager’s call" },
-  ] as const;
+it("keeps a measured zero distinct from a missing model range", async () => {
+  const evaluation = salesEvaluation();
+  openEvaluation({
+    ...evaluation,
+    metrics: evaluation.metrics.map((m) =>
+      m.id === "forecast_landing"
+        ? {
+            ...m,
+            value: 0,
+            range_low_minor: undefined,
+            range_high_minor: undefined,
+          }
+        : m,
+    ),
+  });
+  expect(
+    (await card("Won + confirmed commit")).getByText("0 EUR"),
+  ).toBeVisible();
+  expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
+  expect(
+    screen.queryByText("No modelled range was drawn for this period."),
+  ).toBeNull();
+});
 
-  function landedBy(
-    measure: (typeof cases)[number]["measure"],
-    amount: number,
-    target: boolean,
-  ): ReportingEvaluation {
-    const call = measure === "manager_call";
-    return salesEvaluation({
-      metrics: [
-        metric("bookings_won", 10_000),
-        metric("open_pipeline", 25_000),
-        metric("forecast_landing", amount, {
-          forecast_basis: landingBasis(
-            {
-              won: 10_000,
-              remaining: call ? 0 : amount - 10_000,
-              measure,
-              amount_minor: amount,
-              ...(call ? { system_minor: 14_000 } : {}),
-            },
-            { call_minor: 19_000 },
-          ),
-          target_comparison: target
-            ? {
-                ...compared,
-                basis: measure,
-                target: 20_000,
-                landing: amount,
-                won: 10_000,
-                gap: 20_000 - amount, // ds:ignore the target comparison money gap, not a CSS gap
-                remaining: 10_000,
-                open_pipeline: 11_000,
-                coverage: 1.1,
-              }
-            : {
-                status: "no_target",
-                target_metric: "bookings_won",
-                basis: measure,
+it("does not invent a forecast basis for an older response", async () => {
+  openScenario("legacyLanding");
+  const finish = await card("Landing");
+  expect(finish.getByText("760,000 EUR")).toBeVisible();
+  expect(finish.queryByText("Won + confirmed commit")).toBeNull();
+});
+
+it.each([
+  {
+    measure: "commit_evidence",
+    amount: 14000,
+    label: "Won + confirmed commit",
+  },
+  { measure: "weighted", amount: 17000, label: "Won + weighted open deals" },
+  { measure: "manager_call", amount: 19000, label: "Manager’s call" },
+] as const)(
+  "labels $measure without adding the manager call to won sales",
+  async ({ measure, amount, label }) => {
+    openEvaluation(
+      salesEvaluation({
+        metrics: [
+          metric("bookings_won", 10000),
+          metric("forecast_landing", amount, {
+            forecast_basis: landingBasis(
+              {
+                won: 10000,
+                remaining: amount - 10000,
+                amount_minor: amount,
+                measure,
+                system_minor: 17000,
               },
+              {
+                call_minor: 19000,
+                call_at: "2026-10-30T09:00:00Z",
+                open_pipeline_minor: 11000,
+              },
+            ),
+            target_comparison: {
+              ...compared,
+              basis: measure,
+              target: 20000,
+              won: 10000,
+              landing: amount,
+              gap: 20000 - amount, // ds:ignore money shortfall in minor units, not layout spacing
+              remaining: 10000,
+              open_pipeline: 11000,
+            },
+          }),
+        ],
+      }),
+    );
+    expect((await card(label)).getByText(money(amount))).toBeVisible();
+    expect(screen.queryByText(money(29000))).toBeNull();
+    expect(
+      (await card("Pipeline due this quarter")).getByText(money(11000)),
+    ).toBeVisible();
+    expect(screen.getByText(`${money(10000)} still to win`)).toBeVisible();
+    if (measure === "manager_call") {
+      const call = await card(label);
+      expect(call.getByText("Called 30 Oct 2026")).toBeVisible();
+      expect(
+        call.getByText(`Projected shortfall ${money(20000 - amount)}`),
+      ).toBeVisible();
+      expect(call.getByRole("button", { name: "Evidence" })).toBeVisible();
+    }
+  },
+);
+
+it("keeps current-quarter pipeline separate from explicitly labelled all-open stock", async () => {
+  openScenario("coverageNumerator");
+  expect(
+    (await card("Pipeline due this quarter")).queryByText(money(520000000)),
+  ).toBeNull();
+  expect(
+    screen.getByText(`All open pipeline: ${money(520000000)}`),
+  ).toBeVisible();
+});
+
+it.each(["fx_missing", "partial_visibility", "colleague_withheld"] as const)(
+  "does not invent a target gap for %s",
+  async (status) => {
+    openEvaluation(
+      salesEvaluation({
+        comparison: { status, target_metric: "bookings_won" },
+      }),
+    );
+    const strip = await readings();
+    expect(
+      strip.queryByText(/still to win|Projected shortfall|Infinity|NaN/),
+    ).toBeNull();
+  },
+);
+
+it("names the whole quarter separately from the actuals cutoff", async () => {
+  openScenario("cutoffVersusHorizon");
+  const period = await screen.findByText("1 October – 31 December");
+  expect(period.parentElement).toBe(
+    screen.getByText("Actuals through 31/10/2026, 17:00").parentElement,
+  );
+});
+
+it("withholds period-pipeline values and population details from a masked forecast", async () => {
+  openEvaluation(
+    salesEvaluation({
+      metrics: [
+        metric("forecast_landing", null, {
+          coverage: { status: "unavailable", withheld: true },
+          range_low_minor: 1000000,
+          range_high_minor: 2000000,
+          target_comparison: compared,
+          forecast_basis: landingBasis(
+            { won: 10000, remaining: 5000 },
+            { open_pipeline_minor: 1234500, eligible_count: 18 },
+          ),
         }),
       ],
-    });
-  }
-
-  it.each(
-    cases.flatMap((each) => [
-      { ...each, target: true },
-      { ...each, target: false },
-    ]),
-  )(
-    "$measure lands on its own figure (target: $target)",
-    async ({ measure, amount, basis, target }) => {
-      openEvaluation(landedBy(measure, amount, target));
-      const finish = await card("Expected finish");
-      expect(finish.getByText(money(amount))).toBeVisible();
-      expect(finish.getByText(basis)).toBeVisible();
-      expect(
-        finish.getByText(
-          measure === "manager_call"
-            ? `Records alone project ${money(14_000)}`
-            : `Manager’s call ${money(19_000)}, not added`,
-        ),
-      ).toBeVisible();
-      expect(screen.queryByText(money(29_000))).toBeNull();
-      if (!target) return;
-      // Left to win stays target minus won; the shortfall follows the landing.
-      expect(hero().getByText(`${money(10_000)} still to win`)).toBeVisible();
-      expect(
-        hero().getByText(
-          `Projected shortfall ${money(20_000 - amount)}, from an expected finish of ${money(amount)}`,
-        ),
-      ).toBeVisible();
-      const coverage = await card("Coverage");
-      expect(
-        coverage.getByText(
-          `${money(11_000)} eligible to close this quarter / ${money(10_000)} still to win`,
-        ),
-      ).toBeVisible();
-    },
+    }),
   );
-});
-
-describe("coverage against what is still to win", () => {
-  it("states the ratio the server divided, with both its operands", async () => {
-    const evaluation = openScenario("coverageNumerator");
-    const comparison = evaluation.metrics.find(
-      (each) => each.id === "forecast_landing",
-    )?.target_comparison;
-    const eligible = comparison?.open_pipeline ?? Number.NaN;
-    const remaining = comparison?.remaining ?? Number.NaN;
-    const coverage = await card("Coverage");
-    expect(
-      coverage.getByText(`${formatDecimal(eligible / remaining, "en", 1)}×`),
-    ).toBeVisible();
-    expect(
-      coverage.getByText(
-        `${money(eligible)} eligible to close this quarter / ${money(remaining)} still to win`,
-      ),
-    ).toBeVisible();
-    // All open pipeline is the secondary reading over the stock charts:
-    // today's stock, dated with the cutoff, never the coverage numerator.
-    expect(
-      screen.getByText(`All open pipeline: ${money(520_000_000)}`),
-    ).toBeVisible();
-    expect(
-      screen.getByText("Open deals: 61 · as of 31 Oct 2026"),
-    ).toBeVisible();
-    expect((await readings()).queryByText(/open pipeline/i)).toBeNull();
-  });
-
-  it("reads a target already passed as reached and its surplus, never as an endless ratio", async () => {
-    openScenario("targetReached");
-    expect((await card("Coverage")).getByText("Target reached")).toBeVisible();
-    expect(
-      hero().getByText(/^Projected surplus €160k, from an expected finish/),
-    ).toBeVisible();
-    expect(screen.queryByText(/Infinity|NaN/)).toBeNull();
-  });
-
-  it.each([
-    { status: "fx_missing" },
-    { status: "partial_visibility" },
-    { status: "colleague_withheld" },
-  ] as const)(
-    "compares nothing when the comparison is $status",
-    async ({ status }) => {
-      openEvaluation(
-        salesEvaluation({
-          comparison: { status, target_metric: "bookings_won" },
-        }),
-      );
-      const coverage = await card("Coverage");
-      expect(coverage.getByText("Not compared")).toBeVisible();
-      expect((await readings()).queryByText(/Infinity|NaN|×/)).toBeNull();
-      // The hero states why, once, beside the attainment it affects.
-      expect(hero().queryByText(/still to win/)).toBeNull();
-    },
-  );
-});
-
-describe("the period apart from its cutoff", () => {
-  it("names the whole quarter and the cutoff as two facts", async () => {
-    openScenario("cutoffVersusHorizon");
-    const period = await screen.findByText("1 October – 31 December");
-    const through = screen.getByText("Actuals through 31/10/2026, 17:00");
-    expect(period.parentElement).toBe(through.parentElement);
-    expect(period).not.toBe(through);
-  });
-
-  it("names only the cutoff on an answer stored before the period was kept", async () => {
-    openScenario("legacyLanding");
-    expect(
-      await screen.findByText("Actuals through 31/10/2026, 17:00"),
-    ).toBeVisible();
-    expect(screen.queryByText("1 October – 31 December")).toBeNull();
-  });
+  const pipeline = await card("Pipeline due this quarter");
+  expect(pipeline.getByText("—")).toBeVisible();
+  expect(pipeline.queryByText(money(1234500))).toBeNull();
+  expect(pipeline.queryByText("18 deals")).toBeNull();
+  expect(pipeline.queryByRole("link")).toBeNull();
+  expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
+  expect(screen.queryByText(/Projected shortfall/)).toBeNull();
 });

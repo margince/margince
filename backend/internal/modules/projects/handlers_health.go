@@ -78,3 +78,19 @@ func (h Handlers) CorrectProjectHealthAssessment(
 	}
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
+
+// UndoProjectHealthAssessment withdraws a reading the health job wrote. It
+// takes no body: what stands afterwards is whatever stood before the AI's
+// reading, which the server reads from the history.
+func (h Handlers) UndoProjectHealthAssessment(
+	w http.ResponseWriter, r *http.Request,
+	id crmcontracts.Id, assessmentID openapi_types.UUID,
+	_ crmcontracts.UndoProjectHealthAssessmentParams,
+) {
+	out, err := h.store.UndoAIHealth(r.Context(), pathID[ids.ProjectKind](id), ids.UUID(assessmentID))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusCreated, out)
+}

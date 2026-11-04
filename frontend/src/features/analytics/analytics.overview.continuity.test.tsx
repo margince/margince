@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
   act,
@@ -150,10 +150,13 @@ describe("each Overview view keeps its own question", () => {
     expect(window.location.hash).not.toContain("from=");
     await user.click(await view("Sales review"));
     await readings();
-    const pipeline = await screen.findByRole("link", { name: "Pipeline" });
-    expect(dialsOfLink(pipeline)).toEqual({
+    await user.click(await screen.findByRole("button", { name: "Pipeline" }));
+    expect(
+      Object.fromEntries(
+        new URLSearchParams(window.location.hash.split("?")[1]),
+      ),
+    ).toMatchObject({
       overview: "sales",
-      scope: `team:${TEAM.id}`,
       pipeline: "sales",
       period: "custom",
       from: "2026-10-01",
@@ -295,7 +298,7 @@ describe("a remembered or shared question the reader can no longer ask", () => {
 describe("every way out of Overview carries its question", () => {
   async function expectedFinishDoor() {
     const strip = await readings();
-    return strip.getByRole("link", { description: "Expected finish" });
+    return strip.getByRole("link", { description: "Won + confirmed commit" });
   }
 
   it("opens Forecast from Expected finish with the question, and says what it cannot narrow to", async () => {
@@ -355,10 +358,13 @@ describe("every way out of Overview carries its question", () => {
     open("#/analytics", answer, TWO);
     await readings();
     await chooseAllPipelines(user);
-    const pipeline = await screen.findByRole("link", { name: "Pipeline" });
-    expect(dialsOfLink(pipeline)).toEqual({
+    await user.click(await screen.findByRole("button", { name: "Pipeline" }));
+    expect(
+      Object.fromEntries(
+        new URLSearchParams(window.location.hash.split("?")[1]),
+      ),
+    ).toMatchObject({
       overview: "sales",
-      scope: `team:${TEAM.id}`,
       pipeline: "all",
       period: "this_quarter",
       close: "all_open",
@@ -389,12 +395,12 @@ describe("every way out of Overview carries its question", () => {
   it("keeps My prospecting's doors on the reader's own records", async () => {
     open("#/analytics/overview?overview=prospecting", answer, TWO);
     await readings();
-    const outcomes = await screen.findByRole("link", { name: "SDR outcomes" });
-    expect(dialsOfLink(outcomes)).toEqual({
-      overview: "prospecting",
-      scope: `owner:${SELF}`,
-      period: "this_week",
-    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "SDR outcomes" }),
+    );
+    expect(window.location.hash).toContain("#/analytics/sdr");
+    expect(window.location.hash).toContain("period=this_week");
+    expect(screen.queryByRole("link", { name: "SDR outcomes" })).toBeNull();
   });
 });
 
@@ -422,14 +428,14 @@ describe("a response that arrives late", () => {
     );
     await waitFor(() => expect(releaseDefault).toBeDefined());
     await chooseAllPipelines(user);
-    expect(await screen.findByText("€990k")).toBeVisible();
+    expect(await screen.findByText("990,000 EUR")).toBeVisible();
 
     releaseDefault?.();
     await waitFor(() =>
       expect(salesAsked(asked)[0].signal?.aborted).toBe(true),
     );
-    expect(screen.getByText("€990k")).toBeVisible();
-    expect(screen.queryByText("€110k")).toBeNull();
+    expect(screen.getByText("990,000 EUR")).toBeVisible();
+    expect(screen.queryByText("110,000 EUR")).toBeNull();
   });
 });
 
@@ -535,7 +541,7 @@ describe("a copied link", () => {
   it("is refused to a second reader who may not see its team, instead of showing their own", async () => {
     open("#/analytics", answer, TWO);
     const door = (await readings()).getByRole("link", {
-      description: "Expected finish",
+      description: "Won + confirmed commit",
     });
     const href = door.getAttribute("href") ?? "";
     cleanup();

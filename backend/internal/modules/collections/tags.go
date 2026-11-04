@@ -326,19 +326,12 @@ func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string
 	return storekit.AuditEventWithEvidence(ctx, tx, "update", auditentity.Tag, tagID.UUID, map[string]any{change: link}, evidence)
 }
 
-// EnsureTaggable refuses a record this caller may not tag.
+// EnsureTaggable refuses a record this caller may not tag. Apply-by-name asks it
+// first, so it never mints a tag for a record the caller cannot reach.
 //
-// Split out so a caller can ask BEFORE it creates anything: apply-by-name used
-// to mint the tag first and check the record second, leaving a live audited
-// word behind when the record turned out not to exist or to sit outside the
-// caller's row scope.
-//
-// The gate is exactly ApplyTag's own: UPDATE on the target's object type (not
-// merely read — tagging changes the record) and EnsureWritableLive for the
-// row. Asking a weaker question here than the real write asks would make this
-// pre-flight worse than useless: it would admit a caller apply-by-name then
-// spends a ResolveTag lookup on, only to have the write itself refuse them
-// afterward.
+// The gate is ApplyTag's own: update on the target's object type and
+// EnsureWritableLive for the row. A weaker question would admit a caller the
+// write then refuses.
 func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID ids.UUID) error {
 	if !acceptsEntityType(entityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}

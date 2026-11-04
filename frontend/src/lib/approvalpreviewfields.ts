@@ -214,6 +214,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("approval.preview.meetingHost");
     case "intended_attendee":
       return t("approval.preview.intendedAttendee");
+    case "attendee_host_named":
+      return t("approval.preview.hostNamedAttendee");
     case "target_url":
       return t("approval.preview.targetURL");
     case "enrichment_depth":

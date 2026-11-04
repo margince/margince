@@ -55,10 +55,7 @@ func refuseBuyer(p principal.Principal, what string) error {
 		what, apperrors.ErrPermissionDenied)
 }
 
-// gateObject names the RBAC object a record kind is gated on. A core kind is
-// its own object. An extension kind (`ext:<unit>:<kind>`) is gated on the object
-// its declaration derived. A kind no unit declared is refused for every
-// principal, the system one included, because the name is not a record.
+// gateObject maps an extension kind to its declared object; an undeclared one is no record, so even the system principal is refused.
 func gateObject(kind string) (string, error) {
 	if !recordkinds.IsExtensionName(kind) {
 		return kind, nil
@@ -225,6 +222,20 @@ func RequireHumanOrAgentScope(ctx context.Context, scope principal.Scope) error 
 		return err
 	}
 	if p.Type == principal.PrincipalAgent && p.Scopes.Has(scope) {
+		return nil
+	}
+	return RequireHuman(ctx)
+}
+
+// RequireHumanOrItsAgent is RequireHuman that also admits an agent working on
+// a colleague's passport. Unlike RequireHumanOrAgentScope it refuses
+// passportless automatic work, which acts for nobody.
+func RequireHumanOrItsAgent(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if p.ActsAsItsUser() {
 		return nil
 	}
 	return RequireHuman(ctx)
@@ -460,10 +471,10 @@ func RequireCoach(ctx context.Context) error {
 }
 
 // leads reports whether a human seat holds the team-lead grant for this act.
-// Leading is a human's act: an agent or connector holding the grant through
-// its human leads nobody on its own.
+// Leading is a human's act, done by them or by their agent. A connector, or
+// passportless work, leads nobody on its own.
 func leads(p principal.Principal, action principal.Action) bool {
-	return p.Type == principal.PrincipalHuman && p.Permissions.Allows(objTeamLead, action)
+	return p.HumanOrItsAgent() && p.Permissions.Allows(objTeamLead, action)
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.

@@ -9,7 +9,7 @@ import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { MultiSelect, Select } from "../../design-system/select";
 import { forReader } from "../../format/collate";
-import { formatNumber, ordinalNumber } from "../../format/format";
+import { formatAnalyticsNumber, ordinalNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { VocabularyField } from "../../lib/filterdata";
 import { ValueControl } from "../lists/filtervalue";
@@ -102,8 +102,8 @@ function groupingOptions(words: Words, entity: AnalyticsEntity | undefined) {
             field.records,
             {
               label: option.label,
-              held: formatNumber(field.with_value, words.locale),
-              count: formatNumber(field.records, words.locale),
+              held: formatAnalyticsNumber(field.with_value, words.locale),
+              count: formatAnalyticsNumber(field.records, words.locale),
             },
           ),
         }

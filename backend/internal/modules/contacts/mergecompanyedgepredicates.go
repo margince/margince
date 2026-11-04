@@ -20,6 +20,6 @@ var mergeCompanyEdgeDuplicate = `EXISTS (SELECT 1 FROM relationship b
  AND b.counterparty_company_id IS NOT DISTINCT FROM (CASE WHEN a.counterparty_company_id=@source THEN @target::uuid ELSE a.counterparty_company_id END)
  AND ` + roleKeyedDuplicateSQL + `)`
 
-var mergeCompanyPrimaryWitness = "b.contact_id = a.contact_id AND b.id <> a.id AND " + employment.CurrentPrimarySlotSQL("b")
+var mergePrimarySlotWitness = "b.contact_id = a.contact_id AND b.id <> a.id AND " + employment.CurrentPrimarySlotSQL("b")
 
-var mergeCompanyEdgePrimary = "a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE " + mergeCompanyPrimaryWitness + ")"
+var mergeCompanyEdgePrimary = "a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE " + mergePrimarySlotWitness + ")"

@@ -314,6 +314,54 @@ HERZOG = [("company", "c1", "Herzog Fertigung GmbH", {"description": "Fertigungs
           ("lead", "l1", "Ines Waldner", {"status": "promoted"}, "Demo Admin")]
 
 
+class TeamAndContractTest(unittest.TestCase):
+    TEAM = {"id": "t1", "name": "Fleet Accounts"}
+
+    def read(self, entries, team_ids=("t1",), teams=None, contracts=()):
+        def read_view(arguments):
+            return json.dumps({"data": {"data": [self.TEAM] if teams is None else teams}}), False
+
+        def read_workspace(arguments):
+            if arguments.get("topic") == "colleagues":
+                return json.dumps({"data": {"colleagues": [{"user_id": "u1", "display_name": "Sofia Meier"}]}}), False
+            return json.dumps({"data": {"id": "u1", "team_ids": list(team_ids)}}), False
+
+        def read_details(arguments):
+            return json.dumps({"data": {"data": [{"title": t} for t in contracts]}}), False
+
+        replies = dict(crm_world(HERZOG), read_view=read_view, read_workspace=read_workspace, read_details=read_details)
+        tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            return endstate.end_state(session, list(entries))
+
+    ON_TEAM = 'team "Fleet Accounts" member=Sofia Meier'
+    SIGNED = 'company "Herzog Fertigung GmbH" contract=Wartungsvertrag 2027'
+
+    def test_a_colleague_on_the_team_holds(self):
+        self.assertEqual(self.read([self.ON_TEAM]), ([self.ON_TEAM], []))
+
+    def test_a_colleague_left_off_the_team_fails(self):
+        _, problems = self.read([self.ON_TEAM], team_ids=("other",))
+        self.assertEqual(problems, ['ended with Sofia Meier not on team "Fleet Accounts"'])
+
+    def test_a_team_under_another_name_fails(self):
+        _, problems = self.read([self.ON_TEAM], teams=[{"id": "t1", "name": "Fleet"}])
+        self.assertEqual(problems, ['ended with 0 teams named "Fleet Accounts"'])
+
+    def test_the_contract_on_the_company_holds(self):
+        self.assertEqual(self.read([self.SIGNED], contracts=["Wartungsvertrag 2027"])[1], [])
+
+    def test_no_such_contract_fails(self):
+        _, problems = self.read([self.SIGNED], contracts=["Rahmenvertrag"])
+        self.assertTrue(problems and "0 contracts" in problems[0], problems)
+
+    def test_a_contract_is_only_read_on_a_company(self):
+        with self.assertRaises(ValueError):
+            endstate.parse('deal "X" contract=Y')
+
+
 class ReadersTest(unittest.TestCase):
     def read(self, replies, entries, calls=()):
         tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]

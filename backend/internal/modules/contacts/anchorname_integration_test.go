@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ignoreInstallationName stands in for identity's setting, which this module
@@ -40,5 +42,30 @@ func TestAnUnwiredStoreRefusesToRenameTheAnchor(t *testing.T) {
 	name := "Brandt Renamed GmbH"
 	if _, err := unwired.UpdateCompany(env.ctx, customer, UpdateCompanyInput{DisplayName: &name}); err != nil {
 		t.Errorf("renaming a customer through an unwired store = %v, want it to pass", err)
+	}
+}
+
+func TestAnAgentsCompanySaveIsNeverStampedAsAHumanConfirmation(t *testing.T) {
+	env := newAnchorEnv(t)
+	actor, ok := principal.Actor(env.ctx)
+	if !ok {
+		t.Fatal("the anchor environment binds no actor")
+	}
+	actor.Type, actor.ID, actor.OnBehalfOf = principal.PrincipalAgent, "agent:test", actor.UserID
+	industry := "Manufacturing"
+
+	if _, err := env.store.SaveCompany(principal.WithActor(env.ctx, actor), SaveCompanyInput{
+		DisplayName: "Our Company", Fields: map[string]*string{fieldIndustry: &industry},
+	}); err != nil {
+		t.Fatalf("agent saves the company: %v", err)
+	}
+
+	var source, capturedBy string
+	if err := env.pool.QueryRow(env.ctx, `SELECT source, captured_by FROM company_profile_field
+		WHERE company_id = $1 AND field = $2`, env.anchorID, fieldIndustry).Scan(&source, &capturedBy); err != nil {
+		t.Fatalf("read back the field: %v", err)
+	}
+	if source != CompanySourceAgent || capturedBy != "agent:test" {
+		t.Fatalf("source = %q, captured_by = %q; want the agent on both", source, capturedBy)
 	}
 }

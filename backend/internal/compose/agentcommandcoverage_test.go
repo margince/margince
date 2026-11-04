@@ -42,12 +42,14 @@ import (
 // along as the value so a failure names the place a reader has to go.
 //
 // A registry-served route is not in it. agentGate passes it through, and the
-// tool it runs stages through its own StageInfo, as on the MCP door.
+// tool it runs stages through its own StageInfo, as on the MCP door. Nor is a
+// route-backed one: gen-agentpolicy holds it to auto_execute, so no approval of
+// it is staged that a command would have to bind.
 func agentReachableMutations() map[string]string {
 	routes := make(map[string]string, len(agentPolicies))
 	for route, pol := range agentPolicies {
 		method, _, _ := strings.Cut(route, " ")
-		if pol.Access != accessTool || !mutatingMethod(method) || pol.ServedBy == servedByRegistry {
+		if pol.Access != accessTool || !mutatingMethod(method) || pol.ServedBy == servedByRegistry || pol.ServedBy == servedByRoute {
 			continue
 		}
 		routes[pol.Op] = route

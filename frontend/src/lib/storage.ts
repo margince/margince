@@ -46,6 +46,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  tableOrder: {
+    prefix: "margince.table.order.",
+    area: "local",
+    lifetime: "device",
+  },
   faultsSeen: {
     name: "margince.agent.faults-seen",
     area: "local",
@@ -139,6 +144,11 @@ export const STORAGE_KEYS = {
   analyticsOverviewTab: {
     prefix: "margince.analytics.overviewTab:",
     area: "session",
+    lifetime: "seat",
+  },
+  sessionSeen: {
+    name: "margince.session.seen",
+    area: "local",
     lifetime: "seat",
   },
 } as const satisfies Record<string, Declared>;

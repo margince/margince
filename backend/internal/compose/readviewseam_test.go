@@ -117,23 +117,48 @@ func TestAViewRefusalKeepsItsKind(t *testing.T) {
 	}
 }
 
-// The marker read_view sets admits only a view's own route. A path value that
+// The marker a tool sets admits only the route it meant. A path value that
 // spells a fixed sibling lands on that route instead, and a human-only one must
 // still be refused there.
 func TestTheViewMarkerAdmitsOnlyAViewsOwnRoute(t *testing.T) {
+	const meant = "GET /v1/imports/{id}"
 	for pattern, want := range map[string]bool{
 		"/v1/imports/{id}":     true,
 		"/v1/imports/template": false,
 	} {
 		route := chi.NewRouteContext()
 		route.RoutePatterns = []string{pattern}
-		ctx := context.WithValue(context.WithValue(context.Background(), admittedByTheToolKey{}, true), chi.RouteCtxKey, route)
+		ctx := context.WithValue(context.WithValue(context.Background(), admittedByTheToolKey{}, meant), chi.RouteCtxKey, route)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/x", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got := admittedByTheTool(req); got != want {
 			t.Errorf("a marked request on %s is admitted %v, want %v", pattern, got, want)
+		}
+	}
+}
+
+// A marker naming one route admits nothing else: not the same pattern under
+// another method, and not a marker of the wrong type.
+func TestTheMarkerAdmitsOnlyTheMethodItMeant(t *testing.T) {
+	route := chi.NewRouteContext()
+	route.RoutePatterns = []string{"/v1/imports/{id}"}
+	for name, tc := range map[string]struct {
+		marker any
+		method string
+	}{
+		"another method":   {"GET /v1/imports/{id}", http.MethodDelete},
+		"a boolean marker": {true, http.MethodGet},
+		"an empty marker":  {"", http.MethodGet},
+	} {
+		ctx := context.WithValue(context.WithValue(context.Background(), admittedByTheToolKey{}, tc.marker), chi.RouteCtxKey, route)
+		req, err := http.NewRequestWithContext(ctx, tc.method, "/x", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if admittedByTheTool(req) {
+			t.Errorf("%s: admitted, want gated", name)
 		}
 	}
 }

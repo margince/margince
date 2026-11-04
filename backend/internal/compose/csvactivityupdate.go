@@ -69,7 +69,7 @@ func (w *csvWriters) planActivityUpdate(
 	plan := activityPlan{patch: activityUpdateFrom(changed, typed), changed: len(changed)}
 	// The row's own type cell may be absent, so the kind the fields are held
 	// against is the stored one: a patch cannot change it.
-	err = activities.CheckKindFields(stored.Kind, plan.patch.DurationSeconds, plan.patch.MeetingStatus, "")
+	err = activities.CheckKindFields(stored.Kind, plan.patch.DurationSeconds, plan.patch.MeetingStatus, nil, "")
 	if _, why, known := activityKindReason(err, fields); known {
 		return plan, why, nil
 	}

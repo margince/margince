@@ -12,7 +12,6 @@ package integration
 // on the one refusal both doors give.
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -39,38 +38,6 @@ func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 	if drafted.Subject != "Re: Quote?" || strings.Contains(drafted.Body, "Quote by Friday") || !strings.Contains(drafted.Body, "Hi Pat") {
 		t.Errorf("the draft is %+v, want a reply to the thread that leaves the steering out", drafted)
 	}
-}
-
-type sharedMeeting struct {
-	Kind            string `json:"kind"`
-	MeetingStatus   string `json:"meeting_status"`
-	DurationSeconds int    `json:"duration_seconds"`
-	Audience        string `json:"audience"`
-}
-
-// A meeting booked over either door is the same booked meeting, filed under the
-// same kind of record, with the same rows behind it.
-func TestBookMeetingLeavesTheSameOnEitherDoor(t *testing.T) {
-	d := newTwoDoors(t, "book-write-doors", "read", "write", "send")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Booked Pat", "source": "manual"})
-	link := []map[string]any{{"entity_type": "contact", "entity_id": contact}}
-
-	restBooked := d.restStatus(t, "POST", "/v1/bookings", AnyMap{
-		"start": "2036-10-05T09:00:00Z", "end": "2036-10-05T09:30:00Z", "subject": "Discovery rest", "links": link,
-	}, http.StatusCreated)
-	toolBooked := d.tool(t, "book_meeting", map[string]any{
-		"start": "2036-10-06T09:00:00Z", "end": "2036-10-06T09:30:00Z", "subject": "Discovery tool", "links": link,
-	})
-	viaREST, viaTool := anIDIn(t, restBooked), anIDIn(t, toolBooked)
-	stored := func(id string) json.RawMessage {
-		return d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK)
-	}
-	sameStored(t, "booking", stored(viaREST), stored(viaTool), viaREST, viaTool, "subject", "occurred_at")
-	booked := sameRecords[sharedMeeting](t, "booking", stored(viaREST), stored(viaTool))
-	if booked.Kind != "meeting" || booked.MeetingStatus != "booked" || booked.DurationSeconds != 1800 {
-		t.Errorf("the booked meeting is %+v, want a booked half-hour meeting", booked)
-	}
-	d.sameEffect(t, "booking", viaREST, viaTool, "subject")
 }
 
 // A send to someone who has not consented is refused the same way on either

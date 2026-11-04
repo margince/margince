@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import { Card } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -62,7 +62,7 @@ export function PrivacyNotice({
 }: Readonly<{ card: PrivacyInformationPage }>) {
   const t = useT();
   const { locale } = useLocale();
-  const tz = viewerZone();
+  const tz = browserZone();
 
   const sourceKey = isAcquisitionKind(card.acquired_as)
     ? SOURCE_LABEL[card.acquired_as]

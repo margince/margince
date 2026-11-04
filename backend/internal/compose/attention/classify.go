@@ -102,6 +102,7 @@ func base(
 		MayBeDone:         item.MayBeDone,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
+		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the
@@ -133,6 +134,7 @@ func base(
 		Pair:        item.Pair,
 		ContactCase: item.ContactCase,
 		DueAt:       item.DueAt,
+		DueHasTime:  item.DueHasTime,
 		Overdue:     item.Overdue,
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and

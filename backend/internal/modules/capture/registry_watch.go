@@ -93,11 +93,12 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	if !ok {
 		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	runCtx, err := r.connectorContext(ctx, name, grantedBy)
 	if err != nil {
 		return err
 	}
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	// A member who may no longer capture keeps no push subscription alive.
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		return err
 	}

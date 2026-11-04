@@ -80,15 +80,8 @@ var sendMessageCopy = toolCopy{
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find candidate times for a host without booking or sending anything.",
 	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability.",
-	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting.",
+	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. log_activity records a meeting without inviting anyone. prep_for_meeting prepares for an existing meeting.",
 	Retain:  "Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time.",
-}
-
-var bookMeetingCopy = toolCopy{
-	Purpose: "Record a meeting against linked CRM records without sending an invitation.",
-	Limits:  "Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link.",
-	Instead: "Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting.",
-	Retain:  "Keep the recorded activity id. Do not describe a record-only booking as an invitation sent.",
 }
 
 var enrichCopy = toolCopy{
@@ -111,7 +104,11 @@ var sendOutboundCopy = toolCopy{
 		"nothing. email_reply: a mail answering a thread recorded here, by activity_id. email_new: " +
 		"a first mail starting a new conversation, filed on `links` naming the records it is about. " +
 		"chat_reply: an answer on a captured chat conversation, by activity_id, on the channel it " +
-		"came from.",
+		"came from. The other actions act for the app: deal_room_invite and deal_room_resend mail " +
+		"a buyer their room link, meeting_proposal makes an expiring scheduling link and mails nothing, " +
+		"change_invitation changes an invitation already sent, invite_member adds a member and mails " +
+		"their sign-in link where the installation can send mail, and signature_template and " +
+		"my_signature set the sign-off every later mail carries.",
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +

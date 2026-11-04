@@ -6,11 +6,11 @@ import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { ProgressBar } from "../../design-system/progressbar";
 import { QueryGate } from "../../design-system/querystates";
-import { formatNumber, formatPercent } from "../../format/format";
+import { formatAnalyticsPercent } from "../../format/format";
 import { formatDateTime } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { BoardChart } from "./analytics.overview.board";
 import { metricOf } from "./analytics.overview.readings";
 import { InitiativeDrawer } from "./reporting.initiativedrawer";
@@ -42,7 +42,7 @@ export function InitiativePanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const initiatives = useSalesInitiatives();
   const canEdit = useCanWrite("sales_initiative", "update");
   const [editing, setEditing] = useState(false);
@@ -149,7 +149,12 @@ function Objective({
         {target !== null && !narrowed
           ? t("reporting.objectiveOfTarget", {
               value: shown,
-              target: formatNumber(target, locale),
+              target: reportingAmount(
+                target,
+                reading.unit,
+                evaluation.context.currency,
+                locale,
+              ),
             })
           : shown}
       </p>
@@ -158,7 +163,7 @@ function Objective({
           fraction={Math.min(1, value / target)}
           label={metricName(metric)}
           valueText={t("reporting.objectiveProgress", {
-            share: formatPercent(Math.min(1, value / target), locale),
+            share: formatAnalyticsPercent(Math.min(1, value / target), locale),
           })}
         />
       )}

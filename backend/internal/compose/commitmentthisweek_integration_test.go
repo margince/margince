@@ -63,7 +63,10 @@ func promiseForThisWeek(t *testing.T, workdays []int, away bool, lastDay int) {
 	}
 	if workdays != nil {
 		rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
-		if _, err := identity.NewService(e.Pool).SaveMyWorkingHours(rep, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: workdays, Timezone: zone.String()}); err != nil {
+		if _, err := identity.NewService(e.Pool).SaveMyTimezone(rep, zone.String(), identity.TimezoneChosen); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := identity.NewService(e.Pool).SaveMyWorkingHours(rep, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: workdays}); err != nil {
 			t.Fatalf("saving the rep's working week: %v", err)
 		}
 	}

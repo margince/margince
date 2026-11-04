@@ -44,5 +44,17 @@ func seatUser(seat Seat) crmcontracts.User {
 		GreetingName: seat.GreetingName,
 		Status:       "active",
 		Locale:       contractLocale(seat.Locale),
+		Timezone:     optionalString(seat.Timezone),
+		// The flag rides only with the zone it describes.
+		TimezoneChosen: timezoneChosenFlag(seat.Timezone, seat.TimezoneChosen),
 	}
+}
+
+// timezoneChosenFlag is nil when no zone is sent, so the flag never describes
+// a zone the answer does not carry.
+func timezoneChosenFlag(zone string, chosen bool) *bool {
+	if zone == "" {
+		return nil
+	}
+	return &chosen
 }

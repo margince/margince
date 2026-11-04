@@ -34,7 +34,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// inJurisdiction binds the store to a pack declaring the given disclosures.
+// inJurisdiction registers a pack declaring the given disclosures and puts both
+// selectors in its country. The default entity sends, and the recipient lives
+// there.
 func inJurisdiction(
 	t *testing.T, e *channelConsentEnv, code string, ds ...messagingrules.Disclosure,
 ) *Store {
@@ -42,6 +44,7 @@ func inJurisdiction(
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1, Disclosures: ds,
 	})
+	livesIn(t, e, code)
 	return e.store.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
 			return jurisdiction.Code(code), nil
@@ -99,7 +102,29 @@ func stateParticulars(t *testing.T, e *channelConsentEnv, p ControllerParticular
 	}
 }
 
-// disclosures asks what a message of this category must carry.
+// recipientAddress is the env contact's mail address, which livesIn files.
+func recipientAddress(e *channelConsentEnv) string {
+	return "subject-" + e.contact.String() + "@cc.test"
+}
+
+// livesIn gives the env contact a mail address and a postal address in code's
+// country, written the way the contacts writer stores one: upper case.
+func livesIn(t *testing.T, e *channelConsentEnv, code string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x') ON CONFLICT DO NOTHING`,
+		e.contact, recipientAddress(e)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, code); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// disclosures asks what a message of this category to the env contact must
+// carry.
 func disclosures(
 	t *testing.T, e *channelConsentEnv, store *Store, category commsauthz.Category,
 ) []DisclosureLine {
@@ -107,7 +132,9 @@ func disclosures(
 	var out []DisclosureLine
 	if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = store.DisclosuresFor(e.ctx, tx, category)
+		out, err = store.DisclosuresFor(e.ctx, tx, DisclosureQuery{
+			Category: category, Recipients: []string{recipientAddress(e)},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("resolving the disclosures: %v", err)

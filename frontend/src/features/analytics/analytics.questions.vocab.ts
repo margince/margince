@@ -11,7 +11,7 @@
 
 import type { components } from "../../api/schema";
 import type { Reference } from "../../components/filterreference";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { isMessageKey, type useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemDetails } from "../../lib/problembody";
@@ -185,8 +185,8 @@ export function coverageLines(
       ? [
           plural("analytics.q.fieldCoverage", field.records, {
             label: customFieldLabel(t, field),
-            held: formatNumber(field.with_value, locale),
-            count: formatNumber(field.records, locale),
+            held: formatAnalyticsNumber(field.with_value, locale),
+            count: formatAnalyticsNumber(field.records, locale),
           }),
         ]
       : [];

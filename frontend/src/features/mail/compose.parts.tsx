@@ -10,7 +10,6 @@ import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -25,6 +24,7 @@ import {
 } from "../../lib/messagevoice";
 import type { RelinkKind } from "../../lib/recordtargets";
 import { useRichTextLabels } from "../../lib/richtextlabels";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
 import { AiDraftBand } from "./composeaiband";
@@ -186,6 +186,7 @@ export function ComposeFoot({
   /** The place the body's formatting marks draw, beside Send. */
   marksRef: (node: HTMLDivElement | null) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const scheduled = momentOf(sendAt);
@@ -205,12 +206,14 @@ export function ComposeFoot({
           </Button>
           {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
         </span>
-        {!isChannelReply && <SendMark {...send.permission} />}
+        {!isChannelReply && (
+          <SendMark {...send.permission} blocked={send.blocked} />
+        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
             ? t("compose.willGoOut", {
-                when: momentLabel(scheduled, locale, viewerZone()),
+                when: momentLabel(scheduled, locale, readerZone),
               })
             : savedDraftStatus(savedDraft, t)}
         </span>
@@ -246,24 +249,18 @@ export function ComposeOutcome({
   bodyKey,
   sendUnavailable,
   send,
-  contactId,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
   send: ComposeSend;
-  contactId: string | undefined;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal
-        refusal={send.refusal}
-        contactId={contactId}
-        review={send.sendReview}
-      />
+      <SendRefusal refusal={send.refusal} />
     </>
   );
 }
@@ -401,6 +398,7 @@ export function ComposeWhy({
 export function ReplyQuote({
   message,
 }: Readonly<{ message: Activity | undefined }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -432,7 +430,7 @@ export function ReplyQuote({
                 message.occurred_at,
                 message.occurred_precision,
                 locale,
-                viewerZone(),
+                readerZone,
               ),
               who,
             })}

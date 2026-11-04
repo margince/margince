@@ -223,7 +223,7 @@ export function zeroWeek(): ReportingEvaluation["metrics"] {
   return [
     metric("meetings_held", 0),
     metric("accepted_opportunities", 0),
-    metric("leads_promoted", 0, { denominator: 0 }),
+    metric("leads_qualified", 0, { denominator: 0 }),
     metric("lead_first_response", null, {
       coverage: { status: "no_data", withheld: false },
     }),

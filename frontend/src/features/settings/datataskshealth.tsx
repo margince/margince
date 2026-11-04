@@ -13,12 +13,12 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { problemCodeOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 import { HomeRepairControls } from "./homerepair";
 
@@ -100,9 +100,13 @@ function useDataTasks() {
   return { canSee, query };
 }
 
-function taskFacts(row: Progress, { t, plural, locale }: Words): Fact[] {
+function taskFacts(
+  row: Progress,
+  { t, plural, locale }: Words,
+  zone: string,
+): Fact[] {
   const number = (value: number) => formatNumber(value, locale);
-  const date = (value: string) => formatDateTime(value, locale, viewerZone());
+  const date = (value: string) => formatDateTime(value, locale, zone);
   const estimate =
     row.estimate === undefined
       ? t("dataTasks.unknown")
@@ -207,6 +211,7 @@ function taskTone(row: Progress) {
 }
 
 function TaskRow({ row }: Readonly<{ row: Progress }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -266,7 +271,7 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
       layout="stack"
       control={
         <>
-          <FactList facts={taskFacts(row, { t, plural, locale })} />
+          <FactList facts={taskFacts(row, { t, plural, locale }, readerZone)} />
           {row.review_kind === "home_attention" && (
             <HomeRepairControls
               version={row.version}

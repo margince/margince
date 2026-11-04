@@ -18,12 +18,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -58,10 +55,8 @@ func labelledIn(t *testing.T, e *channelConsentEnv) *Store {
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: code, Version: 1, SubjectPrefix: "[QC]",
 	})
-	return e.store.WithInstallationCountry(
-		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-			return code, nil
-		}))
+	e.judgedUnder = string(code)
+	return e.store
 }
 
 // judgedAs plants a delivery the engine resolved to these categories, one
@@ -94,14 +89,22 @@ func judgedAs(
 		t.Fatalf("planting the delivery: %v", err)
 	}
 	setID := ids.NewV7()
+	// The ruleset each row records, as rulesetStamp writes it: one code with its
+	// version, or NULL for the baseline.
+	var version *int
+	var codes []string
+	if e.judgedUnder != "" {
+		one := 1
+		version, codes = &one, []string{e.judgedUnder}
+	}
 	for i, category := range categories {
 		if _, err := e.owner.Exec(context.Background(), `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, phase,
-			   resolved_category, verdict, reason_code, mode, actor)
-			VALUES ($1, 0, $2, $3, 'staging', $4, 'allow', '', 'enforce', 'test')`,
+			   resolved_category, verdict, reason_code, mode, actor, ruleset_version, ruleset_codes)
+			VALUES ($1, 0, $2, $3, 'staging', $4, 'allow', '', 'enforce', 'test', $5, $6)`,
 			delivery, setID, fmt.Sprintf("someone%d@corp.test", i),
-			string(category)); err != nil {
+			string(category), version, codes); err != nil {
 			t.Fatalf("planting the decision: %v", err)
 		}
 	}
@@ -203,30 +206,54 @@ func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
 	}
 }
 
-// TestAMessageAdvertisingToOnlySomeRecipientsIsNotLabelled is Codex's finding.
+// TestEachAdvertisingRowOwesItsOwnLabel reads every row on its own, across
+// mixed categories and mixed countries.
 //
-// A subject line is ONE line for everybody it reaches. A send read as an
-// active-deal follow-up for one addressee and as marketing for another would be
-// labelled for both or for neither, and neither answer is right — so the
-// requirement does not fire, and the composition that produced the mix is the
-// thing to fix rather than the label.
+//   - A marketing row under the labelling pack owes the label, even beside a
+//     deal follow-up row: the second recipient is still sent advertising.
+//   - A marketing row under the baseline owes nothing.
+//   - A deal follow-up row under the labelling pack owes nothing.
 //
-// The alternative, firing on any marketing recipient, parks the message on a
-// label that cannot be correct for everyone.
-func TestAMessageAdvertisingToOnlySomeRecipientsIsNotLabelled(t *testing.T) {
+// Mutation: answer no finding as soon as any row is not marketing and the
+// first case fails.
+func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
-	delivery, set := judgedAs(t, e,
-		commsauthz.CategoryMarketing, commsauthz.CategoryActiveDealFollowup)
-
-	findings, err := store.CheckMessage(composerCtx(e), delivery, set, "How did the trial go?")
-	if err != nil {
-		t.Fatalf("checking the mixed send: %v", err)
+	stamp := func(set, address string, labelled bool) {
+		t.Helper()
+		var codes []string
+		var version *int
+		if labelled {
+			one := 1
+			codes, version = []string{e.judgedUnder}, &one
+		}
+		if _, err := e.owner.Exec(context.Background(), `
+			UPDATE communication_decision SET ruleset_version = $3, ruleset_codes = $4
+			 WHERE decision_set_id = $1 AND recipient_address = $2`, set, address, version, codes); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if len(findings) != 0 {
-		t.Errorf("a send that is advertising to only some of its recipients was told to "+
-			"carry an advertising label: %+v — the same subject line reaches the addressee "+
-			"it is not advertising to", findings)
+	check := func(delivery, set string) []RequirementFinding {
+		t.Helper()
+		findings, err := store.CheckMessage(composerCtx(e), delivery, set, "How did the trial go?")
+		if err != nil {
+			t.Fatalf("checking the mixed send: %v", err)
+		}
+		return findings
+	}
+
+	// Row 0 is a deal follow-up under the baseline; row 1 advertises under the pack.
+	delivery, set := judgedAs(t, e, commsauthz.CategoryActiveDealFollowup, commsauthz.CategoryMarketing)
+	stamp(set, "someone0@corp.test", false)
+	if got := check(delivery, set); len(got) != 1 || got[0].Requirement != RequirementSubjectPrefix {
+		t.Errorf("findings = %+v, want the label the advertised recipient's pack owes", got)
+	}
+
+	// The advertising row is under the baseline; the labelled row is a follow-up.
+	delivery, set = judgedAs(t, e, commsauthz.CategoryActiveDealFollowup, commsauthz.CategoryMarketing)
+	stamp(set, "someone1@corp.test", false)
+	if got := check(delivery, set); len(got) != 0 {
+		t.Errorf("findings = %+v: no advertising row is under a pack that asks for a label", got)
 	}
 }
 
@@ -247,9 +274,10 @@ func TestAStaleDecisionSetDoesNotJudgeThisSend(t *testing.T) {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_decision
 		  (delivery_id, attempt, decision_set_id, recipient_address, phase,
-		   resolved_category, verdict, reason_code, mode, actor)
-		VALUES ($1, 0, $2, 'someone@corp.test', 'staging', 'marketing', 'allow', '', 'enforce', 'test')`,
-		delivery, live); err != nil {
+		   resolved_category, verdict, reason_code, mode, actor, ruleset_version, ruleset_codes)
+		VALUES ($1, 0, $2, 'someone@corp.test', 'staging', 'marketing', 'allow', '', 'enforce', 'test',
+		        1, ARRAY[$3::text])`,
+		delivery, live, e.judgedUnder); err != nil {
 		t.Fatalf("planting the live decision: %v", err)
 	}
 
@@ -291,5 +319,30 @@ func TestACallerWhoCannotReadTheTimelineLearnsNothing(t *testing.T) {
 
 	if _, err := store.CheckMessage(stranger, delivery, set, "Half price this week"); err == nil {
 		t.Fatal("a caller with no activity grant was told what this delivery was judged as")
+	}
+}
+
+// TestOneRecipientsPackLabelsTheWholeSubject: two recipients of one advertising
+// message, one in the labelling country and one under the baseline. The subject
+// line reaches both, so it owes the second one's label.
+//
+// Mutation: return no finding from CheckMessage when any recipient is under the
+// baseline and this fails.
+func TestOneRecipientsPackLabelsTheWholeSubject(t *testing.T) {
+	e := setupChannelConsent(t)
+	store := labelledIn(t, e)
+	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing, commsauthz.CategoryMarketing)
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE communication_decision SET ruleset_version = NULL, ruleset_codes = NULL
+		 WHERE decision_set_id = $1 AND recipient_address = 'someone0@corp.test'`, set); err != nil {
+		t.Fatal(err)
+	}
+
+	findings, err := store.CheckMessage(composerCtx(e), delivery, set, "Half price this week")
+	if err != nil {
+		t.Fatalf("checking the message: %v", err)
+	}
+	if len(findings) != 1 || findings[0].Requirement != RequirementSubjectPrefix {
+		t.Fatalf("findings = %+v, want the one label the second recipient's pack owes", findings)
 	}
 }

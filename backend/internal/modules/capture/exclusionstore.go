@@ -96,7 +96,7 @@ func NewExclusionStore(db *database.DB) *ExclusionStore {
 // List answers the workspace's rules and the caller's own: a reader learns
 // every rule that binds THEIR connections, and no colleague's personal ones.
 func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, err := storekit.Actor(ctx)

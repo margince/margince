@@ -183,3 +183,46 @@ func TestTheAccountCardAsksDoneAndNotYetBringsThePromiseBack(t *testing.T) {
 		t.Fatalf("Not yet did not bring the plain promise back: %+v", plain)
 	}
 }
+
+// An agent reads the account card as its user left it, and what it puts away its
+// user finds put away.
+func TestAnAgentSharesItsUsersSetAsidesOnTheAccountCard(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kunde GmbH", &e.AdminUser))
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &p.contact, CompanyID: &company, IsCurrentPrimary: new(true), Source: "manual"}); err != nil {
+		t.Fatalf("employing the contact: %v", err)
+	}
+	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	now := p.sentAt.AddDate(0, 0, 7)
+	svc := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return now })
+	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
+	card := func(ctx context.Context) *crmcontracts.ContactMoment {
+		t.Helper()
+		page, err := svc.Assemble(ctx, company)
+		if err != nil {
+			t.Fatalf("assembling the company page: %v", err)
+		}
+		return page.Moment
+	}
+
+	asked := card(agent)
+	if asked == nil || asked.MayBeDone == nil {
+		t.Fatalf("the agent's card did not ask about the reply: %+v", asked)
+	}
+	if err := svc.DismissSuggestion(e.Admin(), company, asked.EvidenceFingerprint, nil); err != nil {
+		t.Fatalf("the user answering Not yet: %v", err)
+	}
+	plain := card(agent)
+	if plain == nil || plain.MayBeDone != nil || plain.Rule != crmcontracts.ContactMomentRuleOpenPromise {
+		t.Fatalf("the agent's card ignored its user's Not yet: %+v", plain)
+	}
+	if err := svc.DismissSuggestion(agent, company, plain.EvidenceFingerprint, nil); err != nil {
+		t.Fatalf("the agent setting the promise aside: %v", err)
+	}
+	for name, ctx := range map[string]context.Context{"the agent": agent, "its user": e.Admin()} {
+		if got := card(ctx); got != nil && got.Rule == crmcontracts.ContactMomentRuleOpenPromise {
+			t.Errorf("%s still reads the promise the agent set aside: %+v", name, got)
+		}
+	}
+}

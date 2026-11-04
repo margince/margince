@@ -1,0 +1,23 @@
+{
+  "scenario": "case71_record_the_signed_contract",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 1548,
+    "cache_creation_input_tokens": 34070,
+    "cache_read_input_tokens": 636063,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2154
+  }
+}

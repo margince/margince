@@ -9,11 +9,14 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectNext } from "./projectnext";
-import { deliveringProject360 } from "./projectstanding.fixtures";
+import {
+  aiJudgedProject360,
+  deliveringProject360,
+} from "./projectstanding.fixtures";
 import { ProjectStanding } from "./projectstandingcard";
 
 // The top of a project's Overview: the next task, then How it stands. The
-// word is a user's health reading, so a project nobody judged reads "Not
+// word is the health reading, a user's or the health job's, so a project nobody judged reads "Not
 // assessed" in neutral, never "On track".
 
 const meta: Meta<typeof ProjectStanding> = {
@@ -89,6 +92,15 @@ export const Withheld: Story = {
   render: overview(
     deliveringProject360({ sections_omitted: ["health"], health: undefined }),
   ),
+};
+
+/** The health job judged it: the agent tag, its one-sentence reason, and the
+ *  undo that puts back what stood before. */
+export const JudgedByTheAI: Story = { render: overview(aiJudgedProject360()) };
+
+export const JudgedByTheAIDark: Story = {
+  globals: { theme: "dark" },
+  render: overview(aiJudgedProject360()),
 };
 
 export const AtRiskDark: Story = {

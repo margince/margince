@@ -55,6 +55,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml ReportingForecastBasis.call_at":            "when a manager submitted a forecast call, the call row's exact write instant",
 	"api/crm.yaml AssessNoticeSource.obtained_at":            "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":             "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
 	"api/crm.yaml NoticeCaseReview.source_obtained_at":       "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
@@ -180,7 +181,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 
 	"generated_at": runStamp, "computed_at": runStamp, "evaluated_at": runStamp, "checked_at": runStamp,
 	"retrieved_at": runStamp, "estimated_at": runStamp, "assessed_at": runStamp, "narrated_at": runStamp,
-	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
+	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp, "opened_at": rowStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
 	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,

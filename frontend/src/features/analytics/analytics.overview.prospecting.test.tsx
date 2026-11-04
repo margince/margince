@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,11 +9,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
-import { upcomingWindow } from "./analytics.overview.fixtures";
 import {
   isWeeks,
   prospectingWeeks,
 } from "./analytics.overview.prospectingdata";
+import { upcomingWindow } from "./analytics.overview.routes.fixtures";
 import { workday, workRows } from "./analytics.overview.scenariodata";
 import {
   metric,
@@ -67,32 +67,33 @@ describe("My prospecting's results", () => {
       ADDRESS,
       weekAnd(
         prospectingEvaluation(),
-        prospectingWeeks(week, "leads_promoted", [1, 2, 0, 4, 2, 3]),
+        prospectingWeeks(week, "leads_qualified", [1, 2, 0, 4, 2, 3]),
       ),
       { seat: "sdr", template: "sales" },
     );
     const lead = await results();
     expect(lead.getByText("Leads qualified")).toBeVisible();
     expect(lead.queryByText("Accepted handoffs")).toBeNull();
-    expect(lead.getByText(/^Of 11 leads that arrived /)).toBeVisible();
+    expect(lead.queryByText(/^Of 11 leads that arrived /)).toBeNull();
+    expect(lead.getByText("Leads qualified")).toBeVisible();
   });
 
-  it("names no qualified figure for a week nobody arrived in, as its column does", async () => {
+  it("shows a measured zero without requiring arrivals in the same week", async () => {
     open(
       ADDRESS,
       weekAnd(
         prospectingEvaluation([
-          metric("leads_promoted", 0, { denominator: 0 }),
+          metric("leads_qualified", 0, { denominator: 0 }),
         ]),
-        prospectingWeeks(week, "leads_promoted", [1, 2, 0, 4, 2, null]),
+        prospectingWeeks(week, "leads_qualified", [1, 2, 0, 4, 2, null]),
       ),
       { seat: "sdr", template: "sales" },
     );
     const lead = await results();
     expect(
-      lead.getByText("—", { selector: ".analytics-hero-value" }),
+      lead.getByText("0", { selector: ".analytics-hero-value" }),
     ).toBeVisible();
-    expect(lead.getByText(/^No lead arrived /)).toBeVisible();
+    expect(lead.queryByText(/^No lead arrived /)).toBeNull();
     const columns = await lead.findAllByRole("button", {
       name: /, Leads qualified: /,
     });
@@ -102,7 +103,7 @@ describe("My prospecting's results", () => {
   it("dates the week's figure and the month's targets apart, and divides neither by the other", async () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
-    expect(lead.getByText(/^Handoffs accepted into a deal, /)).toBeVisible();
+    expect(lead.queryByText(/^Handoffs accepted into a deal, /)).toBeNull();
     expect(lead.getByText(/^Monthly targets, 1 Sept/)).toBeVisible();
     // The month's own actual against the month's target, never the week's 4.
     expect(lead.getByText("Meetings held: 18 of 24")).toBeVisible();
@@ -268,7 +269,7 @@ describe("My prospecting's readings", () => {
       { seat: "sdr" },
     );
     const strip = await readings();
-    expect(strip.getByText(/^1[.,]7/)).toBeVisible();
+    expect(strip.getByText("1 hr 42 mins")).toBeVisible();
     expect(
       strip.getByText("Unanswered leads could not be counted"),
     ).toBeVisible();
@@ -288,62 +289,66 @@ describe("My prospecting's readings", () => {
       { seat: "sdr" },
     );
     const strip = await readings();
-    expect(strip.getByText("Too few")).toBeVisible();
+    expect(strip.getByText("—")).toBeVisible();
     expect(
       strip.getByText("Too few answered leads to give a typical time."),
     ).toBeVisible();
     expect(strip.getByText("3 leads still waiting for a reply")).toBeVisible();
   });
 
-  it("counts booked meetings in the window it names, and lists the same meetings", async () => {
-    const asOf = "2026-09-25T09:00:00Z";
-    const asked = open(ADDRESS, weekAnd(prospectingEvaluation()), {
-      seat: "sdr",
-      summary: () =>
-        jsonResponse({
-          as_of: asOf,
-          scope: { kind: "owner" },
-          workflow: "qualification",
-          upcoming_meetings: 1,
-          upcoming_window: upcomingWindow(asOf),
-        }),
-      meetings: () =>
-        jsonResponse({
-          as_of: asOf,
-          window: upcomingWindow(asOf),
-          rows: [
-            {
-              id: "m-1",
-              starts_at: "2026-09-26T10:00:00Z",
-              starts_precision: "instant",
-              title: "Discovery call with Orchard Freight",
-              restricted: false,
-              record: {
-                type: "lead",
-                id: "l-orchard",
-                label: "Orchard Freight",
+  it.each(["owner", "managed_teams"] as const)(
+    "counts and lists booked meetings in their own window for %s",
+    async (kind) => {
+      const asOf = "2026-09-25T09:00:00Z";
+      const asked = open(ADDRESS, weekAnd(prospectingEvaluation()), {
+        seat: "sdr",
+        summary: () =>
+          jsonResponse({
+            as_of: asOf,
+            scope: { kind },
+            workflow: "qualification",
+            upcoming_meetings: 1,
+            upcoming_window: upcomingWindow(asOf),
+          }),
+        meetings: () =>
+          jsonResponse({
+            as_of: asOf,
+            window: upcomingWindow(asOf),
+            rows: [
+              {
+                id: "m-1",
+                starts_at: "2026-09-26T10:00:00Z",
+                starts_precision: "instant",
+                title: "Discovery call with Orchard Freight",
+                restricted: false,
+                record: {
+                  type: "lead",
+                  id: "l-orchard",
+                  label: "Orchard Freight",
+                },
               },
-            },
-          ],
-        }),
-      template: "sales",
-    });
-    const strip = await readings();
-    expect(strip.getByText("Booked meetings")).toBeVisible();
-    expect(strip.getByText("Next 14 days, through 8 Oct 2026")).toBeVisible();
-    const list = within(
-      await screen.findByRole("region", { name: "Meetings to prepare" }),
-    );
-    expect(
-      await list.findByText("Discovery call with Orchard Freight"),
-    ).toBeVisible();
-    // The list is read in the window the count declared, not one from now.
-    const page = asked.find(({ url }) =>
-      url.pathname.endsWith("/analytics/sdr-summary/meetings"),
-    )?.url.searchParams;
-    expect(page?.get("window_start")).toBe(asOf);
-    expect(page?.get("window_end")).toBe(upcomingWindow(asOf).end_at);
-  });
+            ],
+          }),
+        template: "sales",
+      });
+      const strip = await readings();
+      expect(strip.getByText("Booked meetings")).toBeVisible();
+      expect(strip.getByText("Next 14 days, through 8 Oct 2026")).toBeVisible();
+      const list = within(
+        await screen.findByRole("region", { name: "Meetings to prepare" }),
+      );
+      expect(
+        await list.findByText("Discovery call with Orchard Freight"),
+      ).toBeVisible();
+      // The list is read in the window the count declared, not one from now.
+      const page = asked.find(({ url }) =>
+        url.pathname.endsWith("/analytics/sdr-summary/meetings"),
+      )?.url.searchParams;
+      expect(page?.get("window_start")).toBe(asOf);
+      expect(page?.get("window_end")).toBe(upcomingWindow(asOf).end_at);
+      expect(page?.get("scope_kind")).toBe(kind === "owner" ? "owner" : null);
+    },
+  );
 });
 
 describe("My prospecting's next moves", () => {

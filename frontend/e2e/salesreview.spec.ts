@@ -1,44 +1,15 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { quarterSales } from "../src/features/analytics/analytics.overview.scenariodata";
 import { de } from "../src/i18n/de";
 import { meFixture } from "../src/testing/mefixture";
-import { reportingStoryEvaluation } from "../src/testing/reporting.fixtures";
+import { reportingStoryCatalog } from "../src/testing/reporting.fixtures";
 import { mockApi } from "./seed";
 
-/**
- * Sales review's first screen at 1366×768, measured in a browser. Only a
- * real layout shows whether the question, the lead, three readings, the
- * summary and the first action are on screen before any scroll.
- * German, because the app renders German; names come from the catalog.
- */
-
+// Compact readings precede a substantial outlook on desktop and phone.
 const VIEWPORT = { width: 1366, height: 768 };
 
 // A quarter with a target it is short of, built from the story evaluation.
-const QUARTER = {
-  ...reportingStoryEvaluation,
-  metrics: [
-    ...reportingStoryEvaluation.metrics,
-    {
-      id: "forecast_landing" as const,
-      version: "1",
-      unit: "EUR",
-      value: 76_000_000,
-      coverage: { status: "ok" as const, withheld: false },
-      evidence: { metric: "forecast_landing" as const, context_id: "interval" },
-      target_comparison: {
-        status: "compared" as const,
-        target_metric: "bookings_won" as const,
-        target: 80_000_000,
-        landing: 76_000_000,
-        won: 42_000_000,
-        gap: 4_000_000,
-        remaining: 38_000_000,
-        open_pipeline: 136_000_000,
-        coverage: 3.58,
-      },
-    },
-  ],
-};
+const QUARTER = quarterSales();
 
 const finding = (id: string, type: string, deal: string, label: string) => ({
   id,
@@ -103,6 +74,55 @@ async function openSalesReview(page: Page, evaluation: unknown = QUARTER) {
       }),
     }),
   );
+  await page.route("**/v1/analytics/metrics", (route) =>
+    route.fulfill({
+      json: {
+        ...reportingStoryCatalog,
+        assessment_views: ["sales", "prospecting", "team"],
+      },
+    }),
+  );
+  await page.route("**/v1/analytics/assessment", (route) =>
+    route.fulfill({
+      json: {
+        evaluation_key: QUARTER.evaluation_key,
+        generated_at: "2026-11-03T09:00:00Z",
+        generated_by: "model",
+        sentences: [
+          {
+            text: "Review confirmed commitments with their owners before changing the forecast.",
+            kind: "observation",
+            cells: ["metric:bookings_won"],
+          },
+        ],
+        paragraphs: [
+          [
+            {
+              text: "Review confirmed commitments with their owners before changing the forecast.",
+              kind: "observation",
+              cells: ["metric:bookings_won"],
+            },
+          ],
+          [
+            {
+              text: "Open pipeline shows the opportunities available, while close dates determine which belong to this quarter. Review those opportunities alongside the target before deciding the next forecast call.",
+              kind: "observation",
+              cells: ["metric:bookings_won"],
+            },
+          ],
+        ],
+        cells: [
+          {
+            id: "metric:bookings_won",
+            label: "Sales won",
+            value: "420000 EUR",
+            display: "420.000 EUR",
+          },
+        ],
+        decisions: 0,
+      },
+    }),
+  );
   await page.route(/\/v1\/analytics\/evaluate/, (route) =>
     route.fulfill({ json: evaluation }),
   );
@@ -133,53 +153,30 @@ async function inFirstScreen(what: string, element: Locator) {
   );
 }
 
-test("the question, the lead, three readings, the summary and the first action fit 1366×768", async ({
+test("four quarter readings precede a readable outlook at 1366×768", async ({
   page,
-}) => {
+}, testInfo) => {
   await openSalesReview(page);
-
-  const header = page.getByRole("group", { name: de["analytics.filters"] });
-  await inFirstScreen(
-    "the period control",
-    header.getByRole("combobox").first(),
-  );
-  await inFirstScreen(
-    "the active pipeline chip",
-    header.getByText(/^Pipeline: /),
-  );
-
-  const hero = page.locator("section.panel", {
-    has: page.locator(".analytics-hero-body"),
-  });
-  await inFirstScreen("the lead figure", hero.locator(".analytics-hero-value"));
-  await inFirstScreen(
-    "the target progress",
-    hero.locator(".analytics-hero-aside"),
-  );
-
   const strip = page.getByRole("region", {
     name: de["analytics.overview.readings"],
   });
   const readings = strip.locator("section.stat-card");
-  await expect(readings).toHaveCount(3);
-  for (let at = 0; at < 3; at++)
+  await expect(readings).toHaveCount(4);
+  for (let at = 0; at < 4; at++)
     await inFirstScreen(`reading ${at + 1}`, readings.nth(at));
-
-  const summary = page.getByRole("region", {
-    name: de["analytics.overview.summary"],
+  const outlook = page.getByRole("region", {
+    name: de["analytics.outlook.sales"],
   });
-  await inFirstScreen("the summary's title", summary.locator(".panel-title"));
-  await inFirstScreen(
-    "the summary's first sentence",
-    summary.locator(".analytics-decision li").first(),
-  );
-
-  const actions = page.getByRole("region", { name: de["analytics.attention"] });
-  await inFirstScreen(
-    "the first action",
-    actions.locator(".analytics-attention-row").first(),
-  );
-
+  await inFirstScreen("outlook heading", outlook.locator(".panel-title"));
+  await expect(outlook.locator(".analytics-outlook-prose p")).toHaveCount(2);
+  await expect(
+    page.getByRole("region", { name: "Zusammenfassung" }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Observation", { exact: true })).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("sales-review-desktop.png"),
+    fullPage: true,
+  });
   // Nothing pushes the page sideways, neither the document nor the column
   // that scrolls the content.
   const overflow = await page.evaluate(() => {
@@ -193,34 +190,26 @@ test("the question, the lead, three readings, the summary and the first action f
   expect(overflow).toEqual({ document: false, column: false });
 });
 
-test("a quarter with nothing won keeps its explanation and actions, with no blank chart", async ({
+test("the complete outlook stays readable on a phone with keyboard evidence access", async ({
   page,
 }) => {
-  await openSalesReview(page, {
-    ...QUARTER,
-    charts: QUARTER.charts.map((chart) =>
-      chart.kind === "bookings_trend"
-        ? {
-            ...chart,
-            points: chart.points.map((point) => ({
-              ...point,
-              value: 0,
-              comparison: null,
-            })),
-          }
-        : chart,
+  await openSalesReview(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const outlook = page.getByRole("region", {
+    name: de["analytics.outlook.sales"],
+  });
+  await expect(outlook.locator(".analytics-outlook-prose p")).toHaveCount(2);
+  const records = outlook.getByRole("button", {
+    name: de["analytics.outlook.records"],
+  });
+  await records.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(records).toBeFocused();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
     ),
-  });
-  const hero = page.locator("section.panel", {
-    has: page.locator(".analytics-hero-body"),
-  });
-  await expect(hero.locator(".analytics-hero-value")).toBeVisible();
-  await expect(hero.locator(".report-chart")).toHaveCount(0);
-  await inFirstScreen(
-    "the first action",
-    page
-      .getByRole("region", { name: de["analytics.attention"] })
-      .locator(".analytics-attention-row")
-      .first(),
-  );
+  ).toBe(true);
 });

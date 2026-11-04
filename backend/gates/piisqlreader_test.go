@@ -96,6 +96,9 @@ func sqlLiterals(t *testing.T, path string) []string {
 var erasureCascadeFiles = []string{
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
+	// ai owns the voice samples copied from sent mail, emptied through the
+	// same seam's PurgeTextCopiesTx.
+	"internal/modules/ai/voicesentmailerase.go",
 	"internal/modules/privacy/partyprojections.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
@@ -207,6 +210,8 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
+	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
 	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",

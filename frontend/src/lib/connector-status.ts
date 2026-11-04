@@ -114,6 +114,8 @@ export function errorClassKey(cls: string | null | undefined): MessageKey {
       return "connectors.errAuth";
     case "history_gone":
       return "connectors.errHistoryGone";
+    case "forbidden":
+      return "connectors.errForbidden";
     case "internal":
       return "connectors.errInternal";
     default:
@@ -131,7 +133,7 @@ export function isUnhealthy(status: ConnectorStatus): boolean {
   return status === "error" || status === "reauth_required";
 }
 
-// Mirror of capture.calendarWriteGranted; its Go parity test reads this table.
+// Mirror of capture.CalendarWriteGranted; its Go parity test reads this table.
 const CALENDAR_WRITE_SCOPES: Readonly<Record<string, readonly string[]>> = {
   gcal: [
     "https://www.googleapis.com/auth/calendar.events.owned",

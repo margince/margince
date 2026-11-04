@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/migrations"
 )
@@ -42,10 +43,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
+	if err := start(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintln(os.Stderr, config.RoleMigrate.Refusal(err))
 		os.Exit(1)
 	}
+}
+
+// start is --version when args ask for it, and a migrate command otherwise.
+func start(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-migrate"))
+		return err
+	}
+	return run(ctx, args, stdout, stderr)
 }
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {

@@ -59,7 +59,7 @@ func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
 	}
 }
 
-func TestMyAiActivityRefusesAnAgentBearer(t *testing.T) {
+func TestAnAgentReadsItsUsersAiActivity(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -72,19 +72,10 @@ func TestMyAiActivityRefusesAnAgentBearer(t *testing.T) {
 		t.Fatalf("issue passport → %d", status)
 	}
 
-	// 403 exactly, and the sentinel code with it: a 404 would be a pass for
-	// the wrong reason, since the point is that the refusal lands before the
-	// handler ever looks for a run.
-	var problem struct {
-		Code string `json:"code"`
-	}
 	status := e.Call(t, "GET", "/v1/me/ai-activity", nil,
-		map[string]string{"Authorization": "Bearer " + minted.Token}, &problem)
-	if status != http.StatusForbidden {
-		t.Errorf("agent GET /v1/me/ai-activity → %d, want 403 (the contract declares it human-only)", status)
-	}
-	if problem.Code != "permission_denied" {
-		t.Errorf("agent GET /v1/me/ai-activity → code %q, want permission_denied", problem.Code)
+		map[string]string{"Authorization": "Bearer " + minted.Token}, nil)
+	if status != http.StatusOK {
+		t.Errorf("agent GET /v1/me/ai-activity → %d, want 200", status)
 	}
 }
 

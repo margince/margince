@@ -37,6 +37,60 @@ def run(calls, answer):
     return path
 
 
+class AgentParityCasesTest(unittest.TestCase):
+    """The router and action checks of the agent-parity cases, both directions."""
+
+    def problems(self, name, calls, answer):
+        return check.check(scenario(name), run(calls, answer))
+
+    def test_sharing_with_write_access_fails_a_read_share(self):
+        name = "case68-let-sofia-read-the-account.yaml"
+        share = lambda access: ("change_access", {"action": "share", "request_body": {"access": access}})
+        self.assertEqual(self.problems(name, [share("read")], "Sofia can read it now."), [])
+        problems = self.problems(name, [share("write")], "Sofia can read it now.")
+        self.assertTrue(any("carrying" in p for p in problems), problems)
+        self.assertTrue(any("never called share_record" in p for p in problems), problems)
+
+    def test_clearing_notices_may_only_mark_them_read(self):
+        name = "case70-clear-my-notices.yaml"
+        cleared = ("change_attention", {"action": "mark_all_notices_read"})
+        self.assertEqual(self.problems(name, [cleared], "Your notices are cleared."), [])
+        for extra in (("create_record", {"record_type": "deal"}), ("change_attention", {"action": "dismiss_brief_item"})):
+            with self.subTest(extra=extra):
+                self.assertTrue(self.problems(name, [cleared, extra], "Your notices are cleared."))
+
+    def test_research_during_a_read_of_the_plan_fails(self):
+        name = "case73-read-my-weekly-plan.yaml"
+        read = ("read_details", {"action": "weekly_plan"})
+        self.assertEqual(self.problems(name, [read], "Your plan has three things."), [])
+        self.assertTrue(self.problems(name, [read, ("run_research", {"action": "morning_brief"})], "Your plan has three things."))
+
+    def test_a_handover_during_a_question_about_access_fails(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        answer = "You could deactivate Sofia or hand over her work. Which do you want?"
+        calls = [("list_colleagues", {})]
+        self.assertEqual(check.check(guards, run(calls, answer)), [])
+        moved = calls + [("change_access", {"action": "hand_over_work"})]
+        self.assertTrue(check.check(guards, run(moved, answer)))
+
+    def test_handling_her_access_is_not_naming_an_option(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        problems = check.check(guards, run([("list_colleagues", {})], "I can't handle Sofia's access. Tell me more?"))
+        self.assertTrue(any("never said" in p for p in problems), problems)
+
+    def test_a_plan_that_changes_nothing_passes_without_a_question(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        answer = "Deactivate Sofia at the end of her last day, after a colleague takes over her work."
+        self.assertEqual(check.check(guards, run([("list_colleagues", {})], answer)), [])
+
+    def test_a_team_named_otherwise_fails(self):
+        name = "case69-set-up-the-fleet-team.yaml"
+        calls = lambda team: [("change_access", {"action": "create_team", "request_body": {"name": team}}),
+                              ("change_access", {"action": "add_team_member", "id": "t", "userId": "u"})]
+        self.assertEqual(self.problems(name, calls("Fleet Accounts"), "Done."), [])
+        self.assertTrue(self.problems(name, calls("Fleet"), "Done."))
+
+
 class NoWindowGivenTest(unittest.TestCase):
     """Case 44: the user named no window, so the product's sixty days stand."""
 

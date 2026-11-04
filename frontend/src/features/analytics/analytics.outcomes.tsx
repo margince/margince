@@ -5,7 +5,10 @@ import { StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatMoneyCompact, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { analyticsSectionHref } from "../../lib/analytics.address";
@@ -107,7 +110,7 @@ export function MyOutcomesView({
   const baseCurrency = pipelineQuery.data?.base_currency ?? null;
   const noRow = t(absentReading(pipelineQuery));
   const pipelineCount = pipelineRow
-    ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+    ? formatAnalyticsNumber(rowCount(pipelineRow, "deal_count"), locale)
     : noRow;
   const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
   // The currency names what the figure is IN, so a read with none to name drops
@@ -121,7 +124,7 @@ export function MyOutcomesView({
     ? t("analytics.noBaseCurrency")
     : rawMinor == null
       ? t("analytics.forecastNoAmount")
-      : formatMoneyCompact(rawMinor, baseCurrency, locale);
+      : formatAnalyticsMoney(rawMinor, baseCurrency, locale);
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows
@@ -177,7 +180,7 @@ export function MyOutcomesView({
                 label={t(status.labelKey)}
                 value={
                   meetingsQuery.isSuccess
-                    ? formatNumber(
+                    ? formatAnalyticsNumber(
                         meetingsByStatus.get(status.key) ?? 0,
                         locale,
                       )

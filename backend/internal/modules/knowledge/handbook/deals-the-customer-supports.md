@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance frontend/src/features/analytics/analytics.forecast.enforcement.tsx -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance frontend/src/features/analytics/analytics.forecast.enforcement.tsx frontend/src/features/deals/deal360/dealviabilitycard.tsx backend/internal/compose/dealviabilityread.go backend/internal/compose/attention/dealreviewlane.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -21,6 +21,14 @@ somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
 same review.
 
+The task follows the deal. When the deal gets a new owner, the next check moves
+the task to them. If somebody moved the task to a colleague, it stays with that
+colleague. When the review and every other check on the same task are answered,
+the next check marks the task done.
+
+If a review's task could not be created, **Checks before the call** says how
+many reviews are still without one. The next check tries again.
+
 A review takes four answers:
 
 - **The customer is back** closes the review. It needs a message or a meeting
@@ -38,6 +46,12 @@ A review takes four answers:
 An answer to the older check, **Buyer has gone quiet**, still
 holds. Until it ends, the deal gets no review. A reminder from that check holds
 for at most 90 days from the day it was given.
+
+## See it on the deal
+
+The deal's **Overview** has a **Customer support** card. It says whether the forecast of supported deals counts the deal: **Counted**, **Left out for review**, **Left out: no support** or **Not checked**. It also says when the deal was last checked. An open review shows on the card until someone answers it. Its task being done does not close it: the card then says **Task done, still open**. You need to see the forecast to see the card.
+
+On **Home**, an open review is one row for the deal's owner, under deals at risk. Its task and the deal's "quiet" row do not show beside it. The row stays until someone answers the review on the deal, even when its task is done.
 
 ## Count only deals the customer supports
 

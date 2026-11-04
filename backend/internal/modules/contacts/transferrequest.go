@@ -94,11 +94,11 @@ func TransferRequestableTx(ctx context.Context, tx pgx.Tx, recordType string, id
 	return out, nil
 }
 
-// requireTransferAsker admits a human on a seat that can write who holds the
-// grant to change this record type.
+// requireTransferAsker admits a user or their agent on a seat that can write
+// who holds the grant to change this record type.
 func requireTransferAsker(ctx context.Context, recordType string) error {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman {
+	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
 		return fmt.Errorf("a handover is asked for by a colleague: %w", apperrors.ErrPermissionDenied)
 	}
 	if !p.SeatType.CanMutate() {

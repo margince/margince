@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -85,13 +86,7 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 	_, seat := capturePrincipal(ctx)
 	switch {
 	case direction == connector.DirectionInbound:
-		// Unambiguously: an address two seats proved, a shared mailbox, is
-		// nobody's to claim, or whichever seat synced first would take it.
-		proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, stored)
-		if err != nil || proved {
-			return proved, err
-		}
-		return ownAddressHeldAloneTx(ctx, tx, seat, stored)
+		return addressIsSeatsAloneTx(ctx, tx, seat, stored)
 	case direction == connector.DirectionOutbound && foldAddress(stored) == foldAddress(recipient):
 		var sentBySeat bool
 		// The participant row has to stand for the seat being on the message.
@@ -111,6 +106,46 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 		return sentBySeat, nil
 	}
 	return false, nil
+}
+
+// MailboxIsOwnAloneTx reports whether the mailbox a connector stored a message
+// from belongs to the acting seat alone. capturedBy is the activity's stamp,
+// whose second part names the provider; the seat connects at most one mailbox
+// per provider. A mailbox whose address another seat also holds is shared and
+// nobody's own. The same rule decides when a received reading is turned round.
+func MailboxIsOwnAloneTx(ctx context.Context, tx pgx.Tx, capturedBy string) (bool, error) {
+	_, seat := capturePrincipal(ctx)
+	kind, rest, _ := strings.Cut(capturedBy, ":")
+	provider, _, _ := strings.Cut(rest, ":")
+	if kind != "connector" || provider == "" || seat == ids.Nil {
+		return false, nil
+	}
+	var label string
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(account_label, '') FROM capture_connection
+		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`, seat, provider).Scan(&label)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading the mailbox a message came from: %w", err)
+	}
+	address := bareAddress(label)
+	if address == "" {
+		return false, nil
+	}
+	return addressIsSeatsAloneTx(ctx, tx, seat, address)
+}
+
+// addressIsSeatsAloneTx is AddressIsOwnAloneTx for a named seat. Unambiguously:
+// an address two seats proved is nobody's to claim, or whichever seat synced
+// first would take it.
+func addressIsSeatsAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
+	proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, address)
+	if err != nil || proved {
+		return proved, err
+	}
+	return ownAddressHeldAloneTx(ctx, tx, seat, address)
 }
 
 // ownAddressHeldAloneTx reports that address is one of the acting seat's own
