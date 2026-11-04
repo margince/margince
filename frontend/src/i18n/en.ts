@@ -17091,6 +17091,8 @@ export const en = {
   "provider.profile.landingTitle": "Response received",
   "provider.profile.landing": "Saving to the record…",
   "provider.profile.lookupRefused": "Lookup did not run",
+  "provider.profile.lookupNotYours":
+    "You cannot edit this contact, so you cannot look it up. Ask the owner to hand it over or share it, or ask an administrator.",
   "provider.profile.completed": "Found",
   "provider.profile.noMatch": "The provider has no data for this contact.",
   "provider.profile.stale":
