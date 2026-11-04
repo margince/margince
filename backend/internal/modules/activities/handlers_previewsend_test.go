@@ -39,8 +39,8 @@ func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing
 }
 
 // The preview carries the sender's claim beside the engine's reading. An
-// unproven active-deal claim never resolves, so without it the composer said
-// "no recorded reason" where the gap is the missing deal.
+// unproven active-deal claim never resolves, and the composer names the
+// missing deal from the claim.
 func TestThePreviewCarriesTheClaimBesideTheResolvedCategory(t *testing.T) {
 	t.Parallel()
 	out := previewResponse(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{

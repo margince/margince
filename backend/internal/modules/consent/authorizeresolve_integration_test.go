@@ -855,12 +855,11 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 	return id
 }
 
-// A FAILED ACTIVE-DEAL CLAIM KEEPS THE CLAIM ON THE PREVIEW (#10169). The rep
-// had mail from the recipient a month ago and an open deal they are not a
-// stakeholder on, and picked "Active deal". The claim fails, and an unproven
-// claim never resolves. The preview still has to carry it, because it is the
-// only thing that lets the composer say "choose the deal" instead of "no
-// recorded reason".
+// A FAILED ACTIVE-DEAL CLAIM STAYS ON THE PREVIEW, AND NEVER RESOLVES. The rep
+// has mail from the recipient a month ago and an open deal they are not a
+// stakeholder on, and claims an active-deal follow-up. The claim fails for want
+// of evidence. Requested keeps the claim, which is what the composer names the
+// missing deal from. Resolved never takes it.
 //
 // Mutation: drop BOTH `d.Requested = req.Context` in decidePreviewTx and
 // `d.Requested = res.Category` in decideResolved, and the requested assertion

@@ -623,9 +623,8 @@ describe("one status for the message", () => {
     expect(screen.getByText(sentence)).toBeInTheDocument();
   });
 
-  // #10169: the rep picked "Active deal" and the deal did not support it. An
-  // unproven claim never resolves, so the server sends the rep's pick beside
-  // the engine's reading. The remedy is the deal, never "no recorded reason".
+  // An active-deal claim no deal backs never resolves. The server sends the
+  // rep's pick beside the engine's reading, and the remedy named is the deal.
   it("names the deal when the rep's own active-deal claim failed", () => {
     render(
       <LocaleProvider initial="en">

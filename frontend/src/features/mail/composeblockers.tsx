@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import { decidingRecipient } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
+import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import type { ComposeFields } from "./composefields";
@@ -22,6 +23,12 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
  * that could only answer 404 is a dead button, which `SendPermission` refuses.
  * An answer still out, or one that failed, names no one either. A vouch
  * resting on the answer before it would be recorded for the wrong message.
+ *
+ * The vouch is for the category the refusal is explained in, so the offered
+ * action and the text agree. A claim the engine did not resolve to, such as an
+ * active-deal follow-up with no deal behind it, offers no vouch at all: its
+ * remedy is the missing fact, and a vouch in the resolved category would let
+ * the next check pass on a reason the rep never gave.
  */
 export function reasonTargetOf(
   permission: ComposeSend["permission"],
@@ -32,7 +39,15 @@ export function reasonTargetOf(
   }
   const preview: Preview | undefined = permission.preview;
   const { state, recipient } = decidingRecipient(preview);
-  if (state !== "unproven" || !recipient?.resolved_category) {
+  const category = recipient?.resolved_category;
+  if (state !== "unproven" || !recipient || !category) {
+    return undefined;
+  }
+  const remedy = remedyCategoryOf({
+    category,
+    requestedCategory: recipient.requested_category,
+  });
+  if (remedy !== category) {
     return undefined;
   }
   const contactId = contactOf(recipient.address);
@@ -42,7 +57,7 @@ export function reasonTargetOf(
   return {
     contactId,
     address: recipient.address,
-    category: recipient.resolved_category,
+    category,
   };
 }
 

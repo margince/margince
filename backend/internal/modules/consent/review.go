@@ -82,9 +82,9 @@ type RefusedRecipient struct {
 	CanBeOverruled bool `json:"-"`
 	// RequestedCategory is the reason for contact the sender picked. It is told
 	// to the sender and never stored: the decision row already records it, and
-	// Category stays the engine's own reading. A refused claim for an active
-	// deal resolves to some other category, so without this the sender is told
-	// "no recorded reason" instead of "choose the deal".
+	// Category stays the engine's own reading. An unproven claim never
+	// resolves, so this is the only place the sender's pick travels, and the
+	// remedy for a failed active-deal claim is named from it.
 	RequestedCategory string `json:"-"`
 }
 
