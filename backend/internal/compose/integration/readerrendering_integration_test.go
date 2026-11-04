@@ -42,7 +42,7 @@ func (l *renderingLane) Complete(context.Context, model.Request) (model.Response
 
 const renderingNoteBody = "Wir haben über die Verlängerung gesprochen. Sie möchten das Angebot bis Freitag sehen."
 
-func logGermanActivity(t *testing.T, e *Env, ctx context.Context, kind string, contact ids.UUID) ids.ActivityID {
+func logGermanActivity(ctx context.Context, t *testing.T, e *Env, kind string, contact ids.UUID) ids.ActivityID {
 	t.Helper()
 	subject, body := "Verlängerung", renderingNoteBody
 	logged, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
@@ -80,7 +80,7 @@ func TestTheAuthorSeesTheirNoteInTheirLanguageAndNothingIsWritten(t *testing.T) 
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Lena Vogt", &e.Rep1)
-	id := logGermanActivity(t, e, author, "note", contact)
+	id := logGermanActivity(author, t, e, "note", contact)
 	lane := &renderingLane{}
 	svc := readerrendering.NewService(e.Pool, e.Activities, renderingClock(t)).WithLane(lane)
 
@@ -119,14 +119,14 @@ func TestATextTheCallerMayNotReadIsNotFoundAndNeverReachesTheModel(t *testing.T)
 	lane := &renderingLane{}
 	svc := readerrendering.NewService(e.Pool, e.Activities, renderingClock(t)).WithLane(lane)
 
-	limited := logGermanActivity(t, e, author, "email", contact)
+	limited := logGermanActivity(author, t, e, "email", contact)
 	if _, err := e.Activities.SetAudience(author, limited, activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("limiting: %v", err)
 	}
 	private := e.SeedContact(t, "Private Contact", &e.Rep1)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
-	outOfScope := logGermanActivity(t, e, author, "note", private)
-	archived := logGermanActivity(t, e, author, "note", contact)
+	outOfScope := logGermanActivity(author, t, e, "note", private)
+	archived := logGermanActivity(author, t, e, "note", contact)
 	if _, err := e.Activities.ArchiveActivity(e.Admin(), archived, nil); err != nil {
 		t.Fatalf("archiving: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestARowThatMovedWhileTheModelWroteShowsNoRendering(t *testing.T) {
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Lena Vogt", &e.Rep1)
 
-	limited := logGermanActivity(t, e, author, "email", contact)
+	limited := logGermanActivity(author, t, e, "email", contact)
 	limit := &renderingLane{during: func() {
 		if _, err := e.Activities.SetAudience(author, limited, activities.SetAudienceInput{Audience: "participants"}); err != nil {
 			t.Errorf("limiting during the call: %v", err)
@@ -189,7 +189,7 @@ func TestARowThatMovedWhileTheModelWroteShowsNoRendering(t *testing.T) {
 		t.Errorf("a mail limited while the model wrote: %+v, %v, want ErrNotFound", got, err)
 	}
 
-	archived := logGermanActivity(t, e, author, "note", contact)
+	archived := logGermanActivity(author, t, e, "note", contact)
 	archive := &renderingLane{during: func() {
 		if _, err := e.Activities.ArchiveActivity(e.Admin(), archived, nil); err != nil {
 			t.Errorf("archiving during the call: %v", err)

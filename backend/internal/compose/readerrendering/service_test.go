@@ -56,7 +56,7 @@ func reader(locale string) context.Context {
 	})
 }
 
-func render(t *testing.T, ctx context.Context, activity crmcontracts.Activity, lane *recordingLane) (crmcontracts.ActivityReaderRendering, error) {
+func render(ctx context.Context, t *testing.T, activity crmcontracts.Activity, lane *recordingLane) (crmcontracts.ActivityReaderRendering, error) {
 	t.Helper()
 	now := clocktest.Now(t)
 	svc := NewService(nil, oneActivity{activity}, func() time.Time { return now })
@@ -75,7 +75,7 @@ func TestTheRenderingIsWrittenInTheReadersOwnLanguage(t *testing.T) {
 		if locale == "vi" {
 			lane.reply = `{"already_in_target": false, "subject": "Cuộc trò chuyện", "body": "Chúng tôi đã nói về việc gia hạn hợp đồng."}`
 		}
-		got, err := render(t, reader(locale), note(crmcontracts.ActivityKindNote, germanBody, nil), lane)
+		got, err := render(reader(locale), t, note(crmcontracts.ActivityKindNote, germanBody, nil), lane)
 		if err != nil {
 			t.Fatalf("%s reader: %v", locale, err)
 		}
@@ -94,7 +94,7 @@ func TestTheRenderingIsWrittenInTheReadersOwnLanguage(t *testing.T) {
 func TestTextAlreadyInTheReadersLanguageAsksNoModel(t *testing.T) {
 	de := crmcontracts.ActivityLanguageDe
 	lane := &recordingLane{reply: englishReply}
-	got, err := render(t, reader("de"), note(crmcontracts.ActivityKindNote, germanBody, &de), lane)
+	got, err := render(reader("de"), t, note(crmcontracts.ActivityKindNote, germanBody, &de), lane)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,14 +104,14 @@ func TestTextAlreadyInTheReadersLanguageAsksNoModel(t *testing.T) {
 	if len(lane.sent) != 0 {
 		t.Errorf("a German note shown to a German reader made %d model calls", len(lane.sent))
 	}
-	if _, err := render(t, reader("de"), note(crmcontracts.ActivityKindNote, germanBody, &de), nil); err != nil {
+	if _, err := render(reader("de"), t, note(crmcontracts.ActivityKindNote, germanBody, &de), nil); err != nil {
 		t.Errorf("with no model bound, text already in the reader's language still answers: %v", err)
 	}
 }
 
 func TestAnUnknownLanguageTheModelJudgesUnchangedShowsTheOriginal(t *testing.T) {
 	lane := &recordingLane{reply: `{"already_in_target": true, "subject": "", "body": ""}`}
-	got, err := render(t, reader("de"), note(crmcontracts.ActivityKindNote, "Termin steht.", nil), lane)
+	got, err := render(reader("de"), t, note(crmcontracts.ActivityKindNote, "Termin steht.", nil), lane)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,16 +130,20 @@ func TestARenderingIsRefusedBeforeAnyModelCall(t *testing.T) {
 		lane     *recordingLane
 		want     error
 	}{
-		{"an agent", principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:test"}),
-			note(crmcontracts.ActivityKindNote, germanBody, nil), &recordingLane{}, apperrors.ErrPermissionDenied},
+		{
+			"an agent", principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:test"}),
+			note(crmcontracts.ActivityKindNote, germanBody, nil), &recordingLane{}, apperrors.ErrPermissionDenied,
+		},
 		{"a withheld message", reader("en"), withheld, &recordingLane{}, apperrors.ErrNotFound},
 		{"a task", reader("en"), note(crmcontracts.ActivityKindTask, germanBody, nil), &recordingLane{}, apperrors.ErrNotFound},
 		{"no model", reader("en"), note(crmcontracts.ActivityKindNote, germanBody, nil), nil, ErrNoModel},
-		{"text past the limit", reader("en"), note(crmcontracts.ActivityKindNote, strings.Repeat("ü ", MaxSourceRunes), nil),
-			&recordingLane{}, ErrTooLong},
+		{
+			"text past the limit", reader("en"), note(crmcontracts.ActivityKindNote, strings.Repeat("ü ", MaxSourceRunes), nil),
+			&recordingLane{}, ErrTooLong,
+		},
 	}
 	for _, c := range cases {
-		_, err := render(t, c.ctx, c.activity, c.lane)
+		_, err := render(c.ctx, t, c.activity, c.lane)
 		if !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", c.name, err, c.want)
 		}
@@ -152,7 +156,7 @@ func TestARenderingIsRefusedBeforeAnyModelCall(t *testing.T) {
 func TestAMailIsRenderedWithoutItsQuotedHistory(t *testing.T) {
 	body := germanBody + "\n\nAm 28.11.2026 schrieb Tom Weber <tom.weber@example.com>:\n> Unser Lager ist voll."
 	lane := &recordingLane{reply: englishReply}
-	if _, err := render(t, reader("en"), note(crmcontracts.ActivityKindEmail, body, nil), lane); err != nil {
+	if _, err := render(reader("en"), t, note(crmcontracts.ActivityKindEmail, body, nil), lane); err != nil {
 		t.Fatal(err)
 	}
 	if prompt := lane.sent[0].Messages[0].Content; strings.Contains(prompt, "Lager") || !strings.Contains(prompt, "Verlängerung") {

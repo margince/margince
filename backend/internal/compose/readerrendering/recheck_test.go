@@ -84,7 +84,7 @@ func TestTextPastTheLimitIsRefusedEvenInTheReadersLanguage(t *testing.T) {
 	de := crmcontracts.ActivityLanguageDe
 	long := strings.Repeat(germanBody+" ", MaxSourceRunes/len([]rune(germanBody))+1)
 	lane := &recordingLane{reply: englishReply}
-	if _, err := render(t, reader("de"), note(crmcontracts.ActivityKindNote, long, &de), lane); !errors.Is(err, ErrTooLong) {
+	if _, err := render(reader("de"), t, note(crmcontracts.ActivityKindNote, long, &de), lane); !errors.Is(err, ErrTooLong) {
 		t.Errorf("an oversized German note for a German reader: %v, want ErrTooLong", err)
 	}
 	if len(lane.sent) != 0 {
@@ -96,7 +96,7 @@ func TestTheTextsOwnLanguageWinsOverAStaleLabel(t *testing.T) {
 	stale := crmcontracts.ActivityLanguageDe
 	english := "We talked about the renewal. They want to see the offer by Friday, and purchasing is no longer against the price."
 	lane := &recordingLane{reply: englishReply}
-	got, err := render(t, reader("en"), note(crmcontracts.ActivityKindNote, english, &stale), lane)
+	got, err := render(reader("en"), t, note(crmcontracts.ActivityKindNote, english, &stale), lane)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestTheTextsOwnLanguageWinsOverAStaleLabel(t *testing.T) {
 
 	unplaced := note(crmcontracts.ActivityKindNote, "Termin ok.", &stale)
 	unplaced.Subject = new("Ok")
-	if got, err := render(t, reader("de"), unplaced, &recordingLane{}); err != nil || !got.Unchanged {
+	if got, err := render(reader("de"), t, unplaced, &recordingLane{}); err != nil || !got.Unchanged {
 		t.Errorf("text the detector cannot place keeps its stored label: %+v, %v", got, err)
 	}
 }

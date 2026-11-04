@@ -113,8 +113,10 @@ func (c *readerRenderingCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
 	if reply.AlreadyInTarget != c.expected.AlreadyInTarget {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("already_in_target is %t, wanted %t", reply.AlreadyInTarget, c.expected.AlreadyInTarget)}
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("already_in_target is %t, wanted %t", reply.AlreadyInTarget, c.expected.AlreadyInTarget),
+		}
 	}
 	rendered := reply.Subject + "\n" + reply.Body
 	for _, span := range c.expected.Keeps {
