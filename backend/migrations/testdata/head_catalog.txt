@@ -2078,6 +2078,7 @@ public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::te
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty_backfill_idx CREATE INDEX capture_pending_counterparty_backfill_idx ON public.capture_pending_counterparty USING btree (backfill_id) WHERE (backfill_id IS NOT NULL)
+public.capture_pending_counterparty_email_ix CREATE INDEX capture_pending_counterparty_email_ix ON public.capture_pending_counterparty USING btree (email)
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
@@ -5082,7 +5083,6 @@ public.idx_capture_exclusion_value CREATE INDEX idx_capture_exclusion_value ON p
 public.idx_capture_pending_counterparty_activity CREATE INDEX idx_capture_pending_counterparty_activity ON public.capture_pending_counterparty USING btree (activity_id)
 public.idx_capture_pending_counterparty_due CREATE INDEX idx_capture_pending_counterparty_due ON public.capture_pending_counterparty USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_pending_counterparty_live CREATE UNIQUE INDEX idx_capture_pending_counterparty_live ON public.capture_pending_counterparty USING btree (email) WHERE (status = ANY (ARRAY['pending'::text, 'unsure'::text]))
-public.idx_capture_pending_counterparty_noise CREATE INDEX idx_capture_pending_counterparty_noise ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'noise'::text)
 public.idx_capture_pending_counterparty_owner CREATE INDEX idx_capture_pending_counterparty_owner ON public.capture_pending_counterparty USING btree (owner_id)
 public.idx_capture_pending_counterparty_suppressed CREATE UNIQUE INDEX idx_capture_pending_counterparty_suppressed ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'suppressed'::text)
 public.idx_capture_sync_due CREATE INDEX idx_capture_sync_due ON public.capture_sync_state USING btree (next_sync_at)

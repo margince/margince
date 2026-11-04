@@ -604,11 +604,11 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_pending_counterparty_backfill_idx`: `btree (backfill_id) WHERE (backfill_id IS NOT NULL)`
+- `capture_pending_counterparty_email_ix`: `btree (email)`
 - `capture_pending_counterparty_pkey`: `unique, btree (id)`
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
 - `idx_capture_pending_counterparty_live`: `unique, btree (email) WHERE (status = ANY (ARRAY['pending', 'unsure']))`
-- `idx_capture_pending_counterparty_noise`: `btree (email) WHERE (status = 'noise')`
 - `idx_capture_pending_counterparty_owner`: `btree (owner_id)`
 - `idx_capture_pending_counterparty_suppressed`: `unique, btree (email) WHERE (status = 'suppressed')`
 
