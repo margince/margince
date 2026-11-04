@@ -7,7 +7,7 @@ import { Logomark } from "../design-system/logomark";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
-import { type Route, routeHash } from "../lib/router";
+import { type Route, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
@@ -191,7 +191,8 @@ export function WorkspaceRail({
   // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
   const phone = usePhoneViewport();
-  const [open, setOpen] = useMenuOpen(routeHash(route), phone);
+  // The whole address, query included: Back between two filters is a new page.
+  const [open, setOpen] = useMenuOpen(useHash(), phone);
   const menuOpen = open && phone;
   const more = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);

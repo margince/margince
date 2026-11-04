@@ -165,6 +165,7 @@ function AccountPanel({
   panel,
   setup,
   onDismiss,
+  onFocusLost,
   onShortcuts,
 }: Readonly<{
   identity: Identity;
@@ -172,6 +173,7 @@ function AccountPanel({
   panel: RefObject<HTMLDivElement | null>;
   setup: SetupChecklist | null;
   onDismiss: () => void;
+  onFocusLost: () => void;
   onShortcuts: () => void;
 }>) {
   const t = useT();
@@ -201,6 +203,17 @@ function AccountPanel({
       move(WHO_SEAT);
     }
   }, [hasHead, holds, move]);
+  // The setup row unmounts when another tab hides the reminder. If it held
+  // focus, focus is on <body> now and the arrows walk nothing, so the menu goes.
+  const hadSetup = useRef(setup !== null);
+  useEffect(() => {
+    const dropped = hadSetup.current && setup === null;
+    hadSetup.current = setup !== null;
+    const fell = document.activeElement ?? document.body;
+    if (dropped && fell === document.body) {
+      onFocusLost();
+    }
+  }, [setup, onFocusLost]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Tab leaves the menu, so the menu goes with it (the APG menu-button
@@ -332,13 +345,17 @@ export function AccountMenu() {
    * focusable of its own, and pulling focus onto the trigger after it would undo
    * what the click just did.
    */
-  const dismiss = useCallback(() => {
-    const held = menu.current?.contains(document.activeElement) ?? false;
+  const close = useCallback((held: boolean) => {
     setOpen(false);
     if (held) {
       trigger.current?.focus();
     }
   }, []);
+  const dismiss = useCallback(
+    () => close(menu.current?.contains(document.activeElement) ?? false),
+    [close],
+  );
+  const closeFromLostFocus = useCallback(() => close(true), [close]);
 
   const identity = identityOf(me.data?.user);
   // The top bar has no room for the setup reminder at phone width.
@@ -386,6 +403,7 @@ export function AccountMenu() {
           panel={menu}
           setup={setup}
           onDismiss={dismiss}
+          onFocusLost={closeFromLostFocus}
           onShortcuts={() => {
             dismiss();
             setShortcuts("open");

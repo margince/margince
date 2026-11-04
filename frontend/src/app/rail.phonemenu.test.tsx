@@ -53,6 +53,17 @@ describe("the phone More menu", () => {
     expect(document.querySelector<HTMLElement>(".main")?.inert).toBe(false);
   });
 
+  it("closes when only the address's query changes", async () => {
+    const user = userEvent.setup();
+    renderPhoneShell("#/deals?stage=open");
+    await user.click(more());
+    expect(menu()).not.toBeNull();
+
+    act(() => navigate({ screen: "deals" }, new Map([["stage", "won"]])));
+    await waitFor(() => expect(menu()).toBeNull());
+    expect(document.querySelector<HTMLElement>(".main")?.inert).toBe(false);
+  });
+
   // The pressed row unmounts with the menu. More now stands for the page it
   // opened, as the pressed row does in the desktop sidebar, so focus waits there.
   it("hands focus to More when a menu row opens a page", async () => {

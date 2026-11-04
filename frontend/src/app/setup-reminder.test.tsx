@@ -9,7 +9,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { parseHash } from "../lib/router";
-import { forgetSeat, readStored, STORAGE_KEYS } from "../lib/storage";
+import {
+  forgetSeat,
+  readStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../lib/storage";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   ignoreSearch,
@@ -353,6 +358,24 @@ describe("SetupReminder at phone width", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("menuitem", { name: /Finish setup/ }),
     );
+  });
+
+  it("closes the account menu onto its trigger when the focused row is hidden elsewhere", async () => {
+    stubPhoneViewport();
+    serve();
+    await mountTopBar().answered();
+    const user = userEvent.setup();
+    const account = screen.getByRole("button", { name: /Account/ });
+    await user.click(account);
+    await user.keyboard("{End}{ArrowUp}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: /Finish setup/ }),
+    );
+
+    // Another tab's hide reaches this one through the stored flag.
+    act(() => writeStored(STORAGE_KEYS.setupReminderHidden, "1"));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(account);
   });
 
   it("leaves the account menu once every step is done", async () => {

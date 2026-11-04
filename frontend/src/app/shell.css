@@ -1494,6 +1494,8 @@
       max(var(--space-2), env(safe-area-inset-bottom)) -
       max(var(--space-2), env(safe-area-inset-top))
     );
+    /* The cap is the whole box's room, so padding and border count inside it. */
+    box-sizing: border-box;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: var(--space-2);
