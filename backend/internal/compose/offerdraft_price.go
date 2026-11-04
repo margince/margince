@@ -65,6 +65,7 @@ func (d offerDrafter) resolvePrice(ctx context.Context, c offerLineCandidate, sn
 			case err == nil && product.Currency == currency:
 				line.UnitPriceMinor = product.UnitPriceMinor
 				line.PriceGrounded = true
+				line.ProductID = &id
 				return d.nameFromProduct(ctx, product, language, line)
 			case err == nil, errors.Is(err, apperrors.ErrNotFound):
 				// Wrong currency or a stale/hallucinated id: fails to

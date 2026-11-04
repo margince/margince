@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 356 |
-| Columns | 4200 |
+| Columns | 4201 |
 | Foreign keys | 583 |
 | Owning areas | 38 |
 
@@ -373,7 +373,7 @@ erDiagram
 | [`oauth_grant`](identity.md#oauth_grant) | identity | 9 | 3 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
 | [`offer`](deals.md#offer) | deals | 28 | 3 |
-| [`offer_line_item`](deals.md#offer_line_item) | deals | 19 | 1 |
+| [`offer_line_item`](deals.md#offer_line_item) | deals | 20 | 1 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |
 | [`partner`](contacts.md#partner) | contacts | 29 | 0 |

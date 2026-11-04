@@ -6488,6 +6488,7 @@ public.offer_line_item.offer_line_item_pkey PRIMARY KEY (id)
 public.offer_line_item.offer_line_item_position_check CHECK (("position" >= 1))
 public.offer_line_item.offer_line_item_proposal_state_check CHECK ((proposal_state = ANY (ARRAY['staged'::text, 'accepted'::text])))
 public.offer_line_item.offer_line_item_quantity_check CHECK ((quantity > (0)::numeric))
+public.offer_line_item.offer_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text]))))
 public.offer_line_item.offer_line_item_tax_rate_check CHECK ((tax_rate >= (0)::numeric))
 public.offer_line_item.offer_line_item_ungrounded_price_zero CHECK ((price_grounded OR (unit_price_minor = 0)))
 public.offer_line_item.offer_line_item_unit_price_minor_check CHECK ((unit_price_minor >= 0))
@@ -6504,6 +6505,7 @@ public.offer_line_item.price_grounded boolean NOT NULL gen=- def=true
 public.offer_line_item.product_id uuid gen=- def=-
 public.offer_line_item.proposal_state text NOT NULL gen=- def='accepted'::text
 public.offer_line_item.quantity numeric(14,3) NOT NULL gen=- def=-
+public.offer_line_item.tax_category text gen=- def=-
 public.offer_line_item.tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.offer_line_item.trg_oli_updated CREATE TRIGGER trg_oli_updated BEFORE UPDATE ON public.offer_line_item FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_line_item.unit text NOT NULL gen=- def='unit'::text

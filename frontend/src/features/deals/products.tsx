@@ -41,6 +41,11 @@ import {
   taxCategoryOf,
 } from "./products.taxcategory";
 import { ProductTranslationsDialog } from "./products.translations";
+import {
+  TAX_CATEGORIES,
+  TAX_CATEGORY_LABEL,
+  taxCategoryOf,
+} from "./taxcategory";
 import "../lists/listsection.css";
 import {
   currencyOptions,

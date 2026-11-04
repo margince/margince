@@ -16255,6 +16255,27 @@ func (e OfferLineItemBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for OfferLineItemTaxCategory.
+const (
+	OfferLineItemTaxCategoryExempt   OfferLineItemTaxCategory = "exempt"
+	OfferLineItemTaxCategoryReduced  OfferLineItemTaxCategory = "reduced"
+	OfferLineItemTaxCategoryStandard OfferLineItemTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemTaxCategory enum.
+func (e OfferLineItemTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemTaxCategoryExempt:
+		return true
+	case OfferLineItemTaxCategoryReduced:
+		return true
+	case OfferLineItemTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferLineItemInputBillingIntervalMonths.
 const (
 	OfferLineItemInputBillingIntervalMonthsN1  OfferLineItemInputBillingIntervalMonths = 1
@@ -16291,6 +16312,27 @@ func (e OfferLineItemInputBillingModel) Valid() bool {
 	case OfferLineItemInputBillingModelOneTime:
 		return true
 	case OfferLineItemInputBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemInputTaxCategory.
+const (
+	OfferLineItemInputTaxCategoryExempt   OfferLineItemInputTaxCategory = "exempt"
+	OfferLineItemInputTaxCategoryReduced  OfferLineItemInputTaxCategory = "reduced"
+	OfferLineItemInputTaxCategoryStandard OfferLineItemInputTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemInputTaxCategory enum.
+func (e OfferLineItemInputTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemInputTaxCategoryExempt:
+		return true
+	case OfferLineItemInputTaxCategoryReduced:
+		return true
+	case OfferLineItemInputTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -22489,6 +22531,27 @@ func (e UpdateOfferLineItemRequestBillingModel) Valid() bool {
 	case UpdateOfferLineItemRequestBillingModelOneTime:
 		return true
 	case UpdateOfferLineItemRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateOfferLineItemRequestTaxCategory.
+const (
+	UpdateOfferLineItemRequestTaxCategoryExempt   UpdateOfferLineItemRequestTaxCategory = "exempt"
+	UpdateOfferLineItemRequestTaxCategoryReduced  UpdateOfferLineItemRequestTaxCategory = "reduced"
+	UpdateOfferLineItemRequestTaxCategoryStandard UpdateOfferLineItemRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateOfferLineItemRequestTaxCategory enum.
+func (e UpdateOfferLineItemRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateOfferLineItemRequestTaxCategoryExempt:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryReduced:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -51618,7 +51681,10 @@ type OfferLineItem struct {
 	// Quantity Up to 3 decimal places (numeric 14,3); must be > 0.
 	Quantity float64 `json:"quantity"`
 
-	// TaxRate Percent, up to 2 decimal places.
+	// TaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+	TaxCategory *OfferLineItemTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer's legal entity: today's on a draft, the send day's once sent.
 	TaxRate float64 `json:"tax_rate"`
 	Unit    string  `json:"unit"`
 
@@ -51638,6 +51704,9 @@ type OfferLineItemBillingIntervalMonths int
 
 // OfferLineItemBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemBillingModel string
+
+// OfferLineItemTaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+type OfferLineItemTaxCategory string
 
 // OfferLineItemInput One line to add. With `product_id`, description/unit/unit_price_minor/tax_rate default
 // from the product (a SNAPSHOT — later product edits never touch the line); without it,
@@ -51659,8 +51728,13 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity float64  `json:"quantity"`
-	TaxRate  *float64 `json:"tax_rate,omitempty"`
+	Quantity float64 `json:"quantity"`
+
+	// TaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+	TaxCategory *OfferLineItemInputTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).
+	TaxRate *float64 `json:"tax_rate,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
 	Unit           *string `json:"unit,omitempty"`
@@ -51672,6 +51746,9 @@ type OfferLineItemInputBillingIntervalMonths int
 
 // OfferLineItemInputBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemInputBillingModel string
+
+// OfferLineItemInputTaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+type OfferLineItemInputTaxCategory string
 
 // OfferListResponse defines model for OfferListResponse.
 type OfferListResponse struct {
@@ -60904,9 +60981,14 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount  *int     `json:"interval_count,omitempty"`
-	Position       *int     `json:"position,omitempty"`
-	Quantity       *float64 `json:"quantity,omitempty"`
+	IntervalCount *int     `json:"interval_count,omitempty"`
+	Position      *int     `json:"position,omitempty"`
+	Quantity      *float64 `json:"quantity,omitempty"`
+
+	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. It drops the line's tax category, so the send leaves the rate alone.
 	TaxRate        *float64 `json:"tax_rate,omitempty"`
 	Unit           *string  `json:"unit,omitempty"`
 	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
@@ -60917,6 +60999,9 @@ type UpdateOfferLineItemRequestBillingIntervalMonths int
 
 // UpdateOfferLineItemRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type UpdateOfferLineItemRequestBillingModel string
+
+// UpdateOfferLineItemRequestTaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+type UpdateOfferLineItemRequestTaxCategory string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {

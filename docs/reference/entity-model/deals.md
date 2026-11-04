@@ -829,7 +829,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## offer_line_item
 
-19 columns · primary key `(id)` · referenced by 1 foreign key
+20 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -846,6 +846,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `product_id` | `uuid` |  | Optional rate-card ref; the line survives the product. |
 | `proposal_state` | `text`, default `'accepted'::text` | yes | One of `staged`, `accepted`. |
 | `quantity` | `numeric(14,3)` | yes | Up to 3 decimal places (numeric 14,3); must be > 0. |
+| `tax_category` | `text` |  | The category the line takes its rate from. |
 | `tax_rate` | `numeric(5,2)`, default `0` | yes | Percent, up to 2 decimal places. |
 | `unit` | `text`, default `'unit'::text` | yes | A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. |
 | `unit_price_minor` | `bigint` | yes | Snapshot; never re-read from product after creation. |
@@ -866,6 +867,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_line_item_position_check`: `CHECK (("position" >= 1))`
 - `offer_line_item_proposal_state_check`: `CHECK ((proposal_state = ANY (ARRAY['staged', 'accepted'])))`
 - `offer_line_item_quantity_check`: `CHECK ((quantity > (0)::numeric))`
+- `offer_line_item_tax_category_check`: `CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard', 'reduced', 'exempt']))))`
 - `offer_line_item_tax_rate_check`: `CHECK ((tax_rate >= (0)::numeric))`
 - `offer_line_item_ungrounded_price_zero`: `CHECK ((price_grounded OR (unit_price_minor = 0)))`
 - `offer_line_item_unit_price_minor_check`: `CHECK ((unit_price_minor >= 0))`
