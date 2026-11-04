@@ -124,7 +124,7 @@ type schemaProp struct {
 	Enum       []any                      `json:"enum"`
 	Default    any                        `json:"default"`
 	Examples   []any                      `json:"examples"`
-	MinItems   int                        `json:"minItems"`
+	MinItems   int                        `json:"minItems"` //nolint:tagliatelle // JSON Schema spec keyword, must be camelCase
 	Minimum    *float64                   `json:"minimum"`
 	Items      json.RawMessage            `json:"items"`
 	Required   []string                   `json:"required"`
