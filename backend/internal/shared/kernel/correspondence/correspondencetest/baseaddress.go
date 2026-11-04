@@ -19,6 +19,9 @@ type BaseAddressCase struct {
 var BaseAddressCases = []BaseAddressCase{
 	{"Anna@Example.com", "anna@example.com", false},
 	{"anna+Accounting@example.com", "anna@example.com", true},
+	{" anna+Accounting@example.com ", "anna@example.com", true},
+	{" A.B@gmail.com ", "ab@gmail.com", true},
+	{"Ä.Ö@Gmail.com", "äö@gmail.com", true},
 	{"anna+a+b@example.com", "anna@example.com", true},
 	{"AB+X@Example.COM", "ab@example.com", true},
 	{"+tag@example.com", "+tag@example.com", false},

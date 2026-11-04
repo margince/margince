@@ -30,7 +30,7 @@ import (
 // migration that builds idx_contact_email_mailbox_base spells the same
 // expression, and TestTheAddressVariantLaneReadsTheMailboxBaseIndex holds it.
 func addressBaseSQL(expr string) string {
-	untagged := storekit.SQLf(`regexp_replace(lower(%s), '^([^+@]+)\+[^@]*@', '\1@')`, expr)
+	untagged := storekit.SQLf(`regexp_replace(btrim(lower(%s)), '^([^+@]+)\+[^@]*@', '\1@')`, expr)
 	return storekit.SQLf(
 		`CASE WHEN %[1]s ~ '^[^@]*@(gmail|googlemail)\.com$' THEN replace(regexp_replace(%[1]s, '@(gmail|googlemail)\.com$', ''), '.', '') || '@gmail.com' ELSE %[1]s END`,
 		untagged)
@@ -70,7 +70,9 @@ func lockAddressBaseLane(ctx context.Context, tx pgx.Tx, emails []string) error 
 }
 
 // addressVariantQuery takes the bases, the folded addresses, the contact to
-// leave out and the row limit, in that order.
+// leave out and the row limit. Holders the queue already pairs with that
+// contact are dropped before the limit, as newRivals drops them. Otherwise
+// many contacts on one Gmail base hide the rest.
 var addressVariantQuery = `
 		SELECT e.contact_id, array_agg(e.email)
 		  FROM contact_email e
@@ -78,7 +80,9 @@ var addressVariantQuery = `
 		 WHERE ` + addressBaseSQL("e.email") + ` = ANY($1)
 		   AND lower(e.email) <> ALL($2)
 		   AND e.archived_at IS NULL
-		   AND ($3::uuid IS NULL OR e.contact_id <> $3)
+		   AND ($3::uuid IS NULL OR (e.contact_id <> $3 AND NOT EXISTS (
+		         SELECT 1 FROM dedupe_candidate d
+		          WHERE ` + heldPairSQL("'"+entityContact+"'", "$3", "e.contact_id") + `)))
 		 GROUP BY e.contact_id
 		 ORDER BY e.contact_id
 		 LIMIT $4`

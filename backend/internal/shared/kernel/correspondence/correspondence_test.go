@@ -79,11 +79,7 @@ func TestAPlusTagIsCutFromTheLocalPart(t *testing.T) {
 func TestABaseAddressIsFoldedAndUntagged(t *testing.T) {
 	t.Parallel()
 
-	cases := append([]correspondencetest.BaseAddressCase{
-		{Address: " anna+Accounting@example.com ", Base: "anna@example.com", Changed: true},
-		{Address: " A.B@gmail.com ", Base: "ab@gmail.com", Changed: true},
-	}, correspondencetest.BaseAddressCases...)
-	for _, c := range cases {
+	for _, c := range correspondencetest.BaseAddressCases {
 		got, changed := BaseAddress(c.Address)
 		if got != c.Base || changed != c.Changed {
 			t.Errorf("BaseAddress(%q) = (%q, %v), want (%q, %v)", c.Address, got, changed, c.Base, c.Changed)
