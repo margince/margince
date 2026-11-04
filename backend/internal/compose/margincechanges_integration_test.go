@@ -12,6 +12,8 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -19,10 +21,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,5 +151,37 @@ func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
 	}
 	if len(page.Changes) != 3 || strings.Contains(w.Body.String(), standInReason) || strings.Contains(w.Body.String(), "45,000 EUR a year") {
 		t.Fatalf("agent for a colleague = %s, want three changes with no reason or quote", w.Body.String())
+	}
+}
+
+func TestTheMorningEmailListsTheChangedDealAndAnUndoBeforeTheSendStopsIt(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	worker := &briefGenerateWorker{
+		engine: briefs.NewBriefEngine(v.Pool, contacts.NewStore(InstallationDB(v.Pool))),
+		pool:   v.Pool, users: identity.NewService(v.Pool), log: slog.New(slog.DiscardHandler),
+	}
+	now, words := v.now.Add(time.Hour), mailcopy.For("en")
+
+	message, useful, items, err := worker.morningMessageItems(v.owner(t), now, words, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !useful || !strings.Contains(message.Text, "Margince changed 1 of your deals last night") || !strings.Contains(message.Text, "Support rollout") {
+		t.Fatalf("morning with only Margince's changes = useful %v:\n%s\nwant it sent naming the deal", useful, message.Text)
+	}
+	var basis sendBasis
+	if err := database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+		basis, err = readSendBasis(v.owner(t), tx, v.Rep1, nil, morningRefs(items, digestLines{}), now)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	v.undo(t, deals.VerdictAmountCorrection)
+	err = database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+		return holdSendBasisTx(v.owner(t), tx, basis, func() time.Time { return now })
+	})
+	if !errors.Is(err, errSendBasisChanged) {
+		t.Fatalf("holding a morning after an Undo of what it lists = %v, want the morning read again", err)
 	}
 }
