@@ -163,6 +163,9 @@ export function FilterMatches({
                 run={exportRun}
                 resource={resource}
                 tree={tree}
+                // The rows on screen answer an earlier filter until this one's
+                // first page lands, and the export would not be what they show.
+                held={preview.isPlaceholderData || preview.isPending}
               />
               <ExportProgress run={exportRun} tree={tree} />
             </>

@@ -134,21 +134,15 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
-// preview runs the count and the page after `after` (nil for the first) in one
-// transaction. That buys less than it looks like and is still worth having.
-// The count is the full match count on every page, so a paging table keeps one
-// total.
+// preview runs the count, the page after `after` (nil for the first) and its
+// rows in one snapshot (`REPEATABLE READ`). The count is the full match count on
+// every page, so a paging table keeps one total.
 //
-// What it does NOT buy is a shared snapshot. These run at READ COMMITTED — the
-// pool sets no isolation level — so each statement takes its own snapshot and a
-// commit landing between them is visible to the second. Claiming otherwise would
-// invite the next reader to rely on stability that is not there.
-//
-// What it does buy: one connection, one workspace binding, and two statements
-// back to back, which is the smallest window available without paying for
-// REPEATABLE READ. A preview is a glance at a moving table, and a count one write
-// stale is the honest cost of that — the alternative is a serialization failure
-// shown to somebody who is only typing.
+// One snapshot because the row scope is decided in the page's statement and the
+// rows are read in a later one. Under `READ COMMITTED` a row that turned private
+// between the two would be read as it is now, past the scope that admitted it.
+// The statements only read, so the snapshot cannot fail to serialize. The one
+// write, the agent's log row, is an insert no other writer contends for.
 //
 // logged writes the preview to system_log in the same transaction. A human
 // typing is not logged; an agent's preview is, because for an agent the same
@@ -157,54 +151,58 @@ func (h filterPreviewHandlers) preview(
 	ctx context.Context, engine storekit.Query, pred storekit.Predicate, after *ids.UUID, limit int, logged bool,
 ) (crmcontracts.FilterPreview, error) {
 	var out crmcontracts.FilterPreview
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		// The count is unbounded by design and its predicate is written by the
-		// caller — up to PredicateMaxLeaves substring matches, each of which can
-		// mean a sequential scan, over the largest tables. That combination is new
-		// here: the automation preview also counts without a cap, but from a fixed
-		// catalog of predicates rather than a tree somebody typed.
-		//
-		// So the statement, not the tree, carries the ceiling. A filter too
-		// expensive to count is refused in bounded time instead of holding a pool
-		// connection for as long as it takes, which is the difference between one
-		// slow request and a server that stops answering.
-		if err := database.BoundStatement(ctx, tx, previewStatementBudget); err != nil {
-			return err
-		}
-		count, err := engine.CountMatching(ctx, tx, pred)
-		if err != nil {
-			return err
-		}
-		matched, more, err := engine.SelectPage(ctx, tx, pred, after, limit)
-		if err != nil {
-			return err
-		}
-		columns, err := exportableColumns(ctx, tx, engine.Table)
-		if err != nil {
-			return err
-		}
-		rows, err := readRowsByID(ctx, tx, engine.Table, columns, matched)
-		if err != nil {
-			return err
-		}
-		out = crmcontracts.FilterPreview{
-			MatchCount: count,
-			Columns:    columns,
-			Rows:       rowsAsMaps(memberData{table: engine.Table, columns: columns, rows: rows}),
-			Truncated:  more,
-		}
-		if page := storekit.IDPage(matched, more); page.HasMore {
-			out.NextCursor = &page.NextCursor
-		}
-		if !logged {
-			return nil
-		}
-		_, err = storekit.LogSystem(ctx, tx, "preview", map[string]any{
-			"table": engine.Table, logDetailFilter: pred, "match_count": count, "row_count": len(rows),
+	err := database.WithWorkspaceSnapshot(ctx, h.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+			return previewIn(ctx, tx, engine, pred, after, limit, logged, &out)
 		})
-		return err
 	})
 	return out, err
+}
+
+// previewIn is preview's body: every statement runs on tx, the snapshot's.
+func previewIn(
+	ctx context.Context, tx pgx.Tx, engine storekit.Query, pred storekit.Predicate,
+	after *ids.UUID, limit int, logged bool, out *crmcontracts.FilterPreview,
+) error {
+	// The count is unbounded, and the caller writes its predicate: up to
+	// PredicateMaxLeaves substring matches, each a possible sequential scan.
+	// So the statement carries the ceiling. A filter too costly to count is
+	// refused in bounded time instead of holding a pool connection.
+	if err := database.BoundStatement(ctx, tx, previewStatementBudget); err != nil {
+		return err
+	}
+	count, err := engine.CountMatching(ctx, tx, pred)
+	if err != nil {
+		return err
+	}
+	matched, more, err := engine.SelectPage(ctx, tx, pred, after, limit)
+	if err != nil {
+		return err
+	}
+	columns, err := exportableColumns(ctx, tx, engine.Table)
+	if err != nil {
+		return err
+	}
+	rows, err := readRowsByID(ctx, tx, engine.Table, columns, matched)
+	if err != nil {
+		return err
+	}
+	*out = crmcontracts.FilterPreview{
+		MatchCount: count,
+		Columns:    columns,
+		Rows:       rowsAsMaps(memberData{table: engine.Table, columns: columns, rows: rows}),
+		Truncated:  more,
+	}
+	if page := storekit.IDPage(matched, more); page.HasMore {
+		out.NextCursor = &page.NextCursor
+	}
+	if !logged {
+		return nil
+	}
+	_, err = storekit.LogSystem(ctx, tx, "preview", map[string]any{
+		"table": engine.Table, logDetailFilter: pred, "match_count": count, "row_count": len(rows),
+	})
+	return err
 }
 
 // previewRowLimit resolves the requested page size, refusing what the contract

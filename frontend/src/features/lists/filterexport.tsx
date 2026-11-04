@@ -106,14 +106,21 @@ export function ExportFilterItems({
   run,
   resource,
   tree,
-}: Readonly<{ run: FilterExportRun; resource: FilterResource; tree: Node }>) {
+  held = false,
+}: Readonly<{
+  run: FilterExportRun;
+  resource: FilterResource;
+  tree: Node;
+  /** The rows on screen are not yet this tree's, so its file would differ. */
+  held?: boolean;
+}>) {
   const t = useT();
   return (
     <>
       {FORMATS.map((format) => (
         <Button
           key={format}
-          disabled={run.isPending}
+          disabled={held || run.isPending}
           onClick={() => run.mutate({ format, resource, tree })}
         >
           {t(LABEL[format])}

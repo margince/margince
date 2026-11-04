@@ -138,7 +138,7 @@ func DecodeCursor(token string) (Cursor, error) {
 // of the page before. An empty token reads the first page.
 func DecodeIDCursor(token string) (*ids.UUID, error) {
 	if token == "" {
-		return nil, nil
+		return nil, nil //nolint:nilnil // no cursor is the first page, the after SelectPage reads as nil
 	}
 	after, err := ids.Parse(token)
 	if err != nil {

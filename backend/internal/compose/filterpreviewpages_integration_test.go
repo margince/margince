@@ -10,13 +10,18 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -105,5 +110,67 @@ func TestAFilterPreviewKeepsTheRowScopeOnEveryPage(t *testing.T) {
 	walked := walkPreview(reader, t, e, 2, len(visible))
 	if want := inIDOrder(visible...); !slices.Equal(walked, want) {
 		t.Fatalf("a reader walked %v, want only the rows they may see %v", walked, want)
+	}
+}
+
+// The count, the page and the rows read one snapshot. The row read waits on a
+// lock over contact_email, which only it touches, while a rename commits. A row
+// read in its own snapshot would print the new name.
+func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
+	e := integration.Setup(t)
+	target := seedPagedContacts(t, e, e.Rep1, 1)[0]
+	handlers := filterPreviewHandlers{pool: e.Pool, collections: NewCollectionsStore(e.Pool)}
+	engine, ok, err := handlers.collections.SegmentEngine(e.Admin(), "contact")
+	if err != nil || !ok {
+		t.Fatalf("contact engine: ok=%v err=%v", ok, err)
+	}
+
+	holder := integration.OwnerConn(t)
+	locked, err := holder.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := locked.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("release the contact_email lock: %v", err)
+		}
+	})
+	if _, err := locked.Exec(context.Background(), "LOCK TABLE contact_email IN ACCESS EXCLUSIVE MODE"); err != nil {
+		t.Fatal(err)
+	}
+	var holderPID int32
+	if err := locked.QueryRow(context.Background(), "SELECT pg_backend_pid()").Scan(&holderPID); err != nil {
+		t.Fatal(err)
+	}
+
+	type answer struct {
+		preview crmcontracts.FilterPreview
+		err     error
+	}
+	answered, returned := make(chan answer, 1), make(chan struct{})
+	go func() {
+		defer close(returned)
+		got, err := handlers.preview(e.Admin(), engine, previewPagedFilter, nil, 10, false)
+		answered <- answer{got, err}
+	}()
+	observer := integration.OwnerConn(t)
+	testdb.WaitForContention(t, returned, "the preview finished without reading contact_email", "the preview never waited on contact_email",
+		func(ctx context.Context) (bool, error) {
+			var waiting bool
+			err := observer.QueryRow(ctx,
+				`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, holderPID).Scan(&waiting)
+			return waiting, err
+		})
+	e.WsExec(t, `UPDATE contact SET full_name = 'Renamed meanwhile' WHERE id = $1`, target)
+	if err := locked.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	got := <-answered
+	if got.err != nil {
+		t.Fatal(got.err)
+	}
+	if len(got.preview.Rows) != 1 || got.preview.Rows[0]["full_name"] == "Renamed meanwhile" {
+		t.Fatalf("rows = %v, want the one match as the page's snapshot saw it", got.preview.Rows)
 	}
 }
