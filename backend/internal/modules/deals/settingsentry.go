@@ -27,7 +27,7 @@ var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Let Margince move a deal to a later stage when the customer's own words show it got there; off stops every automatic move.",
+	Doc:     "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
 }, config.Store{
 	RBACObject: stageAutomationObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the apply path reads it; no request carries it

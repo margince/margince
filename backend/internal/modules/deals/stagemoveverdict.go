@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -197,14 +198,17 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 		return false, err
 	}
 	var buyer bool
+	// The ledger already judged the side, so the mail's direction is asked
+	// no further here: this is about who sent it.
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id AND p.role = 'from'
 		  JOIN deal d ON d.id = $1
-		  JOIN relationship r ON r.archived_at IS NULL AND r.ended_at IS NULL
-		   AND ((r.kind = 'employment' AND r.company_id = d.company_id) OR (r.kind = 'deal_stakeholder' AND r.deal_id = d.id))
-		 WHERE a.id = $2 AND a.kind = 'email' AND a.direction = 'inbound'
+		  JOIN relationship r ON r.archived_at IS NULL
+		   AND ((r.kind = 'employment' AND r.company_id = d.company_id AND `+employment.IsCurrentSQL("r.ended_at")+`)
+		        OR (r.kind = 'deal_stakeholder' AND r.deal_id = d.id))
+		 WHERE a.id = $2 AND a.kind = 'email'
 		   AND (r.contact_id = p.contact_id
 		        OR EXISTS (SELECT 1 FROM contact_email ce
 		                    WHERE ce.contact_id = r.contact_id AND lower(ce.email) = lower(p.address))))`,

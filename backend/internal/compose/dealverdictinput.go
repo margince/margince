@@ -228,7 +228,10 @@ func readVerdictLaterStages(ctx context.Context, tx pgx.Tx, deal ids.UUID, read 
 	if err != nil {
 		return fmt.Errorf("compose: reading the stages a deal may move to: %w", err)
 	}
-	read.in.Later, err = pgx.CollectRows(rows, pgx.RowToStructByPos[dealverdict.StageOption])
+	read.in.Later, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealverdict.StageOption, error) {
+		var stage dealverdict.StageOption
+		return stage, row.Scan(&stage.ID, &stage.Name, &stage.Position, &stage.Probability)
+	})
 	if err != nil {
 		return fmt.Errorf("compose: reading the stages a deal may move to: %w", err)
 	}
@@ -248,7 +251,10 @@ func readVerdictExitCriteria(ctx context.Context, tx pgx.Tx, deal ids.UUID, read
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's exit criteria: %w", err)
 	}
-	read.in.ExitCriteria, err = pgx.CollectRows(rows, pgx.RowToStructByPos[dealverdict.ExitCriterion])
+	read.in.ExitCriteria, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealverdict.ExitCriterion, error) {
+		var c dealverdict.ExitCriterion
+		return c, row.Scan(&c.ID, &c.StagePosition, &c.Stage, &c.Label, &c.Kind, &c.Hint)
+	})
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's exit criteria: %w", err)
 	}

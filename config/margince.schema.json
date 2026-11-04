@@ -864,7 +864,7 @@
           "default": 120
         },
         "stage_autopilot_enabled": {
-          "description": "Let Margince move a deal to a later stage when the customer's own words show it got there; off stops every automatic move.",
+          "description": "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
