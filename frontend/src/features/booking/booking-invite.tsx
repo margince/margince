@@ -8,12 +8,12 @@ import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
-import { browserZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { contactQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
@@ -41,7 +41,9 @@ export function BookingInviteScreen({
   contactId,
 }: Readonly<{ contactId?: string }>) {
   const t = useT();
-  const [zone, setZone] = useState(browserZone);
+  // A signed-in host starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(readerZone);
   const [mode, setMode] = useState<BookingMode>("propose");
   const [picks, setPicks] = useState<BookingSlot[]>([]);
   const [edits, setEdits] = useState<Edits>({});

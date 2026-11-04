@@ -17,6 +17,7 @@ import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
@@ -61,7 +62,12 @@ export function BookingGuestScreen({
 }: Readonly<{ hostSlug: string; proposalToken?: string; preview?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [zone, setZone] = useState(browserZone);
+  // A guest has only the browser's clock; a signed-in host previewing their
+  // own page starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(() =>
+    preview ? readerZone : browserZone(),
+  );
   const intent = useBookingIntent();
   const client = useQueryClient();
   const [now] = useState(() => Date.now());

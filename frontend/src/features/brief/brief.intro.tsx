@@ -13,6 +13,7 @@ import {
 } from "../../format/format";
 import { dayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import type { Worklist } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
@@ -53,7 +54,9 @@ export function BriefIntro({
 }>) {
   const reduced = usePrefersReducedMotion();
   const zone = useViewerZone();
-  const today = dayInZone(now.getTime(), zone);
+  // "Today's" read is the server's day, counted on the company's clock (B1).
+  const companyZone = useCompanyZone();
+  const today = dayInZone(now.getTime(), companyZone);
   const [due] = useState(
     () => readStored(STORAGE_KEYS.briefIntroShown) !== today,
   );
@@ -63,7 +66,8 @@ export function BriefIntro({
   // A read from an earlier day would greet with yesterday's figures, so the
   // curtain shows figures only from today's read.
   const fresh =
-    day !== undefined && dayInZone(Date.parse(day.as_of), zone) === today;
+    day !== undefined &&
+    dayInZone(Date.parse(day.as_of), companyZone) === today;
   const showing = due && !reduced && !ended;
 
   useEffect(() => {
@@ -99,6 +103,7 @@ export function BriefIntro({
       day={fresh ? day : undefined}
       now={now}
       zone={zone}
+      dayZone={companyZone}
       startedAt={startedAt}
       leaving={leaving}
       onEnd={() => setEnded(true)}
@@ -112,6 +117,7 @@ function IntroCurtain({
   day,
   now,
   zone,
+  dayZone,
   startedAt,
   leaving,
   onEnd,
@@ -120,6 +126,8 @@ function IntroCurtain({
   day: Worklist | undefined;
   now: Date;
   zone: string;
+  /** The zone Home's day is counted in: the company's (B1). */
+  dayZone: string;
   startedAt: number;
   leaving: boolean;
   onEnd: () => void;
@@ -145,7 +153,7 @@ function IntroCurtain({
           {/* The agent's orb: it wrote the brief this greeting opens. */}
           <MarginceCoreScene size="md" className="brief-intro-core" />
           <span className="t-eyebrow brief-intro-date">
-            {formatDayLong(now.toISOString(), locale, zone)} ·{" "}
+            {formatDayLong(now.toISOString(), locale, dayZone)} ·{" "}
             {formatTimeOfDay(now.toISOString(), locale, zone)}
           </span>
         </span>

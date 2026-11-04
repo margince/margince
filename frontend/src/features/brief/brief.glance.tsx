@@ -137,13 +137,16 @@ function GlanceWhen({
   week,
 }: Readonly<{ view: BriefView; now: Date; week: GlanceFacts["week"] }>) {
   const readerZone = useViewerZone();
+  // Home's contents are the server's day, bucketed on the company's clock
+  // (B1), so the day it is labelled with is that day.
+  const companyZone = useCompanyZone();
   const t = useT();
   const { locale } = useLocale();
   if (view === "morning") {
     const date = now.toISOString();
     return (
       <p className="glance-date">
-        <time dateTime={date}>{formatDayLong(date, locale, readerZone)}</time>
+        <time dateTime={date}>{formatDayLong(date, locale, companyZone)}</time>
       </p>
     );
   }
