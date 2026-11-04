@@ -1917,6 +1917,8 @@ const (
 	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
 	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
 	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindDealOpen    AppliedDealChangeReviewKind = "deal_open"
+	AppliedDealChangeReviewKindDealRevive  AppliedDealChangeReviewKind = "deal_revive"
 	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
 	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
@@ -1929,6 +1931,10 @@ func (e AppliedDealChangeReviewKind) Valid() bool {
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindDealOpen:
+		return true
+	case AppliedDealChangeReviewKindDealRevive:
 		return true
 	case AppliedDealChangeReviewKindProbability:
 		return true
@@ -15528,6 +15534,7 @@ const (
 	MarginceChangeBundleKindsCloseLost       MarginceChangeBundleKinds = "close_lost"
 	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
+	MarginceChangeBundleKindsDealOpen        MarginceChangeBundleKinds = "deal_open"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
 	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
@@ -15540,6 +15547,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealAmount:
 		return true
 	case MarginceChangeBundleKindsDealCloseDate:
+		return true
+	case MarginceChangeBundleKindsDealOpen:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
 		return true
@@ -20998,24 +21007,6 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
-// Defines values for SetTransitionPolicyRequestMode.
-const (
-	SetTransitionPolicyRequestModeSetTransitionModeAuto    SetTransitionPolicyRequestMode = "auto"
-	SetTransitionPolicyRequestModeSetTransitionModePropose SetTransitionPolicyRequestMode = "propose"
-)
-
-// Valid indicates whether the value is a known member of the SetTransitionPolicyRequestMode enum.
-func (e SetTransitionPolicyRequestMode) Valid() bool {
-	switch e {
-	case SetTransitionPolicyRequestModeSetTransitionModeAuto:
-		return true
-	case SetTransitionPolicyRequestModeSetTransitionModePropose:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetUpPartnerRequestPartnerRole.
 const (
 	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
@@ -22345,32 +22336,15 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	}
 }
 
-// Defines values for TransitionPolicyMode.
-const (
-	TransitionPolicyModeTransitionModeAuto    TransitionPolicyMode = "auto"
-	TransitionPolicyModeTransitionModePropose TransitionPolicyMode = "propose"
-)
-
-// Valid indicates whether the value is a known member of the TransitionPolicyMode enum.
-func (e TransitionPolicyMode) Valid() bool {
-	switch e {
-	case TransitionPolicyModeTransitionModeAuto:
-		return true
-	case TransitionPolicyModeTransitionModePropose:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for UndoMarginceChangeKeptReason.
 const (
-	UndoMarginceChangeKeptReasonAccepted      UndoMarginceChangeKeptReason = "accepted"
-	UndoMarginceChangeKeptReasonAlreadyUndone UndoMarginceChangeKeptReason = "already_undone"
-	UndoMarginceChangeKeptReasonChangedSince  UndoMarginceChangeKeptReason = "changed_since"
-	UndoMarginceChangeKeptReasonNotFound      UndoMarginceChangeKeptReason = "not_found"
-	UndoMarginceChangeKeptReasonNotPermitted  UndoMarginceChangeKeptReason = "not_permitted"
-	UndoMarginceChangeKeptReasonVersionSkew   UndoMarginceChangeKeptReason = "version_skew"
+	UndoMarginceChangeKeptReasonAccepted          UndoMarginceChangeKeptReason = "accepted"
+	UndoMarginceChangeKeptReasonAlreadyUndone     UndoMarginceChangeKeptReason = "already_undone"
+	UndoMarginceChangeKeptReasonChangedSince      UndoMarginceChangeKeptReason = "changed_since"
+	UndoMarginceChangeKeptReasonNeedsConfirmation UndoMarginceChangeKeptReason = "needs_confirmation"
+	UndoMarginceChangeKeptReasonNotFound          UndoMarginceChangeKeptReason = "not_found"
+	UndoMarginceChangeKeptReasonNotPermitted      UndoMarginceChangeKeptReason = "not_permitted"
+	UndoMarginceChangeKeptReasonVersionSkew       UndoMarginceChangeKeptReason = "version_skew"
 )
 
 // Valid indicates whether the value is a known member of the UndoMarginceChangeKeptReason enum.
@@ -22381,6 +22355,8 @@ func (e UndoMarginceChangeKeptReason) Valid() bool {
 	case UndoMarginceChangeKeptReasonAlreadyUndone:
 		return true
 	case UndoMarginceChangeKeptReasonChangedSince:
+		return true
+	case UndoMarginceChangeKeptReasonNeedsConfirmation:
 		return true
 	case UndoMarginceChangeKeptReasonNotFound:
 		return true
@@ -26794,6 +26770,24 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 	case UploadAttachmentMultipartBodyEntityTypeLead:
 		return true
 	case UploadAttachmentMultipartBodyEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAttachmentExtractionParamsQuestion.
+const (
+	GetAttachmentExtractionParamsQuestionChatCapture GetAttachmentExtractionParamsQuestion = "chat_capture"
+	GetAttachmentExtractionParamsQuestionDealFacts   GetAttachmentExtractionParamsQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the GetAttachmentExtractionParamsQuestion enum.
+func (e GetAttachmentExtractionParamsQuestion) Valid() bool {
+	switch e {
+	case GetAttachmentExtractionParamsQuestionChatCapture:
+		return true
+	case GetAttachmentExtractionParamsQuestionDealFacts:
 		return true
 	default:
 		return false
@@ -43861,17 +43855,18 @@ type DealRoomInvitationIssued struct {
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
 
-	// Queued Whether the invitation was handed to the mail sender. False when the
-	// installation has no outbound mail configured: the participant and the
-	// credential are recorded either way, and the caller is expected to pass the
-	// link on themselves rather than being told the invitation failed.
+	// Queued Whether the mail relay took the invitation. The answer waits for the relay
+	// for at most 10 seconds. False when the installation has no outbound mail
+	// configured, when the relay refused the mail, or when it did not answer in
+	// time; the send stops then too. The participant and the credential are
+	// recorded either way, and the caller is expected to pass the link on
+	// themselves rather than being told the invitation failed.
 	//
-	// The answer does not wait for the relay. The participant's
-	// `delivery_state` reads `pending` until the relay answers, then `sent` or
-	// `failed`. Deliberately not `delivered`: a relay accepting a message is not a
-	// mailbox receiving it, and an address that hard-bounces a second later was
-	// `sent` all the same. The one attempt is stamped onto the invitation;
-	// nothing revises it afterwards.
+	// The relay's answer is also stamped on the participant's `delivery_state`,
+	// as `sent` or `failed`, a moment after the answer. Deliberately not
+	// `delivered`: a relay accepting a message is not a mailbox receiving it, and
+	// an address that hard-bounces a second later was `sent` all the same. The
+	// one attempt is stamped onto the invitation; nothing revises it afterwards.
 	Queued bool `json:"queued"`
 }
 
@@ -50932,6 +50927,9 @@ type MarginceChangeSummary struct {
 
 	// Moved Deals Margince moved to a later stage.
 	Moved int `json:"moved"`
+
+	// Opened Deals Margince opened from buying evidence.
+	Opened int `json:"opened"`
 
 	// Probabilities Deals given a new probability.
 	Probabilities int `json:"probabilities"`
@@ -59244,35 +59242,6 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
-// SetTransitionPolicyRequest Every threshold is optional. Omitting one KEEPS what the rule has, or
-// takes the product default on a first write — so a caller turning a
-// transition on cannot silently reset a bar somebody set.
-type SetTransitionPolicyRequest struct {
-	CleanAcceptanceThreshold    *float64           `json:"clean_acceptance_threshold,omitempty" maximum:"1" minimum:"0"`
-	CorrectionReversalThreshold *float64           `json:"correction_reversal_threshold,omitempty" maximum:"1" minimum:"0"`
-	FromStageId                 openapi_types.UUID `json:"from_stage_id"`
-
-	// IfVersion The rule's version as the caller read it, refusing the write with
-	// 409 when the row has moved on since.
-	//
-	// OPTIONAL, and its absence is not a conflict. A first write has no
-	// row to have read, and an edit that offers no pin is a caller who
-	// did not read first rather than one holding a stale copy — the same
-	// bargain the exit-criteria editor makes. A client that wants the
-	// guarantee sends the version it read; one that does not, does not
-	// get it.
-	IfVersion          *int64                         `json:"if_version,omitempty"`
-	MinObservationDays *int                           `json:"min_observation_days,omitempty" minimum:"1"`
-	MinReviewed        *int                           `json:"min_reviewed,omitempty" minimum:"1"`
-	Mode               SetTransitionPolicyRequestMode `json:"mode"`
-	ToStageId          openapi_types.UUID             `json:"to_stage_id"`
-	UndoWindowHours    *int                           `json:"undo_window_hours,omitempty" maximum:"8760" minimum:"1"`
-	WindowDays         *int                           `json:"window_days,omitempty" maximum:"365" minimum:"1"`
-}
-
-// SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
-type SetTransitionPolicyRequestMode string
-
 // SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
 // or `served_segments`: the tier is a human's choice, and the others are set after set-up.
 // Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
@@ -59830,14 +59799,6 @@ type Stage struct {
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
 
-// StageAutomationReport defines model for StageAutomationReport.
-type StageAutomationReport struct {
-	Data []StageTransitionRecord `json:"data"`
-
-	// WindowDays The window the counts were taken over.
-	WindowDays int `json:"window_days"`
-}
-
 // StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
 // decides which evidence sources may satisfy it. `buyer_confirmed`,
 // `event_held`, `document_signed` and `terms_accepted` each name something the
@@ -59998,69 +59959,6 @@ type StageListResponse struct {
 type StageOrderRequest struct {
 	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
 	StageIds []openapi_types.UUID `json:"stage_ids"`
-}
-
-// StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
-type StageTransitionEvidenceRecord struct {
-	AcceptedClean int    `json:"accepted_clean"`
-	Kind          string `json:"kind"`
-	Reviewed      int    `json:"reviewed"`
-	Unsafe        int    `json:"unsafe"`
-}
-
-// StageTransitionRecord defines model for StageTransitionRecord.
-type StageTransitionRecord struct {
-	// AcceptedClean Approved with nothing changed.
-	AcceptedClean int `json:"accepted_clean"`
-
-	// AcceptedEdited Approved only after the human changed it. Not a clean acceptance:
-	// the question is whether the proposal is right AS IT STANDS.
-	AcceptedEdited int `json:"accepted_edited"`
-
-	// AutoApplied Applied without anybody being asked. Reported apart so a reader can
-	// see how much of a transition's record the autopilot wrote about
-	// itself.
-	AutoApplied         int     `json:"auto_applied"`
-	CleanAcceptanceRate float64 `json:"clean_acceptance_rate" maximum:"1" minimum:"0"`
-	EditRate            float64 `json:"edit_rate" maximum:"1" minimum:"0"`
-
-	// EvidenceKinds The same moves cut by the criterion kinds they rested on, so an
-	// installation can see WHICH evidence it accepts rather than only that
-	// it accepts most things.
-	EvidenceKinds []StageTransitionEvidenceRecord `json:"evidence_kinds"`
-
-	// Expired Cards whose window closed with nobody answering. A refusal by
-	// NOBODY, which is why it is neither a rejection nor reviewed.
-	Expired       int                `json:"expired"`
-	FromStageId   openapi_types.UUID `json:"from_stage_id"`
-	FromStageName string             `json:"from_stage_name"`
-
-	// ObservationDays Whole days from the first answered proposal to the last, rounded
-	// down.
-	ObservationDays int                `json:"observation_days"`
-	PipelineId      openapi_types.UUID `json:"pipeline_id"`
-
-	// Proposed Cards still standing, unanswered.
-	Proposed      int     `json:"proposed"`
-	Rejected      int     `json:"rejected"`
-	RejectionRate float64 `json:"rejection_rate" maximum:"1" minimum:"0"`
-
-	// Reviewed Proposals a human answered. The denominator of every rate here, and
-	// zero means "nobody has answered one yet" rather than "the rates are
-	// bad" — read it before reading any rate below.
-	Reviewed int `json:"reviewed"`
-
-	// Superseded Cards a fresher reading replaced before anyone answered.
-	Superseded  int                `json:"superseded"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
-	ToStageName string             `json:"to_stage_name"`
-
-	// Unsafe Reviewed moves that were reversed OR whose evidence a human
-	// corrected. One outcome counts once even when both are true.
-	Unsafe int `json:"unsafe"`
-
-	// UnsafeRate The safety number, held to a ceiling rather than a floor.
-	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
 }
 
 // StartBackfillRequest defines model for StartBackfillRequest.
@@ -60938,92 +60836,14 @@ type TransferProjectOwnershipResult struct {
 	Transferred int `json:"transferred"`
 }
 
-// TransitionPolicy defines model for TransitionPolicy.
-type TransitionPolicy struct {
-	// CleanAcceptanceThreshold The share of reviewed proposals a contact must have accepted
-	// UNCHANGED. An edit is agreement with a correction, which is a
-	// weaker claim about the proposal than agreement without one.
-	CleanAcceptanceThreshold float64 `json:"clean_acceptance_threshold"`
-
-	// CorrectionReversalThreshold The ceiling on moves that were undone or whose evidence was
-	// corrected. The one threshold that is a maximum rather than a
-	// minimum, and the one the product suspends a rule for crossing.
-	CorrectionReversalThreshold float64    `json:"correction_reversal_threshold"`
-	EnabledAt                   *time.Time `json:"enabled_at,omitempty"`
-
-	// EnabledBy Who FIRST trusted this transition with automatic moves. Not
-	// overwritten by later threshold edits — who first trusted it is a
-	// different fact from who last adjusted it, and the first is the one
-	// an auditor asks for.
-	EnabledBy   *openapi_types.UUID `json:"enabled_by,omitempty"`
-	FromStageId openapi_types.UUID  `json:"from_stage_id"`
-	Id          openapi_types.UUID  `json:"id"`
-
-	// MinObservationDays The span the record must cover. A fine acceptance rate earned
-	// entirely in one afternoon has not been observed.
-	MinObservationDays int `json:"min_observation_days"`
-
-	// MinReviewed How many proposals a contact must have answered before the rates
-	// mean anything. It also bounds suspension: the volume at which a
-	// record is worth trusting and the volume at which it is worth
-	// distrusting are one judgement.
-	MinReviewed int `json:"min_reviewed"`
-
-	// Mode What the admin has asked for. `auto` is a request, not a state:
-	// moves still go to a contact until the thresholds below hold in the
-	// transaction that would apply them.
-	Mode       TransitionPolicyMode `json:"mode"`
-	PipelineId openapi_types.UUID   `json:"pipeline_id"`
-
-	// SuspendedAt When the PRODUCT turned this rule off. Absent on a rule that is
-	// running. It is not an admin's act and an ordinary save does not
-	// clear it.
-	SuspendedAt *time.Time `json:"suspended_at,omitempty"`
-
-	// SuspendedReason Why the product stopped it, in words an operator can act on.
-	SuspendedReason *string            `json:"suspended_reason,omitempty"`
-	ToStageId       openapi_types.UUID `json:"to_stage_id"`
-
-	// UndoWindowHours How long a contact has to take an automatic move back. Frozen onto
-	// each move as it is applied, so editing this governs the next move
-	// and not the last one.
-	UndoWindowHours int   `json:"undo_window_hours"`
-	Version         int64 `json:"version"`
-
-	// WindowDays How far back the rates are counted.
-	WindowDays int `json:"window_days"`
-}
-
-// TransitionPolicyMode What the admin has asked for. `auto` is a request, not a state:
-// moves still go to a contact until the thresholds below hold in the
-// transaction that would apply them.
-type TransitionPolicyMode string
-
-// TransitionPolicyList defines model for TransitionPolicyList.
-type TransitionPolicyList struct {
-	// AutomationEnabled Whether this installation permits stage automation at all
-	// (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
-	// and while it is off every transition is forced to `propose` regardless of
-	// its own rule.
-	//
-	// A rule's `mode` therefore describes what was asked for, not what will
-	// happen: read both before telling somebody a transition moves deals by
-	// itself.
-	AutomationEnabled bool               `json:"automation_enabled"`
-	Data              []TransitionPolicy `json:"data"`
-}
-
-// TransitionRef One transition, named by the stages at its two ends. Both must belong
-// to the pipeline in the path — the foreign keys admit a pair from two
-// different pipelines, which would be a rule describing a move no deal
-// can make.
-type TransitionRef struct {
-	FromStageId openapi_types.UUID `json:"from_stage_id"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
-}
-
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
 type UndoMarginceChangeItem struct {
+	// ArchiveConfirmedFor The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
+	// a deal Margince opened over exactly that work. Without it, or when the team's
+	// work changed since, such a deal is kept with `needs_confirmation`, the new counts
+	// and the new `team_work`.
+	ArchiveConfirmedFor *string `json:"archive_confirmed_for,omitempty"`
+
 	// AuditLogIds The changes to take back, all on this deal.
 	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
 	DealId      openapi_types.UUID   `json:"deal_id"`
@@ -61039,6 +60859,15 @@ type UndoMarginceChangeKept struct {
 	// Kind The kind of change; absent when the change could not be read.
 	Kind   *string                      `json:"kind,omitempty"`
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
+
+	// TeamNotes With `needs_confirmation`, the notes the team added to the opened deal.
+	TeamNotes *int `json:"team_notes,omitempty"`
+
+	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened deal.
+	TeamTasks *int `json:"team_tasks,omitempty"`
+
+	// TeamWork With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.
+	TeamWork *string `json:"team_work,omitempty"`
 }
 
 // UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
@@ -67025,6 +66854,14 @@ type UploadAttachmentMultipartBody struct {
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
 
+// GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParams struct {
+	Question *GetAttachmentExtractionParamsQuestion `form:"question,omitempty" json:"question,omitempty"`
+}
+
+// GetAttachmentExtractionParamsQuestion defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParamsQuestion string
+
 // ListAuditLogParams defines parameters for ListAuditLog.
 type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -69696,30 +69533,6 @@ type ProgressDealParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
-}
-
-// RevertStageProgressionParams defines parameters for RevertStageProgression.
-type RevertStageProgressionParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetDealStatusParams defines parameters for GetDealStatus.
@@ -72778,39 +72591,6 @@ type ResolveSignalParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// SetTransitionPolicyParams defines parameters for SetTransitionPolicy.
-type SetTransitionPolicyParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// GetStageAutomationReportParams defines parameters for GetStageAutomationReport.
-type GetStageAutomationReportParams struct {
-	PipelineId openapi_types.UUID `form:"pipeline_id" json:"pipeline_id"`
-
-	// WindowDays How far back to count, in days. The default matches the launch
-	// gate's own window, so what a reader sees is what the gate reads.
-	WindowDays *int `form:"window_days,omitempty" json:"window_days,omitempty" maximum:"365" minimum:"1"`
-}
-
 // ListStagesParams defines parameters for ListStages.
 type ListStagesParams struct {
 	PipelineId *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
@@ -74857,12 +74637,6 @@ type CreateSignalJSONRequestBody = CreateSignalRequest
 
 // UpdateSignalJSONRequestBody defines body for UpdateSignal for application/json ContentType.
 type UpdateSignalJSONRequestBody = UpdateSignalRequest
-
-// SetTransitionPolicyJSONRequestBody defines body for SetTransitionPolicy for application/json ContentType.
-type SetTransitionPolicyJSONRequestBody = SetTransitionPolicyRequest
-
-// ResumeTransitionPolicyJSONRequestBody defines body for ResumeTransitionPolicy for application/json ContentType.
-type ResumeTransitionPolicyJSONRequestBody = TransitionRef
 
 // CreateStageJSONRequestBody defines body for CreateStage for application/json ContentType.
 type CreateStageJSONRequestBody = CreateStageRequest
@@ -88008,7 +87782,7 @@ type ServerInterface interface {
 	DownloadAttachment(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 	// (GET /attachments/{id}/extraction)
-	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams)
 	// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 	// (POST /attachments/{id}/extraction)
 	ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -88969,9 +88743,6 @@ type ServerInterface interface {
 	// What has been observed about this deal against its stage's criteria.
 	// (GET /deals/{id}/stage-evidence)
 	ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id)
-	// Take back a stage move the product made by itself.
-	// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-	RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams)
 	// List a deal's stakeholders (deal↔contact relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -90166,18 +89937,6 @@ type ServerInterface interface {
 	// The warm/cold classification with the full "why warm" evidence (B-E08.3).
 	// (GET /signals/{id}/warmth)
 	GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id)
-	// What each transition in this pipeline is allowed to do.
-	// (GET /stage-automation/policies/{id})
-	ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id)
-	// Decide what one transition may do.
-	// (PUT /stage-automation/policies/{id})
-	SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams)
-	// Lift a suspension the product put on a transition.
-	// (POST /stage-automation/policies/{id}/resume)
-	ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id)
-	// What each stage transition has earned.
-	// (GET /stage-automation/report)
-	GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams)
 	// List stages (optionally filtered by pipeline).
 	// (GET /stages)
 	ListStages(w http.ResponseWriter, r *http.Request, params ListStagesParams)
@@ -91578,7 +91337,7 @@ func (_ Unimplemented) DownloadAttachment(w http.ResponseWriter, r *http.Request
 
 // The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 // (GET /attachments/{id}/extraction)
-func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93499,12 +93258,6 @@ func (_ Unimplemented) ProposeDealRoles(w http.ResponseWriter, r *http.Request, 
 // What has been observed about this deal against its stage's criteria.
 // (GET /deals/{id}/stage-evidence)
 func (_ Unimplemented) ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Take back a stage move the product made by itself.
-// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-func (_ Unimplemented) RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95893,30 +95646,6 @@ func (_ Unimplemented) ResolveSignal(w http.ResponseWriter, r *http.Request, id 
 // The warm/cold classification with the full "why warm" evidence (B-E08.3).
 // (GET /signals/{id}/warmth)
 func (_ Unimplemented) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each transition in this pipeline is allowed to do.
-// (GET /stage-automation/policies/{id})
-func (_ Unimplemented) ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Decide what one transition may do.
-// (PUT /stage-automation/policies/{id})
-func (_ Unimplemented) SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Lift a suspension the product put on a transition.
-// (POST /stage-automation/policies/{id}/resume)
-func (_ Unimplemented) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each stage transition has earned.
-// (GET /stage-automation/report)
-func (_ Unimplemented) GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104367,8 +104096,24 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAttachmentExtractionParams
+
+	// ------------- Optional query parameter "question" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "question", r.URL.Query(), &params.Question, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "question"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "question", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAttachmentExtraction(w, r, id)
+		siw.Handler.GetAttachmentExtraction(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118762,73 +118507,6 @@ func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListStageEvidence(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RevertStageProgression operation middleware
-func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "approvalId" -------------
-	var approvalId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "approvalId", chi.URLParam(r, "approvalId"), &approvalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "approvalId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RevertStageProgressionParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RevertStageProgression(w, r, id, approvalId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135250,182 +134928,6 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// ListTransitionPolicies operation middleware
-func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTransitionPolicies(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SetTransitionPolicyParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetTransitionPolicy(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ResumeTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ResumeTransitionPolicy(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetStageAutomationReport operation middleware
-func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetStageAutomationReportParams
-
-	// ------------- Required query parameter "pipeline_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "window_days" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_days", r.URL.Query(), &params.WindowDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_days"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_days", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetStageAutomationReport(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListStages operation middleware
 func (siw *ServerInterfaceWrapper) ListStages(w http.ResponseWriter, r *http.Request) {
 
@@ -142177,9 +141679,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/stage-evidence", wrapper.ListStageEvidence)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/deals/{id}/stage-progressions/{approvalId}/revert", wrapper.RevertStageProgression)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
 	})
 	r.Group(func(r chi.Router) {
@@ -143372,18 +142871,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals/{id}/warmth", wrapper.GetSignalWarmth)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/policies/{id}", wrapper.ListTransitionPolicies)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/stage-automation/policies/{id}", wrapper.SetTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/stage-automation/policies/{id}/resume", wrapper.ResumeTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/report", wrapper.GetStageAutomationReport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stages", wrapper.ListStages)

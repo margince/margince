@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.5 KB |
+| Tool catalog | 190.3 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50075 |
+| Approx. wire tokens | 50041 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 24% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
-| Input schemas | 91.4 KB | 48% | Yes, every step |
+| Descriptions (incl. governance clause) | 41.6 KB | 21% | Yes, every step |
+| Input schemas | 91.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **133.1 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **133.0 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -75,7 +75,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 717 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 712 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1762 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1739 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1489 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1507 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 880 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
@@ -100,7 +100,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2318 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
+| [`read_view`](#read_view) | Read a view | yes |  | 984 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 1681 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 312 |
@@ -2747,11 +2747,11 @@ its website. A promotion answers with the new contact's id. A staged answer's ap
 the retry carries; do not report the change until the retry has answered. (Governance: runs
 immediately for accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review,
 demote, disqualify, link_lead_company, move_project, promote, propose_deal_roles, publish_contact,
-qualify, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal,
-withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per
-call from its arguments for move_deal; the actions disqualify, revert_stage cannot be undone, so
-tell the user what the call will change and get their yes before calling, unless they asked for this
-call themselves; requires passport scope "write".)
+qualify, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review;
+a human approves first for merge_member_accounts, set_up_partner; decided per call from its
+arguments for move_deal; the action disqualify cannot be undone, so tell the user what the call will
+change and get their yes before calling, unless they asked for this call themselves; requires
+passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2777,16 +2777,11 @@ call themselves; requires passport scope "write".)
         "qualify",
         "reopen_lead",
         "request_legal_review",
-        "revert_stage",
         "review_outcome",
         "set_lead_signal",
         "set_up_partner",
         "withdraw_legal_review"
       ],
-      "type": "string"
-    },
-    "approvalId": {
-      "description": "revert_stage only",
       "type": "string"
     },
     "approval_id": {
@@ -2848,7 +2843,7 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review only",
+      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
       "type": "string"
     },
     "idempotency_key": {
@@ -8037,6 +8032,10 @@ own fields.
       "description": "scheduling_calendars only",
       "type": "string"
     },
+    "question": {
+      "description": "document_extraction only",
+      "type": "string"
+    },
     "record_type": {
       "description": "ownership_offer, ownership_offer_candidates, ownership_request only",
       "type": "string"
@@ -10195,18 +10194,13 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
         "signals",
         "site_read",
         "stage",
-        "stage_automation_report",
         "stage_evidence",
         "stage_exit_criteria",
         "stages",
         "teams",
-        "transcript_read",
-        "transition_policies"
+        "transcript_read"
       ],
       "type": "string"
-    },
-    "window_days": {
-      "type": "integer"
     }
   },
   "required": [

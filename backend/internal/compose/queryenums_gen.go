@@ -95,6 +95,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/attachments": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "activity", "lead", "project"}, Array: false, Explode: true},
 	},
+	"GET /v1/attachments/{id}/extraction": {
+		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
+	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
 	},
@@ -528,9 +531,6 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/signals": {
 		{Name: "limit", Minimum: 1},
-	},
-	"GET /v1/stage-automation/report": {
-		{Name: "window_days", Minimum: 1},
 	},
 	"GET /v1/teams": {
 		{Name: "limit", Minimum: 1},

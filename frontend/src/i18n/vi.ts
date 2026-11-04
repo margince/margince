@@ -2363,8 +2363,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.sign_in_policy_read": "Đọc chính sách đăng nhập",
   "systemJob.stage_evidence": "Bằng chứng giai đoạn deal",
   "systemJob.stage_evidence_read": "Đọc bằng chứng giai đoạn deal",
-  "systemJob.stage_progression": "Chuyển giai đoạn deal",
-  "systemJob.stage_progression_outcome": "Kết quả giai đoạn deal",
   "systemJob.suppression_journal_worker": "Xuất sổ ghi xóa dữ liệu",
   "systemJob.stored_object_reap_worker": "Dọn dẹp kho tệp",
   "systemJob.technical_backfill": "Tra cứu kỹ thuật còn tồn đọng",
@@ -3857,7 +3855,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết hiện ra để sao chép. Nếu đã cấu hình máy chủ chuyển tiếp thư, hệ thống cũng gửi liên kết qua email, nhưng không đảm bảo email đến nơi.",
   "access.issued.title": "Liên kết cho {name}",
   "access.issued.mailed":
-    "Đã xếp hàng gửi tới {email}. Danh sách sẽ hiện khi email đã gửi hoặc gửi lỗi. Cũng có thể sao chép liên kết bên dưới.",
+    "Đã gửi tới {email}. Cũng có thể sao chép liên kết bên dưới.",
   "access.issued.notMailed":
     "Chưa gửi liên kết qua email. Sao chép rồi tự gửi.",
   "access.issued.mailedTitle": "Email mời đang chờ gửi",
@@ -4292,7 +4290,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
-  "approval.kind.stage_progression": "Chuyển giai đoạn deal",
   "approval.preview.requiredCriterionMet": "Đã đáp ứng tiêu chí bắt buộc",
   "approval.preview.requiredCriterionUnmet": "Chưa đáp ứng tiêu chí bắt buộc",
   "approval.preview.optionalCriterionMet": "Đã đáp ứng tiêu chí không bắt buộc",
@@ -4301,8 +4298,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Lý do",
   "approval.field.lost_reason": "Lý do thua",
   "approval.field.note": "Ghi chú",
-  "approval.field.from_stage": "Từ",
-  "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
   "approval.kind.commitment_task": "Cam kết công việc",
   "approval.kind.fx_rate_proposal": "Cập nhật tỷ giá",
@@ -12513,7 +12508,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tab.teams": "Nhóm",
   "settings.tab.roles": "Vai trò và quyền",
   "settings.tab.seats": "Tài khoản và giấy phép",
-  "settings.tab.stageautomation": "Tự động chuyển giai đoạn",
   "settings.tab.pipelines": "Pipeline",
   "settings.tab.acquisition": "Nguồn tiếp cận",
   "settings.tab.lossreasons": "Lý do thua",
@@ -15053,6 +15047,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_stage_move.label": "Chuyển giai đoạn",
   "autonomy.kind.deal_stage_move.help":
     "Chuyển deal sang giai đoạn sau khi chính lời của khách cho thấy deal đã tới đó, ví dụ khách yêu cầu bản nháp hợp đồng. Không bao giờ chuyển sang Thắng và không bao giờ lùi lại. Mỗi lần chuyển hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_open.label": "Deal mới",
+  "autonomy.kind.deal_open.help":
+    "Mở một deal cho công ty bạn phụ trách khi khách muốn mua, ví dụ khách yêu cầu báo giá. Deal thuộc về bạn, ở giai đoạn đầu tiên. Mỗi deal mới hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -17837,6 +17834,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Chỉ người có quyền sửa cả hai hồ sơ mới có thể xử lý cặp này: quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Cần chuẩn bị",
+  "worklist.pinnedMark": "Bạn đã ghim",
   "worklist.ready.confirm": "Tôi đã sẵn sàng",
   "worklist.ready.badge": "Sẵn sàng",
   "worklist.ready.done": "Đã ghi nhận bạn sẵn sàng cho cuộc họp này.",
@@ -18058,6 +18056,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.kind.deal_close_date": "Ngày chốt mới",
   "changes.kind.deal_amount": "Giá trị mới",
   "changes.kind.deal_probability": "Xác suất mới",
+  "changes.kind.deal_open": "Mở từ dấu hiệu mua hàng",
+  "changes.undo.confirmArchive":
+    "Deal này hiện có {notes} ghi chú và {tasks} việc cần làm từ nhóm của bạn. Vẫn lưu trữ?",
+  "changes.undo.archived":
+    "Đã lưu trữ. Margince sẽ không mở deal cho việc này nữa, trừ khi có dấu hiệu mua hàng mới.",
   "changes.kind.stage_move": "Chuyển sang giai đoạn sau",
   "changes.summary_one":
     "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
@@ -18881,61 +18884,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.readings.noCompany": "Không có",
   "lead.readings.owed": "Đang chờ",
   "lead.readings.answered": "Đã trả lời",
-  "stageAutomation.record": "Thành tích",
-  "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.transition": "B\u01b0\u1edbc chuy\u1ec3n",
-  "stageAutomation.reviewed": "Đã quyết định",
-  "stageAutomation.reviewedHint":
-    "Đề xuất đã có quyết định. Mọi tỷ lệ đều tính trên số này.",
-  "stageAutomation.open": "C\u00f2n m\u1edf",
-  "stageAutomation.expired": "Đã hết hạn",
-  "stageAutomation.expiredHint":
-    "Không ai trả lời trước khi hết thời hạn. Đây không phải từ chối.",
-  "stageAutomation.cleanAcceptance": "Đã chấp nhận",
-  "stageAutomation.edits": "Đã sửa",
-  "stageAutomation.rejections": "Đã từ chối",
-  "stageAutomation.unsafe": "Đã hoàn tác hoặc đính chính",
-  "stageAutomation.unsafeHint":
-    "Bước chuyển bị hoàn tác hoặc có bằng chứng bị đánh dấu sai. Mỗi bước chuyển chỉ tính một lần dù xảy ra cả hai.",
-  "stageAutomation.observationDays": "S\u1ed1 ng\u00e0y quan s\u00e1t",
-  "stageAutomation.observationHint":
-    "Từ đề xuất đầu tiên đã được xem xét đến đề xuất cuối cùng. Tỷ lệ tốt trong một buổi chiều chưa phải là thành tích lâu dài.",
-  "stageAutomation.glossary": "Ý nghĩa các số liệu",
-  "stageAutomation.evidenceKinds": "Theo b\u1eb1ng ch\u1ee9ng",
-  "stageAutomation.emptyTitle": "Chưa có đề xuất chuyển giai đoạn nào",
-  "stageAutomation.empty":
-    "Mỗi bước chuyển Margince đề xuất trên pipeline này được ghi lại ở đây, cùng với câu trả lời cho bước chuyển đó.",
-  "stageAutomation.noPipelines": "Chưa có pipeline nào để báo cáo.",
-  "stageAutomation.unreadable": "Không thể tải báo cáo này",
-  "stageAutomation.rules": "Quy tắc bước chuyển",
-  "stageAutomation.rulesIntro":
-    "Bật một bước chuyển chưa làm deal tự chuyển ngay. Margince vẫn đề xuất cho đến khi thành tích ở trên đạt ngưỡng, rồi tự chuyển deal và báo lại sau.",
-  "stageAutomation.offTitle": "Tự động chuyển giai đoạn đang tắt",
-  "stageAutomation.offBody":
-    "Khi tính năng này tắt, không deal nào tự chuyển, bất kể bước chuyển bên dưới được thiết lập thế nào. Bên vận hành bản cài đặt này bật tính năng trong cấu hình của bản cài đặt.",
-  "stageAutomation.notEarnedYet": "Chưa đạt: {why}",
-  "stageAutomation.suspended": "Margince đã tạm ngưng",
-  "stageAutomation.suspendedSince": "Đã tạm ngưng {date}",
-  "stageAutomation.resume": "Tiếp tục",
-  "stageAutomation.resumeTitle": "Tiếp tục bước chuyển này?",
-  "stageAutomation.resumeBody":
-    "Margince đã tạm ngưng bước chuyển này (lý do: {reason}). Tiếp tục không bỏ qua ngưỡng: bước chuyển phải đạt thành tích ở trên trước khi tự động chuyển deal.",
-  "stageAutomation.noRules":
-    "Chưa có bước chuyển nào trên pipeline này có quy tắc, nên mọi bước chuyển đều được đề xuất để một thành viên xem lại.",
-  "stageAutomation.undoWindow": "Hoàn tác trong {hours} giờ",
-  "stageAutomation.rulesLoading": "Đang tải quy tắc bước chuyển…",
-  "stageAutomation.saveFailed": "Không thể lưu thay đổi",
-  "stageAutomation.nothingReviewed":
-    "Đã đề xuất, nhưng chưa có quyết định nào.",
-  "stageAutomation.detail": "Chi tiết",
-  "stageAutomation.detailFor": "Chi tiết của {transition}",
-  "stageAutomation.evidenceShare":
-    "Chấp nhận nguyên đề xuất {accepted} trên {reviewed}",
-  "stageAutomation.acceptedHint": "Chấp nhận nguyên đề xuất, không sửa gì.",
-  "stageAutomation.editedHint": "Chấp nhận sau khi đề xuất đã được sửa.",
-  "stageAutomation.rejectedHint": "Đề xuất đã bị từ chối.",
-  "stageAutomation.openHint":
-    "Đề xuất chưa ai trả lời. Không tính vào tỷ lệ nào.",
   "employment.importLoading": "Đang tải lịch sử công tác đã mua…",
   "employment.apply": "Liên kết công ty đã nhập",
   "employment.status.current": "Hiện tại",

@@ -32,8 +32,9 @@ Also called: invite a customer, give the client access, send the room link.
 Whether Margince emails a Deal Room link depends on your installation: "The link is shown for you to copy. If a mail relay is configured, it is also emailed, but delivery is not guaranteed."
 When nothing was sent, the screen says "The link was not mailed. Copy it and send it yourself." Copying the link and sending it yourself is the normal way.
 
-When the email is queued, the invite does not wait for the mail server.
-The contact's row in **Who may enter** later says **email sent**.
+The invite waits for the mail server for at most 10 seconds.
+If the mail server has not answered by then, the email is not sent, and the screen says the link was not mailed.
+When the email is sent, the contact's row in **Who may enter** says **email sent**.
 If the mail server refused it, the row shows **Email failed** and "The invitation email failed. Issue a new link and send it yourself."
 Also called: the buyer did not get the invitation email.
 

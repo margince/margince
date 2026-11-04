@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195042,
+    "tool_catalog_bytes": 194908,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50075,
+    "approx_wire_tokens_total": 50041,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 42671,
-      "input_schema_bytes": 93643,
+      "description_bytes": 42642,
+      "input_schema_bytes": 93538,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 136314
+      "description_plus_input_schema_bytes": 136180
     }
   },
   "tools": {
@@ -2269,7 +2269,7 @@
           "readOnlyHint": false,
           "title": "Move a lead, deal, project or partner"
         },
-        "description": "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program on a company, with company_id, partner_kinds and optionally relationship_stage, next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, demote, disqualify, link_lead_company, move_project, promote, propose_deal_roles, publish_contact, qualify, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the actions disqualify, revert_stage cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program on a company, with company_id, partner_kinds and optionally relationship_stage, next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, demote, disqualify, link_lead_company, move_project, promote, propose_deal_roles, publish_contact, qualify, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the action disqualify cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -2290,16 +2290,11 @@
                 "qualify",
                 "reopen_lead",
                 "request_legal_review",
-                "revert_stage",
                 "review_outcome",
                 "set_lead_signal",
                 "set_up_partner",
                 "withdraw_legal_review"
               ],
-              "type": "string"
-            },
-            "approvalId": {
-              "description": "revert_stage only",
               "type": "string"
             },
             "approval_id": {
@@ -2361,7 +2356,7 @@
               "type": "string"
             },
             "id": {
-              "description": "accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review only",
+              "description": "accept_partner_lead, clear_lead_signal, correct_close_day, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
               "type": "string"
             },
             "idempotency_key": {
@@ -7353,6 +7348,10 @@
               "description": "scheduling_calendars only",
               "type": "string"
             },
+            "question": {
+              "description": "document_extraction only",
+              "type": "string"
+            },
             "record_type": {
               "description": "ownership_offer, ownership_offer_candidates, ownership_request only",
               "type": "string"
@@ -9430,18 +9429,13 @@
                 "signals",
                 "site_read",
                 "stage",
-                "stage_automation_report",
                 "stage_evidence",
                 "stage_exit_criteria",
                 "stages",
                 "teams",
-                "transcript_read",
-                "transition_policies"
+                "transcript_read"
               ],
               "type": "string"
-            },
-            "window_days": {
-              "type": "integer"
             }
           },
           "required": [

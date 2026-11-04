@@ -69,38 +69,23 @@ const AlreadyAccepted = "You already accepted this change"
 
 func (e *CorrectionReversalError) Error() string { return e.Reason }
 
-// RevertCorrection puts back every field one machine correction changed.
+// RevertCorrection puts back every field one machine correction changed, read
+// from the correction's own audit row. The restore, its audit row and the
+// lifecycle stamp commit together. evidence rides into the reversal's audit row.
 //
-// THE WHOLE FIELD SET, from the correction's own audit row. A correction can
-// move the date, the provisional flag and the forecast category together, and
-// restoring one of three would leave the deal in a state no writer ever produced
-// — a date nobody chose sitting under a category that was notched for a reason
-// that no longer applies.
-//
-// ONE TRANSACTION for the restore, the audit row and the lifecycle stamp. Split
-// apart, a failure between them leaves the deal restored while the correction
-// still reads live, and the next sweep would take the reversal for a fresh
-// correction to repeat.
-//
-// evidence rides straight into the reversal's own audit row (nil is fine — it
-// is operational context ABOUT the write, not a fact this store has an opinion
-// on). A caller reversing this on a reader's behalf, rather than redoing the
-// module's own record of what it did, is what lets that reader's read and this
-// write agree on which audit row the result belongs to.
-//
-// ifVersion is the deal's last-seen version, checked under the row lock below
-// (nil skips the check — a caller with no client-observed version to pin, the
-// same posture ClaimDeal/ArchiveDeal/UpdateDeal already take). It is a
-// different guard from buildReversalPatch's own per-field conflict check
-// below, and both matter: the per-field check is what lets a rename between
-// read and Undo through while a re-date does not (deliberate — see this
-// file's own header), but it compares VALUES, and an unrelated field edited
-// away and back to the value the correction itself would produce reads as no
-// conflict at all under a value-only compare — an ABA gap a monotonic version
-// pin closes because it does not care what the value became, only that it
-// moved.
+// ifVersion is the deal's last-seen version, checked under the row lock (nil
+// skips it). A value-only compare per field misses an edit made and undone
+// again; the version pin does not.
 func (s *Store) RevertCorrection(
 	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any,
+) (crmcontracts.Deal, error) {
+	return s.RevertCorrectionConfirmed(ctx, correctionID, ifVersion, evidence, "")
+}
+
+// RevertCorrectionConfirmed is RevertCorrection where the owner confirmed
+// archiving an opened deal over the team's work named by archiveConfirmedFor.
+func (s *Store) RevertCorrectionConfirmed(
+	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any, archiveConfirmedFor string,
 ) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
@@ -145,6 +130,11 @@ func (s *Store) RevertCorrection(
 			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
 		case VerdictStageMoveCorrection:
 			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
+		case DealOpenCorrection:
+			if err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmedFor); err == nil {
+				out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.IncludeArchived, active)
+			}
+			return err
 		default:
 			err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
 		}

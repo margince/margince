@@ -62,6 +62,25 @@ func stageMoveReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	}
 }
 
+// dealOpenReceipt renders a deal Margince opened for the company's owner, with
+// the buying evidence it rests on.
+func dealOpenReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	summary := fmt.Sprintf("Opened the deal %q", c.DealName)
+	if c.Basis != "" {
+		summary += ": " + c.Basis
+	}
+	return attention.Receipt{
+		ID:         c.AuditLogID,
+		Kind:       deals.DealOpenKind,
+		Summary:    summary,
+		OccurredAt: c.AppliedAt,
+		TargetType: approvalTargetDeal,
+		TargetID:   c.DealID.UUID,
+		Actor:      attention.ReceiptActor{Type: c.ActorType, ID: c.ActorID, OnBehalfOf: c.OnBehalfOf},
+		Undo:       &attention.ReceiptUndo{AuditLogID: c.AuditLogID, Version: c.Version, Reversed: c.Reversed},
+	}
+}
+
 func receiptStage(name *string) string {
 	if name == nil {
 		return "a stage since removed"

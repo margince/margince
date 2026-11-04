@@ -40,8 +40,8 @@ type ChangeBundle struct {
 // ChangeSummary counts the owner's changed deals by kind. A deal with two
 // kinds counts once in Deals and once under each kind.
 type ChangeSummary struct {
-	Deals, Closed, Redated, Revalued, Probabilities, Moved int
-	BaseCurrency                                           string
+	Deals, Closed, Redated, Revalued, Probabilities, Moved, Opened int
+	BaseCurrency                                                   string
 	// Bundles is ordered by value, the largest first. Truncated says
 	// bundleCap cut it; the counts above are never cut.
 	Bundles   []ChangeBundle
@@ -75,8 +75,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		heldPos, ownerPos, basePos, capPos := arg(heldCorrections), arg(actor.UserID), arg(base), arg(bundleCap+1)
 		sincePos := arg(since)
 		closedPos, redatedPos := arg(CloseLostCorrection), arg(VerdictCloseDateCorrection)
-		revaluedPos, probabilityPos := arg(VerdictAmountCorrection), arg(VerdictProbabilityCorrection)
-		movedPos := arg(VerdictStageMoveCorrection)
+		revaluedPos, probabilityPos, movedPos, openedPos := arg(VerdictAmountCorrection), arg(VerdictProbabilityCorrection), arg(VerdictStageMoveCorrection), arg(DealOpenCorrection)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 		if err != nil {
 			return err
@@ -108,12 +107,13 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
 			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
 			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
+			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER (),
 			       count(*) FILTER (WHERE $%d = ANY(b.kinds)) OVER ()
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 7 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
 			heldPos, sincePos, sincePos, ownerPos, where, value,
-			closedPos, redatedPos, revaluedPos, probabilityPos, movedPos, capPos)
+			closedPos, redatedPos, revaluedPos, probabilityPos, movedPos, openedPos, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
@@ -122,7 +122,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		for rows.Next() {
 			var b ChangeBundle
 			if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
-				&out.Deals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved); err != nil {
+				&out.Deals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened); err != nil {
 				return err
 			}
 			out.Bundles = append(out.Bundles, b)

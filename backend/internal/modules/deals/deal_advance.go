@@ -48,14 +48,6 @@ type AdvanceDealInput struct {
 	// product, not overruling it, so a move made THROUGH one must not protect
 	// the deal against the next proposal. Nil for an ordinary advance.
 	ApprovalID *ids.UUID
-	// IsExplicitUndo marks the move RevertStageProgression makes.
-	//
-	// It suppresses the automatic reversal detection below, which would
-	// otherwise find the very move being undone and mark it — and the undo
-	// then marks it again, so one reversal is counted twice and the safety
-	// rate reads double. The undo does its own marking, because only it knows
-	// which card the caller asked about.
-	IsExplicitUndo bool
 	// ReversalOf names the deal_stage_history row this move undoes.
 	//
 	// Written into the history row, where readProtection reads it: a move that
@@ -70,6 +62,10 @@ type AdvanceDealInput struct {
 	// it, so the Home receipt can say why the deal was closed.
 	auditEvidence map[string]any
 }
+
+// StageApprovalEvidenceKey links an applied stage audit to the approval a
+// human decided.
+const StageApprovalEvidenceKey = "stage_approval_id"
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
 // belongs to another pipeline.
@@ -235,19 +231,6 @@ func (s *Store) advanceOnTx(
 		})
 		if err != nil {
 			return err
-		}
-
-		// A move BACK over a recent automatic one is a reversal, counted on the
-		// same ledger as the undo button. Not doing this here would let the
-		// safety number be dodged by the obvious route: a rep who disagrees
-		// with what the autopilot did drags the deal back by hand, the rate
-		// that governs the transition never moves, and it keeps applying.
-		if !in.IsExplicitUndo {
-			if err := countAManualMoveBackAsAReversal(
-				ctx, tx, id, ids.StageID{UUID: ids.UUID(*current.StageId)}, in,
-				s.clock()); err != nil {
-				return err
-			}
 		}
 
 		toStageName, auditID, err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability)

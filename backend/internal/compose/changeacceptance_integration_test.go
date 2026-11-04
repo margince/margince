@@ -56,28 +56,24 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 	if audits != 1 || events != 1 {
 		t.Fatalf("acceptance must record one audit and linked event: %d, %d", audits, events)
 	}
-	var refusal *deals.CorrectionReversalError
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); !errors.As(err, &refusal) || refusal.Reason != deals.AlreadyAccepted {
-		t.Fatalf("undid an accepted change: %v", err)
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err == nil {
+		t.Fatal("an accepted change was undone")
 	}
-}
 
-func TestAReversedCorrectionCannotBeAccepted(t *testing.T) {
-	e := setupCloseDate(t)
-	deal := e.seedSweepDeal(t, "Undo this correction", e.early, nil, new(-12), 3)
+	undone := e.seedSweepDeal(t, "Undo before accepting", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	change := e.correctionAuditIDFor(t, deal)
-	dealID := ids.From[ids.DealKind](deal)
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
+	undoneChange := e.correctionAuditIDFor(t, undone)
+	undoneID := ids.From[ids.DealKind](undone)
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, undone), nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	reversed, err := e.Deals.AppliedChangeReview(e.Admin(), dealID, change)
+	reversed, err := e.Deals.AppliedChangeReview(e.Admin(), undoneID, undoneChange)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.Deals.AcceptAppliedChange(e.Admin(), dealID, change, reversed.Version); !errors.Is(err, apperrors.ErrConflict) {
+	if err := e.Deals.AcceptAppliedChange(e.Admin(), undoneID, undoneChange, reversed.Version); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("accepted a reversed change: %v", err)
 	}
 }

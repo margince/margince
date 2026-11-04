@@ -144,55 +144,19 @@ const (
 // own words. Never staged; its Undo moves the deal back.
 const kindDealStageMove = "deal_stage_move"
 
+// kindDealOpen is Margince opening a deal from Deal Scout's evidence for the
+// company's owner. Its Undo archives the deal.
+const kindDealOpen = "deal_open"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
 	kindDealAmount:           true,
 	kindDealProbability:      true,
 	kindDealStageMove:        true,
+	kindDealOpen:             true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
-}
-
-// AdminGovernedAutoKinds are the kinds that may apply without asking on an
-// ADMIN's authority rather than a rep's own.
-//
-// A SECOND set, not more members of AutoApplyKinds, and the split is the whole
-// design. AutoApplyKinds is what a rep may put on auto for themselves, and its
-// bound is that the product can put each one back through the restore path —
-// one Undo and the field is as it was. A stage move is not that: it writes
-// deal_stage_history and the ledger beside the field, so restoring the column
-// alone would leave the history saying the deal is somewhere it is not. It
-// carries its own revert instead.
-//
-// The authority is different too. Nobody's own history earns a stage move the
-// right to skip the question; a transition earns it, per pipeline, measured
-// against thresholds an admin set — which is why membership here grants
-// nothing on its own. The kind still has to pass the governing policy in the
-// transaction that would apply it.
-var AdminGovernedAutoKinds = map[string]bool{
-	"stage_progression": true,
-}
-
-// AutoAppliableKinds is every kind either ladder can apply, in a stable order.
-//
-// The sweep that looks for work and the check that admits it read this same
-// function, because they must agree: a scan over one set feeding a check
-// against the other either misses kinds it should apply or wakes on rows it
-// will always refuse.
-//
-// Held by: TestTheAutoApplySweepScansTheKindsTheApplierAdmits
-// (backend/gates/governedkindseams_test.go)
-func AutoAppliableKinds() []string {
-	kinds := make([]string, 0, len(AutoApplyKinds)+len(AdminGovernedAutoKinds))
-	for kind := range AutoApplyKinds {
-		kinds = append(kinds, kind)
-	}
-	for kind := range AdminGovernedAutoKinds {
-		kinds = append(kinds, kind)
-	}
-	sort.Strings(kinds)
-	return kinds
 }
 
 // SortedAutoApplyKinds is AutoApplyKinds in a stable order.

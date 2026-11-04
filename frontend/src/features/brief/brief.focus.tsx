@@ -251,11 +251,8 @@ function queueLine(
   // The contact on the row, not the message's counterparty: a task or meeting
   // has no message. On a waiting message the backend puts the sender here.
   const who = item.contact?.label ?? null;
-  // The reader's own pin is the queue's reason and not the focus projection's,
-  // for the reason the row in hand withholds it (`allowPin`).
   const reason =
     phrasedReasons(item, false)
-      .filter((entry) => entry.kind !== "pinned")
       .map((entry) => reasonText(entry, t, locale, zone))
       .find((text) => text !== null) ?? null;
   const subject = briefSubjectLabel(item);

@@ -5,9 +5,12 @@ package mailer
 
 import (
 	"context"
+	"errors"
 	"net"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
@@ -29,6 +32,36 @@ func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 		!strings.Contains(got, "Subject: Reset your password") ||
 		!strings.Contains(got, "the link body") {
 		t.Fatalf("relay received %q, want headers + body", got)
+	}
+}
+
+// A caller that stops waiting for the relay stops the exchange too, so the
+// relay cannot take the message after the caller reported it as not taken.
+func TestSendEndsTheExchangeAtTheCallersDeadline(t *testing.T) {
+	relay := startFakeRelay(t, false)
+	relay.HoldAnswer = make(chan struct{})
+	t.Cleanup(func() { close(relay.HoldAnswer) })
+	host, port := relay.Address(t)
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := s.Send(ctx, "ada@example.test", "Your invitation", "the link body")
+	if err == nil {
+		t.Fatal("a relay that never answered the message reads as having taken it")
+	}
+	if !errors.Is(err, os.ErrDeadlineExceeded) {
+		t.Errorf("err = %v, want the caller's deadline", err)
+	}
+}
+
+// The exchange ends at the caller's deadline when that comes before its own.
+func TestTheExchangeDeadlineIsTheCallersWhenThatIsSooner(t *testing.T) {
+	callers := time.Date(2020, 1, 1, 9, 0, 0, 0, time.UTC)
+	ctx, cancel := context.WithDeadline(context.Background(), callers)
+	defer cancel()
+	if got := exchangeDeadline(ctx); !got.Equal(callers) {
+		t.Errorf("exchange deadline = %s, want the caller's %s", got, callers)
 	}
 }
 

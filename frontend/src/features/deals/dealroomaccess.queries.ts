@@ -27,14 +27,14 @@ type Seat = Pick<
 >;
 
 // How often the roster is read again while an invitation mail is on its way.
-// The invite answers before the relay does, and the relay's answer must reach
-// the row.
+// The relay's answer is stamped on the row just after the invite answers, and
+// must reach it.
 export const MAIL_POLL_MS = 2_000;
 
 // How long after a queued invitation the roster keeps reading: the server's
-// send budget, plus a margin. `pending` also means "no relay configured", so
-// the watch ends rather than polling forever.
-export const MAIL_WATCH_MS = 150_000;
+// 10-second relay wait, plus a margin. `pending` also means "no relay
+// configured", so the watch ends rather than polling forever.
+export const MAIL_WATCH_MS = 30_000;
 
 function mailWatchKey(roomId: string) {
   return ["deal-room-mail-watch", roomId] as const;

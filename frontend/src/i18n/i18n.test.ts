@@ -227,7 +227,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "analytics.sectionPipeline",
   "reporting.pipeline",
   "lead.qualify.pipeline",
-  "stageAutomation.pipeline",
   "review.colDeal",
   "worklist.category.leads",
   "filters.sentence.ref.pipeline_one",

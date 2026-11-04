@@ -95,7 +95,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -219,7 +218,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",

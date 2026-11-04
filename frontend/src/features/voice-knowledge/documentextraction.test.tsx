@@ -106,6 +106,39 @@ describe("the three answers a reading can give", () => {
     ).toBeTruthy();
   });
 
+  it("never reviews a chat reading as deal facts, and offers a deal-facts read instead", async () => {
+    const calls = serve({
+      ...GROUNDED,
+      question: "chat_capture",
+      fields: [
+        {
+          field: "chat_text",
+          value: "Laura: send the quote",
+          source_quote: "Laura: send the quote",
+          page_or_section: "messages",
+          confidence: "high",
+        },
+      ],
+    });
+    show();
+    const offer = await screen.findByRole("button", {
+      name: /read this file/i,
+    });
+    expect(screen.queryByRole("button", { name: /accept/i })).toBeNull();
+    expect(screen.queryByText(/send the quote/)).toBeNull();
+    expect(calls.find((c) => c.method === "GET")?.url).toContain(
+      "question=deal_facts",
+    );
+
+    await userEvent.click(offer);
+    await waitFor(() => {
+      const start = calls.find(
+        (c) => c.method === "POST" && c.url.endsWith("/extraction"),
+      );
+      expect(start?.body).toEqual({ question: "deal_facts" });
+    });
+  });
+
   it("says it is still reading rather than showing an empty result", async () => {
     serve({ ...GROUNDED, status: "running", fields: [], omitted: [] });
     show();

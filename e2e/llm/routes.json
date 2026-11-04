@@ -211,7 +211,6 @@
         "qualify": "qualify_lead",
         "reopen_lead": "reopen_lead",
         "request_legal_review": "request_legal_review",
-        "revert_stage": "revert_stage_progression",
         "review_outcome": "create_deal_outcome_review",
         "set_lead_signal": "set_lead_manual_signal",
         "set_up_partner": "set_up_partner",
