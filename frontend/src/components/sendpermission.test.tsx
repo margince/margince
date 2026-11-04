@@ -623,6 +623,55 @@ describe("one status for the message", () => {
     expect(screen.getByText(sentence)).toBeInTheDocument();
   });
 
+  // #10169: the rep picked "Active deal" and the deal did not support it. An
+  // unproven claim never resolves, so the server sends the rep's pick beside
+  // the engine's reading. The remedy is the deal, never "no recorded reason".
+  it("names the deal when the rep's own active-deal claim failed", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission
+          preview={refusing({
+            reason_code: "no_compatible_evidence",
+            resolved_category: "requested_followup",
+            requested_category: "active_deal_followup",
+          })}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("This message needs one more detail"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Choose the deal for this follow-up."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("No recorded reason to contact this recipient"),
+    ).toBeNull();
+  });
+
+  it("names the deal on a refused send whose active-deal claim failed", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission
+          preview={undefined}
+          refusal={{
+            refusals: [
+              {
+                address: "a@x.test",
+                reasonCode: "no_compatible_evidence",
+                requestedCategory: "active_deal_followup",
+                canBeOverruled: true,
+              },
+            ],
+          }}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("Choose the deal for this follow-up."),
+    ).toBeInTheDocument();
+  });
+
   it("says how many of the recipients a refusal applies to where it may not name them", () => {
     render(
       <LocaleProvider initial="en">

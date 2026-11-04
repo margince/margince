@@ -80,6 +80,12 @@ type RefusedRecipient struct {
 	// CanBeOverruled is the preview's own answer for this refusal. It is told
 	// to the sender and never stored: a stored copy would outlive the rule.
 	CanBeOverruled bool `json:"-"`
+	// RequestedCategory is the reason for contact the sender picked. It is told
+	// to the sender and never stored: the decision row already records it, and
+	// Category stays the engine's own reading. A refused claim for an active
+	// deal resolves to some other category, so without this the sender is told
+	// "no recorded reason" instead of "choose the deal".
+	RequestedCategory string `json:"-"`
 }
 
 // Review is a refused send somebody can look at.
@@ -264,7 +270,8 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		PurposeID:   d.PurposeID,
 		// The same answer the preview sends, so the composer picks the same
 		// deciding recipient before and after Send.
-		CanBeOverruled: d.CanBeOverruledByCategory(),
+		CanBeOverruled:    d.CanBeOverruledByCategory(),
+		RequestedCategory: string(d.Requested),
 	}
 	if !d.SubjectID.IsZero() {
 		refusal.SubjectID = d.SubjectID.String()

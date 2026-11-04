@@ -854,3 +854,44 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 	}
 	return id
 }
+
+// A FAILED ACTIVE-DEAL CLAIM KEEPS THE CLAIM ON THE PREVIEW (#10169). The rep
+// had mail from the recipient a month ago and an open deal they are not a
+// stakeholder on, and picked "Active deal". The claim fails, and an unproven
+// claim never resolves. The preview still has to carry it, because it is the
+// only thing that lets the composer say "choose the deal" instead of "no
+// recorded reason".
+//
+// Mutation: drop BOTH `d.Requested = req.Context` in decidePreviewTx and
+// `d.Requested = res.Category` in decideResolved, and the requested assertion
+// fails. Either alone stays green, because the other sets the same claim.
+func TestAFailedDealClaimStaysOnThePreviewWithoutResolving(t *testing.T) {
+	e := setupResolve(t)
+	e.inboundFrom(t, "thread-earlier", e.address, time.Now().AddDate(0, 0, -30))
+	deal := e.openDeal(t, "open", false)
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}},
+		Context:    commsauthz.CategoryActiveDealFollowup,
+		Links:      []ids.UUID{deal},
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if len(set.Decisions) != 1 {
+		t.Fatalf("decisions = %d, want one", len(set.Decisions))
+	}
+	d := set.Decisions[0]
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("a deal the recipient is no stakeholder on supported the follow-up")
+	}
+	if d.ReasonCode != commsauthz.ReasonNoEvidence {
+		t.Errorf("reason = %q, want %q: the gap is the deal, not a stop", d.ReasonCode, commsauthz.ReasonNoEvidence)
+	}
+	if d.Requested != commsauthz.CategoryActiveDealFollowup {
+		t.Errorf("requested = %q, want the rep's active_deal_followup claim", d.Requested)
+	}
+	if d.Resolved == commsauthz.CategoryActiveDealFollowup {
+		t.Error("the unproven claim became the resolved category")
+	}
+}
