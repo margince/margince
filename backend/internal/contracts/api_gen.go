@@ -58045,6 +58045,11 @@ type SendAuthorizationPreviewRecipient struct {
 	// recipient.
 	ReasonCode string `json:"reason_code"`
 
+	// RequestedCategory The reason for contact the sender claimed. An unproven claim never becomes
+	// `resolved_category`, so a composer reads this one to name the gap the sender can
+	// close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+	RequestedCategory *CommunicationContext `json:"requested_category,omitempty"`
+
 	// ResolvedCategory What the engine worked out this message is, which may differ from the claim.
 	ResolvedCategory *CommunicationContext `json:"resolved_category,omitempty"`
 

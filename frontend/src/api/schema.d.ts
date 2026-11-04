@@ -40039,6 +40039,12 @@ export interface components {
             reason_code: string;
             /** @description What the engine worked out this message is, which may differ from the claim. */
             resolved_category?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description The reason for contact the sender claimed. An unproven claim never becomes
+             *     `resolved_category`, so a composer reads this one to name the gap the sender can
+             *     close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+             */
+            requested_category?: components["schemas"]["CommunicationContext"];
             /** @description The lawful ground an allow would rest on. */
             basis?: string;
             /**
@@ -66849,7 +66855,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {
@@ -66950,7 +66957,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {
@@ -67317,7 +67325,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {

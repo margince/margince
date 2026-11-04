@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -853,4 +854,44 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 		t.Fatal(err)
 	}
 	return id
+}
+
+// A FAILED ACTIVE-DEAL CLAIM STAYS ON THE PREVIEW, AND NEVER RESOLVES. The rep
+// has mail from the recipient a month ago and an open deal they are not a
+// stakeholder on, and claims an active-deal follow-up. The claim fails for want
+// of evidence. Requested keeps the claim, which is what the composer names the
+// missing deal from. Resolved never takes it.
+//
+// Mutation: drop BOTH `d.Requested = req.Context` in decidePreviewTx and
+// `d.Requested = res.Category` in decideResolved, and the requested assertion
+// fails. Either alone stays green, because the other sets the same claim.
+func TestAFailedDealClaimStaysOnThePreviewWithoutResolving(t *testing.T) {
+	e := setupResolve(t)
+	e.inboundFrom(t, "thread-earlier", e.address, clocktest.Now(t).AddDate(0, 0, -30))
+	deal := e.openDeal(t, "open", false)
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}},
+		Context:    commsauthz.CategoryActiveDealFollowup,
+		Links:      []ids.UUID{deal},
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if len(set.Decisions) != 1 {
+		t.Fatalf("decisions = %d, want one", len(set.Decisions))
+	}
+	d := set.Decisions[0]
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("a deal the recipient is no stakeholder on supported the follow-up")
+	}
+	if d.ReasonCode != commsauthz.ReasonNoEvidence {
+		t.Errorf("reason = %q, want %q: the gap is the deal, not a stop", d.ReasonCode, commsauthz.ReasonNoEvidence)
+	}
+	if d.Requested != commsauthz.CategoryActiveDealFollowup {
+		t.Errorf("requested = %q, want the rep's active_deal_followup claim", d.Requested)
+	}
+	if d.Resolved == commsauthz.CategoryActiveDealFollowup {
+		t.Error("the unproven claim became the resolved category")
+	}
 }

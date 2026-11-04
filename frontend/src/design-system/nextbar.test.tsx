@@ -18,6 +18,12 @@ describe("the Next bar", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("says the caller's own sentence when it gives one", () => {
+    render(<NextBar empty="No follow-up task recorded." />);
+    expect(screen.getByText("No follow-up task recorded.")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing is due next.")).toBeNull();
+  });
+
   it("draws the late tag, the reason, Snooze and the other tasks", () => {
     const onSnooze = vi.fn();
     const onOpen = vi.fn();
