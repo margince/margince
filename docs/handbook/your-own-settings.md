@@ -15,11 +15,9 @@ Also called: my profile, my account, preferences, user settings.
 
 ### How do I finish setting up Margince?
 To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
-It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
-While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+It lists the steps, each with its own button: connect your mail, connect your calendar, add writing samples and turn on your booking link.
+While steps are open, **Finish setup** at the top of every screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**.
 Also called: setup list, getting started, onboarding steps.
-
-Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, such as a connection that expired, **Your setup** comes back. So does **Finish setup**, unless you chose **Hide until next sign-in**.
 
 The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
