@@ -113,7 +113,11 @@ func enableBookingPage(t *testing.T, e *apptest.AppEnv) {
 	if status != http.StatusFound && status != http.StatusSeeOther {
 		t.Fatalf("calendar callback: %d", status)
 	}
-	hours := json.RawMessage(`{"start_time":"09:00","end_time":"17:00","days":[1,2,3,4,5],"timezone":"UTC"}`)
+	zone := json.RawMessage(`{"timezone":"UTC","source":"chosen"}`)
+	if status := e.Call(t, "PUT", "/v1/me/timezone", zone, nil, nil); status != http.StatusOK {
+		t.Fatalf("time zone: %d", status)
+	}
+	hours := json.RawMessage(`{"start_time":"09:00","end_time":"17:00","days":[1,2,3,4,5]}`)
 	if status := e.Call(t, "PUT", "/v1/me/working-hours", hours, nil, nil); status != http.StatusOK {
 		t.Fatalf("working hours: %d", status)
 	}

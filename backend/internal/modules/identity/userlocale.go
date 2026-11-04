@@ -110,6 +110,10 @@ type Seat struct {
 	// GreetingName is nil when the member never said which name to greet
 	// them by.
 	GreetingName *string
+	// Timezone is empty when the writer did not read it. TimezoneChosen says
+	// whether the person picked it themselves.
+	Timezone       string
+	TimezoneChosen bool
 }
 
 // localeImage renders one side of the audit's before/after pair.

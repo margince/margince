@@ -46,11 +46,16 @@ func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing
 func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	svc, ctx, userID := seatChoosingALanguage(t)
 
+	// The zone is the person's own time zone, set on its own. A zone sent
+	// with the hours is not stored.
+	if _, err := svc.SaveMyTimezone(ctx, "Asia/Ho_Chi_Minh", TimezoneChosen); err != nil {
+		t.Fatalf("saving the time zone: %v", err)
+	}
 	// A four-day week starting early, on their own clock — one of the two
 	// shapes an installation-wide pair of numbers cannot express.
 	saved, err := svc.SaveMyWorkingHours(ctx, WorkingHours{
 		StartMinute: 8 * 60, EndMinute: 13 * 60,
-		Days: []int{4, 1, 2, 3}, Timezone: "Asia/Ho_Chi_Minh",
+		Days: []int{4, 1, 2, 3}, Timezone: "America/New_York",
 	})
 	if err != nil {
 		t.Fatalf("saving working hours: %v", err)
@@ -59,6 +64,9 @@ func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	// of the row should not have to sort it to see the week.
 	if got := saved.Days; len(got) != 4 || got[0] != 1 || got[3] != 4 {
 		t.Errorf("the days were stored as %v, want them ascending", got)
+	}
+	if saved.Timezone != "Asia/Ho_Chi_Minh" {
+		t.Errorf("the answer carries zone %q, want the person's own", saved.Timezone)
 	}
 
 	read, chosen, err := svc.MyWorkingHours(ctx)
@@ -124,9 +132,6 @@ func TestARefusalNamesTheControlTheReaderUsed(t *testing.T) {
 		{"a week with no days in it", WorkingHours{
 			StartMinute: 9 * 60, EndMinute: 17 * 60, Days: nil, Timezone: "Europe/Berlin",
 		}, "days"},
-		{"a zone the database does not carry", WorkingHours{
-			StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{1}, Timezone: "Mars/Olympus",
-		}, "timezone"},
 	} {
 		t.Run(refused.name, func(t *testing.T) {
 			_, err := svc.SaveMyWorkingHours(ctx, refused.in)
