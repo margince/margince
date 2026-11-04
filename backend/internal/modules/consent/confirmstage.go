@@ -132,7 +132,7 @@ func (s *Store) renderConfirmMail(
 	if err != nil {
 		return Rendered{}, "", err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category)
+	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient)
 	return rendered, category, err
 }
 

@@ -167,7 +167,7 @@ func decideBirthTx(
 		return birthDecision{}, err
 	}
 
-	if explicitlyConfidential(fields.Subject) {
+	if ExplicitlyConfidential(fields.Subject) {
 		// The marker also re-opens a settled thread: a reply saying
 		// [Vertraulich] on a conversation a classifier cleared last week is new
 		// information about that conversation, and leaving the cleared verdict

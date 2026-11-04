@@ -19914,7 +19914,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -27968,6 +27968,43 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /voice-profiles/{id}/sources/sent-mail:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Voice]
+      operationId: learnVoiceFromSentMail
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Learn the owner's voice from their own most recent sent mail, once, on request.
+      description: |
+        Reads up to the caller's 200 most recent sent mails and files the words they wrote
+        in each as an email source of their own voice profile. It reads only mail sent from
+        the caller's own connected mailbox: never a colleague's mail, a colleague's copy, or
+        a shared mailbox. Mail limited to its participants or to selected readers, and mail
+        whose subject marks it confidential, is left out.
+
+        Quoted replies, forwards, signatures and legal footers are cut before a mail is
+        stored. A mail that is already a source is left as it is, so a mail the owner removed
+        or excluded stays out. The call reads mail only when it is made; nothing reads sent
+        mail on a schedule. It makes no model call: the stored text reaches a model only in
+        the next build the owner starts.
+
+        Human-only for security: reading a mailbox into a voice profile is the owner's own
+        decision, made by pressing the button.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: What this call learned, and the meter after it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSentMailLearned' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /voice-profiles/{id}/sources/{sourceId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33402,9 +33439,8 @@ paths:
         colleague's working hours through this API, for the reason the setting
         exists at all.
 
-        The times are read on the timezone sent with them, which is also stored:
-        it is the contact's own zone and the product had no author for it before
-        this. Sending the browser's zone is the expected first write.
+        The times are read on the caller's own time zone, which is set through
+        `saveMyTimezone` and is not part of this request.
 
         Narrowing these hours narrows what a customer can book. A screen that
         does not say so at the moment of saving has built a trap rather than a
@@ -33413,13 +33449,49 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/WorkingHours' }
+            schema: { $ref: '#/components/schemas/SaveWorkingHoursRequest' }
       responses:
         '200':
           description: The hours as stored.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/timezone:
+    put:
+      tags: [Identity]
+      operationId: saveMyTimezone
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Set the time zone your own times are shown in.
+      description: |
+        Always the CALLER's own, never anybody else's. An admin does not set a
+        colleague's time zone through this API.
+
+        One zone per user. Booking reads your working hours on it, and mail
+        sent to you is timed by it.
+
+        `source` says who picked the zone. `browser` is the app's first guess
+        from the browser, and is stored only while no zone is stored. `chosen`
+        is the user's own pick: it is always stored and marks the zone as
+        chosen. Saving the zone already stored writes nothing.
+
+        Not open to agents: an agent acting for a user must not change the
+        clock that user's times, bookings and mail are read on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyTimezoneRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the zone as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -49542,11 +49614,9 @@ components:
       properties:
         start_time:
           type: string
-          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
           description: The first minute of the working day, `HH:MM` on the contact's own clock.
         end_time:
           type: string
-          pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
           description: |
             The minute the working day ends, exclusive. `24:00` is the honest
             spelling of "until midnight" and is why this is not the same pattern
@@ -49560,10 +49630,55 @@ components:
         timezone:
           type: string
           description: |
-            The IANA zone the two times are read on. A contact who has never
-            chosen one is read on the installation's reporting timezone, which
-            is what makes the unset case work rather than scheduling everybody
-            on UTC.
+            The IANA zone the two times are read on: the caller's own time zone.
+            A contact with no stored zone is read on the installation's
+            reporting timezone, which is what makes the unset case work rather
+            than scheduling everybody on UTC. Read-only here; it is set through
+            `saveMyTimezone`.
+
+    SaveWorkingHoursRequest:
+      type: object
+      required: [start_time, end_time, days]
+      description: |
+        The hours and days to store. The zone they are read on is the caller's
+        own time zone, set through `saveMyTimezone`.
+      properties:
+        timezone:
+          type: string
+          deprecated: true
+          description: |
+            An older client's way to set the caller's time zone with the hours. When
+            present it is stored as the caller's own chosen zone, in the same
+            transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+        start_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The first minute of the working day, `HH:MM` on the contact's own clock.
+        end_time:
+          type: string
+          pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
+          description: The minute the working day ends, exclusive. `24:00` means until midnight.
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+
+    SaveMyTimezoneRequest:
+      type: object
+      additionalProperties: false
+      required: [timezone, source]
+      properties:
+        timezone:
+          type: string
+          description: An IANA zone name, such as `Europe/Berlin`.
+        source:
+          type: string
+          enum: [browser, chosen]
+          description: |
+            `browser` is the app's guess from the browser, stored only while no
+            zone is stored. `chosen` is the user's own pick, always stored.
 
     MyWorkingHoursResponse:
       type: object
@@ -50390,7 +50505,8 @@ components:
       properties:
         id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
         label: { type: string }
-        value: { type: string }
+        value: { type: string, description: Raw source quantity with its unit. }
+        display: { type: string, description: Locale-formatted quantity for reader text. }
       additionalProperties: false
     ReportSetupRequest:
       type: object
@@ -58118,6 +58234,7 @@ components:
       - leads_qualified
       - lead_first_response
       - leads_awaiting_response
+      - leads_awaiting_response_now
       - partner_pipeline
       - partner_won
       - partner_commission
@@ -59073,6 +59190,13 @@ components:
         `priced_count` and by `fx_missing_count`.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Open deals eligible for this forecast period.
+        open_evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline_minor:
           type: integer
           format: int64
@@ -59692,6 +59816,8 @@ components:
           description: >-
             How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC
             date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+        owner_label: { type: string }
+        stage_label: { type: string }
         owner_id: *id002
         source_type:
           type: string
@@ -59972,7 +60098,16 @@ components:
             The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said.
             Read through one rule on both sides: this when set, else the first word of
             `display_name`. Present on the caller's own seat; absent on the roster.
-        timezone: { type: string, default: UTC, description: IANA name. }
+        timezone:
+          type: string
+          description: >
+            The IANA zone this user's own times are shown in. Absent when no zone is stored;
+            UTC is a zone somebody can pick, so absent is not UTC.
+        timezone_chosen:
+          type: boolean
+          description: >
+            Whether the user chose `timezone` themselves, rather than the app storing the
+            browser's guess. Present on the caller's own seat; absent on the roster.
         locale:
           type: string
           enum: [en, de, vi]
@@ -68799,6 +68934,19 @@ components:
         included: { type: boolean }
         weight: { type: number, minimum: 0, maximum: 2 }
 
+    VoiceSentMailLearned:
+      type: object
+      description: |
+        The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+        each of them is `added`, `already_present` (a source already, left as it is), or
+        `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+      required: [read, added, already_present, no_own_words, summary]
+      properties:
+        read: { type: integer, minimum: 0 }
+        added: { type: integer, minimum: 0 }
+        already_present: { type: integer, minimum: 0 }
+        no_own_words: { type: integer, minimum: 0 }
+        summary: { $ref: '#/components/schemas/VoiceCorpusSummary' }
     VoiceIngestStats:
       type: object
       description: What the speaker filter did to one ingested source; kept words are the only words that count.
@@ -72541,7 +72689,7 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: { $ref: '#/components/schemas/TeamWeekReach' }
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:

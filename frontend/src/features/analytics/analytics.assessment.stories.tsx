@@ -32,12 +32,12 @@ const examples: Record<View, Pick<SalesAssessment, "paragraphs" | "cells">> = {
     paragraphs: [
       [
         sentence(
-          "Sales won stands at €420k against the quarter’s €800k target.",
+          "Sales won stands at 420000 EUR against the quarter’s 800000 EUR target.",
           "won",
           "target",
         ),
         sentence(
-          "The current forecast is €760k, combining €420k already won with €340k of confirmed open commitments.",
+          "The current forecast is 760000 EUR, combining 420000 EUR already won with 340000 EUR of confirmed open commitments.",
           "landing",
           "won",
           "remaining",
@@ -46,12 +46,12 @@ const examples: Record<View, Pick<SalesAssessment, "paragraphs" | "cells">> = {
       ],
       [
         sentence(
-          "There are 18 open deals with €1.36m in pipeline due this quarter.",
+          "There are 18 open deals with 1360000 EUR in pipeline due this quarter.",
           "pipeline",
           "deals",
         ),
         sentence(
-          "The modelled quarter finish ranges from €610k to €980k, with the €800k target inside that range.",
+          "The modelled quarter finish ranges from 610000 EUR to 980000 EUR, with the 800000 EUR target inside that range.",
           "low",
           "high",
           "target",
@@ -64,14 +64,22 @@ const examples: Record<View, Pick<SalesAssessment, "paragraphs" | "cells">> = {
       ],
     ],
     cells: [
-      { id: "won", label: "Sales won this quarter", value: "€420k" },
-      { id: "target", label: "Quarter target", value: "€800k" },
-      { id: "landing", label: "Won + confirmed commit", value: "€760k" },
-      { id: "remaining", label: "Confirmed open commitments", value: "€340k" },
-      { id: "pipeline", label: "Pipeline due this quarter", value: "€1.36m" },
+      { id: "won", label: "Sales won this quarter", value: "420000 EUR" },
+      { id: "target", label: "Quarter target", value: "800000 EUR" },
+      { id: "landing", label: "Won + confirmed commit", value: "760000 EUR" },
+      {
+        id: "remaining",
+        label: "Confirmed open commitments",
+        value: "340000 EUR",
+      },
+      {
+        id: "pipeline",
+        label: "Pipeline due this quarter",
+        value: "1360000 EUR",
+      },
       { id: "deals", label: "Open deals", value: "18" },
-      { id: "low", label: "Modelled range, lower bound", value: "€610k" },
-      { id: "high", label: "Modelled range, upper bound", value: "€980k" },
+      { id: "low", label: "Modelled range, lower bound", value: "610000 EUR" },
+      { id: "high", label: "Modelled range, upper bound", value: "980000 EUR" },
     ],
   },
   prospecting: {

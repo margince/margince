@@ -14,11 +14,8 @@ import {
   isMovement,
   landingBasis,
   metric,
-  overviewRoutes,
   teamHandoffs,
   teamReview,
-  twoPipelines,
-  upcomingWindow,
 } from "./analytics.overview.fixtures";
 import {
   isWeeks,
@@ -26,6 +23,11 @@ import {
   returnedHandoffs,
   upcomingMeetings,
 } from "./analytics.overview.prospectingdata";
+import {
+  overviewRoutes,
+  twoPipelines,
+  upcomingWindow,
+} from "./analytics.overview.routes.fixtures";
 import {
   backlogList,
   boardCharts,

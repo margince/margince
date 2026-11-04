@@ -182,6 +182,22 @@ func (h Handlers) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request,
 	}{Data: data, Summary: wireCorpusSummary(summary), Page: crmcontracts.PageInfo{HasMore: false}})
 }
 
+// LearnVoiceFromSentMail implements (POST /voice-profiles/{id}/sources/sent-mail).
+func (h Handlers) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.LearnVoiceFromSentMailParams) {
+	learned, err := h.voice.LearnFromSentMail(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeVoiceErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VoiceSentMailLearned{
+		Read:           learned.Read,
+		Added:          learned.Added,
+		AlreadyPresent: learned.AlreadyPresent,
+		NoOwnWords:     learned.NoOwnWords,
+		Summary:        wireCorpusSummary(learned.Summary),
+	})
+}
+
 // IngestVoiceCorpusSource implements (POST /voice-profiles/{id}/sources).
 func (h Handlers) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.IngestVoiceCorpusSourceParams) {
 	var req crmcontracts.IngestVoiceCorpusSourceRequest

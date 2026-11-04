@@ -343,6 +343,12 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	_, _ = fmt.Fprintln(stdout, "worker re-scoping derived models on audience changes")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:audience-rescope", rescope.HandleEvent, logger, 0) })
 
+	// A voice sample read from sent mail follows its mail: archived,
+	// restricted, narrowed or marked confidential, the sample is emptied.
+	voiceCopies := compose.NewVoiceCopyRecheckGen(pool)
+	_, _ = fmt.Fprintln(stdout, "worker emptying voice samples whose mail stopped being learnable")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:voice-copy-recheck", voiceCopies.HandleEvent, logger, 0) })
+
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
 	// projection above, so it runs on every worker.

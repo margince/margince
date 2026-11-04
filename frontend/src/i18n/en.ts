@@ -877,6 +877,9 @@ export const en = {
     "No target is set yet. Team leads, management and admins set targets.",
   "reporting.periodYear": "Year",
   "reporting.periodMonth": "Month starting",
+  "reporting.expectedCloseOn": "Expected close",
+  "reporting.qualifiedOn": "Qualified on",
+  "reporting.owner": "Owner",
   "reporting.closedOn": "Closed on",
   "reporting.meetingOn": "Meeting date",
   "reporting.acceptedOn": "Accepted on",
@@ -976,6 +979,8 @@ export const en = {
   "reporting.pausedSchedules_other": "Paused schedules: {count}",
   "reporting.moreMetrics": "All metrics",
   "reporting.selectedValue": "Total",
+  "reporting.pageRecordsOf_one": "{count} of {total} records shown",
+  "reporting.pageRecordsOf_other": "{count} of {total} records shown",
   "reporting.pageRecords_one": "{count} record shown",
   "reporting.pageRecords_other": "{count} records shown",
   "reporting.currentState": "Current state",
@@ -2259,6 +2264,7 @@ export const en = {
   "systemJob.assign_owner_release": "Assignee release",
   "systemJob.assurance": "Forecast check",
   "systemJob.audience_rescope": "Audience update",
+  "systemJob.voice_copy_recheck": "Voice sample cleanup",
   "systemJob.authz_disagreement": "Send permission review",
   "systemJob.auto_apply": "Automatic approval",
   "systemJob.automation": "Automation",
@@ -3584,6 +3590,7 @@ export const en = {
   "stat.evidence": "Evidence",
   "stat.evidence.rests": "What this rests on",
   "stat.open": "Open",
+  "stat.forecast": "Forecast",
   "stat.records": "View records",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
@@ -7641,9 +7648,6 @@ export const en = {
     "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
   "analytics.overview.pipelineDefault": "Use the default pipeline",
   "analytics.overview.pipelineAll": "Use all pipelines",
-  "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
-  "analytics.overview.quarterOnlyBody":
-    "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
   "analytics.overview.setTarget": "Set targets",
   "analytics.overview.targetWho":
     "A colleague who manages targets, most often an admin or a sales manager, can set one.",
@@ -7686,7 +7690,6 @@ export const en = {
     "The count of unanswered leads is hidden from you",
   "analytics.prospect.unansweredFailed":
     "Unanswered leads could not be counted",
-  "analytics.prospect.tooFew": "Too few",
   "analytics.prospect.tooFewResponses":
     "Too few answered leads to give a typical time.",
   "analytics.prospect.upcoming": "Booked meetings",
@@ -7754,6 +7757,8 @@ export const en = {
   "analytics.team.count": "Count",
   "analytics.team.membersWithheld":
     "Individual performance is off, so no member’s figures are shown.",
+  "analytics.team.viewMeetings": "View booked meetings",
+  "analytics.team.memberRecords": "{name}: view {metric} records",
   "analytics.team.members": "Members",
   "analytics.team.member": "Member",
   "analytics.team.meetings": "Meetings held",
@@ -7786,6 +7791,8 @@ export const en = {
     "{count} lead still waits for a first reply",
   "analytics.team.unansweredRow_other":
     "{count} leads still wait for a first reply",
+  "analytics.team.currentUnansweredBasis":
+    "Open leads awaiting a first reply now, regardless of arrival date",
   "analytics.team.unansweredBasis": "Wrote in during this period, no reply yet",
   "analytics.team.unansweredHidden":
     "Leads waiting for a reply are hidden from you.",
@@ -7811,7 +7818,7 @@ export const en = {
   "analytics.team.waitingListBasis":
     "Waiting now, oldest first. Each row names the prospect and who it waits on.",
   "analytics.team.qualified": "Qualified",
-  "analytics.team.unanswered": "Unanswered",
+  "analytics.team.unanswered": "Period arrivals awaiting reply",
   "analytics.team.target": "Monthly target",
   "analytics.team.targetOf": "{actual} of {target}",
   "analytics.team.noTarget": "No target",
@@ -8231,12 +8238,10 @@ export const en = {
   "review.source.contracts": "contracts",
   "review.source.incumbent": "legacy system",
   "analytics.coverageNeverRun":
-    "No check has run yet. An unchecked installation is not the same as a healthy one.",
+    "Start the input check in Forecast to see source coverage.",
   "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not checked: {sources}. Findings below cover only what was checked.",
-  "review.notCheckedYet":
-    "Nothing checked yet: the first check has not been run. The figures above reflect current records.",
   "review.firstCheck.title": "Start the input check",
   "review.firstCheck.body":
     "Starts nightly checks and creates a task for each affected deal.",
@@ -12827,7 +12832,7 @@ export const en = {
   "jurisdiction.confirm.deadlines":
     "Request deadlines follow the new jurisdiction. A request type it sets no deadline for keeps the GDPR month.",
   "jurisdiction.confirm.messaging":
-    "Outgoing messages follow the new jurisdiction’s messaging rules.",
+    "Marketing rules follow each recipient’s country, so this change applies them to recipients in the new country.",
   "jurisdiction.floor.none": "no floor",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd":
@@ -12844,10 +12849,10 @@ export const en = {
   "jurisdiction.effects.carriedValue":
     "{floor}, for mail from before {before}, until {until}",
   "jurisdiction.effects.deadline": "Deadline: {kind}",
-  "jurisdiction.effects.messaging": "Messaging rules",
+  "jurisdiction.effects.messaging": "Marketing rules for recipients here",
   "jurisdiction.effects.messagingValue": "Rule set version {version}",
   "jurisdiction.effects.messagingNone":
-    "None. Every advertising message needs consent.",
+    "None. Advertising to recipients here needs consent.",
   "jurisdiction.effects.class": "Retention class",
   "jurisdiction.deadline.fromReceipt": "{period} from receipt",
   "jurisdiction.rule.gdpr": "GDPR, one calendar month",
@@ -13499,6 +13504,24 @@ export const en = {
   "settings.voice.exclusion.ownerRemoved": "Removed",
   "settings.voice.exclusion.corpusCleared":
     "Removed when the samples were cleared",
+  "settings.voice.sentMailLabel": "Learn from sent mail",
+  "settings.voice.sentMailConsent":
+    "Margince reads up to your 200 most recent sent mails, only from your own mailbox, only now and only because you press the button. Quoted replies, forwards and signatures are left out, and so is mail kept to its participants or marked confidential. Your own words are stored as writing samples and sent to the AI model when you build your Voice DNA. You can remove single mails or clear all samples at any time.",
+  "settings.voice.sentMailButton": "Learn from sent mail",
+  "settings.voice.sentMailReading": "Reading sent mail…",
+  "settings.voice.sentMailLearned_one":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use it.",
+  "settings.voice.sentMailLearned_other":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use them.",
+  "settings.voice.sentMailNothingNew":
+    "Nothing new to learn. Each sent mail found is already a sample or was removed by you.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} mail was left out: it holds only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} mails were left out: they hold only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNone":
+    "No sent mail to learn from. Only mail sent from your own connected mailbox counts, and mail kept private or marked confidential is left out.",
+  "settings.voice.sentMailFailed": "Sent mail was not read. {detail}",
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
@@ -14893,7 +14916,12 @@ export const en = {
   // end polish: setup-popover
   "account.profileCard": "Profile",
   "account.signInCard": "Sign-in",
-  "account.languageCard": "Language",
+  "account.timezoneLabel": "Time zone",
+  "account.timezoneHelp":
+    "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "workingHours.zoneIs": "Your hours are read in {zone}.",
+  "workingHours.changeZone": "Change time zone",
+  "account.languageCard": "Language and time zone",
   "account.browserCard": "This browser",
   "account.passwordHelp":
     "For signing in as {email}. Changing it signs you out everywhere else and disconnects the apps and agents that act for you.",
@@ -15195,9 +15223,6 @@ export const en = {
   "workingHours.unsetTitle": "Not set yet",
   "workingHours.unset":
     "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
-  "workingHours.timezone": "Timezone",
-  "workingHours.browserZone":
-    "Your browser is on {zone}. Availability uses the timezone chosen here.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
   "workingHours.day.1": "Monday",
@@ -16226,6 +16251,9 @@ export const en = {
   "webhooks.event.user_greeting_name.changed.label": "Greeting name changed",
   "webhooks.event.user_greeting_name.changed.when":
     "A member’s greeting name is saved, or filled at their first provider sign-in.",
+  "webhooks.event.user_timezone.changed.label": "Time zone changed",
+  "webhooks.event.user_timezone.changed.when":
+    "A member’s own time zone is stored or changed.",
   "webhooks.event.user_locale.changed.label": "Interface language changed",
   "webhooks.event.user_locale.changed.when":
     "A member chooses the language of their own interface.",
@@ -18310,6 +18338,8 @@ export const en = {
   "worklist.view.total.decisions_other": "{count} outstanding decisions",
   "worklist.view.total.system_one": "{count} unresolved issue",
   "worklist.view.total.system_other": "{count} unresolved issues",
+  "worklist.filter.linked.prospecting":
+    "Showing prospecting follow-ups and meeting work.",
   "worklist.filter.linked.urgent": "Showing urgent work only.",
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
@@ -20067,6 +20097,7 @@ export const en = {
   "analytics.overview.more": "More",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
+  "analytics.outlook.selectedSales": "Sales outlook",
   "analytics.outlook.sales": "Quarter outlook",
   "analytics.outlook.team": "Team prospecting outlook",
   "analytics.outlook.prospecting": "Prospecting outlook",

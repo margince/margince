@@ -133,6 +133,9 @@ type Identity struct {
 	// (data-semantics §2.2). Both are stored; only this one is a property of
 	// the seat.
 	Timezone string
+	// TimezoneChosen is true when the member picked Timezone themselves, and
+	// false when it is the browser's guess or nothing is stored.
+	TimezoneChosen bool
 	// MustChangePassword is true while this account is still using a password
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
@@ -340,7 +343,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		var locale, timezone *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
-			        u.locale, u.timezone, u.greeting_name,
+			        u.locale, u.timezone, u.timezone_chosen, u.greeting_name,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -349,7 +352,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.GreetingName, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.GreetingName, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

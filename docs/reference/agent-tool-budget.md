@@ -15,15 +15,15 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6379 of the window's 32768 tokens per step (19%).
+The heaviest menu is `overnight_at_risk_sweep`: 6388 of the window's 32768 tokens per step (19%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 45 | 2129 | 1584 | 4305 | 13% | 18905 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 45 | 3356 | 2431 | 6379 | 19% | 16831 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 45 |  | 32079 |  |  | 97% |  |  |  |
+| `overnight_at_risk_sweep` | 7 | 7 of 45 | 3360 | 2436 | 6388 | 19% | 16822 | 4 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 45 |  | 32129 |  |  | 98% |  |  |  |
 
 ### `morning_brief`
 
@@ -60,8 +60,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6379 tokens on every step (3356 listing, 2431 step schema), leaving
-16831 of its budget and 26389 tokens of the
+Attaches 7 tools and pays 6388 tokens on every step (3360 listing, 2436 step schema), leaving
+16822 of its budget and 26380 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`

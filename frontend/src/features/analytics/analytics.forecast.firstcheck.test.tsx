@@ -119,15 +119,13 @@ describe("a workspace nobody has started", () => {
     expect(screen.getByRole("button", { name: "Start checking" })).toBeTruthy();
   });
 
-  it("says nothing has been checked rather than that nothing was found", async () => {
+  it("offers the concrete check without a redundant unchecked assurance", async () => {
     show();
-
-    await screen.findByRole("button", { name: "Start checking" });
-    // A reader who takes an unchecked pipeline for a clean one has been told
-    // the opposite of what happened, so the panel must never say "nothing to
-    // check" in this state.
+    expect(
+      await screen.findByRole("button", { name: "Start checking" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
     expect(screen.queryByText("Nothing to check.")).toBeNull();
-    expect(screen.getByText(/Nothing checked yet/)).toBeTruthy();
   });
 
   it("starts the check on the press, and then says it is running", async () => {

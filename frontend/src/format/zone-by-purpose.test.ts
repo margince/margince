@@ -327,6 +327,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
   },
   {
+    file: "features/settings/account-settings.test.tsx",
+    why: "The case picks a zone in the account row and asserts the exact IANA name the write carries; the name the user picked is the subject, so it has to be spelled.",
+  },
+  {
     file: "testing/settings.testkit.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },

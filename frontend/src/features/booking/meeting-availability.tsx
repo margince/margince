@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EmptyState, Field } from "../../design-system/atoms";
+import { Button, EmptyState, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -13,12 +13,12 @@ import { QueryGate } from "../../design-system/querystates";
 import { useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useToast } from "../../design-system/toast";
-import { timezoneOption, viewerZone } from "../../format/timezone";
+import { timezoneOption } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 import { putSchedulingChanges } from "../../lib/scheduling-profile-query";
 import {
   BookingRules,
@@ -231,7 +231,6 @@ function HoursFields({
   const t = useT();
   const { locale } = useLocale();
   const [now] = useState(() => new Date());
-  const browserZone = viewerZone();
   return (
     <>
       {!chosen && <Callout kind="standing" title={t("workingHours.unset")} />}
@@ -270,26 +269,23 @@ function HoursFields({
             />
           )}
         </Field>
-        <Field
-          label={t("workingHours.timezone")}
-          hint={t("workingHours.zoneHelp")}
-        >
-          {(control) => (
-            <TimezoneSelect
-              {...control}
-              value={value.timezone}
-              onChange={(timezone) => onChange({ ...value, timezone })}
-            />
-          )}
-        </Field>
       </div>
-      {!chosen && browserZone !== value.timezone && (
+      {/* The hours are read on the user's own time zone, which is set once
+          under Settings → Account and not here. */}
+      <div className="form-row">
         <p className="t-caption">
-          {t("workingHours.browserZone", {
-            zone: timezoneOption(locale, browserZone, now).label,
-          })}
+          {t("workingHours.zoneIs", {
+            zone: timezoneOption(locale, value.timezone, now).label,
+          })}{" "}
+          {t("workingHours.zoneHelp")}
         </p>
-      )}
+        <Button
+          variant="ghost"
+          onClick={() => navigate({ screen: "settings", id: "account" })}
+        >
+          {t("workingHours.changeZone")}
+        </Button>
+      </div>
     </>
   );
 }
@@ -308,8 +304,11 @@ function useSaveAvailability(
     scope: { id: "working-hours" },
     mutationFn: async ({ hours, rules }: Draft) => {
       if (hours) {
+        const { start_time, end_time, days } = hours;
         const saved = unwrap(
-          await api.PUT("/me/working-hours", { body: hours }),
+          await api.PUT("/me/working-hours", {
+            body: { start_time, end_time, days },
+          }),
         );
         client.setQueryData(["working-hours"], saved);
         onHoursSaved(hours);
