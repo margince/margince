@@ -125,13 +125,13 @@ type VintageOutcome struct {
 }
 
 // CalibrationTallies are a vintage's labelled open deals, counted per bin:
-// by typed chance, by applied chance in use, and by Likely.
+// by typed chance, by applied chance in use, and by commit.
 type CalibrationTallies struct {
 	Labelled      int         `json:"labelled"`
 	NoProbability int         `json:"no_probability"`
 	Typed         ChanceTally `json:"typed"`
 	Applied       ChanceTally `json:"applied"`
-	Likely        [2]Tally    `json:"likely"`
+	Commit        [2]Tally    `json:"commit"`
 }
 
 // ChanceTally is one way of stating each deal's chance, binned by tenths.
@@ -168,12 +168,12 @@ func TallyOpenDeals(deals []OpenDeal) CalibrationTallies {
 		if *deal.WonInHorizon {
 			won = 1
 		}
-		likely := 0
+		commit := 0
 		if deal.InEvidence {
-			likely = 1
+			commit = 1
 		}
-		out.Likely[likely].Deals++
-		out.Likely[likely].Won += won
+		out.Commit[commit].Deals++
+		out.Commit[commit].Won += won
 		if deal.StageProbability == nil {
 			out.NoProbability++
 			continue

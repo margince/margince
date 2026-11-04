@@ -91,7 +91,7 @@ func scoreRows(included []scored, plan EvaluationPlan, fits map[fitKey]closureRa
 		groups[key] = append(groups[key], s.vintage)
 	}
 	var rows []EvaluationRow
-	methods := []string{MethodStageWeighting, MethodSelfCorrecting, MethodLikely, MethodRange}
+	methods := []string{MethodStageWeighting, MethodSelfCorrecting, MethodCommitEvidence, MethodRange}
 	if plan.ScoreCandidate {
 		methods = append(methods, MethodOpenClosure)
 	}
@@ -192,7 +192,7 @@ type prediction func(EvaluationVintage) (int64, error)
 
 // configuredPrediction is won money plus the method's remaining figure. That
 // is the open deals at typed chances, the frozen weighted figure under the
-// chances in use, or Likely.
+// chances in use, or committed evidence.
 func configuredPrediction(method string) prediction {
 	return func(v EvaluationVintage) (int64, error) {
 		readings := Readings{WonMinor: v.WonMinor, EvidenceMinor: v.Evidence, WeightedMinor: v.TypedWeighted}
@@ -200,7 +200,7 @@ func configuredPrediction(method string) prediction {
 		switch method {
 		case MethodSelfCorrecting:
 			readings.WeightedMinor = v.Weighted
-		case MethodLikely:
+		case MethodCommitEvidence:
 			measure = MeasureLikely
 		}
 		landing, err := ProjectLanding(readings, measure, nil)

@@ -37,7 +37,9 @@ const (
 const (
 	MethodStageWeighting = "stage_weighting"
 	MethodSelfCorrecting = "self_correcting_weighting"
-	MethodLikely         = "likely"
+	// MethodCommitEvidence keeps its pre-registered name: the evaluation
+	// corpus and its report are fixed to it. It scores the Likely measure.
+	MethodCommitEvidence = "commit_evidence"
 	MethodRange          = "range_central_80"
 	MethodOpenClosure    = "candidate_open_closure"
 )

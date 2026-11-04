@@ -522,7 +522,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `commit_evidence`, `weighted` or `manager_call`.
+`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
