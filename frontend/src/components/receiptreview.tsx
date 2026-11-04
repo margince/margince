@@ -23,22 +23,16 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
       id: string;
       changeId: string;
       version: number;
-      action: "accept" | "undo";
     }) => {
-      const { error } =
-        input.action === "accept"
-          ? await api.POST("/deals/{id}/applied-changes/{changeId}/accept", {
-              params: {
-                path: { id: input.id, changeId: input.changeId },
-                ...ifMatch(input.version),
-              },
-            })
-          : await api.POST(
-              "/deals/{id}/stage-progressions/{approvalId}/revert",
-              {
-                params: { path: { id: input.id, approvalId: input.changeId } },
-              },
-            );
+      const { error } = await api.POST(
+        "/deals/{id}/applied-changes/{changeId}/accept",
+        {
+          params: {
+            path: { id: input.id, changeId: input.changeId },
+            ...ifMatch(input.version),
+          },
+        },
+      );
       if (error) throwProblem(error);
     },
     onError: () => {
@@ -56,29 +50,17 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
     return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
   if (!writable || !review.writable || subject?.type !== "deal") return null;
-  const press = (action: "accept" | "undo") =>
+  const accept = () =>
     decide.mutate({
       id: subject.id,
       changeId: receipt.id,
       version: review.version,
-      action,
     });
   return (
     <div className="card-actions">
-      {review.can_undo &&
-        (review.kind !== "stage" ? (
-          <ReceiptUndo receipt={receipt} />
-        ) : (
-          <Button
-            variant="ghost"
-            pending={decide.isPending}
-            onClick={() => press("undo")}
-          >
-            {t("common.undo")}
-          </Button>
-        ))}
+      {review.can_undo && <ReceiptUndo receipt={receipt} />}
       {review.can_accept && (
-        <Button pending={decide.isPending} onClick={() => press("accept")}>
+        <Button pending={decide.isPending} onClick={accept}>
           {t(
             review.kind === "close_date"
               ? "brief.changes.keepDate"

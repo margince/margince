@@ -136,8 +136,6 @@ export const OnHome: Story = {
           }),
         [`POST /deals/${deal}/applied-changes/${change.id}/accept`]: () =>
           answer({ accepted: true }),
-        [`POST /deals/${deal}/stage-progressions/${change.id}/revert`]: () =>
-          answer({ reversed: true }),
         [`GET /deals/${deal}`]: () => jsonResponse({ name: "PIM Rollout" }),
       },
       { deal: ["read", "update"] },

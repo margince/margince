@@ -212,7 +212,7 @@ func (s *Store) revertStageCorrection(
 	}
 	history := *c.StageHistoryID
 	reopened, err := s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
-		ToStageID: from, IsExplicitUndo: true, ReversalOf: &history, auditEvidence: evidence,
+		ToStageID: from, ReversalOf: &history, auditEvidence: evidence,
 		// The deal goes back to the open stage it left, so the move claims no win.
 		WonWithoutContractReason: nil,
 	}, active)

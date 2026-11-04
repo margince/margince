@@ -20998,24 +20998,6 @@ func (e SetProjectStakeholderRequestRole) Valid() bool {
 	}
 }
 
-// Defines values for SetTransitionPolicyRequestMode.
-const (
-	SetTransitionPolicyRequestModeSetTransitionModeAuto    SetTransitionPolicyRequestMode = "auto"
-	SetTransitionPolicyRequestModeSetTransitionModePropose SetTransitionPolicyRequestMode = "propose"
-)
-
-// Valid indicates whether the value is a known member of the SetTransitionPolicyRequestMode enum.
-func (e SetTransitionPolicyRequestMode) Valid() bool {
-	switch e {
-	case SetTransitionPolicyRequestModeSetTransitionModeAuto:
-		return true
-	case SetTransitionPolicyRequestModeSetTransitionModePropose:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetUpPartnerRequestPartnerRole.
 const (
 	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
@@ -22339,24 +22321,6 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	case TranscriptReadStartedStatusQueued:
 		return true
 	case TranscriptReadStartedStatusRunning:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for TransitionPolicyMode.
-const (
-	TransitionPolicyModeTransitionModeAuto    TransitionPolicyMode = "auto"
-	TransitionPolicyModeTransitionModePropose TransitionPolicyMode = "propose"
-)
-
-// Valid indicates whether the value is a known member of the TransitionPolicyMode enum.
-func (e TransitionPolicyMode) Valid() bool {
-	switch e {
-	case TransitionPolicyModeTransitionModeAuto:
-		return true
-	case TransitionPolicyModeTransitionModePropose:
 		return true
 	default:
 		return false
@@ -59263,35 +59227,6 @@ type SetSignatureEnrichmentRequest struct {
 	Enabled *bool `json:"enabled"`
 }
 
-// SetTransitionPolicyRequest Every threshold is optional. Omitting one KEEPS what the rule has, or
-// takes the product default on a first write — so a caller turning a
-// transition on cannot silently reset a bar somebody set.
-type SetTransitionPolicyRequest struct {
-	CleanAcceptanceThreshold    *float64           `json:"clean_acceptance_threshold,omitempty" maximum:"1" minimum:"0"`
-	CorrectionReversalThreshold *float64           `json:"correction_reversal_threshold,omitempty" maximum:"1" minimum:"0"`
-	FromStageId                 openapi_types.UUID `json:"from_stage_id"`
-
-	// IfVersion The rule's version as the caller read it, refusing the write with
-	// 409 when the row has moved on since.
-	//
-	// OPTIONAL, and its absence is not a conflict. A first write has no
-	// row to have read, and an edit that offers no pin is a caller who
-	// did not read first rather than one holding a stale copy — the same
-	// bargain the exit-criteria editor makes. A client that wants the
-	// guarantee sends the version it read; one that does not, does not
-	// get it.
-	IfVersion          *int64                         `json:"if_version,omitempty"`
-	MinObservationDays *int                           `json:"min_observation_days,omitempty" minimum:"1"`
-	MinReviewed        *int                           `json:"min_reviewed,omitempty" minimum:"1"`
-	Mode               SetTransitionPolicyRequestMode `json:"mode"`
-	ToStageId          openapi_types.UUID             `json:"to_stage_id"`
-	UndoWindowHours    *int                           `json:"undo_window_hours,omitempty" maximum:"8760" minimum:"1"`
-	WindowDays         *int                           `json:"window_days,omitempty" maximum:"365" minimum:"1"`
-}
-
-// SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
-type SetTransitionPolicyRequestMode string
-
 // SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
 // or `served_segments`: the tier is a human's choice, and the others are set after set-up.
 // Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
@@ -59849,14 +59784,6 @@ type Stage struct {
 // StageSemantic defines model for Stage.Semantic.
 type StageSemantic string
 
-// StageAutomationReport defines model for StageAutomationReport.
-type StageAutomationReport struct {
-	Data []StageTransitionRecord `json:"data"`
-
-	// WindowDays The window the counts were taken over.
-	WindowDays int `json:"window_days"`
-}
-
 // StageCriterionKind What KIND of fact settles a criterion. This is not decoration: the kind
 // decides which evidence sources may satisfy it. `buyer_confirmed`,
 // `event_held`, `document_signed` and `terms_accepted` each name something the
@@ -60017,69 +59944,6 @@ type StageListResponse struct {
 type StageOrderRequest struct {
 	// StageIds Every live stage of the pipeline, each exactly once, in the new order.
 	StageIds []openapi_types.UUID `json:"stage_ids"`
-}
-
-// StageTransitionEvidenceRecord defines model for StageTransitionEvidenceRecord.
-type StageTransitionEvidenceRecord struct {
-	AcceptedClean int    `json:"accepted_clean"`
-	Kind          string `json:"kind"`
-	Reviewed      int    `json:"reviewed"`
-	Unsafe        int    `json:"unsafe"`
-}
-
-// StageTransitionRecord defines model for StageTransitionRecord.
-type StageTransitionRecord struct {
-	// AcceptedClean Approved with nothing changed.
-	AcceptedClean int `json:"accepted_clean"`
-
-	// AcceptedEdited Approved only after the human changed it. Not a clean acceptance:
-	// the question is whether the proposal is right AS IT STANDS.
-	AcceptedEdited int `json:"accepted_edited"`
-
-	// AutoApplied Applied without anybody being asked. Reported apart so a reader can
-	// see how much of a transition's record the autopilot wrote about
-	// itself.
-	AutoApplied         int     `json:"auto_applied"`
-	CleanAcceptanceRate float64 `json:"clean_acceptance_rate" maximum:"1" minimum:"0"`
-	EditRate            float64 `json:"edit_rate" maximum:"1" minimum:"0"`
-
-	// EvidenceKinds The same moves cut by the criterion kinds they rested on, so an
-	// installation can see WHICH evidence it accepts rather than only that
-	// it accepts most things.
-	EvidenceKinds []StageTransitionEvidenceRecord `json:"evidence_kinds"`
-
-	// Expired Cards whose window closed with nobody answering. A refusal by
-	// NOBODY, which is why it is neither a rejection nor reviewed.
-	Expired       int                `json:"expired"`
-	FromStageId   openapi_types.UUID `json:"from_stage_id"`
-	FromStageName string             `json:"from_stage_name"`
-
-	// ObservationDays Whole days from the first answered proposal to the last, rounded
-	// down.
-	ObservationDays int                `json:"observation_days"`
-	PipelineId      openapi_types.UUID `json:"pipeline_id"`
-
-	// Proposed Cards still standing, unanswered.
-	Proposed      int     `json:"proposed"`
-	Rejected      int     `json:"rejected"`
-	RejectionRate float64 `json:"rejection_rate" maximum:"1" minimum:"0"`
-
-	// Reviewed Proposals a human answered. The denominator of every rate here, and
-	// zero means "nobody has answered one yet" rather than "the rates are
-	// bad" — read it before reading any rate below.
-	Reviewed int `json:"reviewed"`
-
-	// Superseded Cards a fresher reading replaced before anyone answered.
-	Superseded  int                `json:"superseded"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
-	ToStageName string             `json:"to_stage_name"`
-
-	// Unsafe Reviewed moves that were reversed OR whose evidence a human
-	// corrected. One outcome counts once even when both are true.
-	Unsafe int `json:"unsafe"`
-
-	// UnsafeRate The safety number, held to a ceiling rather than a floor.
-	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
 }
 
 // StartBackfillRequest defines model for StartBackfillRequest.
@@ -60955,90 +60819,6 @@ type TransferProjectOwnershipRequest struct {
 type TransferProjectOwnershipResult struct {
 	// Transferred Live projects the caller could write that moved; archived and unwritable ones are not counted.
 	Transferred int `json:"transferred"`
-}
-
-// TransitionPolicy defines model for TransitionPolicy.
-type TransitionPolicy struct {
-	// CleanAcceptanceThreshold The share of reviewed proposals a contact must have accepted
-	// UNCHANGED. An edit is agreement with a correction, which is a
-	// weaker claim about the proposal than agreement without one.
-	CleanAcceptanceThreshold float64 `json:"clean_acceptance_threshold"`
-
-	// CorrectionReversalThreshold The ceiling on moves that were undone or whose evidence was
-	// corrected. The one threshold that is a maximum rather than a
-	// minimum, and the one the product suspends a rule for crossing.
-	CorrectionReversalThreshold float64    `json:"correction_reversal_threshold"`
-	EnabledAt                   *time.Time `json:"enabled_at,omitempty"`
-
-	// EnabledBy Who FIRST trusted this transition with automatic moves. Not
-	// overwritten by later threshold edits — who first trusted it is a
-	// different fact from who last adjusted it, and the first is the one
-	// an auditor asks for.
-	EnabledBy   *openapi_types.UUID `json:"enabled_by,omitempty"`
-	FromStageId openapi_types.UUID  `json:"from_stage_id"`
-	Id          openapi_types.UUID  `json:"id"`
-
-	// MinObservationDays The span the record must cover. A fine acceptance rate earned
-	// entirely in one afternoon has not been observed.
-	MinObservationDays int `json:"min_observation_days"`
-
-	// MinReviewed How many proposals a contact must have answered before the rates
-	// mean anything. It also bounds suspension: the volume at which a
-	// record is worth trusting and the volume at which it is worth
-	// distrusting are one judgement.
-	MinReviewed int `json:"min_reviewed"`
-
-	// Mode What the admin has asked for. `auto` is a request, not a state:
-	// moves still go to a contact until the thresholds below hold in the
-	// transaction that would apply them.
-	Mode       TransitionPolicyMode `json:"mode"`
-	PipelineId openapi_types.UUID   `json:"pipeline_id"`
-
-	// SuspendedAt When the PRODUCT turned this rule off. Absent on a rule that is
-	// running. It is not an admin's act and an ordinary save does not
-	// clear it.
-	SuspendedAt *time.Time `json:"suspended_at,omitempty"`
-
-	// SuspendedReason Why the product stopped it, in words an operator can act on.
-	SuspendedReason *string            `json:"suspended_reason,omitempty"`
-	ToStageId       openapi_types.UUID `json:"to_stage_id"`
-
-	// UndoWindowHours How long a contact has to take an automatic move back. Frozen onto
-	// each move as it is applied, so editing this governs the next move
-	// and not the last one.
-	UndoWindowHours int   `json:"undo_window_hours"`
-	Version         int64 `json:"version"`
-
-	// WindowDays How far back the rates are counted.
-	WindowDays int `json:"window_days"`
-}
-
-// TransitionPolicyMode What the admin has asked for. `auto` is a request, not a state:
-// moves still go to a contact until the thresholds below hold in the
-// transaction that would apply them.
-type TransitionPolicyMode string
-
-// TransitionPolicyList defines model for TransitionPolicyList.
-type TransitionPolicyList struct {
-	// AutomationEnabled Whether this installation permits stage automation at all
-	// (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
-	// and while it is off every transition is forced to `propose` regardless of
-	// its own rule.
-	//
-	// A rule's `mode` therefore describes what was asked for, not what will
-	// happen: read both before telling somebody a transition moves deals by
-	// itself.
-	AutomationEnabled bool               `json:"automation_enabled"`
-	Data              []TransitionPolicy `json:"data"`
-}
-
-// TransitionRef One transition, named by the stages at its two ends. Both must belong
-// to the pipeline in the path — the foreign keys admit a pair from two
-// different pipelines, which would be a rule describing a move no deal
-// can make.
-type TransitionRef struct {
-	FromStageId openapi_types.UUID `json:"from_stage_id"`
-	ToStageId   openapi_types.UUID `json:"to_stage_id"`
 }
 
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
@@ -69725,30 +69505,6 @@ type ProgressDealParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
-// RevertStageProgressionParams defines parameters for RevertStageProgression.
-type RevertStageProgressionParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
 	// IfRecommendation Check this recommendation basis before opening its action. Requires if_rule and facts_only; a changed step returns version_skew.
@@ -72805,39 +72561,6 @@ type ResolveSignalParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// SetTransitionPolicyParams defines parameters for SetTransitionPolicy.
-type SetTransitionPolicyParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// GetStageAutomationReportParams defines parameters for GetStageAutomationReport.
-type GetStageAutomationReportParams struct {
-	PipelineId openapi_types.UUID `form:"pipeline_id" json:"pipeline_id"`
-
-	// WindowDays How far back to count, in days. The default matches the launch
-	// gate's own window, so what a reader sees is what the gate reads.
-	WindowDays *int `form:"window_days,omitempty" json:"window_days,omitempty" maximum:"365" minimum:"1"`
-}
-
 // ListStagesParams defines parameters for ListStages.
 type ListStagesParams struct {
 	PipelineId *openapi_types.UUID `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
@@ -74884,12 +74607,6 @@ type CreateSignalJSONRequestBody = CreateSignalRequest
 
 // UpdateSignalJSONRequestBody defines body for UpdateSignal for application/json ContentType.
 type UpdateSignalJSONRequestBody = UpdateSignalRequest
-
-// SetTransitionPolicyJSONRequestBody defines body for SetTransitionPolicy for application/json ContentType.
-type SetTransitionPolicyJSONRequestBody = SetTransitionPolicyRequest
-
-// ResumeTransitionPolicyJSONRequestBody defines body for ResumeTransitionPolicy for application/json ContentType.
-type ResumeTransitionPolicyJSONRequestBody = TransitionRef
 
 // CreateStageJSONRequestBody defines body for CreateStage for application/json ContentType.
 type CreateStageJSONRequestBody = CreateStageRequest
@@ -88996,9 +88713,6 @@ type ServerInterface interface {
 	// What has been observed about this deal against its stage's criteria.
 	// (GET /deals/{id}/stage-evidence)
 	ListStageEvidence(w http.ResponseWriter, r *http.Request, id Id)
-	// Take back a stage move the product made by itself.
-	// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-	RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams)
 	// List a deal's stakeholders (deal↔contact relationships).
 	// (GET /deals/{id}/stakeholders)
 	ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -90193,18 +89907,6 @@ type ServerInterface interface {
 	// The warm/cold classification with the full "why warm" evidence (B-E08.3).
 	// (GET /signals/{id}/warmth)
 	GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id)
-	// What each transition in this pipeline is allowed to do.
-	// (GET /stage-automation/policies/{id})
-	ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id)
-	// Decide what one transition may do.
-	// (PUT /stage-automation/policies/{id})
-	SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams)
-	// Lift a suspension the product put on a transition.
-	// (POST /stage-automation/policies/{id}/resume)
-	ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id)
-	// What each stage transition has earned.
-	// (GET /stage-automation/report)
-	GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams)
 	// List stages (optionally filtered by pipeline).
 	// (GET /stages)
 	ListStages(w http.ResponseWriter, r *http.Request, params ListStagesParams)
@@ -93529,12 +93231,6 @@ func (_ Unimplemented) ListStageEvidence(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Take back a stage move the product made by itself.
-// (POST /deals/{id}/stage-progressions/{approvalId}/revert)
-func (_ Unimplemented) RevertStageProgression(w http.ResponseWriter, r *http.Request, id Id, approvalId openapi_types.UUID, params RevertStageProgressionParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // List a deal's stakeholders (deal↔contact relationships).
 // (GET /deals/{id}/stakeholders)
 func (_ Unimplemented) ListDealStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
@@ -95920,30 +95616,6 @@ func (_ Unimplemented) ResolveSignal(w http.ResponseWriter, r *http.Request, id 
 // The warm/cold classification with the full "why warm" evidence (B-E08.3).
 // (GET /signals/{id}/warmth)
 func (_ Unimplemented) GetSignalWarmth(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each transition in this pipeline is allowed to do.
-// (GET /stage-automation/policies/{id})
-func (_ Unimplemented) ListTransitionPolicies(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Decide what one transition may do.
-// (PUT /stage-automation/policies/{id})
-func (_ Unimplemented) SetTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id, params SetTransitionPolicyParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Lift a suspension the product put on a transition.
-// (POST /stage-automation/policies/{id}/resume)
-func (_ Unimplemented) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// What each stage transition has earned.
-// (GET /stage-automation/report)
-func (_ Unimplemented) GetStageAutomationReport(w http.ResponseWriter, r *http.Request, params GetStageAutomationReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118814,73 +118486,6 @@ func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
-// RevertStageProgression operation middleware
-func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	// ------------- Path parameter "approvalId" -------------
-	var approvalId openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "approvalId", chi.URLParam(r, "approvalId"), &approvalId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "approvalId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RevertStageProgressionParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RevertStageProgression(w, r, id, approvalId, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListDealStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -135293,182 +134898,6 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// ListTransitionPolicies operation middleware
-func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListTransitionPolicies(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// SetTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params SetTransitionPolicyParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetTransitionPolicy(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ResumeTransitionPolicy operation middleware
-func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ResumeTransitionPolicy(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetStageAutomationReport operation middleware
-func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetStageAutomationReportParams
-
-	// ------------- Required query parameter "pipeline_id" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, true, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "window_days" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_days", r.URL.Query(), &params.WindowDays, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_days"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_days", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetStageAutomationReport(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListStages operation middleware
 func (siw *ServerInterfaceWrapper) ListStages(w http.ResponseWriter, r *http.Request) {
 
@@ -142220,9 +141649,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/stage-evidence", wrapper.ListStageEvidence)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/deals/{id}/stage-progressions/{approvalId}/revert", wrapper.RevertStageProgression)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/stakeholders", wrapper.ListDealStakeholders)
 	})
 	r.Group(func(r chi.Router) {
@@ -143415,18 +142841,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/signals/{id}/warmth", wrapper.GetSignalWarmth)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/policies/{id}", wrapper.ListTransitionPolicies)
-	})
-	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/stage-automation/policies/{id}", wrapper.SetTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/stage-automation/policies/{id}/resume", wrapper.ResumeTransitionPolicy)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/stage-automation/report", wrapper.GetStageAutomationReport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/stages", wrapper.ListStages)

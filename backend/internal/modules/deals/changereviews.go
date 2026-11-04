@@ -5,7 +5,6 @@ package deals
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,20 +34,20 @@ func (s *Store) AppliedChangeReviews(ctx context.Context, keys []AppliedChangeKe
 	var out map[AppliedChangeKey]crmcontracts.AppliedDealChangeReview
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readAppliedChangeReviews(ctx, tx, keys, s.clock())
+		out, err = readAppliedChangeReviews(ctx, tx, keys)
 		return err
 	})
 	return out, err
 }
 
-func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChangeKey, now time.Time) (map[AppliedChangeKey]crmcontracts.AppliedDealChangeReview, error) {
+func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChangeKey) (map[AppliedChangeKey]crmcontracts.AppliedDealChangeReview, error) {
 	dealIDs, changeIDs := make([]ids.UUID, len(keys)), make([]ids.UUID, len(keys))
 	for i, key := range keys {
 		dealIDs[i], changeIDs[i] = key.DealID.UUID, key.ChangeID
 	}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	dealsPos, changesPos, nowPos := arg(dealIDs), arg(changeIDs), arg(now)
+	dealsPos, changesPos := arg(dealIDs), arg(changeIDs)
 	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
 		return nil, err
@@ -70,17 +69,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
         d.version, c.reversed_at IS NULL,
         c.reversed_at IS NULL AND NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND d.fields->f.key IS DISTINCT FROM f.value), d.writable
  FROM deal_correction c JOIN visible d ON d.id = c.deal_id JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
- JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id
- UNION ALL
- SELECT o.deal_id, o.approval_id, 'stage', o.accepted_at IS NOT NULL, o.reversed_at IS NOT NULL,
-        d.version, o.outcome = 'auto_applied' AND o.reversed_at IS NULL
-          AND d.stage_id = o.to_stage_id
-          AND $%d::timestamptz < o.decided_at + make_interval(hours => coalesce(o.undo_window_hours, p.undo_window_hours, 72)),
-        o.outcome = 'auto_applied' AND o.reversed_at IS NULL AND d.stage_id = o.to_stage_id, d.writable
- FROM stage_progression_outcome o JOIN visible d ON d.id = o.deal_id
- JOIN requested r ON r.deal_id = o.deal_id AND r.change_id = o.approval_id
- LEFT JOIN stage_progression_policy p ON p.pipeline_id = o.pipeline_id AND p.from_stage_id = o.from_stage_id AND p.to_stage_id = o.to_stage_id
- WHERE o.outcome IN ('auto_applied', 'reversed')`, dealsPos, changesPos, writable, scope, dealsPos, nowPos)
+ JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id`, dealsPos, changesPos, writable, scope, dealsPos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

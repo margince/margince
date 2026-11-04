@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32229,
+    "tokens": 32155,
     "median_tool_tokens": 611,
-    "mean_tool_tokens": 715
+    "mean_tool_tokens": 714
   },
   "agents": [
     {
@@ -93,11 +93,11 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1862
+      "tokens": 1856
     },
     {
       "name": "change_state",
-      "tokens": 1762
+      "tokens": 1739
     },
     {
       "name": "read_workspace",
@@ -105,19 +105,19 @@
     },
     {
       "name": "read_details",
-      "tokens": 1507
+      "tokens": 1489
     },
     {
       "name": "send_outbound",
       "tokens": 1309
     },
     {
-      "name": "read_view",
-      "tokens": 1004
-    },
-    {
       "name": "preview_import",
       "tokens": 1001
+    },
+    {
+      "name": "read_view",
+      "tokens": 984
     },
     {
       "name": "read_analytics",
@@ -149,7 +149,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 712
+      "tokens": 706
     },
     {
       "name": "change_access",

@@ -302,7 +302,6 @@ var decisionGrants = map[string][]grantRequirement{
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
 	// have made by hand.
-	"stage_progression": {{objectDeal, principal.ActionUpdate}},
 	// An automation's request_approval stages under emit_flow_event, and that
 	// action IS the confirm-first act: approving it performs no downstream
 	// write, it finishes the asking. The grant is the one the action catalog

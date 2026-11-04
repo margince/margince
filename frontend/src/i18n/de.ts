@@ -2430,8 +2430,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.sign_in_policy_read": "Lesen der Anmelderichtlinie",
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
-  "systemJob.stage_progression": "Phasenfortschritt",
-  "systemJob.stage_progression_outcome": "Ergebnis des Phasenwechsels",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -4400,7 +4398,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
-  "approval.kind.stage_progression": "Deal-Phase voranbringen",
   "approval.preview.requiredCriterionMet": "Erforderliches Kriterium erfüllt",
   "approval.preview.requiredCriterionUnmet":
     "Erforderliches Kriterium nicht erfüllt",
@@ -4410,8 +4407,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
-  "approval.field.from_stage": "Von",
-  "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.commitment_task": "Aufgabenzusage",
@@ -12855,7 +12850,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Rollen und Berechtigungen",
   "settings.tab.seats": "Plätze und Lizenz",
-  "settings.tab.stageautomation": "Phasensteuerung",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Akquisitionsquellen",
   "settings.tab.lossreasons": "Verlustgründe",
@@ -19382,62 +19376,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.readings.noCompany": "Keins",
   "lead.readings.owed": "Ausstehend",
   "lead.readings.answered": "Beantwortet",
-  "stageAutomation.record": "Bilanz",
-  "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.transition": "\u00dcbergang",
-  "stageAutomation.reviewed": "Geprüft",
-  "stageAutomation.reviewedHint":
-    "Vorschläge, über die jemand entschieden hat. Jede Quote ist ein Anteil dieser Zahl.",
-  "stageAutomation.open": "Noch offen",
-  "stageAutomation.expired": "Abgelaufen",
-  "stageAutomation.expiredHint":
-    "Niemand hat geantwortet, bevor das Zeitfenster endete. Das ist keine Ablehnung.",
-  "stageAutomation.cleanAcceptance": "Angenommen",
-  "stageAutomation.edits": "Bearbeitet",
-  "stageAutomation.rejections": "Abgelehnt",
-  "stageAutomation.unsafe": "Rückgängig gemacht oder korrigiert",
-  "stageAutomation.unsafeHint":
-    "Wechsel, die jemand rückgängig gemacht hat oder deren Beleg als falsch markiert wurde. Ein Wechsel zählt einmal, auch wenn beides geschah.",
-  "stageAutomation.observationDays": "Beobachtete Tage",
-  "stageAutomation.observationHint":
-    "Vom ersten bis zum letzten geprüften Vorschlag. Eine gute Quote an einem Nachmittag ist keine belastbare Bilanz.",
-  "stageAutomation.glossary": "Was die Zahlen bedeuten",
-  "stageAutomation.evidenceKinds": "Nach Beleg",
-  "stageAutomation.emptyTitle": "Noch keine vorgeschlagenen Phasenwechsel",
-  "stageAutomation.empty":
-    "Jeder Phasenwechsel, den Margince auf dieser Pipeline vorschlägt, wird hier gezählt, zusammen mit der Antwort darauf.",
-  "stageAutomation.noPipelines": "Noch keine Pipelines für einen Bericht.",
-  "stageAutomation.unreadable": "Dieser Bericht wurde nicht geladen",
-  "stageAutomation.rules": "Regeln für Übergänge",
-  "stageAutomation.rulesIntro":
-    "Ein aktivierter Übergang verschiebt noch keine Deals. Margince schlägt weiter Phasenwechsel vor, bis die Bilanz oben die Schwelle erreicht. Danach verschiebt Margince die Deals selbstständig und benachrichtigt dich im Anschluss.",
-  "stageAutomation.offTitle": "Die Phasensteuerung ist deaktiviert",
-  "stageAutomation.offBody":
-    "Solange die Phasensteuerung deaktiviert ist, wird kein Deal von selbst verschoben, unabhängig von der Einstellung der Übergänge unten. Wer diese Installation betreibt, aktiviert die Phasensteuerung in deren Konfiguration.",
-  "stageAutomation.notEarnedYet": "Noch nicht qualifiziert: {why}",
-  "stageAutomation.suspended": "Von Margince ausgesetzt",
-  "stageAutomation.suspendedSince": "Ausgesetzt am {date}",
-  "stageAutomation.resume": "Fortsetzen",
-  "stageAutomation.resumeTitle": "Diesen Übergang fortsetzen?",
-  "stageAutomation.resumeBody":
-    "Margince hat diesen Übergang ausgesetzt (Grund: {reason}). Das Fortsetzen überspringt die Schwelle nicht: Der Übergang muss die Bilanz oben erreichen, bevor er Deals automatisch verschiebt.",
-  "stageAutomation.noRules":
-    "Noch kein Übergang dieser Pipeline hat eine Regel, daher wird jeder Wechsel einer Person zur Prüfung vorgeschlagen.",
-  "stageAutomation.undoWindow": "Rückgängig für {hours} h",
-  "stageAutomation.rulesLoading": "Regeln für Übergänge werden geladen…",
-  "stageAutomation.saveFailed": "Änderung nicht gespeichert",
-  "stageAutomation.nothingReviewed": "Vorgeschlagen, aber noch keiner geprüft.",
-  "stageAutomation.detail": "Details",
-  "stageAutomation.detailFor": "Details zu {transition}",
-  "stageAutomation.evidenceShare":
-    "{accepted} von {reviewed} wie vorgeschlagen angenommen",
-  "stageAutomation.acceptedHint":
-    "Wie vorgeschlagen angenommen, ohne Änderung.",
-  "stageAutomation.editedHint":
-    "Angenommen, nachdem jemand den Vorschlag geändert hat.",
-  "stageAutomation.rejectedHint": "Vorschläge, die jemand abgelehnt hat.",
-  "stageAutomation.openHint":
-    "Vorschläge, auf die noch niemand geantwortet hat. Keine Quote zählt sie mit.",
   "employment.importLoading": "Gekaufter beruflicher Werdegang wird geladen…",
   "employment.apply": "Importierte Unternehmen verknüpfen",
   "employment.status.current": "Aktuell",

@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -173,24 +171,4 @@ func TestEvidenceOutlivesADeletedActivity(t *testing.T) {
 		t.Error("deleting the mail marked the contract missing too")
 	}
 
-	var facts deals.StageProgressionFacts
-	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, evidenceReaderPerms)
-	if err := e.Deals.Tx(reader, func(tx pgx.Tx) error {
-		var err error
-		facts, err = e.Deals.ReadStageProgressionFacts(reader, tx, src.deal, deals.AutopilotFacts{}, time.Now())
-		return err
-	}); err != nil {
-		t.Fatalf("the progression facts stopped reading once a source was deleted: %v", err)
-	}
-	if !facts.Criteria[0].Met {
-		t.Error("the criterion lost its settlement when one source was deleted")
-	}
-	for _, cited := range facts.Criteria[0].Sources {
-		if cited.SourceID == src.activity && !cited.Missing {
-			t.Error("the progression facts cite the deleted mail as openable")
-		}
-		if cited.SourceID == src.contract && cited.Missing {
-			t.Error("the progression facts mark the live contract missing")
-		}
-	}
 }

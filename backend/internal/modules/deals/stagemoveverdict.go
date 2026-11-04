@@ -23,6 +23,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// stageMoveCheckActor reads the own domains for the stage-move check. It is
+// the principal of the evidence authorship pass, which judges the same thing.
+const stageMoveCheckActor = "system:evidence_authorship"
+
 // DealStageMoveKind is the owner's switch for Margince moving their deals.
 const DealStageMoveKind = "deal_stage_move"
 

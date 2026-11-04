@@ -113,22 +113,6 @@ it("dates a change from today by its hour and an older one by its day", async ()
   ]);
 });
 
-it("uses the stage reversal route rather than restoring a stage field", async () => {
-  const change = automaticStageReceipt;
-  const path = `/deals/${change.subject?.id}/stage-progressions/${change.id}/revert`;
-  const calls = stubApi({
-    "GET /me": () =>
-      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
-    [`POST ${path}`]: () => jsonResponse({}),
-  });
-  const user = userEvent.setup();
-  render(<ReceiptReview receipt={change} />);
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() =>
-    expect(writes(calls).map((call) => call.path)).toEqual([path]),
-  );
-});
-
 it("offers no write for a superseded change", () => {
   stubApi({});
   render(
