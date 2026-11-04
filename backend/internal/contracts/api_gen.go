@@ -22215,6 +22215,7 @@ func (e TransitionPolicyMode) Valid() bool {
 
 // Defines values for UndoMarginceChangeKeptReason.
 const (
+	UndoMarginceChangeKeptReasonAccepted      UndoMarginceChangeKeptReason = "accepted"
 	UndoMarginceChangeKeptReasonAlreadyUndone UndoMarginceChangeKeptReason = "already_undone"
 	UndoMarginceChangeKeptReasonChangedSince  UndoMarginceChangeKeptReason = "changed_since"
 	UndoMarginceChangeKeptReasonNotFound      UndoMarginceChangeKeptReason = "not_found"
@@ -22225,6 +22226,8 @@ const (
 // Valid indicates whether the value is a known member of the UndoMarginceChangeKeptReason enum.
 func (e UndoMarginceChangeKeptReason) Valid() bool {
 	switch e {
+	case UndoMarginceChangeKeptReasonAccepted:
+		return true
 	case UndoMarginceChangeKeptReasonAlreadyUndone:
 		return true
 	case UndoMarginceChangeKeptReasonChangedSince:

@@ -113,6 +113,12 @@ type morningItem struct {
 func morningRefs(items []morningItem, digest digestLines) sendRefs {
 	refs := digestRefs(digest)
 	for _, item := range items {
+		if item.source == morningChangesWindow {
+			if since, err := time.Parse(time.RFC3339Nano, item.id); err == nil {
+				refs.changesSince = &since
+			}
+			continue
+		}
 		id, err := ids.Parse(item.id)
 		if err != nil {
 			continue

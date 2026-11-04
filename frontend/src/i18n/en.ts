@@ -18242,6 +18242,7 @@ export const en = {
     "Undone, except the {field}, which was changed since Margince set it.",
   "changes.refused":
     "Not undone. The deal changed since you opened this page. Reload and try again.",
+  "changes.alreadyAccepted": "You already accepted this change, so it stays.",
   "changes.deal.title": "Changes by Margince",
   "changes.deal.loading": "Loading changes…",
   "changes.team.title": "Changes by Margince on your team",

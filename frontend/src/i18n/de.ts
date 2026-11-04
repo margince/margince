@@ -18422,6 +18422,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Rückgängig gemacht, außer {field}, das seitdem geändert wurde.",
   "changes.refused":
     "Nicht rückgängig gemacht. Der Deal hat sich geändert, seit du die Seite geöffnet hast. Lade neu und versuche es noch einmal.",
+  "changes.alreadyAccepted":
+    "Du hast diese Änderung schon übernommen, sie bleibt.",
   "changes.deal.title": "Änderungen durch Margince",
   "changes.deal.loading": "Änderungen werden geladen…",
   "changes.team.title": "Änderungen durch Margince in deinem Team",

@@ -183,10 +183,11 @@ The work counts come from the current Worklist read. The greeting's email count 
 ### Check applied changes
 **Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. **Details** shows who made a change and when, each value before and after, and the email, call or meeting it came from. A source opens on a press, and one you cannot open is not named.
 
-**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist. When Margince changed three or more of your deals, they become one row: "Margince updated 3 of your deals: 1 closed, 2 re-dated". It counts deals and names the five worth the most, each with **Undo**. **View all** and **Undo all** end the row. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
+**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
-A deal that changed again reads "This deal changed again. Open the deal to review its current state."
-Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
+When Margince changed three or more of your deals, they become one row: "Margince updated 3 of your deals: 1 closed, 2 re-dated". It counts deals and names the five worth the most, each with **Undo**. **View all** and **Undo all** end the row. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
+
+A deal that changed again reads "This deal changed again. Open the deal to review its current state." Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
 
 ### What happens to a promise from a call or an email?
 A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
@@ -354,8 +355,7 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 
 When there is nothing: "No actions taken on your behalf today."
 
-**Undo** puts the record back the way it was before a deal change. A change already undone
-stays in history with its status and has no action to take. **Undo all** takes back every change Margince made to your deals that you have not kept or undone.
+**Undo** puts the record back the way it was before a deal change. A change already undone stays in history with its status and has no action to take. **Undo all** takes back every change Margince made to your deals that you have not kept or undone.
 
 ## For a team lead
 

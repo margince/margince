@@ -42,7 +42,9 @@ export function undoResultText(
   t: Translator,
 ): string {
   if (result.outcome === "refused") {
-    return t("changes.refused");
+    return result.kept.some((kept) => kept.reason === "accepted")
+      ? t("changes.alreadyAccepted")
+      : t("changes.refused");
   }
   if (result.outcome === "partly_undone") {
     return t("changes.partly", {

@@ -55656,7 +55656,7 @@ export interface components {
             /** @description The kind of change; absent when the change could not be read. */
             kind?: string;
             /** @enum {string} */
-            reason: "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew";
+            reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew";
         };
         TeamMarginceChangeGroup: {
             /** Format: uuid */

@@ -293,3 +293,29 @@ func readerOf(ctx context.Context) ids.UUID {
 	}
 	return ids.Nil
 }
+
+// PendingChangesFingerprintTx fingerprints the held changes Margince made
+// since an instant to one owner's deals: each change's id and whether it was
+// accepted or undone. A morning email that counts these changes is held on it.
+// So an Accept or Undo of any of them, listed or only counted, reads it again.
+// With lock, the changes are taken `FOR SHARE` first, for the hold.
+func PendingChangesFingerprintTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, since time.Time, lock bool) (int64, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	const changes = `FROM deal_correction c JOIN deal d ON d.id = c.deal_id
+		WHERE c.correction = ANY($1) AND c.applied_at >= $2 AND d.owner_id = $3`
+	if lock {
+		if _, err := tx.Exec(ctx, `SELECT 1 `+changes+` FOR SHARE OF c`, heldCorrections, since, owner); err != nil {
+			return 0, fmt.Errorf("deals: holding the changes a morning counts: %w", err)
+		}
+	}
+	var fingerprint int64
+	err := tx.QueryRow(ctx, `SELECT coalesce(('x' || substr(md5(string_agg(
+		       c.id::text || ':' || coalesce(c.accepted_at::text, '') || ':' || coalesce(c.reversed_at::text, ''),
+		       ',' ORDER BY c.id)), 1, 16))::bit(64)::bigint, 0) `+changes, heldCorrections, since, owner).Scan(&fingerprint)
+	if err != nil {
+		return 0, fmt.Errorf("deals: fingerprinting the changes a morning counts: %w", err)
+	}
+	return fingerprint, nil
+}

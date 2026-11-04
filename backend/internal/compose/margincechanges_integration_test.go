@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -218,7 +219,7 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 		t.Fatal(err)
 	}
 	if amount.BeforeAmount != nil || amount.AfterAmount != nil ||
-		strings.Contains(string(amount.Evidence), "45") || strings.Contains(string(wire), "45,000") || strings.Contains(string(wire), "45000") {
+		strings.Contains(string(amount.Evidence), "45000") || strings.Contains(string(amount.Evidence), "quoted") || strings.Contains(string(wire), "45,000") || strings.Contains(string(wire), "45000") {
 		t.Fatalf("masked owner's amount change = %s (evidence %s), want no amount anywhere", wire, amount.Evidence)
 	}
 }
@@ -242,5 +243,123 @@ func TestAnAgentCannotUndoMarginceChangesInBulk(t *testing.T) {
 	}
 	if got := v.field(t, "amount_minor"); got != "4500000" {
 		t.Fatalf("amount after the refused Undo = %s, want Margince's 45,000.00 EUR still there", got)
+	}
+}
+
+// accept keeps one of the deal's changes, as the owner's Accept does.
+func (v *dealVerdictEnv) accept(t *testing.T, dealID ids.UUID, correction string) {
+	t.Helper()
+	audit := v.WsScalar(t, `SELECT audit_log_id::text FROM deal_correction WHERE deal_id = $1 AND correction = $2`, dealID, correction)
+	version, err := strconv.ParseInt(v.WsScalar(t, `SELECT version::text FROM deal WHERE id = $1`, dealID), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Deals.AcceptAppliedChange(v.owner(t), ids.From[ids.DealKind](dealID), ids.MustParse(audit), version); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnAcceptedChangeHasNoUndoOnAnyPath(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	h := newMarginceChangeHandlers(v.Pool)
+	summary, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil || len(summary.Bundles) != 1 {
+		t.Fatalf("pending = %+v %v", summary, err)
+	}
+	bundle := summary.Bundles[0]
+	v.accept(t, v.deal, deals.VerdictAmountCorrection)
+
+	result, err := h.undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
+		DealId: openapi_types.UUID(v.deal), Version: bundle.Version, AuditLogIds: wireUUIDs(bundle.AuditLogIDs),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	accepted := slices.ContainsFunc(result.Kept, func(k crmcontracts.UndoMarginceChangeKept) bool {
+		return k.Reason == crmcontracts.UndoMarginceChangeKeptReasonAccepted && k.Kind != nil && *k.Kind == deals.VerdictAmountCorrection
+	})
+	if !accepted || v.field(t, "amount_minor") != "4500000" {
+		t.Fatalf("bulk Undo after Accept = %+v, amount %s; want the accepted amount kept", result, v.field(t, "amount_minor"))
+	}
+
+	w := httptest.NewRecorder()
+	h.ListDealMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(v.owner(t)),
+		openapi_types.UUID(v.deal), crmcontracts.ListDealMarginceChangesParams{})
+	var page crmcontracts.DealMarginceChanges
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range page.Changes {
+		if change.Kind == deals.VerdictAmountCorrection && (change.Undo != nil || change.Review == nil || !change.Review.Accepted) {
+			t.Fatalf("the deal's list shows the accepted amount as %s, want accepted and no Undo", w.Body.String())
+		}
+	}
+}
+
+// morningBasis reads one morning and the basis its send would hold.
+func (v *dealVerdictEnv) morningBasis(t *testing.T, now time.Time) (string, sendBasis) {
+	t.Helper()
+	worker := &briefGenerateWorker{
+		engine: briefs.NewBriefEngine(v.Pool, contacts.NewStore(InstallationDB(v.Pool))),
+		pool:   v.Pool, users: identity.NewService(v.Pool), log: slog.New(slog.DiscardHandler),
+	}
+	message, _, items, err := worker.morningMessageItems(v.owner(t), now, mailcopy.For("en"), false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var basis sendBasis
+	if err := database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+		basis, err = readSendBasis(v.owner(t), tx, v.Rep1, nil, morningRefs(items, digestLines{}), now)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return message.Text, basis
+}
+
+func (v *dealVerdictEnv) holds(t *testing.T, basis sendBasis, now time.Time) error {
+	t.Helper()
+	return database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+		return holdSendBasisTx(v.owner(t), tx, basis, func() time.Time { return now })
+	})
+}
+
+func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	first := v.deal
+	owner := ids.From[ids.UserKind](v.Rep1)
+	for i := range 5 {
+		amount, currency := int64(4_000_000), "EUR"
+		created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
+			Name: fmt.Sprintf("Rollout %d", i), PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
+			AmountMinor: &amount, Currency: &currency,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		v.deal = ids.UUID(created.Id)
+		v.note = v.logNote(t, "We sign on "+v.lane.date+" for 45,000 EUR a year.")
+		v.run(t)
+	}
+	now := v.now.Add(time.Hour)
+
+	text, basis := v.morningBasis(t, now)
+	if !strings.Contains(text, "Margince changed 6 of your deals last night") || !strings.Contains(text, "and 1 more deals") || strings.Contains(text, "Support rollout") {
+		t.Fatalf("morning with six changed deals:\n%s\nwant five named, the first counted only", text)
+	}
+	if err := v.holds(t, basis, now); err != nil {
+		t.Fatalf("holding before any change = %v", err)
+	}
+	v.accept(t, first, deals.VerdictProbabilityCorrection)
+	if err := v.holds(t, basis, now); !errors.Is(err, errSendBasisChanged) {
+		t.Fatalf("holding after an Accept on a counted, unlisted deal = %v, want the morning read again", err)
+	}
+
+	_, basis = v.morningBasis(t, now)
+	v.accept(t, v.deal, deals.VerdictAmountCorrection)
+	if err := v.holds(t, basis, now); !errors.Is(err, errSendBasisChanged) {
+		t.Fatalf("holding after an Accept on a listed deal = %v, want the morning read again", err)
 	}
 }

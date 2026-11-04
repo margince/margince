@@ -96,10 +96,12 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.DealMarginceChanges{Changes: make([]crmcontracts.Receipt, 0, len(rows))}
-	for _, row := range rows {
-		out.Changes = append(out.Changes, attention.WireReceipt(correctionReceipt(row)))
+	changes, err := h.changeReceipts(r.Context(), rows)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
+	out := crmcontracts.DealMarginceChanges{Changes: changes}
 	if more {
 		last := rows[len(rows)-1]
 		next := encodeChangeCursor(deals.ChangeCursor{AppliedAt: last.AppliedAt, AuditLogID: last.AuditLogID})
@@ -148,15 +150,43 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor,
 		})
 	}
-	for _, row := range report.Rows {
+	changes, err := h.changeReceipts(ctx, report.Rows)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	for i, row := range report.Rows {
 		if row.OwnerID == nil {
 			continue
 		}
-		out.Rows = append(out.Rows, crmcontracts.TeamMarginceChangeRow{
-			OwnerId: openapi_types.UUID(*row.OwnerID), Change: attention.WireReceipt(correctionReceipt(row)),
-		})
+		out.Rows = append(out.Rows, crmcontracts.TeamMarginceChangeRow{OwnerId: openapi_types.UUID(*row.OwnerID), Change: changes[i]})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// changeReceipts draws report rows as receipts with their review state. An
+// accepted change carries no Undo: the owner kept it.
+func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals.CorrectionReceipt) ([]crmcontracts.Receipt, error) {
+	keys := make([]deals.AppliedChangeKey, 0, len(rows))
+	for _, row := range rows {
+		keys = append(keys, deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID})
+	}
+	reviews, err := h.deals.AppliedChangeReviews(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]crmcontracts.Receipt, 0, len(rows))
+	for _, row := range rows {
+		receipt := correctionReceipt(row)
+		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
+			receipt.Review = &review
+		}
+		if row.Accepted {
+			receipt.Undo = nil
+		}
+		out = append(out, attention.WireReceipt(receipt))
+	}
+	return out, nil
 }
 
 // UndoMarginceChanges takes back the named changes, deal by deal.
@@ -274,7 +304,10 @@ func undoRefusal(err error) (crmcontracts.UndoMarginceChangeKeptReason, bool) {
 	if err == nil {
 		return "", false
 	}
-	if _, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
+	if conflict, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
+		if conflict.Reason == deals.AlreadyAccepted {
+			return crmcontracts.UndoMarginceChangeKeptReasonAccepted, true
+		}
 		return crmcontracts.UndoMarginceChangeKeptReasonChangedSince, true
 	}
 	switch {

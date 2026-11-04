@@ -60,7 +60,13 @@ export function DealMarginceChangesCard({
             ]
               .filter(Boolean)
               .join(" · ")}
-            right={<ReceiptUndo receipt={change} />}
+            right={
+              change.review?.accepted ? (
+                t("brief.changes.accepted")
+              ) : (
+                <ReceiptUndo receipt={change} />
+              )
+            }
           />
         ))}
       </OverviewList>

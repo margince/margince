@@ -74601,7 +74601,7 @@ components:
         kind: { type: string, description: The kind of change; absent when the change could not be read. }
         reason:
           type: string
-          enum: [already_undone, changed_since, not_found, not_permitted, version_skew]
+          enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew]
 
     TeamMarginceChangeGroup:
       type: object

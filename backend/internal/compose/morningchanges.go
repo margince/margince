@@ -20,6 +20,10 @@ import (
 // The send holds the deal, so an Undo before the send re-reads the mail.
 const morningChangeSource = "margince_change"
 
+// morningChangesWindow marks where the counted changes start; its id is the
+// instant, and the send holds every change since it.
+const morningChangesWindow = "margince_changes_since"
+
 // morningChangeLines is how many changed deals the email names; the rest are
 // counted and wait on Home.
 const morningChangeLines = 5
@@ -42,10 +46,15 @@ func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deal
 			bundles = append(bundles, bundle)
 		}
 	}
-	if len(bundles) == 0 {
+	// The total is SQL's count over every changed deal, less the ones the
+	// basis excluded; the 500-bundle cap never shrinks it.
+	total := summary.Deals - (len(summary.Bundles) - len(bundles))
+	if total <= 0 {
 		return nil
 	}
-	s.body.Heading(fmt.Sprintf(words.MorningChanges, len(bundles)+summary.Deals-len(summary.Bundles)))
+	// The whole set behind the count is held, not only the deals listed.
+	s.included = append(s.included, morningItem{source: morningChangesWindow, id: since.UTC().Format(time.RFC3339Nano)})
+	s.body.Heading(fmt.Sprintf(words.MorningChanges, total))
 	for _, bundle := range bundles[:min(morningChangeLines, len(bundles))] {
 		s.body.Item(emailview.Item{
 			Title: mailcopy.OneLine(bundle.DealName), Verb: words.MailReview, OneLine: true,
@@ -55,7 +64,7 @@ func (s *morningSelection) appendMorningChanges(ctx context.Context, store *deal
 		s.included = append(s.included, morningItem{source: morningChangeSource, id: bundle.DealID.String()})
 		s.shown++
 	}
-	if more := len(bundles) - morningChangeLines; more > 0 {
+	if more := total - min(morningChangeLines, len(bundles)); more > 0 {
 		s.body.Paragraph(fmt.Sprintf(words.MorningChangeMore, more))
 	}
 	s.body.Action(words.MorningChangesUndo, mailcopy.Destination(base, mailcopy.BriefMorningFragment))

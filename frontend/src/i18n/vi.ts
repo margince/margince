@@ -17949,6 +17949,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã hoàn tác, trừ {field} đã được thay đổi sau khi Margince đặt.",
   "changes.refused":
     "Chưa hoàn tác. Giao dịch đã thay đổi từ khi bạn mở trang này. Hãy tải lại và thử lại.",
+  "changes.alreadyAccepted":
+    "Bạn đã chấp nhận thay đổi này nên nó được giữ lại.",
   "changes.deal.title": "Thay đổi của Margince",
   "changes.deal.loading": "Đang tải thay đổi…",
   "changes.team.title": "Thay đổi của Margince trong nhóm",

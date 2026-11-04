@@ -41,3 +41,21 @@ describe("the words for an Undo of Margince's changes", () => {
     );
   });
 });
+
+describe("an Undo of a change its owner kept", () => {
+  it("says the change was accepted rather than that the deal moved", () => {
+    expect(
+      undoResultText(
+        {
+          deal_id: "d",
+          outcome: "refused",
+          undone: [],
+          kept: [
+            { audit_log_id: "a", kind: "deal_amount", reason: "accepted" },
+          ],
+        },
+        t,
+      ),
+    ).toBe("You already accepted this change, so it stays.");
+  });
+});
