@@ -24,7 +24,7 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
 		in.PipelineID, in.PopulationFingerprint,
 		nullIfEmpty(string(in.ForwardMeasure)), nullIfEmpty(in.QualifiedPolicyVersion),
 		InputFingerprint(in.Readings.Contributions),
-		in.SelfCorrecting, in.EvidenceCutoff, nullIfEmpty(in.RiskSignalsVersion), nullableInt(in.Readings.LikelyThreshold),
+		in.SelfCorrecting, in.EvidenceCutoff, nullIfEmpty(in.RiskSignalsVersion), likelyThresholdColumn(in.Readings.LikelyThreshold),
 	}
 	arguments = append(arguments, frozenRange(in.Readings.Range)...)
 	arguments = append(arguments, frozenLandingColumns(landing)...)
@@ -87,4 +87,13 @@ func (s *Store) frozenLanding(ctx context.Context, tx pgx.Tx, in NewSnapshot) (L
 		}
 	}
 	return ProjectLanding(in.Readings, in.ForwardMeasure, call)
+}
+
+// likelyThresholdColumn is NULL for readings computed without a threshold,
+// which the column's 1..100 check would refuse as zero.
+func likelyThresholdColumn(threshold int) *int {
+	if threshold < 1 {
+		return nil
+	}
+	return &threshold
 }
