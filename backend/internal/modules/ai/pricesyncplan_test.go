@@ -231,3 +231,19 @@ func TestAModelTheVendorSwitchedCallsToIsPricedEvenUnlisted(t *testing.T) {
 		t.Errorf("unlisted = %v, want the switched-to model the catalogue does not price", got)
 	}
 }
+
+// A seeded row with a long-context band is kept as it is. The catalogue
+// publishes one flat price, and writing it would drop the band.
+func TestASyncKeepsARowWithALongContextBand(t *testing.T) {
+	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-3.5-flash", Lane: model.LaneChat})
+	banded := sheetRow(providerGemini, "gemini-3.5-flash", "2", RateSourceSeed)
+	banded.LongContext = true
+
+	plan := planPriceSync(src, []ModelRateRow{banded})
+	if got := writesOf(plan); len(got) != 0 {
+		t.Fatalf("writes = %v, want none", got)
+	}
+	if line := plan.lines[providerGemini]; line.Kept != 1 || line.Updated != 0 {
+		t.Errorf("line = %+v, want the banded row kept", line)
+	}
+}

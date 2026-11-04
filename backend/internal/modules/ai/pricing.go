@@ -34,6 +34,32 @@ type ModelRate struct {
 	CacheReadPerMTokMicroUSD, CacheWritePerMTokMicroUSD int64
 	EffectiveDate                                       time.Time
 	Lane                                                Lane
+	// LongContext is the second price band of a model that charges more for a
+	// call whose prompt passes a size. Nil for a model with one flat price.
+	LongContext *ContextBand
+}
+
+// ContextBand is the price of a call whose prompt is longer than AboveTokens.
+// Above the line the vendor bills every token of the call at the band's
+// prices, not only the tokens past it, so PriceCall swaps all four prices.
+// The prompt size is Usage.TokensIn, which counts cached tokens too: the
+// vendor measures the prompt it was sent, cached or not.
+type ContextBand struct {
+	AboveTokens                                         int
+	InputPerMTokMicroUSD, OutputPerMTokMicroUSD         int64
+	CacheReadPerMTokMicroUSD, CacheWritePerMTokMicroUSD int64
+}
+
+// forPrompt answers the prices a call with a prompt of tokensIn pays: the
+// band's above its line, the row's own everywhere else.
+func (r ModelRate) forPrompt(tokensIn int) ModelRate {
+	b := r.LongContext
+	if b == nil || tokensIn <= b.AboveTokens {
+		return r
+	}
+	r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD = b.InputPerMTokMicroUSD, b.OutputPerMTokMicroUSD
+	r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD = b.CacheReadPerMTokMicroUSD, b.CacheWritePerMTokMicroUSD
+	return r
 }
 
 // PriceCall returns the micro-USD estimate for one call's normalized
@@ -57,7 +83,11 @@ type ModelRate struct {
 // row-by-row sum of PriceCall never drifts from the aggregate SQL.
 //
 // A cache bucket whose price is 0 prices at the input rate (cacheRate).
+//
+// A row with a long-context band prices a call whose prompt is above the
+// band's line at the band's four prices (ModelRate.forPrompt).
 func PriceCall(u Usage, r ModelRate) int64 {
+	r = r.forPrompt(u.TokensIn)
 	uncached := int64(uncachedTokensIn(u.TokensIn, u.CachedTokens, u.CacheWriteTokens))
 	total := uncached*r.InputPerMTokMicroUSD +
 		int64(u.CachedTokens)*cacheRate(r.CacheReadPerMTokMicroUSD, r.InputPerMTokMicroUSD) +
@@ -135,6 +165,17 @@ func rateOn(day time.Time, provider, model string, in, out, cacheRead, cacheWrit
 	}
 }
 
+// withLongContext gives r a second price band for calls whose prompt is longer
+// than above tokens, in micro-USD per million tokens like rateOn's.
+func withLongContext(r ModelRate, above int, in, out, cacheRead, cacheWrite int64) ModelRate {
+	r.LongContext = &ContextBand{
+		AboveTokens:          above,
+		InputPerMTokMicroUSD: in, OutputPerMTokMicroUSD: out,
+		CacheReadPerMTokMicroUSD: cacheRead, CacheWritePerMTokMicroUSD: cacheWrite,
+	}
+	return r
+}
+
 // embedOn is rateOn for the embeddings lane. A separate constructor rather than
 // a lane argument on every call: the chat rows outnumber the embedding rows six
 // to one, and a positional lane on each of them is a column of noise in which
@@ -187,31 +228,14 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// rate from 2027-01-01; the step is an effective-dated row an operator adds.
 		rateOn(day, providerGemini, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
-		// gemini-3.1-pro-preview — the example file's frontier binding — is
-		// DELIBERATELY NOT SEEDED, and that is the point rather than an
-		// omission.
-		//
-		// It is the only Gemini model here whose rate varies with prompt size
-		// (verified 2026-08-12): $2.00/$12.00 per MTok up to 200k tokens and
-		// $4.00/$18.00 above it. ModelRate has four billed buckets and no
-		// notion of a context-length break, so a single row must pick one band
-		// and be wrong about the other — roughly 2x wrong, in whichever
-		// direction it picks.
-		//
-		// This file's own invariant decides it: "a call with no rate row is
-		// UNPRICED, which is a materially different signal from FREE", and
-		// DayCost.UnpricedCalls makes that visible in the report. A row that
-		// under-reports by 2x on long-context calls is WORSE than no row: it
-		// reports a confident wrong number where an absent row reports a
-		// visible unknown. Seeding the >200k price instead is the same error
-		// pointed the other way, over-reporting the common case.
-		//
-		// Restoring a row needs the context band the rate model does not have: #1045.
-		//
-		// Explicit caching is the second charge it cannot express: $4.50/MTok
-		// per HOUR HELD, billed for storage rather than per token processed, so
-		// folding it into any token bucket would charge every call that never
-		// touched the cache.
+		// gemini-3.1-pro-preview, the example file's frontier binding, is the
+		// only Gemini model here whose rate varies with prompt size (verified
+		// 2026-08-12): $2.00/$12.00 per MTok up to 200k prompt tokens and
+		// $4.00/$18.00 above it, cache read at 0.1x input in each band. Above
+		// 200k every token of the call pays the higher band, so the row
+		// carries it as its long-context band (#1045).
+		withLongContext(rateOn(day, providerGemini, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
+			200_000, 4_000_000, 18_000_000, 400_000, 0),
 
 		// OpenAI: config/ai-routing.example.yaml's commented cheap_cloud
 		// binding names "gpt-5-mini", which no longer appears on OpenAI's
@@ -240,6 +264,8 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		withLongContext(rateOn(day, providerGeminiVertex, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
+			200_000, 4_000_000, 18_000_000, 400_000, 0),
 		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
 		// TypeSafe's own API serves the model the broker resells as
 		// typesafe/jev-1.13, seeded at the broker's rate (below) as the owner
@@ -295,10 +321,8 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		//
 		// Sonnet is 4.6, the version config/presets/openrouter_cloud.yaml binds
 		// as its frontier tier; read from the catalog 2026-09-24. It replaced a
-		// 4.5 row nothing bound, which also had the wrong shape to seed: the
-		// catalog prices 4.5 at double above 200k prompt tokens, where 4.6 is
-		// flat across its window — the same reason gemini-3.1-pro-preview is
-		// left unseeded above.
+		// 4.5 row nothing bound. The catalog prices 4.5 at double above 200k
+		// prompt tokens, where 4.6 is flat across its window.
 		// Read 2026-10-12 from the broker's catalog, for the GPT-6 family that
 		// config/presets/openrouter_openai.yaml binds. Unlike the Mistral rows,
 		// OpenAI publishes a cache-write price, so that column is nonzero.

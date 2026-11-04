@@ -59,14 +59,17 @@ func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day t
 
 func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day time.Time) (*ModelRate, error) {
 	var rate ModelRate
+	var band scannedBand
 	from, to := rateFallbacks()
 	err := tx.QueryRow(ctx, `
 		SELECT r.provider, r.model_id, r.input_per_mtok_microusd, r.output_per_mtok_microusd,
-		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.effective_date
+		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.effective_date,
+		       `+longContextColumns("r")+`
 		FROM (`+rateMatch("$1", "$2", "$3", 4, 5)+`) r`,
 		provider, modelID, day, from, to).Scan(
 		&rate.Provider, &rate.ModelID, &rate.InputPerMTokMicroUSD, &rate.OutputPerMTokMicroUSD,
 		&rate.CacheReadPerMTokMicroUSD, &rate.CacheWritePerMTokMicroUSD, &rate.EffectiveDate,
+		&band.above, &band.input, &band.output, &band.cacheRead, &band.cacheWrite,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // no matching rate row IS the "unpriced" answer, not an error — price-on-read never fabricates a price
@@ -74,6 +77,7 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 	if err != nil {
 		return nil, fmt.Errorf("ai: rate lookup: %w", err)
 	}
+	rate.LongContext = band.band()
 	return &rate, nil
 }
 
@@ -85,7 +89,7 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // resolution, inlined so the whole window prices in one query instead of
 // one round-trip per call), the four-bucket arithmetic mirrors PriceCall
 // exactly (same floor, same zero-cache-price fallback to the input rate, same
-// truncating /1000000), and GROUP BY the
+// long-context band, same truncating /1000000), and GROUP BY the
 // call's UTC calendar day + task + tier rolls the window up to exactly
 // AIRT-WIRE-1's /ai/usage grain — one report line per wire row, so the
 // handler attaches each line to its one matching (day, task, tier) row
@@ -147,11 +151,49 @@ func callCostMicroUSD(alias string) string {
 	return fmt.Sprintf(`CASE
 	      WHEN %[1]s.cache_hit OR (%[1]s.tokens_in = 0 AND %[1]s.tokens_out = 0) THEN 0
 	      WHEN r.id IS NULL THEN 0
-	      ELSE (GREATEST(%[1]s.tokens_in - %[1]s.cached_tokens - %[1]s.cache_write_tokens, 0) * r.input_per_mtok_microusd
-	           + %[1]s.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-	           + %[1]s.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-	           + %[1]s.tokens_out * r.output_per_mtok_microusd) / 1000000
-	    END`, alias)
+	      ELSE (GREATEST(%[1]s.tokens_in - %[1]s.cached_tokens - %[1]s.cache_write_tokens, 0) * %[2]s
+	           + %[1]s.cached_tokens * COALESCE(NULLIF(%[3]s, 0), %[2]s)
+	           + %[1]s.cache_write_tokens * COALESCE(NULLIF(%[4]s, 0), %[2]s)
+	           + %[1]s.tokens_out * %[5]s) / 1000000
+	    END`, alias,
+		promptPrice(alias, "input_per_mtok_microusd"), promptPrice(alias, "cache_read_per_mtok_microusd"),
+		promptPrice(alias, "cache_write_per_mtok_microusd"), promptPrice(alias, "output_per_mtok_microusd"))
+}
+
+// promptPrice is one of the rate r's four prices for the ai_call row aliased
+// alias: the long-context band's when the row has one and the call's prompt is
+// above its line, the row's own otherwise. ModelRate.forPrompt is the same rule
+// in Go.
+func promptPrice(alias, column string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.tokens_in > r.long_context_above_tokens
+	        THEN r.long_context_%[2]s ELSE r.%[2]s END`, alias, column)
+}
+
+// longContextColumns are the five long-context band columns of the rate row
+// aliased alias, in the order scannedBand scans them.
+func longContextColumns(alias string) string {
+	return fmt.Sprintf(`%[1]s.long_context_above_tokens, %[1]s.long_context_input_per_mtok_microusd,
+	       %[1]s.long_context_output_per_mtok_microusd, %[1]s.long_context_cache_read_per_mtok_microusd,
+	       %[1]s.long_context_cache_write_per_mtok_microusd`, alias)
+}
+
+// scannedBand holds the five nullable band columns as read. The schema keeps
+// them all set or all empty (ai_model_rate_long_context_complete_check).
+type scannedBand struct {
+	above                                *int
+	input, output, cacheRead, cacheWrite *int64
+}
+
+// band answers the scanned band, or nil for a row with one flat price.
+func (b scannedBand) band() *ContextBand {
+	if b.above == nil || b.input == nil || b.output == nil || b.cacheRead == nil || b.cacheWrite == nil {
+		return nil
+	}
+	return &ContextBand{
+		AboveTokens:          *b.above,
+		InputPerMTokMicroUSD: *b.input, OutputPerMTokMicroUSD: *b.output,
+		CacheReadPerMTokMicroUSD: *b.cacheRead, CacheWritePerMTokMicroUSD: *b.cacheWrite,
+	}
 }
 
 // callUnpriced is whether a row spent something no rate prices. A cache hit and

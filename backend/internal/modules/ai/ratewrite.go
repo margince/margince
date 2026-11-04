@@ -34,6 +34,10 @@ type ModelRateRow struct {
 	EffectiveDate time.Time
 	Lane          Lane
 	Source        RateSource
+	// LongContext is whether the row carries a long-context price band
+	// (ModelRate.LongContext). The price sync leaves such a row alone: the
+	// catalogues it reads publish one flat price per model.
+	LongContext bool
 }
 
 // SetModelRateInput sets one effective-dated model price. The four prices
@@ -333,7 +337,14 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 			cache_read_per_mtok_microusd  = EXCLUDED.cache_read_per_mtok_microusd,
 			cache_write_per_mtok_microusd = EXCLUDED.cache_write_per_mtok_microusd,
 			lane                          = EXCLUDED.lane,
-			source                        = EXCLUDED.source
+			source                        = EXCLUDED.source,
+			-- A written price is one flat price: a band the row carried
+			-- priced the old figures, not these.
+			long_context_above_tokens                  = NULL,
+			long_context_input_per_mtok_microusd       = NULL,
+			long_context_output_per_mtok_microusd      = NULL,
+			long_context_cache_read_per_mtok_microusd  = NULL,
+			long_context_cache_write_per_mtok_microusd = NULL
 		RETURNING id, provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
 		          cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source`,
 		p.provider, p.modelID,
@@ -375,7 +386,8 @@ func (s *RateStore) ListLatestModelRates(ctx context.Context) ([]ModelRateRow, e
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source,
+			       long_context_above_tokens IS NOT NULL
 			FROM ai_model_rate
 			WHERE model_id <> ''
 			ORDER BY provider, model_id, effective_date DESC`)
@@ -406,7 +418,8 @@ func (s *RateStore) ListEffectiveModelRates(ctx context.Context) ([]ModelRateRow
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source,
+			       long_context_above_tokens IS NOT NULL
 			FROM ai_model_rate WHERE effective_date <= $1
 			ORDER BY provider, model_id, effective_date DESC`, s.todayUTC())
 		if err != nil {
@@ -429,7 +442,8 @@ func (s *RateStore) ModelRateHistory(ctx context.Context, provider, modelID stri
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		r, err := tx.Query(ctx, `
 			SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source
+			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source,
+			       long_context_above_tokens IS NOT NULL
 			FROM ai_model_rate WHERE provider = $1 AND model_id = $2
 			ORDER BY effective_date DESC`, strings.TrimSpace(provider), strings.TrimSpace(modelID))
 		if err != nil {
@@ -449,7 +463,7 @@ func scanModelRateRows(r pgx.Rows) ([]ModelRateRow, error) {
 			row                                 ModelRateRow
 			inMicro, outMicro, crMicro, cwMicro int64
 		)
-		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate, &row.Lane, &row.Source); err != nil {
+		if err := r.Scan(&row.Provider, &row.ModelID, &inMicro, &outMicro, &crMicro, &cwMicro, &row.EffectiveDate, &row.Lane, &row.Source, &row.LongContext); err != nil {
 			return nil, fmt.Errorf("scan ai_model_rate: %w", err)
 		}
 		row.InputUsd = MicroUSDToUsdPerMTok(inMicro)

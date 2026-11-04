@@ -45,7 +45,10 @@ func (p *pricePlan) line(provider string) *ProviderRefresh {
 // a hand-set price is kept, a matching one counted, anything else written.
 func (p *pricePlan) apply(t catalogueTarget, cur *ModelRateRow, price func(*ModelRateRow) (SetModelRateInput, bool)) {
 	line := p.line(t.provider)
-	if cur != nil && cur.Source == RateSourceManual {
+	// A hand-set price is the admin's. A row with a long-context band is kept
+	// too: the catalogue's one flat price would drop the band and under-price
+	// every long call.
+	if cur != nil && (cur.Source == RateSourceManual || cur.LongContext) {
 		line.Kept++
 		return
 	}

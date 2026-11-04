@@ -62,6 +62,23 @@ func TestPriceCall(t *testing.T) {
 			ModelRate{InputPerMTokMicroUSD: 5_000_000, CacheReadPerMTokMicroUSD: 500_000},
 			25,
 		},
+		// A banded row at exactly its line: 200k in at $2, 1k out at $12
+		// = (200_000×2e6 + 1_000×12e6)/1e6 = 400_000 + 12_000 = 412_000
+		{
+			"a prompt at the band's line pays the base prices",
+			Usage{TokensIn: 200_000, TokensOut: 1_000},
+			proPreviewRate(),
+			412_000,
+		},
+		// One token above: every token pays the band, not only the excess.
+		// 150_001 uncached at $4 + 50_000 cached at $0.40 + 1k out at $18
+		// = (150_001×4e6 + 50_000×4e5 + 1_000×18e6)/1e6 = 600_004 + 20_000 + 18_000
+		{
+			"a prompt above the band's line pays the band for every token",
+			Usage{TokensIn: 200_001, CachedTokens: 50_000, TokensOut: 1_000},
+			proPreviewRate(),
+			638_004,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -69,6 +86,40 @@ func TestPriceCall(t *testing.T) {
 				t.Fatalf("PriceCall(%+v, %+v) = %d, want %d", c.u, c.r, got, c.want)
 			}
 		})
+	}
+}
+
+// proPreviewRate is the seeded gemini-3.1-pro-preview row, the one row with a
+// long-context band.
+func proPreviewRate() ModelRate {
+	for _, r := range SeedModelRates(seedRatesTestDay) {
+		if r.Provider == providerGemini && r.ModelID == "gemini-3.1-pro-preview" {
+			return r
+		}
+	}
+	panic("the seed sheet no longer prices gemini-3.1-pro-preview")
+}
+
+// Every seeded band must cost at least the row's own prices and start above a
+// real prompt size. A band cheaper than its base would price a longer prompt
+// below a shorter one.
+func TestSeedModelRatesEveryBandCostsAtLeastItsBase(t *testing.T) {
+	banded := 0
+	for _, r := range SeedModelRates(seedRatesTestDay) {
+		b := r.LongContext
+		if b == nil {
+			continue
+		}
+		banded++
+		if b.AboveTokens <= 0 || b.InputPerMTokMicroUSD < r.InputPerMTokMicroUSD ||
+			b.OutputPerMTokMicroUSD < r.OutputPerMTokMicroUSD ||
+			b.CacheReadPerMTokMicroUSD < r.CacheReadPerMTokMicroUSD ||
+			b.CacheWritePerMTokMicroUSD < r.CacheWritePerMTokMicroUSD {
+			t.Errorf("%s/%s: band %+v is cheaper than its base row or starts at no prompt size", r.Provider, r.ModelID, *b)
+		}
+	}
+	if banded == 0 {
+		t.Fatal("no seeded row carries a long-context band, so nothing was checked")
 	}
 }
 
@@ -141,23 +192,21 @@ func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 // nothing contributes nothing and is not a failure.
 // deliberatelyUnpriced are bindings the seeds leave UNPRICED on purpose.
 //
-// The one legitimate reason: ModelRate's four billed buckets cannot express the
-// model's actual charges, so any single row would be a confident wrong number.
-// pricing.go states the invariant that makes this the better answer — "a call
-// with no rate row is UNPRICED, which is a materially different signal from
-// FREE" — and DayCost.UnpricedCalls surfaces it in the report, where a 2x-wrong
-// price would surface as a price.
+// The one legitimate reason: a ModelRate row cannot express the model's actual
+// charges, so any single row would be a confident wrong number. pricing.go
+// states the invariant that makes this the better answer — "a call with no
+// rate row is UNPRICED, which is a materially different signal from FREE" —
+// and DayCost.UnpricedCalls surfaces it in the report, where a 2x-wrong price
+// would surface as a price.
 //
 // Ratified rather than tolerated, because the two failures look identical from
 // here: a binding nobody priced and a binding somebody could not price differ
 // only in whether anyone decided.
-var deliberatelyUnpriced = gatekit.Waive(map[string]string{
-	"gemini/gemini-3.1-pro-preview": "the only Gemini model whose rate varies with prompt size " +
-		"($2/$12 per MTok to 200k, $4/$18 above it), and ModelRate has no context-length break — " +
-		"so one row must be ~2x wrong in one direction or the other. Explicit caching is a second " +
-		"charge it cannot express: billed per hour HELD rather than per token processed. Nothing " +
-		"is billed on it today because no ladder selects the frontier tier. #1045",
-})
+//
+// Empty today. gemini/gemini-3.1-pro-preview was here until #1045 gave a rate
+// row a long-context band: its price doubles above 200k prompt tokens, and the
+// seed now carries both bands.
+var deliberatelyUnpriced = gatekit.Waive(map[string]string{})
 
 func TestSeedModelRatesPricesEveryBindingTheShippedSeedsName(t *testing.T) {
 	priced := map[string]bool{}
