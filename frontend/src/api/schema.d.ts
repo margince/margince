@@ -16582,7 +16582,8 @@ export interface paths {
         head?: never;
         /**
          * Rename a custom field or change whether create dialogs offer it (not a schema change).
-         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, or both;
+         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
+         *     or `activity_kinds`;
          *     `column_name` never moves — the physical column identity is stable across rename.
          *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
          *     entirely, and a body with neither setting is refused with a 422. A retired field
@@ -17366,6 +17367,68 @@ export interface paths {
          *     Human-only. An agent never asserts that a contact met somebody or rang up.
          */
         post: operations["recordQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/qualifying-events/{event_id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back an exchange a colleague recorded by hand.
+         * @description Withdraws an `in_person` or `requested_by_subject` exchange that was recorded by mistake, or
+         *     that the contact took back. The row stays on the record with the moment and the seat that
+         *     withdrew it, and no send rests on it any more, including a message already queued on it.
+         *     A request has no age limit, so this is one of the two ways one stops counting. The other is
+         *     POST /contacts/{id}/acquisition-request/retract, for the request the contact's acquisition
+         *     records. Recording the same exchange again returns the withdrawn row and does not revive it.
+         *
+         *     Human-only for the reason recording is: the exchange is a human's own statement about what
+         *     a contact said, and only a human withdraws it.
+         */
+        post: operations["retractQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/acquisition-request/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back the request the contact's acquisition records.
+         * @description A contact acquired as `requested_quote_or_meeting` or `in_person_permission` counts as having
+         *     asked to hear from us, with no age limit. This withdraws that request, for one recorded by
+         *     mistake or one the contact took back. The acquisition rows stay as the record of how the
+         *     contact was obtained, with the moment and the seat that withdrew the request. No send rests
+         *     on them any more, including a message already queued on them.
+         *
+         *     Human-only for the reason a hand-recorded request is: a request is a human's statement about
+         *     what a contact said, and only a human withdraws it.
+         */
+        post: operations["retractAcquisitionRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20275,10 +20338,10 @@ export interface paths {
          *     `won` counts deals by the day they ACTUALLY closed, never by the day they were
          *     expected to: a deal expected in March and won in April belongs to April, and
          *     counting it in March reports money the quarter did not bring in. `evidence` is the
-         *     committed pipeline whose close dates somebody confirmed — a provisional date is a
-         *     guess, which is what that reading exists to exclude, though the deal stays in
-         *     `open`. `best_case` adds the best-case category. `weighted` applies each deal's
-         *     chance in use, with the strongest learned risk effect, rounded per deal. While
+         *     Likely reading: open deals at `likely_threshold` percent or more whose close dates
+         *     somebody confirmed, counted in full. A provisional date is a guess, which is what
+         *     that reading exists to exclude, though the deal stays in `open`. `weighted` applies
+         *     each deal's chance in use, with the strongest learned risk effect, rounded per deal. While
          *     `self_correcting` is true the chance in use is the stage's typed chance moved toward
          *     the outcomes of deals recorded entering that stage; with no such outcome, and while it
          *     is false, it is the typed chance.
@@ -24592,6 +24655,11 @@ export interface components {
              */
             individual_performance: boolean;
             /**
+             * @description The win probability, in percent, from which an open deal with a confirmed close date
+             *     counts in the Likely forecast. 90 by default.
+             */
+            forecast_likely_threshold: number;
+            /**
              * @description Let the forecast correct itself. On by default. On, each open stage's chance moves
              *     toward the outcomes of deals recorded entering it in the last two years, weighted
              *     against the typed chance as if that were 20 deals; imported and older moves without
@@ -24680,25 +24748,24 @@ export interface components {
             /**
              * @description Which remaining-pipeline reading a projected landing is built from. A setting
              *     rather than a fixed choice, because it is a question about how this installation
-             *     SELLS rather than about the software: a team with a disciplined commit stage means
-             *     something by it, and one that commits everything does not — their weighted number
-             *     is the honest one.
+             *     SELLS rather than about the software: a team whose probabilities are honest at the
+             *     top means something by Likely, and one that rates everything high does not, so
+             *     their weighted number is the honest one.
              *
-             *     `commit_evidence` is the strictest baseline: committed deals whose close date
-             *     somebody confirmed, a provisional date being a guess that stays out.
-             *     `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
-             *     the deals the customer still supports (the `qualified` block on `GET /forecast`).
-             *     `manager_call` takes the authored call as the whole period's landing and is not
-             *     added to what is already won; with no current call the read falls back to
-             *     `commit_evidence` and says so in the landing's `caveat`.
+             *     `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
+             *     percent or more whose close date somebody confirmed, a provisional date being a
+             *     guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
+             *     readings over the deals the customer still supports (the `qualified` block on
+             *     `GET /forecast`). `manager_call` takes the authored call as the whole period's
+             *     landing and is not added to what is already won; with no current call the read
+             *     falls back to `likely` and says so in the landing's `caveat`.
              *
-             *     With no measure saved, the landing uses `qualified_commit_evidence` while the
-             *     installation enforces viability reviews and `commit_evidence` otherwise; this field
-             *     then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+             *     With no measure saved, the landing uses `qualified_likely` while the installation
+             *     enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
              *     client shows an unknown value by its name.
              * @enum {string}
              */
-            forecast_forward_measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -24750,6 +24817,8 @@ export interface components {
             individual_performance?: boolean;
             /** @description Let the forecast correct itself. Omit to leave it unchanged. Each change is audited. */
             forecast_self_correcting?: boolean;
+            /** @description The probability from which a deal counts as Likely. Omit to leave it unchanged. Each change is audited. */
+            forecast_likely_threshold?: number;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -24877,7 +24946,7 @@ export interface components {
              *     at once and re-means no stored row.
              * @enum {string}
              */
-            forecast_forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -34715,6 +34784,8 @@ export interface components {
             operand: "string" | "boolean" | "integer" | "number" | "array";
             /** @description The closed vocabulary the filter takes, when it has one. */
             values?: string[];
+            /** @description When present, the filter is every key this pattern matches rather than `name` alone: an activity list takes each custom field by its `cf_` key, matched exactly. A key no active field names is refused. */
+            pattern?: string;
         };
         /** @description What `describe_record_fields` answers. */
         RecordFieldsVocabulary: {
@@ -34840,6 +34911,8 @@ export interface components {
              * @description The note logged on the deal, absent when the call carried none.
              */
             note_activity_id?: string;
+            /** @description The probability the move set from the new stage, as one sentence. Absent when the move changed no stage. */
+            probability_note?: string;
         };
         /** @description What `qualify_lead` takes besides the lead, which the path names. */
         QualifyLeadRequest: {
@@ -36276,14 +36349,21 @@ export interface components {
             readonly won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other" | null;
             /** @description Required when the reason is `other`, which explains nothing on its own. */
             readonly won_without_contract_detail?: string | null;
-            /** @enum {string|null} */
-            forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
+            /** @description The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability. */
+            readonly win_probability?: number;
+            /**
+             * @description Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+             * @enum {string}
+             */
+            readonly win_probability_source?: "stage" | "human" | "margince";
+            /** @description The probability of the deal's current stage, so a client can show it beside a probability set on the deal. */
+            readonly stage_win_probability?: number;
             /**
              * Format: date
              * @description An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
              */
             expected_close_date?: string | null;
-            /** @description True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date. */
+            /** @description True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date. */
             readonly close_date_provisional?: boolean;
             /**
              * Format: date
@@ -36460,8 +36540,8 @@ export interface components {
              * @description Refused 422 `set_by_advance`; dated by the advance that closes the deal.
              */
             fx_rate_date?: string | null;
-            /** @enum {string|null} */
-            forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
+            /** @description The deal's own win probability in percent. Null sets it back to the stage's probability. Refused 422 `probability_fixed_when_closed` on a won or lost deal, whose probability its stage fixes. */
+            win_probability?: number | null;
             /**
              * Format: date
              * @description On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
@@ -36471,6 +36551,16 @@ export interface components {
             wait_until?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description The deal after a stage move. A move to another stage sets the deal's win probability back to the new stage's, and `probability_set` says so; it is absent when the move changed no stage. */
+        DealAdvanced: components["schemas"]["Deal"] & {
+            probability_set?: components["schemas"]["DealProbabilitySet"];
+        };
+        DealProbabilitySet: {
+            win_probability: number;
+            stage_name: string;
+            /** @description The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields. */
+            note: string;
         };
         CorrectDealCloseDayRequest: {
             /**
@@ -38818,7 +38908,7 @@ export interface components {
             }[];
             source: string;
         };
-        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
+        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
@@ -38875,7 +38965,10 @@ export interface components {
              * @enum {string|null}
              */
             call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
-            /** @enum {string|null} */
+            /**
+             * @description Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
+             * @enum {string|null}
+             */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             source_system?: string | null;
             /**
@@ -39058,7 +39151,7 @@ export interface components {
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
             members?: components["schemas"]["AudienceMember"][];
         };
-        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
+        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
             subject?: string | null;
             body?: string | null;
@@ -41645,11 +41738,27 @@ export interface components {
              * @description When the exchange happened, not when it was typed in.
              */
             occurred_at: string;
+            /**
+             * @description The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
+             *     and only such a request bears out a quote sent before any deal exists. A request to be
+             *     called back supports a follow-up and not a quote.
+             * @default false
+             */
+            asks_for_quote: boolean;
         };
         /** @description A recorded exchange, as it now stands on the contact. */
         QualifyingEventRecord: {
+            /**
+             * Format: uuid
+             * @description The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+             */
+            id: string;
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
+            /** @description The contact asked for a quote or an offer. */
+            asks_for_quote: boolean;
+            /** @description The exchange was withdrawn. Recording it again returns it withdrawn; no send rests on it. */
+            retracted: boolean;
             note: string | null;
             /** Format: date-time */
             occurred_at: string;
@@ -43243,7 +43352,7 @@ export interface components {
              * @description The forward measure the landing was projected with.
              * @enum {string}
              */
-            basis?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            basis?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: double */
             landing?: number;
             /** Format: double */
@@ -44150,11 +44259,12 @@ export interface components {
             won_minor: number;
             /**
              * Format: int64
-             * @description Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+             * @description Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
              */
             evidence_minor: number;
-            /** Format: int64 */
-            best_case_minor: number;
+            /** @description The installation setting `forecast_likely_threshold` this read used. */
+            likely_threshold: number;
+            by_source: components["schemas"]["ForecastBySource"];
             /** Format: int64 */
             open_minor: number;
             /**
@@ -44204,6 +44314,18 @@ export interface components {
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
         };
+        /** @description The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`. */
+        ForecastBySource: {
+            stage: components["schemas"]["ForecastSourceTotal"];
+            human: components["schemas"]["ForecastSourceTotal"];
+            margince: components["schemas"]["ForecastSourceTotal"];
+        };
+        ForecastSourceTotal: {
+            /** Format: int64 */
+            open_minor: number;
+            /** Format: int64 */
+            weighted_minor: number;
+        };
         /** @description One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once. */
         ForecastContribution: {
             /** Format: uuid */
@@ -44213,7 +44335,11 @@ export interface components {
             owner_id?: string;
             /** Format: uuid */
             stage_id?: string;
-            category?: string;
+            /**
+             * @description Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
+             * @enum {string}
+             */
+            probability_source?: "stage" | "human" | "margince";
             /**
              * Format: int64
              * @description The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
@@ -44228,9 +44354,9 @@ export interface components {
             weighted_minor: number;
             in_won: boolean;
             in_open: boolean;
+            /** @description Whether the deal counts in the Likely reading. */
             in_evidence: boolean;
-            in_best_case: boolean;
-            /** @description The chance typed on the deal's stage, in percent. */
+            /** @description The deal's own probability where one is set, else the chance typed on its stage, in percent. */
             typed_probability?: number;
             /** @description The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals. */
             chance_in_use: number;
@@ -44356,8 +44482,6 @@ export interface components {
             /** Format: int64 */
             evidence_minor: number;
             /** Format: int64 */
-            best_case_minor: number;
-            /** Format: int64 */
             weighted_minor: number;
             /**
              * Format: int64
@@ -44406,7 +44530,7 @@ export interface components {
              * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
              * @enum {string}
              */
-            measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /**
              * Format: int64
              * @description The money already banked, the backward half of the sum.
@@ -44696,7 +44820,7 @@ export interface components {
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
             /** @enum {string} */
-            reading: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
+            reading: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */
@@ -46345,6 +46469,8 @@ export interface components {
             show_in_create: boolean;
             /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
             reportable: boolean;
+            /** @description The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it. */
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[] | null;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -46397,12 +46523,15 @@ export interface components {
              * @default true
              */
             show_in_create: boolean;
+            /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
         RenameCustomFieldRequest: {
             label?: string;
             show_in_create?: boolean;
             reportable?: boolean;
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -52666,16 +52795,14 @@ export interface components {
              *     said. Freezing an opinion as a measurement would make the record argue with itself.
              * @enum {string}
              */
-            forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: int64 */
             won_minor: number;
-            /** Format: int64 */
-            commit_minor: number;
             /**
              * Format: int64
-             * @description Inclusive of commit, which is what the label on the surface must say.
+             * @description The Likely reading as the week closed.
              */
-            best_case_minor: number;
+            likely_minor: number;
             /** Format: int64 */
             weighted_minor: number;
             base_currency: string;
@@ -53698,14 +53825,12 @@ export interface components {
         AttentionDealFacts: {
             /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
-            /** @description The recorded forecast category, including omitted. */
-            forecast_category?: string | null;
             /**
              * Format: uuid
              * @description The deal's current stage.
              */
             stage_id?: string | null;
-            /** @description The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`. */
+            /** @description The deal's win probability: its own where one is set, else its stage's. Never a weighting applied to `amount_minor`. */
             win_probability?: number | null;
             /** Format: int64 */
             amount_minor?: number | null;
@@ -55916,15 +56041,13 @@ export interface components {
          *     `amount_minor` converted to the installation's base currency — the only figure by
          *     which two deals in different currencies may be compared. It is not weighted by
          *     `win_probability`: the two are independent facts, one the deal's own money and the
-         *     other a property of the stage it sits in, rather than one computed from the other.
+         *     other the chance it is won, rather than one computed from the other.
          *     A reader must not multiply them together expecting the product to equal a
          *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
-            /** @description The recorded forecast category, including omitted. */
-            forecast_category?: string | null;
             /** Format: uuid */
             stage_id?: string | null;
             /** Format: int64 */
@@ -62599,14 +62722,13 @@ export interface operations {
                 q?: string;
                 status?: "open" | "won" | "lost";
                 /**
-                 * @description One of the forecast's named buckets. The same `deal.forecast_category` the forecast
-                 *     reads, so a tile's figure and the list behind it are one answer rather than two
-                 *     derivations that can disagree.
-                 *
-                 *     A deal carrying no category is in no bucket and is returned by none of the four —
-                 *     the buckets partition the CATEGORISED pipeline, not the pipeline.
+                 * @description Deals whose win probability is at least this percent (inclusive). The same
+                 *     `deal.win_probability` the forecast weights by: the deal's own probability where one
+                 *     is set, else its stage's. A `win_probability_min` above `win_probability_max` is `422`.
                  */
-                forecast_category?: "commit" | "best_case" | "pipeline" | "omitted";
+                win_probability_min?: number;
+                /** @description Deals whose win probability is at most this percent (inclusive). See `win_probability_min`. */
+                win_probability_max?: number;
                 /** @description Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead). */
                 stalled?: boolean;
                 /** @description Filter to the deals belonging to one body of work. */
@@ -63027,13 +63149,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The deal at its new stage. */
+            /** @description The deal at its new stage, and the probability the move set. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Deal"];
+                    "application/json": components["schemas"]["DealAdvanced"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -83030,6 +83152,76 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    retractQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rest on this exchange. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description No live hand-recorded exchange with this id is on this contact: none exists, it is
+             *     derived rather than recorded by hand, or it was already withdrawn.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retractAcquisitionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rest on the acquisition request. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The contact holds no live acquisition request, or it was already withdrawn. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     claimRecord: {
         parameters: {
             query?: never;
@@ -88744,7 +88936,7 @@ export interface operations {
                 /** @description The closing snapshot. */
                 to: string;
                 /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`. */
-                reading?: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
+                reading?: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
             };
             header?: never;
             path?: never;

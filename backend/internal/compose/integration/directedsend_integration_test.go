@@ -101,6 +101,15 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 		t.Error("no refused decision row names the instruction — the refusal was rewritten " +
 			"rather than overridden, so nothing records that anybody overrode it")
 	}
+	var grants int
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM contact_consent WHERE contact_id = $1`, c.contactID).Scan(&grants); err != nil {
+		t.Fatalf("reading the consent rows: %v", err)
+	}
+	if grants != 0 {
+		t.Errorf("%d consent grant(s) after a directed send, want 0 — an override was recorded "+
+			"as permission the subject never gave", grants)
+	}
 }
 
 // THE DECISION IS SPENT, AND THE NEXT MESSAGE NEEDS ITS OWN.
@@ -137,10 +146,12 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	}
 }
 
-// THE SUPPRESSION IS NEVER TOUCHED. A subject who asked us to stop has asked us
-// to stop; an override sends one message against that and changes nothing about
-// the standing request.
-func TestDirectingASendLeavesTheSubjectsStopExactlyWhereItWas(t *testing.T) {
+// Nobody directs a send past a subject's own stop, an admin included. The door
+// refuses, nothing is queued, and the stop stays where the subject put it.
+//
+// Mutation: give subject_request its admin exception back in
+// commsauthz.remedies and the direction is accepted.
+func TestNobodyDirectsASendPastASubjectsStop(t *testing.T) {
 	c := setupConsent(t)
 
 	if _, err := c.Owner.Exec(context.Background(), `
@@ -153,29 +164,58 @@ func TestDirectingASendLeavesTheSubjectsStopExactlyWhereItWas(t *testing.T) {
 		t.Fatalf("marketing send against a stop → %d, want 409", status)
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
-		directed(), nil, nil); status != http.StatusCreated {
-		t.Fatalf("directing the send → %d, want 201", status)
+		directed(), nil, nil); status != http.StatusForbidden {
+		t.Fatalf("an admin directing past the subject's stop → %d, want 403", status)
 	}
 
-	var live int
+	var live, deliveries int
 	if err := c.Owner.QueryRow(context.Background(), `
-		SELECT count(*) FROM communication_suppression
-		 WHERE contact_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
-		c.contactID).Scan(&live); err != nil {
-		t.Fatalf("reading the stop: %v", err)
+		SELECT (SELECT count(*) FROM communication_suppression
+		         WHERE contact_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL),
+		       (SELECT count(*) FROM comms_outbound)`,
+		c.contactID).Scan(&live, &deliveries); err != nil {
+		t.Fatalf("reading the stop and the deliveries: %v", err)
 	}
-	if live != 1 {
-		t.Errorf("%d live stop(s) after a directed send, want 1 — sending against a stop lifted "+
-			"it, so the subject's request was answered by ignoring it", live)
+	if live != 1 || deliveries != 0 {
+		t.Errorf("live stops = %d, deliveries = %d after a refused direction, want 1 and 0", live, deliveries)
 	}
-	var grants int
-	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM contact_consent WHERE contact_id = $1`, c.contactID).Scan(&grants); err != nil {
-		t.Fatalf("reading the consent rows: %v", err)
+}
+
+// A stop recorded after the decision still stops the message. The admin directs
+// a send past missing marketing consent, and the subject objects before it
+// goes. Staging refuses it and the decision stays unspent.
+//
+// Mutation: drop set.ExceptionMayAnswer() from stageDecisions and the message
+// goes out under the decision, past the objection.
+func TestAStopRecordedAfterTheDecisionStillStopsTheMessage(t *testing.T) {
+	c := setupConsent(t)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
 	}
-	if grants != 0 {
-		t.Errorf("%d consent grant(s) after a directed send, want 0 — an override was recorded "+
-			"as permission the subject never gave", grants)
+	review := liveReviewID(t, c)
+	if _, err := c.Owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'marketing_objection', 'operator_ui', 'test', 'subject')`,
+		c.contactID); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directed(), nil, nil); status == http.StatusCreated {
+		t.Fatal("a directed send went out past an objection recorded after the decision")
+	}
+
+	var deliveries int
+	var spent bool
+	if err := c.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM comms_outbound),
+		       EXISTS (SELECT 1 FROM communication_instruction WHERE status = 'consumed')`).
+		Scan(&deliveries, &spent); err != nil {
+		t.Fatalf("reading the deliveries and the decision: %v", err)
+	}
+	if deliveries != 0 || spent {
+		t.Errorf("deliveries = %d, decision spent = %v after the objection, want 0 and unspent",
+			deliveries, spent)
 	}
 }
 

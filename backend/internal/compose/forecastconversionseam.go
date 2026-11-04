@@ -248,7 +248,7 @@ func ForecastForwardMeasure(
 			return "", err
 		}
 		if policy != "" {
-			return forecasting.MeasureQualifiedCommitEvidence, nil
+			return forecasting.MeasureQualifiedLikely, nil
 		}
 	}
 	measure, err := values.ParseForwardMeasure(&stored, "forecast_forward_measure")

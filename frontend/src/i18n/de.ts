@@ -1533,10 +1533,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.short": "Unter dem Ziel von {target}",
   "reporting.compare.ahead": "Über dem Ziel von {target}",
   "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
-  "reporting.compare.basis.commit_evidence": "belegten Commit-Deals",
+  "reporting.compare.basis.likely": "den wahrscheinlichen Deals",
   "reporting.compare.basis.weighted": "der gewichteten Pipeline",
-  "reporting.compare.basis.qualified_commit_evidence":
-    "gestützten Commit-Deals",
+  "reporting.compare.basis.qualified_likely":
+    "den gestützten wahrscheinlichen Deals",
   "reporting.compare.basis.qualified_weighted":
     "der gestützten gewichteten Pipeline",
   "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
@@ -2134,7 +2134,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
-  "home.receipt.forecast": "Prognosekategorie geändert",
+  "home.receipt.forecast": "Abschlusschance geändert",
   "home.task.yours": "Deine Aufgabe: {action}",
   "home.change.unknown": "Geändert von: unbekannt.",
   "home.change.stageUnknown": "Unbekannte Phase",
@@ -2283,7 +2283,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
-  "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",
   "brief.readings.riskBasis": "Nennwert · kein erwarteter Verlust",
@@ -2669,6 +2668,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.filled": "Ergänzte Felder",
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
+  "history.field.meeting_documents_added":
+    "Besprechungsnotizen aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
   "history.field.guest_answers_changed":
     "Antworten der Gäste aus dem Kalender aktualisiert",
@@ -2705,8 +2706,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
   "history.field.first_name": "Vorname",
-  "history.field.forecast_category": "Prognosekategorie",
   "history.field.full_name": "Name",
+  "history.field.win_probability": "Abschlusschance",
+  "history.field.win_probability_override": "Abschlusschance am Deal",
+  "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
   "history.field.fx_rate_to_base": "Wechselkurs",
   "history.field.industry": "Branche",
@@ -2756,6 +2759,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
+  "history.field.qualifying_event_retracted":
+    "Erfasster Austausch zurückgenommen",
+  "history.field.acquisition_request_retracted":
+    "Anfrage aus der Herkunft zurückgenommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
@@ -3308,7 +3315,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.individualPerformanceOff":
-    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen und Summen, zu denen mindestens zwei andere Mitglieder beitragen.",
+    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -5704,7 +5711,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.recordedBy": "Erfasst von",
   "deal.companyWithheld": "Unternehmen ausgeblendet",
   "deal.partnerWithheld": "Partner ausgeblendet",
-  "deal.forecastCategory": "Prognosekategorie",
   "deal.committee.title": "Buying Center",
   "deal.committee.legendEngaged": "Im Austausch",
   "deal.committee.legendQuiet": "Nicht im Austausch",
@@ -5715,10 +5721,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.strip.close.overdue_other": "{days} Tage überfällig",
   "deal.strip.close.provisional": "vorläufig, von keinem Menschen bestätigt",
   "deal.strip.close.waiting": "die Käuferseite bat, bis {date} zu warten",
-  "deal.forecast.commit": "Commit",
-  "deal.forecast.bestCase": "Best Case",
-  "deal.forecast.pipeline": "Pipeline",
-  "deal.forecast.omitted": "nicht in der Prognose",
   "deal.standing.dims": "Einschätzungen zum Deal",
   "deal.standing.momentum": "Dynamik",
   "deal.standing.momentum.active": "Aktiv",
@@ -5742,7 +5744,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.daysNow_other": "{count} Tage · jetzt",
   "deal.standing.baseValue": "Wert in Basiswährung",
   "deal.standing.figure.probability": "Abschlusschance",
-  "deal.standing.figure.stageDefault": "Standard der Phase",
+  "deal.winProbability": "Abschlusschance",
+  "deal.winProbability.hint":
+    "Leer lassen, um die Abschlusschance der Phase zu verwenden.",
+  "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
+  "deal.winProbability.source.stage": "aus der Phase",
+  "deal.winProbability.source.human": "von Hand gesetzt",
+  "deal.winProbability.source.margince": "von Margince gesenkt",
+  "deal.winProbability.stageValue": "Phase {percent}",
+  "deal.winProbability.setByStage":
+    "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
+  "deal.winProbability.band.90_plus": "90 % oder mehr",
+  "deal.winProbability.band.60_89": "60 bis 89 %",
+  "deal.winProbability.band.30_59": "30 bis 59 %",
+  "deal.winProbability.band.1_29": "1 bis 29 %",
+  "deal.winProbability.band.zero": "0 %",
   "field.unset": "Nicht festgelegt",
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.next": "Nächster Schritt",
@@ -6064,12 +6080,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayHint":
     "Der Umsatz nach Zeitraum folgt diesem Tag, und der Wechselkurs wird für ihn neu festgesetzt.",
   "deal.correctCloseDayConfirm": "Abschlusstag speichern",
-  "deal.fcCommit": "Commit",
-  "deal.fcBestCase": "Best Case",
-  "deal.fcPipeline": "Pipeline",
-  "deal.fcOmitted": "Ausgeschlossen",
-  "deal.fcSlipped": "Verschoben",
-  "deal.fcUncategorised": "Ohne Kategorie",
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
@@ -6086,7 +6096,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.totalsNoTeamFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
   "deals.totalsNoRangeFilter":
-    "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Abschlussdatum, Wert, Währung oder Land eingrenzen lassen.",
+    "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Abschlussdatum, Wert, Währung, Land oder einer Abschlusschance außerhalb der festen Stufen eingrenzen lassen.",
   "deals.filterCloseDate": "Abschlussdatum",
   "deals.filterCloseDateAll": "Jedes Abschlussdatum",
   "deals.filterValue": "Wert",
@@ -6110,8 +6120,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterPriorityAll": "Alle Prioritäten",
   "deals.filterAcquisition": "Quelle",
   "deals.filterAcquisitionAll": "Alle Quellen",
-  "deals.filterForecast": "Prognose",
-  "deals.filterForecastAll": "Alle Prognosekategorien",
+  "deals.filterProbability": "Abschlusschance",
+  "deals.filterProbabilityAll": "Jede Abschlusschance",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Jeder Status",
   "deals.statusOpen": "Offen",
@@ -6503,16 +6513,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.none":
     "Für diesen Zeitraum ist kein Prognose-Snapshot verfügbar.",
   "brief.weekly.outlook.won": "Gewonnener Wert",
-  "brief.weekly.outlook.commit": "Verbleibender Commit",
-  "brief.weekly.outlook.bestCase": "Best Case",
-  "brief.weekly.outlook.bestCaseDetail": "Enthält Commit",
+  "brief.weekly.outlook.likely": "Wahrscheinlich",
   "brief.weekly.outlook.weighted": "Gewichteter Deal-Wert",
   "brief.weekly.outlook.landing": "Voraussichtliches Ergebnis",
   "brief.weekly.outlook.open": "Prognose öffnen",
-  "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
+  "brief.weekly.outlook.measure.likely": "Aus wahrscheinlichen Deals",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
-  "brief.weekly.outlook.measure.qualified_commit_evidence":
-    "Aus gestützten Commit-Belegen",
+  "brief.weekly.outlook.measure.qualified_likely":
+    "Aus gestützten wahrscheinlichen Deals",
   "brief.weekly.outlook.measure.qualified_weighted":
     "Aus gestützten gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
@@ -7458,13 +7466,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
+    "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung widerrufen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
+    "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
+    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
+    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.tooMany":
@@ -7749,7 +7757,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.todaysMembers":
     "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
   "analytics.team.withheld":
-    "Die Einzelleistung ist ausgeschaltet, und diese Zahlen würden die Arbeit eines einzelnen Teammitglieds zeigen.",
+    "Die Einzelleistung ist ausgeschaltet. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
   "analytics.team.submitted": "Übergeben",
   "analytics.team.accepted": "Angenommen",
   "analytics.team.returned": "Zurückgegeben",
@@ -7958,7 +7966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.days_in_stage": "Tage in Phase",
   "analytics.field.days_to_close": "Tage bis Abschluss",
   "analytics.field.direction": "Richtung",
-  "analytics.field.forecast_category": "Prognosekategorie",
+  "analytics.field.win_probability_band": "Stufe der Abschlusschance",
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
@@ -8324,7 +8332,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.qualifiedUnknown_other":
     "{count} Deals ({amount}) zählen nicht, weil die letzte Prüfung sie nicht beurteilen konnte.",
   "forecast.qualifiedAnswer":
-    "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
+    "Gewonnene plus wahrscheinliche Deals, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
   "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
   "review.enforcementHint":
     "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
@@ -8386,23 +8394,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.submit": "Antwort speichern",
   "forecast.question": "Prognose für den Zeitraum",
   "forecast.answerWithCall":
-    "Einschätzung: {call}. Gewonnene Deals plus Deals in Commit mit bestätigtem Abschlussdatum: {evidence}.",
+    "Einschätzung: {call}. Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.answerNoCall":
-    "Gewonnene Deals plus Deals in Commit mit bestätigtem Abschlussdatum: {evidence}. Keine Einschätzung abgegeben.",
+    "Gewonnene plus wahrscheinliche Deals: {evidence}. Keine Einschätzung abgegeben.",
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
   "forecast.currentCall": "Einschätzung",
   "forecast.currentCallDetailOver":
-    "Aktualisiert {date} · {gap} über gewonnenen + bestätigten Commit-Deals",
+    "Aktualisiert {date} · {gap} über gewonnenen + wahrscheinlichen Deals",
   "forecast.currentCallDetailUnder":
-    "Aktualisiert {date} · {gap} unter gewonnenen + bestätigten Commit-Deals",
+    "Aktualisiert {date} · {gap} unter gewonnenen + wahrscheinlichen Deals",
   "forecast.callHistoryUnavailable":
     "Diese Prognose wurde abgegeben, bevor Prognosen die zugrunde liegende Pipeline gespeichert haben. Was sich seitdem bewegt hat, lässt sich nicht sagen.",
   "forecast.currentCallDetailEven":
-    "Aktualisiert {date} · entspricht gewonnenen + bestätigten Commit-Deals",
-  "forecast.evidence": "Commit · bestätigtes Datum",
-  "forecast.bestCaseAdds": "Zusatz im Best Case",
+    "Aktualisiert {date} · entspricht gewonnenen + wahrscheinlichen Deals",
+  "forecast.likely": "Wahrscheinlich",
+  "forecast.likely.help":
+    "Offene Deals ab {threshold} mit bestätigtem Abschlussdatum, voll gezählt",
+  "forecast.weighted": "Gewichtet",
+  "forecast.weighted.help":
+    "Wert jedes offenen Deals mal seiner Abschlusschance",
+  "forecast.bySource":
+    "Aus Phasen {stage} · von Hand gesetzt {human} · Margince {margince}",
   "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
   "forecast.updateCall": "Einschätzung aktualisieren",
@@ -8432,7 +8446,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.priced": "Bepreist",
   "forecast.confirmed": "Abschlussdatum bestätigt",
   "forecast.fxMissing": "Wechselkurs fehlt",
-  "analytics.reportForecast": "Prognosekategorien",
+  "analytics.reportForecast": "Prognose nach Abschlusschance",
   "analytics.shareOfOpenPipeline": "Pipeline-Anteil in dieser Währung",
   "analytics.reportPipelineByCloseMonth": "Offene Pipeline nach Abschlussmonat",
   "analytics.closeMonth": "Abschlussmonat",
@@ -12632,6 +12646,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.showInCreate": "Beim Anlegen",
   "cf.showInCreateHint":
     "Ist es aus, steht das Feld nur auf der Datensatzseite und bleibt dort bearbeitbar.",
+  "cf.activityKinds": "Gezeigt bei",
+  "cf.activityKindsHint": "Leer lassen, um das Feld bei jedem Typ zu zeigen.",
+  "cf.activityKindsEvery": "Jeder Typ",
+  "cf.activityKindsFor": "Typen, bei denen „{label}“ erscheint",
+  "cf.activityKindsSaved": "„{label}“ erscheint jetzt bei den gewählten Typen",
   "cf.col.inCreate": "Beim Anlegen",
   "cf.showInCreateFor": "„{label}“ beim Anlegen zeigen",
   "cf.shownInCreate": "„{label}“ beim Anlegen eingeblendet",
@@ -14430,23 +14449,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",
   "installationSettings.forwardMeasureHint":
     "Welche offenen Deals die Hochrechnung zum gewonnenen Umsatz addiert.",
-  "installationSettings.forwardMeasure.commit_evidence":
-    "Commit-Belege: nur bestätigte Abschlussdaten",
+  "installationSettings.forwardMeasure.likely":
+    "Wahrscheinlich: Deals ab der Schwelle für wahrscheinlich, mit bestätigtem Abschlussdatum",
   "installationSettings.forwardMeasure.weighted":
-    "Gewichtet: jeder offene Deal mit der Wahrscheinlichkeit seiner Phase",
-  "installationSettings.forwardMeasure.qualified_commit_evidence":
-    "Gestützte Commit-Belege: bestätigte Abschlussdaten, die der Kunde noch stützt",
+    "Gewichtet: jeder offene Deal mit seiner Abschlusschance",
+  "installationSettings.forwardMeasure.qualified_likely":
+    "Gestützt wahrscheinlich: wahrscheinliche Deals, die der Kunde noch stützt",
   "installationSettings.forwardMeasure.qualified_weighted":
-    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit der Wahrscheinlichkeit ihrer Phase",
+    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit ihrer Abschlusschance",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
+  "installationSettings.likelyThreshold": "Schwelle für wahrscheinlich",
+  "installationSettings.likelyThreshold.help":
+    "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
-  "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
+  "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
-  "forecast.basis.qualified_commit_evidence":
-    "Gewonnen + gestützter bestätigter Commit",
+  "forecast.basis.qualified_likely":
+    "Gewonnen + gestützte wahrscheinliche Deals",
   "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
@@ -14454,7 +14476,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callNotAdded":
     "Einschätzung der Führungskraft {call}, nicht addiert",
   "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
-  "forecast.callAbsentLine": "Keine Einschätzung erfasst, daher Commit",
+  "forecast.callAbsentLine":
+    "Keine Einschätzung erfasst, daher wahrscheinliche Deals",
   "forecast.callBelowLine":
     "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
   "forecast.model.quarter": "Modelliertes Quartalsergebnis",
@@ -14476,10 +14499,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.model.basis":
     "Gewonnener Umsatz plus jeder offene Deal mit Betrag in diesem Zeitraum, in vielen Durchläufen nach seiner Chance gewonnen oder verloren. 8 von 10 modellierten Ergebnissen liegen in dieser Spanne. Die Spanne setzt voraus, dass die Chancen stimmen, und ist keine gemessene Prognosegenauigkeit.",
   "forecast.landingRecordsDetail":
-    "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
+    "Gewonnen plus wahrscheinliche Deals, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
-    "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",
+    "Angezeigt werden die wahrscheinlichen Deals, da für diesen Zeitraum keine Einschätzung erfasst ist.",
   "forecast.landing.caveat.qualified_unavailable":
     "Die Zählung gestützter Deals ist aus, daher zeigt dies alle Deals.",
   "forecast.landing.caveat.call_below_actual":

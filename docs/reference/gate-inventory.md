@@ -223,6 +223,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `activityidentityspine_test.go` | H2 | Every door that mints an activity asks whether the record already has one. |
 | `activitykindsets_test.go` | H3 | The two activity-kind sets relstrength holds, against the vocabulary the contract actually publishes. |
 | `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
+| `activityrowfinish_test.go` | H2 | Every function that scans activity rows also finishes them, inside the activities module and outside it. |
 | `agentauthority_test.go` | H2 | An agent principal names the human whose authority it acts under, or says here why there is none. |
 | `agentgrantscopes_test.go` | H2 | A credential that does not fund the tools its agent declares buys a run that starts, discovers it cannot do its job, and stops. |
 | `agentwritepin_test.go` | H2 | A tool whose tier is resolved by reading a record carries that reading's version into its write. |
@@ -575,6 +576,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in one function, because putting one into the registry is a decision about reachability and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
 | `harnesstransport_test.go` | H2 | A harness transport stays in the harness: only the cert lane hands the router a client of its own, and only an allowlisted directory shells out. |
+| `individualperformancefloor_test.go` | H2 | The small-group floor of "Show individual performance" is compared in one function, belowFloor, and nowhere else. |
 | `integrationmigrateonce_test.go` | H2 | Every file the integration lane compiles migrates the schema once per test process and resets between tests, rather than migrating on every setup. |
 | `jobargscontent_test.go` | H2 | Job args carry references, never content. |
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |

@@ -404,7 +404,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored, kept by a reset | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
 | `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored, kept by a reset | `1` | api, worker | The month the business year begins, 1 to 12. |
 | `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
-| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `commit_evidence` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `likely` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_likely_threshold` | `MARGINCE_INSTALLATION_FORECAST_LIKELY_THRESHOLD` | — | `int`, stored, kept by a reset | `90` | api, worker | The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date. |
 | `installation.forecast_self_correcting` | `MARGINCE_INSTALLATION_FORECAST_SELF_CORRECTING` | — | `bool`, stored, kept by a reset | `true` | api, worker | Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage. |
 | `installation.geocode_backfill_interval_seconds` | `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `3600` | api, worker | Seconds between the sweeps that add missing map points, or 0 for off. |
 | `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 144, stored | `48` | api, worker | Hours before a Gmail push subscription ends that it is renewed. |
@@ -521,7 +522,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `commit_evidence`, `weighted` or `manager_call`.
+`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,

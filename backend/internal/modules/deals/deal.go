@@ -183,8 +183,12 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 			p.Set("close_date_provisional", true, false)
 		}
 	}
-	if in.ForecastCategory != nil {
-		p.Set("forecast_category", current.ForecastCategory, *in.ForecastCategory)
+	if in.WinProbability != nil {
+		if string(current.Status) != string(DealOpen) {
+			return nil, &ProbabilityFixedWhenClosedError{}
+		}
+		stored, storedBy := storedWinProbability(current)
+		setWinProbability(p, stored, storedBy, in.WinProbability, SourceHuman)
 	}
 	if in.WaitUntil != nil {
 		p.SetDate("wait_until", storekit.PlainDate(current.WaitUntil), in.WaitUntil)

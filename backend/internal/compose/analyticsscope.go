@@ -214,15 +214,20 @@ func ownedOrUnowned(col, clause string) string {
 }
 
 // teamMembersSQL selects the members of a live team whose work its numbers
-// count. Those are members who can act, and members who left but are not archived.
-// A departed colleague's open deals stay in the totals until somebody takes
-// them over. Every screen marks that owner as having left.
+// count, for a team id that match compares.
 func teamMembersSQL(pos int, match string) string {
-	return fmt.Sprintf(`SELECT tm.user_id FROM team_membership tm
+	return fmt.Sprintf(`SELECT tm.user_id FROM `+teamMembershipFrom()+` WHERE tm.team_id `+match, pos)
+}
+
+// teamMembershipFrom is who a team's numbers count, read by its totals and by
+// the floor. Those are the members of a live team who can act, and those who
+// left but are not archived. A departed colleague's open deals stay in the
+// totals until somebody takes them over. Every screen marks that owner as left.
+func teamMembershipFrom() string {
+	return `team_membership tm
 		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		JOIN app_user u ON u.id = tm.user_id
-		 AND ((`+identity.LiveMemberSQL("u")+`) OR (`+identity.DepartedMemberSQL("u")+`))
-		WHERE tm.team_id `+match, pos)
+		 AND ((` + identity.LiveMemberSQL("u") + `) OR (` + identity.DepartedMemberSQL("u") + `))`
 }
 
 // ScopeKindManagedTeams is the resolved-only kind for "my teams and me". It is
@@ -240,11 +245,7 @@ const ScopeKindManagedTeams = "managed_teams"
 func resolveAnalyticsScope(
 	ctx context.Context, tx pgx.Tx, p principal.Principal, requested RequestedScope,
 ) (ResolvedScope, error) {
-	lens := p.Permissions.RowScope
-	if auth.Unbounded(p) {
-		lens = principal.RowScopeAll
-	}
-
+	lens := analyticsLens(p)
 	if requested.Kind == "" {
 		return defaultScopeFor(p, lens)
 	}
@@ -300,6 +301,21 @@ func defaultScopeFor(p principal.Principal, lens principal.RowScope) (ResolvedSc
 
 const managedTeamsLabel = "My teams"
 
+// analyticsLens is the row-scope tier a seat measures by. An unbounded seat
+// measures as one that reads everything.
+func analyticsLens(p principal.Principal) principal.RowScope {
+	if auth.Unbounded(p) {
+		return principal.RowScopeAll
+	}
+	return p.Permissions.RowScope
+}
+
+// readsManagedTeams answers whether "My teams" is this seat's default population.
+func readsManagedTeams(p principal.Principal) bool {
+	resolved, err := defaultScopeFor(p, analyticsLens(p))
+	return err == nil && resolved.Kind == ScopeKindManagedTeams
+}
+
 func ownScope(p principal.Principal) ResolvedScope {
 	me := p.UserID
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &me}
@@ -335,10 +351,7 @@ func ResolveAssertionScope(
 // assertionLensRefusal is the strict tier rule for asserting about a
 // population, decidable without a database.
 func assertionLensRefusal(p principal.Principal, requested RequestedScope, resolved ResolvedScope) error {
-	lens := p.Permissions.RowScope
-	if auth.Unbounded(p) {
-		lens = principal.RowScopeAll
-	}
+	lens := analyticsLens(p)
 	switch resolved.Kind {
 	case ScopeKindWorkspace:
 		if requested.Kind != "" && lens != principal.RowScopeAll {

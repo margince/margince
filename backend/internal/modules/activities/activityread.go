@@ -302,25 +302,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := AttachLinks(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCreators(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, one); err != nil {
+	// No columns: each caller fills the custom values with the catalog it read.
+	if err := FinishActivityRows(ctx, tx, CustomColumns{}, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := StampActivityAffordances(ctx, tx, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return one[0], nil

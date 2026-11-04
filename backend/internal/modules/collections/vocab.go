@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // Column references shared across the per-entity segment engines below —
@@ -198,10 +199,10 @@ func customerField(
 // directions when the two part company.
 //
 // Written out here rather than assembled from the generated constants because of
-// how the generator spells a NULLABLE enum: it emits a `<nil>` member, so a set
-// built from CompanySizeBand's or DealForecastCategory's constants would
-// offer "<nil>" as something a human could pick. Only those two are nullable
-// today, and one is enough — a set is either derived or it is not.
+// how the generator spells a nullable enum. It emits a `<nil>` member, so a set
+// built from CompanySizeBand's constants would
+// offer "<nil>" as something a human could pick. One nullable enum is
+// enough, because a set is either derived or it is not.
 //
 // A null in a contract enum is the COLUMN's nullability, never a value worth
 // offering — `exists: false` is how a filter asks for empty — so the sets below
@@ -219,7 +220,6 @@ var (
 		"portfolio_company", "competitor", "other",
 	}
 	dealStatusValues   = []string{"open", "won", "lost"}
-	forecastValues     = []string{"commit", "best_case", "pipeline", "omitted"}
 	leadStatusValues   = []string{"new", "contacted", "engaged", "promoted", "disqualified"}
 	projectPhaseValues = []string{"initiative", "pursuing", "delivering", "closed"}
 	// The technical vocabularies, mirroring platform/techprofile's classifiers
@@ -298,7 +298,7 @@ var segmentEngines = map[string]storekit.Query{
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
 			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
-			"forecast_category":  {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
+			"win_probability":    {Expr: winprobability.SQL("t"), Type: storekit.FieldNumber},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
 			// is a filter rather than a spreadsheet. Same columns and same types

@@ -38,12 +38,9 @@ const (
 	// unrealisticSoonMaxProb bounds the §11 unrealistic_soon flag: at or
 	// above 40% the stage is close enough that a near date is credible.
 	unrealisticSoonMaxProb = 40
-	// lateStageMinProb is FORECAST_BESTCASE_MIN_PROB (§7): at or above it
-	// the date is forecast-bearing, so a machine never finalizes it.
+	// lateStageMinProb: at or above it the date is forecast-bearing, so a
+	// machine never finalizes it.
 	lateStageMinProb = 50
-	// forecastCommitMinProb is FORECAST_COMMIT_MIN_PROB (§7), the derived
-	// Commit default when the rep set no explicit forecast_category.
-	forecastCommitMinProb = 90
 )
 
 // CloseDateFlag is one §11 hygiene finding.
@@ -80,10 +77,9 @@ type CloseDateInput struct {
 	StageWinProbability int
 	RemainingOpenStages int
 
-	// InForecastCommit: the deal counts in this period's Commit or
-	// Best-case per §7 (explicit forecast_category override, else the
-	// probability-derived default) — the number a leader is staking on.
-	InForecastCommit bool
+	// Likely: the deal's probability is at or above the Likely threshold, so
+	// it counts in full in the forecast a leader is staking on.
+	Likely bool
 
 	// StageVelocityDays is the workspace-observed median days-per-stage
 	// for won deals in the deal's pipeline; zero means insufficient evidence.
@@ -101,7 +97,7 @@ type CloseDateHygiene struct {
 	// Provisional: the written date is a guess a human must confirm — the
 	// deal stays out of Commit/Best-case until then.
 	Provisional bool
-	// Downgrade: the deal has gone quiet; its forecast category drops one
+	// Downgrade: the deal has gone quiet; its win probability drops one
 	// notch instead of the date being pushed optimistically forward.
 	Downgrade bool
 }
@@ -191,7 +187,7 @@ func closeDateAction(f closeDateFindings, in CloseDateInput, autoApply bool) Clo
 	// wait, so a stage-velocity guess is never silently finalized.
 	clearOverdue := f.overdue && !f.missing && !f.unrealisticSoon
 	lateStage := in.StageWinProbability >= lateStageMinProb
-	if autoApply && clearOverdue && !f.paused && !in.InForecastCommit && !lateStage {
+	if autoApply && clearOverdue && !f.paused && !in.Likely && !lateStage {
 		return CloseDateActionAutoApply
 	}
 	return CloseDateActionProvisionalConfirm
