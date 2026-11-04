@@ -795,7 +795,7 @@ export const OVERVIEW_SCENARIOS = {
           comparison: {
             status: "target_reached",
             target_metric: "bookings_won",
-            basis: "commit_evidence",
+            basis: "likely",
             target: 80_000_000,
             landing: 96_000_000,
             won: 88_000_000,
@@ -810,7 +810,7 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   landingBases: {
-    about: "100 won, 40 confirmed commit and a call of 190 that is not added.",
+    about: "100 won, 40 Likely and a call of 190 that is not added.",
     views: {
       sales: sales(
         quarterSales({

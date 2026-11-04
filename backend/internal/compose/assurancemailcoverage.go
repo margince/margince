@@ -3,7 +3,8 @@
 
 package compose
 
-// What the nightly input check could reach of a deal's mail, overall and per owner.
+// Which mailboxes the nightly input check could read, for the installation and
+// for each deal's owner.
 
 import (
 	"context"
@@ -23,16 +24,19 @@ const sourceMail = "mail"
 
 // mailProviders are the capture connectors that carry mail. gcal is calendar
 // and the chat providers are messaging. A healthy WhatsApp says nothing about
-// the mailbox a close date would be checked against.
+// whether anybody read the mailbox a close date is checked against.
 var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo"}
 
-// mailCoverage grades the mailbox by connector health, not by mail volume. A
-// quiet mailbox on a healthy connector is not stale, and a broken connector under
-// recent mail is not checked. The sync checkpoint says when the source was read.
+// mailCoverage grades the mailbox by CONNECTOR health, not by mail volume.
 //
-// This is the run's grade over every mailbox in the installation. A deal's own
-// silence is judged on its owner's mailboxes (mailCoverageByOwner), so one broken
-// mailbox does not blind the check for every deal.
+// Mail volume would conflate two facts. A quiet mailbox on a healthy connector
+// would read as stale, because nothing arrived. A broken connector under
+// recent mail would read as checked. The sync checkpoint is the fact this
+// state claims: when the connector last read the source.
+//
+// This is the run's grade over every mailbox in the installation. A deal's
+// own silence is judged on its owner's mailboxes (mailCoverageByOwner), so one
+// broken mailbox does not blind the check for every deal.
 func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
 	var counts mailCounts
 	if err := tx.QueryRow(ctx, `
@@ -48,10 +52,10 @@ func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.Sourc
 
 // mailCountsSQL is the aggregate both mail gradings read.
 //
-// It fails closed over every connection that is not disconnected. min() ignores
-// NULL, so a never-synced broken mailbox beside a healthy one would otherwise
-// vanish from the aggregate. The run would then claim checked over a source it
-// never read.
+// It fails closed over every live connection that nobody disconnected. min()
+// ignores NULL, so a never-synced broken mailbox next to a healthy one would
+// otherwise vanish from the aggregate. The run would then claim checked over a
+// source it never read.
 const mailCountsSQL = `count(*) FILTER (WHERE c.status <> 'disconnected'),
 		       count(*) FILTER (WHERE c.status = 'reauth_required'),
 		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
@@ -68,9 +72,9 @@ type mailCounts struct {
 func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 	switch {
 	case m.live == 0:
-		// Never configured, or every mailbox disconnected. Either
-		// way there is nothing to fix, only something to decide, and the two
-		// route to different contacts than a broken connector does.
+		// Never configured, or every mailbox disconnected by a person. Either
+		// way there is nothing to fix, only something to decide. Both route to
+		// other contacts than a broken connector does.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
 	case m.reauth > 0:
 		// Somebody must re-grant access; until then part of the mailbox is
@@ -81,9 +85,9 @@ func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 		// does not make the source checked: the claim covers all of them.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
 	case now.Sub(*m.oldestSuccess) > staleAfter:
-		// The slowest mailbox decides: "mail was checked" means all of them.
-		// The oldest checkpoint grades the source and caps the checked-through
-		// date below.
+		// The slowest mailbox decides. "Mail was checked" over three mailboxes
+		// means all three, so the oldest checkpoint grades the source. It also
+		// caps the checked-through date below.
 		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
 	default:
 		return assurance.SourceCoverage{
@@ -122,9 +126,9 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 	return out, rows.Err()
 }
 
-// dealMailboxesSQL is the mail connections that delivered a deal's mail, as text.
-// An entry is "<user>:<provider>:<generation>" for each connection a
-// capture_import row names in delivered_by, or "<user>" for an import naming none.
+// dealMailboxesSQL is the mail connections that delivered a deal's mail, as
+// text. A connection a capture_import row names in delivered_by reads
+// "<user>:<provider>:<generation>". An import that names none reads "<user>".
 // Only mail every member may read counts, as for customer progress, so every
 // reader computes the same list. The viability fingerprint carries it, so a
 // mailbox that delivers the deal's mail later makes the receipt stale.
@@ -185,12 +189,18 @@ func mailCoverageByConnection(ctx context.Context, tx pgx.Tx, now time.Time) (ma
 // dealMailCovered answers, for one deal, whether the mail a silence would be
 // read from was read on time.
 //
-// The deal's own mailboxes decide, whatever the run's grade says: those are the
-// owner's live connections and each connection that delivered its mail. One that
-// is gone, rebound or not read on time leaves the deal unknown, and so does an
-// owner with no live mailbox. An import naming no connection is judged on that
-// user's live connections. A deal with no owner and no captured mail keeps the
-// run's grade. An entry of mailboxes that does not parse fails closed.
+// The deal's own mailboxes decide, whatever the run's grade says. A run grade
+// of checked proves only that the connected mailboxes are healthy. It does not
+// prove that the deal's mail reaches one of them. The deal's mailboxes are the
+// owner's live connections, and each connection that delivered its mail. A
+// delivering connection that is gone, bound to another account, or not read on
+// time leaves the deal unknown. So does an owner with no live mailbox. An
+// import that names no connection is judged on that user's live connections.
+// A deal with no owner and no captured mail has no mailboxes of its own and
+// keeps the run's grade.
+//
+// mailboxes are dealMailboxesSQL's entries. One that does not parse fails
+// closed.
 func dealMailCovered(
 	runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage, byConnection map[mailConnection]connectionCoverage,
 ) func(owner *ids.UUID, mailboxes []string) bool {

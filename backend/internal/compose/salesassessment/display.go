@@ -167,7 +167,7 @@ func citedMoney(token, unit string, cited []string, cells map[string]CellIn) (Ce
 
 func machineWording(text string) bool {
 	lowered := strings.ToLower(text)
-	for _, phrase := range []string{"commit_evidence", "no_target", "qualified_commit_evidence", "i checked", "i verified", "i couldn’t confirm", "i couldn't confirm", "ich habe geprüft", "tôi đã kiểm tra", "nothing checked", "http://", "https://"} {
+	for _, phrase := range []string{"qualified_likely", "no_target", "i checked", "i verified", "i couldn’t confirm", "i couldn't confirm", "ich habe geprüft", "tôi đã kiểm tra", "nothing checked", "http://", "https://"} {
 		if strings.Contains(lowered, phrase) {
 			return true
 		}

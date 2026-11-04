@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
@@ -30,10 +31,10 @@ import (
 
 // assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
 // level so the function stays within the length a reader holds at once.
-const assuranceSubjectsSQL = `
+var assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
-		       d.forecast_category, s.name, d.stage_id,
+		       ` + deals.WinProbabilitySQL("d") + `, s.name, d.stage_id,
 		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
 		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
 		       d.created_at, d.wait_until,
@@ -195,9 +196,20 @@ func assuranceSubjects(
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
+	subjects, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
 		return scanAssuranceSubject(row, now, zone, mailCovered)
 	})
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		subjects[i].Likely = subjects[i].WinProbability >= threshold
+	}
+	return subjects, nil
 }
 
 func scanAssuranceSubject(
@@ -206,13 +218,13 @@ func scanAssuranceSubject(
 	var out assurance.Subject
 	var dealID ids.UUID
 	var owner *ids.UUID
-	var currency, category, stage *string
+	var currency, stage *string
 	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
 	var mailboxes []string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
+		&out.ExpectedClose, &out.CloseProvisional, &out.WinProbability, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
@@ -227,9 +239,6 @@ func scanAssuranceSubject(
 	}
 	if currency != nil {
 		out.Currency = *currency
-	}
-	if category != nil {
-		out.Category = *category
 	}
 	if stage != nil {
 		out.StageName = *stage

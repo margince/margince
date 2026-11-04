@@ -90,7 +90,7 @@ describe("the lead and its readings", () => {
     expect(cards).toHaveLength(4);
     for (const label of [
       "Sales won",
-      "Won + confirmed commit",
+      "Won + Likely deals",
       "Modelled quarter finish",
       "Pipeline due this quarter",
     ])

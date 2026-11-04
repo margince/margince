@@ -103,9 +103,9 @@ func (e *LostReasonRequiredError) FieldFault() (field, code, message string) {
 // stage's semantic (never from client-supplied status), appending the
 // stage history snapshot and emitting the first-class deal.stage_changed
 // event — never a generic deal.updated (events.md §1).
-func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealInput) (crmcontracts.Deal, error) {
+func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealInput) (AdvancedDeal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
 	// The custom-field catalog is fetched BEFORE the transaction opens: it
 	// reads through its own connection, and a second connection inside a
@@ -113,9 +113,9 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	// lock that transaction holds.
 	active, err := s.activeColumns(ctx)
 	if err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
-	var out crmcontracts.Deal
+	var out AdvancedDeal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.advanceOnTx(ctx, tx, id, in, active)
@@ -139,7 +139,7 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 func (s *Store) AdvanceDealTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	active CustomColumns,
-) (crmcontracts.Deal, error) {
+) (AdvancedDeal, error) {
 	return s.advanceOnTx(ctx, tx, id, in, active.cols)
 }
 
@@ -148,13 +148,13 @@ func (s *Store) AdvanceDealTx(
 func (s *Store) advanceOnTx(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	active []fieldcatalog.Column,
-) (crmcontracts.Deal, error) {
+) (AdvancedDeal, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return crmcontracts.Deal{}, err
+		return AdvancedDeal{}, err
 	}
 
-	var out crmcontracts.Deal
+	var out AdvancedDeal
 	// A closure rather than the body inline: fourteen early returns below say
 	// `return err`, and unwrapping them into `return crmcontracts.Deal{}, err`
 	// would be fourteen chances to return a half-built deal beside an error.
@@ -184,7 +184,7 @@ func (s *Store) advanceOnTx(
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
@@ -202,13 +202,7 @@ func (s *Store) advanceOnTx(
 		// Checked inside the transaction that writes the transition, and
 		// checked BEFORE the patch is built, so a refusal costs nothing and a
 		// concurrent archive cannot remove the evidence between the two.
-		if StageSemantic(semantic) == SemanticWon {
-			if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
-				return err
-			}
-		}
-
-		p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+		p, status, err := s.buildStageAdvance(ctx, tx, id, current, in, semantic)
 		if err != nil {
 			return err
 		}
@@ -251,13 +245,15 @@ func (s *Store) advanceOnTx(
 			}
 		}
 
-		if err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability); err != nil {
+		toStageName, err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability)
+		if err != nil {
 			return err
 		}
+		out.Probability = newProbabilitySet(winProbability, toStageName)
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
-		if out, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		if out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
 		}
 		return nil
@@ -299,9 +295,9 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
-) error {
+) (string, error) {
 	if err := releaseLossNote(ctx, tx, p, current); err != nil {
-		return err
+		return "", err
 	}
 	var evidence map[string]any
 	if in.ApprovalID != nil {
@@ -309,19 +305,23 @@ func announceStageAdvance(
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
-		return fmt.Errorf("audit stage advance: %w", err)
+		return "", fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
 	payload.LostReasonCode = lostReasonCodeFromPatch(p)
 	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
-		return fmt.Errorf("read the stage names for the change: %w", err)
+		return "", fmt.Errorf("read the stage names for the change: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
-		return fmt.Errorf("emit deal.stage_changed: %w", err)
+		return "", fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
-	return nil
+	var toStageName string
+	if payload.ToStageName != nil {
+		toStageName = *payload.ToStageName
+	}
+	return toStageName, nil
 }
 
 // onDealWon does what winning a deal sets off, in the transaction that won it.
@@ -384,6 +384,25 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 		return nil
 	}
 	return &frozen
+}
+
+// buildStageAdvance checks a win's evidence, then builds the stage move's row
+// changes plus the probability the target stage sets.
+func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
+	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
+) (*storekit.Patch, string, error) {
+	if StageSemantic(semantic) == SemanticWon {
+		if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
+			return nil, "", err
+		}
+	}
+	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+	if err != nil {
+		return nil, "", err
+	}
+	stored, storedBy := storedWinProbability(current)
+	setWinProbability(p, stored, storedBy, nil, SourceStage)
+	return p, status, nil
 }
 
 // stageTransitionPatch derives the row changes one stage move implies

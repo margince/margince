@@ -26,9 +26,9 @@ func InputFingerprint(rows []Contribution) string {
 		if row.BaseMinor != nil {
 			base = fmt.Sprint(*row.BaseMinor)
 		}
-		material = fmt.Appendf(material, "%s|%s|%d|%t|%t|%t|%t|%t|%s|%s|%s|%s|%d|%s|%s|%s|%s\n",
+		material = fmt.Appendf(material, "%s|%s|%d|%t|%t|%t|%t|%s|%s|%s|%s|%d|%s|%s|%s|%s\n",
 			row.DealID, base, row.WeightedMinor, row.InWon, row.InOpen, row.InEvidence,
-			row.InBestCase, row.InLost, row.Qualification, row.Category, row.ExclusionReason,
+			row.InLost, row.Qualification, row.Source, row.ExclusionReason,
 			row.StageID, row.StageProbability, optionalInt(row.TypedProbability), optionalInt(row.EvidenceN),
 			strings.Join(SignalCodes(row.Signals), ","), optionalEffect(row.Effect))
 	}

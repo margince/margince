@@ -93,8 +93,8 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	sql := fmt.Sprintf(`
 		SELECT d.id, d.owner_id, %[5]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
-		       d.status = 'won', d.status = 'lost', d.forecast_category,
-		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s, d.name, %[7]s
+		       d.status = 'won', d.status = 'lost', `+deals.WinProbabilitySourceSQL("d")+`,
+		       COALESCE(`+deals.WinProbabilitySQL("d")+`, 0), d.stage_id, %[6]s, d.name, %[7]s
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE %[2]s
@@ -207,7 +207,8 @@ func forecastPopulationClauses(ctx context.Context, tx pgx.Tx, scope forecasting
 func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	var d forecasting.Deal
 	var owner *ids.UUID
-	var currency, category *string
+	var currency *string
+	var source string
 	var stage *ids.UUID
 	var qualification string
 	var policy, disposition *string
@@ -215,7 +216,7 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	var complete *bool
 	err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 		&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification, &d.Name,
+		&d.Won, &d.Lost, &source, &d.StageProbability, &stage, &qualification, &d.Name,
 		&policy, &assessed, &disposition, &complete)
 	d.Qualification = viability.Qualification(qualification)
 	if policy != nil && disposition != nil && complete != nil {
@@ -232,9 +233,8 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	if currency != nil {
 		d.Currency = *currency
 	}
-	if category != nil {
-		d.Category = *category
-	}
+	d.Source = forecasting.ProbabilitySource(source)
+	d.WinProbability = d.StageProbability
 	return d, err
 }
 

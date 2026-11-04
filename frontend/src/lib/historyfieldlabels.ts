@@ -40,7 +40,6 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["ended_at", "history.field.ended_at"],
   ["expected_close_date", "history.field.expected_close_date"],
   ["first_name", "history.field.first_name"],
-  ["forecast_category", "history.field.forecast_category"],
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
@@ -86,6 +85,16 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["commercial_motion", "history.field.commercial_motion"],
   ["priority", "history.field.priority"],
   ["acquisition_source", "history.field.acquisition_source"],
+  ["win_probability", "history.field.win_probability"],
+]);
+
+// The columns an update stores under names of their own: the deal's
+// `win_probability` is recorded as the figure set on the deal and who set it.
+// Apart from both maps above, because no `Update<Type>Request` names these and
+// no hand-built image writes them, so each census would call them orphans.
+const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["win_probability_override", "history.field.win_probability_override"],
+  ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
 
 // Fields a HAND-BUILT audit image names — a write described by its own
@@ -199,7 +208,9 @@ export function historyFieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   const key =
-    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
+    HISTORY_FIELD_LABELS.get(field) ??
+    STORED_COLUMN_LABELS.get(field) ??
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 

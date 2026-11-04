@@ -16,7 +16,7 @@ import (
 func TestEnforcedEmptyScopeSendsZeroQualifiedBlock(t *testing.T) {
 	t.Parallel()
 	period := Period{Start: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), End: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), Zone: time.UTC}
-	enforced, err := Compute(period, period.Start, nil)
+	enforced, err := Compute(period, nil, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestEnforcedEmptyScopeSendsZeroQualifiedBlock(t *testing.T) {
 		t.Errorf("mode = %q, want enforcing", enforced.QualificationMode())
 	}
 
-	off, err := Compute(period, period.Start, nil)
+	off, err := Compute(period, nil, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +42,8 @@ func TestEnforcedEmptyScopeSendsZeroQualifiedBlock(t *testing.T) {
 func TestQualifiedLandingFallsBackWithCaveat(t *testing.T) {
 	t.Parallel()
 	for measure, baseline := range map[ForwardMeasure]ForwardMeasure{
-		MeasureQualifiedCommitEvidence: MeasureCommitEvidence,
-		MeasureQualifiedWeighted:       MeasureWeighted,
+		MeasureQualifiedLikely:   MeasureLikely,
+		MeasureQualifiedWeighted: MeasureWeighted,
 	} {
 		got, err := ProjectLanding(measured(400_00, 250_00, 180_00), measure, nil)
 		if err != nil {
@@ -54,7 +54,7 @@ func TestQualifiedLandingFallsBackWithCaveat(t *testing.T) {
 				measure, got.Measure, got.Caveat, baseline, CaveatQualifiedUnavailable)
 		}
 	}
-	got, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureQualifiedCommitEvidence, nil)
+	got, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureQualifiedLikely, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,8 +68,8 @@ func TestQualifiedLandingUsesTheQualifiedReadings(t *testing.T) {
 	readings := measured(400_00, 250_00, 180_00)
 	readings.Qualified = &QualifiedReadings{EvidenceMinor: 100_00, WeightedMinor: 90_00}
 	for measure, want := range map[ForwardMeasure]int64{
-		MeasureQualifiedCommitEvidence: 500_00,
-		MeasureQualifiedWeighted:       490_00,
+		MeasureQualifiedLikely:   500_00,
+		MeasureQualifiedWeighted: 490_00,
 	} {
 		got, err := ProjectLanding(readings, measure, nil)
 		if err != nil {
@@ -148,7 +148,7 @@ func TestExcludedAndReinstatedBuckets(t *testing.T) {
 func TestADealThatLeftTheQualifiedReadingByDateIsPushedOut(t *testing.T) {
 	t.Parallel()
 	gone := qualified(open("a", 100_00), viability.QualificationExcluded)
-	gone.InOpen, gone.InEvidence, gone.InBestCase = false, false, false
+	gone.InOpen, gone.InEvidence = false, false
 	moved := Classify(ReadingQualifiedEvidence,
 		policySide(viability.PolicyVersion, qualified(open("a", 100_00), viability.QualificationEligible)),
 		policySide(viability.PolicyVersion, gone))
