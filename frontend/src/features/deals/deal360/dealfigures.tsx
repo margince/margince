@@ -234,6 +234,7 @@ export function DealTimeline({
       record={words.zone}
       gap={timelineGap(inputs, words)}
       events={timelineEvents(inputs, words)}
+      history={inputs.history}
       marks={activityMarks(inputs.activities, {
         ...words,
         record: words.zone,

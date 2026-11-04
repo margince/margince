@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -50,9 +51,11 @@ const VIEW: Contact360 = {
 
 function standingText(view: Contact360): string {
   const { container } = render(
-    <LocaleProvider initial="en">
-      <ContactHowItStands view={view} />
-    </LocaleProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ContactHowItStands view={view} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   const parts = container.querySelectorAll(
     ".standing-sheet-sentence, .pe-standing-caption",

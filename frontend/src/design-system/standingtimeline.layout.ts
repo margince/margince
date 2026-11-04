@@ -91,16 +91,19 @@ export type TimelineAxis = Readonly<{ range: TimelineRange; far?: number }>;
  * looks back, at least `MIN_LOOKAHEAD_MS`. It leaves room after today (a week,
  * or a sixth of the time before it), so the Today pill never stands on the
  * axis's end. A date further ahead is not stretched to: it sits past a break.
+ * `from` is where the reader's zoom starts the axis, if earlier than every
+ * moment.
  */
 export function axisOf(
   today: number,
   moments: readonly number[],
+  from = today,
 ): TimelineAxis {
-  const first = Math.min(today, ...moments);
+  const first = Math.min(today, from, ...moments);
   const reach = today + Math.max(today - first, MIN_LOOKAHEAD_MS);
   const near = moments.filter((at) => at <= reach);
   const room = Math.max(7 * DAY_MS, (today - first) / 6);
-  const range = rangeOf([today, today + room, ...near]);
+  const range = rangeOf([first, today + room, ...near]);
   const beyond = moments.filter((at) => pastRange(at, range));
   return beyond.length > 0 ? { range, far: Math.min(...beyond) } : { range };
 }

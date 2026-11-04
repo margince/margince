@@ -8,6 +8,7 @@ import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { HowItStands } from "../../design-system/howitstands";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { HealthRating } from "../../design-system/readingtone";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
 import {
   StandingDims,
   type StandingPeek,
@@ -67,6 +68,11 @@ export function CompanyHowItStands({
   const zone = useRecordZone();
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
+  // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const history = useRecordTimeline("company", companyId, {
+    firstPage: view?.activities,
+    enabled: Boolean(view?.activities),
+  });
   if (loading) {
     return (
       <Panel>
@@ -146,7 +152,8 @@ export function CompanyHowItStands({
           record={zone}
           gap={gap}
           events={events}
-          marks={activityMarks(view.activities?.data ?? [], {
+          history={history}
+          marks={activityMarks(history.activities, {
             t,
             locale,
             zone,

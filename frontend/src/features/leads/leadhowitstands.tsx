@@ -143,6 +143,7 @@ export function LeadHowItStands({
           record={record}
           events={timeline.events}
           gap={timeline.gap}
+          history={thread}
           marks={activityMarks(thread.activities, {
             ...ctx,
             onOpen: () =>

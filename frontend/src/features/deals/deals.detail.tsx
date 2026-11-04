@@ -355,6 +355,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
                       card: statusQuery.data,

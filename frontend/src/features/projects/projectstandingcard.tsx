@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { HowItStands } from "../../design-system/howitstands";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { StandingDims } from "../../design-system/standingdims";
 import { StandingTimeline } from "../../design-system/standingtimeline";
 import { formatNumber } from "../../format/format";
@@ -70,6 +71,11 @@ export function ProjectStanding({
   const { locale } = useLocale();
   const zone = useRecordZone();
   const ctx = { t, plural, locale, zone };
+  // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const history = useRecordTimeline("project", view.project.id, {
+    firstPage: view.activities,
+    enabled: Boolean(view.activities),
+  });
   const peeks = {
     commitments: commitmentsPeek(view, ctx, reveal(PROJECT_COMMITMENTS_ANCHOR)),
     deals: dealsPeek(view, ctx),
@@ -110,7 +116,8 @@ export function ProjectStanding({
           record={zone}
           gap={projectGap(view, ctx)}
           events={projectEvents(view, ctx)}
-          marks={activityMarks(view.activities?.data ?? [], {
+          history={history}
+          marks={activityMarks(history.activities, {
             ...ctx,
             record: zone,
             asOf: view.as_of,

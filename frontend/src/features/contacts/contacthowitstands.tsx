@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { HowItStands } from "../../design-system/howitstands";
 import { statTone } from "../../design-system/readingtone";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { StandingDims } from "../../design-system/standingdims";
 import { StrengthRing } from "../../design-system/standingring";
 import { StandingTimeline } from "../../design-system/standingtimeline";
@@ -38,6 +39,11 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
   const { locale } = useLocale();
   const zone = useRecordZone();
   const words: StandingWords = { t, locale, zone };
+  // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const history = useRecordTimeline("contact", view.contact.id, {
+    firstPage: view.activities,
+    enabled: Boolean(view.activities),
+  });
   const openHistory = () =>
     navigate(contactTabRoute(view.contact.id, "timeline"));
   const peeks = contactPeeks(view, { t, plural, locale, zone }, openHistory);
@@ -77,7 +83,8 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
           record={zone}
           gap={contactGap(view, words)}
           events={contactTimelineEvents(view, words)}
-          marks={activityMarks(view.activities?.data ?? [], {
+          history={history}
+          marks={activityMarks(history.activities, {
             t,
             locale,
             zone,
