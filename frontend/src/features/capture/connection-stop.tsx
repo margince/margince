@@ -89,6 +89,14 @@ export function StopConfirm({
       onStopped(stop.afterwards);
     }
   }, [nothingLeft, stop, onStopped]);
+  // Each stop starts from an idle disconnect. The reset waits for the stop to
+  // end, so the stop that ran one cannot read as idle and end a second time.
+  const { reset } = disconnect;
+  useEffect(() => {
+    if (stop === null) {
+      reset();
+    }
+  }, [stop, reset]);
   const providers = services
     .map((service) =>
       service === "mail" ? account.mail?.provider : account.calendar?.provider,

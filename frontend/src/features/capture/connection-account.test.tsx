@@ -23,7 +23,7 @@ import type {
 } from "../../lib/connect-account";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
-import { StopConfirm } from "./connection-stop";
+import { type PendingStop, StopConfirm } from "./connection-stop";
 
 // One account on Connections: its services each say how they are doing and
 // carry their own verb. The verbs about the whole account sit in its menu.
@@ -450,6 +450,49 @@ describe("the account's own verbs", () => {
     finish(new Response(null, { status: 204 }));
     await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
     expect(onStopped).toHaveBeenCalledOnce();
+  });
+
+  it("ends a later stop whose services left, after an earlier stop succeeded", async () => {
+    stubApi({
+      "POST /disconnect": () => new Response(null, { status: 204 }),
+    });
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const client = new QueryClient();
+    const confirm = (
+      connections: CaptureConnection[],
+      stop: PendingStop | null,
+    ) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={stop}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = rtlRender(
+      confirm([gmail, gcal], { services: ["mail"], afterwards: null }),
+    );
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(null));
+    view.rerender(confirm([gcal], null));
+
+    view.rerender(confirm([gcal], { services: ["mail"], afterwards }));
+
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("disconnects every service of the account after one confirm", async () => {
