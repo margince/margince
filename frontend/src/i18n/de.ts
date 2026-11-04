@@ -15292,6 +15292,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verstummte Deals als verloren schließen",
   "autonomy.kind.deal_close_lost.help":
     "Margince schließt einen Deal als verloren, wenn der Kunde 120 Tage nicht geantwortet hat (ein Admin kann die Zahl ändern), oder sofort, wenn der Kunde absagt. Jede Schließung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_amount.label": "Deal-Beträge",
+  "autonomy.kind.deal_amount.help":
+    "Margince setzt den Betrag eines Deals, wenn der Kunde oder dein Angebot einen Preis dafür nennt, etwa „50.000 USD für das erste Jahr“. Ein Preis in einer anderen Währung wird zum gespeicherten Kurs umgerechnet. Jede Änderung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_probability.label": "Gewinnwahrscheinlichkeiten",
+  "autonomy.kind.deal_probability.help":
+    "Margince setzt die Gewinnwahrscheinlichkeit eines Deals, wenn die Belege sie klar verschieben, etwa eine mündliche Zusage oder ein Budgetstopp. Eine Wahrscheinlichkeit, die du selbst gesetzt hast, ändert Margince nie. Jede Änderung erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18363,6 +18369,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.closeLostUndone":
     "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
+  "worklist.handled.verdictUndone":
+    "Rückgängig gemacht. Margince ändert das nicht wieder, bis auf diesem Deal etwas Neues passiert.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
@@ -20029,6 +20037,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.cert_judge": "Bewertung der Modellzertifizierung",
   "aiTask.name.cold_start": "Auswertung der Einrichtung",
   "aiTask.name.corpus_ask": "Fragen zum Dokumentenbestand",
+  "aiTask.name.deal_verdict": "Prüft Termine, Betrag und Chancen eines Deals",
   "aiTask.name.deal_health": "Deal-Statusübersicht",
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",

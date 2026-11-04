@@ -45,6 +45,7 @@ does in this state.
 | `cold_start` | Onboarding read | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `corpus_ask` | Document corpus question | interactive | `premium` | answers from its own facts instead of failing | — |
 | `deal_health` | Deal status card | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
+| `deal_verdict` | Checking a deal's dates, amount and chances | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `document_extract` | Document extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `draft_reply` | Reply drafting | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
 | `enrich` | Signature enrichment | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |

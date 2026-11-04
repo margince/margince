@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4228 |
+| Columns | 4234 |
 | Foreign keys | 585 |
 | Owning areas | 38 |
 
@@ -175,7 +175,7 @@ erDiagram
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
-| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 12 | 0 |
+| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 18 | 0 |
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 24 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |

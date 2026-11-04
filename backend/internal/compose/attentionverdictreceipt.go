@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// verdictReceipt renders an amount or probability Margince set from the
+// deal's evidence: before and after, the reason, and for an amount the quote
+// and the conversion it rests on.
+func verdictReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	var summary string
+	if c.Correction == deals.VerdictAmountCorrection {
+		summary = fmt.Sprintf("Changed the amount on %q: %s → %s", c.DealName,
+			receiptAmount(c.BeforeAmount, c.Currency), receiptAmount(c.AfterAmount, c.Currency))
+	} else {
+		summary = fmt.Sprintf("Changed the win probability on %q: %s → %s", c.DealName,
+			receiptProbability(c.BeforeProbability), receiptProbability(c.AfterProbability))
+	}
+	if c.Basis != "" {
+		summary += " — " + c.Basis
+	}
+	summary += amountSource(c.Evidence)
+	return attention.Receipt{
+		ID:         c.AuditLogID,
+		Kind:       c.Correction,
+		Summary:    summary,
+		OccurredAt: c.AppliedAt,
+		TargetType: approvalTargetDeal,
+		TargetID:   c.DealID.UUID,
+		Actor:      attention.ReceiptActor{Type: c.ActorType, ID: c.ActorID, OnBehalfOf: c.OnBehalfOf},
+		Undo:       &attention.ReceiptUndo{AuditLogID: c.AuditLogID, Version: c.Version, Reversed: c.Reversed},
+	}
+}
+
+func receiptAmount(amount *int64, currency *string) string {
+	if amount == nil || currency == nil {
+		return "none"
+	}
+	return values.MajorUnits(*amount, *currency) + " " + *currency
+}
+
+func receiptProbability(pct *int) string {
+	if pct == nil {
+		return "the stage's"
+	}
+	return fmt.Sprintf("%d%%", *pct)
+}
+
+// amountSource names the customer's words and, for another currency, the
+// amount they named and the rate's date.
+func amountSource(evidence []byte) string {
+	var facts struct {
+		Quote    string `json:"quoted_words"`
+		Amount   string `json:"quoted_amount"`
+		Currency string `json:"quoted_currency"`
+		RateDate string `json:"rate_date"`
+	}
+	if len(evidence) == 0 || json.Unmarshal(evidence, &facts) != nil || facts.Quote == "" {
+		return ""
+	}
+	out := fmt.Sprintf(". The customer wrote %q", facts.Quote)
+	if facts.RateDate != "" {
+		out += fmt.Sprintf("; %s %s converted at the rate of %s", facts.Amount, facts.Currency, facts.RateDate)
+	}
+	return out
+}

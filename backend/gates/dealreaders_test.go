@@ -118,6 +118,9 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/dealverdictpass.go:dueVerdictCandidates":                  "the open, owned deals the nightly verdict may read, with their checksum. Only ids, owners and checksums leave. The close-date pass reads them under its system principal, and every change runs as the owner's agent through deals.ApplyVerdict, which asks auth.Require for deal update",
+	"internal/compose/dealverdictinput.go:readVerdictDeal":                      "one deal's name, stage, amount, close date and probability for the nightly verdict, under the close-date pass's system principal. They reach the model and the owner's own Home receipt only; the change itself runs as the owner's agent",
+	"internal/compose/dealverdictjudge.go:record":                               "the checksum and fingerprint of one deal after the nightly verdict, stored on the deal's receipt under the close-date pass's system principal. Only the hashes and the close date leave",
 	"internal/compose/dealclosefacts.go:closeFactsSQL":                          "the dates a Margince close rests on: the last Undo of a close, the newest note a colleague logged after it, and the newest customer message of any audience. Only timestamps leave. The nightly close-date pass reads them under its system principal, and the close itself runs as the owner's agent",
 	"internal/modules/deals/refilecompanies.go:refileAssociationsTx":            "RequireSystem restricts this event-recovery read to current and audited association identities. They select activities for an unattended pass; each final filing rechecks the deal under the capturing seat and exposes no deal record to a caller.",
 	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
@@ -156,6 +159,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/verdictapply.go:lockVerdictDeal":               "the status, owner, legal hold and the fields a verdict changes, under the deal's row lock. Its one caller, ApplyVerdict, asks auth.Require(ctx, \"deal\", update) first and then auth.EnsureWritable on the row",
 	"internal/modules/deals/closelost.go:closeStillDue":                    "the status, owner and legal hold of a deal Margince is about to close, under its row lock. Its one caller, CloseAsLost, asks auth.Require(ctx, \"deal\", update) first",
 	"internal/modules/deals/closelost.go:lostStageAndCode":                 "the lost stage of the deal's pipeline. Reached only from CloseAsLost, behind the same deal update gate",
 	"internal/modules/deals/recordhandover.go:recordDealsTx":               "the open deals one owner holds on a contact or company a handover moves. Its two callers ask auth.Require(ctx, \"deal\", read) or update first, and only ids, versions and counts leave",
