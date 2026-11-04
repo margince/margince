@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -361,7 +362,13 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		writeConsentErr(w, r, err)
 		return
 	}
+	recordedID, err := ids.Parse(recorded.ID)
+	if err != nil {
+		writeConsentErr(w, r, fmt.Errorf("consent: the recorded exchange has no id: %w", err))
+		return
+	}
 	out := crmcontracts.QualifyingEventRecord{
+		Id:         openapi_types.UUID(recordedID),
 		Kind:       crmcontracts.QualifyingEventRecordKind(recorded.Kind),
 		OccurredAt: recorded.OccurredAt,
 	}
@@ -370,6 +377,16 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		out.Note = &note
 	}
 	httperr.WriteJSON(w, http.StatusCreated, out)
+}
+
+// RetractQualifyingEvent serves POST
+// /contacts/{id}/consent/qualifying-events/{event_id}/retract. Wire-only.
+func (h Handlers) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, eventID openapi_types.UUID) {
+	if err := h.store.RetractQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), ids.UUID(eventID)); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {

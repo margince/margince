@@ -198,13 +198,14 @@ resolve it in `commsauthz.RemediesFor`.
   no evidence and no marketing consent.
 - A reason that lists only the admin exception can be sent past only by an admin. Examples are a
   hard bounce and a frequency cap.
-- A contact's own stop lists no remedy, so nobody sends past it, an admin included. That covers an
-  objection, a withdrawal, a processing restriction and a stop request.
+- A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
+  objection, a withdrawal, a limit on processing and a request to stop.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
-A direction does not reach a stop recorded after it was given. Staging and the transmit ticket
-both ask `DecisionSet.ExceptionMayAnswer`, so a later stop refuses the message and the direction
-stays unspent.
+The direction stores whether an admin gave it. Staging and the transmit check both ask
+`DecisionSet.ExceptionMayAnswer` again before the message goes. So a stop recorded later refuses
+the message, and so does a refusal only an admin may answer under a rep's direction. The direction
+is then not used.
 
 A contact can be written to about a thread when three things hold:
 

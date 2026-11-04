@@ -75,13 +75,30 @@ func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
 	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
 	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
 	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
-	if !(DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer() {
-		t.Error("an exception may answer missing consent and a bounce, yet the set refuses it")
+	if !(DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception may answer missing consent and a bounce, yet the set refuses it")
 	}
 	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest} {
 		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
-		if set.ExceptionMayAnswer() {
-			t.Errorf("an exception answers a set holding %q", stop)
+		if set.ExceptionMayAnswer(true) {
+			t.Errorf("an admin's exception answers a set holding %q", stop)
 		}
+	}
+}
+
+// A rep's exception answers what any sender may answer and nothing an admin
+// alone may: a bounce recorded after it was given stops the message.
+func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
+	t.Parallel()
+	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
+	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
+	if !(DecisionSet{Decisions: []Decision{missing}}).ExceptionMayAnswer(false) {
+		t.Error("a rep's exception does not answer missing marketing consent")
+	}
+	if (DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(false) {
+		t.Error("a rep's exception answers a hard bounce, which only an admin may")
+	}
+	if !(DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception does not answer a hard bounce")
 	}
 }

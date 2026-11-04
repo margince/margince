@@ -17778,11 +17778,12 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 
 // Defines values for QualifyingEventRecordKind.
 const (
-	QualifyingEventRecordKindActiveDeal     QualifyingEventRecordKind = "active_deal"
-	QualifyingEventRecordKindInPerson       QualifyingEventRecordKind = "in_person"
-	QualifyingEventRecordKindInboundMessage QualifyingEventRecordKind = "inbound_message"
-	QualifyingEventRecordKindInquiry        QualifyingEventRecordKind = "inquiry"
-	QualifyingEventRecordKindMeeting        QualifyingEventRecordKind = "meeting"
+	QualifyingEventRecordKindActiveDeal         QualifyingEventRecordKind = "active_deal"
+	QualifyingEventRecordKindInPerson           QualifyingEventRecordKind = "in_person"
+	QualifyingEventRecordKindInboundMessage     QualifyingEventRecordKind = "inbound_message"
+	QualifyingEventRecordKindInquiry            QualifyingEventRecordKind = "inquiry"
+	QualifyingEventRecordKindMeeting            QualifyingEventRecordKind = "meeting"
+	QualifyingEventRecordKindRequestedBySubject QualifyingEventRecordKind = "requested_by_subject"
 )
 
 // Valid indicates whether the value is a known member of the QualifyingEventRecordKind enum.
@@ -17797,6 +17798,8 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindInquiry:
 		return true
 	case QualifyingEventRecordKindMeeting:
+		return true
+	case QualifyingEventRecordKindRequestedBySubject:
 		return true
 	default:
 		return false
@@ -54330,6 +54333,8 @@ type QualifyLeadRequest struct {
 
 // QualifyingEventRecord A recorded exchange, as it now stands on the contact.
 type QualifyingEventRecord struct {
+	// Id The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+	Id         openapi_types.UUID        `json:"id"`
 	Kind       QualifyingEventRecordKind `json:"kind"`
 	Note       *string                   `json:"note"`
 	OccurredAt time.Time                 `json:"occurred_at"`
@@ -87266,6 +87271,9 @@ type ServerInterface interface {
 	// Record the exchange that makes business correspondence lawful.
 	// (POST /contacts/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back an exchange a colleague recorded by hand.
+	// (POST /contacts/{id}/consent/qualifying-events/{event_id}/retract)
+	RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id, eventId openapi_types.UUID)
 	// Record that this contact asked us to stop writing to them.
 	// (POST /contacts/{id}/consent/suppress)
 	SuppressContact(w http.ResponseWriter, r *http.Request, id Id)
@@ -91451,6 +91459,12 @@ func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request,
 // Record the exchange that makes business correspondence lawful.
 // (POST /contacts/{id}/consent/qualifying-events)
 func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back an exchange a colleague recorded by hand.
+// (POST /contacts/{id}/consent/qualifying-events/{event_id}/retract)
+func (_ Unimplemented) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id, eventId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111745,6 +111759,47 @@ func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordQualifyingEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetractQualifyingEvent operation middleware
+func (siw *ServerInterfaceWrapper) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "event_id" -------------
+	var eventId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "event_id", chi.URLParam(r, "event_id"), &eventId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "event_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetractQualifyingEvent(w, r, id, eventId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140262,6 +140317,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/consent/qualifying-events/{event_id}/retract", wrapper.RetractQualifyingEvent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress", wrapper.SuppressContact)

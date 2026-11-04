@@ -66,15 +66,18 @@ func HasRemedy(reason string, remedy Remedy) bool {
 
 // ExceptionMayAnswer reports whether a recorded one-message exception may stand
 // over every refusal in this set. Staging and dispatch both ask it, so a stop
-// recorded after the exception was given still stops the message.
-func (s DecisionSet) ExceptionMayAnswer() bool {
+// or an admin-only refusal recorded after the exception was given still stops
+// the message. givenByAdmin is the exception's own record of who gave it, never
+// the authority of whoever is sending now.
+func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
 	for _, d := range s.Decisions {
-		if d.Verdict == VerdictAllow {
+		if d.Verdict == VerdictAllow || HasRemedy(d.ReasonCode, RemedyException) {
 			continue
 		}
-		if !HasRemedy(d.ReasonCode, RemedyException) && !HasRemedy(d.ReasonCode, RemedyAdminException) {
-			return false
+		if givenByAdmin && HasRemedy(d.ReasonCode, RemedyAdminException) {
+			continue
 		}
+		return false
 	}
 	return true
 }

@@ -106,7 +106,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_instruction
 
-17 columns · primary key `(id)` · referenced by 2 foreign keys
+18 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -119,6 +119,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `directed_by` | `uuid` | yes | Points at `app_user.id`. |
 | `explanation` | `text` | yes |  |
 | `facts_as_of` | `timestamp with time zone` | yes |  |
+| `given_by_admin` | `boolean`, default `false` | yes |  |
 | `reason_code` | `text` | yes | One of `customer_requested_outside_crm`, `contractual_necessity`, `legal_obligation`, `other`. |
 | `review_id` | `uuid` | yes | Points at `communication_review.id`. |
 | `revoked_at` | `timestamp with time zone` |  |  |
@@ -430,7 +431,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -439,6 +440,8 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `kind` | `text` | yes | One of `inbound_message`, `inquiry`, `active_deal`, `in_person`, `meeting`, `requested_by_subject`. |
 | `note` | `text` |  | The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
+| `retracted_at` | `timestamp with time zone` |  |  |
+| `retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
 | `source_entity_type` | `text` |  | One of `activity`, `deal`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |

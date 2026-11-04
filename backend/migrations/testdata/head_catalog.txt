@@ -2498,6 +2498,7 @@ public.communication_instruction.directed_at timestamp with time zone NOT NULL g
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
 public.communication_instruction.explanation text NOT NULL gen=- def=-
 public.communication_instruction.facts_as_of timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.given_by_admin boolean NOT NULL gen=- def=false
 public.communication_instruction.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_instruction.reason_code text NOT NULL gen=- def=-
 public.communication_instruction.review_id uuid NOT NULL gen=- def=-
@@ -2531,7 +2532,8 @@ BEGIN
      AND NEW.id IS NOT DISTINCT FROM OLD.id
      AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
      AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
-     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code
+     AND NEW.given_by_admin IS NOT DISTINCT FROM OLD.given_by_admin THEN
     RETURN NEW;
   END IF;
   IF NEW.id IS DISTINCT FROM OLD.id
@@ -2543,7 +2545,8 @@ BEGIN
      OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
      OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
      OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
-     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at
+     OR NEW.given_by_admin IS DISTINCT FROM OLD.given_by_admin THEN
     RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
@@ -3247,6 +3250,8 @@ public.consent_qualifying_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_qualifying_event.kind text NOT NULL gen=- def=-
 public.consent_qualifying_event.note text gen=- def=-
 public.consent_qualifying_event.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.consent_qualifying_event.retracted_at timestamp with time zone gen=- def=-
+public.consent_qualifying_event.retracted_by text gen=- def=-
 public.consent_qualifying_event.source text NOT NULL gen=- def=-
 public.consent_qualifying_event.source_entity_id uuid gen=- def=-
 public.consent_qualifying_event.source_entity_type text gen=- def=-

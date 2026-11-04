@@ -2670,6 +2670,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
   "history.field.qualifying_event": "Sự kiện đủ điều kiện",
+  "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.reason": "Lý do",
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",

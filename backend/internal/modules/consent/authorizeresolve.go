@@ -57,6 +57,10 @@ type resolution struct {
 	// for it — and so would turn an unchecked id into an authorization the
 	// sender could not have obtained themselves.
 	EvidenceChecked bool
+	// MarketingStopsBind says a marketing objection binds this resolution
+	// although its category is not marketing: a quote resting on a recorded
+	// request alone, with no deal or offer behind it.
+	MarketingStopsBind bool
 }
 
 // resolveCategory works out what this message is for one recipient.

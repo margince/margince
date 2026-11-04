@@ -2603,7 +2603,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1314,
+      "tokens": 1309,
       "agents": [],
       "required_by_cases": [
         "case44_chase_what_is_slipping",

@@ -41,11 +41,10 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrecontractQuote &&
-		category != commsauthz.CategoryPrivacyNotice {
-		// A LEAD REACHES THE ARMS THAT ASK WHO WROTE TO US, AND NO OTHER.
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
+		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
-		// The correspondence and quote arms ask that through subjectAskedUs,
+		// The correspondence arm asks who wrote to us through subjectAskedUs,
 		// whose readers answer about a lead on their own: wroteToUsWithin shares
 		// the authorIsTheSubject spelling, which matches a lead through its bare
 		// address, and requestOnRecord returns false for a non-contact rather
@@ -98,7 +97,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryContractNotice:
 		return validateContract(ctx, tx, req, subject)
 	case commsauthz.CategoryPrecontractQuote:
-		return validateQuote(ctx, tx, req, subject, w)
+		return validateQuote(ctx, tx, req, subject)
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
@@ -149,8 +148,16 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 	if err != nil || found {
 		return found, err
 	}
-	return requestOnRecord(ctx, tx, subject)
+	return requestOnRecord(ctx, tx, subject, followupRequestKinds)
 }
+
+// followupRequestKinds and quoteRequestKinds are the acquisition kinds that
+// record the subject asking. Permission given in person supports a follow-up;
+// only a request for a quote or meeting supports a quote.
+var (
+	followupRequestKinds = []string{"requested_quote_or_meeting", "in_person_permission"}
+	quoteRequestKinds    = []string{"requested_quote_or_meeting"}
+)
 
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
 // recorded that they asked to hear from us, inside the window.
@@ -239,27 +246,27 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 }
 
 // validateQuote answers a requested quote or offer. Either a sent offer on the
-// named deal reaches this contact, or the subject asked us. The second is the
-// quote written from the enquiry, before anyone has made a deal or an offer for
-// it, and it needs no newsletter consent.
-func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules) (resolution, error) {
-	if subject.Kind == entityContact {
-		res, err := quoteOnDeal(ctx, tx, req, subject)
-		if err != nil || res.Supported {
-			return res, err
-		}
+// named deal reaches this contact, or a request for a quote is on record. The
+// second is the quote written from the enquiry before anyone made a deal or an
+// offer, and it needs no newsletter consent. Correspondence alone is not a
+// request for a quote; a reply in the enquiry's own thread is a reply.
+//
+// The request arm is the weaker ground, so a marketing objection still binds
+// it (MarketingStopsBind).
+func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	res, err := quoteOnDeal(ctx, tx, req, subject)
+	if err != nil || res.Supported {
+		return res, err
 	}
-	asked, err := subjectAskedUs(ctx, tx, subject, w)
-	if err != nil {
-		return resolution{}, err
-	}
-	if !asked {
-		return resolution{Category: commsauthz.CategoryPrecontractQuote, Reason: commsauthz.ReasonNoEvidence}, nil
+	asked, err := requestOnRecord(ctx, tx, subject, quoteRequestKinds)
+	if err != nil || !asked {
+		return res, err
 	}
 	return resolution{
-		Category:  commsauthz.CategoryPrecontractQuote,
-		Basis:     commsauthz.BasisPrecontractRequest,
-		Supported: true,
+		Category:           commsauthz.CategoryPrecontractQuote,
+		Basis:              commsauthz.BasisPrecontractRequest,
+		Supported:          true,
+		MarketingStopsBind: true,
 	}, nil
 }
 

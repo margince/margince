@@ -247,20 +247,21 @@ func (s *Store) RecordQualifyingEvent(
 		//
 		// Matched on the contact, the moment and the words: two genuinely
 		// different exchanges with the same contact do not share all three.
-		var inserted bool
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
 				(contact_id, kind, note, occurred_at, source, captured_by)
 			SELECT $1, $2, $3, $4, 'human', $5
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
-				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
-			RETURNING true`,
-			contactID, in.Kind, note, in.OccurredAt, by).Scan(&inserted); err != nil {
+				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
+				   AND retracted_at IS NULL)
+			RETURNING id::text`,
+			contactID, in.Kind, note, in.OccurredAt, by).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Already on file. The caller's claim stands, and nothing was
-				// written twice — so there is nothing to audit either.
-				return nil
+				// written twice — so there is nothing to audit either. The id
+				// is the standing row's, so the caller can still retract it.
+				return standingExchangeID(ctx, tx, contactID, in.Kind, note, in.OccurredAt, &out.ID)
 			}
 			return fmt.Errorf("consent: recording the exchange: %w", err)
 		}
@@ -284,6 +285,71 @@ func (s *Store) RecordQualifyingEvent(
 		return QualifyingEvent{}, err
 	}
 	return out, nil
+}
+
+// standingExchangeID reads the id of the live exchange a retried record matched.
+func standingExchangeID(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, note string, at time.Time, out *string) error {
+	if err := tx.QueryRow(ctx, `
+		SELECT id::text FROM consent_qualifying_event
+		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4 AND retracted_at IS NULL
+		 ORDER BY created_at LIMIT 1`, contactID, kind, note, at).Scan(out); err != nil {
+		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
+	}
+	return nil
+}
+
+// RetractQualifyingEvent withdraws an exchange recorded by hand. The row stays
+// as the record of what was said and when it was taken back; no send and no
+// verdict reads it any more.
+//
+// Human-only and gated like recording, because it is the same statement taken
+// back. A derived exchange is not retracted here: it stands on a record the
+// product holds, and archiving that record is what ends it.
+func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+			return err
+		}
+		var kind string
+		var occurred time.Time
+		err := tx.QueryRow(ctx, `
+			UPDATE consent_qualifying_event
+			   SET retracted_at = now(), retracted_by = $3
+			 WHERE id = $1 AND contact_id = $2 AND kind = ANY($4::text[]) AND retracted_at IS NULL
+			RETURNING kind, occurred_at`, eventID, contactID, by, handRecordedKindList()).Scan(&kind, &occurred)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("consent: withdrawing the exchange: %w", err)
+		}
+		// Audit-only, as recording is: the public-event catalog has no type for
+		// a lawful basis, and the trail answers who withdrew what.
+		_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+			"qualifying_event_retracted": kind,
+			fieldOccurredAt:              occurred.UTC().Format(time.RFC3339),
+		})
+		return err
+	})
+}
+
+// handRecordedKindList is handRecordedKinds as a statement argument.
+func handRecordedKindList() []string {
+	out := make([]string, 0, len(handRecordedKinds))
+	for kind := range handRecordedKinds {
+		out = append(out, kind)
+	}
+	return out
 }
 
 // InvalidQualifyingEventError refuses a claim the record could not stand

@@ -1535,6 +1535,10 @@ func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
 }
 
+func (stubs) RetractQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, eventId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RetractQualifyingEvent")
+}
+
 func (stubs) SuppressContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SuppressContact")
 }

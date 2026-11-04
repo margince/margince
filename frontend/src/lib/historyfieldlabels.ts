@@ -155,6 +155,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["overrides_carried", "history.field.overrides_carried"],
   ["provider_claims_received", "history.field.provider_claims_received"],
   ["qualifying_event", "history.field.qualifying_event"],
+  ["qualifying_event_retracted", "history.field.qualifying_event_retracted"],
   ["reachability", "history.field.reachability"],
   ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],

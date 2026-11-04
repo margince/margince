@@ -107,6 +107,9 @@ const (
 // QualifyingEvent is the deterministic thing on the record that makes business
 // correspondence lawful.
 type QualifyingEvent struct {
+	// ID is set on an exchange recorded by hand, which is the one kind a
+	// caller may later retract.
+	ID               string
 	Kind             string
 	OccurredAt       time.Time
 	SourceEntityType string

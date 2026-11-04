@@ -25941,6 +25941,42 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/qualifying-events/{event_id}/retract:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: event_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Compliance]
+      operationId: retractQualifyingEvent
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take back an exchange a colleague recorded by hand.
+      description: |
+        Withdraws an `in_person` or `requested_by_subject` exchange that was recorded by mistake, or
+        that the contact took back. The row stays on the record with the moment and the seat that
+        withdrew it, and no send rests on it any more. A request otherwise has no age limit, so this
+        is how one stops counting.
+
+        Human-only for the reason recording is: the exchange is a human's own statement about what
+        a contact said, and only a human withdraws it.
+      responses:
+        '204':
+          description: Withdrawn. Sends no longer rest on this exchange.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: |
+            No live hand-recorded exchange with this id is on this contact: none exists, it is
+            derived rather than recorded by hand, or it was already withdrawn.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/claim:
     parameters:
       - name: record_type
@@ -57140,10 +57176,14 @@ components:
 
     QualifyingEventRecord:
       type: object
-      required: [kind, occurred_at, note]
+      required: [id, kind, occurred_at, note]
       description: A recorded exchange, as it now stands on the contact.
       properties:
-        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person, meeting] }
+        id:
+          type: string
+          format: uuid
+          description: The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject] }
         note: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
 

@@ -348,7 +348,9 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 // BOUNDED ABOVE. occurred_at is caller-stated, so a future date is not a memory
 // of anything and must not authorize a send now, with the same small allowance
 // RecordQualifyingEvent gives a client clock that runs fast.
-func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef) (bool, error) {
+//
+// A request the rep retracted no longer counts (RetractRequest).
+func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, acquisitionKinds []string) (bool, error) {
 	if subject.Kind != entityContact {
 		// Both tables are keyed on contact_id; a lead holds neither.
 		return false, nil
@@ -358,15 +360,16 @@ func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef) (bool, 
 		SELECT EXISTS (
 			SELECT 1 FROM contact_acquisition_evidence e
 			 WHERE e.contact_id = $1::uuid
-			   AND e.kind IN ('requested_quote_or_meeting', 'in_person_permission')
+			   AND e.kind = ANY($4::text[])
 			   AND coalesce(e.occurred_at, e.captured_at) <= $2
 		) OR EXISTS (
 			SELECT 1 FROM consent_qualifying_event q
 			 WHERE q.contact_id = $1::uuid
 			   AND q.kind = ANY($3::text[])
 			   AND q.occurred_at <= $2
+			   AND q.retracted_at IS NULL
 		)`, subject.ID, time.Now().Add(clockSkewAllowance),
-		[]string{KindRequestedBySubject, KindInquiry}).Scan(&found)
+		[]string{KindRequestedBySubject, KindInquiry}, acquisitionKinds).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}

@@ -846,6 +846,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/contacts/{id}/consent/double-opt-in":                          {Op: "issueDoubleOptIn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
 	"POST /v1/contacts/{id}/consent/privacy-notice":                         {Op: "sendPrivacyNotice", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
 	"POST /v1/contacts/{id}/consent/qualifying-events":                      {Op: "recordQualifyingEvent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
+	"POST /v1/contacts/{id}/consent/qualifying-events/{event_id}/retract":   {Op: "retractQualifyingEvent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"POST /v1/contacts/{id}/consent/suppress":                               {Op: "suppressContact", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
 	"POST /v1/contacts/{id}/consent/suppress/{suppressionId}/lift":          {Op: "liftSuppression", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
 	"POST /v1/contacts/{id}/draft-email":                                    {Op: "draftContactEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "covered"},

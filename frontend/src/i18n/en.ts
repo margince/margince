@@ -2647,6 +2647,7 @@ export const en = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
   "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",

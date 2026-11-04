@@ -17373,6 +17373,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/consent/qualifying-events/{event_id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back an exchange a colleague recorded by hand.
+         * @description Withdraws an `in_person` or `requested_by_subject` exchange that was recorded by mistake, or
+         *     that the contact took back. The row stays on the record with the moment and the seat that
+         *     withdrew it, and no send rests on it any more. A request otherwise has no age limit, so this
+         *     is how one stops counting.
+         *
+         *     Human-only for the reason recording is: the exchange is a human's own statement about what
+         *     a contact said, and only a human withdraws it.
+         */
+        post: operations["retractQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -41653,8 +41683,13 @@ export interface components {
         };
         /** @description A recorded exchange, as it now stands on the contact. */
         QualifyingEventRecord: {
+            /**
+             * Format: uuid
+             * @description The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+             */
+            id: string;
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
             note: string | null;
             /** Format: date-time */
             occurred_at: string;
@@ -83037,6 +83072,43 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retractQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rest on this exchange. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description No live hand-recorded exchange with this id is on this contact: none exists, it is
+             *     derived rather than recorded by hand, or it was already withdrawn.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
