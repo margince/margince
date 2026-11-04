@@ -96,8 +96,11 @@ calendar that no worker holds under lease. A held invite parks itself when its o
 All of them share one `attention_episode`, and the host gets one notice for it, keyed on that id.
 
 Parking and resuming write the domain row, the audit row and the outbox event together. Each
-delivery pass first resumes the parked invites whose calendar can take them again, judged by the
-same `blocker` the booking page reads. A trigger clears the reason each time the status moves on,
+delivery pass first resumes a parked queue under the host's lock. The host must have granted the
+calendar again since the disconnect, and the `blocker` the booking page reads must be `none`. The
+latest disconnect of each host and calendar stays in `meeting_calendar_episode` after its invites
+resume. So a refusal that was in flight during the resume parks nothing, and a later one is a new
+disconnect. A trigger clears the reason each time the status moves on,
 so no writer has to do it.
 
 ## Video links come with the create
