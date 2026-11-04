@@ -6192,16 +6192,20 @@ export interface paths {
          *     else the installation's base language. A mail is rendered from its current message,
          *     without the quoted history below it.
          *
-         *     When the text is already in the target language the answer is `unchanged: true` and
-         *     the original text, with no model call. That holds for a known source language equal
-         *     to the target, and for an unknown one the model judges to be in the target already.
+         *     The source language is read from the text as it stands; the stored `language` label
+         *     decides only when the text cannot be placed. When the text is already in the target
+         *     language the answer is `unchanged: true` and the original text, with no model call.
+         *     That holds for a known source language equal to the target, and for an unknown one the
+         *     model judges to be in the target already.
          *
          *     Answers 404 for an activity the caller cannot read the content of: missing, outside
          *     their scope, outside its audience, held under a retention obligation, archived, or of
-         *     a kind with no text (`task`, a row with neither subject nor body). With no AI model it
-         *     answers 409 `ai_not_configured`. Text past the limit the model can write back in one
-         *     answer is 422 `too_long`. A model that was asked and did not answer is 503
-         *     `assistant_unavailable`.
+         *     a kind with no text (`task`, a row with neither subject nor body). The activity is read
+         *     again after the model answers, and one that stopped being readable or whose text or
+         *     version changed meanwhile answers 404 too. With no AI model it answers 409
+         *     `ai_not_configured`. Text past the limit the model can write back in one answer is 422
+         *     `too_long`, also when it is already in the target language. A model that was asked
+         *     and did not answer is 503 `assistant_unavailable`.
          */
         post: operations["renderActivityForReader"];
         delete?: never;

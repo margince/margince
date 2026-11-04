@@ -25,10 +25,17 @@ import (
 )
 
 // renderingLane answers one English rendering and counts its calls.
-type renderingLane struct{ calls int }
+type renderingLane struct {
+	calls int
+	// during runs while the model "writes", to move the row under the call.
+	during func()
+}
 
 func (l *renderingLane) Complete(context.Context, model.Request) (model.Response, error) {
 	l.calls++
+	if l.during != nil {
+		l.during()
+	}
 	return model.Response{ServedModel: "stub-model", Text: `{"already_in_target": false,
 	  "subject": "Renewal", "body": "We talked about the renewal. They want to see the offer by Friday."}`}, nil
 }
@@ -162,5 +169,37 @@ func TestAMessageHeldUnderARetentionObligationIsNotFound(t *testing.T) {
 	}
 	if lane.calls != 0 {
 		t.Error("a held mail reached the model")
+	}
+}
+
+func TestARowThatMovedWhileTheModelWroteShowsNoRendering(t *testing.T) {
+	e := Setup(t)
+	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
+	contact := e.SeedContact(t, "Lena Vogt", &e.Rep1)
+
+	limited := logGermanActivity(t, e, author, "email", contact)
+	limit := &renderingLane{during: func() {
+		if _, err := e.Activities.SetAudience(author, limited, activities.SetAudienceInput{Audience: "participants"}); err != nil {
+			t.Errorf("limiting during the call: %v", err)
+		}
+	}}
+	svc := readerrendering.NewService(e.Pool, e.Activities, renderingClock(t)).WithLane(limit)
+	if got, err := svc.Render(asReader(colleague, "en"), limited, nil); !errors.Is(err, apperrors.ErrNotFound) || got.Body != nil {
+		t.Errorf("a mail limited while the model wrote: %+v, %v, want ErrNotFound", got, err)
+	}
+
+	archived := logGermanActivity(t, e, author, "note", contact)
+	archive := &renderingLane{during: func() {
+		if _, err := e.Activities.ArchiveActivity(e.Admin(), archived, nil); err != nil {
+			t.Errorf("archiving during the call: %v", err)
+		}
+	}}
+	svc = readerrendering.NewService(e.Pool, e.Activities, renderingClock(t)).WithLane(archive)
+	if got, err := svc.Render(asReader(author, "en"), archived, nil); !errors.Is(err, apperrors.ErrNotFound) || got.Body != nil {
+		t.Errorf("a note archived while the model wrote: %+v, %v, want ErrNotFound", got, err)
+	}
+	if limit.calls != 1 || archive.calls != 1 {
+		t.Errorf("the model was asked %d and %d times, want once each, before the row moved", limit.calls, archive.calls)
 	}
 }

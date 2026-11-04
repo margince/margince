@@ -73,6 +73,11 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 	if err != nil {
 		return crmcontracts.ActivityReaderRendering{}, err
 	}
+	// Before either answer: text past the limit is refused even when it is
+	// already in the reader's language, so the two paths cannot disagree.
+	if in.TooLong() {
+		return crmcontracts.ActivityReaderRendering{}, ErrTooLong
+	}
 	out := crmcontracts.ActivityReaderRendering{
 		ActivityId:     activity.Id,
 		SourceLanguage: sourceLanguage(in.Source),
@@ -84,9 +89,6 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 	}
 	if s.lane == nil {
 		return crmcontracts.ActivityReaderRendering{}, ErrNoModel
-	}
-	if in.TooLong() {
-		return crmcontracts.ActivityReaderRendering{}, ErrTooLong
 	}
 	res, err := ai.Ask(ai.WithSubject(ctx, id.Ref(), in.Subject), s.lane, Request(in), func(raw string) error {
 		reply, err := Parse(raw)
@@ -105,6 +107,9 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 	}
 	if err != nil {
 		return crmcontracts.ActivityReaderRendering{}, fmt.Errorf("%w: %w", ai.ErrOutputRejected, err)
+	}
+	if err := s.stillReadable(ctx, activity); err != nil {
+		return crmcontracts.ActivityReaderRendering{}, err
 	}
 	out.ModelUsed = &res.ServedModel
 	if reply.AlreadyInTarget {
@@ -126,11 +131,40 @@ func (s *Service) input(ctx context.Context, activity crmcontracts.Activity, loc
 		return Input{}, apperrors.ErrNotFound
 	}
 	in.Target = s.target(ctx, locale)
+	// The text as it stands wins over a stored label, which an older writer may
+	// have read from other words. The label decides only where detection cannot.
 	in.Source = textlang.OfMessage(in.Body, in.Subject)
-	if activity.Language != nil && textlang.Known(string(*activity.Language)) {
+	if in.Source == textlang.Unknown && activity.Language != nil && textlang.Known(string(*activity.Language)) {
 		in.Source = textlang.Lang(*activity.Language)
 	}
 	return in, nil
+}
+
+// stillReadable reads the activity again after the model answered. A row the
+// caller lost, archived or held meanwhile, or whose words changed, answers
+// ErrNotFound. Else the rendering would show text the caller may no longer
+// read, or words nobody wrote.
+func (s *Service) stillReadable(ctx context.Context, before crmcontracts.Activity) error {
+	after, err := s.activities.GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(before.Id)), storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	withheld := after.ContentState != nil && *after.ContentState == crmcontracts.ActivityContentStateWithheld
+	if withheld || deref(after.Subject) != deref(before.Subject) || deref(after.Body) != deref(before.Body) ||
+		!sameVersion(after.Version, before.Version) {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+func sameVersion(a, b *crmcontracts.RowVersion) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // ReadableBody is the text of an activity a rendering is made from. A mail
