@@ -60,7 +60,7 @@ func assessmentForecastMetricCells(evaluation crmcontracts.ReportingEvaluation, 
 		add("range_high", &value)
 	}
 	if comparison := metric.TargetComparison; comparison != nil {
-		cells = append(cells, salesassessment.CellIn{ID: "forecast:target_status", Label: label("target_status"), Value: string(comparison.Status), Coverage: "ok"})
+		cells = append(cells, salesassessment.CellIn{ID: "forecast:target_status", Label: label("target_status"), Value: assessmentTargetStatus(string(comparison.Status), words), Coverage: "ok"})
 		if comparison.Status == "compared" || comparison.Status == "target_reached" {
 			add("target", comparison.Target)
 			add("remaining", comparison.Remaining)
@@ -68,7 +68,8 @@ func assessmentForecastMetricCells(evaluation crmcontracts.ReportingEvaluation, 
 		}
 	}
 	if basis := metric.ForecastBasis; basis != nil {
-		cells = append(cells, salesassessment.CellIn{ID: "forecast:basis", Label: label("basis"), Value: string(basis.Landing.Measure), Coverage: "ok"})
+
+		cells = append(cells, salesassessment.CellIn{ID: "forecast:basis", Label: label("basis"), Value: assessmentBasis(string(basis.Landing.Measure), words), Coverage: "ok"})
 		if basis.OpenPipelineMinor != nil {
 			v := float64(*basis.OpenPipelineMinor)
 			add("period_pipeline", &v)
@@ -81,11 +82,37 @@ func assessmentForecastMetricCells(evaluation crmcontracts.ReportingEvaluation, 
 			key   string
 			value *int64
 		}{{"eligible", &basis.EligibleCount}, {"included", basis.IncludedCount}, {"fx_missing", &basis.FxMissingCount}} {
-			if count.value != nil {
+			if count.value != nil && (count.key != "fx_missing" || *count.value > 0) {
 				v := float64(*count.value)
 				cells = append(cells, assessmentCell("forecast:"+count.key, label(count.key), &v, "count", assessmentWindow(window, zone), metric.Coverage))
 			}
 		}
 	}
 	return cells
+}
+
+func assessmentBasis(basis string, words langcopy.Spoken) string {
+	switch basis {
+	case "commit_evidence":
+		return words.Say(langcopy.Phrase{En: "Won sales plus confirmed commitments", De: "Gewonnener Umsatz plus bestätigte Zusagen", Vi: "Doanh số đã thắng cộng cam kết đã xác nhận"})
+	case "qualified_commit_evidence":
+		return words.Say(langcopy.Phrase{En: "Won sales plus qualified confirmed commitments", De: "Gewonnener Umsatz plus qualifizierte bestätigte Zusagen", Vi: "Doanh số đã thắng cộng cam kết đủ điều kiện đã xác nhận"})
+	case "manager_call":
+		return words.Say(assessmentForecastLabels["call"])
+	default:
+		return words.Say(langcopy.Phrase{En: "Weighted estimate", De: "Gewichtete Schätzung", Vi: "Ước tính có trọng số"})
+	}
+}
+
+func assessmentTargetStatus(status string, words langcopy.Spoken) string {
+	switch status {
+	case "no_target":
+		return words.Say(langcopy.Phrase{En: "No sales target is set for this quarter", De: "Für dieses Quartal ist kein Umsatzziel gesetzt", Vi: "Chưa đặt mục tiêu doanh số cho quý này"})
+	case "target_reached":
+		return words.Say(langcopy.Phrase{En: "The sales target has been reached", De: "Das Umsatzziel wurde erreicht", Vi: "Đã đạt mục tiêu doanh số"})
+	case "compared":
+		return words.Say(langcopy.Phrase{En: "A matching sales target is available", De: "Ein passendes Umsatzziel ist verfügbar", Vi: "Có mục tiêu doanh số phù hợp"})
+	default:
+		return words.Say(langcopy.Phrase{En: "No matching target comparison is available", De: "Kein passender Zielvergleich verfügbar", Vi: "Không có so sánh mục tiêu phù hợp"})
+	}
 }

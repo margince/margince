@@ -168,3 +168,10 @@ func dueToday(row ranked) bool {
 }
 
 func urgentWork(row ranked) bool { return semanticLevelOf(row) <= levelPromise }
+
+func summaryPopulation(considered, filtered []ranked, view, filter string) []ranked {
+	if filter == string(crmcontracts.WorklistFilterProspecting) {
+		return filtered
+	}
+	return outstanding(considered, view)
+}

@@ -5,7 +5,7 @@
 
 package identity
 
-// A person's own time zone. A chosen zone is stored with its flag and one
+// A user's own time zone. A chosen zone is stored with its flag and one
 // audit row. A browser guess never replaces a stored zone. An unchanged value
 // writes nothing. The scheduler reads the new zone.
 
@@ -101,7 +101,7 @@ func TestABrowserGuessFillsOnlyAnEmptyZone(t *testing.T) {
 	if zone, chosen, audits := timezoneRow(t, svc, user); zone == nil || *zone != "Europe/Lisbon" || chosen || audits != 1 {
 		t.Errorf("row = %v chosen=%v audits=%d, want the guess stored once, not chosen", zone, chosen, audits)
 	}
-	// The person's own pick still replaces the guess.
+	// The user's own pick still replaces the guess.
 	if _, err := svc.SaveMyTimezone(ctx, "Europe/Berlin", TimezoneChosen); err != nil {
 		t.Fatal(err)
 	}

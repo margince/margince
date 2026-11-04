@@ -66,6 +66,8 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 		return crmcontracts.ReportingEvaluation{}, err
 	}
 	restrictFrozenCharts(out.Result.Charts)
+	actions := reportingOverviewActions(out.Result, out.Facts)
+	out.Result.OverviewActions = &actions
 	return out.Result, nil
 }
 

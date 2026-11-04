@@ -13,7 +13,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -21,11 +21,11 @@ import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import type { HandoffScope } from "./analytics.outcomes.sdr";
-import { outboundDials, TEAM_PERIODS } from "./analytics.overview.context";
+import { TEAM_PERIODS } from "./analytics.overview.context";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
 import { QualificationNote } from "./analytics.overview.prospecting";
 import {
   MetricReading,
-  OverviewLinks,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
 import { MemberTable } from "./analytics.overview.team.members";
@@ -133,6 +133,7 @@ export function TeamProspecting({
     metrics,
     blocks: [],
   };
+  useOverviewNavigation("team", selection);
   const query = useReportingEvaluation(
     selection,
     team !== undefined &&
@@ -196,13 +197,6 @@ export function TeamProspecting({
           <p>{t("analytics.team.chooseTeamBody")}</p>
         </Callout>
       )}
-      <OverviewLinks
-        dials={outboundDials("team", { scope: scopeKey(scope), period })}
-        sections={[
-          { section: "sdr", label: t("reporting.sdr") },
-          { section: "leads", label: t("reporting.leads") },
-        ]}
-      />
     </>
   );
 }
@@ -246,6 +240,8 @@ function TeamBody({
   const outlook = query.data && !query.isError && (
     <AssessmentPanel
       view="team"
+      work={review.data?.members_withheld ? undefined : summary.data}
+      workPending={summary.isPending || review.isPending}
       selection={query.data.selection}
       evaluation={query.data}
       onEvidence={onEvidence}
@@ -268,7 +264,18 @@ function TeamBody({
                     key={id}
                     evaluation={evaluation}
                     id={id}
-                    detail={span}
+                    detail={
+                      id === "leads_awaiting_response_now"
+                        ? t("analytics.frame", {
+                            asOf: formatDateAbbrev(
+                              evaluation.context.evaluated_at,
+                              locale,
+                              evaluation.context.timezone,
+                            ),
+                            zone: evaluation.context.timezone,
+                          })
+                        : span
+                    }
                     onEvidence={onEvidence}
                   />
                 ))}
@@ -306,8 +313,21 @@ function TeamBody({
                 zone={zone}
                 onEvidence={onEvidence}
               />
+              <MemberTable
+                review={data}
+                zone={zone}
+                onOpen={(id, owner) => {
+                  const metric = query.data?.metrics.find(
+                    (metric) => metric.id === id,
+                  );
+                  if (metric)
+                    onEvidence({
+                      ...metric.evidence,
+                      group_key: `owner:${owner}`,
+                    });
+                }}
+              />
               {outlook}
-              <MemberTable review={data} zone={zone} />
 
               {data.workflow === "qualification" && <QualificationNote />}
               {data.handoffs && data.handoffs.unattributed > 0 && (
@@ -327,12 +347,12 @@ function TeamBody({
 const HANDOFF_READINGS = [
   "accepted_opportunities",
   "meetings_held",
-  "leads_awaiting_response",
+  "leads_awaiting_response_now",
 ] as const;
 const QUALIFICATION_READINGS = [
   "leads_qualified",
   "meetings_held",
-  "leads_awaiting_response",
+  "leads_awaiting_response_now",
 ] as const;
 
 // The handoff list's scope for a team review. My teams names no kind the list
@@ -347,7 +367,7 @@ function Unattributed({ count }: Readonly<{ count: number }>) {
   return (
     <p className="t-caption">
       {plural("analytics.team.unattributed", count, {
-        count: formatNumber(count, locale),
+        count: formatAnalyticsNumber(count, locale),
       })}
     </p>
   );

@@ -1,11 +1,11 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { en } from "../../i18n/en";
 import { AnalyticsScreen, ForecastTile } from "./analytics";
 import { ForecastStrip } from "./analytics.pipeline";
@@ -115,7 +115,7 @@ describe("a forecast tile with no money to state", () => {
 
     const detail = screen.getByText(/weighted/);
     expect(detail.textContent).toBe(
-      `${formatMoneyCompact(125_000, "EUR", "en")} weighted · ${deals("4")}`,
+      `${formatAnalyticsMoney(125_000, "EUR", "en")} weighted · ${deals("4")}`,
     );
   });
 });
@@ -219,7 +219,7 @@ describe("the seat's own readings when the report answers with nothing", () => {
     await openOutcomes();
 
     expect(
-      await screen.findByText(formatMoneyCompact(250_000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(250_000, "EUR", "en")),
     ).toBeTruthy();
     expect(screen.queryByText(en["analytics.noBaseCurrency"])).toBeNull();
     expect(screen.queryByText(en["analytics.forecastNoAmount"])).toBeNull();
