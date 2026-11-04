@@ -178,8 +178,8 @@ func carryLeadConsent(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contact
 // lead.promoted + contact.* events — all inside the caller's transaction,
 // still under the lead row lock taken by PromoteLead.
 func (s *Store) finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
-	// The column keeps microseconds, so the audit image must too: a finer stamp
-	// reads as a later edit and the promotion could no longer be undone.
+	// The column keeps microseconds. A finer stamp in the audit image reads as
+	// a later edit, and the undo refuses.
 	now := s.clock().UTC().Truncate(time.Microsecond)
 	setBy, err := statusSetByFor(ctx)
 	if err != nil {
