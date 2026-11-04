@@ -74,6 +74,9 @@ type RefusedRecipient struct {
 	SubjectID   string `json:"subject_id,omitempty"`
 	ReasonCode  string `json:"reason_code"`
 	Category    string `json:"category,omitempty"`
+	// Requested is what the sender claimed the message is, which an unproven
+	// claim never writes into Category. Empty on a snapshot from before it.
+	Requested string `json:"requested,omitempty"`
 	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
 	// and nil, additively, for a snapshot written before this field existed.
 	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
@@ -86,6 +89,15 @@ type RefusedRecipient struct {
 	// resolves, so this is the only place the sender's pick travels, and the
 	// remedy for a failed active-deal claim is named from it.
 	RequestedCategory string `json:"-"`
+}
+
+// claim is what the sender said the message is: the claim when one was made,
+// otherwise the engine's reading.
+func (r RefusedRecipient) claim() commsauthz.Category {
+	if r.Requested != "" {
+		return commsauthz.Category(r.Requested)
+	}
+	return commsauthz.Category(r.Category)
 }
 
 // Review is a refused send somebody can look at.
@@ -267,6 +279,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		SubjectKind: d.SubjectKind,
 		ReasonCode:  d.ReasonCode,
 		Category:    string(d.Resolved),
+		Requested:   string(d.Requested),
 		PurposeID:   d.PurposeID,
 		// The same answer the preview sends, so the composer picks the same
 		// deciding recipient before and after Send.

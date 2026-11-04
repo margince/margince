@@ -181,8 +181,14 @@ func (s *Store) RecordContext(
 	// jurisdiction pack that shortens the window shortens this too. Two copies
 	// of the bound would drift, and the drift would be silent in exactly the
 	// same way.
-	if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
-		return Review{}, err
+	//
+	// A request answering an explicit claim that requestOnRecord reads has no
+	// age limit there, so it has none here either (requestAnswersClaim). A send
+	// that named no claim is judged on the windowed legacy reading.
+	if !requestAnswersClaim(in.Kind, commsauthz.Category(refusal.Requested)) {
+		if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
+			return Review{}, err
+		}
 	}
 	// A request stated against a refused quote is a request for that quote.
 	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
@@ -190,7 +196,7 @@ func (s *Store) RecordContext(
 		Note:       in.Note,
 		OccurredAt: in.OccurredAt,
 		AsksForQuote: in.Kind == KindRequestedBySubject &&
-			refusal.Category == string(commsauthz.CategoryPrecontractQuote),
+			refusal.claim() == commsauthz.CategoryPrecontractQuote,
 	}); err != nil {
 		return Review{}, err
 	}
@@ -199,6 +205,22 @@ func (s *Store) RecordContext(
 	// that is the row as it stands after the write — a suppression recorded
 	// while the rep was typing is exactly the case a patched copy would miss.
 	return s.ReviewForReader(ctx, reviewID)
+}
+
+// requestAnswersClaim reports whether the claim's validator reads this
+// statement as a request with no age limit (requestOnRecord). That holds for a
+// request the subject made, answering a reply, a follow-up or a quote.
+func requestAnswersClaim(kind string, claim commsauthz.Category) bool {
+	if kind != KindRequestedBySubject {
+		return false
+	}
+	switch claim {
+	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup,
+		commsauthz.CategoryPrecontractQuote:
+		return true
+	default:
+		return false
+	}
 }
 
 // refusalNaming finds the refusal this statement is about.
@@ -215,45 +237,6 @@ func refusalNaming(review Review, subject ids.ContactID) (RefusedRecipient, bool
 		}
 	}
 	return RefusedRecipient{}, false
-}
-
-// whyAStatementCannotAnswer says what is really in the way, in the words the
-// rep needs rather than the engine's code.
-//
-// NAMED ONE BY ONE rather than answered with "this cannot be fixed here",
-// because each of these has a different next move and the rep is about to go
-// looking for it. A default that said nothing would send them back to the same
-// box to try different words.
-func whyAStatementCannotAnswer(reason string) string {
-	switch reason {
-	case commsauthz.ReasonObjection, commsauthz.ReasonSubjectRequest:
-		return "this contact asked us to stop, so what you remember does not change it; " +
-			"a send that has to go anyway needs a recorded exception"
-	case commsauthz.ReasonRestricted:
-		return "this record is under a processing restriction, which only lifting the " +
-			"restriction changes"
-	case commsauthz.ReasonHardBounce:
-		return "this address does not accept mail, so the message would not arrive whatever " +
-			"the evidence says; correct the address"
-	case commsauthz.ReasonConsentWithdrawn:
-		return "they took their consent back, and only they can give it again"
-	case commsauthz.ReasonNoMarketingConsent, commsauthz.ReasonUnconfirmedDOI:
-		return "marketing needs their express consent, which no recollection of a conversation " +
-			"can supply"
-	case commsauthz.ReasonFrequencyCapReached:
-		return "this jurisdiction's limit on how often we may write has been reached; it passes " +
-			"with time rather than with evidence"
-	case commsauthz.ReasonNoSubject:
-		return "this address does not resolve to one contact, so there is nobody to record the " +
-			"evidence against"
-	case commsauthz.ReasonUnknownPurpose:
-		return "this message names a purpose this installation does not define, which is a " +
-			"problem with the message rather than with what you know about the contact"
-	case commsauthz.ReasonLegacyTransactionalUnevidenced:
-		return "this message was sent under the old transactional key with nothing behind it; " +
-			"give it a communication context and the engine can judge it properly"
-	}
-	return fmt.Sprintf("this refusal (%s) is not one a statement about what happened can answer", reason)
 }
 
 // HeldSubjectsForReview lists the contacts a review was refused for, so a caller
@@ -303,8 +286,8 @@ func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.C
 	}
 	return &ContextNotAnswerableError{
 		Why: fmt.Sprintf("this happened more than %d days ago, which is longer than a recorded "+
-			"exchange keeps supporting a message the contact did not prompt; a send that has to "+
-			"go anyway needs a recorded exception", int(window.Hours()/24)),
+			"exchange keeps supporting a message the contact did not prompt; %s",
+			int(window.Hours()/24), refusalNextMove(commsauthz.ReasonNoEvidence)),
 	}
 }
 
