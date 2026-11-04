@@ -111,6 +111,8 @@ Every field of `Extension` that brings something to the core.
 | `Channels` | Messaging providers this unit supplies TRANSPORT for. |
 | `CompanyTypes` | Company types this unit adds beside core's own. |
 | `RecordKinds` | Kinds of record this unit adds beside core's own, stored as `ext:<unit>:<kind>`. |
+| `ReportCounts` | Named numbers this unit adds to Reports and Home. |
+| `ReportBreakdowns` | Counts split by one field, added to Reports and Home. |
 | `FinanceSources` | Accounting systems this unit can read into the core's finance mirror. |
 | `Secrets` | Secret keys the unit declares it will use, by name and scope. |
 | `Jobs` | Scheduled background jobs the unit contributes: named cadenced passes that fan out over the fleet, one workspace per tick. |

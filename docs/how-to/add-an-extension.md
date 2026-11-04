@@ -727,6 +727,32 @@ The service reports itself unready while your table, a column or the unique inde
 [an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-record-kinds-and-link-registry)
 says what core does with a kind today, and what it leaves out.
 
+## Declare a report count or breakdown
+
+A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits
+that count by one field.
+
+```go
+ReportCounts: []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
+ReportBreakdowns: []extension.ReportBreakdown{{Name: "by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Name` | The short name, written like a kind name. The wire name is `ext:<unit>:<name>`. |
+| `Label` | What a screen shows. Required, in English. |
+| `Population` | The short name of one of your record kinds, or the key of a core deal report such as `pipeline-current`. |
+| `By` | For a breakdown only. A field your kind declares. On a core deal report, a custom field: `cf_<name>` for the deal's, `company_cf_<name>` for its company's. The field may be a multi-select. |
+
+You write no query. Core runs it through the report engine. The seat's row scope and its mask both apply.
+
+A group below the group floor, five records by default, is held back. So are the smallest group left and the total.
+A seat that may not read your kind does not see the report.
+
+The reference page
+[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-report-breakdowns-and-counts)
+lists what each part does.
+
 ## Draw a panel on a core page
 
 A unit with a frontend package can draw its own part of a page inline on a core page. Declare one

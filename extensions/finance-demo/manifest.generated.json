@@ -51,6 +51,21 @@
       ]
     }
   ],
+  "report_counts": [
+    {
+      "name": "ledger_accounts",
+      "label": "Ledger accounts",
+      "population": "ledger_account"
+    }
+  ],
+  "report_breakdowns": [
+    {
+      "name": "accounts_by_name",
+      "label": "Ledger accounts by name",
+      "population": "ledger_account",
+      "by": "name"
+    }
+  ],
   "oauth_apps": [
     {
       "provider": "offline_demo",

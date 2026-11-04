@@ -42,6 +42,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := preflightRecordKinds(exts); err != nil {
 		return err
 	}
+	if err := preflightReports(exts); err != nil {
+		return err
+	}
 	if err := preflightEntryObjects(exts, verbs); err != nil {
 		return err
 	}
@@ -95,6 +98,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	}
 	registerCompanyTypes(exts)
 	registerRecordKinds(exts)
+	registerReports(exts)
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
 	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
 	// with one bad name registers none), so it cannot half-widen what a role

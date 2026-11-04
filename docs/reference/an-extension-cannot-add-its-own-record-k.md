@@ -18,7 +18,7 @@ are done.
 | 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) | done |
 | 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) | done |
 | 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) | done |
-| 4 | Extension report breakdowns and counts | Nothing yet. | None yet | planned |
+| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) | done |
 | 5 | Extension signal types with structured evidence | Nothing yet. | None yet | planned |
 | 6 | Panels and tabs on record pages | Nothing yet. | None yet | planned |
 | 7 | "Pick a record" field type | Nothing yet. | None yet | planned |
@@ -131,3 +131,37 @@ What this feature does not do yet:
 - A Live List over an extension kind is refused. Only a Shortlist takes one.
 - The activity writers still refuse an extension kind, so no activity is filed on an extension record yet. The column is ready.
 - The record page, search, and the REST wire enums keep core's kinds. Tag counts do not include extension records.
+
+## Extension report breakdowns and counts
+
+An extension can add named counts and breakdowns to Reports and Home. A count is how many live records a population
+holds. A breakdown splits that count by one field. The steps to declare one are in
+[Declare a report count or breakdown](../how-to/add-an-extension.md#declare-a-report-count-or-breakdown).
+
+A declaration is data, never SQL. Core builds the query and runs it through the same report engine as its own reports,
+so a unit cannot register a report that skips a gate. Every name is `ext:<unit>:<name>`, built from the declaring unit's
+name.
+
+| Part | What it does |
+|---|---|
+| `Extension.ReportCounts` and `Extension.ReportBreakdowns` | The unit declares a name, a label and a population. A breakdown also names the field it splits by. The boot and `make gen` refuse a bad name, a duplicate, or a population that is neither one of the unit's own kinds nor a core report population. |
+| Population | The short name of a record kind the unit declares, or the key of a core report population. A core key has a hyphen and a kind name never does, so the two cannot be confused. |
+| Field of a unit's kind | One of the fields the kind declares. |
+| Field of a core population | A custom field of the deal, written `cf_<name>`, or of its company, written `company_cf_<name>`. Only the deal populations take one. |
+| Multi-select fields | Core's own rule keeps a multi-select field out of reports, because a record would fall in several groups and the groups would not add up. A registered breakdown admits one and splits by the sorted combination of values a record holds. One record is in one group and the groups add up to the whole. |
+| Row scope | A unit's kind has no owner, so the kind's `read` right is its whole scope: a seat without it gets nothing and the report is left out. A core population keeps its own row scope. |
+| Field masks | A mask that reaches the kind or the population takes the rows out of every group. The answer carries how many in `excluded_by_permission`. |
+| Group floor | A group below the analytics group floor is withheld. The floor is the one the analytics questions use, five by default. The smallest remaining group goes with it, and so does the total. A count under the floor is withheld too. |
+| `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. |
+| Reports and Home | The Reports Pipeline page and the Home side column draw each answer in a panel. Both read the same endpoint. |
+
+The frontend holds no list of registered names. The label and the groups come from the answer, so the screens cannot
+drift from the registry. The contract's `kind` values `count` and `breakdown` are held equal to the registry's by a
+unit test.
+
+What this feature does not do yet:
+
+- A breakdown by a field of a signal's evidence is not offered. Evidence has no named fields until the extension signal
+  types feature gives it some.
+- A report is not an entity of the analytics question builder, and has no drill-through.
+- A core population other than the deal's takes counts only.
