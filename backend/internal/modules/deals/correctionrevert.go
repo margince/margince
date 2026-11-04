@@ -132,7 +132,12 @@ func (s *Store) RevertCorrection(
 		if correction.Reversed() {
 			return &CorrectionReversalError{Reason: alreadyTakenBack}
 		}
-		if err := s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence); err != nil {
+		if correction.Correction == CloseLostCorrection {
+			err = s.revertCloseLost(ctx, tx, correction, ifVersion, evidence, active)
+		} else {
+			err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
+		}
+		if err != nil {
 			return err
 		}
 		// Read inside the transaction that just took write authority on this
@@ -221,13 +226,14 @@ func lockCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection
 	err := tx.QueryRow(ctx, `
 		SELECT id, deal_id, audit_log_id, correction, fields, applied_at,
 		       reversed_at, reversed_by,
-		       remaining_open_stages, asking, standing_close_date
+		       remaining_open_stages, asking, standing_close_date, stage_history_id
 		  FROM deal_correction
 		 WHERE id = $1
 		   FOR UPDATE`, id).
 		Scan(&c.ID, &c.DealID, &c.AuditLogID, &c.Correction, &c.Fields, &c.AppliedAt,
 			&c.ReversedAt, &c.ReversedBy,
-			&c.Evidence.RemainingOpenStages, &c.Evidence.Asking, &c.Evidence.StandingCloseDate)
+			&c.Evidence.RemainingOpenStages, &c.Evidence.Asking, &c.Evidence.StandingCloseDate,
+			&c.StageHistoryID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return DealCorrection{}, apperrors.ErrNotFound
 	}

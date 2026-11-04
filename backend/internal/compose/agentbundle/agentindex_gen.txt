@@ -231,7 +231,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/move/dismiss` | dismissDealMove | Set the deal card's move aside for me until it changes. | Change records | at once |
 | `DELETE /deals/{id}/move/dismiss` | restoreDealMove | Put a set-aside move back on the deal card, the undo behind "Not now". | Change records | at once |
 | `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | Read records | at once |
-| `GET /deals/{id}/viability` | getDealViability | Whether the customer still supports this deal, and the review behind the answer. | Read records | at once |
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
 | `POST /deals/{id}/role-proposals` | proposeDealRoles | Read the buying roles out of what this deal's contacts have written. | Change records | at once |
 
@@ -458,7 +457,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /forecast/stage-chances` | getForecastStageChances | The chance the forecast uses for each open stage, and the evidence behind it. | Read records | at once |
 | `GET /forecast/assurance` | getForecastAssurance | What last night's input check found, and how much of the pipeline it reached. | Read records | at once |
 | `GET /forecast/assurance/preview` | previewForecastAssurance | What a check would find, without recording any of it. | Read records | at once |
-| `GET /forecast/assurance/enforcement` | getForecastAssuranceEnforcement | Whether the qualified forecast applies the viability reviews. | Read records | at once |
 | `GET /analytics/coverage` | getDataCoverage | How current the sources behind the numbers are. | Read records | at once |
 | `GET /forecast/assurance/exceptions` | listInputChecks | The open findings this caller can see. | Read records | at once |
 | `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | Read records | at once |

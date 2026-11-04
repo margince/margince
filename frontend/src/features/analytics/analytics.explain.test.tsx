@@ -179,7 +179,7 @@ describe("a row's explain drawer", () => {
       reportsStub({
         forecastRows: [
           {
-            forecast_category: "commit",
+            win_probability_band: "90_plus",
             raw_minor: 100000,
             deal_count: 1,
             derivation_url: ROW_HANDLE,
@@ -190,10 +190,10 @@ describe("a row's explain drawer", () => {
     render(<AnalyticsScreen />);
     await openPipeline(userEvent.setup());
     expect(
-      await screen.findByRole("button", { name: "Explain Commit" }),
+      await screen.findByRole("button", { name: "Explain 90% or more" }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Explain Best case" }),
+      screen.queryByRole("button", { name: "Explain 60 to 89%" }),
     ).toBeNull();
     // A tile with no handle draws no source slot at all, not an empty one.
     expect(document.querySelectorAll(".stat-card-source")).toHaveLength(1);
@@ -230,7 +230,7 @@ describe("a row's explain drawer", () => {
     expect(derivationUrls[0]).toContain("isnull=currency");
   });
 
-  it("binds a forecast tile's missing category as isnull", async () => {
+  it("explains a band tile through its own row's derivation", async () => {
     const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];
     vi.stubGlobal(
@@ -238,11 +238,11 @@ describe("a row's explain drawer", () => {
       reportsStub({
         forecastRows: [
           {
-            forecast_category: null,
+            win_probability_band: "zero",
             raw_minor: 100000,
             deal_count: 1,
             derivation_url:
-              "/v1/reports/forecast/derivation?by=forecast_category&agg=count::deal_count&isnull=forecast_category",
+              "/v1/reports/forecast/derivation?by=win_probability_band&agg=count::deal_count",
           },
         ],
         onDerivation: (u) => derivationUrls.push(u),
@@ -251,11 +251,9 @@ describe("a row's explain drawer", () => {
     );
     render(<AnalyticsScreen />);
     await openPipeline(user);
-    await user.click(
-      await screen.findByRole("button", { name: "Explain No category" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Explain 0%" }));
     await screen.findByText("Fleet retrofit");
-    expect(derivationUrls[0]).toContain("isnull=forecast_category");
+    expect(derivationUrls[0]).toContain("by=win_probability_band");
   });
 
   // Two no-company rows, one per currency, are two triggers a reader must be

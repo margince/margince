@@ -55,12 +55,15 @@ export function ContactToday({
   onAction,
   onOpenTasks,
   onOpenEmail,
+  onAddTask,
 }: Readonly<{
   moment?: ContactMoment;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
   onOpenTasks?: () => void;
   onOpenEmail?: (activityId: string) => void;
+  // Opens the task form on this contact; absent where the reader may not log.
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -107,7 +110,14 @@ export function ContactToday({
   if (task) {
     return <TaskBar task={task} view={view} more={more(rest)} />;
   }
-  return <AnswerBar moment={moment} view={view} onAction={onAction} />;
+  return (
+    <AnswerBar
+      moment={moment}
+      view={view}
+      onAction={onAction}
+      onAddTask={onAddTask}
+    />
+  );
 }
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
@@ -261,17 +271,20 @@ function TaskBar({
   );
 }
 
-// No move and no task. A quiet rung has the basis to say nothing is due. An
-// unread reading, a withheld source and a relationship with nothing recorded
-// do not, so each says what it does know instead.
+// No move and no task. A quiet rung on a record whose tasks the reader saw in
+// full says no follow-up task is recorded, and no more: it does not claim that
+// nothing is left to do. An unread reading, a withheld source and a
+// relationship with nothing recorded say what they do know instead.
 function AnswerBar({
   moment,
   view,
   onAction,
+  onAddTask,
 }: Readonly<{
   moment: ContactMoment | undefined;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const omitted = new Set(view.sections_omitted);
@@ -300,7 +313,20 @@ function AnswerBar({
       />
     );
   }
-  return <RecordNextBar />;
+  return (
+    <RecordNextBar
+      // "What was said" already shows the last exchange, of every kind.
+      lastExchange={false}
+      empty={t("standing.next.noTask")}
+      action={
+        onAddTask && (
+          <Button variant="ghost" onClick={onAddTask}>
+            {t("standing.next.addTask")}
+          </Button>
+        )
+      }
+    />
+  );
 }
 
 // What the move says is owed, in the order both readers below take it: the

@@ -43,6 +43,9 @@ type DealCorrection struct {
 	ReversedAt *time.Time
 	ReversedBy *string
 	Evidence   CorrectionEvidence
+	// StageHistoryID is the stage move a close as lost wrote; nil for every
+	// other correction.
+	StageHistoryID *ids.UUID
 }
 
 // Reversed reports whether this correction has already been taken back.
@@ -119,15 +122,15 @@ func recordCorrection(
 	err = tx.QueryRow(ctx, `
 		INSERT INTO deal_correction
 		    (deal_id, run_id, audit_log_id, correction, fields,
-		     remaining_open_stages, asking, standing_close_date, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		     remaining_open_stages, asking, standing_close_date, captured_by, stage_history_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (audit_log_id) DO UPDATE SET updated_at = now()
 		RETURNING id, deal_id, audit_log_id, correction, fields, applied_at,
 		          reversed_at, reversed_by,
 		          remaining_open_stages, asking, standing_close_date`,
 		in.DealID, runID, in.AuditLogID, in.Correction, in.Fields,
 		in.Evidence.RemainingOpenStages, in.Evidence.Asking,
-		in.Evidence.StandingCloseDate, capturedBy).
+		in.Evidence.StandingCloseDate, capturedBy, in.StageHistoryID).
 		Scan(&out.ID, &out.DealID, &out.AuditLogID, &out.Correction, &out.Fields,
 			&out.AppliedAt, &out.ReversedAt, &out.ReversedBy,
 			&out.Evidence.RemainingOpenStages, &out.Evidence.Asking,
@@ -192,7 +195,7 @@ func reversedCorrections(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]C
 	rows, err := tx.Query(ctx, `
 		SELECT remaining_open_stages, asking, standing_close_date
 		  FROM deal_correction
-		 WHERE deal_id = $1 AND reversed_at IS NOT NULL`, dealID)
+		 WHERE deal_id = $1 AND reversed_at IS NOT NULL AND correction <> $2`, dealID, CloseLostCorrection)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading reversed corrections: %w", err)
 	}

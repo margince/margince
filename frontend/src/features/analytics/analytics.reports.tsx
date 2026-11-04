@@ -107,7 +107,7 @@ export const SECTION_REPORTS = {
 const REPORT_GROUP_BY: Record<CardKey, string[]> = {
   "pipeline-current": ["stage_id"],
   "pipeline-by-close-month": ["close_month"],
-  forecast: ["forecast_category"],
+  forecast: ["win_probability_band"],
   "open-deals-per-company": ["company_id", FIELD_CURRENCY],
   // The specs' own defaults: an empty plan takes each report's declared
   // grouping and aggregates, which is what these three need.

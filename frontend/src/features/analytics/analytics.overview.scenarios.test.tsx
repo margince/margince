@@ -210,7 +210,7 @@ const SIGNATURES: Readonly<
   Record<string, Partial<Record<OverviewView, Signature>>>
 > = {
   populated: {
-    sales: shows("Won + confirmed commit"),
+    sales: shows("Won + Likely deals"),
     prospecting: shows("All 5 items in your Worklist"),
     team: shows(/Most often: Wrong territory/),
   },
@@ -329,7 +329,7 @@ const SIGNATURES: Readonly<
     },
   },
   targetReached: { sales: shows("Target reached") },
-  landingBases: { sales: shows("Won + confirmed commit") },
+  landingBases: { sales: shows("Won + Likely deals") },
   legacyLanding: { sales: shows("Landing") },
   noForecast: { sales: shows("Unavailable") },
   unknownWorkflow: {

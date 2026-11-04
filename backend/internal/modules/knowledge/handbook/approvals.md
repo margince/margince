@@ -217,8 +217,9 @@ raises it.
 Automatic changes are the exception to everything below: some proposals do not
 wait.
 
-Three kinds of change can apply on their own, without an approval being
-decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
+Four kinds of change can apply on their own, with no approval. They are
+**Close dates**, **Close silent deals as lost**, **Company names** and
+**Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
@@ -357,8 +358,11 @@ yourself.
 5. Open **History** and find the meeting. Margince queues a reading when you
    log a transcript. If no reading is running or done, click **Read
    transcript** to ask for one.
-6. Wait for **Done**. It reports what it found: "{count} next steps awaiting
-   review", or "Transcript read in full. No next steps found."
+6. Wait for **Done**. It reports what it found, in your language:
+   - A task it wrote names who has it, you or a colleague.
+   - You decide the "{count} next steps awaiting review" yourself.
+   - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
+   - A reading that found nothing says "Transcript read in full. No next steps found."
 7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the

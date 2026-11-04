@@ -33,7 +33,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		if e.compared != nil {
 			e.compared.operands = &reporting.ForecastOperands{Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End}, ColleagueWithheld: true}
 		}
-		return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+		return []reporting.Fact{}, belowFloorCoverage(frame), nil
 	}
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -56,11 +56,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	var qualifiedOpen *int64
-	if readings.Qualified != nil {
-		qualifiedOpen = &readings.Qualified.OpenMinor
-	}
-	facts, err = forecastOpenFacts(frame, facts, readings, qualifiedOpen)
+	facts, err = forecastOpenFacts(frame, facts, readings)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -70,7 +66,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	// A reader with no capture, such as the weekly digest, compares nothing.
 	if e.compared != nil {
-		operands := forecastOperands(period, readings, landing, qualifiedOpen, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
+		operands := forecastOperands(period, readings, landing, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
 		if err := guardForecastOperands(ctx, tx, period, scope, frame, readings, operands); err != nil {
 			return nil, crmcontracts.ReportingCoverage{}, err
 		}
@@ -139,7 +135,7 @@ func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasti
 		if contribution.InEvidence {
 			contexts = append(contexts, "forecast_supported")
 		}
-		if contribution.InBestCase && !contribution.InEvidence {
+		if contribution.InOpen && !contribution.InEvidence {
 			contexts = append(contexts, "forecast_upside")
 		}
 		if contribution.InOpen {
@@ -218,7 +214,6 @@ func forecastAuthoredFacts(frame crmcontracts.ReportingContext, out []reporting.
 
 const (
 	forecastOpenContext      = "forecast_open"
-	forecastQualifiedContext = "forecast_open_qualified"
 	forecastRangeLowContext  = "forecast_range_low"
 	forecastRangeHighContext = "forecast_range_high"
 )
@@ -249,49 +244,35 @@ func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fac
 	return out, nil
 }
 
-// forecastOpenFacts adds the open totals a target comparison divides, as
-// authored totals beside the landing. A deal with no exchange rate leaves the
+// forecastOpenFacts adds the open total a target comparison divides, as an
+// authored total beside the landing. A deal with no exchange rate leaves the
 // total unknown rather than short.
-func forecastOpenFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, readings forecasting.Readings, qualifiedOpen *int64) ([]reporting.Fact, error) {
-	totals := map[string]*int64{forecastOpenContext: &readings.OpenMinor}
-	if qualifiedOpen != nil {
-		totals[forecastQualifiedContext] = qualifiedOpen
+func forecastOpenFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, readings forecasting.Readings) ([]reporting.Fact, error) {
+	amount := readings.OpenMinor
+	if amount > reportingExactInteger {
+		return nil, errors.New("forecast exceeds exact reporting range")
 	}
-	for _, context := range []string{forecastOpenContext, forecastQualifiedContext} {
-		amount, ok := totals[context]
-		if !ok {
-			continue
-		}
-		if *amount > reportingExactInteger {
-			return nil, errors.New("forecast exceeds exact reporting range")
-		}
-		fact := reporting.Fact{Metric: reportingForecastLanding, ContextID: context, SourceType: reportingForecastProjection, Row: crmcontracts.ReportingEvidenceRow{Key: context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[context])}}
-		if readings.FxMissingCount == 0 {
-			value := float64(*amount)
-			fact.Money, fact.Row.Value = amount, &value
-		}
-		out = append(out, fact)
+	fact := reporting.Fact{Metric: reportingForecastLanding, ContextID: forecastOpenContext, SourceType: reportingForecastProjection, Row: crmcontracts.ReportingEvidenceRow{Key: forecastOpenContext, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[forecastOpenContext])}}
+	if readings.FxMissingCount == 0 {
+		value := float64(amount)
+		fact.Money, fact.Row.Value = &amount, &value
 	}
-	return out, nil
+	return append(out, fact), nil
 }
 
 // forecastOperands are the figures a target comparison rests on, read from
 // the same readings as the landing.
-func forecastOperands(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, qualifiedOpen *int64, callOverPipeline bool) *reporting.ForecastOperands {
+func forecastOperands(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, callOverPipeline bool) *reporting.ForecastOperands {
 	ref := func(context string) crmcontracts.ReportingEvidenceRef {
 		return crmcontracts.ReportingEvidenceRef{Metric: reportingForecastLanding, ContextId: context}
 	}
 	out := &reporting.ForecastOperands{
 		Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
 		Measure: crmcontracts.ReportingTargetComparisonBasis(landing.Measure), LandingMinor: landing.AmountMinor,
-		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor, QualifiedOpenMinor: qualifiedOpen,
+		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor,
 		FxMissing: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
 		CallBelowWon: landing.Caveat == forecasting.CaveatCallBelowActual,
 		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref(forecastWonContext), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
-	}
-	if qualifiedOpen != nil {
-		qualified := ref(forecastQualifiedContext)
-		out.Operands.QualifiedOpenPipeline = &qualified
 	}
 	return out
 }

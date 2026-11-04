@@ -240,10 +240,7 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = req.AcquisitionSource
-	if req.ForecastCategory != nil {
-		cat := string(*req.ForecastCategory)
-		in.ForecastCategory = &cat
-	}
+	in.WinProbability = req.WinProbability
 	if req.WaitUntil != nil {
 		in.WaitUntil = &req.WaitUntil.Time
 	}

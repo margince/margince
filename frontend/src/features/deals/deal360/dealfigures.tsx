@@ -35,6 +35,7 @@ import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { activityMarks } from "../../../lib/standingmarks";
 import { useViewerZone } from "../../../lib/viewerzone";
+import { probabilityWords } from "../dealprobability";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
@@ -112,31 +113,31 @@ function ValueFigure({ inputs, words }: FigureProps) {
   );
 }
 
-// The stage's own default, which is what the pipeline says a deal there is
-// worth; nothing on the deal states a probability of its own. A closed deal's
-// outcome is settled, so it is certain either way.
+// The deal's own probability where somebody set one, else its stage's. A closed
+// deal's outcome is settled, so it is certain either way.
 function ProbabilityFigure({ inputs, words }: FigureProps) {
   const { t, locale } = words;
   const { status } = inputs.deal;
+  const label = t("deal.standing.figure.probability");
   if (status !== "open") {
     return (
       <StatCard
-        label={t("deal.standing.figure.probability")}
+        label={label}
         value={formatPercent(status === "won" ? 1 : 0, locale)}
         detail={t("deal.standing.figure.final")}
       />
     );
   }
-  const stage = inputs.stages.find((each) => each.id === inputs.deal.stage_id);
+  const probability = probabilityWords(inputs.deal, t, locale);
+  if (!probability) {
+    return <StatCard label={label} value={t("field.unset")} />;
+  }
+  const detail = [probability.source, probability.stage].filter(Boolean);
   return (
     <StatCard
-      label={t("deal.standing.figure.probability")}
-      value={
-        stage
-          ? formatPercent(stage.win_probability / 100, locale)
-          : t("field.unset")
-      }
-      detail={stage ? t("deal.standing.figure.stageDefault") : undefined}
+      label={label}
+      value={probability.value}
+      detail={detail.join(" · ") || undefined}
     />
   );
 }

@@ -168,6 +168,15 @@ describe("history field labels", () => {
     ).toEqual([]);
   });
 
+  it("names the columns a deal's probability is stored under", () => {
+    expect(historyFieldLabel("win_probability_override", (k) => en[k])).toBe(
+      en["history.field.win_probability_override"],
+    );
+    expect(historyFieldLabel("win_probability_set_by", (k) => en[k])).toBe(
+      en["history.field.win_probability_set_by"],
+    );
+  });
+
   it("names a key the catalogs actually carry", () => {
     const missing = historyFieldLabelled()
       .map((field) => historyFieldLabelKey(field))
