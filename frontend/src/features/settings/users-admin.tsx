@@ -228,7 +228,13 @@ function MembersTable({
 }>) {
   const t = useT();
   const teamNames = useTeamNames(management);
+  // Back to the first batch on every change of search, a return to an
+  // earlier one included: clearing a narrow search must not redraw at once
+  // every row a wider one had loaded.
   const [drawn, setDrawn] = useState({ search, count: MEMBER_BATCH });
+  if (drawn.search !== search) {
+    setDrawn({ search, count: MEMBER_BATCH });
+  }
   const count = drawn.search === search ? drawn.count : MEMBER_BATCH;
   const entity = useEntityColumn(management, canChangeRole);
   const member: DataTableColumn<User> = {

@@ -77,3 +77,26 @@ describe("a large members list", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 });
+
+// Clearing a search starts again at the first batch, even when the empty
+// search had loaded more before.
+//
+// Mutation: keep the batch count for a search string seen before, and the
+// cleared list redraws 200 rows at once.
+describe("a search changed and cleared", () => {
+  it("starts again at the first batch", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    vi.stubGlobal("fetch", largeRoster());
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(drawnNames()).toBe(MEMBER_BATCH));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(drawnNames()).toBe(2 * MEMBER_BATCH));
+
+    const search = screen.getByRole("searchbox", { name: "Search members" });
+    await user.type(search, "Roster Member 3");
+    await waitFor(() => expect(drawnNames()).toBeLessThan(MEMBER_BATCH + 1));
+    await user.clear(search);
+    await waitFor(() => expect(drawnNames()).toBe(MEMBER_BATCH));
+  });
+});

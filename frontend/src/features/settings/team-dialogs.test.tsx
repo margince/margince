@@ -151,3 +151,75 @@ it("searches a team of 120 and removes the member on the row pressed", async () 
     ),
   );
 });
+
+// A search typed while a removal is in flight keeps focus in the search box.
+// Focus moves only once the removal has landed.
+//
+// Mutation: move focus on any change in the shown rows, as before, and the
+// search box loses focus while the removal waits.
+it("leaves focus in the search box while a removal is pending", async () => {
+  let answer: (() => void) | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "DELETE") {
+        const id = new URL(req.url).pathname.split("/").at(-1) ?? "";
+        await new Promise<void>((resolve) => {
+          answer = () => {
+            dropMember(id);
+            resolve();
+          };
+        });
+        return new Response(null, { status: 204 });
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+  const user = userEvent.setup();
+  render(<Roster size={120} />);
+  const dialog = within(await screen.findByRole("dialog"));
+  const search = dialog.getByRole("searchbox", {
+    name: en["teams.searchMembers"],
+  });
+  await user.type(search, "Roster Member 07");
+  await user.click(
+    dialog.getByRole("button", {
+      name: "Remove Roster Member 072 from DACH Sales",
+    }),
+  );
+  await user.click(search);
+  await user.type(search, "{Backspace}");
+  expect(search).toHaveFocus();
+  await vi.waitFor(() => expect(answer).toBeDefined());
+  answer?.();
+  await vi.waitFor(() => expect(search).not.toHaveFocus());
+});
+
+// The count's total is the team's own, not however much of the roster this
+// reader's list loaded. A roster cut short says so.
+it("counts against the team's size when the roster is cut short", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => jsonResponse({ data: [] })),
+  );
+  const user = userEvent.setup();
+  render(
+    <TeamMembersModal
+      team={{ ...TEAM, member_count: 120 } as never}
+      users={teamOf(50)}
+      usersPartial
+      canEdit
+      open
+      onClose={() => {}}
+    />,
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  await user.type(
+    dialog.getByRole("searchbox", { name: en["teams.searchMembers"] }),
+    "Roster Member 01",
+  );
+  expect(dialog.getByText(/ of 120 members$/)).toBeInTheDocument();
+  expect(dialog.queryByText(/ of 50 members$/)).toBeNull();
+});
