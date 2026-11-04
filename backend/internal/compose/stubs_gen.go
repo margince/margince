@@ -367,7 +367,7 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
-func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageSummaryParams) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 

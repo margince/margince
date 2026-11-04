@@ -65640,6 +65640,15 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAiUsageSummaryParams defines parameters for GetAiUsageSummary.
+type GetAiUsageSummaryParams struct {
+	// From Default: the first day of the current UTC month. Must not be after `to`.
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Default: today.
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // GetAccountCoverageParams defines parameters for GetAccountCoverage.
 type GetAccountCoverageParams struct {
 	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
@@ -85983,7 +85992,7 @@ type ServerInterface interface {
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
-	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
 	// The accounts at risk in one population: single-threaded deals, accounts in pipeline
 	// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
 	// facts behind its verdict. Counts for every view come with each answer; rows come for
@@ -89295,7 +89304,7 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 
 // What AI cost this month so far, as one figure.
 // (GET /ai/usage/summary)
-func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98254,6 +98263,9 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 // GetAiUsageSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -98262,8 +98274,37 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiUsageSummaryParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAiUsageSummary(w, r)
+		siw.Handler.GetAiUsageSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

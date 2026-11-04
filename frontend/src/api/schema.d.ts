@@ -14746,10 +14746,13 @@ export interface paths {
         };
         /**
          * What AI cost this month so far, as one figure.
-         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
-         *     (the first day of the current UTC month through now), computed the same way and admitted
-         *     by the same grant. For a page that shows only the month's total and needs none of the
-         *     report's lines, budget or decisions.
+         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for the same window,
+         *     computed the same way and admitted by the same grant. For a page that shows only a
+         *     total and needs none of the report's lines, budget or decisions.
+         *
+         *     The window defaults to the installation's UTC month. A reader whose own month differs
+         *     sends it, so one figure answers for both: a surface that names a month and a surface
+         *     beside it that totals one cannot disagree about which month that is.
          */
         get: operations["getAiUsageSummary"];
         put?: never;
@@ -79538,7 +79541,12 @@ export interface operations {
     };
     getAiUsageSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Default: the first day of the current UTC month. Must not be after `to`. */
+                from?: string;
+                /** @description Default: today. */
+                to?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -79556,6 +79564,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listAgentUsageByUser: {

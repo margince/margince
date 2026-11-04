@@ -139,10 +139,21 @@ type MonthSpend struct {
 // up lines rather than pricing the month as one sum. Each line truncates to
 // whole cents on its own, and those lines are what the report's reader sees.
 func (m *Meter) MonthSpend(ctx context.Context, rates *RateStore) (MonthSpend, error) {
+	from, to := m.UsageWindow()
+	return m.SpendOver(ctx, rates, from, to)
+}
+
+// SpendOver is MonthSpend over a window the caller names, for a reader whose
+// own month is not the installation's.
+//
+// A surface that names a month and a surface beside it that totals one have to
+// agree about which month that is. Only the reader knows their zone.
+func (m *Meter) SpendOver(
+	ctx context.Context, rates *RateStore, from, to time.Time,
+) (MonthSpend, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return MonthSpend{}, err
 	}
-	from, to := m.UsageWindow()
 	days, err := m.pricedDays(ctx, rates, from, to)
 	if err != nil {
 		return MonthSpend{}, err
