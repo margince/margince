@@ -8,12 +8,12 @@ import "./atoms.css";
 import { autolinkBlocks } from "./markdown-autolink";
 import { hardBreakBlocks } from "./markdown-hardbreaks";
 import { runText } from "./markdown-highlight";
+import { parseInline } from "./markdown-inline";
 import {
   type Block,
   type Inline,
   type MarkdownHighlight,
   type MarkdownHighlightOutcome,
-  parseInline,
   type Run,
   readMarkdown,
 } from "./markdown-parse";
