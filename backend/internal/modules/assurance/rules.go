@@ -337,9 +337,15 @@ func noEconomicBuyer() Rule {
 // review_required answer into a finding. It reads customer progress only. A
 // rep mailing a silent prospect weekly keeps last_activity_at fresh, and the
 // close date is no evidence either way.
+//
+// It declares no run-level Needs. Whether the mail was read is judged per
+// deal, on the mailboxes the deal's mail could reach. A deal whose mail was not
+// read arrives as unknown and raises nothing, so one broken mailbox does not
+// stop the check for every deal. A review type never clears in absence, so
+// declaring no need clears nothing either.
 func dealViability() Rule {
 	return Rule{
-		Type: TypeDealViability, Version: viability.PolicyVersion, Needs: []string{sourceMail},
+		Type: TypeDealViability, Version: viability.PolicyVersion,
 		Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 			if s.Viability == nil || s.Viability.Outcome != viability.OutcomeReviewRequired {
 				return nil
