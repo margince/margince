@@ -321,14 +321,14 @@ describe("a row's explain drawer", () => {
     vi.stubGlobal("fetch", reportsStub(opts));
     render(<AnalyticsScreen />);
     const drawer = await openRowDrawer(user);
-    expect(await within(drawer).findByText("€5,000.00")).toBeTruthy();
+    expect(await within(drawer).findByText("5,000 EUR")).toBeTruthy();
     opts.baseCurrency = "USD";
     act(() => {
       focusManager.setFocused(false);
       focusManager.setFocused(true);
     });
     await waitFor(() => expect(runs).toBe(2));
-    expect(within(drawer).getByText("€5,000.00")).toBeTruthy();
+    expect(within(drawer).getByText("5,000 EUR")).toBeTruthy();
     expect(within(drawer).queryByText("$5,000.00")).toBeNull();
     act(() => focusManager.setFocused(undefined));
   });

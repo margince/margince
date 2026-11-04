@@ -143,7 +143,9 @@ A forecast link can share a live view or a stored capture. The user who gets it 
 
 **Quarter outlook** explains the measured figures in connected paragraphs. **View supporting records** opens the evidence, and **Refresh assessment** asks again. A suggested decision can fill in the deal and owner when you choose **Record decision**.
 
-The figures and actions remain available without AI text. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
+Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
+
+The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
 
 ## Can I describe a report or an initiative in words?
 

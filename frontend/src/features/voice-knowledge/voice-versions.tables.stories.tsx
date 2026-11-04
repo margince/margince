@@ -6,7 +6,7 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { DataTable } from "../../design-system/datatable";
 import { Panel } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { StoryProviders } from "../../testing/story-utils";
 import { changeColumns, versionColumns } from "./voice-versions.tables";
@@ -112,7 +112,7 @@ function Tables() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = browserZone();
   return (
     <Panel title="Builds">
       <DataTable

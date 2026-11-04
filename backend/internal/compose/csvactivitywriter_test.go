@@ -52,7 +52,7 @@ func TestARowWithoutATypeOrADateIsNotFiled(t *testing.T) {
 
 func TestEachRefusalOfTheActivitiesStoreIsTheReasonTheReportShows(t *testing.T) {
 	note := "held"
-	kindFault := activities.CheckKindFields("note", nil, &note, "")
+	kindFault := activities.CheckKindFields("note", nil, &note, nil, "")
 	if kindFault == nil {
 		t.Fatal("a meeting status on a note must be refused by the store's own check")
 	}

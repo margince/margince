@@ -11,7 +11,7 @@ import {
 } from "../../../design-system/overviewcard";
 import { formatDayMonth, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { useRoomAttendance } from "../dealroomaccess.queries";
 
 type DealRoom = components["schemas"]["DealRoom"];
@@ -60,7 +60,7 @@ export function DealRoomCard({
 function RoomRow({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
   // Until the seats are read, the room's own name stands in: "Nobody invited"
   // before the read answers would be a claim the page cannot back.

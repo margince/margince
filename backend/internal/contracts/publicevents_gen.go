@@ -66,6 +66,33 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCallOutcome.
+const (
+	CallEndedCallBackLater PublicEventActivityChangedFieldsCallOutcome = "call_back_later"
+	CallEndedNotReached    PublicEventActivityChangedFieldsCallOutcome = "not_reached"
+	CallEndedPutThrough    PublicEventActivityChangedFieldsCallOutcome = "put_through"
+	CallEndedReached       PublicEventActivityChangedFieldsCallOutcome = "reached"
+	CallEndedVoicemail     PublicEventActivityChangedFieldsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCallOutcome enum.
+func (e PublicEventActivityChangedFieldsCallOutcome) Valid() bool {
+	switch e {
+	case CallEndedCallBackLater:
+		return true
+	case CallEndedNotReached:
+		return true
+	case CallEndedPutThrough:
+		return true
+	case CallEndedReached:
+		return true
+	case CallEndedVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
 	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
@@ -695,6 +722,7 @@ const (
 	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
+	UserTimezoneChanged                   SubscribableEventType = "user_timezone.changed"
 	UserUpdated                           SubscribableEventType = "user.updated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
 	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
@@ -980,6 +1008,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case UserReactivated:
 		return true
+	case UserTimezoneChanged:
+		return true
 	case UserUpdated:
 		return true
 	case VoiceBuildChanged:
@@ -1070,6 +1100,12 @@ type PublicEventActivityChangedFields struct {
 	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
+	// CallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+	CallOutcome *PublicEventActivityChangedFieldsCallOutcome `json:"call_outcome,omitempty"`
+
+	// CallOutcomeCleared True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+	CallOutcomeCleared *bool `json:"call_outcome_cleared,omitempty"`
+
 	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
 	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
 
@@ -1078,6 +1114,9 @@ type PublicEventActivityChangedFields struct {
 
 	// DueAt The activity's new due_at (absent when this update did not touch it).
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime Whether the new due_at names a time of day (true) or only a day (false). Carried whenever this update names due_at.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
@@ -1100,8 +1139,11 @@ type PublicEventActivityChangedFields struct {
 	// Relinked The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 	Relinked *PublicEventActivityRelinkedRef `json:"relinked,omitempty"`
 
-	// RemindAt The activity's new remind_at (absent when this update did not touch it).
+	// RemindAt The activity's new remind_at (absent when this update did not set it).
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindAtCleared True when this update cleared the reminder: named as null by the caller, or ended because the due date moved. A reminder a consumer mirrors stops firing then.
+	RemindAtCleared *bool `json:"remind_at_cleared,omitempty"`
 
 	// RequestSettlementChanged The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
 	RequestSettlementChanged *bool `json:"request_settlement_changed,omitempty"`
@@ -1121,6 +1163,9 @@ type PublicEventActivityChangedFieldsAudience string
 
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
+
+// PublicEventActivityChangedFieldsCallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+type PublicEventActivityChangedFieldsCallOutcome string
 
 // PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
@@ -2722,6 +2767,15 @@ type PublicEventUserReactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserTimezoneChanged Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+type PublicEventUserTimezoneChanged struct {
+	// Chosen True when the member picked the zone themselves. A later browser guess never replaces a chosen zone.
+	Chosen bool `json:"chosen"`
+
+	// Timezone The IANA name now stored, such as Europe/Berlin.
+	Timezone string `json:"timezone"`
+}
+
 // PublicEventUserUpdated defines model for PublicEventUserUpdated.
 type PublicEventUserUpdated struct {
 	By     openapi_types.UUID `json:"by"`
@@ -3448,6 +3502,10 @@ func (PublicEventUserReactivated) EventType() string { return "user.reactivated"
 
 func (PublicEventUserReactivated) EntityType() string { return "user" }
 
+func (PublicEventUserTimezoneChanged) EventType() string { return "user_timezone.changed" }
+
+func (PublicEventUserTimezoneChanged) EntityType() string { return "user" }
+
 func (PublicEventUserUpdated) EventType() string { return "user.updated" }
 
 func (PublicEventUserUpdated) EntityType() string { return "user" }
@@ -3630,6 +3688,7 @@ var PublicEventVersions = map[string]int{
 	"user_display_name.changed":                 1,
 	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
+	"user_timezone.changed":                     1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
 	"voice.draft_outcome_recorded":              1,
@@ -3649,7 +3708,7 @@ var PublicEventSamples = map[string]string{
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3780,6 +3839,7 @@ var PublicEventSamples = map[string]string{
 	"user_display_name.changed":                 "{\"display_name\":\"Sample display name\"}",
 	"user_greeting_name.changed":                "{\"greeting_name\":\"Sample greeting name\"}",
 	"user_locale.changed":                       "{\"locale\":\"Sample locale\"}",
+	"user_timezone.changed":                     "{\"chosen\":true,\"timezone\":\"Sample timezone\"}",
 	"voice.build_changed":                       "{\"build_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"candidate_action\":\"Sample candidate action\",\"next_attempt_at\":\"2026-10-14T09:12:00Z\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"result_version\":1,\"source_count\":1,\"source_hash\":\"Sample source hash\",\"stage\":\"Sample stage\",\"status\":\"Sample status\",\"status_code\":\"Sample status code\"}",
 	"voice.corpus_changed":                      "{\"action\":\"Sample action\",\"origin\":\"Sample origin\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"register\":\"Sample register\",\"source_count\":1,\"source_hash\":\"Sample source hash\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"word_delta\":1}",
 	"voice.draft_outcome_recorded":              "{\"outcome\":\"Sample outcome\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"qualifies_as_source\":true,\"transformation_count\":1}",

@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
 import { ContractTerms } from "./contractterms";
 
 type Contract = components["schemas"]["Contract"];

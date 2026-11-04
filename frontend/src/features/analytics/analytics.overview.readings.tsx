@@ -2,17 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useState } from "react";
-import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import {
-  analyticsSectionHref,
-  type Section,
-} from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
-import type { UrlParams } from "../../lib/urlstate";
 import { scopeDials } from "./analytics.overview.context";
 import {
   type ReportingEvaluation,
@@ -67,12 +62,14 @@ export function MetricReading({
   id,
   label,
   detail,
+  narrow = "row",
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   id: Metric["id"];
   label?: string;
   detail?: ReactNode;
+  narrow?: Parameters<typeof StatCard>[0]["narrow"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
@@ -83,7 +80,7 @@ export function MetricReading({
   const hidden = metric?.coverage.withheld && metric.value == null;
   return (
     <StatCard
-      narrow="row"
+      narrow={narrow}
       label={label ?? metricName(id)}
       value={
         hidden
@@ -106,33 +103,6 @@ export function MetricReading({
       opens="records"
       onOpen={metric ? () => onEvidence(metric.evidence) : undefined}
     />
-  );
-}
-
-/**
- * The deeper pages a view leads to, after its own readings and lists. Each
- * is a link carrying the view's question, so the page it opens answers it.
- * A modified click opens it in a new tab.
- */
-export function OverviewLinks({
-  sections,
-  dials,
-}: Readonly<{
-  sections: readonly Readonly<{ section: Section; label: string }>[];
-  dials: UrlParams;
-}>) {
-  return (
-    <ActionRow>
-      {sections.map(({ section, label }) => (
-        <AppLink
-          key={section}
-          className="btn btn-ghost"
-          href={analyticsSectionHref(section, dials)}
-        >
-          {label}
-        </AppLink>
-      ))}
-    </ActionRow>
   );
 }
 

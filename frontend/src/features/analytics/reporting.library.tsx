@@ -6,12 +6,12 @@ import { Button, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
@@ -33,7 +33,7 @@ export function ReportingLibrary({
   const [params] = useUrlParams();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const canCreate = useCanWrite("report_definition", "create");
   const canSeeSchedules = useCan("report_schedule", "read");
   const [filter, setFilter] = useState("all");
@@ -203,7 +203,7 @@ export function ReportingLibrary({
                                 "reporting.pausedSchedules",
                                 report.paused_schedule_count,
                                 {
-                                  count: formatNumber(
+                                  count: formatAnalyticsNumber(
                                     report.paused_schedule_count,
                                     locale,
                                   ),

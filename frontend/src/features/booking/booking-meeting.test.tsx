@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { routeHash } from "../../lib/router";
 import { bookingInvitation } from "../../testing/book.testkit";
 import {
@@ -70,7 +70,7 @@ it("names the meeting in its heading, with its delivery as a badge and its time 
   expect(screen.getByRole("status").textContent).toBe(
     "Calendar invitation created",
   );
-  const zone = viewerZone();
+  const zone = browserZone();
   expect(
     screen.getByText(
       `${formatDayFull(bookingInvitation.start, "en", zone)} · ${formatTimeRange(bookingInvitation.start, bookingInvitation.end, "en", zone)}`,

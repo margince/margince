@@ -4773,6 +4773,12 @@ paths:
         - name: kind
           in: query
           schema: {type: string, enum: [email, call, meeting, note, task, message]}
+        - name: call_outcome
+          in: query
+          description: Calls that ended this way. Matches calls only.
+          schema:
+            type: string
+            enum: [reached, not_reached, voicemail, call_back_later, put_through]
         - name: channel_provider
           in: query
           description: |-
@@ -11044,7 +11050,7 @@ paths:
             to colleagues and call it their day.
         - name: filter
           in: query
-          schema: {type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming]}
+          schema: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming]}
           description: |-
             Narrow the queue. Omitted means everything, which is the default view.
         - name: view
@@ -19042,7 +19048,7 @@ components:
         concern_since: {type: [string, 'null'], format: date-time, description: When the current concern began.}
         last_synced_at: {type: [string, 'null'], format: date-time, description: 'Last sync attempt; null before the first.'}
         last_success_at: {type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.'}
-        last_sync_error_class: {type: [string, 'null']}
+        last_sync_error_class: {type: [string, 'null'], description: '`forbidden`: the member''s role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.'}
         sync_failing_since: {type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.'}
         next_sync_due_at: {type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).'}
         backfill: {allOf: [{$ref: '#/components/schemas/BackfillStatus'}], description: 'Summary of the connection''s backfill run; state `none` when never run.'}
@@ -19613,6 +19619,27 @@ components:
           description: |-
             Whether a connect started right now would proceed, per provider a contact can choose
             between, so the connect screen can say so before the click rather than after a 501.
+        seat_capture: {$ref: '#/components/schemas/SeatCapture'}
+    SeatCapture:
+      type: object
+      additionalProperties: false
+      description: |-
+        Whether the caller's own role and seat let capture write, asked by the same check connect
+        and every sync ask. False hides every connect button; a connected mailbox stops at its
+        next sync.
+      required: [allowed]
+      properties:
+        allowed: {type: boolean}
+        reason:
+          type: [string, 'null']
+          enum: [role_cannot_capture, null]
+          description: Why `allowed` is false; null when it is true.
+        missing:
+          type: [string, 'null']
+          enum: [activity, contact, lead, seat, null]
+          description: |-
+            What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+            `lead`, or `seat` for a read seat. Null when `allowed` is true.
     CaptureProviderAvailability:
       type: object
       description: |-
@@ -19626,12 +19653,13 @@ components:
         provider: {type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between.}
         reason:
           type: string
-          enum: [ready, app_missing, app_unusable, unsupported]
+          enum: [ready, app_missing, app_unusable, unsupported, role_cannot_capture]
           description: |-
             `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
             app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
             is a different fix from registering one. `unsupported`: this deployment does not serve the
-            provider at all.
+            provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+            capture writes, for every provider alike (`seat_capture` says so once).
     PublicOriginStatus:
       type: object
       description: |-
@@ -23486,6 +23514,7 @@ components:
             listed here, so a task read out of a message the reader may not open never reaches
             this field.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.'}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
         assignee_name:
@@ -25832,6 +25861,7 @@ components:
         claim_id: {type: string, format: uuid}
         days_overdue: {type: integer}
         due_at: {type: string}
+        due_has_time: {type: boolean, description: True when due_at is an agreed time of day.}
         quote: {type: string}
         source: {type: string}
         source_activity_id: {type: string, format: uuid}
@@ -26064,6 +26094,7 @@ components:
       required: [as_of, commitments]
       properties:
         as_of: {type: string}
+        time_zone: {type: string, description: 'The installation zone, where a due date is a day.'}
         commitments: {type: array, items: {$ref: '#/components/schemas/AgentCommitment'}}
     IntroPaths:
       description: 'What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.'
@@ -29052,6 +29083,7 @@ components:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
+        due_has_time: {type: boolean, readOnly: true, description: 'Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.'}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
@@ -29133,9 +29165,9 @@ components:
           type: string
           nullable: true
           readOnly: true
-          enum: [product, calendar, sending_system]
+          enum: [product, calendar, sending_system, bulk]
           description: >-
-            What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+            What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
         voice:
           allOf: [{$ref: '#/components/schemas/ActivityVoice'}]
           readOnly: true
@@ -29158,6 +29190,10 @@ components:
           readOnly: true
           description: >-
             Whether this response carries the activity's content. An `available` row is complete.
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: {type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.'}
         invitation_status:
           type: [string, 'null']
@@ -29326,6 +29362,7 @@ components:
         subject: {type: string, minLength: 1}
         body: {type: [string, 'null']}
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
     CreateTaskRequest:
       type: object
@@ -29346,6 +29383,7 @@ components:
         subject: {type: string, minLength: 1, description: 'What has to be done, as one line.'}
         body: {type: [string, 'null'], description: 'Detail, if one line is not enough.'}
         due_at: {type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.'}
+        due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.'}
         links:
           type: array
@@ -29396,6 +29434,7 @@ components:
           description: >-
             `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'Task only. True: `due_at` is a time of day; `remind_at` defaults to it.'}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         host_user_id:
@@ -29411,6 +29450,10 @@ components:
             Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: {type: [integer, 'null']}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -29654,9 +29697,14 @@ components:
           description: >-
             How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -32493,6 +32541,7 @@ components:
         - leads_qualified
         - lead_first_response
         - leads_awaiting_response
+        - leads_awaiting_response_now
         - partner_pipeline
         - partner_won
         - partner_commission
@@ -33442,6 +33491,13 @@ components:
         the field existed; a reader then says the basis is unknown and never guesses one.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Open deals eligible for this forecast period.
+        open_evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline_minor:
           type: integer
           format: int64
@@ -34059,6 +34115,8 @@ components:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: >-
             How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+        owner_label: {type: string}
+        stage_label: {type: string}
         owner_id:
           type: string
           format: uuid
@@ -34292,7 +34350,14 @@ components:
           maxLength: 100
           description: >-
             The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
-        timezone: {type: string, default: UTC, description: IANA name.}
+        timezone:
+          type: string
+          description: >-
+            The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+        timezone_chosen:
+          type: boolean
+          description: >-
+            Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
         locale:
           type: string
           enum: [en, de, vi]
@@ -34326,6 +34391,10 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        connected_mailboxes:
+          type: integer
+          readOnly: true
+          description: How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
         invite_email_state:
           type: [string, 'null']
           enum: [sending, sent, failed, null]
@@ -35942,6 +36011,10 @@ components:
         key: {type: string, description: The role key an invite or a role change sends.}
         name: {type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this.}
         is_system: {type: boolean, description: True for a role the product ships.}
+        captures_mail:
+          type: boolean
+          readOnly: true
+          description: Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
     ComposedExtension:
       type: object
       additionalProperties: false
@@ -40494,7 +40567,7 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: {$ref: '#/components/schemas/TeamWeekReach'}
-        filter: {type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
+        filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}
         queue:
@@ -41410,6 +41483,7 @@ components:
             organizer. Otherwise it is the seat whose calendar the meeting came off.
             `kind` is always `user`.
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
+        due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string

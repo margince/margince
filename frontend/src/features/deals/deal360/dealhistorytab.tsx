@@ -22,7 +22,7 @@ import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
 import {
   ChronologyFilter,
@@ -54,7 +54,7 @@ export function DealHistoryTab({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [filter, setFilter] = useChronologyFilter(deal.id);
   const [filters, setFilters] = useTimelineFilters(deal.id);
   const timeline = useRecordTimeline("deal", deal.id, { filters });
@@ -68,7 +68,7 @@ export function DealHistoryTab({
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
-    values: { currency: deal.currency ?? null, locale, zone: recordZone },
+    values: { currency: deal.currency ?? null, locale, zone: readerZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -139,7 +139,7 @@ export function DealHistoryTab({
                     chronology.entries,
                     timeline.hasNextPage,
                   )}
-                  zone={recordZone}
+                  zone={readerZone}
                 />
               )}
             </div>

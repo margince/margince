@@ -172,7 +172,7 @@ Also called: booking page, scheduling link, book a meeting with me.
 <!-- opens: settings/meetings -->
 To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in **When people can book**.
 1. Pick your **Working days**.
-2. Set **From**, **Until** and your time zone. Guests see the hours in their own zone.
+2. Set **From** and **Until**. They are read in your own time zone, which you set under Settings → **Account**. Guests see the hours in their own zone.
 3. Under **Booking rules**, set **Minimum notice**, **Break between meetings** and **How far ahead**. Pick one of the given times, or **Other**.
 4. Choose **Save availability**, which saves hours and rules together.
 Saving works even while the calendar is being reconnected, because the rules never ask the calendar anything.
@@ -185,16 +185,16 @@ needs permission from an administrator."
 Opening meeting settings from a booking draft opens another tab; coming back loads the saved settings again.
 
 ### How do I change my time zone?
-<!-- opens: settings/meetings -->
-To change your own time zone in Margince, open Settings → **Meetings** and choose a place in the **Timezone** list under **When people can book**. Then choose **Save availability**, or **Save working hours** if you may not book meetings.
-Your time zone is yours alone, and it decides when customers can book time with you.
-The company's reporting time zone is a separate setting; see the next question.
+<!-- opens: settings/account -->
+To change your own time zone in Margince, open Settings → **Account**, pick a place in the **Time zone** list and choose **Save**.
+On your first sign-in, Margince uses your browser's time zone, and a zone you pick stays on every browser.
+Every time Margince shows you is in your zone, and so is your booking and mail timing. The company's time zone is separate; see the next question.
 Also called: change time zone, my time zone, local time.
 
-### How do I change the company's reporting time zone?
+### How do I change the company's time zone?
 <!-- opens: settings/company -->
-To change the time zone reports use in Margince, open Settings → **Company profile** and set **Reporting timezone** in the **Installation** card.
-Report periods use it for the whole team, and only Admin and Ops change it. Your own time zone on **Meetings** stays as it is.
+To change the company's time zone in Margince, open Settings → **Company profile** and set **Company time zone** in the **Installation** card.
+Report periods, scheduled jobs, documents sent out and the "today" lists use it, and only Admin and Ops change it. Times on screen stay in your own zone.
 Also called: company time zone, report time zone, installation time zone.
 
 ### How do I share a booking link?
@@ -277,15 +277,18 @@ learns only from samples you add.
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
 1. Under **Add your writing**, drop or pick files, several at once. After that, add more under **Make it sharper**. **Add writing** at the top takes you there.
 2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
+   To use mail you sent, choose **Learn from sent mail**. Margince then reads up to your 200 most recent sent mails.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
 When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
-Also called: tone, writing style, Voice DNA, sound like me.
+Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
 
 The best samples are emails you sent, then proposals and posts, then the written
 record of calls or meetings. Leave out text others wrote, and AI drafts: Margince
 learns a different voice from them. A read-only seat sees the page and cannot change it.
+
+**Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 
 Margince reads a PDF or Word document to its text in the browser before it
 sends anything. It skips a file with no text in it. It names a file it cannot

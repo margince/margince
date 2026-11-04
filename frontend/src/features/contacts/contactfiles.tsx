@@ -17,7 +17,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { attachmentAnchor } from "../../lib/attachmentlink";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./contact360.css";
 
@@ -244,7 +244,7 @@ function FilesTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const columns: DataTableColumn<Attachment>[] = [
     {
       key: "document",
@@ -281,7 +281,7 @@ function FilesTable({
       header: t("contact.documents.col.added"),
       render: (file) => (
         <span className="t-num">
-          {formatDateAbbrev(file.created_at, locale, recordZone)}
+          {formatDateAbbrev(file.created_at, locale, readerZone)}
         </span>
       ),
     },

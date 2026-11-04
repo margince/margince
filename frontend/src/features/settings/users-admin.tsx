@@ -20,7 +20,6 @@ import {
   formatNumber,
 } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
 import "./users-admin.css";
@@ -33,6 +32,7 @@ import {
   type AssignableRole,
   useAssignableRoles,
 } from "../../lib/roles.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { usePageReadOnly } from "./settingsnav";
 import { useEntityColumn } from "./users-entitycell";
 import { InviteUserForm } from "./users-invite-form";
@@ -388,6 +388,7 @@ function MemberActivity({
   member,
   management,
 }: Readonly<{ member: User; management: boolean }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const added = member.created_at;
@@ -397,7 +398,7 @@ function MemberActivity({
       {added && (
         <time className="t-caption users-nowrap" dateTime={added}>
           {t("users.addedOn", {
-            date: formatDateAbbrev(added, locale, viewerZone()),
+            date: formatDateAbbrev(added, locale, readerZone),
           })}
         </time>
       )}
@@ -408,6 +409,7 @@ function MemberActivity({
 // Null means never signed in, or withheld from this reader: a delegated admin
 // sees none for a member they do not outrank. The cell claims neither.
 function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (!at) {
@@ -417,7 +419,7 @@ function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
     <time
       className="users-nowrap"
       dateTime={at}
-      title={formatDateTime(at, locale, viewerZone())}
+      title={formatDateTime(at, locale, readerZone)}
     >
       {formatRelativeTime(at, locale)}
     </time>

@@ -25,7 +25,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];
@@ -328,7 +328,7 @@ export function VoiceSamples({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const sources = useVoiceSources(profileId);
   const [removing, setRemoving] = useState<VoiceCorpusSource | null>(null);
   const asked = useLastSubject(removing);

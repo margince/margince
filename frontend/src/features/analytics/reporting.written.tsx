@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -125,7 +125,10 @@ function targetSentence(
     ),
     target: amount(evaluation, won, target, words),
     actual: amount(evaluation, won, actual, words),
-    percent: formatNumber(Math.round((actual / target) * 100), words.locale),
+    percent: formatAnalyticsNumber(
+      Math.round((actual / target) * 100),
+      words.locale,
+    ),
   });
 }
 
@@ -155,6 +158,6 @@ function openSentence(
   return words.plural("reporting.writtenOpen", count, {
     date: stateDay(evaluation, words),
     amount: amount(evaluation, open, open.value, words),
-    count: formatNumber(count, words.locale),
+    count: formatAnalyticsNumber(count, words.locale),
   });
 }

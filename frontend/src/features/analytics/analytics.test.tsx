@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoney } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { en } from "../../i18n/en";
 import { SECTIONS, sectionFromAddress } from "../../lib/analytics.address";
 import { AnalyticsScreen } from "./analytics";
@@ -72,7 +72,7 @@ describe("the delivery section", () => {
       .click(await screen.findByRole("button", { name: "Delivery" }));
 
     expect(
-      await screen.findByText(formatMoney(400000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(400000, "EUR", "en")),
     ).toBeTruthy();
     const link = await screen.findByRole("link", { name: "Rollout Nord" });
     expect(link.getAttribute("href")).toBe("/#/projects/p1");
@@ -152,7 +152,7 @@ describe("the data coverage section", () => {
     expect(screen.getByText("—")).toBeTruthy();
   });
 
-  it("says a fresh installation was never looked at, in words", async () => {
+  it("points to the input check when source coverage has no result", async () => {
     vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
     render(<AnalyticsScreen />);
     await userEvent
@@ -163,7 +163,7 @@ describe("the data coverage section", () => {
       .click(await screen.findByRole("button", { name: "Data coverage" }));
     expect(
       await screen.findByText(
-        "No check has run yet. An unchecked installation is not the same as a healthy one.",
+        "Start the input check in Forecast to see source coverage.",
       ),
     ).toBeTruthy();
   });
@@ -390,13 +390,13 @@ describe("AnalyticsScreen", () => {
       "fetch",
       reportsStub({
         onRun: (key, body) => bodies.push({ key, body }),
-        // 12343 × 20% per deal (2469 × 2 = 4938) — a figure a client can only
-        // reproduce by rounding round(24686 × 20%) = 4937, the wrong way.
+        // Per-deal rounding puts this reading above the whole-unit boundary;
+        // rounding the aggregate first would put it below.
         stageRows: [
           {
             stage_id: "pl-s1",
-            raw_minor: 24686,
-            weighted_minor: 4938,
+            raw_minor: 24746,
+            weighted_minor: 4950,
             deal_count: 2,
           },
         ],
@@ -415,8 +415,8 @@ describe("AnalyticsScreen", () => {
           ),
       ),
     ).toBe(true);
-    expect((await stageTable()).getByText("€49.38")).toBeTruthy();
-    expect(screen.queryByText("€49.37")).toBeNull();
+    expect((await stageTable()).getByText("≈50 EUR")).toBeTruthy();
+    expect(screen.queryByText("≈49 EUR")).toBeNull();
   });
 
   it("switching to Open deals per company groups by company_id and renders a table", async () => {

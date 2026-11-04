@@ -161,11 +161,7 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 				Reason:    commsauthz.ReasonUnknownPurpose,
 			}, nil
 		}
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return resolution{}, err
-		}
-		return g.validate(ctx, tx, req, subject, req.Context, w)
+		return g.validate(ctx, tx, req, subject, req.Context, packRulesFor(subject.Country))
 	}
 	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
 	if err != nil {

@@ -13,11 +13,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { DealRoomPage } from "./dealroompage";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 // The head of the seller's Deal Room: what the room is, what it is called, how
 // it stands, and who is in it. Everything here is a claim a rep acts on — a

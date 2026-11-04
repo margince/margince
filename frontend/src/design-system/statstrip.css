@@ -119,7 +119,7 @@
    fit. Labels remain complete, and explanations and actions have separate
    lines so neither can squeeze the other out of a phone or side rail. */
 @container (max-width: 40rem) {
-  .stat-strip:has(.stat-card-narrow-row) {
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack) {
     grid-template-columns: 1fr;
     /* The hairline IS the divider now, so the air between slots would be a
        second one. Each row carries its own padding instead. */
@@ -133,7 +133,8 @@
   /* No boxes: a column of five bordered panes reads as five cards to swipe
      rather than one list to scan. The plate draws the single rule between
      rows, which is the seam rule every other row shape here follows. */
-  .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  :is(.stat-card-narrow-row, .stat-card-narrow-stack) {
     border: 0;
     border-radius: 0;
     background: none;
@@ -155,27 +156,27 @@
     column-gap: var(--space-4);
     row-gap: 0;
   }
-  .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
     > .stat-card-label {
     grid-area: label;
   }
-  .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
     > .stat-card-value {
     grid-area: figure;
     /* Trailing edge, so a column of figures lines up whatever the label beside
        it runs to. `tabular-nums` is the tile's own and does the rest. */
     text-align: right;
   }
-  .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
     > .stat-card-foot {
     grid-area: foot;
     justify-self: start;
   }
-  .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
     > .stat-card-detail {
     grid-area: basis;
   }
@@ -183,16 +184,27 @@
      basis. Folded into a row the three sit side by side on grid lines the plate
      spaces, so the margins under them would open a gap where the plate asked
      for none. */
-  .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row > * {
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
+    > * {
     margin-block-end: 0;
     min-block-size: 0;
   }
-  .stat-strip:has(.stat-card-narrow-row) > * + * {
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack) > * + * {
     border-block-start: 1px solid var(--groundEdge);
+  }
+  .stat-strip:has(.stat-card-narrow-stack) .stat-card-narrow-stack {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "label" "figure" "basis" "foot";
+  }
+  .stat-strip:has(.stat-card-narrow-stack)
+    .stat-card-narrow-stack
+    > .stat-card-value {
+    text-align: start;
   }
   /* A wrapper's own corner goes with its box: a radius on a full-bleed row
      clips the hairline it sits against. */
-  .stat-strip:has(.stat-card-narrow-row) > button {
+  .stat-strip:has(.stat-card-narrow-row, .stat-card-narrow-stack) > button {
     border-radius: 0;
   }
 }

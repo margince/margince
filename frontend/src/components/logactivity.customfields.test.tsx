@@ -4,8 +4,8 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { browserZone } from "../format/timezone";
+import { CompanyZoneProvider } from "../lib/companyzone";
 import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
@@ -50,9 +50,9 @@ it("logs an activity with the value of a field the workspace added", async () =>
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone={viewerZone()}>
+    <CompanyZoneProvider zone={browserZone()}>
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </CompanyZoneProvider>,
   );
   fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
     target: { value: "Plant walk-through" },

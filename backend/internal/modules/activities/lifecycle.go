@@ -41,9 +41,12 @@ type UpdateActivityInput struct {
 	OccurredPrecision *string
 	DurationSeconds   *int
 	DueAt             *time.Time
-	RemindAt          *time.Time
-	AssigneeID        *ids.UserID
-	IsDone            *bool
+	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
+	// a DueAt without it is a day (admitPatchTime).
+	DueHasTime *bool
+	RemindAt   *time.Time
+	AssigneeID *ids.UserID
+	IsDone     *bool
 	// Clear names the fields sent as an explicit JSON null, which a nil pointer
 	// cannot tell from a field not mentioned.
 	Clear []string
@@ -52,7 +55,10 @@ type UpdateActivityInput struct {
 	// carries — a patch cannot change a kind, so the stored one is the only
 	// honest thing to hold it against.
 	MeetingStatus *string
-	IfVersion     *int64
+	// CallOutcome is how a call ended; refused on another kind, like
+	// MeetingStatus, against the kind the row carries.
+	CallOutcome *string
+	IfVersion   *int64
 	// CustomFields are the patch's cf_ values; a null clears one. customColumns
 	// are the active fields they are checked and written against.
 	CustomFields  map[string]any
@@ -129,9 +135,11 @@ func updateActivityInTx(
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
+		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
 		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
+		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
 		  -- The language was READ from the text, so an edit to the text reads
@@ -148,7 +156,7 @@ func updateActivityInTx(
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg))
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -216,6 +224,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.DueAt != nil {
 		p.Set("due_at", current.DueAt, *in.DueAt)
 	}
+	if in.DueHasTime != nil {
+		p.Set(fieldDueHasTime, current.DueHasTime, *in.DueHasTime)
+	}
 	if in.RemindAt != nil {
 		p.Set("remind_at", current.RemindAt, *in.RemindAt)
 	}
@@ -228,6 +239,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	if in.MeetingStatus != nil {
 		p.Set("meeting_status", current.MeetingStatus, *in.MeetingStatus)
 	}
+	if in.CallOutcome != nil {
+		p.Set(fieldCallOutcome, callOutcomeOf(current), *in.CallOutcome)
+	}
 	return !p.Empty()
 }
 
@@ -235,7 +249,8 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
 	return (in.clears("due_at") && current.DueAt != nil) ||
 		(in.clears("remind_at") && current.RemindAt != nil) ||
-		(in.clears("assignee_id") && current.AssigneeId != nil)
+		(in.clears("assignee_id") && current.AssigneeId != nil) ||
+		(in.clearsDeclared(fieldCallOutcome, current) && current.CallOutcome != nil)
 }
 
 func (in UpdateActivityInput) clears(field string) bool { return slices.Contains(in.Clear, field) }
@@ -297,7 +312,7 @@ func admitActivityPatch(
 		in.Subject = &subject
 	}
 	if !held && (in.Subject != nil || in.Body != nil) {
-		if err := CheckEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body)); err != nil {
+		if err := CheckEntryHasContent(string(current.Kind), firstSet(in.Subject, current.Subject), firstSet(in.Body, current.Body), in.patchedCallOutcome(current)); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -314,6 +329,11 @@ func admitActivityPatch(
 	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
+	if !held {
+		if err := checkCallOutcomeKind(string(current.Kind), in.CallOutcome); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
 	if !held && !in.calendarSettlement && changesInvitation(*in) {
 		if err := refuseActiveInvitationPatch(ctx, tx, id.UUID); err != nil {
 			return crmcontracts.Activity{}, held, err
@@ -326,6 +346,9 @@ func admitActivityPatch(
 	}
 	if !held {
 		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+		if err := in.admitPatchTime(current.Kind); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -344,28 +367,10 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
+		in.followReminder(current)
 		endPassedReminder(current, in)
 	}
 	return current, held, nil
-}
-
-// renormalizeTranscriptPatch re-runs ADR-0058's normalizer on a body PATCH
-// when the target row is transcript-marked. A transcript's normalized form
-// is only ever produced on ingest (LogActivityInputFrom) — without this, a
-// PATCH could leave a transcript-marked row holding un-normalized text (raw
-// CRLFs, trailing whitespace), which is exactly the row the
-// activity/transcript retention selector and any future line citation both
-// assume is already canonical.
-func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivityInput) error {
-	if in.Body == nil || current.SourceSystem == nil || *current.SourceSystem != transcriptSourceSystem {
-		return nil
-	}
-	normalized, err := normalizeTranscript(*in.Body)
-	if err != nil {
-		return err
-	}
-	in.Body = &normalized
-	return nil
 }
 
 // RefuseArchiveActivity answers every authority refusal ArchiveActivity would
@@ -493,4 +498,39 @@ func archiveActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	return readActivityAt(ctx, tx, id, storekit.IncludeArchived, asOf)
+}
+
+// callOutcomeOf is the stored outcome of a call as the store's plain string,
+// nil when it has none.
+func callOutcomeOf(a crmcontracts.Activity) *string {
+	if a.CallOutcome == nil {
+		return nil
+	}
+	s := string(*a.CallOutcome)
+	return &s
+}
+
+// patchedCallOutcome is the outcome the row holds after the patch: none when
+// the patch clears it, the patched one when it names one, else the stored one.
+func (in UpdateActivityInput) patchedCallOutcome(current crmcontracts.Activity) *string {
+	if in.clears(fieldCallOutcome) {
+		return nil
+	}
+	return firstSet(in.CallOutcome, callOutcomeOf(current))
+}
+
+// clearableActivityColumns is what a restore (Undo) may set back to nothing on
+// an activity, and what the row holds there now. Only the call outcome: undoing
+// a first pick puts the call back to "no outcome". compose's clearableFields
+// names the same list, held equal by gates/clearablefields_test.go.
+func clearableActivityColumns(current crmcontracts.Activity) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"call_outcome": {Column: "call_outcome", Current: callOutcomeOf(current)},
+	}
+}
+
+// clearsDeclared is a clear of a field the store declares clearable.
+func (in UpdateActivityInput) clearsDeclared(field string, current crmcontracts.Activity) bool {
+	_, declared := clearableActivityColumns(current)[field]
+	return declared && in.clears(field)
 }

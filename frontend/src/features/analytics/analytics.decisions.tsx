@@ -26,8 +26,8 @@ import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
 type DecisionInput = components["schemas"]["SalesDecisionInput"];
@@ -56,7 +56,7 @@ export function useSalesDecisions(dealId?: string) {
 export function DecisionsPanel() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const decisions = useSalesDecisions();
   const canRecord = useCanWrite("activity", "create");
   const canClose = useCanWrite("activity", "update");

@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemCodeOf } from "../../lib/problem";
@@ -33,6 +32,7 @@ import "./worklist.css";
 // it — a reading in the Brief. One spelling of the parameter, two ways in.
 export { WORKLIST_FILTER_PARAM };
 
+import { useViewerZone } from "../../lib/viewerzone";
 import { WorklistBody } from "./worklist.body";
 import { accumulatedDay } from "./worklist.reads";
 
@@ -51,6 +51,7 @@ export function WorklistScreen({
   opensOn?: string;
   embedded?: boolean;
 }> = {}) {
+  const readerZone = useViewerZone();
   const t = useT();
   const {
     scope,
@@ -158,7 +159,7 @@ export function WorklistScreen({
           rather than reset: the walk stays where the reader had paged it. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
         onReplySent={() =>
           void queryClient.invalidateQueries({ queryKey: worklistKey })

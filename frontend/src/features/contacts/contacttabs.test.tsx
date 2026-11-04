@@ -13,11 +13,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { telUri } from "../../format/contacturi";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactTimelineTab } from "./contacttabs";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 type Contact360 = components["schemas"]["Contact360"];
 type Deal = components["schemas"]["Deal"];

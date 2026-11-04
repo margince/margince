@@ -66,6 +66,7 @@ function MeetingsLanding() {
       outcome={route.id2}
       provider={route.id3}
       connections={connections.data?.data}
+      captureMissing={connections.data?.captureMissing}
       connectCalendar={{
         onConnect: (calendar) =>
           connect.mutate({ provider: calendar, returnTo: "meetings" }),

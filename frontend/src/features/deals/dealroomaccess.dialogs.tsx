@@ -9,7 +9,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import type {
   Capability,
   DealRoom,
@@ -235,7 +235,7 @@ export function RevokeDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const revoke = useMutation({
     mutationFn: async () => {
@@ -265,7 +265,7 @@ export function RevokeDialog({
       <p>
         {participant.email}
         {participant.last_seen_at
-          ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
+          ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, readerZone) })}`
           : ` · ${t("access.neverSignedIn")}`}
       </p>
       <p>{t("access.revokeBody")}</p>

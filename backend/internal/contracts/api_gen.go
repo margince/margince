@@ -246,6 +246,7 @@ func (e AccountDraftReasonKind) Valid() bool {
 
 // Defines values for ActivityAutomaticKind.
 const (
+	ActivityAutomaticKindBulk          ActivityAutomaticKind = "bulk"
 	ActivityAutomaticKindCalendar      ActivityAutomaticKind = "calendar"
 	ActivityAutomaticKindProduct       ActivityAutomaticKind = "product"
 	ActivityAutomaticKindSendingSystem ActivityAutomaticKind = "sending_system"
@@ -254,11 +255,40 @@ const (
 // Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
 func (e ActivityAutomaticKind) Valid() bool {
 	switch e {
+	case ActivityAutomaticKindBulk:
+		return true
 	case ActivityAutomaticKindCalendar:
 		return true
 	case ActivityAutomaticKindProduct:
 		return true
 	case ActivityAutomaticKindSendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityCallOutcome.
+const (
+	ActivityCallOutcomeActivityCallOutcomeCallBackLater ActivityCallOutcome = "put_through"
+	ActivityCallOutcomeActivityCallOutcomeNone          ActivityCallOutcome = "reached"
+	ActivityCallOutcomeActivityCallOutcomeNotReached    ActivityCallOutcome = "voicemail"
+	ActivityCallOutcomeActivityCallOutcomeReached       ActivityCallOutcome = "not_reached"
+	ActivityCallOutcomeActivityCallOutcomeVoicemail     ActivityCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the ActivityCallOutcome enum.
+func (e ActivityCallOutcome) Valid() bool {
+	switch e {
+	case ActivityCallOutcomeActivityCallOutcomeCallBackLater:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeNone:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeNotReached:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeReached:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -4338,10 +4368,11 @@ func (e CaptureProviderAvailabilityProvider) Valid() bool {
 
 // Defines values for CaptureProviderAvailabilityReason.
 const (
-	CaptureProviderAvailabilityReasonAppMissing  CaptureProviderAvailabilityReason = "app_missing"
-	CaptureProviderAvailabilityReasonAppUnusable CaptureProviderAvailabilityReason = "app_unusable"
-	CaptureProviderAvailabilityReasonReady       CaptureProviderAvailabilityReason = "ready"
-	CaptureProviderAvailabilityReasonUnsupported CaptureProviderAvailabilityReason = "unsupported"
+	CaptureProviderAvailabilityReasonAppMissing        CaptureProviderAvailabilityReason = "app_missing"
+	CaptureProviderAvailabilityReasonAppUnusable       CaptureProviderAvailabilityReason = "app_unusable"
+	CaptureProviderAvailabilityReasonReady             CaptureProviderAvailabilityReason = "ready"
+	CaptureProviderAvailabilityReasonRoleCannotCapture CaptureProviderAvailabilityReason = "role_cannot_capture"
+	CaptureProviderAvailabilityReasonUnsupported       CaptureProviderAvailabilityReason = "unsupported"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProviderAvailabilityReason enum.
@@ -4352,6 +4383,8 @@ func (e CaptureProviderAvailabilityReason) Valid() bool {
 	case CaptureProviderAvailabilityReasonAppUnusable:
 		return true
 	case CaptureProviderAvailabilityReasonReady:
+		return true
+	case CaptureProviderAvailabilityReasonRoleCannotCapture:
 		return true
 	case CaptureProviderAvailabilityReasonUnsupported:
 		return true
@@ -8704,6 +8737,33 @@ func (e ConversationMemoryEntryStatus) Valid() bool {
 	case ConversationMemoryEntryStatusReplied:
 		return true
 	case ConversationMemoryEntryStatusUnanswered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateActivityRequestCallOutcome.
+const (
+	CreateActivityRequestCallOutcomeCreateCallOutcomeCallBackLater CreateActivityRequestCallOutcome = "put_through"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeNone          CreateActivityRequestCallOutcome = "reached"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeNotReached    CreateActivityRequestCallOutcome = "voicemail"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeReached       CreateActivityRequestCallOutcome = "not_reached"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeVoicemail     CreateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityRequestCallOutcome enum.
+func (e CreateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeCallBackLater:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeNone:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeNotReached:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeReached:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -18826,6 +18886,7 @@ const (
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
+	ReportingMetricIDLeadsAwaitingResponseNow      ReportingMetricID = "leads_awaiting_response_now"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
@@ -18863,6 +18924,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadStatusMoves:
 		return true
 	case ReportingMetricIDLeadsAwaitingResponse:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponseNow:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -19786,6 +19849,24 @@ func (e SaveMyLocaleRequestLocale) Valid() bool {
 	}
 }
 
+// Defines values for SaveMyTimezoneRequestSource.
+const (
+	SaveMyTimezoneRequestSourceBrowser SaveMyTimezoneRequestSource = "browser"
+	SaveMyTimezoneRequestSourceChosen  SaveMyTimezoneRequestSource = "chosen"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyTimezoneRequestSource enum.
+func (e SaveMyTimezoneRequestSource) Valid() bool {
+	switch e {
+	case SaveMyTimezoneRequestSourceBrowser:
+		return true
+	case SaveMyTimezoneRequestSourceChosen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SavedViewSharedScope.
 const (
 	SavedViewSharedScopePrivate   SavedViewSharedScope = "private"
@@ -20290,6 +20371,45 @@ func (e SearchResultType) Valid() bool {
 	case SearchResultTypeProject:
 		return true
 	case SearchResultTypeTag:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SeatCaptureMissing.
+const (
+	SeatCaptureMissingActivity SeatCaptureMissing = "activity"
+	SeatCaptureMissingContact  SeatCaptureMissing = "contact"
+	SeatCaptureMissingLead     SeatCaptureMissing = "lead"
+	SeatCaptureMissingSeat     SeatCaptureMissing = "seat"
+)
+
+// Valid indicates whether the value is a known member of the SeatCaptureMissing enum.
+func (e SeatCaptureMissing) Valid() bool {
+	switch e {
+	case SeatCaptureMissingActivity:
+		return true
+	case SeatCaptureMissingContact:
+		return true
+	case SeatCaptureMissingLead:
+		return true
+	case SeatCaptureMissingSeat:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SeatCaptureReason.
+const (
+	SeatCaptureReasonRoleCannotCapture SeatCaptureReason = "role_cannot_capture"
+)
+
+// Valid indicates whether the value is a known member of the SeatCaptureReason enum.
+func (e SeatCaptureReason) Valid() bool {
+	switch e {
+	case SeatCaptureReasonRoleCannotCapture:
 		return true
 	default:
 		return false
@@ -22030,6 +22150,33 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonSuperseded:
 		return true
 	case UndoabilityReasonUnsupportedRecordType:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateActivityRequestCallOutcome.
+const (
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeCallBackLater UpdateActivityRequestCallOutcome = "put_through"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeNone          UpdateActivityRequestCallOutcome = "reached"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeNotReached    UpdateActivityRequestCallOutcome = "voicemail"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeReached       UpdateActivityRequestCallOutcome = "not_reached"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeVoicemail     UpdateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the UpdateActivityRequestCallOutcome enum.
+func (e UpdateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeCallBackLater:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeNone:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeNotReached:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeReached:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -24179,6 +24326,7 @@ const (
 	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
 	WorklistFilterLeads             WorklistFilter = "leads"
 	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterProspecting       WorklistFilter = "prospecting"
 	WorklistFilterRelationships     WorklistFilter = "relationships"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
@@ -24204,6 +24352,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
+		return true
+	case WorklistFilterProspecting:
 		return true
 	case WorklistFilterRelationships:
 		return true
@@ -25534,6 +25684,33 @@ func (e ListActivitiesParamsKind) Valid() bool {
 	case ListActivitiesParamsKindNote:
 		return true
 	case ListActivitiesParamsKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListActivitiesParamsCallOutcome.
+const (
+	ListActivitiesParamsCallOutcomeListCallOutcomeCallBackLater ListActivitiesParamsCallOutcome = "call_back_later"
+	ListActivitiesParamsCallOutcomeListCallOutcomeNotReached    ListActivitiesParamsCallOutcome = "not_reached"
+	ListActivitiesParamsCallOutcomeListCallOutcomePutThrough    ListActivitiesParamsCallOutcome = "put_through"
+	ListActivitiesParamsCallOutcomeListCallOutcomeReached       ListActivitiesParamsCallOutcome = "reached"
+	ListActivitiesParamsCallOutcomeListCallOutcomeVoicemail     ListActivitiesParamsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the ListActivitiesParamsCallOutcome enum.
+func (e ListActivitiesParamsCallOutcome) Valid() bool {
+	switch e {
+	case ListActivitiesParamsCallOutcomeListCallOutcomeCallBackLater:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeNotReached:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomePutThrough:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeReached:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -28673,6 +28850,7 @@ const (
 	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
 	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
 	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterProspecting       GetWorklistParamsFilter = "prospecting"
 	GetWorklistParamsFilterRelationships     GetWorklistParamsFilter = "relationships"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
@@ -28698,6 +28876,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterLeads:
 		return true
 	case GetWorklistParamsFilterMeetings:
+		return true
+	case GetWorklistParamsFilterProspecting:
 		return true
 	case GetWorklistParamsFilterRelationships:
 		return true
@@ -29106,7 +29286,7 @@ type Activity struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
 
-	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
 	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
@@ -29121,6 +29301,9 @@ type Activity struct {
 
 	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
 	CalendarManaged *bool `json:"calendar_managed,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -29139,7 +29322,7 @@ type Activity struct {
 	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
 	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
 
-	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
@@ -29160,6 +29343,9 @@ type Activity struct {
 
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
@@ -29250,13 +29436,16 @@ type Activity struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 type ActivityAutomaticKind string
+
+// ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type ActivityCallOutcome string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
 
-// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
@@ -29322,6 +29511,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
+	DueHasTime *bool               `json:"due_has_time,omitempty"`
 	Subject    string              `json:"subject"`
 }
 
@@ -29702,18 +29892,21 @@ type AgentClientSecret struct {
 
 // AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
 type AgentCommitment struct {
-	About            []AgentCommitmentSubject `json:"about"`
-	AssigneeId       *openapi_types.UUID      `json:"assignee_id,omitempty"`
-	AssigneeName     *string                  `json:"assignee_name,omitempty"`
-	ClaimId          *openapi_types.UUID      `json:"claim_id,omitempty"`
-	DaysOverdue      *int                     `json:"days_overdue,omitempty"`
-	DueAt            *string                  `json:"due_at,omitempty"`
-	Quote            *string                  `json:"quote,omitempty"`
-	Source           string                   `json:"source"`
-	SourceActivityId *openapi_types.UUID      `json:"source_activity_id,omitempty"`
-	State            string                   `json:"state"`
-	Subject          string                   `json:"subject"`
-	TaskId           *openapi_types.UUID      `json:"task_id,omitempty"`
+	About        []AgentCommitmentSubject `json:"about"`
+	AssigneeId   *openapi_types.UUID      `json:"assignee_id,omitempty"`
+	AssigneeName *string                  `json:"assignee_name,omitempty"`
+	ClaimId      *openapi_types.UUID      `json:"claim_id,omitempty"`
+	DaysOverdue  *int                     `json:"days_overdue,omitempty"`
+	DueAt        *string                  `json:"due_at,omitempty"`
+
+	// DueHasTime True when due_at is an agreed time of day.
+	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	Quote            *string             `json:"quote,omitempty"`
+	Source           string              `json:"source"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	State            string              `json:"state"`
+	Subject          string              `json:"subject"`
+	TaskId           *openapi_types.UUID `json:"task_id,omitempty"`
 }
 
 // AgentCommitmentSubject A record a commitment is about.
@@ -32150,6 +32343,9 @@ type AssignNoticeCase struct {
 
 // AssignableRole defines model for AssignableRole.
 type AssignableRole struct {
+	// CapturesMail Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
+	CapturesMail *bool `json:"captures_mail,omitempty"`
+
 	// IsSystem True for a role the product ships.
 	IsSystem bool `json:"is_system"`
 
@@ -33090,6 +33286,9 @@ type AttentionItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
@@ -34879,7 +35078,7 @@ type CaptureConnection struct {
 	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
 	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
 
-	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
+	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member's role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
 
 	// LastSyncedAt Last sync attempt (CAP-DDL-5); null before the first.
@@ -34958,10 +35157,13 @@ type CaptureConnectionStatus string
 
 // CaptureConnectionConcern defines model for CaptureConnectionConcern.
 type CaptureConnectionConcern struct {
-	AccountLabel  *string            `json:"account_label"`
-	Concern       CaptureConcernKind `json:"concern"`
-	ConnectionId  openapi_types.UUID `json:"connection_id"`
-	DisplayName   *string            `json:"display_name"`
+	AccountLabel *string            `json:"account_label"`
+	Concern      CaptureConcernKind `json:"concern"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+	DisplayName  *string            `json:"display_name"`
+
+	// ErrorClass The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
+	ErrorClass    *string            `json:"error_class,omitempty"`
 	LastSuccessAt *time.Time         `json:"last_success_at"`
 	Provider      string             `json:"provider"`
 	Since         *time.Time         `json:"since"`
@@ -34981,6 +35183,11 @@ type CaptureConnectionListResponse struct {
 	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
 	// process can reach the origin — it cannot say a recipient's mail client can.
 	PublicOrigin *PublicOriginStatus `json:"public_origin,omitempty"`
+
+	// SeatCapture Whether the caller's own role and seat let capture write, asked by the same check connect
+	// and every sync ask. False hides every connect button; a connected mailbox stops at its
+	// next sync.
+	SeatCapture *SeatCapture `json:"seat_capture,omitempty"`
 }
 
 // CaptureConsent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -35276,7 +35483,8 @@ type CaptureProviderAvailability struct {
 	// Reason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
 	// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
 	// is a different fix from registering one. `unsupported`: this deployment does not serve the
-	// provider at all.
+	// provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+	// capture writes, for every provider alike (`seat_capture` says so once).
 	Reason CaptureProviderAvailabilityReason `json:"reason"`
 }
 
@@ -35286,7 +35494,8 @@ type CaptureProviderAvailabilityProvider string
 // CaptureProviderAvailabilityReason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
 // app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
 // is a different fix from registering one. `unsupported`: this deployment does not serve the
-// provider at all.
+// provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+// capture writes, for every provider alike (`seat_capture` says so once).
 type CaptureProviderAvailabilityReason string
 
 // CapturePurgeOutcome What a purge destroyed, or what a preview says it would. The four counts are disjoint and
@@ -36660,8 +36869,11 @@ type Company360NextStep struct {
 	// Body The task's own words, as written. Only a task whose content this reader may read is
 	// listed here, so a task read out of a message the reader may not open never reaches
 	// this field.
-	Body            *string             `json:"body,omitempty"`
-	DueAt           *time.Time          `json:"due_at,omitempty"`
+	Body  *string    `json:"body,omitempty"`
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
+	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	Overdue         bool                `json:"overdue"`
@@ -41159,6 +41371,9 @@ type CreateActivityRequest struct {
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
 	Body            *string               `json:"body,omitempty"`
 
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *CreateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
+
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
 	// `422 code: field_not_valid_for_kind`. Must name a provider this installation has
@@ -41166,8 +41381,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -41228,6 +41446,9 @@ type CreateActivityRequest struct {
 	ThreadKey            *string                `json:"thread_key,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type CreateActivityRequestCallOutcome string
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
 type CreateActivityRequestDirection string
@@ -42210,6 +42431,9 @@ type CreateTaskRequest struct {
 
 	// DueAt When it is due. Optional — a task without a date is still a task.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -52155,6 +52379,9 @@ type OnboardingStateStep string
 type OpenCommitments struct {
 	AsOf        string            `json:"as_of"`
 	Commitments []AgentCommitment `json:"commitments"`
+
+	// TimeZone The installation zone, where a due date is a day.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 // OpenDealRoomThreadRequest defines model for OpenDealRoomThreadRequest.
@@ -55672,9 +55899,11 @@ type ReportingEvidenceRow struct {
 	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerLabel        *string             `json:"owner_label,omitempty"`
 	Restricted        bool                `json:"restricted"`
 	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
 	SourceType        *string             `json:"source_type,omitempty"`
+	StageLabel        *string             `json:"stage_label,omitempty"`
 	Value             *float64            `json:"value"`
 }
 
@@ -55726,6 +55955,10 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenCount Open deals eligible for this forecast period.
+	OpenCount    *int64                `json:"open_count,omitempty"`
+	OpenEvidence *ReportingEvidenceRef `json:"open_evidence,omitempty"`
 
 	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
 	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
@@ -56755,9 +56988,14 @@ type SalesAssessmentConfidence string
 
 // SalesAssessmentCell defines model for SalesAssessmentCell.
 type SalesAssessmentCell struct {
+	// Display Locale-formatted quantity for reader text.
+	Display *string `json:"display,omitempty"`
+
 	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
+
+	// Value Raw source quantity with its unit.
 	Value string `json:"value"`
 }
 
@@ -57038,6 +57276,39 @@ type SaveMyLocaleRequest struct {
 // (`en-GB`, `fr`) is refused rather than approximated, because a locale
 // with no catalog renders as raw message keys.
 type SaveMyLocaleRequestLocale string
+
+// SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
+type SaveMyTimezoneRequest struct {
+	// Source `browser` is the app's guess from the browser, stored only while no
+	// zone is stored. `chosen` is the user's own pick, always stored.
+	Source SaveMyTimezoneRequestSource `json:"source"`
+
+	// Timezone An IANA zone name, such as `Europe/Berlin`.
+	Timezone string `json:"timezone"`
+}
+
+// SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
+// zone is stored. `chosen` is the user's own pick, always stored.
+type SaveMyTimezoneRequestSource string
+
+// SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
+// own time zone, set through `saveMyTimezone`.
+type SaveWorkingHoursRequest struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` means until midnight.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone An older client's way to set the caller's time zone with the hours. When
+	// present it is stored as the caller's own chosen zone, in the same
+	// transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Timezone *string `json:"timezone,omitempty"`
+}
 
 // SavedView A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow.
 type SavedView struct {
@@ -57669,6 +57940,27 @@ type SearchResultTrustTier string
 
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
+
+// SeatCapture Whether the caller's own role and seat let capture write, asked by the same check connect
+// and every sync ask. False hides every connect button; a connected mailbox stops at its
+// next sync.
+type SeatCapture struct {
+	Allowed bool `json:"allowed"`
+
+	// Missing What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+	// `lead`, or `seat` for a read seat. Null when `allowed` is true.
+	Missing *SeatCaptureMissing `json:"missing,omitempty"`
+
+	// Reason Why `allowed` is false; null when it is true.
+	Reason *SeatCaptureReason `json:"reason,omitempty"`
+}
+
+// SeatCaptureMissing What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+// `lead`, or `seat` for a read seat. Null when `allowed` is true.
+type SeatCaptureMissing string
+
+// SeatCaptureReason Why `allowed` is false; null when it is true.
+type SeatCaptureReason string
 
 // SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
@@ -60199,7 +60491,13 @@ type UpdateAcquisitionSourceRequest struct {
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
-	DueAt      *time.Time          `json:"due_at,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+	CallOutcome *UpdateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
+	DueAt       *time.Time                        `json:"due_at,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
@@ -60228,6 +60526,9 @@ type UpdateActivityRequest struct {
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// UpdateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+type UpdateActivityRequestCallOutcome string
 
 // UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 // `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -61565,10 +61866,13 @@ type User struct {
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
 	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
-	Assignable  *bool               `json:"assignable,omitempty"`
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName string              `json:"display_name"`
-	Email       openapi_types.Email `json:"email"`
+	Assignable *bool `json:"assignable,omitempty"`
+
+	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
+	ConnectedMailboxes *int                `json:"connected_mailboxes,omitempty"`
+	CreatedAt          *time.Time          `json:"created_at,omitempty"`
+	DisplayName        string              `json:"display_name"`
+	Email              openapi_types.Email `json:"email"`
 
 	// EmailEditable Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
 	EmailEditable *bool `json:"email_editable,omitempty"`
@@ -61610,9 +61914,12 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone IANA name.
-	Timezone  *string    `json:"timezone,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	Timezone *string `json:"timezone,omitempty"`
+
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -62050,6 +62357,17 @@ type VoiceReviewReason struct {
 	Code   string             `json:"code"`
 	Text   string             `json:"text"`
 	Values map[string]float64 `json:"values"`
+}
+
+// VoiceSentMailLearned The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+// each of them is `added`, `already_present` (a source already, left as it is), or
+// `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+type VoiceSentMailLearned struct {
+	Added          int                `json:"added"`
+	AlreadyPresent int                `json:"already_present"`
+	NoOwnWords     int                `json:"no_own_words"`
+	Read           int                `json:"read"`
+	Summary        VoiceCorpusSummary `json:"summary"`
 }
 
 // WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
@@ -63055,10 +63373,11 @@ type WorkingHours struct {
 	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
 	StartTime string `json:"start_time"`
 
-	// Timezone The IANA zone the two times are read on. A contact who has never
-	// chosen one is read on the installation's reporting timezone, which
-	// is what makes the unset case work rather than scheduling everybody
-	// on UTC.
+	// Timezone The IANA zone the two times are read on: the caller's own time zone.
+	// A contact with no stored zone is read on the installation's
+	// reporting timezone, which is what makes the unset case work rather
+	// than scheduling everybody on UTC. Read-only here; it is set through
+	// `saveMyTimezone`.
 	Timezone string `json:"timezone"`
 }
 
@@ -63990,6 +64309,9 @@ type WorklistItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -64970,6 +65292,9 @@ type PermissionDenied = Problem
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
 
+// RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type RoleCannotCapture = Problem
+
 // SettingLocked RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SettingLocked = Problem
 
@@ -65075,6 +65400,9 @@ type ListActivitiesParams struct {
 	IncludeArchived *IncludeArchived          `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 	Kind            *ListActivitiesParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
 
+	// CallOutcome Calls that ended this way. Matches calls only.
+	CallOutcome *ListActivitiesParamsCallOutcome `form:"call_outcome,omitempty" json:"call_outcome,omitempty"`
+
 	// ChannelProvider Filter to messages carried by one transport. Since `kind=message` no longer names
 	// the transport, this is the only way to ask the question `kind=telegram` used to
 	// answer (ADR-0107).
@@ -65112,6 +65440,9 @@ type ListActivitiesParams struct {
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
 type ListActivitiesParamsKind string
+
+// ListActivitiesParamsCallOutcome defines parameters for ListActivities.
+type ListActivitiesParamsCallOutcome string
 
 // ListActivitiesParamsEntityType defines parameters for ListActivities.
 type ListActivitiesParamsEntityType string
@@ -72352,6 +72683,30 @@ type IngestVoiceCorpusSourceParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// LearnVoiceFromSentMailParams defines parameters for LearnVoiceFromSentMail.
+type LearnVoiceFromSentMailParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // DeleteVoiceCorpusSourceParams defines parameters for DeleteVoiceCorpusSource.
 type DeleteVoiceCorpusSourceParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -73659,8 +74014,11 @@ type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 // SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
 type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
+// SaveMyTimezoneJSONRequestBody defines body for SaveMyTimezone for application/json ContentType.
+type SaveMyTimezoneJSONRequestBody = SaveMyTimezoneRequest
+
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
-type SaveMyWorkingHoursJSONRequestBody = WorkingHours
+type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -74172,6 +74530,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "calendar_managed")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -74266,6 +74632,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'due_at': %w", err)
 		}
 		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
 	}
 
 	if raw, found := object["duration_seconds"]; found {
@@ -74626,6 +75000,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
 	if a.CaptureLabel != nil {
 		object["capture_label"], err = json.Marshal(a.CaptureLabel)
 		if err != nil {
@@ -74703,6 +75084,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -76830,6 +77218,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["channel_provider"]; found {
 		err = json.Unmarshal(raw, &a.ChannelProvider)
 		if err != nil {
@@ -76852,6 +77248,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'due_at': %w", err)
 		}
 		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
 	}
 
 	if raw, found := object["duration_seconds"]; found {
@@ -77086,6 +77490,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
 	if a.ChannelProvider != nil {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
@@ -77104,6 +77515,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -83182,12 +83600,28 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["due_at"]; found {
 		err = json.Unmarshal(raw, &a.DueAt)
 		if err != nil {
 			return fmt.Errorf("error reading 'due_at': %w", err)
 		}
 		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
 	}
 
 	if raw, found := object["is_done"]; found {
@@ -83271,10 +83705,24 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
 	if a.DueAt != nil {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -87660,6 +88108,9 @@ type ServerInterface interface {
 	// End one of your sessions.
 	// (DELETE /me/sessions/{sessionId})
 	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Set the time zone your own times are shown in.
+	// (PUT /me/timezone)
+	SaveMyTimezone(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -88455,6 +88906,9 @@ type ServerInterface interface {
 	// Dry-run one candidate source; detect its shape and speakers without storing anything.
 	// (POST /voice-profiles/{id}/sources/preview)
 	PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id)
+	// Learn the owner's voice from their own most recent sent mail, once, on request.
+	// (POST /voice-profiles/{id}/sources/sent-mail)
+	LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams)
 	// Permanently remove one retained source and mark any active artifact stale.
 	// (DELETE /voice-profiles/{id}/sources/{sourceId})
 	DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams)
@@ -92799,6 +93253,12 @@ func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, s
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Set the time zone your own times are shown in.
+// (PUT /me/timezone)
+func (_ Unimplemented) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // When you are bookable.
 // (GET /me/working-hours)
 func (_ Unimplemented) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
@@ -94389,6 +94849,12 @@ func (_ Unimplemented) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Learn the owner's voice from their own most recent sent mail, once, on request.
+// (POST /voice-profiles/{id}/sources/sent-mail)
+func (_ Unimplemented) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Permanently remove one retained source and mark any active artifact stale.
 // (DELETE /voice-profiles/{id}/sources/{sourceId})
 func (_ Unimplemented) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams) {
@@ -94893,6 +95359,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "call_outcome" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "call_outcome", r.URL.Query(), &params.CallOutcome, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "call_outcome"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "call_outcome", Err: err})
 		}
 		return
 	}
@@ -124393,6 +124872,26 @@ func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SaveMyTimezone operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyTimezone(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -136377,6 +136876,62 @@ func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// LearnVoiceFromSentMail operation middleware
+func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LearnVoiceFromSentMailParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LearnVoiceFromSentMail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
 
@@ -140551,6 +141106,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/timezone", wrapper.SaveMyTimezone)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)
 	})
 	r.Group(func(r chi.Router) {
@@ -141344,6 +141902,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/preview", wrapper.PreviewVoiceCorpusSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/sent-mail", wrapper.LearnVoiceFromSentMail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/voice-profiles/{id}/sources/{sourceId}", wrapper.DeleteVoiceCorpusSource)

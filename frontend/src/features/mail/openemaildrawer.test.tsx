@@ -13,7 +13,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   activity202,
   jsonResponse,
@@ -107,7 +107,7 @@ function drawer(
   const view = render(
     <OpenEmailDrawer
       activityId={MESSAGE}
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={vi.fn()}
     />,
   );

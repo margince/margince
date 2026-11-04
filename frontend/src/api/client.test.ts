@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { problemCode } from "../lib/problem";
 import {
@@ -398,4 +398,38 @@ describe("the api client's model-call count", () => {
 
     expect(seen).toEqual([0]);
   });
+});
+
+it("shows model work when Analytics interpretation outlives a cached answer", async () => {
+  vi.useFakeTimers();
+  let settle: ((reply: Response) => void) | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        }),
+    ),
+  );
+  const pending = api.POST("/analytics/assessment", {
+    body: {
+      selection: {
+        scope: { kind: "workspace" },
+        period: "this_quarter",
+        target_basis: "fiscal_quarter",
+        close_window: "all_open",
+        metrics: [],
+        blocks: [],
+      },
+    },
+  });
+  await vi.advanceTimersByTimeAsync(CACHE_ANSWER_GRACE_MS + 1);
+  expect(modelCallsInFlight()).toBe(1);
+  if (!settle) throw new Error("assessment request did not open");
+  settle(
+    new Response("{}", { headers: { "Content-Type": "application/json" } }),
+  );
+  await pending;
+  expect(modelCallsInFlight()).toBe(0);
 });

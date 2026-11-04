@@ -64,3 +64,8 @@
 1793747477_an_admin_keeps_tax_rates_per_country.down.sql | role | removes that one grant from the same fixed set of system roles
 1793769685_gemini_pro_is_priced_in_two_bands.up.sql | *, ai_model_rate, audit_log | one model on two providers: at most two inserted rows, and the few dated rows of that model still at its old flat price
 1793769685_gemini_pro_is_priced_in_two_bands.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793774861_a_person_says_whether_they_chose_their_time_zone.up.sql | app_user | one row per seat, and a workspace holds at most its licensed seats plus a few agents; only seats that saved working hours are touched
+1793781269_only_a_call_that_reached_somebody_is_contact.up.sql | * | the bodies are the four last_activity_of_* read functions, re-created to read the call outcome, and two triggers re-created to fire on it; the migration validates two checks on a column every row holds NULL in and changes no existing row
+1793781269_only_a_call_that_reached_somebody_is_contact.down.sql | * | the down migration re-creates the same four read functions and two triggers as they were; it changes no existing row
+1793784484_a_sync_can_fail_for_a_role_that_cannot_capture.down.sql | capture_sync_state | one row per mail or calendar connection, and only those whose last sync was refused for the member's role
+1793784485_the_sync_error_class_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

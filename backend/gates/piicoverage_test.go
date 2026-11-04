@@ -211,7 +211,13 @@ var piiTables = map[string]piiHandling{
 	// Held by: TestTheRetentionSweepDestroysTheProviderOriginalToo and
 	// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
-	"raw_capture":          {erasureWrite: true, sarRead: true},
+	"raw_capture": {erasureWrite: true, sarRead: true},
+	// A voice sample read from the owner's sent mail is a copy of that mail's
+	// words, and names whoever the owner wrote to. Both erasers that destroy a
+	// mail's content empty the sample through privacy.RawCapturePurger. Not
+	// exported: the subject's copy of the correspondence is the activity,
+	// which AssembleSAR already hands back.
+	"voice_corpus_source":  {erasureWrite: true, sarRead: false},
 	"capture_party_source": {erasureWrite: true, sarRead: true},
 	"embedding":            {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// The 24-hour capture trace names its counterparty — by address for mail,

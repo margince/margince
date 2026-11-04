@@ -13,7 +13,6 @@ import {
   formatNumber,
 } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralBase,
@@ -35,6 +34,7 @@ import {
   type Node,
   type RadiusOperand,
 } from "../../lib/segmentpredicate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useTagCatalog } from "./tagadmin.queries";
 
 /**
@@ -106,6 +106,7 @@ export type SentenceWords = Readonly<{
 }>;
 
 export function useSentenceWords(): SentenceWords {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -120,7 +121,7 @@ export function useSentenceWords(): SentenceWords {
   const tagNames = new Map(
     (catalog.data?.data ?? []).map((tag) => [tag.id, tag.name]),
   );
-  return { t, plural, locale, zone: viewerZone(), retiredTags, tagNames };
+  return { t, plural, locale, zone: readerZone, retiredTags, tagNames };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */

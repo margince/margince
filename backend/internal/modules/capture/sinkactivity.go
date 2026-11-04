@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -381,20 +380,11 @@ func (s *Sink) upsertActivity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 	fields ActivityFields, birth birthDecision,
 ) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedActivityObject, principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	// Attested outbound is the ONLY write that turns "does this workspace
-	// correspond with them" from no to yes, and a verdict acts on that answer
-	// inside its own transaction — so the two serialize here rather than racing.
-	// Taken only for the attested row: inbound mail cannot change the answer,
-	// and locking every capture insert on its sender would serialize a busy
-	// address against itself for nothing.
-	if rec.Counterparty.SentByOwner() {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			mailidentity.CorrespondenceLockKey(rec.Counterparty.Email)); err != nil {
-			return ids.ActivityID{}, false, err
-		}
+	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {
+		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
 	query, args := capturedActivityInsert(ctx, rec, fields, birth)
