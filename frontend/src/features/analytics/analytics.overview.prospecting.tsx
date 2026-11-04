@@ -5,21 +5,23 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { AssessmentPanel } from "./analytics.assessment";
 import { scopeKey } from "./analytics.context";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
-import { outboundDials } from "./analytics.overview.context";
 import { DoNext } from "./analytics.overview.donext";
 import { MonthlyTargets } from "./analytics.overview.monthly";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
 import {
   ProspectingReadings,
   ProspectingResults,
@@ -33,10 +35,7 @@ import {
   HandoffCohort,
   UpcomingMeetings,
 } from "./analytics.overview.prospectingwork";
-import {
-  OverviewLinks,
-  OverviewSaveActions,
-} from "./analytics.overview.readings";
+import { OverviewSaveActions } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -52,8 +51,7 @@ import {
   validDateRange,
 } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
-import { viewRequest } from "./reporting.views";
-import { OpeningSummary, prospectingSummary } from "./reporting.written";
+import { viewRequest, workflowMetrics } from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -94,15 +92,19 @@ export function MyProspecting({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
   const filters = useOverviewFilters([], "this_week");
   const readsLeads = useCan("lead", "read");
   const summary = useSdrSummary(self?.id ?? "", !!self?.id && readsLeads);
-  const { metrics, blocks: sdrBlocks } = viewRequest(
+  const { metrics: offered, blocks: sdrBlocks } = viewRequest(
     "sdr",
     catalog,
     filters.period,
+  );
+  const metrics = workflowMetrics(
+    offered,
+    workflowTemplate(workflowOf(framework, summary)),
   );
   const selection: ReportingSelection = {
     scope: { kind: "owner", id: self?.id, label: self?.label },
@@ -115,15 +117,23 @@ export function MyProspecting({
     blocks: [],
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
+  const workflow = workflowOf(framework, summary);
+  useOverviewNavigation("prospecting", selection, {
+    start: filters.start,
+    end: filters.end,
+  });
   const query = useReportingEvaluation(
     selection,
-    !!self?.id && validDates && metrics.length > 0,
+    !!self?.id && validDates && metrics.length > 0 && workflow !== "pending",
   );
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
     useSelectionEvidence(JSON.stringify(selection));
   const weeks = useProspectingWeeks(
     query.data,
-    weekOutcome(workflowOf(framework, summary)),
+    weekOutcome(
+      workflowOf(framework, summary),
+      catalog.metrics.some((metric) => metric.id === "leads_qualified"),
+    ),
   );
   // Each opener keeps the read it was pressed in: a week's column its weeks,
   // every other figure the week's evaluation.
@@ -141,9 +151,11 @@ export function MyProspecting({
       </SurfaceState>
     );
   }
-  const workflow = workflowOf(framework, summary);
   const known = workflow === "handoff" || workflow === "qualification";
-  const outcome = weekOutcome(workflow);
+  const outcome = weekOutcome(
+    workflow,
+    catalog.metrics.some((metric) => metric.id === "leads_qualified"),
+  );
   const retryWorkflow = () => {
     void framework.refetch();
     void summary.refetch();
@@ -225,11 +237,7 @@ export function MyProspecting({
             )}
           </QueryGate>
         </div>
-        <ProspectingMoves
-          evaluation={query.isError ? undefined : query.data}
-          workflow={known ? workflow : undefined}
-          waiting={summary.data?.handoffs?.waiting}
-        />
+        <DoNext />
       </div>
       <ProspectingWork
         self={self.id}
@@ -238,6 +246,20 @@ export function MyProspecting({
         week={query.data}
         weeks={weeks}
         onEvidence={openFrom}
+        outlook={
+          query.data &&
+          known &&
+          !query.isError && (
+            <AssessmentPanel
+              view="prospecting"
+              work={summary.data}
+              workPending={summary.isLoading}
+              selection={query.data.selection}
+              evaluation={query.data}
+              onEvidence={openFrom}
+            />
+          )
+        }
       />
       {evidence && query.data && (
         <ReportingEvidenceDrawer
@@ -247,55 +269,11 @@ export function MyProspecting({
           onClose={closeEvidence}
         />
       )}
-      <OverviewLinks
-        dials={outboundDials("prospecting", {
-          // The reader's own work, never a colleague's or a team's.
-          scope: scopeKey(self),
-          period: filters.period,
-          from: filters.period === "custom" ? filters.start : undefined,
-          through: filters.period === "custom" ? filters.end : undefined,
-        })}
-        sections={[
-          { section: "sdr", label: t("reporting.sdr") },
-          { section: "leads", label: t("reporting.leads") },
-        ]}
-      />
     </>
   );
 }
 
-// The short explanation and the first moves of the day, beside the results.
-function ProspectingMoves({
-  evaluation,
-  workflow,
-  waiting,
-}: Readonly<{
-  evaluation: ReportingEvaluation | undefined;
-  workflow: Workflow | undefined;
-  waiting: number | undefined;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  return (
-    <div className="analytics-column">
-      {evaluation && (
-        <OpeningSummary
-          title={t("analytics.overview.summary")}
-          sentences={prospectingSummary(evaluation, workflow, waiting, {
-            t,
-            plural,
-            locale,
-          })}
-        />
-      )}
-      <DoNext />
-    </div>
-  );
-}
-
-// Below the first screen: who the reader waits on, the meetings ahead, and how
-// the recent weeks and the submitted handoffs turned out.
+// Meetings and waiting work precede interpretation; outcome history follows it.
 function ProspectingWork({
   self,
   workflow,
@@ -303,7 +281,9 @@ function ProspectingWork({
   week,
   weeks,
   onEvidence,
+  outlook,
 }: Readonly<{
+  outlook: ReactNode;
   self: string;
   workflow: WorkflowState;
   summary: ReturnType<typeof useSdrSummary>;
@@ -326,10 +306,13 @@ function ProspectingWork({
           )}
         />
       </div>
+      {outlook}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
         <div className="analytics-pair">
-          <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          <Disclosure summary={t("analytics.prospect.historyTitle")}>
+            <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          </Disclosure>
           {workflow === "handoff" && (
             <HandoffCohort self={self} evaluation={week} />
           )}
@@ -378,35 +361,47 @@ function Waiting({
   );
 }
 
-// Without SDR handoffs the page says why it counts qualified leads, and shows
-// the one who can change that where the setting is.
 export function QualificationNote() {
   const t = useT();
   const canEdit = useCanWrite("reporting_framework", "update");
   return (
-    <p className="t-caption">
-      {t("analytics.overview.noHandoffs")}{" "}
-      {canEdit ? (
-        <AppLink
-          className="btn btn-link"
-          href={analyticsSectionHref("definitions", new Map())}
-        >
-          {t("analytics.overview.changeWorkflow")}
-        </AppLink>
-      ) : (
-        t("analytics.overview.workflowWho")
-      )}
-    </p>
+    <Disclosure summary={t("reporting.definitions")}>
+      <p className="t-caption">
+        {t("analytics.overview.noHandoffs")}{" "}
+        {canEdit ? (
+          <AppLink
+            className="btn btn-link"
+            href={analyticsSectionHref("definitions", new Map())}
+          >
+            {t("analytics.overview.changeWorkflow")}
+          </AppLink>
+        ) : (
+          t("analytics.overview.workflowWho")
+        )}
+      </p>
+    </Disclosure>
   );
 }
 
-function weekOutcome(workflow: WorkflowState): ProspectingOutcome | undefined {
-  if (workflow === "handoff") return "accepted_opportunities";
-  if (workflow === "qualification") return "leads_promoted";
+function workflowTemplate(workflow: WorkflowState): string | undefined {
+  if (workflow === "handoff") return "sdr";
+  if (workflow === "qualification") return "sales";
   return undefined;
 }
 
-// A week's columns answer their own evaluation, so the drawer reads that one.
+function weekOutcome(
+  workflow: WorkflowState,
+  events: boolean,
+): ProspectingOutcome | undefined {
+  if (workflow === "handoff") return "accepted_opportunities";
+  if (workflow === "qualification")
+    return events ? "leads_qualified" : "leads_promoted";
+  return undefined;
+}
+
+{
+  /* A week's columns answer their own evaluation, so the drawer reads that one. */
+}
 function weeksOwn(
   reference: ReportingEvidenceRef,
   weeks: ReportingEvaluation | undefined,

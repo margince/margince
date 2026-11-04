@@ -225,9 +225,14 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // scoped to a contact, and a retention window is scoped to time. So the purger
 // is a constructor argument, and EvaluateInstallation refuses the whole pass,
 // before it touches a record, if it is nil.
+//
+// PurgeTextCopiesTx empties the copies other modules took of the given
+// activities' text, such as a voice sample read from sent mail. It rides the
+// same seam because every path that destroys the original destroys them too.
 type RawCapturePurger interface {
 	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
+	PurgeTextCopiesTx(context.Context, pgx.Tx, []ids.UUID) error
 }
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without

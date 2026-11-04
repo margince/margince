@@ -158,15 +158,13 @@ func dueMarker(due *time.Time) string {
 // heldByAnother reports whether a named colleague, and not the reader, holds
 // this task.
 //
-// An agent claims nobody's work as its own. A passport carries its granting
-// human's UserID, so comparing ids would answer about that human and the
-// phrasing would call their task "ours". auth.RequireHuman is what tells the
-// two apart, which a check for a non-zero id does not.
+// An agent on its user's passport reads as that user, so its dismissal key is
+// theirs. Passportless work holds nothing, whatever id it carries.
 func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 	if task.AssigneeId == nil {
 		return false
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return true
 	}
 	viewer, ok := principal.Actor(ctx)

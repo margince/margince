@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // JustInDays is how far back a record page leads with what arrived. Older
@@ -96,8 +97,9 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 }
 
 // answersThemSQL keeps a row under alias a that answers them. That is anything
-// we sent, a call, or a meeting that was not canceled or a no-show. A note answers nobody.
-const answersThemSQL = `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR a.kind = 'call'
+// we sent, a call that reached somebody (relstrength.CallCountsSQL), or a
+// meeting that was not canceled or a no-show. A note answers nobody.
+var answersThemSQL = `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind = 'call' AND ` + relstrength.CallCountsSQL("a") + `)
  OR (a.kind = 'meeting' AND a.meeting_status IS DISTINCT FROM 'canceled' AND a.meeting_status IS DISTINCT FROM 'no_show'))`
 
 // markLatestInboundTasks drops an item a task already stands for, which

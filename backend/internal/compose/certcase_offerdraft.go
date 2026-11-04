@@ -232,6 +232,20 @@ type offerDraftRateCard map[ids.ProductID]crmcontracts.Product
 // GetProduct ignores the archived filter because this rate card holds only the
 // live products the catalogue read returns, so LiveOnly and IncludeArchived are
 // the same question of it.
+// ProductNamesIn answers each product's own name: the fixture's products carry
+// no translations.
+func (r offerDraftRateCard) ProductNamesIn(
+	_ context.Context, _ string, products []ids.UUID,
+) (map[ids.UUID]string, error) {
+	out := make(map[ids.UUID]string, len(products))
+	for _, id := range products {
+		if product, live := r[ids.From[ids.ProductKind](id)]; live {
+			out[id] = product.Name
+		}
+	}
+	return out, nil
+}
+
 func (r offerDraftRateCard) GetProduct(
 	_ context.Context, id ids.ProductID, _ storekit.ArchivedFilter,
 ) (crmcontracts.Product, error) {
@@ -256,6 +270,10 @@ type offerDraftCase struct {
 // the same request in the shape-retry when the brain supports one, and a case
 // that retried would certify the answer a model gives after being told it got
 // the shape wrong rather than the answer it gives.
+// offerDraftCaseLanguage is the language every case drafts in, pinned for the
+// reason Run gives.
+const offerDraftCaseLanguage = string(textlang.English)
+
 func (c *offerDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a
@@ -263,7 +281,7 @@ func (c *offerDraftCase) Run(ctx context.Context, completer aitasks.Completer) (
 	// one that changed its mind. The rule is PRESENT in the graded request for
 	// the same reason — production sends one, so a case that left it out would
 	// grade a prompt the product does not send.
-	req := offerDraftRequest(c.dealContext, c.catalog, string(textlang.English))
+	req := offerDraftRequest(c.dealContext, c.catalog, offerDraftCaseLanguage)
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {
@@ -353,7 +371,7 @@ func (c *offerDraftCase) gate(candidates []offerLineCandidate) ([]deals.StagedOf
 		// The gate's only I/O is the rate-card lookup, which this case serves from
 		// the fixture's own products, so it needs nothing from the run's context.
 		lines, err := c.drafter.groundOfferLines(
-			context.Background(), candidates[i:i+1], c.dealContext, c.currency)
+			context.Background(), candidates[i:i+1], c.dealContext, c.currency, offerDraftCaseLanguage)
 		switch {
 		case err != nil:
 			return nil, nil, fmt.Errorf(

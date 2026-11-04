@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { routeHash } from "../../lib/router";
 import { bookingInvitation } from "../../testing/book.testkit";
 import {
@@ -70,7 +70,7 @@ it("names the meeting in its heading, with its delivery as a badge and its time 
   expect(screen.getByRole("status").textContent).toBe(
     "Calendar invitation created",
   );
-  const zone = viewerZone();
+  const zone = browserZone();
   expect(
     screen.getByText(
       `${formatDayFull(bookingInvitation.start, "en", zone)} · ${formatTimeRange(bookingInvitation.start, bookingInvitation.end, "en", zone)}`,
@@ -155,6 +155,27 @@ it("keeps the host's delivery and link notes off the guest's page", async () => 
   expect(screen.queryByText("Video call", { selector: "dt" })).toBeNull();
   expect(screen.queryByRole("region", { name: "Delivery" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+});
+
+// A refused calendar parked the host's whole queue: retrying one invitation
+// would fail the same way, so the notice sends the host to reconnect instead.
+it("sends the host to reconnect when their calendar refused Margince", async () => {
+  host({
+    status: "needs_attention",
+    version: 4,
+    attention_reason: "calendar_disconnected",
+  });
+  const notice = (
+    await screen.findByText("Your calendar refused Margince")
+  ).closest(".callout");
+  if (!(notice instanceof HTMLElement))
+    throw new Error("The refusal is explained in a callout");
+  expect(
+    within(notice).getByRole("button", { name: "Reconnect calendar" }),
+  ).toBeTruthy();
+  expect(
+    within(notice).queryByRole("button", { name: "Retry invitation" }),
+  ).toBeNull();
 });
 
 it("offers a retry of the same invitation before cancelling when the calendar refused it", async () => {

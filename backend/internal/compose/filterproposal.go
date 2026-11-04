@@ -194,12 +194,12 @@ func (h filterProposalHandlers) vocabulary(ctx context.Context, resource string)
 }
 
 // language is the reader's own interface language when the client sent it, and
-// the installation's base language otherwise.
+// the language they chose for their seat otherwise.
 func (h filterProposalHandlers) language(ctx context.Context, locale *crmcontracts.FilterProposalRequestLocale) string {
 	if locale != nil {
 		return string(*locale)
 	}
-	return identity.BaseLanguageForPrompt(ctx, h.pool)
+	return identity.ReaderLanguageForPrompt(ctx, h.pool)
 }
 
 func wireProposal(

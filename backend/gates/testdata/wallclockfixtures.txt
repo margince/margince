@@ -55,6 +55,7 @@ internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1
 internal/compose/connectors_csrf_test.go 1
 internal/compose/connectors_graph_test.go 2
+internal/compose/connectors_seatcapture_test.go 1
 internal/compose/connectors_test.go 3
 internal/compose/connectors_wiring_test.go 1
 internal/compose/correctionrevert_integration_test.go 2
@@ -187,6 +188,7 @@ internal/compose/integration/pinstageevidence_integration_test.go 1
 internal/compose/integration/project360_integration_test.go 7
 internal/compose/integration/project360dealmask_integration_test.go 1
 internal/compose/integration/project_legal_hold_integration_test.go 3
+internal/compose/integration/projecthealth_integration_test.go 1
 internal/compose/integration/providerclaims_integration_test.go 1
 internal/compose/integration/providerprivatecapture_integration_test.go 2
 internal/compose/integration/providerprofile_integration_test.go 5
@@ -234,7 +236,7 @@ internal/compose/integration/workflow_approval_staging_integration_test.go 1
 internal/compose/integration/workflow_dispatch_bench_test.go 2
 internal/compose/integration/workflow_integration_test.go 4
 internal/compose/invitedtaskassignee_integration_test.go 1
-internal/compose/jobs_storedobject_integration_test.go 5
+internal/compose/jobs_storedobject_integration_test.go 1
 internal/compose/jobtimeout_integration_test.go 1
 internal/compose/lastcontact_integration_test.go 1
 internal/compose/leadladder_manual_integration_test.go 2
@@ -387,6 +389,7 @@ internal/modules/consent/privacyinfo_integration_test.go 2
 internal/modules/consent/qualifyingevent_integration_test.go 8
 internal/modules/consent/reviewcontextids_test.go 1
 internal/modules/consent/rightscase_integration_test.go 2
+internal/modules/consent/rulesonce_integration_test.go 1
 internal/modules/consent/submissionreview_integration_test.go 1
 internal/modules/consent/suppressionverdict_integration_test.go 5
 internal/modules/consent/textversion_integration_test.go 3

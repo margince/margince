@@ -71,13 +71,13 @@ var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasureOf resolves the stored measure inside a transaction the
-// caller already holds.
+// caller already holds, and whether anybody chose it.
 //
 // Here rather than in the composition for the reason FiscalYearStartMonthOf is:
 // how this setting is read belongs with the entry that declares it, so a
 // wiring site injecting it does not restate the default or the key.
-func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return config.StoredValTx(ctx, tx, config.Bound(), ForecastForwardMeasure)
+func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, bool, error) {
+	return config.StoredChosenTx(ctx, tx, config.Bound(), ForecastForwardMeasure)
 }
 
 // FiscalYearStartMonthOf resolves the month the installation's business year

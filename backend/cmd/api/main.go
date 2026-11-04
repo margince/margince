@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 func main() {
@@ -50,8 +51,13 @@ func main() {
 	}
 }
 
-// start is --check-config when args ask for it, and the boot otherwise.
+// start is --version or --check-config when args ask for it, and the boot
+// otherwise.
 func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-api"))
+		return err
+	}
 	if checked, err := checkAPIConfig(args, config.Environ(), stdout); checked || err != nil {
 		return err
 	}
@@ -397,7 +403,7 @@ func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pg
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	m, err := compose.OperatorMailer(ctx, pool, vault, settings, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, letterheadBlobstore(ctx, settings, logger), settings, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -415,6 +421,24 @@ func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pg
 		compose.WithOperatorMail(m),
 		compose.WithDealRoomInviteMail(m),
 	}, nil
+}
+
+// letterheadBlobstore is the object store operator mail reads the company logo
+// from. The mail still goes out without one, headed by the company name, so a
+// store that will not open is logged rather than refusing the boot: the
+// attachment wiring reports the same fault as a boot error of its own.
+//
+//nolint:ireturn // the store has three providers behind one interface.
+func letterheadBlobstore(ctx context.Context, settings *config.Config, logger *slog.Logger) blobstore.Store {
+	blob, configured, err := blobstore.FromConfig(ctx, settings)
+	if err != nil {
+		logger.WarnContext(ctx, "operator mail is headed by the company name alone: the object store could not be opened", "cause", err)
+		return nil
+	}
+	if !configured {
+		return nil
+	}
+	return blob
 }
 
 // blobstoreOptions wires the attachment endpoints (and their /readyz probe +

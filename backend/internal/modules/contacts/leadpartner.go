@@ -175,7 +175,7 @@ func (s *Store) AcceptPartnerLead(ctx context.Context, id ids.LeadID) (crmcontra
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)

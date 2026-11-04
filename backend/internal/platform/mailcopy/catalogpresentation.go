@@ -24,6 +24,7 @@ func workPresentationLines(line writeLine) {
 		"Some team information is missing. Check the team view for details.",
 		"Ein Teil der Teaminformationen fehlt. Prüfe die Details in der Teamübersicht.",
 		"Thiếu một phần thông tin nhóm. Kiểm tra trong tổng quan nhóm.")
+	line(func(c *Copy) *string { return &c.PoweredBy }, "Powered by Margince", "Bereitgestellt von Margince", "Được cung cấp bởi Margince")
 	line(func(c *Copy) *string { return &c.InviteBy }, "%s invited you to join %s.", "%s hat dich zu %s eingeladen.", "%s đã mời bạn tham gia %s.")
 	line(func(c *Copy) *string { return &c.MailWhy }, "You receive this because email delivery is enabled in your notification settings.", "Du erhältst diese E-Mail, weil der E-Mail-Versand in deinen Benachrichtigungseinstellungen aktiviert ist.", "Bạn nhận được thư này vì đã bật gửi email trong cài đặt thông báo.")
 	line(func(c *Copy) *string { return &c.MailCoverage },

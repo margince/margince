@@ -46,9 +46,9 @@ var Revision string
 // single source of the answer can settle. Left "dev" by a plain `docker build`
 // and empty by a bare `go build`, both of which Unknown answers for.
 //
-// The value is the constellation release version (`YYYY.<edition>`; the PoC
-// pipeline cuts `1970.<build>`). It is compared for EQUALITY only — never
-// ordered. A set is either one release or it is not.
+// The value is the release version: the `v*` tag for a tagged release, and
+// `1970.<build>` from the constellation lane. It is compared for equality only,
+// never ordered. A set is either one release or it is not.
 var ReleaseVersion string
 
 // Unknown is the value a comparison must not be made against — either side
@@ -86,4 +86,24 @@ func SkewBetween(mine, theirs string) bool {
 		return false
 	}
 	return mine != theirs
+}
+
+// VersionLine is what every program prints for `--version`: its name, its
+// release and its commit. A server install reads its release here, so a fact
+// the build did not stamp prints as Unknown, never as an empty field.
+func VersionLine(program string) string {
+	return program + " " + orUnknown(ReleaseVersion) + " (revision " + orUnknown(Revision) + ")"
+}
+
+// AsksForVersion reports whether the program was started as `<program>
+// --version`, which answers before any configuration is read.
+func AsksForVersion(args []string) bool {
+	return len(args) == 1 && args[0] == "--version"
+}
+
+func orUnknown(fact string) string {
+	if Comparable(fact) {
+		return fact
+	}
+	return Unknown
 }

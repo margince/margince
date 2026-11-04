@@ -108,7 +108,7 @@ type stubDisclosures struct {
 	asked []string
 }
 
-func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string) ([]DisclosureLine, error) {
+func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string) ([]DisclosureLine, error) {
 	s.asked = append(s.asked, category)
 	return s.lines, nil
 }

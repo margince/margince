@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 // How many reads each Analytics opening view makes, under the app's own query
 // client. Here rather than beside the screen, because a feature test may not
 // import the shell's client.
@@ -63,10 +63,11 @@ const SALES: View = {
   optional: (url) =>
     path(url) === "/v1/forecast/assurance/exceptions" ||
     path(url) === "/v1/analytics/decisions" ||
+    path(url) === "/v1/analytics/assessment" ||
     (path(url) === "/v1/analytics/evaluate" &&
       (isMovement(url) || isChartRead(url))),
-  // The movement read, the chart read and the decisions list.
-  inFlight: 3,
+  // The movement read, the chart read, the decisions list and the assessment.
+  inFlight: 4,
 };
 
 // Sales review's chart read: the board's charts with the metrics they belong to.
@@ -281,12 +282,12 @@ describe("the request census of each opening view", () => {
     const period = await screen.findByRole("combobox", { name: "Date range" });
     await user.click(period);
     await user.click(await screen.findByRole("option", { name: "This month" }));
-    expect(await screen.findByText("€123k")).toBeVisible();
+    expect(await screen.findByText("123,000 EUR")).toBeVisible();
     const quarter = asked.find(
       ({ url }) => url.searchParams.get("period") === "this_quarter",
     );
     expect(quarter?.signal?.aborted).toBe(true);
     releaseQuarter(jsonResponse(salesEvaluation()));
-    await waitFor(() => expect(screen.queryByText("€420k")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("420,000 EUR")).toBeNull());
   });
 });

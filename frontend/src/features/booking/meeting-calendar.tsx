@@ -25,6 +25,7 @@ import {
   useConnectAccount,
 } from "../../lib/connect-account";
 import { missingCalendarWriteGrant } from "../../lib/connector-status";
+import { captureRefusalOf, useConnectors } from "../../lib/connectors";
 import { navigate } from "../../lib/router";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
@@ -118,13 +119,15 @@ function useCalendarDraft(
   const { provider, ready, selected, calendars } = calendar;
   const dirty =
     JSON.stringify(calendarFields(form)) !==
-      JSON.stringify(calendarFields(baseline)) ||
-    (provider !== "" && provider !== baseline.provider);
+    JSON.stringify(calendarFields(baseline));
   const writable =
     ready && !!selected?.writable && !calendars.isFetching && !!provider;
   useSaveDraft({
     // A calendar that is not ready cannot be saved; its row's Reconnect says so.
     dirty: dirty && ready,
+    // The live calendar the card picked by itself: shown as the answer, not an edit.
+    offered: ready && provider !== "" && provider !== baseline.provider,
+    offer: provider,
     // The card says why beside the choice.
     invalid: !selected || !writable,
     save: async () => {
@@ -259,10 +262,13 @@ function CalendarConnectionRow({
   const { locale } = useLocale();
   const now = useNow(60_000);
   const reconnect = useConnectAccount();
+  const refusal = captureRefusalOf(useConnectors().data);
   const expired = connection.status === "reauth_required";
   const readOnly = !expired && missingCalendarWriteGrant(connection);
-  const syncedAt = connection.last_synced_at
-    ? Date.parse(connection.last_synced_at)
+  // The last sync that worked: `last_synced_at` is the last attempt, which a
+  // failing calendar keeps moving.
+  const syncedAt = connection.last_success_at
+    ? Date.parse(connection.last_success_at)
     : Number.NaN;
   const openConnections = () =>
     navigate({ screen: "settings", id: "connections" });
@@ -297,7 +303,7 @@ function CalendarConnectionRow({
         )
       }
       action={
-        ready ? (
+        ready || refusal ? (
           <Button onClick={openConnections}>
             {t("scheduling.openConnections")}
           </Button>
@@ -315,7 +321,7 @@ function CalendarConnectionRow({
         )
       }
       menu={
-        ready ? undefined : (
+        ready || refusal ? undefined : (
           <OverflowMenu label={calendarName(t, provider)}>
             <Button onClick={openConnections}>
               {t("scheduling.openConnections")}
@@ -324,6 +330,7 @@ function CalendarConnectionRow({
         )
       }
     >
+      {!ready && refusal && <p className="t-caption">{t(refusal)}</p>}
       <ConnectRefusal connect={reconnect} />
     </ProviderRow>
   );

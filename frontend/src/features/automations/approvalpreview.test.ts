@@ -924,7 +924,7 @@ it.each(LOCALES)("labels contact source context in %s", (locale) => {
 });
 
 it.each(LOCALES)("describes offer creation and full terms in %s", (locale) => {
-  const terms = "First paragraph.\n\n" + "Complete terms. ".repeat(40);
+  const terms = `First paragraph.\n\n${"Complete terms. ".repeat(40)}`;
   const rows = commercialPreviewDisplay(
     {
       ...preview,

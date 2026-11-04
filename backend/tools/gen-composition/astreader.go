@@ -338,21 +338,13 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		// The manifest's risk tiers are already set, from the merged contract.
 		// What the Go slice contributes is the join: behavior for a verb the
 		// contract does not declare is a defect, reported at its own line.
-		var tools []declaredTool
-		tools, err = r.readTools(kv.Value, file)
-		if err == nil {
-			err = r.joinToolsToContract(served(tools), r.verbs)
-		}
+		err = r.readToolsField(kv.Value, file)
 	case "Jobs":
 		// Symmetric with Tools: the manifest's job risk tiers are already set,
 		// from the merged contract. What the Go slice contributes is the join —
 		// behavior for a job the contract does not declare is a defect,
 		// reported at its own line.
-		var declared []declaredTool
-		declared, err = r.readJobs(kv.Value, file)
-		if err == nil {
-			err = r.joinJobsToContract(served(declared), r.jobs)
-		}
+		err = r.readJobsField(kv.Value, file)
 	case "Jurisdictions", "Messaging", "SubjectRights", "Documents":
 		// Recognized and skipped. All four are policy or content the core
 		// consults: retention floors, messaging rules, request deadlines and
@@ -439,4 +431,20 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		err = r.readDeclaredField(key.Name, kv, file, m)
 	}
 	return err
+}
+
+func (r *unitReader) readToolsField(value ast.Expr, file *ast.File) error {
+	tools, err := r.readTools(value, file)
+	if err != nil {
+		return err
+	}
+	return r.joinToolsToContract(served(tools), r.verbs)
+}
+
+func (r *unitReader) readJobsField(value ast.Expr, file *ast.File) error {
+	declared, err := r.readJobs(value, file)
+	if err != nil {
+		return err
+	}
+	return r.joinJobsToContract(served(declared), r.jobs)
 }

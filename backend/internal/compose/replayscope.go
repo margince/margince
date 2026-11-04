@@ -372,10 +372,11 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/contacts/{id}/consent":     {object: tableContact, table: tableContact, pathParam: "id"},
 	"POST /v1/company/site-reads":        {object: tableCompany, rowNote: "an ingestion job against the installation's own company (A107), not a customer record"},
 
-	"POST /v1/company/site-reads/{readId}/confirm":  {object: tableCompany, rowNote: "the installation's singleton company profile — one company per installation (A107), so there is no row to scope"},
-	"POST /v1/voice-profiles/{id}/builds":           {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
-	"POST /v1/voice-profiles/{id}/draft-rejections": {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
-	"POST /v1/voice-profiles/{id}/sources":          {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
+	"POST /v1/company/site-reads/{readId}/confirm":   {object: tableCompany, rowNote: "the installation's singleton company profile — one company per installation (A107), so there is no row to scope"},
+	"POST /v1/voice-profiles/{id}/builds":            {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
+	"POST /v1/voice-profiles/{id}/draft-rejections":  {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
+	"POST /v1/voice-profiles/{id}/sources":           {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
+	"POST /v1/voice-profiles/{id}/sources/sent-mail": {object: tableVoiceProfile, rowNote: "the response holds counts and the corpus meter only; no mail text and no source"},
 
 	"POST /v1/voice-profiles/{id}/versions/{profileVersion}/apply":    {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
 	"POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject":   {object: tableVoiceProfile, table: tableVoiceProfile, pathParam: "id"},
@@ -438,6 +439,7 @@ var replayableOperations = map[string]replayTarget{
 	// record.
 	"POST /v1/projects/{id}/health-assessments":                             {object: tableProject, table: tableProject, pathParam: "id"},
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {object: tableProject, table: tableProject, pathParam: "id"},
+	"POST /v1/projects/{id}/health-assessments/{assessment_id}/undo":        {object: tableProject, table: tableProject, pathParam: "id"},
 	"PATCH /v1/record-roles/{id}":                                           {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/lead-disqualify-reasons":                                      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-disqualify-reasons/{id}":                                {object: objectCustomField, rowNote: noOwnerCatalog},

@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ForecastShareActions, ShareViewButton } from "./analytics.share";
@@ -379,7 +379,7 @@ describe("the links a reader has shared", () => {
 
     const north = await within(drawer).findByText("Team North");
     expect(north).toBeTruthy();
-    const zone = viewerZone();
+    const zone = browserZone();
     const northRow = rowOf("Team North");
     expect(northRow.textContent).toContain("Live view");
     expect(northRow.textContent).toContain(
@@ -435,7 +435,7 @@ describe("the links a reader has shared", () => {
     // are told apart by the verb that ends each.
     expect(verb).toHaveAccessibleDescription(
       new RegExp(
-        `Live view.*Created ${formatDate(northLink.created_at, "en", viewerZone())}.*Team North`,
+        `Live view.*Created ${formatDate(northLink.created_at, "en", browserZone())}.*Team North`,
       ),
     );
     await user.click(verb);

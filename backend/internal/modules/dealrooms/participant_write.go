@@ -37,13 +37,13 @@ type IssuedInvitation struct {
 
 // InviteParticipant admits a named contact and mints their credential.
 //
-// Human-only: deciding which outside contact may read a deal's material is not a
-// judgement an agent makes.
+// Deciding which outside contact may read a deal's material is the user's
+// judgement, or their agent's at their word, never automatic work's.
 func (s *Store) InviteParticipant(ctx context.Context, roomID ids.DealRoomID, in InviteInput) (IssuedInvitation, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return IssuedInvitation{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return IssuedInvitation{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -135,7 +135,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return IssuedInvitation{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return IssuedInvitation{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -198,7 +198,7 @@ func (s *Store) RevokeParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
 	var out crmcontracts.DealRoomParticipant
@@ -291,7 +291,7 @@ func (s *Store) UpdateParticipant(ctx context.Context, roomID ids.DealRoomID, pa
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomParticipant{}, err
 	}
 	var out crmcontracts.DealRoomParticipant

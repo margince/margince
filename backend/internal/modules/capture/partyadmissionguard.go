@@ -222,7 +222,7 @@ func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (cont
 	}
 	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
 	ctx = principal.WithActor(ctx, actor)
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedContactObject, principal.ActionCreate); err != nil {
 		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}
 	return ctx, nil

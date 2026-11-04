@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // flakyEffect fails while failing is true, and otherwise redeems as a real
@@ -212,5 +213,31 @@ func TestAFailureAfterTheRedemptionReachesTheDecider(t *testing.T) {
 	}
 	if listed[0].Retryable {
 		t.Error("a redeemed approval is offered for retry, which the approve endpoint refuses")
+	}
+}
+
+// The decider's agent clears a failure from the decider's list. It reads the
+// same list, and its acknowledgement is its own in the audit row.
+func TestAnAgentAcknowledgesAFailureItsUserDecided(t *testing.T) {
+	e := setupStaging(t)
+	effect := &flakyEffect{e: e, failing: true}
+	deciding := e.asHumanWith(decidesEverything())
+	id := e.failedDecision(deciding, t, effect.run)
+	first := e.markOf(t, id)
+
+	p, ok := principal.Actor(deciding)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+	agent := principal.WithActor(deciding, p)
+	if listed := e.ownFailures(agent, t); len(listed) != 1 {
+		t.Fatalf("the agent's list = %+v, want its user's one failure", listed)
+	}
+	if err := e.svc.AcknowledgeEffectFailure(agent, id, first); err != nil {
+		t.Fatalf("the agent acknowledging: %v", err)
+	}
+	if got := e.ownFailures(deciding, t); len(got) != 0 {
+		t.Errorf("the acknowledged failure is still on its decider's list: %d rows", len(got))
 	}
 }

@@ -36,7 +36,7 @@ func TestAReminderFollowsTheReachOfItsMail(t *testing.T) {
 		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
 		messageID: ids.NewV7().String() + "@customer.example",
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), mail, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), mail, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
@@ -114,7 +114,7 @@ func TestAReminderAHumanNarrowedKeepsItsAudience(t *testing.T) {
 		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
 		messageID: ids.NewV7().String() + "@customer.example",
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), mail, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), mail, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})

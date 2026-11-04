@@ -77,24 +77,12 @@ one certification run can cover:
 
 ## Steps
 
-1. **Get the declaration into the contract.**
-   `backend/api/ai-tasks.yaml` is a **mirror**.
-   The AI task contract that rules is kept in a specification repository the maintainers own.
-   This file must match it word for word.
-   So the declaration is agreed there first, and lands here as a copy.
+1. **Declare the task in the contract**, `backend/api/ai-tasks.yaml`.
+   This file rules the AI task list; no other document comes before it.
+   To ask for a new task, open an issue with the YAML block below.
+   Add a sentence on what calls it.
 
-   What that means for you depends on where you are:
-
-   - Maintainer, or working with access to the specification: land the declaration in the specification
-     repository. Then copy it into `ai-tasks.yaml` with no change.
-   - Someone outside the team: **open an issue** that asks for the task or site. Fill in the YAML block
-     below, and add a sentence on what calls it. A maintainer lands it in the specification. Your pull request
-     then carries the copy and everything from step 2 on.
-
-     Do not skip to a later step and edit `ai-tasks.yaml` on its own. A mirror with no declaration in the specification behind it cannot be merged, even with a green build.
-     No gate finds this order, because every check compares the code against this repository's copy.
-
-   The declaration itself, the shape to put in that issue and to copy here:
+   The declaration has this shape:
 
    ```yaml
    tasks:
@@ -113,8 +101,9 @@ one certification run can cover:
    ```
 
    - `status`: `shipped` means every name in `sites[]` must exist, be registered, own a certification case
-     and own a corpus scenario. `planned` allows none of the four. Declare `planned` while the site is not written yet.
-     Change it to `shipped` in the commit that adds the site.
+     and own a corpus scenario. A `planned` task lists no `sites[]` at all, and has no case, scenario or record.
+     Declare `planned` while no site is written yet; name the sites to come in `doc`.
+     Add `sites[]` and change it to `shipped` in the commit that adds the first site.
    - `company_context`: `none`, or scopes and `token_budget` (and `conditional` for "only when the caller
      asks"). You must set it: a missing rule is a build error, never a default at run time.
    - `no_payload: true`: content from this task must never reach `ai_call_payload`, for any capture rule the
@@ -282,8 +271,8 @@ Write the question to the guide for decision models. Do not copy the prompt:
 - A record covers one (provider, model, `env`) binding. An edit to the prompt, the request builder, the grader
   or the score rule gives a new version and marks the record **stale**. Certify again; do not edit a record
   by hand.
-- **Renaming** a task or site starts in the specification, like any other contract change. It then lands
-  here in each place the old name was used. That is the copied declaration, the census line, and the case's
+- **Renaming** a task or site starts in `ai-tasks.yaml`, like any other contract change. It then lands
+  in each place the old name was used. That is the declaration, the census line, and the case's
   `Site()`. It is also the corpus `site:` field, the record folder, and any entry keyed by the old name.
 - **Removing a site** means you also delete its corpus scenarios and its record. A record left behind claims a
   band for a prompt that no longer ships.

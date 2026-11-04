@@ -7,12 +7,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { telUri } from "../../format/contacturi";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { ContactMemory } from "./contactmemory";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 type Contact360 = components["schemas"]["Contact360"];
 type Activity = components["schemas"]["Activity"];
@@ -346,13 +351,13 @@ describe("the What was said card", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <LocaleProvider initial="en">
-          <RecordZoneProvider zone="Pacific/Kiritimati">
+          <CompanyZoneProvider zone="Pacific/Kiritimati">
             <ContactMemory
               view={viewWith([], { conversation_memory: [entry] })}
               onOpenEmail={vi.fn()}
               onFullHistory={vi.fn()}
             />
-          </RecordZoneProvider>
+          </CompanyZoneProvider>
         </LocaleProvider>
       </QueryClientProvider>,
     );

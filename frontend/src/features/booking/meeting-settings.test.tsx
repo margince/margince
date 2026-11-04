@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { focusManager } from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -274,6 +275,27 @@ it("states a read-only calendar's saved choices and reconnects it back to Meetin
   ]);
 });
 
+it("dates the calendar's sync from its last success, not its last attempt", async () => {
+  const day = 24 * 60 * 60 * 1000;
+  mount(
+    { provider: "gcal" },
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              ...bookingConnection,
+              last_synced_at: new Date(Date.now()).toISOString(),
+              last_success_at: new Date(Date.now() - 3 * day).toISOString(),
+            },
+          ],
+        }),
+    },
+  );
+  expect(await screen.findByText("Synced 3 d ago")).toBeTruthy();
+  expect(screen.queryByText("Synced just now")).toBe(null);
+});
+
 it("explains a missing saved calendar and saves only once another is chosen", async () => {
   const user = userEvent.setup();
   const server = mount({ provider: "gcal", calendar_id: "deleted" });
@@ -306,6 +328,9 @@ it("says bookings are live with nothing landing in an expired calendar, and paus
   ).toBeTruthy();
   expect(screen.getByText(/The connection has expired/)).toBeTruthy();
   expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
+  // The link says what its guests see: the page is paused.
+  const links = screen.getByRole("region", { name: "Booking links" });
+  expect(within(links).getAllByText("Paused").length).toBeGreaterThan(0);
   expect(
     await screen.findByText(
       /You can save this while the calendar is being reconnected/,
@@ -369,6 +394,60 @@ it("saves never-chosen hours as offered, without a change first", async () => {
     end_time: "17:00",
   });
   expect(server.profileWrites).toEqual([]);
+});
+
+async function barDiscard(user: User) {
+  await enabledSave();
+  const bar = saveBar();
+  if (bar === null) throw new Error("the page has no save bar");
+  await user.click(within(bar).getByRole("button", { name: "Discard" }));
+}
+
+it("discards the only connected calendar offered to a profile never saved", async () => {
+  const user = userEvent.setup();
+  const server = mount();
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.profileWrites).toEqual([]);
+});
+
+it("offers the next sole calendar after the one discarded is swapped for it", async () => {
+  const user = userEvent.setup();
+  let connected = bookingConnection;
+  const server = mount(
+    {},
+    { "GET /connectors": () => jsonResponse({ data: [connected] }) },
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+
+  connected = {
+    ...bookingConnection,
+    id: "outlook",
+    provider: "graphcal",
+    scopes: ["Calendars.ReadWrite"],
+  };
+  // The reader comes back to the tab, and the connections are read again.
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  focusManager.setFocused(undefined);
+  await user.click(await enabledSave());
+  await waitFor(() => expect(server.profileWrites).toHaveLength(1));
+  expect(server.profileWrites[0]).toMatchObject({ provider: "graphcal" });
+});
+
+it("discards never-chosen hours offered through the bar", async () => {
+  const user = userEvent.setup();
+  const server = mount(
+    { provider: "gcal" },
+    {
+      "GET /me/working-hours": () =>
+        jsonResponse({ ...bookingHours, chosen: false }),
+    },
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.hourWrites).toEqual([]);
 });
 
 it.each([

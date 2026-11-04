@@ -95,9 +95,10 @@ func (e *UndisclosableError) FieldFault() (field, code, message string) {
 // passes the consent gate, so a missing footer is a wiring gap rather than a
 // permission bypass.
 type DisclosureResolver interface {
-	// DisclosuresFor answers one line per obligation the category carries.
-	// An empty answer means nothing is owed here.
-	DisclosuresFor(ctx context.Context, category string) ([]DisclosureLine, error)
+	// DisclosuresFor answers one line per obligation the category carries for
+	// these recipients, whose countries pick the marketing obligations. An
+	// empty answer means nothing is owed here.
+	DisclosuresFor(ctx context.Context, category string, recipients []string) ([]DisclosureLine, error)
 }
 
 // WithDisclosures wires the resolver onto the send path.
@@ -174,9 +175,9 @@ func htmlDisclosures(lines []DisclosureLine) string {
 // resolver owns the vocabulary and answers what an unrecognised category owes,
 // which for the packs that exist is the obligations binding every first
 // contact.
-func (s *Store) disclosuresFor(ctx context.Context, category string) ([]DisclosureLine, error) {
+func (s *Store) disclosuresFor(ctx context.Context, category string, recipients []string) ([]DisclosureLine, error) {
 	if s.disclosures == nil {
 		return nil, nil
 	}
-	return s.disclosures.DisclosuresFor(ctx, category)
+	return s.disclosures.DisclosuresFor(ctx, category, recipients)
 }

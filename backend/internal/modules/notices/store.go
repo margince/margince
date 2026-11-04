@@ -335,7 +335,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 
 // UnreadWorkFor omits stage history and mirrors of the authoritative approval queue.
 func (s *Store) UnreadWorkFor(ctx context.Context, limit int) ([]Notice, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	return s.unreadPage(ctx, limit, true)

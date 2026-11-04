@@ -60,7 +60,7 @@ func (s *Service) CachedSections(ctx context.Context, companyID ids.CompanyID) [
 	}
 	// A dossier is a reading aid for a contact, and its cache is keyed per
 	// reader; an agent has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil
 	}
 	userID, err := actingUser(ctx)

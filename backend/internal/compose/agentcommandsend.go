@@ -22,12 +22,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // commandBody decodes the buffered body into one decoder's view of it.
@@ -135,36 +133,11 @@ func sendCompanyEmailCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reques
 	}), nil
 }
 
-// bookMeetingCommand decodes POST /v1/bookings. It has no routed id either —
-// a booking anchors on no existing row — and every operand the resolver reads
-// is in the body.
-//
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func bookMeetingCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
-	in, err := commandBody[struct {
-		HostUserID *ids.UUID           `json:"host_user_id"`
-		Start      time.Time           `json:"start"`
-		End        time.Time           `json:"end"`
-		Subject    string              `json:"subject"`
-		Links      []agents.RecordLink `json:"links"`
-	}](body)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewBookMeetingCall(deps.records, deps.language, agents.BookMeetingCommand{
-		HostUserID: in.HostUserID,
-		Start:      in.Start,
-		End:        in.End,
-		Subject:    in.Subject,
-		Links:      in.Links,
-	}), nil
-}
-
 //nolint:ireturn // both transports resolve the same invitation command.
 func meetingInvitationCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	in, err := commandBody[crmcontracts.MeetingInvitationRequest](body)
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewMeetingInvitationCall(deps.records, deps.language, in), nil
+	return agents.NewMeetingInvitationCall(deps.records, deps.language, deps.invitations, in), nil
 }

@@ -16,8 +16,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
@@ -95,7 +96,10 @@ export function ReportingDefinitions() {
                 <>
                   <p>
                     {t("reporting.revision", {
-                      revision: formatNumber(framework.revision, locale),
+                      revision: formatAnalyticsNumber(
+                        framework.revision,
+                        locale,
+                      ),
                     })}{" "}
                     · {t(`reporting.${framework.definition.template}`)}
                   </p>
@@ -113,6 +117,21 @@ export function ReportingDefinitions() {
     </>
   );
 }
+
+type Thresholds = NonNullable<Framework["definition"]["account_coverage"]>;
+
+// The Account coverage limits an admin publishes, with the server's defaults
+// shown where none was published yet.
+const THRESHOLDS: readonly {
+  key: keyof Thresholds;
+  label: MessageKey;
+  fallback: number;
+}[] = [
+  { key: "max_engaged_seats", label: "reporting.maxEngagedSeats", fallback: 1 },
+  { key: "untouched_days", label: "reporting.untouchedDays", fallback: 21 },
+  { key: "silent_days", label: "reporting.silentDays", fallback: 30 },
+  { key: "won_within_days", label: "reporting.wonWithinDays", fallback: 180 },
+];
 
 function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const t = useT();
@@ -304,6 +323,33 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
         >
           {t("reporting.addCapture")}
         </Button>
+      </fieldset>
+      <fieldset>
+        <legend>{t("reporting.coverageThresholds")}</legend>
+        <p>{t("reporting.coverageThresholdsHelp")}</p>
+        <div className="reporting-toolbar">
+          {THRESHOLDS.map(({ key, label, fallback }) => (
+            <Field key={key} label={t(label)}>
+              {(field) => (
+                <TextInput
+                  {...field}
+                  inputMode="numeric"
+                  value={String(definition.account_coverage?.[key] ?? fallback)}
+                  onChange={(event) => {
+                    const digits = event.target.value.replace(/\D/g, "");
+                    setDefinition({
+                      ...definition,
+                      account_coverage: {
+                        ...definition.account_coverage,
+                        [key]: digits === "" ? fallback : Number(digits),
+                      },
+                    });
+                  }}
+                />
+              )}
+            </Field>
+          ))}
+        </div>
       </fieldset>
       <Field label={t("reporting.reason")} required>
         {(field) => (

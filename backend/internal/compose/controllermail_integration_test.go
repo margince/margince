@@ -98,6 +98,16 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 	}
 }
 
+// livesIn puts the lane's contact in code's country, written upper case as the
+// contacts writer stores it.
+func (l *confirmLaneEnv) livesIn(t *testing.T, code jurisdiction.Code) {
+	t.Helper()
+	if _, err := l.e.Pool.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, l.contact, string(code)); err != nil {
+		t.Fatalf("placing the contact in %s: %v", code, err)
+	}
+}
+
 // TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow is the central claim:
 // the installation's own mail leaves the same evidence every other message does.
 func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
@@ -244,8 +254,9 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
 	})
-	store := l.store.WithInstallationCountry(consent.InstallationCountryFunc(
-		func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return ackJurisdiction, nil }))
+	// The receipt is owed under the subject's own country.
+	l.livesIn(t, ackJurisdiction)
+	store := l.store
 	if _, err := l.e.Pool.Exec(context.Background(), `
 		INSERT INTO consent_purpose (key, label, class)
 		VALUES ('newsletter', 'Newsletter', 'marketing')
@@ -380,7 +391,8 @@ func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) 
 	lane := setupConfirmLane(t)
 	const country jurisdiction.Code = "qh"
 	messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
-	store := lane.store.WithInstallationCountry(consent.InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return country, nil })).
+	lane.livesIn(t, country)
+	store := lane.store.
 		WithMailLanguage(consent.MailLanguageFunc(func(ctx context.Context, tx pgx.Tx) (string, error) {
 			_, err := tx.Exec(ctx, `SELECT 1/0`)
 			return "", err

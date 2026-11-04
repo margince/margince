@@ -79,7 +79,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	return contractRouter(srv,
 		// Innermost, so it sees the handler's own status.
 		forgetHomeOnWrite(srv.homeCache, srv.log),
-		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), gate),
+		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), leadDisqualifier{store: newContactsStore(InstallationDB(pool))}, sendStore(pool, srv.send), gate),
 		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the
 		// idempotency replay: a refusal that cost a database read is a slow

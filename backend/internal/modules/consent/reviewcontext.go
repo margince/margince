@@ -181,7 +181,7 @@ func (s *Store) RecordContext(
 	// jurisdiction pack that shortens the window shortens this too. Two copies
 	// of the bound would drift, and the drift would be silent in exactly the
 	// same way.
-	if err := s.refuseAnExchangeTooOldToCount(ctx, in.OccurredAt); err != nil {
+	if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
 		return Review{}, err
 	}
 	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
@@ -279,14 +279,14 @@ func HeldSubjectsForReview(review Review) []ids.ContactID {
 // rep whose evidence has aged out is not making a mistake — the fact is true
 // and no longer supports an unprompted message — and the next move is a
 // recorded exception, not a differently worded sentence.
-func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, occurredAt time.Time) error {
+func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.ContactID, occurredAt time.Time) error {
 	var window time.Duration
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rules, err := s.packRulesFor(ctx, tx)
+		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()})
 		if err != nil {
 			return err
 		}
-		window = rules.reply
+		window = packRulesFor(country).reply
 		return nil
 	}); err != nil {
 		return err

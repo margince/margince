@@ -5,8 +5,11 @@ package weekly
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
@@ -21,11 +24,13 @@ func MailMessage(review Review, homeURL string, words mailcopy.Copy) emailview.M
 	if figures.beforeHistory() {
 		body.Paragraph(words.WeeklyBeforeHistory)
 	}
-	body.Facts(mailFacts(review, words)...)
+	headline, rest := mailHeadline(mailFacts(review, words), words)
+	body.Stats(headline...)
+	body.Facts(rest...)
 	if len(review.Deals) > 0 {
 		body.Heading(words.WeeklyWhatMoved)
 		for _, deal := range review.Deals[:min(len(review.Deals), mailDealCap)] {
-			body.Paragraph(mailDealLine(deal, words))
+			body.Item(mailDealItem(deal, words))
 		}
 		if rest := len(review.Deals) - mailDealCap; rest > 0 {
 			body.Paragraph(fmt.Sprintf(words.WeeklyAndMore, rest))
@@ -72,3 +77,28 @@ func mailFacts(review Review, words mailcopy.Copy) []emailview.Fact {
 
 	return rows
 }
+
+// mailHeadline lifts the week's short figures for won deals, revenue and
+// delivered tasks into the stat strip; every other fact stays in the list.
+func mailHeadline(facts []emailview.Fact, words mailcopy.Copy) ([]emailview.Stat, []emailview.Fact) {
+	headlined := []string{words.WeeklyWonRevenue, words.WeeklyDealsWon, words.WeeklyTasksDelivered}
+	var headline []emailview.Stat
+	var rest []emailview.Fact
+	for _, fact := range facts {
+		lifted := slices.Contains(headlined, fact.Label)
+		if lifted && len(headline) < 3 && isHeadlineFigure(fact.Value) {
+			headline = append(headline, emailview.Stat(fact))
+			continue
+		}
+		rest = append(rest, fact)
+	}
+	return headline, rest
+}
+
+// isHeadlineFigure keeps a coverage caption in the list, where it reads as a
+// sentence. A caption with no digit, such as Unavailable, is no figure at all.
+func isHeadlineFigure(value string) bool {
+	return utf8.RuneCountInString(value) <= headlineFigureRunes && strings.ContainsAny(value, "0123456789")
+}
+
+const headlineFigureRunes = 14

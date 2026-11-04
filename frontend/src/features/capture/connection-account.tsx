@@ -20,7 +20,6 @@ import {
   isMailbox,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
@@ -40,6 +39,7 @@ import {
   serviceReason,
 } from "../../lib/connector-status";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ImportPastEmailDialog } from "./backfill";
 import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
 import { AccountServices } from "./connection-service";
@@ -182,6 +182,7 @@ export function ConnectionAccountRow({
   heldWindow,
   onImapReconnect,
   reconnectPrimary = true,
+  canConnect = true,
 }: Readonly<{
   account: ConnectionAccount;
   /** A past-email window asked for at connect and held for the reader. */
@@ -190,6 +191,9 @@ export function ConnectionAccountRow({
   /** False for every broken account after the first in one panel, so the
    *  panel keeps one primary verb. */
   reconnectPrimary?: boolean;
+  /** False when the reader's role or seat cannot capture: the server
+   *  refuses every connect, reconnect and import, so none is offered. */
+  canConnect?: boolean;
 }>) {
   const t = useT();
   const { mail, calendar } = account;
@@ -199,7 +203,9 @@ export function ConnectionAccountRow({
   const actions = useAccountActions(account, onImapReconnect);
   const { connect } = actions;
   const health = healthBadge(accountHealth(account));
-  const { reasonKey, offerReconnect } = accountAlert(account);
+  const alert = accountAlert(account);
+  const reasonKey = alert.reasonKey;
+  const offerReconnect = canConnect && alert.offerReconnect;
 
   return (
     <ProviderRow
@@ -225,6 +231,7 @@ export function ConnectionAccountRow({
         <AccountMenu
           account={account}
           name={name}
+          canConnect={canConnect}
           reconnectInMenu={!offerReconnect}
           onBringsIn={() => actions.bringsIn.set(true)}
           onImport={() => actions.importing.set(true)}
@@ -241,7 +248,7 @@ export function ConnectionAccountRow({
         connectPendingFor={
           connect.isPending ? connect.variables?.provider : undefined
         }
-        onConnect={actions.reconnect}
+        onConnect={canConnect ? actions.reconnect : null}
         onImport={() => actions.importing.set(true)}
       />
       {!actions.bringsIn.open && (
@@ -325,6 +332,7 @@ function AccountDialogs({
 function AccountMenu({
   account,
   name,
+  canConnect,
   reconnectInMenu,
   onBringsIn,
   onImport,
@@ -333,6 +341,7 @@ function AccountMenu({
 }: Readonly<{
   account: ConnectionAccount;
   name: string;
+  canConnect: boolean;
   /** False while Reconnect is the row's visible verb, so it is not offered twice. */
   reconnectInMenu: boolean;
   onBringsIn: () => void;
@@ -345,13 +354,13 @@ function AccountMenu({
   const mail = account.mail;
   return (
     <OverflowMenu label={t("connectors.account.menu", { account: name })}>
-      {vendor && (
+      {canConnect && vendor && (
         <Button onClick={onBringsIn}>{t("connectors.menu.bringsIn")}</Button>
       )}
-      {vendor && mail && !isLiveRun(mail.backfill?.state) && (
+      {canConnect && vendor && mail && !isLiveRun(mail.backfill?.state) && (
         <Button onClick={onImport}>{t("connectors.menu.importOlder")}</Button>
       )}
-      {account.key !== "test_mailbox" && reconnectInMenu && (
+      {canConnect && account.key !== "test_mailbox" && reconnectInMenu && (
         <Button onClick={onReconnect}>{t("connectors.reconnect")}</Button>
       )}
       <Button variant="danger" onClick={onDisconnect}>
@@ -363,6 +372,7 @@ function AccountMenu({
 
 /** What the account brings in, and since when. */
 function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const { mail, calendar } = account;
@@ -389,7 +399,7 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
       {createdAt && (
         <span>
           {t("connectors.account.connectedOn", {
-            date: formatDateTime(createdAt, locale, viewerZone()),
+            date: formatDateTime(createdAt, locale, readerZone),
           })}
         </span>
       )}

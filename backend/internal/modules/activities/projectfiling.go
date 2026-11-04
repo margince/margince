@@ -345,11 +345,11 @@ func shareLockQualifyingRecords(ctx context.Context, tx pgx.Tx, id ids.ActivityI
 }
 
 // GetProjectFiling reads one activity's project filing and the decisions already
-// taken on it. Human-only like the undo it offers, and bounded by what the caller
-// may see: a project out of their sight is unnamed, and a decision that touched
-// one is a bare timestamp.
+// taken on it. The user or their agent reads it, like the undo it offers. What
+// the caller may see bounds it: a project out of their sight is unnamed, and a
+// decision that touched one is a bare timestamp.
 func (s *Store) GetProjectFiling(ctx context.Context, id ids.ActivityID) (crmcontracts.ProjectFiling, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ProjectFiling{}, err
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {

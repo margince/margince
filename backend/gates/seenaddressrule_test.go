@@ -66,7 +66,7 @@ func TestTheSeenSenderRuleIsSpelledOnce(t *testing.T) {
 			at := bytes.Index(body, decl)
 			window := body[at:min(at+600, len(body))]
 			if compares.Match(window) {
-				if name == "registry_calendar.go" && bytes.HasPrefix(decl, []byte("func calendarWriteGranted(")) {
+				if name == "registry_calendar.go" && bytes.HasPrefix(decl, []byte("func CalendarWriteGranted(")) {
 					// Provider scopes are OAuth grants, not sender addresses.
 					oauthScopeComparison = true
 					continue

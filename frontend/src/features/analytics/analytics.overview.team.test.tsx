@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -36,8 +36,8 @@ const qualificationReview = (over: Parameters<typeof teamReview>[0] = {}) =>
   teamReview({
     workflow: "qualification",
     handoffs: undefined,
-    member_targets: {
-      metric: "leads_promoted",
+    member_event_targets: {
+      metric: "leads_qualified",
       window: {
         start_at: "2026-08-31T22:00:00Z",
         end_at: "2026-09-30T22:00:00Z",
@@ -45,7 +45,7 @@ const qualificationReview = (over: Parameters<typeof teamReview>[0] = {}) =>
     },
     members: teamReview().members.map((member, index) => ({
       ...member,
-      ...(index === 0 ? { target: { value: 8, actual: 5 } } : {}),
+      ...(index === 0 ? { event_target: { value: 8, actual: 5 } } : {}),
     })),
     ...over,
   });
@@ -55,8 +55,8 @@ const qualificationTeam = () => {
   return {
     ...base,
     metrics: base.metrics.map((reading) =>
-      reading.id === "leads_promoted"
-        ? metric("leads_promoted", 5, { denominator: 12 })
+      reading.id === "leads_qualified"
+        ? metric("leads_qualified", 5, { denominator: 12 })
         : reading,
     ),
   };
@@ -111,7 +111,7 @@ describe("Team prospecting", () => {
     // The catalog's own names, in the order the cards stand.
     expect(
       screen.getByRole("region", { name: "Opening readings" }).textContent,
-    ).toMatch(/Accepted.*Meetings held.*Leads qualified.*Leads still waiting/);
+    ).toMatch(/Accepted.*Meetings held.*Leads awaiting a first reply now/);
     const panel = await standing();
     expect(
       panel.getByText(/Of the 6 rounds handed on in this period/),
@@ -230,7 +230,7 @@ describe("Team prospecting", () => {
       asked.some(
         ({ url }) =>
           url.pathname.endsWith("/analytics/evidence") &&
-          url.searchParams.get("metric") === "leads_awaiting_response",
+          url.searchParams.get("metric") === "leads_awaiting_response_now",
       ),
     ).toBe(true);
   });
@@ -254,8 +254,10 @@ describe("Team prospecting", () => {
     const rows = within(members).getAllByRole("row");
     expect(within(rows[1]).getByText("Riley Rep")).toBeVisible();
     expect(within(rows[2]).getByText("Sam SDR")).toBeVisible();
-    expect(screen.getByText(/Accepted counts each deal once/)).toBeVisible();
-    expect(screen.getByText(/not a ranking/)).toBeVisible();
+    expect(
+      screen.getByText(/Accepted counts each deal once/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/not a ranking/)).toBeInTheDocument();
   });
 
   it("gives a qualification team qualified leads first, and each member's own monthly target", async () => {
@@ -269,23 +271,19 @@ describe("Team prospecting", () => {
       strip.getByText("Meetings held"),
     ]);
     const panel = await standing();
-    expect(
-      panel.getByText(
-        /5 of the 12 leads that arrived in this period are qualified so far\..*That is 42% of the leads that arrived\./,
-      ),
-    ).toBeVisible();
+    expect(panel.queryByText(/of the 12 leads that arrived/)).toBeNull();
     const members = await screen.findByRole("table", { name: "Members" });
     expect(headers(members)).toEqual([
       "Member",
       "Qualified",
       "Meetings held",
-      "Unanswered",
+      "Period arrivals awaiting reply",
       "Monthly target",
     ]);
     const rows = within(members).getAllByRole("row");
     expect(within(rows[1]).getByText("5 of 8")).toBeVisible();
     expect(within(rows[2]).getByText("No target")).toBeVisible();
-    expect(screen.getByText(/Targets are monthly\./)).toBeVisible();
+    expect(screen.getByText(/Targets are monthly/)).toBeInTheDocument();
     expect(screen.queryByText("Submitted")).toBeNull();
   });
 
@@ -344,7 +342,7 @@ describe("Team prospecting", () => {
       return {
         ...base,
         metrics: base.metrics.map((reading) =>
-          reading.id === "leads_awaiting_response"
+          reading.id === "leads_awaiting_response_now"
             ? metric("leads_awaiting_response", 0)
             : reading,
         ),
@@ -352,9 +350,9 @@ describe("Team prospecting", () => {
     };
     const NOTHING = "Nothing waits on the team in this period.";
 
-    it("says nothing waits only over a measured zero", async () => {
+    it("omits an all-clear message for measured zero", async () => {
       open(TEAM_ADDRESS, zero, { template: "sales", team: served(quiet) });
-      expect((await standing()).getByText(NOTHING)).toBeVisible();
+      expect((await standing()).queryByText(NOTHING)).toBeNull();
     });
 
     it("names a figure the review withholds, and claims nothing", async () => {
@@ -410,7 +408,11 @@ describe("Team prospecting", () => {
       ),
     });
     const members = await screen.findByRole("table", { name: "Members" });
-    expect(headers(members)).toEqual(["Member", "Meetings held", "Unanswered"]);
+    expect(headers(members)).toEqual([
+      "Member",
+      "Meetings held",
+      "Period arrivals awaiting reply",
+    ]);
     expect(
       screen.getByText("Qualified leads are hidden from you."),
     ).toBeVisible();
@@ -420,6 +422,17 @@ describe("Team prospecting", () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
       team: served(teamReview({ members_withheld: true, members: [] })),
+      summary: () =>
+        jsonResponse({
+          as_of: "2026-09-21T09:00:00Z",
+          scope: TEAM,
+          workflow: "handoff",
+          upcoming_meetings: 2,
+          upcoming_window: {
+            start_at: "2026-09-21T09:00:00Z",
+            end_at: "2026-10-05T09:00:00Z",
+          },
+        }),
     });
     expect(
       await screen.findByText(
@@ -431,6 +444,9 @@ describe("Team prospecting", () => {
     expect(screen.queryByRole("table", { name: "Members" })).toBeNull();
     expect(screen.queryByText("Riley Rep")).toBeNull();
     expect(screen.queryByText("Sam SDR")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "View booked meetings" }),
+    ).toBeNull();
   });
 
   it("asks both reads for the one team the scope names", async () => {
@@ -452,7 +468,7 @@ describe("Team prospecting", () => {
     ]);
     expect(
       screen.getByText(/These figures follow today’s team\./),
-    ).toBeVisible();
+    ).toBeInTheDocument();
   });
 
   it("reads nothing for one colleague's records and says to choose a team", async () => {
@@ -489,4 +505,54 @@ describe("Team prospecting", () => {
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();
   });
+});
+
+it("keeps a legacy server's member counts and arrival-cohort targets", async () => {
+  const review = qualificationReview({
+    member_event_targets: undefined,
+    member_targets: {
+      metric: "leads_promoted",
+      window: {
+        start_at: "2026-09-01T00:00:00Z",
+        end_at: "2026-10-01T00:00:00Z",
+      },
+    },
+    members: teamReview().members.map((member, index) => ({
+      ...member,
+      qualified_events: undefined,
+      event_target: undefined,
+      qualified: index === 0 ? 4 : 1,
+      target: index === 0 ? { value: 8, actual: 3 } : undefined,
+    })),
+  });
+  open(TEAM_ADDRESS, qualificationTeam, {
+    template: "sales",
+    team: served(review),
+  });
+  const table = await screen.findByRole("table", { name: "Members" });
+  expect(
+    within(table).getByRole("columnheader", {
+      name: "Arriving leads qualified",
+    }),
+  ).toBeVisible();
+  expect(within(table).getByText("3 of 8")).toBeVisible();
+  expect(screen.getByText(/^Arrival cohort:/)).toBeVisible();
+});
+
+it("shows attributed member counts with their partial-history reason", async () => {
+  open(TEAM_ADDRESS, qualificationTeam, {
+    template: "sales",
+    team: served(
+      qualificationReview({
+        qualification_basis: "first_qualification",
+        qualification_unattributed: 2,
+        qualification_target_unattributed: 2,
+      }),
+    ),
+  });
+  const table = await screen.findByRole("table", { name: "Members" });
+  expect(within(table).getByText("At least 5 of 8")).toBeVisible();
+  expect(
+    screen.getByText(/2 first qualifications have no recorded owner/),
+  ).toBeVisible();
 });

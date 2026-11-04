@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LOCALES, translate } from "../../i18n";
 import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 
@@ -23,7 +23,7 @@ it.each(LOCALES)(
       },
       (key, values) => translate(locale, key, values),
       locale,
-      viewerZone(),
+      browserZone(),
     );
     expect(result).not.toContain("usually");
     expect(result).not.toContain("guessed");
@@ -48,7 +48,7 @@ it("does not reinterpret an unrelated business receipt", () => {
     },
     (key, values) => translate("en", key, values),
     "en",
-    viewerZone(),
+    browserZone(),
   );
   expect(result).toBe("Won the deal");
 });
@@ -81,7 +81,7 @@ it.each(["accepted", "reversed"])(
       },
       (key, values) => translate("en", key, values),
       "en",
-      viewerZone(),
+      browserZone(),
     );
     expect(result).toContain(
       state === "reversed" ? "Reverted close-date estimate" : "Close date:",
@@ -149,7 +149,7 @@ it("reports a decided approval by its sentence and the values it set", () => {
     },
     (key, values) => translate("en", key, values),
     "en",
-    viewerZone(),
+    browserZone(),
   );
   expect(result).toBe("Update record deal — Name: Acme, Inc.");
 });

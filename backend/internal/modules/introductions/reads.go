@@ -80,13 +80,10 @@ func scanRequest(src row, r *Request) error {
 
 // roleOf answers which party the caller is, or "" for anybody else.
 //
-// An agent is nobody here, whatever id it carries. A passport presents its
-// granting human's UserID, so matching on the id alone would make a credential
-// a PARTY to its human's asks — reading the request text, the status and the
-// reason somebody gave for refusing. Being lent authority to act is not the
-// same as being the contact whose favour was asked.
+// A user's agent is that user here, because its passport carries their UserID.
+// Automatic work with no passport is nobody, whatever id it carries.
 func (s *Store) roleOf(ctx context.Context, r *Request) Actor {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return ""
 	}
 	actor, ok := principal.Actor(ctx)
@@ -129,9 +126,9 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// The same human arm roleOf states: an id match would make a passport a
-	// party to its human's asks.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A human, or their agent at their word, is a party to their own asks;
+	// automatic work with no passport is a party to none.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
@@ -193,17 +190,14 @@ func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, err
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// The paragraph below names the agent case, and an id check does not reach
-	// it: a passport carries its granting human's UserID, so this refused a
-	// caller with NO id and admitted the one the sentence is about.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A user's agent reads its user's queue. Automatic work carries an id that
+	// answers an id check, so the check names who may ask.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// No human, no queue. A caller with no human behind it has nobody
-		// whose favour was asked for, and answering with somebody else's asks
-		// would be handing an agent a colleague's inbox.
+		// A caller with no user behind it has nobody whose favour was asked for.
 		return nil, apperrors.ErrPermissionDenied
 	}
 	var out []Request

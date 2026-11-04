@@ -1,0 +1,10 @@
+/* The way forward a typed word that matches nothing offers, under the list:
+   a control its own width, not a bar across the panel. */
+.tagpicker-way {
+  align-self: flex-start;
+}
+
+.tagpicker-foot {
+  margin: 0;
+  color: var(--textSecondary);
+}

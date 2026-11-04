@@ -27,7 +27,7 @@ type acceptedChangeAudit struct {
 // AcceptAppliedChange records agreement with one applied change, not a new
 // approval or a replay of its effects. The audit records the deciding human.
 func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, changeID ids.UUID, version int64) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {

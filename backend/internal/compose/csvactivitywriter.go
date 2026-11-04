@@ -73,7 +73,7 @@ func (w *csvWriters) activityBirthOf(row migration.Row, typed map[string]any) (a
 		return in, migration.Why(migration.ReasonActivityTypeUnnamed)
 	case in.OccurredAt == nil:
 		return in, migration.Why(migration.ReasonOccurredAtUnnamed)
-	case activities.CheckEntryHasContent(in.Kind, in.Subject, in.Body) != nil:
+	case activities.CheckEntryHasContent(in.Kind, in.Subject, in.Body, nil) != nil:
 		return in, migration.Why(migration.ReasonActivityEmpty)
 	}
 	return in, migration.Reason{}

@@ -395,3 +395,77 @@ func TestTwoClaimsForOneFieldLeaveTheSlotAndTheEvidenceAgreeing(t *testing.T) {
 		t.Errorf("rows under this contact = %d, want 1", rows)
 	}
 }
+
+// A user's answer stands against their agent's research: the claim lands
+// nowhere and is not counted. A value only a pass or an agent wrote is replaced.
+// An accepted claim is somebody's word for a value, and automatic work with no
+// passport acts for nobody.
+func TestPassportlessAutomaticWorkCannotAcceptAClaim(t *testing.T) {
+	e := setupDedupe(t)
+	human := e.as()
+	p, ok := principal.Actor(human)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	contactID, _ := e.seedEmployedContact(human, t, "Ida Holm", "ida@automaticclaim.test", "Holm AS", "automaticclaim.test")
+	p.Type, p.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
+	_, err := e.store.SaveResearchClaims(principal.WithActor(human, p), contactID, []ResearchClaimInput{{
+		Field: "title", Value: "CTO", Quote: "Ida Holm is CTO.", SourceURL: "https://automaticclaim.test/team",
+	}})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("automatic work accepted a claim: %v, want permission denied", err)
+	}
+}
+
+func TestAnAgentsAcceptedClaimDoesNotOverwriteAHumansValue(t *testing.T) {
+	e := setupDedupe(t)
+	human := e.as()
+	p, ok := principal.Actor(human)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+	agent := principal.WithActor(human, p)
+	contactID, _ := e.seedEmployedContact(human, t, "Oda Lund", "oda@agentclaim.test", "Lund AS", "agentclaim.test")
+	accept := func(ctx context.Context, value string) int {
+		t.Helper()
+		saved, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{{
+			Field: "title", Value: value, Quote: "Oda Lund is " + value + ".", SourceURL: "https://agentclaim.test/team",
+		}})
+		if err != nil {
+			t.Fatalf("saving %q: %v", value, err)
+		}
+		return saved
+	}
+	audits := func() int {
+		t.Helper()
+		var n int
+		if err := e.store.tx(human, func(tx pgx.Tx) error {
+			return tx.QueryRow(human, `SELECT count(*) FROM audit_log
+			WHERE entity_type = 'contact' AND entity_id = $1 AND after ? 'research_claims_accepted'`, contactID).Scan(&n)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	if saved := accept(agent, "Buyer"); saved != 1 {
+		t.Fatalf("the agent's first claim saved %d, want 1", saved)
+	}
+	if saved := accept(agent, "Senior Buyer"); saved != 1 {
+		t.Errorf("an agent replacing its own value saved %d, want 1", saved)
+	}
+	if saved := accept(human, "Head of Buying"); saved != 1 {
+		t.Errorf("the user replacing an agent's value saved %d, want 1", saved)
+	}
+	before := audits()
+	if saved := accept(agent, "Chief Buyer"); saved != 0 {
+		t.Errorf("an agent over a user's value saved %d, want 0", saved)
+	}
+	if got := readStoredClaim(human, t, e, contactID, "title"); got.value != "Head of Buying" || got.capturedBy != "human:"+e.rep.String() {
+		t.Errorf("the user's value became %+v", got)
+	}
+	if after := audits(); after != before {
+		t.Errorf("an acceptance that landed nothing wrote %d audit rows", after-before)
+	}
+}

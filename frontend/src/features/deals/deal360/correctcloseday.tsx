@@ -14,7 +14,7 @@ import { calendarDay } from "../../../format/calendarday";
 import { useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -28,7 +28,7 @@ export function CorrectCloseDayAction({
   disabledReasonId,
 }: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const current = deal.closed_at

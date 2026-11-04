@@ -1,0 +1,22 @@
+name: reader_rendering_renders_vietnamese_into_german
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "email"
+  subject: "Lịch họp tuần sau"
+  body: "Chào anh Minh,\n\nCông ty Sao Mai đồng ý gặp vào thứ Ba lúc 10 giờ. Chúng tôi sẽ gửi bản hợp đồng sửa đổi trước ngày 20 tháng 11.\n\nTrân trọng,\nLê Thu Hà"
+  source: "vi"
+  target: "de"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Sao Mai", "Minh", "10", "20", "11", "Lê Thu Hà"]
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The rendering is natural German: the meeting on Tuesday at 10, and the promise to send the revised contract before 20 November. Names stay exactly as written, with their Vietnamese marks."

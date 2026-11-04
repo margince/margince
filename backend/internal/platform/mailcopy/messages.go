@@ -17,34 +17,30 @@ func (c Copy) AccountMessage(invitation bool, inviter, company, link string) ema
 	if invitation {
 		title, intro, action, closing = c.InviteSubject, c.InviteIntro, c.InviteAction, c.InviteIgnore
 		if inviter != "" && company != "" {
-			content.Paragraph(fmt.Sprintf(c.InviteBy, OneLine(inviter), OneLine(company)))
+			content.Lead(fmt.Sprintf(c.InviteBy, OneLine(inviter), OneLine(company)))
 		}
 	}
 	if !invitation || inviter == "" || company == "" {
-		content.Paragraph(intro)
+		content.Lead(intro)
 	}
 	content.Action(action, link)
-	content.Paragraph(closing)
-	message := content.Message(title, string(c.Language), c.Preview(title))
-	message.Brand = company
-	return message
+	content.Footnote(closing)
+	return content.Message(title, string(c.Language), c.Preview(title))
 }
 
 // RoomMessage identifies the shared material and discloses personal access and activity recording.
 func (c Copy) RoomMessage(title, inviter, company, link string, expires time.Time) emailview.Message {
 	var content emailview.Content
 	if inviter != "" && company != "" {
-		content.Paragraph(fmt.Sprintf(c.RoomSharedBy, OneLine(inviter), OneLine(company)))
+		content.Lead(fmt.Sprintf(c.RoomSharedBy, OneLine(inviter), OneLine(company)))
 	} else if company != "" {
-		content.Paragraph(OneLine(company))
+		content.Lead(OneLine(company))
 	}
 	content.Paragraph(c.RoomIntro)
 	content.Heading(OneLine(title))
 	content.Action(c.RoomAction, link)
-	content.Paragraph(fmt.Sprintf(c.RoomPersonal, c.Instant(expires)))
-	content.Paragraph(c.RoomIgnore)
-	content.Paragraph(c.RoomDisclosure)
-	message := content.Message(c.RoomSubject+" · "+OneLine(title), string(c.Language), c.RoomPreview)
-	message.Brand = company
-	return message
+	content.Note(fmt.Sprintf(c.RoomPersonal, c.Instant(expires)), emailview.Info)
+	content.Note(c.RoomDisclosure, emailview.Neutral)
+	content.Footnote(c.RoomIgnore)
+	return content.Message(c.RoomSubject+" · "+OneLine(title), string(c.Language), c.RoomPreview)
 }

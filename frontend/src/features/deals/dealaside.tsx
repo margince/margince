@@ -31,10 +31,10 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
@@ -84,7 +84,7 @@ function DealAsideBody({
     deal,
     t,
     locale,
-    zone: useRecordZone(),
+    zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
   };
   const owner = useMemberName(deal.owner_id).data;
@@ -149,7 +149,7 @@ function DealAsideBody({
   );
 }
 
-// The fields a row changes, and its value as text when it edits in place.
+// The fields a row changes, and its value as text when it is edited alone.
 type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
 
 type RowMaker = (
@@ -169,7 +169,7 @@ type Facts = Readonly<{
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
-// that names its fields changes them in place, empty or not.
+// that names its fields opens their edit, empty or not.
 function rowMaker(
   masked: readonly string[],
   t: Translator,

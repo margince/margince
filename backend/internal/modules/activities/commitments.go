@@ -61,6 +61,8 @@ type OpenTask struct {
 	// a pointer the whole way to the wire rather than collapsing to a zero
 	// time somewhere in the middle.
 	DueAt *time.Time
+	// DueHasTime is true when DueAt names a time of day rather than a day.
+	DueHasTime bool
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -358,7 +360,8 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
 
@@ -391,5 +394,5 @@ func joinAnd(terms []string) string {
 
 func openTaskColumns() string {
 	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
-		", a.assignee_id, coalesce(u.display_name, ''), a.created_at"
+		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at"
 }

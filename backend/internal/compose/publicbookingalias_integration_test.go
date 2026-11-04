@@ -50,7 +50,7 @@ func newAliasHosts(t *testing.T) *aliasHosts {
 			t.Fatal(err)
 		}
 	}
-	h.server = New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithPublicBaseURL(previewOrigin))
+	h.server = New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	return h
 }
 

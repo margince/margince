@@ -38,6 +38,8 @@ import (
 // which is one of the two spellings this seam removed.
 type restCommandDeps struct {
 	records datasource.SystemOfRecordProvider
+	// invitations resolves an invitation's addresses for its staged summary.
+	invitations agents.InvitationRoster
 	// stages resolves a pipeline stage's configured SEMANTIC, which is what
 	// makes a deal move a close, a reopen or a routine step — three opposite
 	// decisions wearing one shape, so the summary a human reads cannot be
@@ -58,6 +60,9 @@ type restCommandDeps struct {
 	// written from. Same reason `stages` and `imports` are here: a human
 	// deciding "fold X into Y" cannot be shown the ids and asked to mean it.
 	tags agents.Tags
+	// leadReasons refuses a disqualify reason no rep could pick before a user is
+	// asked to release the call.
+	leadReasons agents.DisqualifyReasons
 	// language is the installation's base language, which every staged line
 	// is written in — this door's own and the one a command's resolver writes.
 	language baselanguage.Resolver
@@ -185,7 +190,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"sendEmail":               sendEmailCommand,
 	"sendMessage":             sendMessageCommand,
 	"sendCompanyEmail":        sendCompanyEmailCommand,
-	"bookMeeting":             bookMeetingCommand,
 	"createMeetingInvitation": meetingInvitationCommand,
 	"promoteLead":             promoteLeadCommand,
 	"disqualifyLead":          disqualifyLeadCommand,

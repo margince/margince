@@ -1,5 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
@@ -37,14 +44,29 @@ import {
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
 import { useLocale } from "./i18n";
+import {
+  CompanyZoneProvider,
+  useConfiguredCompanyZone,
+} from "./lib/companyzone";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { markJourney } from "./lib/journeymarks";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  watchStored,
+  writeStored,
+} from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
+import {
+  renderableViewerZone,
+  useBrowserZoneOnFirstSignIn,
+  ViewerZoneProvider,
+} from "./lib/viewerzone";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -141,6 +163,48 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// Watched, so a sign-out here or in another tab ends Home's early reads at once.
+const watchSessionSeen = (changed: () => void) =>
+  watchStored(STORAGE_KEYS.sessionSeen, changed);
+const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
+
+// Marks whether this browser has a session, and answers whether the probe was
+// refused. A refused refetch keeps the last data beside its error.
+function noteSessionSeen(data: unknown, error: unknown): boolean {
+  const refused =
+    error instanceof AuthProbeError && error.kind === "unauthorized";
+  if (refused) {
+    removeStored(STORAGE_KEYS.sessionSeen);
+  } else if (data && !error) {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+  }
+  return refused;
+}
+
+// On a browser that had a session, Home's reads start with the session probe.
+// Waiting for the gates it opens costs two round trips. An answer that sends the
+// reader elsewhere stops them, and the cleanup aborts them.
+function homeMayRead(
+  state: Readonly<{
+    screen: Screen;
+    signedIn: boolean;
+    sessionSeen: boolean;
+    refused: boolean;
+    confined: boolean;
+    described: boolean | undefined;
+    unfinished: boolean;
+  }>,
+): boolean {
+  return (
+    state.screen === "home" &&
+    (state.signedIn || state.sessionSeen) &&
+    !state.refused &&
+    !state.confined &&
+    state.described !== false &&
+    !state.unfinished
+  );
+}
+
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -157,7 +221,7 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
-  // The signed-in person's own language, handed up to the provider that sits
+  // The signed-in user's own language, handed up to the provider that sits
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
@@ -168,17 +232,18 @@ function AuthedApp({
       adoptLocale(chosen);
     }
   }, [me.data, adoptLocale]);
+  // A user with no stored zone gets the browser's as a first guess. They
+  // change it under Settings → Account.
+  useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
+    const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {
       hadSession.current = true;
       setNotice(null);
       markJourney("session");
       return;
     }
-    if (
-      me.error instanceof AuthProbeError &&
-      me.error.kind === "unauthorized"
-    ) {
+    if (refused) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -204,7 +269,14 @@ function AuthedApp({
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
   // 401 and say nothing about the installation.
-  const recordZone = useConfiguredRecordZone(authed);
+  const companyZone = useConfiguredCompanyZone(authed);
+  // The reader's own clock, for every time a signed-in screen shows. It is
+  // the zone they stored, or their browser's until they have one.
+  const storedZone = me.data?.user.timezone;
+  const browserZone = useMemo(
+    () => renderableViewerZone(storedZone),
+    [storedZone],
+  );
 
   // The route is a dependency so the gate holds on every navigation. Otherwise
   // the palette or a typed hash walks past onboarding.
@@ -228,16 +300,24 @@ function AuthedApp({
   }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
+  const sessionSeen = useSyncExternalStore(
+    watchSessionSeen,
+    sessionSeenNow,
+    sessionSeenNow,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const gatesPending = companyPending || recordZone.pending || progress.pending;
+  const gatesPending =
+    companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
-  // Home's reads start here rather than when its lazy screen commits, and only
-  // once nothing will send the reader to onboarding instead.
-  const opensHome =
-    shellReady &&
-    described === true &&
-    !progress.unfinished &&
-    route.screen === "home";
+  const opensHome = homeMayRead({
+    screen: route.screen,
+    signedIn: me.data !== undefined,
+    sessionSeen,
+    refused: me.isError,
+    confined: confinement !== null,
+    described,
+    unfinished: progress.unfinished,
+  });
   const queryClient = useQueryClient();
   useEffect(() => {
     if (shellReady) {
@@ -325,30 +405,32 @@ function AuthedApp({
 
   return (
     <DateFormatsProvider>
-      <RecordZoneProvider zone={recordZone.zone}>
-        {/* An address pressed on any screen writes from here: the composer is
+      <CompanyZoneProvider zone={companyZone.zone}>
+        <ViewerZoneProvider zone={browserZone}>
+          {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
-        <WriteToHost>
-          <CallLogHost>
-            <SourceHost>
-              <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-                <ScreenView
-                  screen={route.screen}
-                  id={route.id}
-                  id2={route.id2}
-                />
-              </AuthedShell>
-            </SourceHost>
-          </CallLogHost>
-        </WriteToHost>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          commands={commands}
-        />
-        {/* Over whatever the reader was doing, not on a screen of its own. */}
-        <AskFromAddress />
-      </RecordZoneProvider>
+          <WriteToHost>
+            <CallLogHost>
+              <SourceHost>
+                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                  <ScreenView
+                    screen={route.screen}
+                    id={route.id}
+                    id2={route.id2}
+                  />
+                </AuthedShell>
+              </SourceHost>
+            </CallLogHost>
+          </WriteToHost>
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            commands={commands}
+          />
+          {/* Over whatever the reader was doing, not on a screen of its own. */}
+          <AskFromAddress />
+        </ViewerZoneProvider>
+      </CompanyZoneProvider>
     </DateFormatsProvider>
   );
 }

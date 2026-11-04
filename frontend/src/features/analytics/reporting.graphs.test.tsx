@@ -271,8 +271,8 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
 });
 
 it.each([
-  { actual: 21600000, label: "€84k remaining" },
-  { actual: 34000000, label: "€40k above target" },
+  { actual: 21600000, label: "84,000 EUR remaining" },
+  { actual: 34000000, label: "40,000 EUR above target" },
 ])("shows target attainment with $label", ({ actual, label }) => {
   const evaluation = {
     ...reportingStoryEvaluation,

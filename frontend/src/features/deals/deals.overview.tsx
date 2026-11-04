@@ -7,9 +7,9 @@ import {
   OverviewRow,
 } from "../../design-system/overviewcard";
 import { type Locale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { dealRoleLabel } from "../records/record360";
 import { DealApprovals } from "./deal360/dealapprovals";
 import { DealBrief } from "./deal360/dealbrief";
@@ -17,8 +17,10 @@ import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
+import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
+import { DealViabilityCard } from "./deal360/dealviabilitycard";
 import type { Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
@@ -49,7 +51,7 @@ export function OffersPanel({
   onCreate: (currency: string) => void;
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const currencyReasonId = useId();
   // The sentence for an unpriced deal closes the card, so the link keeps its
   // place beside the title; the refused link points at it.
@@ -159,7 +161,7 @@ export function DealOverviewPane({
 }>) {
   const t = useT();
   const plural = usePlural();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deal, offers, coverage, activities, card } = inputs;
   // The task the bar names is not one of the others.
   const shown = (card?.next?.evidence ?? []).flatMap((row) =>
@@ -241,6 +243,14 @@ export function DealOverviewPane({
             // The record's own write refusal, not the advance verb's.
             onEdit={readOnly ? undefined : onEditDetails}
           />
+          {!deal.archived_at && (
+            <DealProductsCard
+              dealId={deal.id}
+              currency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+            />
+          )}
+          {!deal.archived_at && <DealViabilityCard dealId={deal.id} />}
           <DealRoomCard dealId={deal.id} onOpen={() => onOpenTab("room")} />
         </div>
       </div>

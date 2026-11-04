@@ -29,7 +29,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/automatic-work-health: per colleague and kind, the items Margince
@@ -103,7 +103,7 @@ function ShareCell({ tally }: Readonly<{ tally: Tally }>) {
 
 function DayTable({ row }: Readonly<{ row: Row }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { locale } = useLocale();
   const columns: DataTableColumn<Day>[] = [
     {
@@ -310,7 +310,7 @@ export function useAutomaticWorkHealth(days: Window) {
 
 export function AutomaticWorkHealthCard() {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { locale } = useLocale();
   const [days, setDays] = useState<Window>("7");
   const { canSee, query } = useAutomaticWorkHealth(days);

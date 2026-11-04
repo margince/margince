@@ -7,6 +7,7 @@ package agents
 // Register* calls, so it runs after all of them. A router whose targets share
 // one seam registers beside them, and is absent when that seam is.
 func RegisterRouters(r *Registry) {
+	registerContractRouters(r)
 	registerWhereServed(r, changeState{})
 	registerWhereServed(r, readWorkspace{})
 	r.Register(readForecast{})
