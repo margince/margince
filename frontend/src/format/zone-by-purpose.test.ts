@@ -6,7 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { beforeAll, describe, expect, it } from "vitest";
-import { parseSource } from "../../scripts/lib/source-tree";
+import { checkedProgram, parseSource } from "../../scripts/lib/source-tree";
 import { FALLBACK_COMPANY_ZONE } from "./timezone";
 
 // A screen that names a zone has decided something, and the decision is the
@@ -921,17 +921,6 @@ type ZoneRef = { source: ZoneSource; file: string; line: number };
 
 const companyZoneModule = join(srcRoot, "lib", "companyzone.tsx");
 
-function appCompilerOptions(): ts.CompilerOptions {
-  const configPath = join(srcRoot, "..", "tsconfig.app.json");
-  const read = ts.readConfigFile(configPath, ts.sys.readFile);
-  const parsed = ts.parseJsonConfigFileContent(
-    read.config,
-    ts.sys,
-    dirname(configPath),
-  );
-  return { ...parsed.options, noEmit: true, incremental: false };
-}
-
 /**
  * Every reference to the two exported zone sources in the given files,
  * resolved through the TypeScript checker. A reference is any identifier whose
@@ -946,21 +935,11 @@ function zoneSourceRefs(
   roots: readonly string[],
   overlay: ReadonlyMap<string, string> = new Map(),
 ): ZoneRef[] {
-  const options = appCompilerOptions();
-  const host = ts.createCompilerHost(options, true);
-  const readFile = host.readFile.bind(host);
-  const fileExists = host.fileExists.bind(host);
-  const getSourceFile = host.getSourceFile.bind(host);
-  host.readFile = (file) => overlay.get(file) ?? readFile(file);
-  host.fileExists = (file) => overlay.has(file) || fileExists(file);
-  host.getSourceFile = (file, language, ...rest) => {
-    const text = overlay.get(file);
-    return text === undefined
-      ? getSourceFile(file, language, ...rest)
-      : ts.createSourceFile(file, text, language, true);
-  };
-  const program = ts.createProgram([...roots], options, host);
-  const checker = program.getTypeChecker();
+  const { program, checker } = checkedProgram(
+    join(srcRoot, "..", "tsconfig.app.json"),
+    roots,
+    overlay,
+  );
   const exported = (file: string, name: string): ts.Symbol | undefined => {
     const source = program.getSourceFile(file);
     const module = source && checker.getSymbolAtLocation(source);
