@@ -589,6 +589,69 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReaderRenderingSourceLanguage.
+const (
+	ActivityReaderRenderingSourceLanguageDe ActivityReaderRenderingSourceLanguage = "de"
+	ActivityReaderRenderingSourceLanguageEn ActivityReaderRenderingSourceLanguage = "en"
+	ActivityReaderRenderingSourceLanguageVi ActivityReaderRenderingSourceLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingSourceLanguage enum.
+func (e ActivityReaderRenderingSourceLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingSourceLanguageDe:
+		return true
+	case ActivityReaderRenderingSourceLanguageEn:
+		return true
+	case ActivityReaderRenderingSourceLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingTargetLanguage.
+const (
+	ActivityReaderRenderingTargetLanguageDe ActivityReaderRenderingTargetLanguage = "de"
+	ActivityReaderRenderingTargetLanguageEn ActivityReaderRenderingTargetLanguage = "en"
+	ActivityReaderRenderingTargetLanguageVi ActivityReaderRenderingTargetLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingTargetLanguage enum.
+func (e ActivityReaderRenderingTargetLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingTargetLanguageDe:
+		return true
+	case ActivityReaderRenderingTargetLanguageEn:
+		return true
+	case ActivityReaderRenderingTargetLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingRequestLocale.
+const (
+	ActivityReaderRenderingRequestLocaleDe ActivityReaderRenderingRequestLocale = "de"
+	ActivityReaderRenderingRequestLocaleEn ActivityReaderRenderingRequestLocale = "en"
+	ActivityReaderRenderingRequestLocaleVi ActivityReaderRenderingRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingRequestLocale enum.
+func (e ActivityReaderRenderingRequestLocale) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingRequestLocaleDe:
+		return true
+	case ActivityReaderRenderingRequestLocaleEn:
+		return true
+	case ActivityReaderRenderingRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityReferenceContentState.
 const (
 	ActivityReferenceContentStateAvailable ActivityReferenceContentState = "available"
@@ -905,6 +968,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReaderRendering               AiActivityKind = "reader_rendering"
 	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
 	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
@@ -965,6 +1029,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReaderRendering:
 		return true
 	case AiActivityKindReportInterpret:
 		return true
@@ -1489,6 +1555,7 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReaderRendering               AiTask = "reader_rendering"
 	AiTaskReportInterpret               AiTask = "report_interpret"
 	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
@@ -1546,6 +1613,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReaderRendering:
 		return true
 	case AiTaskReportInterpret:
 		return true
@@ -10714,6 +10783,27 @@ func (e EmailDeliveryState) Valid() bool {
 	case EmailDeliveryStatePending:
 		return true
 	case EmailDeliveryStateSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailPresentationLanguage.
+const (
+	EmailPresentationLanguageDe EmailPresentationLanguage = "de"
+	EmailPresentationLanguageEn EmailPresentationLanguage = "en"
+	EmailPresentationLanguageVi EmailPresentationLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the EmailPresentationLanguage enum.
+func (e EmailPresentationLanguage) Valid() bool {
+	switch e {
+	case EmailPresentationLanguageDe:
+		return true
+	case EmailPresentationLanguageEn:
+		return true
+	case EmailPresentationLanguageVi:
 		return true
 	default:
 		return false
@@ -29100,7 +29190,7 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
@@ -29178,7 +29268,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -29267,6 +29357,49 @@ type ActivityListResponse struct {
 	Data []Activity `json:"data"`
 	Page PageInfo   `json:"page"`
 }
+
+// ActivityReaderRendering One activity's text in one reader's language, written for this reader and stored
+// nowhere.
+type ActivityReaderRendering struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Body The text in the target language, null when the activity has none.
+	Body        *string   `json:"body,omitempty"`
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// ModelUsed The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
+	ModelUsed *string `json:"model_used,omitempty"`
+
+	// SourceLanguage The language the original is written in, null when it could not be told.
+	SourceLanguage *ActivityReaderRenderingSourceLanguage `json:"source_language,omitempty"`
+
+	// Subject The subject in the target language, null when the activity has none.
+	Subject        *string                               `json:"subject,omitempty"`
+	TargetLanguage ActivityReaderRenderingTargetLanguage `json:"target_language"`
+
+	// Unchanged True when the original is already in the target language. `subject` and `body`
+	// are then the original text.
+	Unchanged bool `json:"unchanged"`
+}
+
+// ActivityReaderRenderingSourceLanguage The language the original is written in, null when it could not be told.
+type ActivityReaderRenderingSourceLanguage string
+
+// ActivityReaderRenderingTargetLanguage defines model for ActivityReaderRendering.TargetLanguage.
+type ActivityReaderRenderingTargetLanguage string
+
+// ActivityReaderRenderingRequest defines model for ActivityReaderRenderingRequest.
+type ActivityReaderRenderingRequest struct {
+	// Locale The language to show the text in, normally the reader's interface language.
+	// Absent means the language the reader chose for their seat, else the
+	// installation's base language.
+	Locale *ActivityReaderRenderingRequestLocale `json:"locale,omitempty"`
+}
+
+// ActivityReaderRenderingRequestLocale The language to show the text in, normally the reader's interface language.
+// Absent means the language the reader chose for their seat, else the
+// installation's base language.
+type ActivityReaderRenderingRequestLocale string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -44054,6 +44187,11 @@ type EmailPresentation struct {
 	From           []EmailParty       `json:"from"`
 	Id             openapi_types.UUID `json:"id"`
 
+	// Language The language the message is written in, as `Activity.language` records it. Null
+	// when withheld, and when it could not be told. A client offers the reader's own
+	// language beside a message in another one or in an unknown one.
+	Language *EmailPresentationLanguage `json:"language,omitempty"`
+
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the
 	// frame when the reads that serve them land, and they are not listed until then.
@@ -44086,6 +44224,11 @@ type EmailPresentation struct {
 	// Version The activity's version, for the If-Match its own actions send.
 	Version RowVersion `json:"version"`
 }
+
+// EmailPresentationLanguage The language the message is written in, as `Activity.language` records it. Null
+// when withheld, and when it could not be told. A client offers the reader's own
+// language beside a message in another one or in an unknown one.
+type EmailPresentationLanguage string
 
 // EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
 // correspondence. A scheduled send and a draft awaiting approval will borrow the
@@ -44753,7 +44896,8 @@ type FilterProposalResource string
 // FilterProposalRequest A list described in plain words, to be turned into filter clauses.
 type FilterProposalRequest struct {
 	// Locale The reader's interface language, which the reasons in `unsupported` are
-	// written in. Absent means the installation's base language.
+	// written in. Absent means the language the reader chose for their seat, else the
+	// installation's base language.
 	Locale   *FilterProposalRequestLocale  `json:"locale,omitempty"`
 	Resource FilterProposalRequestResource `json:"resource"`
 
@@ -44762,7 +44906,8 @@ type FilterProposalRequest struct {
 }
 
 // FilterProposalRequestLocale The reader's interface language, which the reasons in `unsupported` are
-// written in. Absent means the installation's base language.
+// written in. Absent means the language the reader chose for their seat, else the
+// installation's base language.
 type FilterProposalRequestLocale string
 
 // FilterProposalRequestResource defines model for FilterProposalRequest.Resource.
@@ -72725,6 +72870,9 @@ type DraftEmailJSONRequestBody = DraftSteering
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
 
+// RenderActivityForReaderJSONRequestBody defines body for RenderActivityForReader for application/json ContentType.
+type RenderActivityForReaderJSONRequestBody = ActivityReaderRenderingRequest
+
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
 
@@ -85478,6 +85626,9 @@ type ServerInterface interface {
 	// Undo filing this activity under a project. Requires a stated reason; audited.
 	// (POST /activities/{id}/project-filing/undo)
 	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
+	// Show one note, mail or meeting in the reader's own language.
+	// (POST /activities/{id}/reader-rendering)
+	RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -88589,6 +88740,12 @@ func (_ Unimplemented) GetActivityProjectFiling(w http.ResponseWriter, r *http.R
 // Undo filing this activity under a project. Requires a stated reason; audited.
 // (POST /activities/{id}/project-filing/undo)
 func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show one note, mail or meeting in the reader's own language.
+// (POST /activities/{id}/reader-rendering)
+func (_ Unimplemented) RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95722,6 +95879,38 @@ func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenderActivityForReader operation middleware
+func (siw *ServerInterfaceWrapper) RenderActivityForReader(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenderActivityForReader(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -138338,6 +138527,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/project-filing/undo", wrapper.UndoActivityProjectFiling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/reader-rendering", wrapper.RenderActivityForReader)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
