@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
@@ -129,6 +129,7 @@ function results(rows: readonly Record<string, unknown>[]) {
   return (
     <FilterResults
       preview={preview(rows)}
+      resource="contact"
       fields={[TIER_FIELD]}
       named={["cf_loyalty_tier"]}
       unit="contacts"
@@ -170,6 +171,7 @@ it("shows a dash where a row has no value", () => {
 it("words an industry code in its column", () => {
   render(
     <FilterResults
+      resource="company"
       preview={{
         resource: "company",
         match_count: 1,
@@ -196,6 +198,7 @@ it("says what the caller worded for an empty answer", () => {
   render(
     <FilterResults
       preview={preview([])}
+      resource="contact"
       fields={[TIER_FIELD]}
       named={["cf_loyalty_tier"]}
       unit="contacts"
@@ -218,18 +221,19 @@ describe("a first page of many", () => {
     cf_loyalty_tier: "gold",
   }));
 
-  function firstPage(onPerPage: (next: number) => void) {
+  function firstPage(onLoadMore: () => void) {
     return (
       <FilterResults
         preview={{ ...preview(PAGE), match_count: 214, truncated: true }}
+        resource="contact"
         fields={[TIER_FIELD]}
         named={["cf_loyalty_tier"]}
         unit="contacts"
         widthsKey="filter-preview-contacts"
         pending={false}
         total={214}
-        perPage={25}
-        onPerPage={onPerPage}
+        hasMore
+        onLoadMore={onLoadMore}
       />
     );
   }
@@ -241,25 +245,79 @@ describe("a first page of many", () => {
     );
 
     expect(screen.getByText(/1 to 25 of 214 contacts/)).toBeTruthy();
-    // No page past the rows in hand: the next page is asked for, not walked.
-    expect(screen.queryByRole("button", { name: "Page 2" })).toBeNull();
   });
 
-  it("hands the size dial's choice back as the next request's page", async () => {
-    const asked: number[] = [];
+  it("asks for the next page once the reader steps past the rows in hand", async () => {
+    const onLoadMore = vi.fn();
     const user = userEvent.setup();
-    render(
-      firstPage((next) => asked.push(next)),
-      { wrapper },
-    );
+    render(firstPage(onLoadMore), { wrapper });
 
-    await pickOption(
-      user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
-      "50 per page",
-    );
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(asked).toEqual([50]);
+    expect(onLoadMore).toHaveBeenCalled();
+  });
+});
+
+describe("a row", () => {
+  const ROW = { id: "p1", full_name: "Ann Lee", cf_loyalty_tier: "gold" };
+
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("opens its record on a click", async () => {
+    const user = userEvent.setup();
+    render(results([ROW]), { wrapper });
+
+    await user.click(screen.getByText("gold"));
+
+    expect(window.location.hash).toBe("#/contacts/p1");
+  });
+
+  it("links its identity cell to the record page", () => {
+    render(results([ROW]), { wrapper });
+
+    expect(
+      screen.getByRole("link", { name: "Ann Lee" }).getAttribute("href"),
+    ).toBe("/#/contacts/p1");
+  });
+});
+
+describe("the columns past the opening six", () => {
+  const WIDE = ["id", "name", "a", "b", "c", "d", "e", "f", "g"];
+
+  function wide() {
+    return (
+      <FilterResults
+        preview={{
+          resource: "company",
+          match_count: 1,
+          columns: WIDE,
+          rows: [Object.fromEntries(WIDE.map((name) => [name, `${name}-1`]))],
+          truncated: false,
+        }}
+        resource="company"
+        fields={[]}
+        named={[]}
+        unit="companies"
+        widthsKey="filter-preview-wide"
+        pending={false}
+      />
+    );
+  }
+
+  it("are offered unticked in the display menu, and shown once ticked", async () => {
+    const user = userEvent.setup();
+    render(wide(), { wrapper });
+    // "name" plus five more open the table; "f" is the seventh.
+    expect(screen.queryByRole("columnheader", { name: "f" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Display" }));
+    const offered = screen.getByRole("checkbox", { name: "f" });
+    expect(offered).not.toBeChecked();
+    await user.click(offered);
+
+    expect(screen.getByRole("columnheader", { name: "f" })).toBeTruthy();
   });
 });
 
@@ -365,6 +423,7 @@ describe("a column that points at another record", () => {
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
           <FilterResults
+            resource="deal"
             preview={{
               resource: "deal",
               match_count: rows.length,

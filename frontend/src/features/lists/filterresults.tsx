@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The preview's first page as a table (AC-filters-and-views-5, the reading half).
+// The preview's rows as a table (AC-filters-and-views-5, the reading half).
 //
 // It renders through the catalog's ListTable rather than a grid of its own. That
 // was worth checking rather than assuming: ListTable reads as a record-list
@@ -11,21 +11,24 @@
 // frontend/CLAUDE.md records that this tree has twice grown a duplicate surface
 // exactly that way.
 //
-// What this file decides is WHICH columns to show, because the preview carries
-// every non-generated column of the table and thirty columns is not a table
-// anybody reads.
+// What this file decides is which columns to show first. The preview carries
+// every non-generated column of the table, and thirty columns is not a table
+// anybody reads. The rest wait unticked in the display menu.
 
 import { useCompanyMarksByID } from "../../components/companymarks";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { ENTITY } from "../../lib/entity";
 import {
   type FilterPreview,
+  type FilterResource,
   fieldLabel,
   type VocabularyField,
 } from "../../lib/filterdata";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { navigate, routeHash } from "../../lib/router";
 import { ReferenceCell } from "./filterresultcell";
 
 /** A preview row: schema-derived, so its values span every type the table holds. */
@@ -34,9 +37,8 @@ type PreviewRow = Record<string, unknown>;
 /**
  * How many columns a preview opens with, before the column picker is used.
  *
- * A glance, not a report — the same reasoning that bounds the page. ListTable
- * starts with every column it is given visible, so this is the number that
- * decides whether a reader sees a table or a horizontal scrollbar.
+ * Every other column is handed to the table unticked. So this number decides
+ * whether a reader sees a table or a horizontal scrollbar.
  */
 const MAX_COLUMNS = 6;
 
@@ -104,6 +106,8 @@ export function previewColumnNames(
 
 export type FilterResultsProps = Readonly<{
   preview: FilterPreview | undefined;
+  /** The record type of the rows, which names the page a row opens. */
+  resource: FilterResource;
   fields: readonly VocabularyField[];
   /** The fields the filter names, in the order they were written. */
   named: readonly string[];
@@ -116,16 +120,16 @@ export type FilterResultsProps = Readonly<{
   pending: boolean;
   /** How many rows match on the server, when more match than were sent. */
   total?: number;
-  /**
-   * The page size the caller asked the server for, and how to ask again: the
-   * table's size dial then sets the request rather than slicing what came.
-   */
-  perPage?: number;
-  onPerPage?: (next: number) => void;
+  /** The server holds rows past these, and how to ask for the next page. */
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  /** What the rows answer, so a new filter takes the pager back to page one. */
+  scopeKey?: string;
 }>;
 
 export function FilterResults({
   preview,
+  resource,
   fields,
   named,
   unit,
@@ -133,12 +137,17 @@ export function FilterResults({
   emptyNote,
   pending,
   total,
-  perPage,
-  onPerPage,
+  hasMore = false,
+  onLoadMore,
+  scopeKey,
 }: FilterResultsProps) {
   const t = useT();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
-  const names = previewColumnNames(preview?.columns ?? [], named);
+  const opening = previewColumnNames(preview?.columns ?? [], named);
+  const names = [
+    ...opening,
+    ...(preview?.columns ?? []).filter((name) => !opening.includes(name)),
+  ];
   const referenceOf = (name: string) =>
     fields.find((field) => field.name === name)?.references;
   // Every company the page names, read in one batch rather than one request
@@ -161,6 +170,7 @@ export function FilterResults({
       // The identity column is fixed, because it makes a row recognisable. The
       // picker may not hide it, and a phone shows it as the card's heading.
       fixed: index === 0,
+      initiallyHidden: index >= opening.length,
       cell: (row) => {
         const value = row[name];
         return reference && typeof value === "string" && value !== "" ? (
@@ -176,24 +186,28 @@ export function FilterResults({
     };
   });
 
+  // A row opens the record it is, through the route every record link uses.
+  const route = (row: PreviewRow) => ENTITY[resource].route(String(row.id));
+
   return (
     <ListTable<PreviewRow>
+      // Which columns start ticked follows the filter, and the table reads
+      // `initiallyHidden` once, so a new opening set is a new table.
+      key={`${widthsKey}:${opening.join(",")}`}
       rows={rows}
       columns={columns}
       rowKey={rowKey}
+      onRowClick={(row) => navigate(route(row))}
+      rowHref={(row) => routeHash(route(row))}
       unit={unit}
       widthsKey={widthsKey}
       emptyNote={emptyNote}
       pending={pending}
       caption={t("filters.resultsCaption")}
       total={total}
-      perPage={perPage}
-      onPerPage={onPerPage}
-      // The preview is deliberately a first page, and the reader's next step is
-      // to narrow the filter rather than to walk pages of it — so there is no
-      // pager to offer. Claiming `hasMore` without an `onLoadMore` would render
-      // a control that does nothing.
-      hasMore={false}
+      hasMore={hasMore}
+      onLoadMore={onLoadMore}
+      scopeKey={scopeKey}
     />
   );
 }

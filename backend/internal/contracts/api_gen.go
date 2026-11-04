@@ -44682,17 +44682,21 @@ type FilterPreview struct {
 	// length of `rows`. This is the number a builder shows a human while
 	// they decide whether the filter is right, so it is a full count rather
 	// than a page size dressed up as one.
-	MatchCount int                   `json:"match_count"`
+	MatchCount int `json:"match_count"`
+
+	// NextCursor Opaque cursor for the next page, or null if none.
+	NextCursor *string               `json:"next_cursor,omitempty"`
 	Resource   FilterPreviewResource `json:"resource"`
 
-	// Rows Up to `limit` matching rows as column→value maps, ordered by id.
+	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
+	// after the request's `cursor` when it names one.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.
 	Rows []map[string]interface{} `json:"rows"`
 
-	// Truncated Whether `match_count` exceeds the rows returned — so a caller can say
-	// "showing 25 of 812" without comparing lengths and guessing.
+	// Truncated Whether more rows follow this page. It is true exactly when
+	// `next_cursor` is set.
 	Truncated bool `json:"truncated"`
 }
 
@@ -44701,6 +44705,10 @@ type FilterPreviewResource string
 
 // FilterPreviewRequest A candidate filter to evaluate without saving it.
 type FilterPreviewRequest struct {
+	// Cursor Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+	// page after it. Absent reads the first page.
+	Cursor *string `json:"cursor,omitempty"`
+
 	// Filter The canonical filter tree — the same representation a dynamic list's
 	// `definition` and a saved view's `query` carry, and untyped here for
 	// the same reason they are. The grammar's authority is the predicate
@@ -44711,8 +44719,8 @@ type FilterPreviewRequest struct {
 	// one a list or view accepts.
 	Filter map[string]interface{} `json:"filter"`
 
-	// Limit How many rows to sample. The COUNT is unaffected by this — it is the
-	// full match count for the caller, not the size of the page.
+	// Limit The page size. The COUNT is unaffected by this — it is the full match
+	// count for the caller on every page, not the size of the page.
 	Limit    *int                         `json:"limit,omitempty"`
 	Resource FilterPreviewRequestResource `json:"resource"`
 }

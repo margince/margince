@@ -17,6 +17,7 @@ import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { ENTITY } from "../../lib/entity";
 import { customColumnLabel, useFilterVocabulary } from "../../lib/filterdata";
 import {
   type List,
@@ -39,12 +40,7 @@ import {
   ListRecordsCount,
 } from "./listlibrary";
 import { useMemberColumns } from "./listmembercolumns";
-import {
-  isMemberSource,
-  MEMBER_SOURCES,
-  MembersPanel,
-  useListExport,
-} from "./listmembers";
+import { isMemberSource, MembersPanel, useListExport } from "./listmembers";
 import { ArchiveListAction } from "./listrules";
 import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
@@ -285,7 +281,7 @@ function ListSinceVisit({ list }: Readonly<{ list: List }>) {
         summary={list.changes_since_visit}
         onOpen={
           isMemberSource(type)
-            ? (id) => navigate({ screen: MEMBER_SOURCES[type].screen, id })
+            ? (id) => navigate(ENTITY[type].route(id))
             : undefined
         }
       />
@@ -430,12 +426,12 @@ function ListMembers({ list }: Readonly<{ list: List }>) {
       </Panel>
     );
   }
-  const source = MEMBER_SOURCES[list.entity_type];
+  const kind = list.entity_type;
   return (
     <MembersPanel
       list={list}
-      source={list.entity_type}
-      onOpen={(row) => navigate({ screen: source.screen, id: row.id })}
+      source={kind}
+      onOpen={(row) => navigate(ENTITY[kind].route(row.id))}
       columns={columns}
     />
   );
