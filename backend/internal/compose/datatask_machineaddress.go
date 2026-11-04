@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// machineAddressTag is the word existing machine-address contacts are filed
-// under, for a user to find with the tag filter and archive or keep. Nothing
-// is archived or deleted by the task.
+// machineAddressTag is the word machine-address contacts are filed under, for a
+// user to find with the tag filter and archive or keep. This task archives
+// nothing; technicalAddressDataTask archives and retires what it can.
 const machineAddressTag = "machine-address"
 
 // machineAddressTaggedBy keys the run id on each audit row a data task writes.

@@ -360,25 +360,6 @@ func admitActivityPatch(
 	return current, held, nil
 }
 
-// renormalizeTranscriptPatch re-runs ADR-0058's normalizer on a body PATCH
-// when the target row is transcript-marked. A transcript's normalized form
-// is only ever produced on ingest (LogActivityInputFrom) — without this, a
-// PATCH could leave a transcript-marked row holding un-normalized text (raw
-// CRLFs, trailing whitespace), which is exactly the row the
-// activity/transcript retention selector and any future line citation both
-// assume is already canonical.
-func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivityInput) error {
-	if in.Body == nil || current.SourceSystem == nil || *current.SourceSystem != transcriptSourceSystem {
-		return nil
-	}
-	normalized, err := normalizeTranscript(*in.Body)
-	if err != nil {
-		return err
-	}
-	in.Body = &normalized
-	return nil
-}
-
 // RefuseArchiveActivity answers every authority refusal ArchiveActivity would
 // answer with, and writes nothing.
 //

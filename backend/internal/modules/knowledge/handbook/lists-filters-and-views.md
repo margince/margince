@@ -97,7 +97,7 @@ One tag at a time: a second tag takes the place of the first. **Any tag** takes 
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
-Margince tags a contact `machine-address` when its email belongs to a sending system, such as `noreply@` or `receipts@`. These contacts were made before Margince refused such addresses. Filter by the tag, then keep or archive each one. Margince archives and deletes none of them itself.
+Margince does not make a contact from an address that belongs to a sending system, such as `noreply@`, `receipts@` or `@bcc.hubspot.com`. A background task cleans up contacts made before that. A contact whose every address is technical is archived, even if someone edited it, and Undo brings it back. A contact that also has a real address stays and loses only the technical one. A contact on legal hold, or with a phone number or chat identity, is tagged `machine-address` for you to review.
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?

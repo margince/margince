@@ -49,8 +49,11 @@ type outboundMessage struct {
 	// files is what this message carries, already snapshotted.
 	files           []OutboundFile
 	listUnsubscribe string
-	to              []string
-	links           []ActivityLinkInput
+	// advertising says the body carries the advertising duties: the
+	// marketing-only disclosures and the unsubscribe surface.
+	advertising bool
+	to          []string
+	links       []ActivityLinkInput
 	// provider is the mailbox this send goes out through, resolved once per
 	// send. It names the DELIVERY only: the timeline row's natural key is the
 	// transport-independent mail identity (connector.EmailSourceSystem), so the
@@ -187,6 +190,9 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		// message, and the fingerprint stamped from this request is what the
 		// transmit phase later compares the wire against.
 		HTMLBody: m.htmlBody,
+		// Staging refuses this body if a recipient resolves to marketing and
+		// the body was composed without the advertising duties.
+		OmitsAdvertisingDuties: !m.advertising,
 	}
 }
 

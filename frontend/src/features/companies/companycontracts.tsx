@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ContractTerms } from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
 import {
   Badge,
@@ -29,7 +30,6 @@ import {
   isTerminalContractStatus,
 } from "../projects/contractlifecycle";
 import { ContractPaper } from "../projects/contractpaperchip";
-import { ContractTerm, ContractTerms } from "./contractterms";
 import { CustomFieldsPanel } from "./customfields.card";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -402,6 +402,26 @@ function ContractRow({
         {t("contracts.archive.body", { title: contract.title })}
       </ConfirmModal>
     </PanelRow>
+  );
+}
+
+// The term as the two dates that bound it. Absent dates say so in words,
+// because a blank reads as "not loaded". An agreement entered from an invoice
+// often has no recorded term.
+function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const on = (date: string) => formatDate(date, locale, recordZone);
+  if (!contract.starts_on && !contract.ends_on) {
+    return <span>{t("contracts.noTerm")}</span>;
+  }
+  return (
+    <span className="rec-term-dates">
+      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
+      {" – "}
+      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
+    </span>
   );
 }
 
