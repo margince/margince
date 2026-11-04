@@ -257,7 +257,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	invoice := e.invoice(t, company, false)
 	e.employ(t, company)
 	deal := e.openDeal(t, "open", true)
-	e.enquired(t)
+	e.enquiredAbout(t, deal)
 
 	// A seat that may write mail and read contacts, and may NOT read finance.
 	// Everything else about the context is the ordinary sending principal.

@@ -431,11 +431,12 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `about_deal_id` | `uuid` |  |  |
 | `asks_for_quote` | `boolean`, default `false` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `kind` | `text` | yes | One of `inbound_message`, `inquiry`, `active_deal`, `in_person`, `meeting`, `requested_by_subject`. |

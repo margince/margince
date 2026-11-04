@@ -38,3 +38,20 @@ func TestOnlyTheReasonsAStatementResolvesOfferAContextAnswer(t *testing.T) {
 		})
 	}
 }
+
+// A refusal keeps the deal its message named, so the answer a rep gives in the
+// review form is recorded about that deal and reused for the next message
+// about it. A message that named no deal records an answer about none.
+func TestARefusalKeepsTheDealItsAnswerIsAbout(t *testing.T) {
+	deal := ids.NewV7()
+	named := refusedRecipientOf(commsauthz.Decision{
+		Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonDealNotRequested,
+		Evidence: commsauthz.Evidence{DealID: deal},
+	})
+	if named.dealID() != deal {
+		t.Errorf("the refusal names deal %s, want %s", named.dealID(), deal)
+	}
+	if none := refusedRecipientOf(commsauthz.Decision{Verdict: commsauthz.VerdictReview}); !none.dealID().IsZero() || none.DealID != nil {
+		t.Errorf("a message naming no deal left deal %v on its refusal", none.DealID)
+	}
+}

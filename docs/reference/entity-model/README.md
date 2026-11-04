@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4228 |
+| Columns | 4229 |
 | Foreign keys | 585 |
 | Owning areas | 38 |
 
@@ -253,7 +253,7 @@ erDiagram
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
 | [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
-| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 13 | 0 |
+| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 14 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 35 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 12 | 1 |
