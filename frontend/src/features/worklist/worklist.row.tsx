@@ -357,5 +357,7 @@ function RowAsk({
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? <p className="t-body">{t(askKey(item))}</p> : null;
+  return framed ? (
+    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
+  ) : null;
 }

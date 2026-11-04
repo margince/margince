@@ -101,6 +101,20 @@
   min-block-size: 20px;
   padding: 0 8px;
 }
+/* A record's mark leads the chip, flush with its rounded start edge. */
+.chip-lead {
+  padding-inline-start: 2px;
+}
+.chip-dense.chip-lead {
+  padding-inline-start: 0;
+}
+.chip-mark {
+  display: contents;
+}
+.chip-dense .chip-mark > .avatar {
+  inline-size: 20px;
+  block-size: 20px;
+}
 .chip-link {
   text-decoration: none;
 }

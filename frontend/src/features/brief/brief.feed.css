@@ -111,19 +111,17 @@
   font: var(--fontBody);
   color: var(--textSecondary);
 }
+/* The state stands at the far end of the chips' line. */
+.brief-task-status {
+  margin-inline-start: auto;
+}
 .brief-task-meta {
+  align-self: stretch;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   margin-block-start: var(--space-2);
-}
-.brief-task-who {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font: var(--fontBodySmall);
-  color: var(--textPrimary);
 }
 
 /* ── The card in hand ─────────────────────────────────────────────────────
@@ -217,70 +215,111 @@
 .brief-triage-pending > .pending {
   align-self: stretch;
 }
-/* WHEN AND WHOSE, under the work: what kind, who it is with, and its clock,
-   as one caption line split by dots. Nothing stands above the name. */
-.brief-triage-lead-head {
-  order: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-2);
-  margin: 0;
-}
-.brief-triage-lead-head > * + *::before {
-  content: "·";
-  margin-inline-end: var(--space-2);
-  color: var(--textSecondary);
-}
-.brief-triage-label {
-  color: var(--textPrimary);
-  font-weight: var(--fontWeightMedium);
-}
-.brief-triage-label-now {
-  color: var(--warningText);
-}
-.brief-triage-lead .worklist-row {
+/* The open card reads top to bottom as the design does: the name, what to do,
+   its chips and figures, the source as a quote with why it matters, then the
+   verbs. The row inside is laid open so its parts take these places. */
+.brief-triage-lead .worklist-row,
+.brief-triage-lead .worklist-row-text {
   display: contents;
 }
 .brief-triage-lead .worklist-row::before {
   content: none;
 }
-.brief-triage-lead .worklist-row-text {
-  width: 100%;
+.brief-triage-lead .worklist-row-title {
+  order: 1;
+}
+.brief-triage-lead-head {
+  display: contents;
+}
+.brief-triage-lead-head > .heading {
+  order: 1;
+}
+.brief-triage-lead-head > .brief-task-meta {
+  order: 3;
+  margin: 0;
+}
+.brief-triage-facts {
+  order: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+.brief-triage-lead .worklist-row-context,
+.brief-triage-lead .worklist-row-detail,
+.brief-triage-lead .worklist-row-sample,
+.brief-triage-lead .worklist-row-verdict {
+  order: 2;
+  font: var(--fontBodyLarge);
+}
+.brief-triage-lead .emailentry {
+  order: 5;
+}
+/* Why it matters, under the quote, in the accent ink with a lead arrow. */
+.brief-triage-lead .worklist-row-because {
+  order: 6;
+  margin: 0;
+  color: var(--accentText);
+}
+.brief-triage-lead .worklist-row-because::before {
+  content: "\2192\00a0";
+}
+.brief-triage-lead .worklist-row-facts-line,
+.brief-triage-lead .worklist-row-touch,
+.brief-triage-lead .worklist-row-ask {
+  order: 7;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.brief-triage-lead .worklist-row-facts {
+  font: var(--fontBodySmall);
+  color: var(--textPrimary);
 }
 .brief-triage-lead .worklist-row-acts {
-  order: 2;
+  order: 8;
   align-self: stretch;
-  justify-content: flex-start;
+  justify-content: flex-end;
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--borderSubtle);
 }
-/* The head already says where the row stands, why and whose it is, so the
-   rank tile, the kind, the message's by-line and its marks draw nothing here. */
+.brief-triage-lead-asks .worklist-row-ask {
+  order: 2;
+  font: var(--fontBodyLarge);
+  color: var(--textPrimary);
+}
+/* Details first, alone at the start, the way into more; the answer last. */
+.brief-triage-lead .brief-triage-details {
+  order: -1;
+  margin-inline-end: auto;
+  color: var(--accentText);
+}
+.brief-triage-lead .worklist-row-acts > .btn-primary,
+.brief-triage-lead .worklist-row-acts > .btn-ai {
+  order: 1;
+}
+.brief-triage-lead .worklist-row-acts > .overflow-menu {
+  order: 2;
+}
+/* The chips already say whose it is, when it is due and that it is late, so
+   the rank, the kind, and the captions saying so draw nothing. */
 .brief-triage-lead .worklist-rank,
 .brief-triage-lead .worklist-row-kind,
-.brief-triage-lead .emailentry__lead,
+.brief-triage-lead .worklist-row-about,
+.brief-triage-lead .worklist-row-when,
 .brief-triage-lead .emailentry__marks {
   display: none;
 }
 
-/* THE NAME OF THE ROW IN HAND: the column's headline. A waiting message names
-   itself by its subject, at the same rung. */
+/* THE NAME OF THE ROW IN HAND, one rung over the cards behind it. */
+.brief-triage-lead p.worklist-row-title {
+  margin: 0;
+}
 .brief-triage-lead p.worklist-row-title,
-.brief-triage-lead .emailentry__subject {
-  font: var(--fontHeadingMedium);
+.brief-triage-lead-head > .heading {
+  font: var(--fontHeadingSmall);
   white-space: normal;
   overflow-wrap: anywhere;
   text-wrap: balance;
-}
-.brief-triage-lead .worklist-row-context,
-.brief-triage-lead .worklist-row-detail,
-.brief-triage-lead .worklist-row-verdict {
-  font: var(--fontBody);
-}
-.brief-triage-lead .worklist-row-facts {
-  font: var(--fontBody);
-  color: var(--textPrimary);
 }
 /* The name sits in the title itself or, for a subject headline, inside its
    heading; both shapes wrap inside the card. */
@@ -291,6 +330,7 @@
 }
 .brief-triage-lead .worklist-row-title > .heading {
   min-width: 0;
+  font: var(--fontHeadingSmall);
   overflow-wrap: anywhere;
   text-wrap: balance;
 }
@@ -300,21 +340,29 @@
 .brief-triage-lead .worklist-row-title > .heading > .btn {
   font: inherit;
 }
-/* What the sender wrote, in their words, as a quote: three lines, because the
-   reader is deciding how to answer and the message is what they answer. */
+/* What the sender wrote, as a quote card: who and when over their words. */
 .brief-triage-lead .emailentry {
-  padding: 0;
+  align-self: stretch;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background-image: linear-gradient(var(--bgChip), var(--bgChip));
+}
+.brief-triage-lead .emailentry__lead {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.brief-triage-lead .emailentry__subject {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
 }
 .brief-triage-lead .emailentry__preview {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
-  margin-block-start: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background-image: linear-gradient(var(--bgChip), var(--bgChip));
   font: var(--fontBodyLarge);
   font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
@@ -326,11 +374,6 @@
   .brief-task,
   .brief-triage-lead {
     padding-inline-end: var(--space-4);
-  }
-  /* ds:ignore the phone rung of the same one headline */
-  .brief-triage-lead p.worklist-row-title,
-  .brief-triage-lead .emailentry__subject {
-    font: var(--fontHeadingSmall);
   }
 }
 

@@ -239,13 +239,14 @@
   flex-direction: column;
   gap: var(--space-6);
 }
-/* A reading in the rail is one compact row: the name and the figure on one
-   line, the basis and the way into its lane under them. Context, so it stays
-   smaller than the cards it is read beside. */
+/* A reading in the rail is one line: the name, its basis quiet at the end,
+   the figure, and an arrow into its lane. Context, so it stays smaller than
+   the cards it is read beside. */
 .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
-  grid-template-areas:
-    "label figure"
-    "basis foot";
+  grid-template-areas: "label basis figure foot";
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-3);
   padding-block: var(--space-2);
   row-gap: 0;
 }
@@ -258,8 +259,27 @@
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
+  > .stat-card-detail {
+  min-width: 0;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
   > .stat-card-foot {
   justify-self: end;
+}
+/* The arrow alone opens the lane here; its word stays for a screen reader. */
+.brief-rail .stat-card-narrow-row .stat-card-open-word {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
@@ -685,13 +705,29 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+/* Each change is a card like a task's: its mark in the tick's column, what
+   changed and when, then its verbs on a ruled line at the end. */
 .brief-main .brief-agent-section .magic-line {
-  grid-template-columns: var(--space-3) minmax(0, 1fr) auto auto;
+  grid-template-columns: var(--space-8) minmax(0, 1fr) auto;
   column-gap: var(--space-3);
-  row-gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
+  row-gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-3);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
+}
+.brief-main .brief-agent-section .magic-line > .magic-mark {
+  justify-self: center;
+}
+.brief-main .brief-agent-section .magic-line-when {
+  grid-column: 3;
+  grid-row: 1;
+}
+.brief-main .brief-agent-section .magic-line-controls {
+  grid-row: 2;
+  grid-column: 2 / -1;
+  justify-content: flex-end;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 /* The name's line breaks evenly when a long name wraps. */
 .glance-greeting-name {

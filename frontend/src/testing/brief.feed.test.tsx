@@ -253,7 +253,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
   const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector(".brief-triage-label-now")?.textContent).toBe(
+  expect(head?.querySelector(".brief-task-status")?.textContent).toBe(
     "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);
@@ -300,8 +300,9 @@ it("names the account a row in hand is about", () => {
   const { container } = render(
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
-  const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector("a")?.textContent).toBe("Nordwind");
+  const head = container.querySelector<HTMLElement>(".brief-triage-lead-head");
+  if (!head) throw new Error("the card in hand has no head");
+  expect(within(head).getByRole("link", { name: "Nordwind" })).toBeTruthy();
 });
 
 // A waiting card names its row's contact, not a message's sender. A task

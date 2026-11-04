@@ -6199,6 +6199,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // không do mô hình viết.
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
+  "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Việc của bạn",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",

@@ -9,21 +9,16 @@ import {
   TaskNextSteps,
   TaskNextStepsPending,
 } from "../../components/tasknextsteps";
-import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
-import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
-import { formatDayMonth } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { Heading } from "../../design-system/heading";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { briefSubjectLabel, subjectHref } from "../../lib/worklistcopy";
-import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { useMe } from "../../lib/session";
+import { briefContextTitle } from "../../lib/worklistcopy";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
-import { contactHref, useListed } from "../worklist/worklist.row.captions";
-import { cardWhen, TaskCard, TaskTick } from "./brief.taskcard";
+import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
 
@@ -49,8 +44,7 @@ export function Triage({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  const recordZone = useRecordZone();
+  const viewer = useMe(false).data?.user;
   // A press removes the pressed button from the list. Focus follows it onto
   // the card it brought in hand; a first render takes no focus.
   const pressed = useRef(false);
@@ -74,36 +68,20 @@ export function Triage({
         {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
-          <Button variant="ghost" onClick={() => onContext(lead)}>
+          <Button
+            variant="ghost"
+            className="brief-triage-details"
+            onClick={() => onContext(lead)}
+          >
             {t("brief.focus.context")}
           </Button>
         )}
       </>
     ) : undefined;
-  // The head's facts come from the helpers the row uses, so the card and the
-  // queue agree. A message is dated by its arrival, the rest by its own clock.
-  // The reader's own pin is the queue's reason, not the card's.
-  const arrived = lead.email_summary;
-  const when = arrived
-    ? [
-        activityDay(
-          arrived.occurred_at,
-          arrived.occurred_precision,
-          locale,
-          zone,
-          formatDayMonth,
-        ),
-        activityTimeOfDay(
-          arrived.occurred_at,
-          arrived.occurred_precision,
-          locale,
-          zone,
-        ),
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : cardWhen(lead, t, locale, zone, recordZone);
-  const label = t(eyebrowKeyFor(lead));
+  // The open card says what to do, then its chips, then the deal's figures.
+  // With no line of its own from the producer, the row's ask is its line.
+  const told = Boolean(briefContextTitle(lead) || lead.detail);
+  const inbox = lead.email_summary?.display_status;
   // Every row of the day is a card in the server's order, and the one in hand
   // opens where it stands. An ordered list, so the order reaches a screen
   // reader as the claim it is.
@@ -115,22 +93,29 @@ export function Triage({
             {/* Keyed by the row, so pressing another one mounts a new card and
                 replays its arrival. The press is answered on the card. */}
             <div ref={takeFocus} tabIndex={-1} className="brief-triage-frame">
-              <Card as="article" className="brief-triage-lead">
+              <Card
+                as="article"
+                className={
+                  told
+                    ? "brief-triage-lead"
+                    : "brief-triage-lead brief-triage-lead-asks"
+                }
+              >
                 <TaskTick item={lead} />
                 <div className="brief-triage-body">
-                  <p className="t-caption brief-triage-lead-head">
-                    <span
-                      className={
-                        lead.band === "now"
-                          ? "brief-triage-label brief-triage-label-now"
-                          : "brief-triage-label"
-                      }
-                    >
-                      {label}
-                    </span>
-                    <AboutLine item={lead} />
-                    {when && <span className="t-num">{when}</span>}
-                  </p>
+                  <div className="brief-triage-lead-head">
+                    {lead.email_summary && (
+                      <Heading size="small" as="h3">
+                        {taskName(lead, viewer, t, locale)}
+                      </Heading>
+                    )}
+                    <TaskMeta item={lead} linked />
+                    {inbox && (
+                      <p className="t-caption brief-triage-facts">
+                        {t(`visibility.${inbox}`)}
+                      </p>
+                    )}
+                  </div>
                   <WorklistRow
                     // Personal ordering is the queue's, not the focus projection's.
                     allowPin={false}
@@ -166,33 +151,5 @@ export function Triage({
         ),
       )}
     </ol>
-  );
-}
-
-/**
- * Whose row this is, linked: the contact the server put on the row, else the
- * record it is about. The sender of a thread filed under a deal is a contact,
- * and the reply goes to them. Where the message sits (the team's inbox, the
- * reader's own) follows in the access badge's own words.
- */
-function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const contact = item.contact;
-  const label =
-    contact?.label ??
-    (briefSubjectLabel(item) ? undefined : item.subject?.label);
-  const listed = useListed();
-  const target = contact?.label ? contactHref(contact) : subjectHref(item);
-  const href = target && listed(target);
-  const inbox = item.email_summary?.display_status;
-  return (
-    <>
-      {label && href && (
-        <AppLink className="entity-link" href={href}>
-          {label}
-        </AppLink>
-      )}
-      {inbox && <span>{t(`visibility.${inbox}`)}</span>}
-    </>
   );
 }

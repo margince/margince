@@ -4,27 +4,58 @@
 // One row of the day as a to-do card: the tick, what to do, and who it is
 // with. The row in hand is drawn whole by brief.focus.tsx; these are the rest.
 
-import { CalendarDays, CircleCheck } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarDays,
+  Circle,
+  FolderKanban,
+  Handshake,
+  Hourglass,
+  type LucideIcon,
+  Mail,
+  MessageSquare,
+  Settings,
+  ShieldCheck,
+  SquareCheck,
+  TrendingDown,
+  UserPlus,
+} from "lucide-react";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
+import { Chip } from "../../design-system/readings";
+import {
+  calendarDaysBetween,
+  formatDayMonthNearYear,
+  formatNumber,
+} from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+  type Words,
+} from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import {
   briefContextTitle,
   briefSubjectLabel,
-  dealFactsText,
   itemTitle,
   phrasedReasons,
   reasonText,
+  subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { employerOf } from "../worklist/worklist.meetingparties";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { readerTask } from "../worklist/worklist.reader";
 import { useTaskDone } from "../worklist/worklist.row.answer";
+import { contactHref, useListed } from "../worklist/worklist.row.captions";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(
@@ -33,8 +64,14 @@ export function taskName(
   t: Translator,
   locale: Locale,
 ): string {
+  const mail = item.email_summary;
+  const sender = item.contact?.label ?? mail?.counterparty;
+  // A message waiting on the reader is named by the move it asks for.
+  if (mail?.move === "needs_reply" && sender && mail.subject)
+    return t("brief.task.reply", { name: sender, subject: mail.subject });
   return (
-    briefSubjectLabel(item) ?? itemTitle(readerTask(item, viewer, t), t, locale)
+    briefSubjectLabel(item) ??
+    itemTitle(readerTask(item, viewer, t), t, locale, subjectChipped(item))
   );
 }
 
@@ -82,7 +119,7 @@ function DoneVerb({ item }: Readonly<{ item: WorklistItem }>) {
       label={t("brief.task.done", {
         title: taskName(item, viewer, t, locale),
       })}
-      icon={<CircleCheck aria-hidden="true" />}
+      icon={<Circle aria-hidden="true" />}
       variant="ghost"
       pending={done.pending}
       onClick={() => void done.complete()}
@@ -98,12 +135,8 @@ export function TaskCard({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const recordZone = useRecordZone();
   const viewer = useMe(false).data?.user;
-  const when = cardWhen(item, t, locale, zone, recordZone);
   const line = taskLine(item, t, locale, zone);
-  // Deals that read alike stay apart by their figures.
-  const facts = item.deal ? dealFactsText(item, t, locale, zone) : null;
   return (
     <Card as="article" className="brief-task">
       <TaskTick item={item} />
@@ -112,31 +145,112 @@ export function TaskCard({
           {taskName(item, viewer, t, locale)}
         </span>
         {line && <span className="brief-task-line">{line}</span>}
-        <span className="brief-task-meta">
-          {when && (
-            <Badge tone={dueTone(item)} icon={CalendarDays}>
-              {when}
-            </Badge>
-          )}
-          <span className="t-caption">{t(eyebrowKeyFor(item))}</span>
-          <TaskPeople item={item} />
-          {facts && <span className="t-caption t-num">{facts}</span>}
-        </span>
+        <TaskMeta item={item} />
       </button>
     </Card>
   );
 }
 
-/** The clock a card races. An undated task has none, so it shows none. */
+/**
+ * One line of chips under a card's text: when it is due, what kind of work it
+ * is, who and what it is with, and its state at the far end. `linked` makes
+ * each record a link, for the open card, which is no button of its own.
+ */
+export function TaskMeta({
+  item,
+  linked = false,
+}: Readonly<{ item: WorklistItem; linked?: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const when = cardWhen(
+    item,
+    { t, plural, locale },
+    viewerZone(),
+    recordZone,
+    new Date(),
+  );
+  // The open card's title already carries the late badge.
+  const status = statusOf(item, linked);
+  return (
+    <span className="brief-task-meta">
+      {when && (
+        <Badge tone={dueTone(item)} icon={CalendarDays}>
+          {when}
+        </Badge>
+      )}
+      <Chip dense icon={kindIcon(item)}>
+        {t(kindKey(item))}
+      </Chip>
+      <TaskPeople item={item} linked={linked} />
+      {status && (
+        <span className="brief-task-status">
+          <Badge tone={status.tone} dot>
+            {t(status.key)}
+          </Badge>
+        </span>
+      )}
+    </span>
+  );
+}
+
+const CATEGORY_ICONS: Record<WorklistItem["category"], LucideIcon> = {
+  customer_waiting: MessageSquare,
+  leads: UserPlus,
+  deals_at_risk: TrendingDown,
+  meetings: CalendarClock,
+  upcoming: CalendarClock,
+  tasks: SquareCheck,
+  decisions: ShieldCheck,
+  relationships: Hourglass,
+  system: Settings,
+};
+
+// A waiting message is named for what it is, an email; its category moves to
+// the state at the end of the line.
+function kindKey(item: WorklistItem): MessageKey {
+  return item.email_summary ? "timeline.kind.email" : eyebrowKeyFor(item);
+}
+
+function kindIcon(item: WorklistItem): LucideIcon {
+  return item.email_summary ? Mail : CATEGORY_ICONS[item.category];
+}
+
+type CardStatus = Readonly<{ key: MessageKey; tone: "danger" | "warning" }>;
+
+/** Late first, then why a message is waiting; any other row has no state. */
+function statusOf(item: WorklistItem, titled: boolean): CardStatus | null {
+  if (item.overdue === true)
+    return titled ? null : { key: "worklist.overdue", tone: "danger" };
+  if (item.email_summary && item.band === "now")
+    return { key: eyebrowKeyFor(item), tone: "warning" };
+  return null;
+}
+
+/**
+ * The clock a card races. An undated task has none, so it shows none. A late
+ * one says its day and how late it is, the two facts a reader acts on.
+ */
 export function cardWhen(
   item: WorklistItem,
-  t: Translator,
-  locale: Locale,
+  words: Words,
   zone: string,
   recordZone: string,
+  now: Date,
 ): string | null {
   if (item.source === "task" && !item.due_at) return null;
-  return whenText(item, t, locale, zone, recordZone, new Date());
+  const { t, plural, locale } = words;
+  if (item.overdue === true && item.due_at) {
+    const clock = item.source === "task" ? recordZone : zone;
+    const late = calendarDaysBetween(new Date(item.due_at), now, clock);
+    if (late > 0)
+      return [
+        formatDayMonthNearYear(item.due_at, locale, clock, now),
+        plural("co.next.daysLate", late, { days: formatNumber(late, locale) }),
+      ].join(" · ");
+  }
+  return whenText(item, t, locale, zone, recordZone, now);
 }
 
 /** Late is danger, the day's first band a warning, anything else plain. */
@@ -145,22 +259,96 @@ export function dueTone(item: WorklistItem): "danger" | "warning" | "default" {
   return item.band === "now" ? "warning" : "default";
 }
 
-/** Who the work is with and what it is about, as a reader knows them. */
-export function TaskPeople({ item }: Readonly<{ item: WorklistItem }>) {
-  const about =
-    item.subject?.id === item.contact?.id ? undefined : item.subject;
-  const named = [
-    item.contact && { ...item.contact, type: "contact" as const },
-    about,
-  ].filter((who) => who?.label !== undefined && who.label !== "");
-  return named.map((who) =>
-    who ? (
-      <span key={who.id} className="brief-task-who">
-        {(who.type === "contact" || who.type === "company") && (
-          <Avatar name={who.label ?? ""} identity={who.id} />
-        )}
-        {who.label}
-      </span>
-    ) : null,
+type Named = Readonly<{
+  id: string;
+  label: string;
+  href?: string;
+  mark: "avatar" | LucideIcon;
+}>;
+
+const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = {
+  deal: Handshake,
+  lead: UserPlus,
+  project: FolderKanban,
+};
+
+/**
+ * Who the work is with and what it is about: the contact, the account they
+ * work for, and the record the row is about where it is neither.
+ */
+export function TaskPeople({
+  item,
+  linked = false,
+}: Readonly<{ item: WorklistItem; linked?: boolean }>) {
+  const listed = useListed();
+  // A brief item's open card is headed by its record, so no chip repeats it.
+  const headed = linked && briefSubjectLabel(item) !== undefined;
+  const named = namedOn(item).filter(
+    (who, index, all) =>
+      all.findIndex((other) => other.id === who.id) === index &&
+      !(headed && who.id === item.subject?.id),
   );
+  return named.map((who) => {
+    const appHref = linked && who.href ? listed(who.href) : undefined;
+    return who.mark === "avatar" ? (
+      <Chip
+        key={who.id}
+        dense
+        appHref={appHref}
+        lead={<Avatar name={who.label} identity={who.id} />}
+      >
+        {who.label}
+      </Chip>
+    ) : (
+      <Chip key={who.id} dense appHref={appHref} icon={who.mark}>
+        {who.label}
+      </Chip>
+    );
+  });
+}
+
+/** The subject has a chip of its own on the card, so the name need not say it. */
+function subjectChipped(item: WorklistItem): boolean {
+  const subject = item.subject;
+  if (!subject?.label) return false;
+  return (
+    subject.type === "contact" ||
+    subject.type === "company" ||
+    SUBJECT_ICONS[subject.type] !== undefined
+  );
+}
+
+function namedOn(item: WorklistItem): Named[] {
+  const named: Named[] = [];
+  const contact = item.contact;
+  if (contact?.label)
+    named.push({
+      id: contact.id,
+      label: contact.label,
+      href: contactHref(contact),
+      mark: "avatar",
+    });
+  const employer = contact && employerOf(contact);
+  if (contact?.employer && employer)
+    named.push({
+      id: contact.employer.company_id,
+      label: employer.label,
+      href: employer.href,
+      mark: "avatar",
+    });
+  const subject = item.subject;
+  if (subject?.label) {
+    const mark =
+      subject.type === "contact" || subject.type === "company"
+        ? "avatar"
+        : SUBJECT_ICONS[subject.type];
+    if (mark)
+      named.push({
+        id: subject.id,
+        label: subject.label,
+        href: subjectHref(item),
+        mark,
+      });
+  }
+  return named;
 }

@@ -6352,6 +6352,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
+  "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Deine Aufgaben",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",

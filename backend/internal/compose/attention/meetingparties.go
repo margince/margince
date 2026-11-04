@@ -82,8 +82,8 @@ func isMeetingRow(row crmcontracts.WorklistItem) bool {
 	return row.Source == sourceMeeting || row.Source == sourceMeetingOutcome
 }
 
-// nameTheEmployers puts the counterparty's employer on every meeting row that
-// names one, in one read for the page.
+// nameTheEmployers puts the contact's employer on every row that names a
+// contact, in one read for the page, so each card can name the account.
 func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
 	if s.employers == nil {
 		return nil
@@ -91,7 +91,7 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 	var wanted []ids.UUID
 	seen := map[ids.UUID]bool{}
 	for _, row := range rows {
-		if !isMeetingRow(row) || row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
+		if row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
 			continue
 		}
 		seen[ids.UUID(row.Contact.Id)] = true
@@ -109,7 +109,7 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 		return fmt.Errorf("attention: naming where the meetings' contacts work: %w", err)
 	}
 	for i := range rows {
-		if !isMeetingRow(rows[i]) || rows[i].Contact == nil {
+		if rows[i].Contact == nil {
 			continue
 		}
 		if employer, known := employers[ids.UUID(rows[i].Contact.Id)]; known {

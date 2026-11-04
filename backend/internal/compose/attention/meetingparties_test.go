@@ -8,7 +8,6 @@ package attention
 
 import (
 	"context"
-	"slices"
 	"testing"
 	"time"
 
@@ -105,10 +104,9 @@ func TestTheHostIsNamedOnlyWhereTheReaderMayResolveTheName(t *testing.T) {
 	}
 }
 
-// The counterparty's employer rides on meeting rows only: every other row's
-// title already names its record. A contact whose employer the reader may not
-// see gets none.
-func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
+// Every row that names a contact says where that contact works, so a card can
+// name the account. A contact whose employer the reader may not see gets none.
+func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 	t.Parallel()
 	known, withheld, sender := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	acme := crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(ids.NewV7()), CompanyName: "Acme"}
@@ -121,6 +119,7 @@ func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
 		{Source: sourceMeeting, Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(known)}},
 		{Source: sourceMeetingOutcome, Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(withheld)}},
 		{Source: "waiting", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(sender)}},
+		{Source: "task"},
 	}
 	if err := svc.nameTheEmployers(context.Background(), rows); err != nil {
 		t.Fatalf("naming the employers: %v", err)
@@ -131,13 +130,10 @@ func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
 	if rows[1].Contact.Employer != nil {
 		t.Errorf("a withheld employer is named %+v, want none", rows[1].Contact.Employer)
 	}
-	if rows[2].Contact.Employer != nil {
-		t.Errorf("a waiting row carries employer %+v, want none", rows[2].Contact.Employer)
+	if rows[2].Contact.Employer == nil || rows[2].Contact.Employer.CompanyName != "Acme" {
+		t.Errorf("a waiting row employer = %+v, want Acme", rows[2].Contact.Employer)
 	}
-	if !slices.Contains(asked, known) || !slices.Contains(asked, withheld) {
-		t.Errorf("the employer read was asked about %v, want both meeting contacts", asked)
-	}
-	if slices.Contains(asked, sender) {
-		t.Error("the employer read was asked about a row that is not a meeting")
+	if len(asked) != 3 {
+		t.Errorf("the employer read was asked about %v, want the three contacts once each", asked)
 	}
 }

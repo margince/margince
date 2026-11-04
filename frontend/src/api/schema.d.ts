@@ -55502,9 +55502,8 @@ export interface components {
             label?: string;
             touch?: components["schemas"]["WorklistContactTouch"];
             /**
-             * @description Where the contact works today, so a meeting row says which account the
-             *     meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
-             *     other row's title already names its record.
+             * @description Where the contact works today, so every row that names a contact can also
+             *     name the account, and a meeting row says which account the meeting was with.
              *
              *     Absent where the contact has no current employer, or where this caller may
              *     not read the employment or the company. Absent never means "works nowhere".

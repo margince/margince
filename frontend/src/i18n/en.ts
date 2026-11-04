@@ -6345,6 +6345,7 @@ export const en = {
   // never model-written, so it cannot say what the rows contradict.
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
+  "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Your tasks",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
