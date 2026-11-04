@@ -93,13 +93,20 @@ func (h sdrSummaryHandlers) ListSdrUpcomingMeetings(w http.ResponseWriter, r *ht
 	ctx := r.Context()
 	err = h.db.Tx(ctx, func(tx pgx.Tx) error {
 		out.AsOf = h.now().UTC()
-		if _, err := ResolveAnalyticsScope(ctx, tx, requested); err != nil {
+		resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
+		if err != nil {
 			return err
+		}
+		allowed, err := mayReadIndividualWork(ctx, tx, resolved)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return apperrors.ErrPermissionDenied
 		}
 		if !weekly.MayReadMeetings(ctx) {
 			return apperrors.ErrPermissionDenied
 		}
-		var err error
 		if out.Window, err = requestedWindow(ctx, tx, params.WindowStart, params.WindowEnd, after != nil, out.AsOf); err != nil {
 			return err
 		}

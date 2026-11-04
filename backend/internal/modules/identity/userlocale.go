@@ -111,7 +111,7 @@ type Seat struct {
 	// them by.
 	GreetingName *string
 	// Timezone is empty when the writer did not read it. TimezoneChosen says
-	// whether the person picked it themselves.
+	// whether the user picked it themselves.
 	Timezone       string
 	TimezoneChosen bool
 }

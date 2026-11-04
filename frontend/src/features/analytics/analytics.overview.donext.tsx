@@ -6,9 +6,10 @@ import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { problemStatus } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { listReadState } from "../../lib/worklist.listread";
@@ -20,6 +21,7 @@ import {
   whenText,
 } from "../../lib/worklistcopyreasons";
 import { worklistDayOptions } from "../../lib/worklistday";
+import { worklistLaneHref } from "../../lib/worklistrouting";
 import type { WorklistItem } from "../../lib/worklisttypes";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 
@@ -37,7 +39,7 @@ export function DoNext() {
   const plural = usePlural();
   const { locale } = useLocale();
   const day = useInfiniteQuery(
-    worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW),
+    worklistDayOptions("mine", "prospecting", undefined, DEFAULT_VIEW),
   );
   const page = day.data?.pages[0];
   const items = page?.queue?.slice(0, NAMED_WORK) ?? [];
@@ -47,7 +49,13 @@ export function DoNext() {
   const read = listReadState(day, page?.queue);
   const state = read === "empty" && incomplete ? "unavailable" : read;
   const total = page?.summary?.total ?? 0;
-  const worklist = routeHash({ screen: "worklist" });
+  const worklist = worklistLaneHref("prospecting");
+  if (problemStatus(day.error) === 422)
+    return (
+      <AppLink href={worklistLaneHref("all")}>
+        {t("analytics.sdrOpenWorklist")}
+      </AppLink>
+    );
   if (state === "empty") return null;
   return (
     <Panel
@@ -60,7 +68,7 @@ export function DoNext() {
                 so it is said whole rather than less the cards drawn here. */}
             {total > items.length
               ? plural("analytics.doNext.all", total, {
-                  count: formatNumber(total, locale),
+                  count: formatAnalyticsNumber(total, locale),
                 })
               : t("analytics.sdrOpenWorklist")}
           </AppLink>

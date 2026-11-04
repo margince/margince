@@ -6,7 +6,7 @@ import { Button, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -203,7 +203,7 @@ export function ReportingLibrary({
                                 "reporting.pausedSchedules",
                                 report.paused_schedule_count,
                                 {
-                                  count: formatNumber(
+                                  count: formatAnalyticsNumber(
                                     report.paused_schedule_count,
                                     locale,
                                   ),

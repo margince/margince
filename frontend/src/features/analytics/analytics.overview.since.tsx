@@ -83,6 +83,7 @@ export function SinceLastReview({
             </>
           );
         }
+        if (!chart.capture_status?.next_capture_at) return null;
         return (
           <p className="analytics-open-line">
             <span className="analytics-attention-title">

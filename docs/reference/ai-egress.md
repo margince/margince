@@ -79,6 +79,10 @@ hosted provider would defeat the check. Both declare `local_only`: their prompt
 reaches no hosted provider under any profile, and no decision provider the
 registry does not mark local either.
 
+`voice_build` reads mail too, but only a user's own sent mail, and only after that
+user chose **Learn from sent mail** on their Writing voice page. Its text then goes
+where the task's ladder in the table sends it.
+
 The **Local-only ladder** column names the ladder's tiers and does not say what
 a deployment binds them to. Those tiers are size classes, and for a task that
 does not declare `local_only` the AI profile decides:

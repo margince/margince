@@ -12,7 +12,7 @@ import type {
   ResolveAnswer,
   ResolveSheetLabels,
 } from "../../design-system/resolvesheet";
-import { formatDate, formatMoneyOrAbsent } from "../../format/format";
+import { formatAnalyticsMoneyOrAbsent, formatDate } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -186,7 +186,7 @@ function checkColumns(
       header: t("review.colAtStake"),
       render: (check) => (
         <span className="t-num">
-          {formatMoneyOrAbsent(
+          {formatAnalyticsMoneyOrAbsent(
             check.affected_minor ?? null,
             check.currency ?? "",
             locale,

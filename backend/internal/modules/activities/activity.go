@@ -78,7 +78,9 @@ type LogActivityInput struct {
 	// engagement, so a hand-logged meeting moves a lead the same as a synced
 	// one.
 	MeetingStatus *string
-	DueAt         *time.Time
+	// CallOutcome is how a call ended; the mapping refuses it on another kind.
+	CallOutcome *string
+	DueAt       *time.Time
 	// DueHasTime is true when DueAt names an agreed time of day rather than
 	// the day the task is due by. It needs DueAt, and on a task with no
 	// RemindAt it sets the reminder to DueAt (admitTaskTime).
@@ -227,7 +229,7 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 func (s *Store) logActivityAndReadTranscript(
 	ctx context.Context, tx pgx.Tx, in LogActivityInput,
 ) (crmcontracts.Activity, bool, error) {
-	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body); err != nil {
+	if err := CheckEntryHasContent(in.Kind, in.Subject, in.Body, in.CallOutcome); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	if in.RequestActivityID != nil {
@@ -329,7 +331,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime,
+		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime, in.CallOutcome,
 	})
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
@@ -344,9 +346,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time`+authorCols+precisionCol+languageCol+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+precisionCol+languageCol+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26`+authorHolders+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

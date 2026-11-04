@@ -204,6 +204,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	// same hazard: a swap reads as a valid-looking wrong value.
 	assertString(t, "a.direction", stringOf(got.Direction))
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
+	assertString(t, "a.call_outcome", stringOf(got.CallOutcome))
 	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
 	// Served for mail only, and the sentinel row's kind is not mail.

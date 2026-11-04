@@ -19,7 +19,7 @@
 #              so a running dev stack and this lane never collide either. More
 #              than one package touches Redis, and at least two FLUSHDB between
 #              tests, so this is an isolation boundary rather than a convenience
-#              — see the NPKGS guard below for what happens when it is short.
+#              — batches wait before reusing the reserved test block.
 # Within a package nothing changes — still -p 1, the same sequential model that is
 # green today — so no test file needs editing.
 #
@@ -194,9 +194,8 @@ GO_DIRS=(backend)
 # which `make dev` owns, and the block above this one, which the per-worktree
 # dev stacks take. So --databases in docker-compose.dev.yml is higher than this
 # number, not equal to it, and the gate asserts the offset rather than equality.
-# It is one PER PACKAGE, not per concurrent job — a package's keys must survive
-# the whole package, and a slot freed by a finished package cannot be handed on
-# while its successor is still reading.
+# Packages in each batch own distinct databases until the whole batch exits.
+# Later batches reuse that block without entering the worktree dev allocation.
 REDIS_DBS=64
 
 # Candidate packages: every directory in the module that holds test files. Which
@@ -459,17 +458,6 @@ done < "$GROUPED"
 rm -f "$GROUPED"
 
 NPKGS=$(wc -l < "$WORK" | tr -d ' ')
-# One Redis logical db per package, and there must be enough of them. Wrapping
-# the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and every
-# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
-# other package's keys mid-test and the failure surfaces in whichever suite was
-# reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
-if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
-  exit 1
-fi
 # Say what was left to the unit lane. An unreported exclusion and a broken
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
@@ -494,9 +482,8 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # Redis logical db per slot — db 0 stays reserved for `make dev`. The modulo
-  # never wraps in practice: the NPKGS guard above refuses the run rather than
-  # let two packages land on one db.
+  # The batch barrier lets this wrap only after the previous holder exits.
+  # Database 0 and the higher worktree dev block stay outside this mapping.
   local redis_db=$(( 1 + (idx - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
@@ -554,11 +541,7 @@ export REDIS_DBS
 # is this script's to reduce.
 FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
-# Fan out with a bounded worker pool. nl numbers the lines → stable per-job db
-# names + logs. The work line rides as a positional arg, not spliced into the
-# script, so the shard-mode regex characters never meet the shell.
-nl -ba -w1 -s'|' "$WORK" \
-  | xargs -P "$JOBS" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$OUTDIR"
+run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
 
 # Aggregate: print every log in package (idx) order, then enforce the teeth.
 fail=0

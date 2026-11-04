@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { landingBasisLines } from "./analytics.forecast.landing";
 import {
@@ -22,7 +22,37 @@ import {
   reportingCompactAmount,
 } from "./reporting.model";
 
-export function SalesOverviewMetrics({
+export function SalesOverviewMetrics(
+  props: Parameters<typeof QuarterOverviewMetrics>[0],
+) {
+  const t = useT();
+  if (props.evaluation.selection.period === "this_quarter")
+    return <QuarterOverviewMetrics {...props} />;
+  return (
+    <StatStrip label={t("analytics.overview.readings")} density="compact">
+      <MetricReading
+        narrow="stack"
+        evaluation={props.evaluation}
+        id="bookings_won"
+        onEvidence={props.onEvidence}
+      />
+      <MetricReading
+        narrow="stack"
+        evaluation={props.evaluation}
+        id="open_pipeline"
+        onEvidence={props.onEvidence}
+      />
+      <MetricReading
+        narrow="stack"
+        evaluation={props.evaluation}
+        id="closed_win_rate"
+        onEvidence={props.onEvidence}
+      />
+    </StatStrip>
+  );
+}
+
+function QuarterOverviewMetrics({
   evaluation,
   aside,
   forecastHref,
@@ -50,13 +80,13 @@ export function SalesOverviewMetrics({
     );
   const periodPipeline =
     basis?.open_pipeline_minor ?? comparison?.open_pipeline;
-  const quarter = evaluation.selection.period === "this_quarter";
   const hasRange =
     visibleForecast?.range_low_minor != null &&
     visibleForecast.range_high_minor != null;
   return (
     <StatStrip label={t("analytics.overview.readings")} density="compact">
       <MetricReading
+        narrow="stack"
         evaluation={evaluation}
         id="bookings_won"
         detail={aside}
@@ -69,7 +99,7 @@ export function SalesOverviewMetrics({
         money={money}
       />
       <StatCard
-        narrow="row"
+        narrow="stack"
         label={t("forecast.model.quarter")}
         value={
           hasRange
@@ -80,29 +110,37 @@ export function SalesOverviewMetrics({
           hasRange ? t("forecast.model.detail") : forecast?.coverage.reason
         }
         href={hasRange ? forecastHref : undefined}
+        opens="forecast"
       />
       <StatCard
-        narrow="row"
+        narrow="stack"
         label={t("analytics.outlook.periodPipeline")}
-        value={quarter && periodPipeline != null ? money(periodPipeline) : "—"}
+        value={periodPipeline != null ? money(periodPipeline) : "—"}
         basis={
-          quarter && coverage ? (
-            <ForecastCoverage evaluation={evaluation} />
-          ) : undefined
+          coverage ? <ForecastCoverage evaluation={evaluation} /> : undefined
         }
         detail={
-          quarter && basis ? (
+          basis ? (
             <>
-              <span>
-                {plural("analytics.outlook.dealCount", basis.eligible_count, {
-                  count: formatNumber(basis.eligible_count, locale),
-                })}
-              </span>
+              {basis.open_count != null && (
+                <span>
+                  {plural("analytics.outlook.dealCount", basis.open_count, {
+                    count: formatAnalyticsNumber(basis.open_count, locale),
+                  })}
+                </span>
+              )}
               {coverage?.summary && <span>{coverage.summary}</span>}
             </>
           ) : undefined
         }
-        href={quarter && periodPipeline != null ? forecastHref : undefined}
+        onOpen={
+          basis?.open_evidence && periodPipeline != null
+            ? () => {
+                if (basis.open_evidence) onEvidence(basis.open_evidence);
+              }
+            : undefined
+        }
+        opens="records"
       />
     </StatStrip>
   );
@@ -141,7 +179,7 @@ function ForecastOverviewReading({
       : undefined;
   return (
     <StatCard
-      narrow="row"
+      narrow="stack"
       label={t(
         basis ? `forecast.basis.${basis.landing.measure}` : "forecast.landing",
       )}
@@ -149,6 +187,7 @@ function ForecastOverviewReading({
       basis={calledAt && lines.beside ? <span>{lines.beside}</span> : undefined}
       value={readingValue(forecast, evaluation, t, locale)}
       href={forecast?.value != null ? href : undefined}
+      opens="forecast"
       detail={
         <>
           {(calledAt || lines.beside) && (

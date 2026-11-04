@@ -5,7 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { formatMoney } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { AnalyticsScreen } from "./analytics";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
@@ -47,9 +47,11 @@ it("totals the whole pipeline above its stages, priced shortfall included", asyn
   await openPipeline();
 
   expect(
-    await screen.findByText(formatMoney(150_000, "EUR", "en")),
+    await screen.findByText(formatAnalyticsMoney(150_000, "EUR", "en")),
   ).toBeTruthy();
-  expect(screen.getByText(formatMoney(30_000, "EUR", "en"))).toBeTruthy();
+  expect(
+    screen.getByText(formatAnalyticsMoney(30_000, "EUR", "en")),
+  ).toBeTruthy();
   expect(screen.getByText("5")).toBeTruthy();
   // Under both money totals: the weighted one is short the same deals.
   expect(
@@ -82,7 +84,7 @@ it("states no pipeline-wide shortfall when a stage left its priced count out", a
   await openPipeline();
 
   expect(
-    await screen.findByText(formatMoney(150_000, "EUR", "en")),
+    await screen.findByText(formatAnalyticsMoney(150_000, "EUR", "en")),
   ).toBeTruthy();
   expect(screen.queryByText((text) => text.includes("of 5 priced"))).toBeNull();
 });
@@ -112,9 +114,11 @@ it("draws no pipeline total when an unpriced stage's shortfall cannot be stated"
 
   // The priced stage's own row, and no total that quietly equals it.
   expect(
-    await screen.findAllByText(formatMoney(100_000, "EUR", "en")),
+    await screen.findAllByText(formatAnalyticsMoney(100_000, "EUR", "en")),
   ).toHaveLength(1);
-  expect(screen.getAllByText(formatMoney(20_000, "EUR", "en"))).toHaveLength(1);
+  expect(
+    screen.getAllByText(formatAnalyticsMoney(20_000, "EUR", "en")),
+  ).toHaveLength(1);
 });
 
 it("asks every pipeline card for the picked record scope, and leaves delivery company-wide", async () => {
