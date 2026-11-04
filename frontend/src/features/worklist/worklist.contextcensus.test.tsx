@@ -90,6 +90,7 @@ const CONTEXT = {
   customer_waiting: record("customer_waiting", "contact"),
   lead_response: record("lead_response", "lead"),
   deal_at_risk: record("deal_at_risk", "deal"),
+  deal_review: record("deal_review", "deal"),
   meeting: activity("meeting"),
   relationship_decay: record("relationship_decay", "contact"),
   failed_approval: record("failed_approval", "contact"),

@@ -821,8 +821,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Người chủ trì",
   "approval.preview.intendedAttendee":
     "Người dự kiến tham dự (không được thông báo)",
-  "approval.preview.hostNamedAttendee":
-    "Chỉ mời theo địa chỉ (không kiểm tra sự đồng ý)",
+  "approval.preview.hostNamedAttendee": "Địa chỉ được nhập",
   "approval.preview.htmlBody": "Nội dung có định dạng",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
@@ -1903,6 +1902,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Hủy cuộc họp",
   "scheduling.cancelConfirm":
     "Hủy cuộc họp này và thông báo cho người tham dự?",
+  "scheduling.calendarDisconnectedTitle": "Lịch của bạn đã từ chối Margince",
+  "scheduling.calendarDisconnectedHelp":
+    "Mọi lời mời đang chờ lịch này đều tạm dừng. Hãy kết nối lại lịch với quyền thêm sự kiện, chúng sẽ tự được gửi đi.",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
   "scheduling.pausedUnavailable":
@@ -2119,6 +2121,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kết nối lịch",
   "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Deal bị gắn cờ",
+  "brief.coverage.source.deal_review": "Rà soát sự ủng hộ",
   "brief.coverage.source.lead_response": "Lead đã giao",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
   "brief.coverage.source.conversation_claim": "Cam kết của khách hàng",
@@ -4062,6 +4065,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Việc cần làm",
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
+  "deal.products.emptyTakesOffer":
+    "Nếu bạn lưu danh sách trống, deal sẽ lấy sản phẩm từ báo giá đã chấp nhận, nếu có.",
+  "deal.products.title": "Sản phẩm",
+  "deal.products.denied": "Bạn không được xem các sản phẩm của deal này.",
+  "deal.products.empty":
+    "Chưa có sản phẩm. Báo giá được chấp nhận sẽ đặt chúng, hoặc bạn có thể tự đặt.",
+  "deal.products.edit": "Đặt sản phẩm",
+  "deal.products.editTitle": "Đặt các sản phẩm deal này bán",
+  "deal.products.save": "Lưu sản phẩm",
+  "deal.products.intro":
+    "Báo cáo sản phẩm tính deal này theo các sản phẩm được liệt kê ở đây.",
+  "deal.products.replacesOffer":
+    "Báo giá được chấp nhận đã đặt các sản phẩm này. Lưu sẽ thay thế chúng, và một báo giá được chấp nhận sau này sẽ giữ nguyên danh sách của bạn.",
+  "deal.products.amount": "Số tiền cho {name}",
+  "deal.products.remove": "Xóa {name}",
+  "deal.products.add": "Thêm sản phẩm",
+  "deal.products.alreadyListed": "Đã có trong danh sách",
+  "deal.products.fromOffer": "Từ báo giá",
+  "deal.products.setByHand": "Tự đặt",
   "deal.commitments.title": "Cam kết của khách hàng",
   "deal.commitments.empty":
     "Khách hàng không có cam kết nào đang mở cho deal này.",
@@ -5466,6 +5488,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Xác nhận",
   "deals.cancel": "Hủy",
   "deals.advanced": "Đã chuyển sang {stage}",
+  "deals.viability.title": "Sự ủng hộ của khách hàng",
+  "deals.viability.standing": "Dự báo deal được ủng hộ",
+  "deals.viability.enforced":
+    "Dự báo chỉ tính các deal được khách hàng ủng hộ.",
+  "deals.viability.notEnforced":
+    "Dự báo tính mọi deal; mục này chỉ để tham khảo.",
+  "deals.viability.qualification.eligible": "Được tính",
+  "deals.viability.qualification.excluded": "Tạm loại để rà soát",
+  "deals.viability.qualification.unsupported": "Bị loại: không được ủng hộ",
+  "deals.viability.qualification.unknown": "Chưa kiểm tra",
+  "deals.viability.qualification.closed": "Đã đóng: không nằm trong dự báo",
+  "deals.viability.checkOutOfDate":
+    "Lần kiểm tra này không còn được tính, nên deal được xem là chưa kiểm tra.",
+  "deals.viability.assessed": "Kiểm tra lần cuối",
+  "deals.viability.review": "Rà soát sự ủng hộ",
+  "deals.viability.reviewOpenedOn": "Mở ngày {date}",
+  "deals.viability.reviewOpen": "Đang mở",
+  "deals.viability.taskDoneReviewOpen": "Đã xong việc, vẫn mở",
 
   "deal.ownerKeep": "Giữ người chịu trách nhiệm hiện tại",
   "deal.ownerMe": "Giao cho tôi",
@@ -17650,6 +17690,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lead này đang chờ phản hồi đầu tiên. Liên hệ trước khi hết thời hạn phản hồi.",
   "worklist.ask.deal_at_risk":
     "Deal này có dấu hiệu chững lại. Mở deal và lên bước tiếp theo.",
+  "worklist.ask.deal_review":
+    "Khách hàng có thể không còn ủng hộ deal này. Mở deal và trả lời phần rà soát.",
   "worklist.ask.meeting": "Cuộc họp này sắp diễn ra. Mở để chuẩn bị.",
   "worklist.ask.relationship_decay":
     "Đã lâu không có liên hệ nào với liên hệ này. Liên hệ lại, hoặc tạm gác trong một tháng.",
@@ -18044,6 +18086,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",
   "worklist.untitled.deal_at_risk": "Deal đang chững lại",
+  "worklist.untitled.deal_review": "Rà soát sự ủng hộ",
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
   "worklist.untitled.relationship_decay": "Liên lạc đang thưa dần",
@@ -18845,7 +18888,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.consequence.capture_history_incomplete": "Nhập lịch sử chưa hoàn tất.",
   "scheduling.linksTitle": "Liên kết đặt lịch",
   "scheduling.status.paused": "Đã tạm dừng",
-  "scheduling.status.attention": "Cần xử lý",
   "scheduling.acceptBookings": "Nhận đặt lịch",
   "scheduling.acceptBookingsHelp":
     "Ai có liên kết của bạn đều có thể chọn một giờ trống. Tắt để tạm dừng đặt lịch; liên kết vẫn giữ nguyên.",
@@ -18860,8 +18902,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Trạng thái",
   "scheduling.col.actions": "Thao tác",
   "scheduling.videoCall": "Cuộc gọi video",
-  "scheduling.row.live": "Đang hoạt động",
-  "scheduling.row.noInvitations": "Không gửi lời mời",
   "scheduling.videoNotSet": "Chưa thiết lập",
   "scheduling.video.ownShort": "Liên kết riêng",
   "scheduling.mainLink": "(liên kết chính)",

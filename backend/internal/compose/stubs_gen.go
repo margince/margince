@@ -1959,6 +1959,10 @@ func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "GetDealStatus")
 }
 
+func (stubs) GetDealViability(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealViability")
+}
+
 func (stubs) GetDealWinEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetDealWinEvidence")
 }
@@ -3449,6 +3453,10 @@ func (stubs) SetRoleObjectGrant(w nethttp.ResponseWriter, r *nethttp.Request, ke
 
 func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key string) {
 	httperr.NotImplemented(w, r, "RestoreRole")
+}
+
+func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {
+	httperr.NotImplemented(w, r, "DescribeRouterActions")
 }
 
 func (stubs) ListScheduledSends(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListScheduledSendsParams) {

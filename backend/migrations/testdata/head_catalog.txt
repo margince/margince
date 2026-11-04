@@ -6179,10 +6179,22 @@ public.maskable_field.field text NOT NULL gen=- def=-
 public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
 public.maskable_field.object text NOT NULL gen=- def=-
 public.maskable_field_pkey CREATE UNIQUE INDEX maskable_field_pkey ON public.maskable_field USING btree (object, field)
+public.meeting_calendar_episode acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.meeting_calendar_episode.episode uuid NOT NULL gen=- def=-
+public.meeting_calendar_episode.host_user_id uuid NOT NULL gen=- def=-
+public.meeting_calendar_episode.meeting_calendar_episode_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.meeting_calendar_episode.meeting_calendar_episode_pkey PRIMARY KEY (host_user_id, provider)
+public.meeting_calendar_episode.meeting_calendar_episode_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
+public.meeting_calendar_episode.provider text NOT NULL gen=- def=-
+public.meeting_calendar_episode.resumed_at timestamp with time zone gen=- def=-
+public.meeting_calendar_episode.started_at timestamp with time zone NOT NULL gen=- def=-
+public.meeting_calendar_episode_pkey CREATE UNIQUE INDEX meeting_calendar_episode_pkey ON public.meeting_calendar_episode USING btree (host_user_id, provider)
 public.meeting_invitation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.meeting_invitation.activity_id uuid NOT NULL gen=- def=-
 public.meeting_invitation.appointment jsonb NOT NULL gen=- def=-
 public.meeting_invitation.attempts integer NOT NULL gen=- def=0
+public.meeting_invitation.attention_episode uuid gen=- def=-
+public.meeting_invitation.attention_reason text gen=- def=-
 public.meeting_invitation.calendar_id text NOT NULL gen=- def=-
 public.meeting_invitation.cleanup_complete boolean NOT NULL gen=- def=false
 public.meeting_invitation.command text NOT NULL gen=- def='create'::text
@@ -6192,6 +6204,8 @@ public.meeting_invitation.lease_until timestamp with time zone gen=- def=-
 public.meeting_invitation.management_hash text NOT NULL gen=- def=-
 public.meeting_invitation.management_ref text NOT NULL gen=- def=-
 public.meeting_invitation.meeting_invitation_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.meeting_invitation.meeting_invitation_attention_follows_status CREATE TRIGGER meeting_invitation_attention_follows_status BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW EXECUTE FUNCTION meeting_invitation_attention_follows_status()
+public.meeting_invitation.meeting_invitation_attention_reason_check CHECK ((attention_reason = ANY (ARRAY['delivery_failed'::text, 'calendar_disconnected'::text])))
 public.meeting_invitation.meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text])))
 public.meeting_invitation.meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
 public.meeting_invitation.meeting_invitation_host_user_id_retirement_guard CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
@@ -6209,6 +6223,15 @@ public.meeting_invitation.reminder_status text NOT NULL gen=- def='off'::text
 public.meeting_invitation.status text NOT NULL gen=- def=-
 public.meeting_invitation.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.meeting_invitation.version bigint NOT NULL gen=- def=1
+public.meeting_invitation_attention_follows_status() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.status <> 'needs_attention' THEN
+    NEW.attention_reason := NULL;
+    NEW.attention_episode := NULL;
+  END IF;
+  RETURN NEW;
+END;
+
 public.meeting_invitation_due CREATE INDEX meeting_invitation_due ON public.meeting_invitation USING btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending'::text, 'rescheduling'::text, 'canceling'::text]))
 public.meeting_invitation_management_hash_key CREATE UNIQUE INDEX meeting_invitation_management_hash_key ON public.meeting_invitation USING btree (management_hash)
 public.meeting_invitation_pkey CREATE UNIQUE INDEX meeting_invitation_pkey ON public.meeting_invitation USING btree (activity_id)
@@ -6488,6 +6511,7 @@ public.offer_line_item.offer_line_item_pkey PRIMARY KEY (id)
 public.offer_line_item.offer_line_item_position_check CHECK (("position" >= 1))
 public.offer_line_item.offer_line_item_proposal_state_check CHECK ((proposal_state = ANY (ARRAY['staged'::text, 'accepted'::text])))
 public.offer_line_item.offer_line_item_quantity_check CHECK ((quantity > (0)::numeric))
+public.offer_line_item.offer_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text]))))
 public.offer_line_item.offer_line_item_tax_rate_check CHECK ((tax_rate >= (0)::numeric))
 public.offer_line_item.offer_line_item_ungrounded_price_zero CHECK ((price_grounded OR (unit_price_minor = 0)))
 public.offer_line_item.offer_line_item_unit_price_minor_check CHECK ((unit_price_minor >= 0))
@@ -6504,6 +6528,7 @@ public.offer_line_item.price_grounded boolean NOT NULL gen=- def=true
 public.offer_line_item.product_id uuid gen=- def=-
 public.offer_line_item.proposal_state text NOT NULL gen=- def='accepted'::text
 public.offer_line_item.quantity numeric(14,3) NOT NULL gen=- def=-
+public.offer_line_item.tax_category text gen=- def=-
 public.offer_line_item.tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.offer_line_item.trg_oli_updated CREATE TRIGGER trg_oli_updated BEFORE UPDATE ON public.offer_line_item FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.offer_line_item.unit text NOT NULL gen=- def='unit'::text

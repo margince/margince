@@ -56,6 +56,10 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 			"reach the one producer that synthesises rows")
 	}
 	rows = append(rows, folded...)
+	// The review fold synthesises rows the same way: one with nothing to fold
+	// must still name who answers for it.
+	owner := ids.NewV7()
+	rows = foldDealReviews(rows, []DealReview{{ID: ids.NewV7(), DealID: ids.NewV7(), DealName: "Reviewed", Owner: &owner}})
 	if len(rows) == 0 {
 		t.Fatal("the fixture produced no rows, so this census would pass over nothing")
 	}

@@ -1890,9 +1890,6 @@ export interface paths {
          *     this puts that value back and clears the buffer. For a phone the undo is per
          *     number: the replaced number comes back and the number that replaced it is retired.
          *
-         *     Human-only, and deliberately: the machine is what wrote the replacement, so an agent
-         *     undoing it would be one authority arguing with itself.
-         *
          *     **Refused when the record has moved on.** The restore applies only while the field
          *     still holds exactly what was written — the same "is this still ours" test the
          *     provider-claim revert makes. A field somebody has since corrected by hand, or that a
@@ -2883,7 +2880,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What this account needs, as the model last read it for this reader.
+         * What this account needs, as the model last judged it for this reader.
          * @description The account scan is the model's reading of one account for one reader: what the
          *     exchanges and the pipeline say needs a contact, each finding citing the records it
          *     rests on and quoting the words it read. It is the same advice shape the 360's own
@@ -3007,9 +3004,6 @@ export interface paths {
          *     when the cache still matches. When no model lane is configured, or the workspace's
          *     AI budget is exhausted, the brief degrades to a deterministic structured summary
          *     rather than failing — `generated_by` says which it is.
-         *
-         *     Human-only: a brief is a reading aid for a colleague, and an agent reading records
-         *     through a passport has the records themselves.
          */
         get: operations["getCompanyBrief"];
         put?: never;
@@ -3058,8 +3052,6 @@ export interface paths {
          *
          *     The account's moment (`Company360.moment`) is set aside the same way: its
          *     `evidence_fingerprint` is accepted here while that promise is open on the account.
-         *
-         *     Human-only: an agent has no opinion to record.
          */
         post: operations["dismissCompanySuggestion"];
         /**
@@ -3103,8 +3095,6 @@ export interface paths {
          *     answer degrades to a deterministic structured one rather than failing —
          *     `generated_by` says which it is. Read-only: no record field changes, and nothing
          *     is sent.
-         *
-         *     Human-only: an agent asking about an account has the records themselves.
          */
         post: operations["askAboutCompany"];
         delete?: never;
@@ -3436,9 +3426,8 @@ export interface paths {
          *     the stored answer stood indefinitely.
          *
          *     This is that way. A contact pressing it has said the stored answer is not good enough,
-         *     and the consultation runs even though the number has not changed. It is HUMAN-ONLY:
-         *     the register is a shared public service consulted on one worker, and an agent able to
-         *     re-ask in a loop is how an installation gets blocked for everybody.
+         *     and the consultation runs even though the number has not changed. The register is a shared
+         *     public service consulted on one worker, so the floor below binds an agent as it binds a contact.
          *
          *     The work is queued, not done here — the register can be slow or decline, and neither
          *     should hold a request open. `202` means the consultation was accepted; read the
@@ -4421,8 +4410,7 @@ export interface paths {
          *     and freezes the exchange rate again for that day, so revenue by period and the base-currency
          *     figure follow the corrected day. The change is audited and emits `deal.updated`.
          *
-         *     A signed-in user's correction only: an agent is refused, because the day decides which period
-         *     counts the revenue. An open deal answers 422 `deal_not_closed` (its forecast date is
+         *     An open deal answers 422 `deal_not_closed` (its forecast date is
          *     `expected_close_date`), a day after today answers 422 `close_day_future`, and a currency
          *     with no stored rate on or before the day answers 422 `fx_rate_unavailable`. The day the
          *     deal already closed on changes nothing and answers 200.
@@ -6032,7 +6020,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Limit (or re-open) who may read this activity's content.
+         * Limit (or re-open) who may see this activity's content.
          * @description Sets the activity's `audience` and, for `selected`, replaces the named members in one
          *     transaction. Per message, never per thread or per contact: limiting one email says nothing
          *     about its siblings or about the contacts on it. The caller needs write authority over the
@@ -6358,7 +6346,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
+         * Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
          * @description S-E04.3. Reads the transcript's normalized lines (ADR-0058: line N is the Nth newline-split
          *     segment of the body) and stages each next step or commitment it STATES as a 🟡 approval,
          *     citing the exact lines it was read from in `evidence[].source_lines`. NOTHING is written to
@@ -6373,12 +6361,6 @@ export interface paths {
          *     A transcript that states no next steps is a CORRECT empty answer, reported as `done` with a
          *     detail saying so — never as a failure, because a rep who cannot tell those apart will either
          *     distrust a good answer or trust a broken one.
-         *
-         *     Human-only. The `enrich` verb reads an COMPANY from its website and takes an
-         *     company id, so it cannot express reading one activity; and this operation exists to put
-         *     a question in front of the contact who was in the meeting. An agent that wants the same
-         *     outcome proposes the task directly through its own governed tool, where the confirm-first
-         *     tier already applies — rather than through a second door that stages on its behalf.
          */
         post: operations["readTranscriptForNextSteps"];
         delete?: never;
@@ -6743,9 +6725,6 @@ export interface paths {
          * Move a scheduled message to a different moment.
          * @description Time only. The content is what the approval bound to, so changing it is
          *     cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
-         *
-         *     Human-only: an agent may SCHEDULE through the 🟡 send tools, but moving or cancelling
-         *     a message a human approved is not an agent's decision.
          */
         patch: operations["rescheduleScheduledSend"];
         trace?: never;
@@ -6764,8 +6743,7 @@ export interface paths {
         put?: never;
         /**
          * Withdraw a scheduled message before it fires.
-         * @description Nothing is transmitted and nothing reaches the timeline. Human-only, for the same
-         *     reason rescheduling is.
+         * @description Nothing is transmitted and nothing reaches the timeline.
          */
         post: operations["cancelScheduledSend"];
         delete?: never;
@@ -8376,17 +8354,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List current and superseded human-provided qualification signals.
+         * List current and superseded manual qualification signals.
          * @description Returns the stored band, score effect, confidence, reason, author and lifecycle directly.
          *     Clients must not reconstruct these facts from score factors because several bands have
          *     the same point value and the decomposition does not contain superseded rows.
          */
         get: operations["listLeadManualSignals"];
         /**
-         * Enter or replace a human-provided scoring factor (S-E13.6).
+         * Enter or replace a manual scoring factor.
          * @description A rep supplies a qualification signal capture cannot fetch — a traffic band, an
          *     employee count, a budget hint. It feeds the same transparent weighted score and
-         *     appears in the decomposition as its own human-provided factor, never blended into an
+         *     appears in the decomposition as its own manual factor, never blended into an
          *     auto-captured one.
          *
          *     One live band per factor: setting a factor that already has one REPLACES it. A
@@ -8441,7 +8419,7 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Withdraw a human-provided scoring factor.
+         * Withdraw a manual scoring factor.
          * @description Clears the rep's own live input for this factor and recomputes. Superseded rows are
          *     history and are NOT deleted by this path — clearing withdraws a current input, and
          *     where there is none (the auto value already took over) this succeeds as a no-op
@@ -9595,7 +9573,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Evaluate a saved report as a seat holding one role would read it. Human-only.
+         * Evaluate a saved report as a seat holding one role would see it.
          * @description The report evaluated under the caller's own permissions narrowed to the role's: an
          *     object only where both grant it, the narrower row scope, and every field mask either
          *     carries. So the preview never shows the caller anything their own access withholds.
@@ -10849,6 +10827,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/router-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What each action of one MCP router takes, as its own route defines it.
+         * @description The answer the `describe_router_actions` agent tool gives, run by the same tool on
+         *     both doors: for each action of one router whose actions run a REST route, the
+         *     route, its path ids, whether it takes the record's version, and its JSON body schema.
+         */
+        get: operations["describeRouterActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/list-filters": {
         parameters: {
             query?: never;
@@ -11182,13 +11182,12 @@ export interface paths {
          */
         get: operations["getAnchorCompany"];
         /**
-         * Save the installation's own company — the human's confirm-first write.
+         * Save the installation's own company.
          * @description Creates the anchor company on first save (marking it `is_anchor`) and updates it on every
          *     later one. Its `display_name` is the installation's name: the same transaction writes it to
-         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. This is a HUMAN write: every field is stamped
-         *     `captured_by=human:<user id>`, `source=human`, whether it was typed from scratch or accepted
-         *     from a /coldstart/preview read-back — once a human has looked at a value and saved it, it is
-         *     theirs, and a later agent read-back will not overwrite it.
+         *     `InstallationSettings.name`, which sign-in, `/me` and the data reset read. Every field is stamped
+         *     `captured_by` with the caller and `source` `human` or `agent`, whether it was typed from scratch
+         *     or accepted from a /coldstart/preview read-back. A later read-back does not overwrite either.
          *
          *     Unlike the cold-start accept path this never resolves a target by domain: the workspace names its
          *     own anchor, so a company saved from pasted text or typed by hand works exactly like one read from
@@ -14147,10 +14146,6 @@ export interface paths {
          *     company. Every human role may read the list; any seat holding `capture_settings:create`
          *     adds a new `extra` entry, while carve-outs, kind changes and removal demand
          *     `capture_settings:update` (admin/ops). Governed by the `capture_settings` RBAC object.
-         *
-         *     Human-only, like the personal-mail exclusion list it replaces: the list names the domains
-         *     this installation corresponds with and which of them it treats as consumer mail, which is
-         *     capture posture rather than record data, and no agent task needs it.
          */
         get: operations["listConsumerMailDomains"];
         put?: never;
@@ -14224,8 +14219,8 @@ export interface paths {
          *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
-         *     Every human role may read the list; changing an entry demands `company:update`
-         *     (admin/ops). Human-only: this is capture posture, not record data.
+         *     Every role may read the list; changing an entry demands `company:update`
+         *     (admin/ops).
          */
         get: operations["listBlockedDomains"];
         /**
@@ -14747,8 +14742,8 @@ export interface paths {
          *     the editable document, and it is the one that decides where an installation's text is
          *     sent.
          *
-         *     Human session only. An agent never re-points which vendor processes the installation's
-         *     correspondence, whatever its passport scopes admit.
+         *     Human session only for now: an agent does not read which vendor processes the
+         *     installation's correspondence until this read is opened to agents.
          */
         get: operations["getAiRouting"];
         /**
@@ -16653,9 +16648,8 @@ export interface paths {
          *     Admin/ops-only, read included: the retention screen is an admin surface and no other
          *     role has a consumer for it. Governed by the `retention_policy` RBAC object.
          *
-         *     Human-only, like every sibling governance read (`listRoles`, `listAuditLog`,
-         *     `listAiCalls`): what an installation destroys and whether destruction is currently
-         *     suspended is not reconnaissance to hand an agent, even one carrying an admin's passport.
+         *     Human-only for now: what an installation destroys and whether destruction is currently
+         *     suspended stays with a signed-in user until this read is opened to agents.
          */
         get: operations["getRetentionSettings"];
         put?: never;
@@ -17448,7 +17442,7 @@ export interface paths {
         get: operations["listRecordGrants"];
         put?: never;
         /**
-         * Share one record with a user or team (human-only).
+         * Share one record with a user or team.
          * @description Grants `read` or `write` on a single record to a user or team otherwise out of their own/team/all
          *     scope. Enforced by the application visibility WHERE clause: the grant arm is rendered into the
          *     row-scope predicate and into the write-authority arm, and the tenant predicate is bound by the
@@ -17493,7 +17487,7 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoke a manual record grant (human-only).
+         * Revoke a manual record grant.
          * @description Deletes the grant; the subject loses the widened access immediately (the next query no longer
          *     matches the `OR EXISTS (record_grant …)` clause). Audited (`action: record_unshare`).
          *     An `If-Match` naming a version the grant no longer holds answers `409 version_skew` and
@@ -17524,11 +17518,11 @@ export interface paths {
         get: operations["listUsers"];
         put?: never;
         /**
-         * Invite a new member. Admin-only, human-only.
+         * Invite a new member. Admin-only.
          * @description Creates an active member with the chosen system role and no password, then issues a
          *     single-use set-password token. When an email sender is configured the invite link is
          *     mailed to the new address; otherwise the member sets a password through the standard
-         *     account-recovery flow. Needs `user_admin.create`; an agent may never provision a human.
+         *     account-recovery flow. Needs `user_admin.create`.
          *     Naming `team_ids` puts the member on those teams, which only an admin may do: any other
          *     caller gets 403 `team_membership_requires_admin`. Emits `user.invited`.
          */
@@ -17856,7 +17850,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Set a member's system role. Admin-only, human-only.
+         * Set a member's system role. Admin-only.
          * @description Replaces the member's role assignments with the one target system role and emits
          *     `role.changed` so effective-permission caches never serve a stale grant. Admin-only.
          */
@@ -17876,7 +17870,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Deactivate a member and revoke their live access. Admin-only, human-only.
+         * Deactivate a member and revoke their live access. Admin-only.
          * @description Flips the member to `deactivated` and hard-revokes every live session and passport they
          *     bound, in one transaction; per-call re-auth already refuses a deactivated principal, and
          *     `user.deactivated` lets caches drop access without polling. Idempotent. Admin-only.
@@ -17901,7 +17895,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Reactivate a deactivated member. Admin-only, human-only.
+         * Reactivate a deactivated member. Admin-only.
          * @description Returns a `deactivated` member to `active`; they may sign in again (existing sessions
          *     stay revoked and are re-minted on the next login). Idempotent on an already-active member.
          *     Emits `user.reactivated`. Admin-only.
@@ -17924,7 +17918,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Count the live records a member still owns. Member administration, human-only.
+         * Count the live records a member still owns.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
          *     caller can see. For a member who left, it also counts the contacts and companies only
          *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
@@ -17934,7 +17928,7 @@ export interface paths {
         get: operations["getUserHandover"];
         put?: never;
         /**
-         * Move every live record a member owns to a colleague. Member administration, human-only.
+         * Move every live record a member owns to a colleague. Member administration.
          * @description Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
          *     Every record moves through its own owner-change write, so each gets the audit row and
          *     event a single reassignment writes, and a deal's pending proposals follow it to the new
@@ -18142,13 +18136,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the workspace's roles with their object grants and row scope. Human-only.
+         * List the workspace's roles with their object grants and row scope.
          * @description The role editor's read. Every live role the workspace defines — the six seeded system
          *     roles and any custom ones — with the `objects` map exactly as `role.permissions`
          *     stores it. Archived roles are left out unless `include_archived` is true.
          *
-         *     Gated on `role_admin.read`. Agents are refused outright — no autonomy tier makes
-         *     rewriting the permission model an agent's call.
+         *     Gated on `role_admin.read`.
          *
          *     The `objects` map is returned VERBATIM from the stored document, including any object
          *     this installation no longer knows (a unit that was removed). `policy.Parse` drops such
@@ -18337,7 +18330,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
+         * List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
          * @description What this binary actually composed (ADR-0120): one entry per enabled unit under
          *     `extensions/`, with the RBAC objects, routes and jobs it contributes. The role editor
          *     reads it to group `ext_<unit>_<object>` grants under the unit that declared them —
@@ -18975,7 +18968,7 @@ export interface paths {
          *     here never changes what a buyer is currently reading.
          *
          *     `state` is not editable — it moves through the lifecycle operations
-         *     (publish/pause/resume/close), which are human-only for that reason.
+         *     (publish/pause/resume/close).
          */
         patch: operations["updateDealRoom"];
         trace?: never;
@@ -19072,12 +19065,7 @@ export interface paths {
         get?: never;
         /**
          * Set or clear when buyer access lapses.
-         * @description HUMAN-ONLY: this moves the moment an outside party stops being able to read
-         *     the deal's material, and extending it is a decision somebody has to own. An
-         *     agent may open a room, which nobody can read yet; it may not widen the window
-         *     in which a buyer can read one.
-         *
-         *     Null clears the bound, leaving access open until the room is closed or
+         * @description Null clears the bound, leaving access open until the room is closed or
          *     archived. A past instant is accepted and takes effect immediately — that is
          *     how access is cut short without ending the room.
          */
@@ -19172,7 +19160,7 @@ export interface paths {
         put?: never;
         /**
          * Admit a named contact to the room.
-         * @description HUMAN-ONLY. Records the colleague and mints one credential for them. Whether a mail
+         * @description Records the colleague and mints one credential for them. Whether a mail
          *     relay took the credential is reported as `queued` — it is false when the
          *     installation has no outbound mail configured and when the relay refused the
          *     message. The participant and the invitation are recorded either way, so a mail
@@ -19219,7 +19207,7 @@ export interface paths {
         head?: never;
         /**
          * Correct a participant's name, address or capability.
-         * @description HUMAN-ONLY. Correcting the ADDRESS is only possible while their credential is
+         * @description Correcting the ADDRESS is only possible while their credential is
          *     still unconsumed — once someone has signed in, changing where their link goes
          *     would hand their access to a different contact. Correcting it invalidates the
          *     credential already sent and mints nothing: resend to issue a new one.
@@ -19245,7 +19233,7 @@ export interface paths {
         put?: never;
         /**
          * Issue a fresh credential, retiring the previous one.
-         * @description HUMAN-ONLY. Supersedes rather than accumulates: the moment a new credential is
+         * @description Supersedes rather than accumulates: the moment a new credential is
          *     issued the previous one stops working, so an old link sitting in an old mailbox
          *     cannot still admit anyone.
          *
@@ -19275,7 +19263,7 @@ export interface paths {
         put?: never;
         /**
          * Take a contact's access away.
-         * @description HUMAN-ONLY, and deliberately available in EVERY room state including closed and
+         * @description Deliberately available in EVERY room state including closed and
          *     archived. Revocation is a security control: being unable to remove somebody
          *     from a room holding your signed contract is a real hazard months after the deal
          *     closed, so this is never frozen along with the room's content.
@@ -19424,8 +19412,8 @@ export interface paths {
         put?: never;
         /**
          * Close a thread — the seller's side saying the point is settled.
-         * @description Human-only: resolving a required-change thread is the seller answering the
-         *     buyer's objection, so a contact stands behind it. Resolving an already
+         * @description Resolving a required-change thread is the seller answering the buyer's objection.
+         *     Resolving an already
          *     resolved thread answers 200 with the thread unchanged.
          */
         post: operations["resolveDealRoomThread"];
@@ -19691,10 +19679,12 @@ export interface paths {
          *     daily rate is missing — never rate=1, RT-PR-C2), captures the buyer/issuer snapshots and
          *     emits `offer.sent`. NO TRANSPORT: nothing leaves the installation here, and nothing is
          *     rendered or delivered to a counterparty — delivery is a separate capability that does not
-         *     exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
-         *     with no staging path — this IS the commercial commitment, since a sent revision is never
+         *     exist yet. This IS the commercial commitment, since a sent revision is never
          *     mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
-         *     day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
+         *     day has passed is refused 422 `offer_lapsed`; regenerate it with a later date. Every line
+         *     with a `tax_category` takes the send day's rate from the tax rate sheet, and the totals
+         *     follow; a category with no rate on the sheet refuses the send (422 `tax_rate_missing`).
+         *     A typed rate is left as it is.
          */
         post: operations["sendOffer"];
         delete?: never;
@@ -19719,8 +19709,7 @@ export interface paths {
          * Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
          * @description sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
          *     accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
-         *     `offer.accepted`. Recording the buyer's acceptance is a human attestation — an agent
-         *     principal is rejected outright. An offer whose `valid_until` day has passed is refused
+         *     `offer.accepted`. An offer whose `valid_until` day has passed is refused
          *     422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
          */
         post: operations["acceptOffer"];
@@ -19770,8 +19759,7 @@ export interface paths {
          *     also carries the AI provenance notice (`ai_generated`/`ai_disclosure`) and the
          *     `diff_from_previous` line-item summary versus the prior revision; a mechanical
          *     regenerate (no AI context available) still works and returns `ai_generated=false`. The
-         *     produced draft's terms are not frozen until the send gate, which is human-only too.
-         *     HUMAN-ONLY: an agent principal is refused (403 `permission_denied`); no tool serves this verb.
+         *     produced draft's terms are not frozen until the send gate.
          */
         post: operations["regenerateOffer"];
         delete?: never;
@@ -19799,7 +19787,7 @@ export interface paths {
          *     none is set) plus its line items, and stores the result as `pdf_asset_ref` (B-E03.22/
          *     WP7, data-model §12.6). The rendered totals equal the server-computed totals — the PDF
          *     never recomputes money (P11). Not itself an irreversible act: a render can be repeated,
-         *     and `send` — the human-only step this precedes — is where the offer's terms are frozen.
+         *     and `send` — the step this precedes — is where the offer's terms are frozen.
          *     Nothing leaves the installation at either step.
          */
         post: operations["renderOffer"];
@@ -21499,9 +21487,6 @@ export interface paths {
          *     A rep's own stage moves are absent here exactly as they are from the lane: a move
          *     somebody made themselves is not news to them, and the centre is not the place those
          *     reappear.
-         *
-         *     Human-only. An agent carrying its grantor's authority does not read what the product
-         *     told its grantor.
          */
         get: operations["listNotices"];
         put?: never;
@@ -21907,6 +21892,39 @@ export interface paths {
          *     coverage view was withheld, not that the deal passes every check.
          */
         get: operations["getDealCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/viability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Whether the customer still supports this deal, and the review behind the answer.
+         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
+         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
+         *     `deal_viability` review with its task. The review is shown while it is open, even when
+         *     its task is done: completing the task does not answer the review.
+         *
+         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
+         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
+         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
+         *     so nothing here needs masking.
+         *     `qualification` is computed whether or not the installation enforces it;
+         *     `qualification_mode` says whether the qualified forecast applies it.
+         */
+        get: operations["getDealViability"];
         put?: never;
         post?: never;
         delete?: never;
@@ -22614,10 +22632,7 @@ export interface paths {
         put?: never;
         /**
          * Record an agreement (CONTRACT-WIRE-2).
-         * @description Human-only. Contract value and dates are exactly the figures a confident wrong
-         *     answer damages most, so the assistant reads contracts and never writes one.
-         *
-         *     `signed_on` is never defaulted from a deal's close time: that timestamp records
+         * @description `signed_on` is never defaulted from a deal's close time: that timestamp records
          *     when somebody moved a stage, which is not evidence that anything was signed.
          *     A `company_id`, `deal_id` or `project_id` that names a record the caller cannot read answers
          *     422 naming that field, the same for a missing record and for one hidden by row scope.
@@ -22856,7 +22871,7 @@ export interface paths {
         get: operations["getAttachmentExtraction"];
         put?: never;
         /**
-         * Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
+         * Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
          * @description RD-WIRE-N-1. Reads the document for the four deal-writable facts (RD-PARAM-N-3)
          *     and stages what it can ground, each carrying the quote it was read from. NOTHING
          *     is written to any record until a human accepts it through
@@ -22904,10 +22919,7 @@ export interface paths {
          *     `unsupported_entity_type` otherwise. `field_keys` is checked against the closed
          *     allowlist of deal-writable fields before any write lands — a key outside that
          *     allowlist 422s the whole request (no partial acceptance). Requires deal UPDATE
-         *     authority on the target deal (object RBAC + row-scope visibility), on top of the
-         *     transport-level human-only gate below: the human's direct call is itself the
-         *     approval, matching the rest of the attachment surface (`x-agent-access:
-         *     human-only`) — there is no 🟡 agent-staged path for this operation in V1.
+         *     authority on the target deal (object RBAC + row-scope visibility).
          */
         post: operations["acceptAttachmentExtraction"];
         delete?: never;
@@ -38099,6 +38111,14 @@ export interface components {
             video_call?: boolean;
             /** @description The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one. */
             video_url?: string;
+            /**
+             * @description Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+             *     Margince, so every queued invitation of that host and calendar was paused; they go out again on
+             *     their own once the calendar is reconnected with write access. `delivery_failed`: this one
+             *     invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+             * @enum {string}
+             */
+            attention_reason?: "delivery_failed" | "calendar_disconnected";
         };
         MeetingProposal: {
             /**
@@ -43934,6 +43954,75 @@ export interface components {
             won_percent?: number;
             chance_in_use: number;
         };
+        DealViability: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description Whether the installation's qualified forecast applies `qualification`.
+             * @enum {string}
+             */
+            qualification_mode: "off" | "enforcing";
+            /**
+             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+             * @enum {string}
+             */
+            qualification: "eligible" | "excluded" | "unsupported" | "unknown" | "closed";
+            /**
+             * Format: date-time
+             * @description When the input check last assessed the deal; null when it never did.
+             */
+            assessed_at?: string | null;
+            /**
+             * @description The review standing the qualification rests on.
+             * @enum {string}
+             */
+            disposition?: "none" | "open_review" | "override" | "unsupported";
+            /** @description Whether the deal was judged on its current evidence under the current policy. */
+            complete?: boolean;
+            policy_version?: string;
+            receipt?: components["schemas"]["DealViabilityReceipt"];
+            /** Format: date */
+            expected_close_date?: string | null;
+            close_date_provisional: boolean;
+            /** @description True when the expected close date is before today in the installation's zone. */
+            close_date_overdue: boolean;
+            /** @description The baseline chance, the deal's stage probability. */
+            stage_probability: number;
+            review?: components["schemas"]["DealViabilityReview"];
+        };
+        /** @description The input check's last answer about the deal. Absent when it never assessed it. */
+        DealViabilityReceipt: {
+            /** @description The check's outcome, such as `eligible` or `unsupported`. */
+            outcome: string;
+            /** @description The viability policy the check applied. */
+            policy_version: string;
+            /** @description Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`. */
+            current: boolean;
+            /** @description The reason codes the check recorded. */
+            reasons: string[];
+            /** Format: date-time */
+            valid_until: string;
+        };
+        /** @description The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done. */
+        DealViabilityReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            opened_at: string;
+            episode: number;
+            /**
+             * @description How far handing the review to a task got; null before a pass queued it.
+             * @enum {string|null}
+             */
+            delivery_state?: "pending" | "failed" | "delivered" | null;
+            task?: components["schemas"]["DealViabilityTask"];
+        };
+        /** @description The task the review was delivered as. Absent until delivered, or when the reader may not see it. */
+        DealViabilityTask: {
+            /** Format: uuid */
+            id: string;
+            done: boolean;
+        };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
          *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
@@ -46540,6 +46629,28 @@ export interface components {
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };
+        /** @description The actions of one MCP router whose actions run REST routes. */
+        RouterActions: {
+            router: string;
+            actions: {
+                /** @description The value the router's action argument takes. */
+                action: string;
+                /** @description The route's summary. */
+                does: string;
+                /** @description The method and route, for example POST /v1/record-grants. */
+                route: string;
+                /** @description The path ids the action takes as arguments. */
+                ids?: string[];
+                /** @description The query parameters it takes as arguments. */
+                query?: string[];
+                /** @description Whether it takes if_version: the version you last read. */
+                if_version?: boolean;
+                /** @description Whether the app asks its user to confirm it first. */
+                ask_user_first?: boolean;
+                /** @description The JSON schema of its body argument. */
+                body?: Record<string, never>;
+            }[];
+        };
         /**
          * @description One operation's agent-admission policy: the shape `tools/gen-agentpolicy`
          *     derives from this file's `x-agent-access` / `x-mcp-tool` annotations and the
@@ -46589,10 +46700,21 @@ export interface components {
              */
             scope?: "read" | "draft" | "write" | "send" | "enrich";
             /**
-             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. Absent means the operation's own handler runs and the gate admits it.
+             * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. route — the reverse: the MCP verb runs this operation's own handler in process, so both doors are one engine. Such a verb is an action of the router named in `router`, called by `action`. Absent means the operation's own handler runs and the gate admits it.
              * @enum {string}
              */
-            served_by?: "registry";
+            served_by?: "registry" | "route";
+            /** @description The listed MCP router that fronts this verb (served_by = route). */
+            router?: string;
+            /** @description The router's name for this verb (served_by = route). */
+            action?: string;
+            /** @description The app asks its user to confirm this act before it runs, so the tool tells an agent to get the user's yes first (served_by = route). */
+            ask_user_first?: boolean;
+            /**
+             * @description Why a human-only operation that a signed-in user reaches in the app stays out of an agent's reach, declared as `x-human-only-reason`. security — reaching it would let an agent read a secret, raise rights or change its own governance. covered — another MCP tool does the same job. pending — not opened to agents yet. An operation nobody signs in to reach (a public page, a sign-in step) declares none.
+             * @enum {string}
+             */
+            human_only_reason?: "security" | "covered" | "pending";
         };
         /**
          * @description EXACTLY ONE input source (B-E01.2b/.13): `url` (fetch+parse a website, ADR-0006), `text` (the
@@ -50973,9 +51095,14 @@ export interface components {
             discount_pct: number;
             /**
              * Format: double
-             * @description Percent, up to 2 decimal places.
+             * @description Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer's legal entity: today's on a draft, the send day's once sent.
              */
             tax_rate: number;
+            /**
+             * @description The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+             * @enum {string|null}
+             */
+            tax_category?: "standard" | "reduced" | "exempt" | null;
             /**
              * Format: int64
              * @description round(qty × unit_price × (1 − discount_pct/100)) — server-computed.
@@ -51161,8 +51288,16 @@ export interface components {
             interval_count?: number | null;
             /** Format: double */
             discount_pct?: number | null;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).
+             */
             tax_rate?: number | null;
+            /**
+             * @description Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+             * @enum {string|null}
+             */
+            tax_category?: "standard" | "reduced" | "exempt" | null;
         };
         /** @description Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422). */
         UpdateOfferLineItemRequest: {
@@ -51187,8 +51322,16 @@ export interface components {
             interval_count?: number | null;
             /** Format: double */
             discount_pct?: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description A typed rate. It drops the line's tax category, so the send leaves the rate alone.
+             */
             tax_rate?: number;
+            /**
+             * @description Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+             * @enum {string}
+             */
+            tax_category?: "standard" | "reduced" | "exempt";
         };
         CreateOfferRequest: {
             currency: string;
@@ -53619,7 +53762,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch" | "deal_review";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
@@ -54566,12 +54709,17 @@ export interface components {
             /**
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              *
+             *     `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+             *     the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+             *     into it, and it stays while the review is open, even once its task is done. It offers
+             *     only `open`; the review is answered on the deal.
+             *
              *     `batch` is the one that names no single record: it stands for a GROUP of
              *     routine decisions that read alike, so a hundred of them cost the reader one
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch" | "deal_review";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -74396,6 +74544,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    describeRouterActions: {
+        parameters: {
+            query: {
+                /** @description The router whose actions to describe. */
+                router: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The router's actions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouterActions"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     describeListFilters: {
         parameters: {
             query?: never;
@@ -82812,7 +82986,7 @@ export interface operations {
                     "application/json": components["schemas"]["RecordGrant"];
                 };
             };
-            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
+            /** @description RBAC denied (`manage_sharing` required), or an agent with no passport, which acts for nobody. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -82852,7 +83026,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description RBAC denied (`manage_sharing` required), or the caller is an agent principal. */
+            /** @description RBAC denied (`manage_sharing` required), or an agent with no passport, which acts for nobody. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -89632,6 +89806,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealCoverage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealViability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's viability. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViability"];
                 };
             };
             401: components["responses"]["Unauthorized"];

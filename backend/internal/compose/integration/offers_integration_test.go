@@ -411,13 +411,9 @@ func assertOfferEventTrail(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-// ADR-0055 on the offer surface: sendOffer carries no registered agent
-// tool (`x-agent-access: human-only`), so an agent is refused outright —
-// there is no 🟡 staging path to redeem, whatever caps its passport holds.
-// The offer stays draft. The human path alongside it must be unaffected:
-// a human session sending the same offer end to end still works, which is
-// the behaviour that must not have regressed by tightening the agent side.
-func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
+// An agent drafts and sends an offer as its user, and records the buyer's
+// decision. Each runs at once, as the app's own button does.
+func TestAnAgentSendsAndAcceptsAnOfferItDrafted(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Agent", "agent@fable.test", "Admin")
 	dealID := offerFixture(t, e)
@@ -443,32 +439,11 @@ func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 		t.Fatalf("agent 🟢 offer draft → %d", status)
 	}
 
-	// Human-only: refused outright, no approval staged, offer stays draft.
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/send", nil, bearer, &problem); status != http.StatusForbidden || problem.Code != "permission_denied" {
-		t.Fatalf("agent send → %d %q, want 403 permission_denied (human-only)", status, problem.Code)
-	}
-	if !strings.Contains(problem.Detail, "human-only") {
-		t.Fatalf("refusal %q does not say the verb is human-only", problem.Detail)
-	}
-	var still offerBody
-	if status := e.Call(t, "GET", "/v1/offers/"+offer.ID, nil, bearer, &still); status != http.StatusOK || still.Status != "draft" {
-		t.Fatalf("offer after the refused agent send = %q, want draft", still.Status)
-	}
-
-	// The human path is unaffected: the same agent-drafted offer, sent by
-	// the human session, executes end to end.
 	var sent offerBody
-	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/send", nil, nil, &sent); status != http.StatusOK || sent.Status != "sent" {
-		t.Fatalf("human send → %d %q, want 200 sent", status, sent.Status)
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/send", nil, bearer, &sent); status != http.StatusOK || sent.Status != "sent" {
+		t.Fatalf("agent send → %d %q, want 200 sent", status, sent.Status)
 	}
-
-	// Recording the buyer's decision is a human attestation: the agent is
-	// rejected outright on accept, whatever its scopes.
-	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/accept", nil, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent accept → %d, want 403 (human-only)", status)
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/accept", nil, bearer, nil); status != http.StatusOK {
+		t.Fatalf("agent accept → %d, want 200", status)
 	}
 }

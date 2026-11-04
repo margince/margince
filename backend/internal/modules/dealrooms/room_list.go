@@ -179,7 +179,7 @@ func (s *Store) ArchiveRoom(ctx context.Context, id ids.DealRoomID, ifVersion *i
 	if err := auth.Require(ctx, roomObject, principal.ActionDelete); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom

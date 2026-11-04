@@ -38,6 +38,9 @@ type SchedulingCalendar interface {
 	// Blocker says why the host's connected calendar cannot take bookings,
 	// without a provider call.
 	Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error)
+	// ReconnectedSince says whether the host granted the calendar again after
+	// since: the evidence a parked queue waits for.
+	ReconnectedSince(context.Context, ids.UserID, string, time.Time) (bool, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
@@ -170,8 +173,13 @@ func (s *Store) calendarBlocker(ctx context.Context, host ids.UserID, profile cr
 	return s.calendar.Blocker(ctx, host, string(profile.Provider))
 }
 
+// calendarNotConnected is the refusal a host can act on when their calendar
+// refused us; calendarAuthFailure recognises it by value.
+var calendarNotConnected = SchedulingArgumentError{Field: "provider", Code: codeRequired, Message: "Connect a calendar first"}
+
 func errCalendarNotConnected() error {
-	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+	refusal := calendarNotConnected
+	return &refusal
 }
 
 // unconnectedAsRefusal turns the provider seam's "no usable connection" into

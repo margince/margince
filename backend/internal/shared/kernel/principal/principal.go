@@ -134,6 +134,12 @@ func (p Principal) ActsAsItsUser() bool {
 	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
 }
 
+// HumanOrItsAgent reports whether p is a human, or an agent acting for one on
+// their passport. Either may do what that human does in the product.
+func (p Principal) HumanOrItsAgent() bool {
+	return p.Type == PrincipalHuman || p.ActsAsItsUser()
+}
+
 // Action is one CRUD verb of the object-level RBAC matrix
 // (features/04 §1). Archive counts as delete (soft-delete IS the delete).
 type Action string

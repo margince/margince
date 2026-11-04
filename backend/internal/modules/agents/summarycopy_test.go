@@ -70,6 +70,7 @@ var summaryVerbs = map[string][]string{
 	"booking":             {"%q", "%s", "%s"},
 	"bookingHost":         {"%s"},
 	"bookingLinks":        {"%d"},
+	"hostNamed":           {"%s"},
 	"noSubject":           nil,
 	"relinkActivity":      {"%s", "%s", "%s"},
 	"relinkActivities":    {"%d", "%s", "%s"},

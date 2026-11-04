@@ -21,7 +21,7 @@ func (h Handlers) WithMemberWork(work MemberWork) Handlers {
 
 // UpdateMember applies profile, role and team edits in one transaction.
 func (h Handlers) UpdateMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -50,7 +50,7 @@ func (h Handlers) UpdateMember(w http.ResponseWriter, r *http.Request, id crmcon
 
 // RemoveMember requires a reviewed dependency snapshot before permanent removal.
 func (h Handlers) RemoveMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -72,7 +72,7 @@ func (h Handlers) RemoveMember(w http.ResponseWriter, r *http.Request, id crmcon
 
 // GetMember returns the current revision for an administrator editing an account.
 func (h Handlers) GetMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}

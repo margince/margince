@@ -5,7 +5,8 @@ package approvals
 
 // The way off the Worklist for an approved decision whose work did not run.
 //
-// The failure is shown to the contact who decided it, and to nobody else. They
+// The failure is shown to the contact who decided it or their agent, and to
+// nobody else. They
 // can approve it once more, which re-drives the work (decisioneffect.go), or say
 // they have seen it. Either one takes the row away; a later failure brings it back.
 
@@ -92,7 +93,7 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 
 // AcknowledgeEffectFailure takes a failed decision off its decider's Worklist.
 //
-// Only the decider may do it, and anyone else is answered 404. The failure is
+// Only the decider or their agent may do it, and anyone else is answered 404. The failure is
 // shown to nobody else, so its existence is not theirs to learn. Acknowledging
 // the same failure twice changes nothing and records nothing.
 //
@@ -102,9 +103,9 @@ func (s *Service) AcknowledgeEffectFailure(ctx context.Context, id ids.ApprovalI
 	if err := actingForAHuman(ctx); err != nil {
 		return err
 	}
-	// The decider's own list, so an agent acting for them is refused too.
+	// The decider's own list, which their agent reads and clears as they do.
 	p, _ := principal.Actor(ctx)
-	if p.Type != principal.PrincipalHuman || p.UserID.IsZero() {
+	if !p.HumanOrItsAgent() || p.UserID.IsZero() {
 		return apperrors.ErrPermissionDenied
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -59,7 +59,7 @@ func seatIdentity(
 
 // InviteUser (POST /users): provision a new member and mail the set-password link.
 func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -115,7 +115,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 
 // ChangeUserRole (PATCH /users/{id}/role).
 func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -138,7 +138,7 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 
 // DeactivateUser (POST /users/{id}/deactivate).
 func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -165,7 +165,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 
 // ReactivateUser (POST /users/{id}/reactivate).
 func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}

@@ -210,6 +210,7 @@ func applyResolvedHumanFacts(
 	by string,
 	edits []resolvedHumanFact,
 ) ([]map[string]any, error) {
+	source := companyAuthorSource(ctx)
 	applied := make([]map[string]any, 0, len(edits))
 	for _, edit := range edits {
 		oldKey := edit.proposal.ValueKey
@@ -225,12 +226,12 @@ func applyResolvedHumanFacts(
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO company_fact (company_id, category, field, value, value_key, evidence_snippet, source_url, confidence, source, captured_by, site_read_id)
-			VALUES ($1, $2, $3, $4, $5, '', '', 1, 'human', $6, NULL)
+			VALUES ($1, $2, $3, $4, $5, '', '', 1, $7, $6, NULL)
 			ON CONFLICT (company_id, category, field, value_key)
 			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = '', source_url = '',
-			 confidence = 1, source = 'human', captured_by = EXCLUDED.captured_by,
+			 confidence = 1, source = EXCLUDED.source, captured_by = EXCLUDED.captured_by,
 			 site_read_id = NULL, captured_at = now()`, companyID,
-			edit.proposal.Category, edit.proposal.Field, edit.value, newKey, by); err != nil {
+			edit.proposal.Category, edit.proposal.Field, edit.value, newKey, by, source); err != nil {
 			return nil, fmt.Errorf("save human company fact %s.%s: %w",
 				edit.proposal.Category, edit.proposal.Field, err)
 		}
@@ -238,7 +239,7 @@ func applyResolvedHumanFacts(
 			"category":     edit.proposal.Category,
 			"field":        edit.proposal.Field,
 			"value":        edit.value,
-			auditKeySource: CompanySourceHuman,
+			auditKeySource: source,
 		})
 	}
 	return applied, nil

@@ -17,8 +17,10 @@ import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
+import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
+import { DealViabilityCard } from "./deal360/dealviabilitycard";
 import type { Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
@@ -241,6 +243,14 @@ export function DealOverviewPane({
             // The record's own write refusal, not the advance verb's.
             onEdit={readOnly ? undefined : onEditDetails}
           />
+          {!deal.archived_at && (
+            <DealProductsCard
+              dealId={deal.id}
+              currency={deal.currency ?? null}
+              refusedReasonId={refusedReasonId}
+            />
+          )}
+          {!deal.archived_at && <DealViabilityCard dealId={deal.id} />}
           <DealRoomCard dealId={deal.id} onOpen={() => onOpenTab("room")} />
         </div>
       </div>

@@ -1,0 +1,31 @@
+# CASE 72 — Reading a panel is read_details. Refreshing it would spend the enrich scope, and the user did not ask for that.
+name: case72_read_the_dossier
+criteria: [1]
+writes: false
+
+prompt: |
+  What does the dossier say about Nordholz Anlagenbau GmbH? Do not create anything new.
+
+must_call:
+  - read_details
+
+must_call_with:
+  - read_details.action=dossier
+
+may_call:
+  - find_records
+  - search_records
+  - list_records
+  - read_record
+  - read_context
+  - read_workspace
+  - whoami
+
+must_not_call_with:
+  - run_research~.
+
+must_mention:
+  - "Nordholz"
+
+runs: 3
+pass_at: 2
