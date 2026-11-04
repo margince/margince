@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -866,7 +867,7 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 // fails. Either alone stays green, because the other sets the same claim.
 func TestAFailedDealClaimStaysOnThePreviewWithoutResolving(t *testing.T) {
 	e := setupResolve(t)
-	e.inboundFrom(t, "thread-earlier", e.address, time.Now().AddDate(0, 0, -30))
+	e.inboundFrom(t, "thread-earlier", e.address, clocktest.Now(t).AddDate(0, 0, -30))
 	deal := e.openDeal(t, "open", false)
 
 	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
