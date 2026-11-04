@@ -17,10 +17,12 @@ import {
 } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { markdownLines } from "../design-system/markdown-text";
 import { NextBar } from "../design-system/nextbar";
+import { isTranscriptActivity } from "../design-system/transcriptread";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
 import { useNow } from "../format/now";
@@ -157,14 +159,17 @@ function itemWords(activity: Activity): {
   return { subject, excerpt: excerpt || undefined };
 }
 
-// A form's note is one answer per line; the row reads them as one line. A
-// note is markdown, so its lines are the text it renders; a chat message's
-// characters are its own.
+// A form's note is one answer per line; the row reads them as one line. Text
+// the timeline renders as markdown reads as the text it renders; a chat
+// message's characters are its own.
 function oneLine(activity: Activity, text: string): string {
-  const lines =
-    activity.kind === "note"
-      ? markdownLines(text)
-      : text.split("\n").map((line) => line.trim());
+  const markdown = writtenAsMarkdown({
+    kind: activity.kind,
+    transcript: isTranscriptActivity(activity),
+  });
+  const lines = markdown
+    ? markdownLines(text)
+    : text.split("\n").map((line) => line.trim());
   return lines.filter(Boolean).join(" · ");
 }
 
