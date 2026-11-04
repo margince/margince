@@ -47,7 +47,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_decision
 
-24 columns · primary key `(id)` · referenced by 0 foreign keys
+29 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,10 +61,15 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `delivery_id` | `uuid` | yes | Points at `comms_outbound.id`. |
 | `evidence` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `execution_authority` | `text`, default `'supported'::text` | yes | One of `supported`, `instruction`. |
+| `existing_customer_notice_id` | `uuid` |  |  |
+| `existing_customer_offer_id` | `uuid` |  |  |
+| `existing_customer_sold_at` | `timestamp with time zone` |  |  |
 | `instruction_id` | `uuid` |  | Points at `communication_instruction.id`. |
 | `legacy_verdict` | `text` |  |  |
+| `legal_entity_id` | `uuid` |  |  |
 | `mode` | `text` | yes | One of `observe`, `warn`, `enforce`. |
 | `phase` | `text` | yes | One of `staging`, `transmit`. |
+| `purpose_key` | `text` |  |  |
 | `reason_code` | `text` | yes |  |
 | `recipient_address` | `text` | yes |  |
 | `requested_category` | `text` |  |  |
@@ -88,6 +93,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `communication_decision_basis`: `CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'consent', 'existing_customer_exception', 'vn_subject_agreement']))))`
 - `communication_decision_category`: `CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound', 'requested_followup', 'precontract_quote', 'active_deal_followup', 'customer_service', 'account_notice', 'contract_notice', 'invoice_or_payment', 'security_notice', 'privacy_notice', 'record_confirmation', 'consent_confirmation', 'optout_confirmation', 'marketing'])))`
 - `communication_decision_execution_authority`: `CHECK ((execution_authority = ANY (ARRAY['supported', 'instruction'])))`
+- `communication_decision_existing_customer_shape`: `CHECK ((((existing_customer_notice_id IS NULL) = (existing_customer_offer_id IS NULL)) AND ((existing_customer_notice_id IS NULL) = (existing_customer_sold_at IS NULL))))`
 - `communication_decision_instruction_shape`: `CHECK (((execution_authority = 'instruction') = (instruction_id IS NOT NULL)))`
 - `communication_decision_mode`: `CHECK ((mode = ANY (ARRAY['observe', 'warn', 'enforce'])))`
 - `communication_decision_phase`: `CHECK ((phase = ANY (ARRAY['staging', 'transmit'])))`
@@ -644,7 +650,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## existing_customer_notice
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -653,6 +659,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `customer_group` | `text` | yes | Which customers the declaration covers, in words. |
 | `effective_from` | `timestamp with time zone` | yes |  |
 | `effective_until` | `timestamp with time zone` |  | Exclusive end of the period. |
+| `evidence_dated_at` | `timestamp with time zone` |  | The date the proof bears. |
+| `evidence_reference` | `text` |  | Where the dated proof of the notice is kept, for example an archived copy of the checkout page. |
 | `legal_entity_id` | `uuid` | yes | The sending entity that collected the addresses. |
 | `notice_text` | `text` | yes | The notice the customers saw when their address was collected. |
 | `withdrawn_at` | `timestamp with time zone` |  |  |
@@ -670,6 +678,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `existing_customer_notice_channel_bounded`: `CHECK (((length(btrim(collection_channel)) >= 1) AND (length(btrim(collection_channel)) <= 200)))`
+- `existing_customer_notice_evidence_bounded`: `CHECK (((evidence_reference IS NULL) OR ((length(btrim(evidence_reference)) >= 1) AND (length(btrim(evidence_reference)) <= 500))))`
+- `existing_customer_notice_evidence_shape`: `CHECK (((evidence_reference IS NULL) = (evidence_dated_at IS NULL)))`
 - `existing_customer_notice_group_bounded`: `CHECK (((length(btrim(customer_group)) >= 1) AND (length(btrim(customer_group)) <= 500)))`
 - `existing_customer_notice_period_ordered`: `CHECK (((effective_until IS NULL) OR (effective_until > effective_from)))`
 - `existing_customer_notice_reason_bounded`: `CHECK (((withdrawn_reason IS NULL) OR ((length(btrim(withdrawn_reason)) >= 1) AND (length(btrim(withdrawn_reason)) <= 500))))`

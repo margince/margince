@@ -44465,6 +44465,8 @@ type DeclareExistingCustomerNoticeRequest struct {
 	CustomerGroup     string               `json:"customer_group"`
 	EffectiveFrom     time.Time            `json:"effective_from"`
 	EffectiveUntil    *time.Time           `json:"effective_until,omitempty"`
+	EvidenceDatedAt   *time.Time           `json:"evidence_dated_at,omitempty"`
+	EvidenceReference *string              `json:"evidence_reference,omitempty"`
 	LegalEntityId     openapi_types.UUID   `json:"legal_entity_id"`
 	NoticeText        string               `json:"notice_text"`
 	PurposeIds        []openapi_types.UUID `json:"purpose_ids"`
@@ -45480,16 +45482,25 @@ type ExcuseNoticeCaseState string
 // ExistingCustomerNotice defines model for ExistingCustomerNotice.
 type ExistingCustomerNotice struct {
 	// CollectionChannel How their addresses were collected, for example the web shop checkout.
-	CollectionChannel string    `json:"collection_channel"`
-	CreatedAt         time.Time `json:"created_at"`
+	CollectionChannel string `json:"collection_channel"`
+
+	// CoversFrom The first moment a sale counts: `effective_from`, but no earlier than `evidence_dated_at`, and without proof no earlier than `created_at`.
+	CoversFrom time.Time `json:"covers_from"`
+	CreatedAt  time.Time `json:"created_at"`
 
 	// CustomerGroup Which customers the declaration covers, in words.
 	CustomerGroup string    `json:"customer_group"`
 	EffectiveFrom time.Time `json:"effective_from"`
 
 	// EffectiveUntil Exclusive end of the period. Null while the notice is still given.
-	EffectiveUntil *time.Time         `json:"effective_until,omitempty"`
-	Id             openapi_types.UUID `json:"id"`
+	EffectiveUntil *time.Time `json:"effective_until,omitempty"`
+
+	// EvidenceDatedAt The date the proof bears.
+	EvidenceDatedAt *time.Time `json:"evidence_dated_at,omitempty"`
+
+	// EvidenceReference Where the dated proof of the notice is kept, for example an archived copy of the checkout page.
+	EvidenceReference *string            `json:"evidence_reference,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
 
 	// LegalEntityId The sending entity that collected the addresses.
 	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`

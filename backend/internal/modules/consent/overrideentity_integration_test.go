@@ -66,15 +66,18 @@ func (e *resolveEnv) vouchAs(t *testing.T, user ids.UUID) ids.UUID {
 	return id
 }
 
-// decideAs runs the whole per-recipient decision as user.
+// decideAs runs the whole per-recipient decision as user, naming the sending
+// entity as staging does.
 func (e *resolveEnv) decideAs(t *testing.T, user ids.UUID) commsauthz.Decision {
 	t.Helper()
 	ctx := e.seatCtx(user)
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = e.gate.decideOne(ctx, tx, connector.Recipient{Email: e.address},
-			commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.PhaseStaging)
+		req, err := withSendingEntity(ctx, tx, commsauthz.Request{LegacyPurposeKey: "newsletter"})
+		if err != nil {
+			return err
+		}
+		out, err = e.gate.decideOne(ctx, tx, connector.Recipient{Email: e.address}, req, commsauthz.PhaseStaging)
 		return err
 	}); err != nil {
 		t.Fatalf("deciding: %v", err)

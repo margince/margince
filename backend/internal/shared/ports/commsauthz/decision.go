@@ -4,6 +4,8 @@
 package commsauthz
 
 import (
+	"time"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -128,6 +130,19 @@ type Request struct {
 	// it when a recipient resolves to marketing. False makes no claim, for a
 	// caller that composes no such footer.
 	OmitsAdvertisingDuties bool
+	// SendingEntity is the legal entity the message goes out for. Staging
+	// resolves it from the sender; transmit reads the one staging stored, and
+	// never the principal the dispatcher runs as. Zero means unknown, and then
+	// nothing that is scoped to an entity can allow the message.
+	SendingEntity ids.UUID
+}
+
+// ExistingCustomerGround is the sale and the collection-notice declaration a
+// marketing message went out on without consent.
+type ExistingCustomerGround struct {
+	NoticeID ids.UUID
+	OfferID  ids.UUID
+	SoldAt   time.Time
 }
 
 // Decision is the engine's answer about ONE recipient at ONE phase.
@@ -174,6 +189,14 @@ type Decision struct {
 	// would otherwise have been discarded (aStopThatBindsTheMessage,
 	// consent/reviewcontext.go).
 	PurposeID *ids.UUID
+
+	// SendingEntity and PurposeKey are what this decision was taken for, and
+	// are stored on its row so transmit asks about the same entity and purpose.
+	SendingEntity ids.UUID
+	PurposeKey    string
+	// ExistingCustomer is set when the message is allowed on the
+	// existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

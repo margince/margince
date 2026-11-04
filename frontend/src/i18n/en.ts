@@ -10401,6 +10401,10 @@ export const en = {
   "privacy.customerNoticeFrom": "Shown from",
   "privacy.customerNoticeUntil": "Shown until",
   "privacy.customerNoticeUntilHint": "Leave empty while you still show it.",
+  "privacy.customerNoticeProof": "Where the proof is kept",
+  "privacy.customerNoticeProofHint":
+    "Needed for sales before today, for example an archived copy of the checkout page. Without it the notice counts from today.",
+  "privacy.customerNoticeProofDay": "Date on the proof",
   "privacy.customerNoticePurposes": "Newsletters for similar products",
   "privacy.customerNoticeNoPurposes": "Add a marketing purpose first.",
   "privacy.customerNoticePeriod": "Period",

@@ -45,6 +45,8 @@ func (h Handlers) DeclareExistingCustomerNotice(w http.ResponseWriter, r *http.R
 		NoticeText:        req.NoticeText,
 		EffectiveFrom:     req.EffectiveFrom,
 		EffectiveUntil:    req.EffectiveUntil,
+		EvidenceReference: deref(req.EvidenceReference),
+		EvidenceDatedAt:   req.EvidenceDatedAt,
 		PurposeIDs:        purposes,
 		Now:               time.Now(),
 	})
@@ -82,9 +84,19 @@ func wireCustomerNotice(n CustomerNotice) crmcontracts.ExistingCustomerNotice {
 		NoticeText:        n.NoticeText,
 		EffectiveFrom:     n.EffectiveFrom,
 		EffectiveUntil:    n.EffectiveUntil,
+		EvidenceReference: n.EvidenceReference,
+		EvidenceDatedAt:   n.EvidenceDatedAt,
+		CoversFrom:        n.CoversFrom,
 		PurposeIds:        purposes,
 		CreatedAt:         n.CreatedAt,
 		WithdrawnAt:       n.WithdrawnAt,
 		WithdrawnReason:   n.WithdrawnReason,
 	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

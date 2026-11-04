@@ -53,16 +53,16 @@ import (
 //
 // ONE SENDING ENTITY. A vouch recorded by a rep of one legal entity serves
 // every rep of that entity, whoever owns the contact now and however old the
-// vouch is, and never a send for another entity.
+// vouch is, and never a send for another entity. The entity is the one the
+// message was staged for; an unknown one matches no vouch.
 func liveOverride(
-	ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category,
+	ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category, entity ids.UUID,
 ) (ids.UUID, bool, error) {
-	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
-	if err != nil {
-		return ids.UUID{}, false, err
+	if entity.IsZero() {
+		return ids.UUID{}, false, nil
 	}
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT id FROM communication_override
 		 WHERE revoked_at IS NULL
 		   AND category = $2

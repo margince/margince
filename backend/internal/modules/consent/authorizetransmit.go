@@ -259,7 +259,12 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // decideOneIn is decideOne under a country the caller already resolved for
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
-	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
+	req, agree := canonicalPurpose(req)
+	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing,
+		SendingEntity: req.SendingEntity, PurposeKey: req.LegacyPurposeKey}
+	if !agree {
+		return denyContradiction(d, commsauthz.CategoryMarketing), nil
+	}
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		// Ambiguity refuses rather than picking, and that is an ANSWER about
@@ -338,7 +343,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// on that default. A per-category vouch has nothing to answer there, so it is
 	// excluded rather than allowed to flip a send on a category it never named.
 	if d.CanBeOverruledByCategory() {
-		id, ok, err := liveOverride(ctx, tx, contactID, d.Resolved)
+		id, ok, err := liveOverride(ctx, tx, contactID, d.Resolved, req.SendingEntity)
 		if err != nil {
 			return d, err
 		}

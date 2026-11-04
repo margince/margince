@@ -65,6 +65,7 @@ function notice(over: Record<string, unknown> = {}) {
     notice_text: "You may object at any time.",
     effective_from: "2023-03-01T12:00:00Z",
     effective_until: null,
+    covers_from: "2023-03-01T12:00:00Z",
     purpose_ids: ["p-news"],
     created_at: "2024-01-01T00:00:00Z",
     withdrawn_at: null,
@@ -168,6 +169,16 @@ describe("the existing-customer notices card", () => {
       }),
       "2024-01-20{Enter}",
     );
+    await user.type(
+      within(dialog).getByLabelText(en["privacy.customerNoticeProof"]),
+      "archived checkout page",
+    );
+    await user.type(
+      within(dialog).getByRole("textbox", {
+        name: en["privacy.customerNoticeProofDay"],
+      }),
+      "2024-01-05{Enter}",
+    );
     expect(within(dialog).queryByLabelText("Invoices")).not.toBeInTheDocument();
     await user.click(await within(dialog).findByLabelText("Newsletter"));
     await user.click(
@@ -187,6 +198,8 @@ describe("the existing-customer notices card", () => {
     const from = Date.parse(String(body.effective_from));
     const until = Date.parse(String(body.effective_until));
     expect(until - from).toBe(11 * DAY_MS);
+    expect(body.evidence_reference).toBe("archived checkout page");
+    expect(from - Date.parse(String(body.evidence_dated_at))).toBe(5 * DAY_MS);
   });
 
   it("withdraws a declaration with the reason typed", async () => {

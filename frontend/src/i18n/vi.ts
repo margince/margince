@@ -10129,6 +10129,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.customerNoticeFrom": "Hiển thị từ",
   "privacy.customerNoticeUntil": "Hiển thị đến",
   "privacy.customerNoticeUntilHint": "Để trống nếu bạn vẫn đang hiển thị.",
+  "privacy.customerNoticeProof": "Nơi lưu bằng chứng",
+  "privacy.customerNoticeProofHint":
+    "Cần cho các giao dịch mua trước hôm nay, ví dụ bản lưu trang thanh toán. Không có bằng chứng thì thông báo chỉ tính từ hôm nay.",
+  "privacy.customerNoticeProofDay": "Ngày trên bằng chứng",
   "privacy.customerNoticePurposes": "Bản tin cho sản phẩm tương tự",
   "privacy.customerNoticeNoPurposes": "Hãy thêm một mục đích tiếp thị trước.",
   "privacy.customerNoticePeriod": "Khoảng thời gian",

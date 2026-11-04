@@ -65,8 +65,10 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id, ruleset_version, ruleset_codes)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
+			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
+			   existing_customer_sold_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
@@ -76,7 +78,8 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// for one recipient and directed for another did not go out on
 			// somebody's decision for both.
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
-			ruleset.Version, ruleset.Codes)
+			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d))
 		if err != nil {
 			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
 		}

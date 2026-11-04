@@ -37,10 +37,26 @@ UPDATE communication_override o
   FROM recorder
  WHERE recorder.id = o.id AND recorder.user_id IS NOT NULL;
 
-UPDATE communication_override
-   SET legal_entity_id = (SELECT le.id FROM legal_entity le WHERE le.is_default),
-       revoked_at = coalesce(revoked_at, now())
- WHERE legal_entity_id IS NULL;
+-- The entity column must name one, and an unattributed row never matches a
+-- send: it is revoked, and each live one revoked here leaves an audit row on
+-- its record so the record's history says why the vouch is gone.
+WITH unnamed AS (
+    UPDATE communication_override
+       SET legal_entity_id = (SELECT le.id FROM legal_entity le WHERE le.is_default),
+           revoked_at = coalesce(revoked_at, now())
+     WHERE legal_entity_id IS NULL
+    RETURNING id, contact_id, lead_id, category,
+              (revoked_at = now()) AS revoked_here
+)
+INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
+SELECT 'system', 'migration', 'update',
+       CASE WHEN contact_id IS NOT NULL THEN 'contact' ELSE 'lead' END,
+       coalesce(contact_id, lead_id),
+       jsonb_build_object('override_id', id, 'override_category', category, 'revoked', false),
+       jsonb_build_object('override_id', id, 'override_category', category, 'revoked', true,
+                          'reason', 'recorder could not be named')
+  FROM unnamed
+ WHERE revoked_here;
 
 ALTER TABLE communication_override
     ALTER COLUMN legal_entity_id SET NOT NULL,

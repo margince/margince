@@ -78,10 +78,9 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 				return err
 			}
 			w := packRulesFor(country)
-			marketing, err := marketingContextTx(ctx, tx, w)
-			if err != nil {
-				return err
-			}
+			// No sending entity: this gate is asked about a purpose key, not a
+			// staged message, so the existing-customer route never applies here.
+			marketing := MarketingContext{Exception: w.marketingException}
 			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
 			if err != nil {
 				return err

@@ -10410,6 +10410,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.customerNoticeFrom": "Gezeigt ab",
   "privacy.customerNoticeUntil": "Gezeigt bis",
   "privacy.customerNoticeUntilHint": "Leer lassen, solange du ihn noch zeigst.",
+  "privacy.customerNoticeProof": "Wo der Nachweis liegt",
+  "privacy.customerNoticeProofHint":
+    "Nötig für Käufe vor heute, zum Beispiel eine archivierte Kopie der Bestellseite. Ohne Nachweis gilt der Hinweis ab heute.",
+  "privacy.customerNoticeProofDay": "Datum auf dem Nachweis",
   "privacy.customerNoticePurposes": "Newsletter für ähnliche Produkte",
   "privacy.customerNoticeNoPurposes": "Lege zuerst einen Werbezweck an.",
   "privacy.customerNoticePeriod": "Zeitraum",

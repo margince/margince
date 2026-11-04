@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 359 |
-| Columns | 4248 |
+| Columns | 4255 |
 | Foreign keys | 589 |
 | Owning areas | 38 |
 
@@ -227,7 +227,7 @@ erDiagram
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
-| [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
+| [`communication_decision`](consent.md#communication_decision) | consent | 29 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 11 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
@@ -308,7 +308,7 @@ erDiagram
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 3 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 6 | 0 |
-| [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 12 | 1 |
+| [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 14 | 1 |
 | [`existing_customer_notice_purpose`](consent.md#existing_customer_notice_purpose) | consent | 2 | 0 |
 | [`extension_ingest_position`](compose.md#extension_ingest_position) | compose | 4 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 6 | 0 |

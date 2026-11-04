@@ -277,7 +277,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops, req.SendingEntity)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -293,7 +293,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // caller's suppression re-check needs it to tell a narrow row that binds this
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop, entity ids.UUID) (commsauthz.Decision, *ids.UUID, error) {
 	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
@@ -358,10 +358,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	}
 
 	w := packRulesFor(country)
-	marketing, err := marketingContextTx(ctx, tx, w)
-	if err != nil {
-		return commsauthz.Decision{}, nil, err
-	}
+	marketing := MarketingContext{Exception: w.marketingException, SendingEntity: entity}
 	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply), marketing)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
@@ -412,6 +409,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		d.Basis = basisForClass(purpose.Class)
 		if verdict.ExistingCustomer != nil {
 			d.Basis = commsauthz.BasisExistingCustomerException
+			d.ExistingCustomer = verdict.ExistingCustomer
 		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny

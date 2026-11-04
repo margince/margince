@@ -16706,8 +16706,9 @@ export interface paths {
          *
          *     Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
          *     marketing send to a contact without consent goes out when all of these hold: an offer
-         *     the sending entity issued was accepted on a deal the contact was a stakeholder of before
-         *     the acceptance; a live declaration of that entity covers the moment of acceptance; the
+         *     the sending entity issued was accepted, and the contact was its buyer before the
+         *     acceptance (the deal's economic buyer, or a billing contact of the offer's buyer company);
+         *     a live declaration of that entity covers the moment of acceptance (`covers_from`); the
          *     declaration names the send's marketing purpose; and the contact has not objected. An
          *     offer that names no issuing entity counts for none. The send then records the basis
          *     `existing_customer_exception`.
@@ -16720,7 +16721,10 @@ export interface paths {
          *     A declaration is never edited; to correct one, withdraw it and declare again.
          *
          *     `effective_from` may lie in the past, so customers won before the declaration was made
-         *     qualify where the notice was given then. It may not lie in the future. `effective_until`
+         *     qualify where the notice was given then. It may not lie in the future. A sale before the
+         *     day of the declaration counts only with proof: `evidence_reference` names where the dated
+         *     proof is kept, and `evidence_dated_at` is the date it bears; no sale before that date
+         *     counts. The two are given together or not at all. `effective_until`
          *     is exclusive and optional; without it the notice is still given. Every purpose must be a
          *     marketing purpose. An archived legal entity is refused as 422.
          */
@@ -49039,6 +49043,18 @@ export interface components {
              * @description Exclusive end of the period. Null while the notice is still given.
              */
             effective_until?: string | null;
+            /** @description Where the dated proof of the notice is kept, for example an archived copy of the checkout page. */
+            evidence_reference?: string | null;
+            /**
+             * Format: date-time
+             * @description The date the proof bears.
+             */
+            evidence_dated_at?: string | null;
+            /**
+             * Format: date-time
+             * @description The first moment a sale counts: `effective_from`, but no earlier than `evidence_dated_at`, and without proof no earlier than `created_at`.
+             */
+            covers_from: string;
             /** @description The marketing purposes that advertise goods or services like the ones these customers bought. */
             purpose_ids: string[];
             /** Format: date-time */
@@ -49057,6 +49073,9 @@ export interface components {
             effective_from: string;
             /** Format: date-time */
             effective_until?: string | null;
+            evidence_reference?: string | null;
+            /** Format: date-time */
+            evidence_dated_at?: string | null;
             purpose_ids: string[];
         };
         /**

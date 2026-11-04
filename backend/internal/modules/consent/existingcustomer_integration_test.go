@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -86,8 +87,8 @@ func (e *resolveEnv) archivedEntity(t *testing.T) ids.UUID {
 	return entity
 }
 
-// saleAt plants a sale: a deal with the env's contact as stakeholder from
-// before, and an offer of entity accepted at a moment.
+// saleAt plants a sale: a deal with the env's contact as its economic buyer
+// from before, and an offer of entity accepted at a moment.
 func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, offer ids.UUID) {
 	t.Helper()
 	deal = ids.NewV7()
@@ -95,8 +96,9 @@ func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, 
 		INSERT INTO deal (id, name, pipeline_id, stage_id, status, source, captured_by)
 		VALUES ($1, 'Spring order', $2, $3, 'open', 'manual', 'human:x')`, deal, e.pipeline, e.stage)
 	e.ownerExec(t, `
-		INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by, created_at)
-		VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x', $3)`, deal, e.contact, at.Add(-30*24*time.Hour))
+		INSERT INTO relationship (kind, deal_id, contact_id, role, source, captured_by, created_at)
+		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x', $3)`,
+		deal, e.contact, at.Add(-30*24*time.Hour))
 	offer = e.offerOn(t, deal, "accepted")
 	e.ownerExec(t, `UPDATE offer SET legal_entity_id = $2, accepted_at = $3 WHERE id = $1`, offer, entity, at)
 	return deal, offer
@@ -109,6 +111,7 @@ func (e *resolveEnv) declare(t *testing.T, entity ids.UUID, from time.Time, unti
 		LegalEntityID: entity, CustomerGroup: "Web shop buyers", CollectionChannel: "web shop checkout",
 		NoticeText:    "We will send you offers for similar products. You can object at any time, free of charge.",
 		EffectiveFrom: from, EffectiveUntil: until, PurposeIDs: purposes, Now: clocktest.Now(t),
+		EvidenceReference: "archived checkout page", EvidenceDatedAt: &from,
 	})
 	if err != nil {
 		t.Fatalf("declaring the notice: %v", err)
@@ -216,6 +219,10 @@ func TestASaleIsAnAcceptedOfferOfTheSendingEntity(t *testing.T) {
 			deal, _ := e.saleAt(t, e.defaultEntity(t), at)
 			e.ownerExec(t, `UPDATE relationship SET created_at = $2 WHERE deal_id = $1`, deal, at.Add(time.Hour))
 		},
+		"a stakeholder who only advised": func(t *testing.T, e *resolveEnv, at time.Time) {
+			deal, _ := e.saleAt(t, e.defaultEntity(t), at)
+			e.ownerExec(t, `UPDATE relationship SET role = 'influencer' WHERE deal_id = $1`, deal)
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupResolve(t)
@@ -315,5 +322,102 @@ func TestADeclarationStatesAPastPeriodAndMarketingPurposes(t *testing.T) {
 	listed, err := e.store.CustomerNotices(e.consentAdminCtx())
 	if err != nil || len(listed) != 1 || listed[0].WithdrawnReason == nil || *listed[0].WithdrawnReason != "wrong period" {
 		t.Fatalf("listed = %+v (%v), want the one withdrawn declaration with its reason", listed, err)
+	}
+}
+
+// The buyer of a sale counts and a colleague on the same deal who only
+// advised does not. A billing contact of the buyer company counts too.
+func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the buyer got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+	adviser := e.anotherContact(t, "adviser@buyer.test")
+	adviser.livesIn(t, customerRoute())
+	e.ownerExec(t, `
+		INSERT INTO relationship (kind, deal_id, contact_id, role, source, captured_by, created_at)
+		SELECT 'deal_stakeholder', deal_id, $1, 'influencer', 'manual', 'human:x', created_at
+		  FROM relationship WHERE contact_id = $2 AND kind = 'deal_stakeholder'`, adviser.contact, e.contact)
+	if got := adviser.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("an adviser on the buyer's deal was allowed on basis %q", got.Basis)
+	}
+
+	company := e.company(t)
+	e.ownerExec(t, `UPDATE offer SET buyer_company_id = $1`, company)
+	e.ownerExec(t, `
+		INSERT INTO relationship (kind, company_id, contact_id, role, source, captured_by, created_at)
+		VALUES ('billing_contact', $1, $2, 'recipient', 'manual', 'human:x', $3)`,
+		company, adviser.contact, soldAt.Add(-time.Hour))
+	if got := adviser.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the buyer company's billing contact got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+}
+
+// A declaration back-dated without proof covers no sale before the day it is
+// declared; the same declaration with dated proof covers it.
+func TestABackDatedDeclarationNeedsDatedProof(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	if _, err := e.store.DeclareCustomerNotice(e.consentAdminCtx(), DeclareNoticeInput{
+		LegalEntityID: e.defaultEntity(t), CustomerGroup: "Web shop buyers", CollectionChannel: "checkout",
+		NoticeText: "You may object.", EffectiveFrom: soldAt.Add(-year),
+		PurposeIDs: []ids.UUID{newsletter}, Now: clocktest.Now(t),
+	}); err != nil {
+		t.Fatalf("declaring without proof: %v", err)
+	}
+	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("a declaration without proof covered a sale from before the day it was declared")
+	}
+	proofDate := soldAt.Add(-24 * time.Hour)
+	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	e.ownerExec(t, `UPDATE existing_customer_notice SET evidence_dated_at = $1 WHERE evidence_dated_at IS NOT NULL`, proofDate)
+	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("with dated proof got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+	e.ownerExec(t, `UPDATE existing_customer_notice SET evidence_dated_at = $1 WHERE evidence_dated_at IS NOT NULL`, soldAt.Add(time.Hour))
+	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("proof dated after the sale covered it")
+	}
+}
+
+// A message naming two different purposes is refused, whichever it is judged by.
+func TestAMessageNamingTwoPurposesIsRefused(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	e.seedPurpose(t, "events", "marketing")
+	got := e.decide(t, commsauthz.Request{LegacyPurposeKey: "events", MarketingPurpose: "newsletter"})
+	if got.Verdict != commsauthz.VerdictDeny || got.ReasonCode != commsauthz.ReasonClaimContradictsResolution {
+		t.Fatalf("verdict = %q (%s), want a refusal for two purposes", got.Verdict, got.ReasonCode)
+	}
+	if got := e.decide(t, commsauthz.Request{MarketingPurpose: "newsletter"}); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the marketing purpose alone got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+}
+
+// The staging row of a send on the route names the entity, the purpose, the
+// declaration and the sale it rested on.
+func TestTheDecisionRowNamesTheGroundItRestedOn(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	n := e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	delivery := e.plantDelivery(t)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		_, err := e.gate.AuthorizeStagingTx(e.ctx, tx, delivery, commsauthz.Request{
+			Recipients: []connector.Recipient{{Email: e.address}}, LegacyPurposeKey: "newsletter",
+			Subject: "S", Body: "b"})
+		return err
+	}); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	var entity, notice ids.UUID
+	var purpose string
+	var offer *ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id
+		  FROM communication_decision WHERE delivery_id = $1`, delivery).Scan(&entity, &purpose, &notice, &offer); err != nil {
+		t.Fatalf("reading the staging row: %v", err)
+	}
+	if entity != e.defaultEntity(t) || purpose != "newsletter" || notice != n.ID || offer == nil {
+		t.Fatalf("row = entity %s purpose %q notice %s offer %v, want the default entity, newsletter, %s and the sale",
+			entity, purpose, notice, offer, n.ID)
 	}
 }

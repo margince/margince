@@ -45,6 +45,8 @@ type Draft = Readonly<{
   text: string;
   from: ISODate | "";
   until: ISODate | "";
+  proof: string;
+  proofDay: ISODate | "";
   purposes: string[];
 }>;
 
@@ -83,6 +85,8 @@ function DeclareForm({ onDone }: Readonly<{ onDone: () => void }>) {
     text: "",
     from: "",
     until: "",
+    proof: "",
+    proofDay: "",
     purposes: [],
   });
   const entity = draft.entity || fallbackEntity;
@@ -97,6 +101,9 @@ function DeclareForm({ onDone }: Readonly<{ onDone: () => void }>) {
             notice_text: d.text.trim(),
             effective_from: startOf(d.from, zone),
             effective_until: d.until ? afterEndOf(d.until, zone) : null,
+            evidence_reference: d.proof.trim() || null,
+            evidence_dated_at:
+              d.proof.trim() && d.proofDay ? startOf(d.proofDay, zone) : null,
             purpose_ids: d.purposes,
           },
         }),
@@ -116,7 +123,8 @@ function DeclareForm({ onDone }: Readonly<{ onDone: () => void }>) {
     draft.channel.trim() !== "" &&
     draft.text.trim() !== "" &&
     draft.from !== "" &&
-    draft.purposes.length > 0;
+    draft.purposes.length > 0 &&
+    (draft.proof.trim() === "") === (draft.proofDay === "");
   const marketing = purposes.data ?? [];
   return (
     <>
@@ -201,6 +209,29 @@ function DeclareForm({ onDone }: Readonly<{ onDone: () => void }>) {
               value={draft.until}
               min={draft.from || undefined}
               onChange={(event) => edit({ until: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field
+          label={t("privacy.customerNoticeProof")}
+          hint={t("privacy.customerNoticeProofHint")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              maxLength={500}
+              value={draft.proof}
+              onChange={(event) => edit({ proof: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label={t("privacy.customerNoticeProofDay")}>
+          {(control) => (
+            <DateInput
+              {...control}
+              value={draft.proofDay}
+              max={isoOrBlank(todayIn(zone)) || undefined}
+              onChange={(event) => edit({ proofDay: event.target.value })}
             />
           )}
         </Field>
@@ -312,14 +343,14 @@ function NoticeTable({
   const period = (n: CustomerNotice) =>
     n.effective_until
       ? t("privacy.customerNoticeRange", {
-          from: day(n.effective_from),
+          from: day(n.covers_from),
           until: day(
             new Date(
               new Date(n.effective_until).getTime() - 1000,
             ).toISOString(),
           ),
         })
-      : t("privacy.customerNoticeOngoing", { from: day(n.effective_from) });
+      : t("privacy.customerNoticeOngoing", { from: day(n.covers_from) });
   const columns: DataTableColumn<CustomerNotice>[] = [
     {
       key: "group",

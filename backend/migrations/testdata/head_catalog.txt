@@ -2442,6 +2442,7 @@ public.communication_decision.communication_decision_basis CHECK (((basis IS NUL
 public.communication_decision.communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
 public.communication_decision.communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE CASCADE
 public.communication_decision.communication_decision_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))
+public.communication_decision.communication_decision_existing_customer_shape CHECK ((((existing_customer_notice_id IS NULL) = (existing_customer_offer_id IS NULL)) AND ((existing_customer_notice_id IS NULL) = (existing_customer_sold_at IS NULL))))
 public.communication_decision.communication_decision_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES communication_instruction(id) ON DELETE RESTRICT
 public.communication_decision.communication_decision_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL)))
 public.communication_decision.communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text])))
@@ -2457,11 +2458,16 @@ public.communication_decision.decision_set_id uuid NOT NULL gen=- def=-
 public.communication_decision.delivery_id uuid NOT NULL gen=- def=-
 public.communication_decision.evidence jsonb NOT NULL gen=- def='{}'::jsonb
 public.communication_decision.execution_authority text NOT NULL gen=- def='supported'::text
+public.communication_decision.existing_customer_notice_id uuid gen=- def=-
+public.communication_decision.existing_customer_offer_id uuid gen=- def=-
+public.communication_decision.existing_customer_sold_at timestamp with time zone gen=- def=-
 public.communication_decision.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_decision.instruction_id uuid gen=- def=-
 public.communication_decision.legacy_verdict text gen=- def=-
+public.communication_decision.legal_entity_id uuid gen=- def=-
 public.communication_decision.mode text NOT NULL gen=- def=-
 public.communication_decision.phase text NOT NULL gen=- def=-
+public.communication_decision.purpose_key text gen=- def=-
 public.communication_decision.reason_code text NOT NULL gen=- def=-
 public.communication_decision.recipient_address text NOT NULL gen=- def=-
 public.communication_decision.requested_category text gen=- def=-
@@ -4529,7 +4535,11 @@ public.existing_customer_notice.created_at timestamp with time zone NOT NULL gen
 public.existing_customer_notice.customer_group text NOT NULL gen=- def=-
 public.existing_customer_notice.effective_from timestamp with time zone NOT NULL gen=- def=-
 public.existing_customer_notice.effective_until timestamp with time zone gen=- def=-
+public.existing_customer_notice.evidence_dated_at timestamp with time zone gen=- def=-
+public.existing_customer_notice.evidence_reference text gen=- def=-
 public.existing_customer_notice.existing_customer_notice_channel_bounded CHECK (((length(btrim(collection_channel)) >= 1) AND (length(btrim(collection_channel)) <= 200)))
+public.existing_customer_notice.existing_customer_notice_evidence_bounded CHECK (((evidence_reference IS NULL) OR ((length(btrim(evidence_reference)) >= 1) AND (length(btrim(evidence_reference)) <= 500))))
+public.existing_customer_notice.existing_customer_notice_evidence_shape CHECK (((evidence_reference IS NULL) = (evidence_dated_at IS NULL)))
 public.existing_customer_notice.existing_customer_notice_group_bounded CHECK (((length(btrim(customer_group)) >= 1) AND (length(btrim(customer_group)) <= 500)))
 public.existing_customer_notice.existing_customer_notice_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.existing_customer_notice.existing_customer_notice_period_ordered CHECK (((effective_until IS NULL) OR (effective_until > effective_from)))

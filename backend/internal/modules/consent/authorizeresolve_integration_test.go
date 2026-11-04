@@ -255,12 +255,16 @@ func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 
 // decide runs the WHOLE per-recipient decision, not just the resolution — which
 // is what the Resolved/Requested split has to be asserted through, because the
-// split happens in decideResolved rather than in the resolver.
+// split happens in decideResolved rather than in the resolver. It names the
+// sending entity as staging does.
 func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Decision {
 	t.Helper()
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		var err error
+		req, err := withSendingEntity(e.ctx, tx, req)
+		if err != nil {
+			return err
+		}
 		out, err = e.gate.decideOne(e.ctx, tx,
 			connector.Recipient{Email: e.address}, req, commsauthz.PhaseStaging)
 		return err

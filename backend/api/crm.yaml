@@ -24845,8 +24845,9 @@ paths:
 
         Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
         marketing send to a contact without consent goes out when all of these hold: an offer
-        the sending entity issued was accepted on a deal the contact was a stakeholder of before
-        the acceptance; a live declaration of that entity covers the moment of acceptance; the
+        the sending entity issued was accepted, and the contact was its buyer before the
+        acceptance (the deal's economic buyer, or a billing contact of the offer's buyer company);
+        a live declaration of that entity covers the moment of acceptance (`covers_from`); the
         declaration names the send's marketing purpose; and the contact has not objected. An
         offer that names no issuing entity counts for none. The send then records the basis
         `existing_customer_exception`.
@@ -24874,7 +24875,10 @@ paths:
         A declaration is never edited; to correct one, withdraw it and declare again.
 
         `effective_from` may lie in the past, so customers won before the declaration was made
-        qualify where the notice was given then. It may not lie in the future. `effective_until`
+        qualify where the notice was given then. It may not lie in the future. A sale before the
+        day of the declaration counts only with proof: `evidence_reference` names where the dated
+        proof is kept, and `evidence_dated_at` is the date it bears; no sale before that date
+        counts. The two are given together or not at all. `effective_until`
         is exclusive and optional; without it the notice is still given. Every purpose must be a
         marketing purpose. An archived legal entity is refused as 422.
       requestBody:
@@ -67270,7 +67274,7 @@ components:
 
     ExistingCustomerNotice:
       type: object
-      required: [id, legal_entity_id, customer_group, collection_channel, notice_text, effective_from, purpose_ids, created_at]
+      required: [id, legal_entity_id, customer_group, collection_channel, notice_text, effective_from, covers_from, purpose_ids, created_at]
       properties:
         id: { type: string, format: uuid }
         legal_entity_id: { type: string, format: uuid, description: 'The sending entity that collected the addresses.' }
@@ -67279,6 +67283,14 @@ components:
         notice_text: { type: string, description: 'The notice the customers saw when their address was collected.' }
         effective_from: { type: string, format: date-time }
         effective_until: { type: [string, 'null'], format: date-time, description: 'Exclusive end of the period. Null while the notice is still given.' }
+        evidence_reference: { type: [string, 'null'], description: 'Where the dated proof of the notice is kept, for example an archived copy of the checkout page.' }
+        evidence_dated_at: { type: [string, 'null'], format: date-time, description: 'The date the proof bears.' }
+        covers_from:
+          type: string
+          format: date-time
+          description: >-
+            The first moment a sale counts: `effective_from`, but no earlier than `evidence_dated_at`,
+            and without proof no earlier than `created_at`.
         purpose_ids:
           type: array
           description: The marketing purposes that advertise goods or services like the ones these customers bought.
@@ -67297,6 +67309,8 @@ components:
         notice_text: { type: string, minLength: 1, maxLength: 4000 }
         effective_from: { type: string, format: date-time }
         effective_until: { type: [string, 'null'], format: date-time }
+        evidence_reference: { type: [string, 'null'], maxLength: 500 }
+        evidence_dated_at: { type: [string, 'null'], format: date-time }
         purpose_ids:
           type: array
           minItems: 1

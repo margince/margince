@@ -18,6 +18,11 @@ CREATE TABLE existing_customer_notice (
     -- The period the notice was given in; NULL until means it still is.
     effective_from timestamptz NOT NULL,
     effective_until timestamptz,
+    -- Where the dated proof of the notice is kept, and the date it bears. A
+    -- declaration covers no sale before that date, and without proof none
+    -- before the day it was declared.
+    evidence_reference text,
+    evidence_dated_at timestamptz,
     captured_by text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     withdrawn_at timestamptz,
@@ -35,6 +40,10 @@ CREATE TABLE existing_customer_notice (
         CHECK (length(btrim(notice_text)) BETWEEN 1 AND 4000),
     CONSTRAINT existing_customer_notice_period_ordered
         CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT existing_customer_notice_evidence_shape
+        CHECK ((evidence_reference IS NULL) = (evidence_dated_at IS NULL)),
+    CONSTRAINT existing_customer_notice_evidence_bounded
+        CHECK (evidence_reference IS NULL OR length(btrim(evidence_reference)) BETWEEN 1 AND 500),
     CONSTRAINT existing_customer_notice_withdrawal_shape
         CHECK ((withdrawn_at IS NULL) = (withdrawn_by IS NULL)
            AND (withdrawn_at IS NULL) = (withdrawn_reason IS NULL)),

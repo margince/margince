@@ -244,7 +244,8 @@ func resolutionForClass(class Class) resolution {
 // they had supported minutes earlier. See authorizeevidencecarry.go.
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence
+		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence,
+		       legal_entity_id, purpose_key
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -259,9 +260,10 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 	claims := map[string]stagedClaim{}
 	for rows.Next() {
 		var address string
-		var claimed *string
+		var claimed, purposeKey *string
 		var evidence []byte
-		if err := rows.Scan(&address, &claimed, &evidence); err != nil {
+		var entity *ids.UUID
+		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
 		var out stagedClaim
@@ -269,6 +271,12 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 			out.category = commsauthz.Category(*claimed)
 		}
 		out.evidence = evidenceFrom(evidence)
+		if entity != nil {
+			out.entity = *entity
+		}
+		if purposeKey != nil {
+			out.purposeKey = *purposeKey
+		}
 		claims[address] = out
 	}
 	if err := rows.Err(); err != nil {
@@ -288,10 +296,20 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // claim, because they describe the message and not one recipient of it.
 func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
+	// The purpose staging judged, held against the delivery's own key: two
+	// keys that disagree reach canonicalPurpose and are refused there.
+	purposeKey, deliveryKey := staged.purposeKey, ""
+	if purposeKey == "" {
+		purposeKey = req.PurposeKey
+	} else {
+		deliveryKey = req.PurposeKey
+	}
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
 		Context:          staged.category,
-		LegacyPurposeKey: req.PurposeKey,
+		LegacyPurposeKey: purposeKey,
+		MarketingPurpose: deliveryKey,
+		SendingEntity:    staged.entity,
 		// The records this recipient's message was staged on. Re-validated
 		// here, never trusted: a voided invoice or an ended employment refuses
 		// at transmit exactly as it would have at staging.
@@ -383,4 +401,7 @@ type stagedClaim struct {
 	// evidence is the ids the message was staged on, re-asked at transmit.
 	evidence commsauthz.Evidence
 	category commsauthz.Category
+	// entity and purposeKey are what staging decided the message for.
+	entity     ids.UUID
+	purposeKey string
 }

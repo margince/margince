@@ -41,6 +41,9 @@ type CustomerNotice struct {
 	NoticeText        string
 	EffectiveFrom     time.Time
 	EffectiveUntil    *time.Time
+	EvidenceReference *string
+	EvidenceDatedAt   *time.Time
+	CoversFrom        time.Time
 	PurposeIDs        []ids.UUID
 	CapturedBy        string
 	CreatedAt         time.Time
@@ -58,6 +61,11 @@ type DeclareNoticeInput struct {
 	NoticeText        string
 	EffectiveFrom     time.Time
 	EffectiveUntil    *time.Time
+	// EvidenceReference names where the dated proof of the notice is kept,
+	// and EvidenceDatedAt is the date it bears. Without them the declaration
+	// covers no sale before the day it is declared.
+	EvidenceReference string
+	EvidenceDatedAt   *time.Time
 	PurposeIDs        []ids.UUID
 	Now               time.Time
 }
@@ -82,6 +90,12 @@ func (in DeclareNoticeInput) validate() error {
 		return &ValidationError{Field: "effective_from", Reason: "give the day the notice was first given, no later than today"}
 	case in.EffectiveUntil != nil && !in.EffectiveUntil.After(in.EffectiveFrom):
 		return &ValidationError{Field: "effective_until", Reason: "the end of the period must come after its start"}
+	case (strings.TrimSpace(in.EvidenceReference) == "") != (in.EvidenceDatedAt == nil):
+		return &ValidationError{Field: "evidence_dated_at", Reason: "name the proof of the notice together with the date it bears"}
+	case utf8.RuneCountInString(strings.TrimSpace(in.EvidenceReference)) > 500:
+		return &ValidationError{Field: "evidence_reference", Reason: "name the proof in 1 to 500 characters"}
+	case in.EvidenceDatedAt != nil && in.EvidenceDatedAt.After(in.Now):
+		return &ValidationError{Field: "evidence_dated_at", Reason: "the proof's date can be no later than today"}
 	case len(in.PurposeIDs) == 0:
 		return &ValidationError{Field: "purpose_ids", Reason: "name at least one marketing purpose that advertises goods like the ones bought"}
 	}
@@ -122,11 +136,12 @@ func (s *Store) DeclareCustomerNotice(ctx context.Context, in DeclareNoticeInput
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO existing_customer_notice
 			    (legal_entity_id, customer_group, collection_channel, notice_text,
-			     effective_from, effective_until, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			     effective_from, effective_until, evidence_reference, evidence_dated_at, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id`,
 			in.LegalEntityID, strings.TrimSpace(in.CustomerGroup), strings.TrimSpace(in.CollectionChannel),
-			strings.TrimSpace(in.NoticeText), in.EffectiveFrom, in.EffectiveUntil, by).Scan(&id); err != nil {
+			strings.TrimSpace(in.NoticeText), in.EffectiveFrom, in.EffectiveUntil,
+			nullableText(strings.TrimSpace(in.EvidenceReference)), in.EvidenceDatedAt, by).Scan(&id); err != nil {
 			return fmt.Errorf("consent: recording the collection notice: %w", err)
 		}
 		if _, err := tx.Exec(ctx, `
@@ -140,7 +155,8 @@ func (s *Store) DeclareCustomerNotice(ctx context.Context, in DeclareNoticeInput
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", customerNoticeEntity, id, map[string]any{
 			"legal_entity_id": in.LegalEntityID.String(), "effective_from": in.EffectiveFrom,
-			"effective_until": in.EffectiveUntil, "purposes": len(notice.PurposeIDs),
+			"effective_until": in.EffectiveUntil, "evidence_dated_at": in.EvidenceDatedAt,
+			"purposes": len(notice.PurposeIDs),
 		})
 		if err != nil {
 			return err
@@ -256,7 +272,8 @@ func customerNoticeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (CustomerNoti
 func customerNoticesTx(ctx context.Context, tx pgx.Tx, id *ids.UUID) ([]CustomerNotice, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT n.id, n.legal_entity_id, n.customer_group, n.collection_channel, n.notice_text,
-		       n.effective_from, n.effective_until, n.captured_by, n.created_at,
+		       n.effective_from, n.effective_until, n.evidence_reference, n.evidence_dated_at,
+		       `+noticeCoversFromSQL+`, n.captured_by, n.created_at,
 		       n.withdrawn_at, n.withdrawn_reason,
 		       coalesce(array_agg(np.purpose_id ORDER BY np.purpose_id)
 		                FILTER (WHERE np.purpose_id IS NOT NULL), '{}')
@@ -271,7 +288,8 @@ func customerNoticesTx(ctx context.Context, tx pgx.Tx, id *ids.UUID) ([]Customer
 	notices, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (CustomerNotice, error) {
 		var n CustomerNotice
 		err := row.Scan(&n.ID, &n.LegalEntityID, &n.CustomerGroup, &n.CollectionChannel, &n.NoticeText,
-			&n.EffectiveFrom, &n.EffectiveUntil, &n.CapturedBy, &n.CreatedAt,
+			&n.EffectiveFrom, &n.EffectiveUntil, &n.EvidenceReference, &n.EvidenceDatedAt,
+			&n.CoversFrom, &n.CapturedBy, &n.CreatedAt,
 			&n.WithdrawnAt, &n.WithdrawnReason, &n.PurposeIDs)
 		return n, err
 	})

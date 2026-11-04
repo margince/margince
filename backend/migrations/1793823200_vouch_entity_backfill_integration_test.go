@@ -73,6 +73,16 @@ func TestTheVouchEntityBackfillFollowsTheRecorderAndRevokesTheUnnamed(t *testing
 	if !revoked {
 		t.Error("a vouch with no nameable recorder stayed live: it must be revoked, not given the default entity")
 	}
+	var audited int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'contact' AND entity_id = $1
+		  AND after->>'override_id' = $2 AND after->>'reason' = 'recorder could not be named'`,
+		contact, unnamed).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != 1 {
+		t.Errorf("the revoked vouch left %d audit rows on its contact, want 1", audited)
+	}
 }
 
 func vouchEntities(t *testing.T, conn *pgx.Conn, branchRep string) (branch, defaultEntity string) {
