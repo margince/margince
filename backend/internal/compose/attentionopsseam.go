@@ -127,7 +127,6 @@ type attentionBookingHealth struct{ store *activities.Store }
 // through the bare registry every health lane reads. The credential check the
 // settings screen adds needs the capture connectors and the vault, which this
 // constructor does not have.
-// Known gap: Home misses a blocker only that credential check finds.
 func newAttentionBookingHealth(pool *pgxpool.Pool, db *database.DB) attentionBookingHealth {
 	calendar := bookingGrantCalendar{newSchedulingCalendar(pool, captureHealthRegistry(db))}
 	return attentionBookingHealth{store: activities.NewStore(db).WithSchedulingCalendar(calendar)}
