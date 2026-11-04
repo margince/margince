@@ -69,10 +69,10 @@ func seatCounts(bySeat map[ids.UUID]int) []activities.TranscriptSeatCount {
 }
 
 // transcriptTaskAssignee is the seat a task the rule wrote is assigned to. A
-// held task names nobody, as an unassigned one does.
+// held or archived task names nobody, as an unassigned one does.
 func transcriptTaskAssignee(ctx context.Context, tx pgx.Tx, task ids.UUID) (ids.UUID, error) {
 	var seat *ids.UUID
-	err := tx.QueryRow(ctx, `SELECT assignee_id FROM activity WHERE id = $1 AND restricted_at IS NULL`, task).Scan(&seat)
+	err := tx.QueryRow(ctx, `SELECT assignee_id FROM activity WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`, task).Scan(&seat)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, nil
 	}
