@@ -4,10 +4,8 @@
 package activities
 
 // The activity lifecycle beyond capture: update (completing a task is
-// the everyday case), archive (visibility change — the 🟡 floor on the
-// agent surface), and relink (moving a captured email onto the right
-// deal WITHOUT touching its provenance — an association event, not a
-// re-capture).
+// the everyday case) and archive (visibility change, the 🟡 floor on the
+// agent surface).
 
 import (
 	"context"
