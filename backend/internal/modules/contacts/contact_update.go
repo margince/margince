@@ -9,6 +9,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -111,7 +112,9 @@ func (s *Store) updateContactInTx(
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return out, err
 	}
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	// Before the patch and the lane locks, so a rename through the parts is
+	// patched, locked and re-checked as a full_name edit is.
+	in = updateAsWritten(current, in, active)
 	setter, err := relationshipMarkSetter(ctx, in)
 	if err != nil {
 		return out, err
@@ -203,6 +206,42 @@ func contactChangeImages(
 		after["phones"] = in.Phones
 	}
 	return before, after
+}
+
+// updateAsWritten completes the input with what the request implies: the core
+// fields cleared to NULL, and the display name that follows the name parts.
+func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	in.FullName = displayNameAfter(current, in)
+	return in
+}
+
+// displayNameAfter is the full_name an update writes. A display name that was
+// the plain join of the old parts follows the new parts. One typed by hand, or
+// a changed one the update sends, stays as it is. The edit form sends the
+// stored full_name with every name change, so an unchanged one is no choice.
+func displayNameAfter(current crmcontracts.Contact, in UpdateContactInput) *string {
+	if in.FullName != nil && *in.FullName != current.FullName {
+		return in.FullName
+	}
+	first, last := derefString(current.FirstName), derefString(current.LastName)
+	newFirst, newLast := namePartAfter(first, in.FirstName, in.Clear, "first_name"), namePartAfter(last, in.LastName, in.Clear, "last_name")
+	joined := JoinNameParts(newFirst, newLast)
+	if joined == "" || joined == current.FullName || current.FullName != JoinNameParts(first, last) {
+		return in.FullName
+	}
+	return &joined
+}
+
+// namePartAfter is one name column as the update leaves it.
+func namePartAfter(stored string, set *string, clear []string, field string) string {
+	switch {
+	case set != nil:
+		return *set
+	case slices.Contains(clear, field):
+		return ""
+	}
+	return stored
 }
 
 func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, markSetter string) (*storekit.Patch, error) {

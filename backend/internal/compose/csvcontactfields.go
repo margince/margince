@@ -85,8 +85,7 @@ func contactFullName(fields map[string]string) string {
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
-	joined := strings.TrimSpace(strings.TrimSpace(fields["first_name"]) + " " + strings.TrimSpace(fields["last_name"]))
-	if joined != "" {
+	if joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"]); joined != "" {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
@@ -107,11 +106,11 @@ func withNamePartsAsFullName(fields map[string]string) map[string]string {
 
 // joinedNameParts is "first last" when the row states both parts, else "".
 func joinedNameParts(fields map[string]string) string {
-	first, last := strings.TrimSpace(fields["first_name"]), strings.TrimSpace(fields["last_name"])
-	if first == "" || last == "" {
+	first, last := fields["first_name"], fields["last_name"]
+	if strings.TrimSpace(first) == "" || strings.TrimSpace(last) == "" {
 		return ""
 	}
-	return first + " " + last
+	return contacts.JoinNameParts(first, last)
 }
 
 // contactEmailsFrom reads the single email column a spreadsheet carries into the
