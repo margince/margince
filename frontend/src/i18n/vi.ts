@@ -14900,7 +14900,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đóng deal là thua khi khách hàng không trả lời trong 120 ngày (quản trị viên có thể đổi con số này), hoặc ngay lập tức khi khách hàng từ chối. Mỗi lần đóng hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.deal_amount.label": "Giá trị deal",
   "autonomy.kind.deal_amount.help":
-    'Đặt giá trị deal khi khách hàng hoặc báo giá của bạn nêu giá cho deal, ví dụ "50.000 USD cho năm đầu". Giá bằng tiền tệ khác được quy đổi theo tỷ giá đã lưu. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.',
+    "Đặt giá trị deal khi khách hàng hoặc báo giá của bạn nêu giá cho deal, ví dụ “50.000 USD cho năm đầu”. Giá bằng tiền tệ khác được quy đổi theo tỷ giá đã lưu. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.deal_probability.label": "Xác suất thắng",
   "autonomy.kind.deal_probability.help":
     "Đặt xác suất thắng của deal khi bằng chứng thay đổi rõ ràng, ví dụ khách đồng ý miệng hoặc ngân sách bị đóng băng. Xác suất do bạn tự đặt không bao giờ bị thay đổi. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
@@ -15415,7 +15415,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.field.owner": "Chạy dưới tên",
-  "webhooks.field.ownerHint": "Sự kiện chỉ được gửi khi đồng nghiệp này còn hoạt động và được xem bản ghi. Khóa ký vẫn giữ nguyên.",
+  "webhooks.field.ownerHint":
+    "Sự kiện chỉ được gửi khi đồng nghiệp này còn hoạt động và được xem bản ghi. Khóa ký vẫn giữ nguyên.",
   "webhooks.field.ownerInactive": "Chủ sở hữu cũ, không còn hoạt động",
   "webhooks.field.ownerCurrent": "Đang phụ trách",
   "webhooks.row.ownerInactive": "Đã dừng: chủ sở hữu bị vô hiệu hóa",

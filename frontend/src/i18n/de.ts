@@ -15828,7 +15828,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
   "webhooks.field.owner": "Läuft als",
-  "webhooks.field.ownerHint": "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
+  "webhooks.field.ownerHint":
+    "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
   "webhooks.field.ownerInactive": "Früheres Teammitglied, nicht mehr aktiv",
   "webhooks.field.ownerCurrent": "Aktuell zuständig",
   "webhooks.row.ownerInactive": "Gestoppt: Verantwortlicher deaktiviert",

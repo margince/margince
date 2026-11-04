@@ -15214,10 +15214,10 @@ export const en = {
     "Closes a deal as lost when the customer has not answered for 120 days (an admin can change the number), or at once when the customer declines. Each close shows on Home with an Undo.",
   "autonomy.kind.deal_amount.label": "Deal amounts",
   "autonomy.kind.deal_amount.help":
-    'Sets a deal\'s amount when the customer or your offer names a price for it, such as "50,000 USD for the first year". A price in another currency is converted at the stored rate. Each change shows on Home with an Undo.',
+    "Sets a deal’s amount when the customer or your offer names a price for it, such as “50,000 USD for the first year”. A price in another currency is converted at the stored rate. Each change shows on Home with an Undo.",
   "autonomy.kind.deal_probability.label": "Win probabilities",
   "autonomy.kind.deal_probability.help":
-    "Sets a deal's win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
+    "Sets a deal’s win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -15733,7 +15733,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.field.owner": "Runs as",
-  "webhooks.field.ownerHint": "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
+  "webhooks.field.ownerHint":
+    "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
   "webhooks.field.ownerInactive": "Former owner, no longer active",
   "webhooks.field.ownerCurrent": "Current owner",
   "webhooks.row.ownerInactive": "Stopped: owner deactivated",
@@ -19833,7 +19834,7 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
-  "aiTask.name.deal_verdict": "Checking a deal's dates, amount and chances",
+  "aiTask.name.deal_verdict": "Checking a deal’s dates, amount and chances",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
