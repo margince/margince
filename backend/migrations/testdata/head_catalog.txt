@@ -3699,11 +3699,13 @@ public.currency_minor_digits.currency_minor_digits_pkey PRIMARY KEY (currency)
 public.currency_minor_digits.digits smallint NOT NULL gen=- def=-
 public.currency_minor_digits_pkey CREATE UNIQUE INDEX currency_minor_digits_pkey ON public.currency_minor_digits USING btree (currency)
 public.custom_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.custom_field.activity_kinds text[] gen=- def=-
 public.custom_field.archived_at timestamp with time zone gen=- def=-
 public.custom_field.column_name text NOT NULL gen=- def=-
 public.custom_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.custom_field.created_by uuid NOT NULL gen=- def=-
 public.custom_field.currency currency_code gen=- def=-
+public.custom_field.custom_field_activity_kinds_check CHECK (((activity_kinds IS NULL) OR ((object = 'activity'::text) AND (cardinality(activity_kinds) > 0))))
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)

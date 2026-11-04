@@ -272,7 +272,7 @@ erDiagram
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 21 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
-| [`custom_field`](customfields.md#custom_field) | customfields | 16 | 0 |
+| [`custom_field`](customfields.md#custom_field) | customfields | 17 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |

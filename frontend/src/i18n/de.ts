@@ -12632,6 +12632,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.showInCreate": "Beim Anlegen",
   "cf.showInCreateHint":
     "Ist es aus, steht das Feld nur auf der Datensatzseite und bleibt dort bearbeitbar.",
+  "cf.activityKinds": "Gezeigt bei",
+  "cf.activityKindsHint": "Leer lassen, um das Feld bei jedem Typ zu zeigen.",
+  "cf.activityKindsEvery": "Jeder Typ",
+  "cf.activityKindsFor": "Typen, bei denen „{label}“ erscheint",
+  "cf.activityKindsSaved": "„{label}“ erscheint jetzt bei den gewählten Typen",
   "cf.col.inCreate": "Beim Anlegen",
   "cf.showInCreateFor": "„{label}“ beim Anlegen zeigen",
   "cf.shownInCreate": "„{label}“ beim Anlegen eingeblendet",

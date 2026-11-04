@@ -23,6 +23,8 @@ type ListFilterEntry struct {
 	Name    string   `json:"name"`
 	Operand string   `json:"operand"`
 	Values  []string `json:"values,omitempty"`
+	// Pattern, when set, says the filter is every key it matches rather than Name.
+	Pattern string `json:"pattern,omitempty"`
 }
 
 // DescribeListFiltersResult is what describe_list_filters answers.
@@ -64,7 +66,7 @@ func describedListFilters(filters map[string][]listFilter) DescribeListFiltersRe
 			if operand == "" {
 				operand = schemaString
 			}
-			entries = append(entries, ListFilterEntry{Name: filter.Name, Operand: operand, Values: filter.Enum})
+			entries = append(entries, ListFilterEntry{Name: filter.Name, Operand: operand, Values: filter.Enum, Pattern: filter.Pattern})
 		}
 		out.RecordTypes[recordType] = entries
 	}

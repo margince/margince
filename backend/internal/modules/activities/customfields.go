@@ -10,6 +10,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -70,7 +71,34 @@ func (s *Store) withCustomColumns(ctx context.Context, in *LogActivityInput) err
 		return err
 	}
 	in.customChecked = true
-	return storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+	return checkCustomValues(in.Kind, in.customColumns, in.CustomFields)
+}
+
+// checkCustomValues is the one check of a logged or patched activity's cf_
+// values. Each value fits its column, and its field applies to the kind. A null
+// always passes, so a value stored before the field was narrowed can be cleared.
+//
+//craft:ignore naked-any values is a request body's extension map
+func checkCustomValues(kind string, columns []fieldcatalog.Column, values map[string]any) error {
+	if err := storekit.CheckCustomValues(columns, values); err != nil {
+		return err
+	}
+	for _, column := range columns {
+		if values[column.Name] != nil && !column.AppliesToKind(kind) {
+			return &KindFieldError{Field: column.Name, Only: kindsInWords(column.ActivityKinds)}
+		}
+	}
+	return nil
+}
+
+// kindsInWords names the kinds a field applies to the way the refusal reads:
+// "a meeting or a call".
+func kindsInWords(kinds []string) string {
+	words := make([]string, len(kinds))
+	for i, kind := range kinds {
+		words[i] = "a " + kind
+	}
+	return strings.Join(words, " or ")
 }
 
 // readPatchColumns reads the catalog for a patch that names a custom field,

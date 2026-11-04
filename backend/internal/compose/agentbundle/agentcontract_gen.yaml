@@ -26246,6 +26246,10 @@ components:
           type: array
           items: {type: string}
           description: The closed vocabulary the filter takes, when it has one.
+        pattern:
+          type: string
+          description: >-
+            When present, the filter is every key this pattern matches rather than `name` alone: an activity list takes each custom field by its `cf_` key, matched exactly. A key no active field names is refused.
     RecordFieldsVocabulary:
       description: 'What `describe_record_fields` answers.'
       type: object
@@ -29502,7 +29506,7 @@ components:
             Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
       additionalProperties: true
       description: >-
-        The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+        The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
     ActivityAudience:
       type: string
       enum: [workspace, participants, selected]
@@ -29715,7 +29719,7 @@ components:
             patch names, because a patch cannot change a kind.
       additionalProperties: true
       description: >-
-        A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+        A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
     LatestInboundList:
       type: object
       required: [data]
@@ -36201,6 +36205,11 @@ components:
           type: boolean
           description: >-
             Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
+        activity_kinds:
+          type: [array, 'null']
+          items: {type: string, enum: [call, email, meeting, message, note, task]}
+          description: >-
+            The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}

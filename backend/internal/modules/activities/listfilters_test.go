@@ -94,13 +94,14 @@ func TestAnActivityFilterOperandOfTheWrongShapeIsRefused(t *testing.T) {
 	}
 }
 
-// The timeline offers its filters on the activity type, and nothing on a type
-// this module does not list.
+// The timeline offers its filters on the activity type, its custom fields
+// among them, and nothing on a type this module does not list.
 func TestOnlyTheActivityTypeOffersTheTimelineFilters(t *testing.T) {
 	p := &Provider{}
 	want := []string{
 		"assignee_id", "call_outcome", "channel_provider", "entity_id", "entity_type", "include_archived", "kind",
 		"occurred_after", "occurred_before", "project_id", "reminder_due", "sort", "source_activity_id", "thread_key", "waiting_reply",
+		"cf_",
 	}
 	if got := p.ListFilters(datasource.EntityActivity); !slices.Equal(got, want) {
 		t.Errorf("activity offers %v, want %v", got, want)

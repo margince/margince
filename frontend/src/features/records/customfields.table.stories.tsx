@@ -89,7 +89,12 @@ const noop = () => {};
 function Table({
   fields = FIELDS,
   canEdit = true,
-}: Readonly<{ fields?: CustomField[]; canEdit?: boolean }>) {
+  object = "deal",
+}: Readonly<{
+  fields?: CustomField[];
+  canEdit?: boolean;
+  object?: CustomField["object"];
+}>) {
   installFetchStub({
     "GET /users/names": () =>
       jsonResponse({ data: [{ id: "u-2", display_name: "Anna Weber" }] }),
@@ -98,18 +103,48 @@ function Table({
     <StoryProviders>
       <Panel title="Custom fields">
         <FieldTable
-          object="deal"
+          object={object}
           fields={fields}
           canEdit={canEdit}
           meUserId="u1"
           onRename={noop}
           onArchive={noop}
           onSetting={noop}
+          onKinds={noop}
         />
       </Panel>
     </StoryProviders>
   );
 }
+
+/** Activity fields: one shows on meetings only, one on every type. */
+export const ActivityKinds: Story = {
+  render: () => (
+    <Table
+      object="activity"
+      fields={[
+        field({
+          id: "visit",
+          object: "activity",
+          label: "Visit report",
+          column_name: "cf_visit_report",
+          activity_kinds: ["meeting"],
+        }),
+        field({
+          id: "region",
+          object: "activity",
+          label: "Region",
+          column_name: "cf_region",
+        }),
+      ]}
+    />
+  ),
+};
+
+export const ActivityKindsDark: Story = {
+  globals: { theme: "dark" },
+  render: ActivityKinds.render,
+};
 
 /** Live fields, one kept out of create forms, one retired: the retired row is
  * badged and offers no verb. */

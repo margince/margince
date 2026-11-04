@@ -68,7 +68,9 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
 	in := ListActivitiesInput{Query: text, Limit: &limit, Cursor: cursor}
-	if err := activityListFilters.Apply(&in, filters); err != nil {
+	if err := activityListFilters.ApplyCustom(&in, filters, func(in *ListActivitiesInput, custom map[string]string) {
+		in.CustomFilters = custom
+	}); err != nil {
 		return nil, "", false, err
 	}
 	if err := httperr.RequirePair(filterEntityType, in.EntityType, filterEntityID, in.EntityID); err != nil {

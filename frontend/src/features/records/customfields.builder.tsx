@@ -20,6 +20,7 @@ import {
   ddlPreview,
   looksStructural,
 } from "../../lib/customfields.logic";
+import { ActivityKindsSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
 import "./customfields.css";
 
@@ -35,6 +36,8 @@ export type NewFieldDraft = {
   currency: string;
   options: string[];
   showInCreate: boolean;
+  // The activity types an activity field shows on; empty is every type.
+  activityKinds: string[];
 };
 
 export function FieldBuilder({
@@ -59,6 +62,7 @@ export function FieldBuilder({
   const [options, setOptions] = useState<string[]>([""]);
   const [showInCreate, setShowInCreate] = useState(true);
   const showInCreateHintId = useId();
+  const [activityKinds, setActivityKinds] = useState<string[]>([]);
   const structural = looksStructural(label);
   // A picklist needs a non-blank option and a currency field a 3-letter
   // ISO-4217 code. Confirm stays disabled until that shape is valid too.
@@ -96,6 +100,7 @@ export function FieldBuilder({
       currency,
       options,
       showInCreate,
+      activityKinds: object === "activity" ? activityKinds : [],
     });
   };
 
@@ -195,6 +200,18 @@ export function FieldBuilder({
             {t("cf.showInCreateHint")}
           </p>
         </div>
+
+        {object === "activity" && (
+          <Field label={t("cf.activityKinds")} hint={t("cf.activityKindsHint")}>
+            {(control) => (
+              <ActivityKindsSelect
+                {...control}
+                values={activityKinds}
+                onChange={setActivityKinds}
+              />
+            )}
+          </Field>
+        )}
 
         {structural && (
           <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>

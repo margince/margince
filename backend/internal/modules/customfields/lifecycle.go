@@ -30,15 +30,16 @@ import (
 // decide from. The lock is taken before any decision read, so the snapshot
 // cannot go stale under a concurrent writer.
 type lockedField struct {
-	Object       string
-	ColumnName   string
-	Type         string
-	Status       string
-	Label        string
-	OptionsRaw   []byte
-	ShowInCreate bool
-	Reportable   bool
-	Version      int64
+	Object        string
+	ColumnName    string
+	Type          string
+	Status        string
+	Label         string
+	OptionsRaw    []byte
+	ShowInCreate  bool
+	Reportable    bool
+	ActivityKinds []string
+	Version       int64
 }
 
 // mutable is the status gate on the two catalog mutations a retired field no
@@ -60,9 +61,10 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, version
+		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, activity_kinds, version
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
-		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable, &f.Version)
+		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable,
+		&f.ActivityKinds, &f.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -83,19 +85,20 @@ func readField(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.Custom
 	return out, nil
 }
 
-// FieldPatch is the merge-PATCH of the two settings a live field may change.
-// A nil member is left as it is.
+// FieldPatch is the merge-PATCH of the settings a live field may change. A nil
+// member is left as it is, and an empty ActivityKinds means every kind again.
 type FieldPatch struct {
-	Label        *string
-	ShowInCreate *bool
-	Reportable   *bool
+	Label         *string
+	ShowInCreate  *bool
+	Reportable    *bool
+	ActivityKinds *[]string
 }
 
 // validate refuses a patch that changes nothing or blanks the label. An empty
 // patch answers the same label-required refusal a rename always gave, so a
 // client that only ever renames sees no new error.
 func (p FieldPatch) validate() error {
-	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil {
+	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil && p.ActivityKinds == nil {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
 	if p.Label != nil && strings.TrimSpace(*p.Label) == "" {
@@ -130,28 +133,13 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		if ifVersion != nil && *ifVersion != f.Version {
 			return apperrors.ErrVersionSkew
 		}
-		next := f
-		if patch.Label != nil {
-			next.Label = *patch.Label
-			if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
-				return err
-			}
-			if err := refuseTakenLabel(ctx, tx, f.Object, id, next.Label); err != nil {
-				return err
-			}
-		}
-		if patch.ShowInCreate != nil {
-			next.ShowInCreate = *patch.ShowInCreate
-		}
-		if patch.Reportable != nil {
-			if *patch.Reportable && !reportable(f) {
-				return &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
-			}
-			next.Reportable = *patch.Reportable
+		next, err := patch.apply(ctx, tx, id, f)
+		if err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3 WHERE id = $4`,
-			next.Label, next.ShowInCreate, next.Reportable, id); err != nil {
+			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3, activity_kinds = $4 WHERE id = $5`,
+			next.Label, next.ShowInCreate, next.Reportable, storedKinds(next.ActivityKinds), id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
 		if out, err = readField(ctx, tx, id); err != nil {
@@ -169,6 +157,38 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 	return out, nil
 }
 
+// apply answers the locked row as the patch leaves it, refusing a setting the
+// field cannot take. A label change takes the schema lock first, so the label
+// collision check cannot race a create.
+func (p FieldPatch) apply(ctx context.Context, tx pgx.Tx, id ids.UUID, f lockedField) (lockedField, error) {
+	next := f
+	if p.Label != nil {
+		next.Label = *p.Label
+		if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
+			return lockedField{}, err
+		}
+		if err := refuseTakenLabel(ctx, tx, f.Object, id, next.Label); err != nil {
+			return lockedField{}, err
+		}
+	}
+	if p.ShowInCreate != nil {
+		next.ShowInCreate = *p.ShowInCreate
+	}
+	if p.Reportable != nil {
+		if *p.Reportable && !reportable(f) {
+			return lockedField{}, &ValidationError{Errors: []FieldError{{Field: fieldReport, Code: codeUnsupportedType}}}
+		}
+		next.Reportable = *p.Reportable
+	}
+	if p.ActivityKinds != nil {
+		if errs := checkActivityKinds(f.Object, *p.ActivityKinds); len(errs) > 0 {
+			return lockedField{}, &ValidationError{Errors: errs}
+		}
+		next.ActivityKinds = storedKinds(*p.ActivityKinds)
+	}
+	return next, nil
+}
+
 // auditDiff names only the settings the patch carried, so the trail of a
 // rename does not claim the create-dialog setting moved, and the other way.
 func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]any) {
@@ -181,6 +201,9 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 	}
 	if p.Reportable != nil {
 		before[fieldReport], after[fieldReport] = was.Reportable, now.Reportable
+	}
+	if p.ActivityKinds != nil {
+		before[fieldKinds], after[fieldKinds] = was.ActivityKinds, now.ActivityKinds
 	}
 	return before, after
 }

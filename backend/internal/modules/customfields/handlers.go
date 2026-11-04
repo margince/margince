@@ -90,6 +90,9 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	if req.Options != nil {
 		spec.Options = *req.Options
 	}
+	if req.ActivityKinds != nil {
+		spec.ActivityKinds = kindStrings(*req.ActivityKinds)
+	}
 	field, err := h.svc.Create(r.Context(), spec)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
@@ -111,12 +114,26 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	patch := FieldPatch{Label: req.Label, ShowInCreate: req.ShowInCreate, Reportable: req.Reportable}
+	if req.ActivityKinds != nil {
+		kinds := kindStrings(*req.ActivityKinds)
+		patch.ActivityKinds = &kinds
+	}
 	field, err := h.svc.Update(r.Context(), ids.UUID(id), patch, ifVersion)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, field)
+}
+
+// kindStrings is a wire kind list as the engine reads it. The engine checks
+// each kind, so a kind the request type did not hold is refused there.
+func kindStrings[K ~string](kinds []K) []string {
+	out := make([]string, len(kinds))
+	for i, kind := range kinds {
+		out[i] = string(kind)
+	}
+	return out
 }
 
 // RetireCustomField soft-retires the field (CUSTOM-FIELDS-WIRE-4):

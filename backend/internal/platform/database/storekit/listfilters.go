@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // FilterBinding narrows one list input by one caller-supplied value.
@@ -70,6 +71,32 @@ func (s FilterSet[I]) Apply(in *I, filters map[string]string) error {
 		}
 	}
 	*in = narrowed
+	return nil
+}
+
+// ApplyCustom is Apply for a list that also filters by custom fields. Each cf_
+// key goes to setCustom, which puts it where the route's cf_ query parameters
+// land. Every other name binds as Apply binds it. The store refuses a key no
+// field names, as it does on the route.
+func (s FilterSet[I]) ApplyCustom(in *I, filters map[string]string, setCustom func(*I, map[string]string)) error {
+	core := make(map[string]string, len(filters))
+	var custom map[string]string
+	for name, value := range filters {
+		if !datasource.IsCustomFieldKey(name) {
+			core[name] = value
+			continue
+		}
+		if custom == nil {
+			custom = map[string]string{}
+		}
+		custom[name] = value
+	}
+	if err := s.Apply(in, core); err != nil {
+		return err
+	}
+	if custom != nil {
+		setCustom(in, custom)
+	}
 	return nil
 }
 

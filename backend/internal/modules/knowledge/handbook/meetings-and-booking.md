@@ -47,7 +47,8 @@ Also called: reschedule, change the time, postpone a meeting.
 A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
 has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
 and on the timeline. To say more, or to record a no-show, press **Add notes**:
-1. Pick **Held** or **No-show** and write what was said.
+1. Pick **Held** or **No-show** and write what was said. Change any of your company's own fields
+   for meetings here too.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One

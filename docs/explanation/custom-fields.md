@@ -159,8 +159,9 @@ depends on `ports/fieldcatalog.Reader`, a seam with one method that answers *whi
 live on this object, and of what type*. Compose puts in the real service. A `nil` `Reader` passes
 everything through at no cost, for tests and installs that never wired the module.
 
-`Column` is small: name and type, nothing else. The slug, label, retire status, and `picklist` options stay
-inside `customfields`, because a record store has no need for admin metadata. The store calls the
+`Column` is small: the name, the type, a field's options, a currency field's currency and an
+activity field's kinds. The slug, label and retire status stay inside `customfields`, because a record
+store has no need for admin metadata. The store calls the
 custom column helpers in `storekit`. They are code that builds SQL parts and values, and they touch no database.
 The store puts the result into the same `Patch` that carries core columns. So custom fields go through
 the ordinary audit before and after, and the update guarded by version, with no extra records to keep.
@@ -180,6 +181,13 @@ One rule catches developers out: a record write refuses what it cannot store. A 
 Three things fail. One is a key that is not a `cf_` key. Another is a `cf_` key that names no active
 field. The third is a value of the wrong type or outside the field's options. The codes are
 `unknown_field` and `invalid_value`. Nothing is written, so a success means every key was stored.
+
+An activity field may apply to some kinds only (`custom_field.activity_kinds`, null for every kind).
+The activity writer refuses a value for a field that does not apply to the kind of the activity.
+The code is `field_not_valid_for_kind`, on a create and on a patch, where it reads the stored kind.
+A `null` always passes, so a value stored before the field was narrowed can still be cleared. The
+check is `checkCustomValues` in `internal/modules/activities/customfields.go`, and the REST routes
+and the agent tools all reach it.
 
 ## No `cf_*` column is indexed
 

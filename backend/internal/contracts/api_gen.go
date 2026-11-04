@@ -8962,6 +8962,36 @@ func (e CreateContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for CreateCustomFieldRequestActivityKinds.
+const (
+	CreateCustomFieldRequestActivityKindsCall    CreateCustomFieldRequestActivityKinds = "call"
+	CreateCustomFieldRequestActivityKindsEmail   CreateCustomFieldRequestActivityKinds = "email"
+	CreateCustomFieldRequestActivityKindsMeeting CreateCustomFieldRequestActivityKinds = "meeting"
+	CreateCustomFieldRequestActivityKindsMessage CreateCustomFieldRequestActivityKinds = "message"
+	CreateCustomFieldRequestActivityKindsNote    CreateCustomFieldRequestActivityKinds = "note"
+	CreateCustomFieldRequestActivityKindsTask    CreateCustomFieldRequestActivityKinds = "task"
+)
+
+// Valid indicates whether the value is a known member of the CreateCustomFieldRequestActivityKinds enum.
+func (e CreateCustomFieldRequestActivityKinds) Valid() bool {
+	switch e {
+	case CreateCustomFieldRequestActivityKindsCall:
+		return true
+	case CreateCustomFieldRequestActivityKindsEmail:
+		return true
+	case CreateCustomFieldRequestActivityKindsMeeting:
+		return true
+	case CreateCustomFieldRequestActivityKindsMessage:
+		return true
+	case CreateCustomFieldRequestActivityKindsNote:
+		return true
+	case CreateCustomFieldRequestActivityKindsTask:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateCustomFieldRequestObject.
 const (
 	CreateCustomFieldRequestObjectActivity CreateCustomFieldRequestObject = "activity"
@@ -9682,6 +9712,36 @@ func (e CreateVoiceBuildRequestReason) Valid() bool {
 	case CreateVoiceBuildRequestReasonManual:
 		return true
 	case CreateVoiceBuildRequestReasonOnboarding:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CustomFieldActivityKinds.
+const (
+	CustomFieldActivityKindsCall    CustomFieldActivityKinds = "call"
+	CustomFieldActivityKindsEmail   CustomFieldActivityKinds = "email"
+	CustomFieldActivityKindsMeeting CustomFieldActivityKinds = "meeting"
+	CustomFieldActivityKindsMessage CustomFieldActivityKinds = "message"
+	CustomFieldActivityKindsNote    CustomFieldActivityKinds = "note"
+	CustomFieldActivityKindsTask    CustomFieldActivityKinds = "task"
+)
+
+// Valid indicates whether the value is a known member of the CustomFieldActivityKinds enum.
+func (e CustomFieldActivityKinds) Valid() bool {
+	switch e {
+	case CustomFieldActivityKindsCall:
+		return true
+	case CustomFieldActivityKindsEmail:
+		return true
+	case CustomFieldActivityKindsMeeting:
+		return true
+	case CustomFieldActivityKindsMessage:
+		return true
+	case CustomFieldActivityKindsNote:
+		return true
+	case CustomFieldActivityKindsTask:
 		return true
 	default:
 		return false
@@ -18349,6 +18409,36 @@ func (e RelinkDestinationType) Valid() bool {
 	case RelinkDestinationTypeLead:
 		return true
 	case RelinkDestinationTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RenameCustomFieldRequestActivityKinds.
+const (
+	RenameCustomFieldRequestActivityKindsCall    RenameCustomFieldRequestActivityKinds = "call"
+	RenameCustomFieldRequestActivityKindsEmail   RenameCustomFieldRequestActivityKinds = "email"
+	RenameCustomFieldRequestActivityKindsMeeting RenameCustomFieldRequestActivityKinds = "meeting"
+	RenameCustomFieldRequestActivityKindsMessage RenameCustomFieldRequestActivityKinds = "message"
+	RenameCustomFieldRequestActivityKindsNote    RenameCustomFieldRequestActivityKinds = "note"
+	RenameCustomFieldRequestActivityKindsTask    RenameCustomFieldRequestActivityKinds = "task"
+)
+
+// Valid indicates whether the value is a known member of the RenameCustomFieldRequestActivityKinds enum.
+func (e RenameCustomFieldRequestActivityKinds) Valid() bool {
+	switch e {
+	case RenameCustomFieldRequestActivityKindsCall:
+		return true
+	case RenameCustomFieldRequestActivityKindsEmail:
+		return true
+	case RenameCustomFieldRequestActivityKindsMeeting:
+		return true
+	case RenameCustomFieldRequestActivityKindsMessage:
+		return true
+	case RenameCustomFieldRequestActivityKindsNote:
+		return true
+	case RenameCustomFieldRequestActivityKindsTask:
 		return true
 	default:
 		return false
@@ -41363,7 +41453,7 @@ type CreateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
@@ -41652,16 +41742,21 @@ type CreateContractRequestValueBasis string
 // plus a 422 on mismatch is sufficient, matching how Offer/Product money fields are
 // documented elsewhere in this contract.
 type CreateCustomFieldRequest struct {
-	Currency *string                        `json:"currency,omitempty"`
-	Label    string                         `json:"label"`
-	Object   CreateCustomFieldRequestObject `json:"object"`
-	Options  *[]string                      `json:"options,omitempty"`
+	// ActivityKinds The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422.
+	ActivityKinds *[]CreateCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
+	Currency      *string                                  `json:"currency,omitempty"`
+	Label         string                                   `json:"label"`
+	Object        CreateCustomFieldRequestObject           `json:"object"`
+	Options       *[]string                                `json:"options,omitempty"`
 
 	// ShowInCreate Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
 	ShowInCreate *bool                        `json:"show_in_create,omitempty"`
 	Source       string                       `json:"source"`
 	Type         CreateCustomFieldRequestType `json:"type"`
 }
+
+// CreateCustomFieldRequestActivityKinds defines model for CreateCustomFieldRequest.ActivityKinds.
+type CreateCustomFieldRequestActivityKinds string
 
 // CreateCustomFieldRequestObject defines model for CreateCustomFieldRequest.Object.
 type CreateCustomFieldRequestObject string
@@ -42543,6 +42638,9 @@ type CreateWorkspaceEmailDomainRequest struct {
 // `source`/`captured_by` — the catalog row itself has no such columns; provenance
 // on create lives in the audit row.
 type CustomField struct {
+	// ActivityKinds The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it.
+	ActivityKinds *[]CustomFieldActivityKinds `json:"activity_kinds,omitempty"`
+
 	// ArchivedAt Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -42586,6 +42684,9 @@ type CustomField struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 }
+
+// CustomFieldActivityKinds defines model for CustomField.ActivityKinds.
+type CustomFieldActivityKinds string
 
 // CustomFieldObject The existing core object this field is added to.
 type CustomFieldObject string
@@ -49909,6 +50010,9 @@ type ListFilter struct {
 	// Operand What the string operand spells: a boolean is "true" or "false", an array is comma-separated.
 	Operand ListFilterOperand `json:"operand"`
 
+	// Pattern When present, the filter is every key this pattern matches rather than `name` alone: an activity list takes each custom field by its `cf_` key, matched exactly. A key no active field names is refused.
+	Pattern *string `json:"pattern,omitempty"`
+
 	// Values The closed vocabulary the filter takes, when it has one.
 	Values *[]string `json:"values,omitempty"`
 }
@@ -55133,12 +55237,16 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
 type RenameCustomFieldRequest struct {
-	Label        *string `json:"label,omitempty"`
-	Reportable   *bool   `json:"reportable,omitempty"`
-	ShowInCreate *bool   `json:"show_in_create,omitempty"`
+	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
+	Label         *string                                  `json:"label,omitempty"`
+	Reportable    *bool                                    `json:"reportable,omitempty"`
+	ShowInCreate  *bool                                    `json:"show_in_create,omitempty"`
 }
+
+// RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
+type RenameCustomFieldRequestActivityKinds string
 
 // RenderedBlock defines model for RenderedBlock.
 type RenderedBlock struct {
@@ -60487,7 +60595,7 @@ type UpdateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+// UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`

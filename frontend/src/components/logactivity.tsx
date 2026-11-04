@@ -155,7 +155,7 @@ export function LogActivityForm({
     }
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
-  const custom = useActivityCustomFields();
+  const custom = useActivityCustomFields(draft.kind);
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
