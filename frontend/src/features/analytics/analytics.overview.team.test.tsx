@@ -499,7 +499,9 @@ describe("Team prospecting", () => {
       ),
     });
     expect(
-      await screen.findByText(/taking another team’s total from it would leave fewer than two/),
+      await screen.findByText(
+        /taking another team’s total from it would leave fewer than two/,
+      ),
     ).toBeVisible();
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
