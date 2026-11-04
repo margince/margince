@@ -364,3 +364,79 @@ components:
 		t.Fatalf("free carries a tag though it allows repeats: %v", props["free"])
 	}
 }
+
+// A bounded number carries both bounds in one extra-tags entry, and the
+// downgrade does not read a bound tag it added as a schema keyword.
+func TestNumberBoundsTagTheGeneratedField(t *testing.T) {
+	src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        limit: { type: integer, minimum: 1, maximum: 25 }
+        floor: { type: number, minimum: 0.5 }
+        free: { type: integer }
+`
+	out, err := Bytes([]byte(src))
+	if err != nil {
+		t.Fatalf("Bytes: %v", err)
+	}
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]map[string]any `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(out, &doc); err != nil {
+		t.Fatal(err)
+	}
+	props := doc.Components.Schemas["Thing"].Properties
+	for name, want := range map[string]map[string]any{
+		"limit": {MinimumTag: "1", MaximumTag: "25"},
+		"floor": {MinimumTag: "0.5"},
+	} {
+		tags, ok := props[name]["x-oapi-codegen-extra-tags"].(map[string]any)
+		if !ok || len(tags) != len(want) || tags[MinimumTag] != want[MinimumTag] || tags[MaximumTag] != want[MaximumTag] {
+			t.Errorf("%s carries %v, want the tags %v", name, props[name], want)
+		}
+	}
+	if _, tagged := props["free"]["x-oapi-codegen-extra-tags"]; tagged {
+		t.Errorf("free carries a tag though it declares no bound: %v", props["free"])
+	}
+}
+
+func TestANumberBoundThatIsNoNumberFailsTheDowngrade(t *testing.T) {
+	src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        limit: { type: integer, minimum: one }
+`
+	if _, err := Bytes([]byte(src)); err == nil || !strings.Contains(err.Error(), "minimum") {
+		t.Fatalf("Bytes = %v, want a refusal naming the minimum", err)
+	}
+}
+
+// An exclusive bound has no decoder behind it, so the contract cannot state one.
+func TestAnExclusiveBoundFailsTheDowngrade(t *testing.T) {
+	for _, keyword := range []string{"exclusiveMinimum", "exclusiveMaximum"} {
+		src := `
+openapi: 3.1.0
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        limit: { type: integer, ` + keyword + `: 0 }
+`
+		if _, err := Bytes([]byte(src)); err == nil || !strings.Contains(err.Error(), keyword) {
+			t.Errorf("Bytes = %v, want a refusal naming %s", err, keyword)
+		}
+	}
+}

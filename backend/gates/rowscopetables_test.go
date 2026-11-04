@@ -632,8 +632,12 @@ const (
 	// guests onto the meeting that stays, under a system job or a calendar sync.
 	// The contacts move between two rows of one meeting, and nothing is returned.
 	//
-	// 153: consent's privacy page names the kinds of data a notice link's own
+	// 153: deals.correctionReceiptSelect is the SELECT list every change report
+	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
+	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
+	//
+	// 154: consent's privacy page names the kinds of data a notice link's own
 	// contact or lead holds (privacyinfoparts.go). It reads presence flags only,
 	// for the record the link resolved, and returns no reference.
-	modulesTierUnscopedCeiling = 153
+	modulesTierUnscopedCeiling = 154
 )

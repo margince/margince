@@ -156,6 +156,12 @@ Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its
 2. For a company name, a lifecycle stage or anything older, choose **Undo** in the record's history.
    That is **History** → **Changes** on a contact, lead or deal, and **More actions** → **Full history** on a company.
 Only a human can undo; an agent cannot.
+
+Margince may close a deal or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason and **Undo**. The card stays after the change leaves Home. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
+- After a close: "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check."
+- After any other change: "Undone. Margince will not change the amount again until something new happens on this deal."
+- When a colleague changed a field since: "Undone, except the amount, which was changed since Margince set it."
+
 Also called: revert the AI, roll back an agent edit, reverse an automatic change.
 
 ## What an approval card holds
