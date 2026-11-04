@@ -119,6 +119,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["admission", "history.field.admission"],
   ["admission_reason", "history.field.admission_reason"],
   ["admission_reason_code", "history.field.admission_reason_code"],
+  ["stored_credentials_masked", "history.field.stored_credentials_masked"],
   ["admission_sender_kind", "history.field.admission_sender_kind"],
   ["admission_source", "history.field.admission_source"],
   ["bounce", "history.field.bounce"],

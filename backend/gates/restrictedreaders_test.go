@@ -84,7 +84,8 @@ var activityReadLiteral = gatekit.TableReadPattern("activity")
 // Both orders, because a projection may sit either side of its FROM.
 var auditImageRead = regexp.MustCompile(
 	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
-		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
+		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`,
+)
 
 // auditImageEntity is a record type a statement pins its audit rows to with a
 // LITERAL, and auditImageEntityMention is any test of that column at all.
@@ -275,8 +276,10 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/companyscope.go:companyLinkReach": "returns a SQL set of activity and company IDs for membership, not message content. Every visible reader composes its activity content or availability gate on the outer activity; internal follow-up and last-touch writers need the same membership to invalidate old account facts when an activity becomes held",
-	"internal/modules/activities/companyscope.go:companyReach":     "adds participant-derived activity IDs to the same membership fragment. No subject, body, attachment or participant address leaves it; outer readers carry ActivityContentClause or ActivityAvailableClause. Filtering held rows here would change the shared membership used for internal account invalidation",
+	"internal/compose/datatask_mailcredentials.go:estimateStoredMailCredentials": "counts the mail a credential repair has left to do, where a restricted row holds the credential as plainly as any other",
+	"internal/modules/activities/mailcredentialmask.go:readMailToMask":           "the credential repair reads restricted mail too, because leaving it unmasked would keep the value openable",
+	"internal/modules/activities/companyscope.go:companyLinkReach":               "returns a SQL set of activity and company IDs for membership, not message content. Every visible reader composes its activity content or availability gate on the outer activity; internal follow-up and last-touch writers need the same membership to invalidate old account facts when an activity becomes held",
+	"internal/modules/activities/companyscope.go:companyReach":                   "adds participant-derived activity IDs to the same membership fragment. No subject, body, attachment or participant address leaves it; outer readers carry ActivityContentClause or ActivityAvailableClause. Filtering held rows here would change the shared membership used for internal account invalidation",
 
 	"internal/modules/capture/senderstanding.go:LockHoldEvidenceTx":                              "System-only hold locking for a contact release. It reads thread keys and share-locks rows so a release and a writer that changes a hold serialize. A restricted message is a hold in its own right, so it must be locked too; no content leaves the function.",
 	"internal/modules/capture/partyrecovery.go:partyRecoveryPageTx":                              "A system-only durable recovery cursor reads only the greatest opaque activity id as a finite sweep ceiling. Every selected target is subsequently admitted under the capturing seat current content gate; no held content leaves this metadata read.",

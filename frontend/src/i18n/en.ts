@@ -2538,6 +2538,7 @@ export const en = {
   "history.field.address": "Address",
   "history.field.admission": "Domain intake check",
   "history.field.admission_reason_code": "Intake reason category",
+  "history.field.stored_credentials_masked": "Stored credentials masked",
   "history.field.admission_sender_kind": "Sender category",
   "history.field.admission_reason": "Intake check reason",
   "history.field.admission_source": "Intake check source",

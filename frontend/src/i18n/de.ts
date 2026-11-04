@@ -2646,6 +2646,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.address": "Adresse",
   "history.field.admission": "Eingangsprüfung der Domain",
   "history.field.admission_reason_code": "Kategorie des Aufnahmegrunds",
+  "history.field.stored_credentials_masked":
+    "Gespeicherte Zugangsdaten maskiert",
   "history.field.admission_sender_kind": "Absenderkategorie",
   "history.field.admission_reason": "Grund der Eingangsprüfung",
   "history.field.admission_source": "Quelle der Eingangsprüfung",
