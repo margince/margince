@@ -519,4 +519,65 @@ describe("the figure a tab or pill draws", () => {
     // "0" would call the cut empty, and "0+" says nothing.
     expect(pillFigure(page, "tasks")).toBeUndefined();
   });
+
+  it("keeps an exact total exact beside a category read to its bound", () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 200,
+        shown: 25,
+        more_available: true,
+        total: 340,
+      },
+      { category: "tasks", considered: 3, shown: 3, more_available: false },
+    ]);
+    expect(pillFigure(page, "decisions")).toEqual({ count: 340, floor: false });
+    page.counts.push({
+      category: "customer_waiting",
+      considered: 10,
+      shown: 1,
+      more_available: true,
+    });
+    expect(pillFigure(page, "decisions")).toEqual({ count: 340, floor: false });
+    expect(pillFigure(page, "all")).toEqual({ count: 353, floor: true });
+  });
+
+  it("keeps the first page's total exact when a tail source fails", () => {
+    const page = day([
+      {
+        category: "tasks",
+        considered: 50,
+        shown: 50,
+        more_available: true,
+        total: 120,
+      },
+    ]);
+    page.sources_unavailable = [
+      { source: "task", category: "tasks", reason: "failed" },
+    ];
+    expect(pillFigure(page, "tasks")).toEqual({ count: 120, floor: false });
+    expect(pillFigure(page, "all")).toEqual({ count: 120, floor: false });
+  });
+
+  it("draws a Work type button's floor with +", async () => {
+    stub(
+      day([
+        { category: "tasks", considered: 4, shown: 1, more_available: false },
+        {
+          category: "customer_waiting",
+          considered: 30,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    const label = translate("en", "worklist.filter.customer_waiting");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^${label}\\s*30\\+$`) }),
+      ).toBeTruthy();
+    });
+  });
 });

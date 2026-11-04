@@ -8,11 +8,7 @@ import { SegmentedControl } from "../../design-system/atoms";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
-import {
-  outstandingCounts,
-  pillCount,
-  pillFigure,
-} from "../../lib/worklistcounts";
+import { outstandingCounts, pillFigure } from "../../lib/worklistcounts";
 import { WORKLIST_VIEWS, type WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistFilter } from "./worklist.queries";
 
@@ -48,12 +44,17 @@ export function viewHeadline(
   view: WorklistView,
   locale: Locale,
 ): string {
-  // A view no category was counted for has only the summary to go on.
-  const counted = outstandingCounts(day, view).length > 0;
-  const exact = counted ? pillCount(day, "all", view) : day.summary.total;
-  const value = exact ?? day.summary.total;
-  return translatePlural(locale, `worklist.view.total.${view}`, value, {
-    count: floorFigure(formatNumber(value, locale), exact === undefined, value),
+  // A view no category was counted for has only the summary to go on. The
+  // figure is the tab's own, so the heading and the tab never disagree.
+  const figure = outstandingCounts(day, view).length
+    ? (viewCount(day, view) ?? { count: day.summary.total, floor: true })
+    : { count: day.summary.total, floor: false };
+  return translatePlural(locale, `worklist.view.total.${view}`, figure.count, {
+    count: floorFigure(
+      formatNumber(figure.count, locale),
+      figure.floor,
+      figure.count,
+    ),
   });
 }
 
