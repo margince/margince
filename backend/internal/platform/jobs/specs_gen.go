@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "ca91e077598e84cdfae8664b5e9c53a69bfbd08d8e9ff2af89f560367b12f0bb"
+const JobContractHash = "8c1ddda6f9e2f3dbe8a56a588dc93088281550338cd9ed905fee40996a61d050"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -139,15 +139,6 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
 		Args:      []ArgField{{Name: "Deal"}, {Name: "Workspace"}},
-	},
-	"assurance_review_delivery": {
-		Kind:      "assurance_review_delivery",
-		GoType:    "AssuranceReviewDeliveryArgs",
-		Role:      Worker,
-		Queue:     "default",
-		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "Episode", Scalar: true, Reason: "The review's episode counter, so a job for an episode that has since ended does nothing."}, {Name: "Exception"}, {Name: "Workspace"}},
 	},
 	"assurance_run": {
 		Kind:      "assurance_run",
@@ -821,6 +812,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
+	},
+	"project_health_scan": {
+		Kind:      "project_health_scan",
+		GoType:    "ProjectHealthScanArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"provider_lookup_sweep": {
 		Kind:         "provider_lookup_sweep",

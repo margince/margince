@@ -133,9 +133,6 @@ func bundleRunFindings(
 			minted++
 		}
 	}
-	if err := settleReviewTasks(ctx, deps); err != nil {
-		failed = append(failed, err)
-	}
 	if len(failed) > 0 {
 		return minted, errors.Join(failed...)
 	}
@@ -249,13 +246,6 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
-	if review, ok := reviewFinding(subject); ok {
-		episode, err := readEpisodeTask(ctx, deps, review.ID)
-		if err != nil {
-			return false, err
-		}
-		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
-	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {
 		return false, fmt.Errorf("compose: asking for the subject's task: %w", err)

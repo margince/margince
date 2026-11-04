@@ -73,29 +73,17 @@ const sample: Comparison = {
   remaining: 38_000_000,
   open_pipeline: 136_000_000,
   coverage: 136 / 38,
-  qualified: { status: "not_enforced" },
 };
 
 it("shows the gap, what is left and the coverage the server compared", () => {
   show(sample);
   expect(screen.getByText("Gap to target")).toBeVisible();
-  expect(screen.getByText("€40k")).toBeVisible();
-  expect(screen.getByText("Short of the €800k target")).toBeVisible();
+  expect(screen.getByText("40,000 EUR")).toBeVisible();
+  expect(screen.getByText("Short of the 800,000 EUR target")).toBeVisible();
   expect(screen.getByText("3.6×")).toBeVisible();
-  expect(screen.getByText("Not switched on")).toBeVisible();
-});
-
-it("labels qualified coverage apart from coverage over the deals closing this quarter", () => {
-  show({
-    ...sample,
-    qualified: { status: "compared", open_pipeline: 57_000_000, coverage: 1.5 },
-  });
   expect(
     screen.getByText("Coverage, deals closing this quarter"),
   ).toBeVisible();
-  expect(screen.queryByText(/all open/i)).toBeNull();
-  expect(screen.getByText("Coverage, qualified deals")).toBeVisible();
-  expect(screen.getByText("1.5×")).toBeVisible();
 });
 
 it("reads a target already won as reached, never as an endless coverage", () => {
@@ -149,7 +137,7 @@ it.each([
 
 it("says a landing exactly on the target is at it, not ahead of it", () => {
   show({ ...sample, gap: 0, landing: 80_000_000 });
-  expect(screen.getByText("At the €800k target")).toBeVisible();
+  expect(screen.getByText("At the 800,000 EUR target")).toBeVisible();
 });
 
 it("offers the selection the server can compare and applies it as given", async () => {

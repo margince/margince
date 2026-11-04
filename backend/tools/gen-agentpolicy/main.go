@@ -47,14 +47,25 @@ type policy struct {
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
 	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool
+	Router     string // x-mcp-tool router: the listed tool that fronts this verb (served_by: route)
+	Action     string // x-mcp-tool action: the router's name for this verb
+	AskFirst   bool   // x-mcp-tool ask_user_first: the app confirms this act before it runs
+	// HumanOnlyReason is x-human-only-reason: why an agent may not reach an
+	// operation its user reaches in the app (security | covered | pending).
+	HumanOnlyReason string
 }
 
 func main() {
 	in := flag.String("in", "", "authoritative crm.yaml")
 	out := flag.String("out", "", "generated Go table")
+	agentsDir := flag.String("agents", "", "the agents package, whose routers a route-backed action names")
 	flag.Parse()
-	if *in == "" || *out == "" {
-		log.Fatal("gen-agentpolicy: -in and -out are required")
+	if *in == "" || *out == "" || *agentsDir == "" {
+		log.Fatal("gen-agentpolicy: -in, -out and -agents are required")
+	}
+	routers, rErr := registeredRouters(*agentsDir)
+	if rErr != nil {
+		log.Fatalf("gen-agentpolicy: %v", rErr)
 	}
 
 	src, err := os.ReadFile(*in)
@@ -82,6 +93,7 @@ func main() {
 	policies, defects := derivePolicies(doc.Paths)
 	defects = append(defects, vocab.violations(policies)...)
 	defects = append(defects, scopeCoherence(policies)...)
+	defects = append(defects, routeBackedDefects(policies, routers)...)
 	if len(defects) > 0 {
 		sort.Strings(defects)
 		log.Fatalf("gen-agentpolicy: the contract violates the ADR-0055 fail-closed invariant:\n  %s", strings.Join(defects, "\n  "))
@@ -94,7 +106,23 @@ func main() {
 	if vErr != nil {
 		log.Fatalf("gen-agentpolicy: %v", vErr)
 	}
-	formatted, err := format.Source([]byte(renderTable(policies, vocab) + renderViews(views)))
+	var raw struct {
+		Components struct {
+			Schemas map[string]any `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(src, &raw); err != nil {
+		log.Fatalf("gen-agentpolicy: parsing %s: %v", *in, err)
+	}
+	shapes, sErr := routeShapes(doc.Paths, doc.Components.Parameters, doc.Components.Schemas, raw.Components.Schemas, policies,
+		func(p policy) bool { return p.ServedBy == routeServed })
+	if sErr != nil {
+		log.Fatalf("gen-agentpolicy: %v", sErr)
+	}
+	if defects := nonJSONBodies(shapes); len(defects) > 0 {
+		log.Fatalf("gen-agentpolicy: the contract violates the ADR-0055 fail-closed invariant:\n  %s", strings.Join(defects, "\n  "))
+	}
+	formatted, err := format.Source([]byte(renderTable(policies, vocab) + renderViews(views) + renderRouteShapes(shapes)))
 	if err != nil {
 		log.Fatalf("gen-agentpolicy: formatting the generated table: %v", err)
 	}
@@ -123,17 +151,26 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					Tier       string `yaml:"tier"`
 					Scope      string `yaml:"scope"`
 					ServedBy   string `yaml:"served_by"`
+					Router     string `yaml:"router"`
+					Action     string `yaml:"action"`
+					AskFirst   bool   `yaml:"ask_user_first"`
 				} `yaml:"x-mcp-tool"`
-				AgentAccess string                 `yaml:"x-agent-access"`
-				Security    *[]map[string][]string `yaml:"security"`
+				AgentAccess     string                 `yaml:"x-agent-access"`
+				HumanOnlyReason string                 `yaml:"x-human-only-reason"`
+				Security        *[]map[string][]string `yaml:"security"`
 			}
 			if err := node.Decode(&op); err != nil {
 				log.Fatalf("gen-agentpolicy: %s %s: %v", httpMethod, path, err)
 			}
 			p := policy{Route: httpMethod + " /v1" + path, Op: op.OperationID}
+			if defect := reasonDefect(op.AgentAccess, op.HumanOnlyReason, op.Security); defect != "" {
+				defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
+				continue
+			}
 			switch {
 			case op.AgentAccess == "human-only" || op.AgentAccess == "auth-bootstrap":
 				p.Access = op.AgentAccess
+				p.HumanOnlyReason = op.HumanOnlyReason
 			case op.AgentAccess != "":
 				defects = append(defects, fmt.Sprintf("%s %s (%s): unknown x-agent-access %q", httpMethod, path, op.OperationID, op.AgentAccess))
 				continue
@@ -144,6 +181,9 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.Tier = op.MCPTool.Tier
 				p.Scope = op.MCPTool.Scope
 				p.ServedBy = op.MCPTool.ServedBy
+				p.Router = op.MCPTool.Router
+				p.Action = op.MCPTool.Action
+				p.AskFirst = op.MCPTool.AskFirst
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
@@ -228,6 +268,14 @@ type agentPolicy struct {
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
 	ServedBy   agentServedBy   // registry: the handler's tool call admits it
+	Router     string          // the listed router fronting Tool (ServedBy == servedByRoute)
+	Action     string          // the router's name for Tool
+	// AskUserFirst: the app asks its user to confirm this act, so the tool
+	// tells an agent to ask first too.
+	AskUserFirst bool
+	// HumanOnlyReason says why a human-only operation stays out of an agent's
+	// reach; empty for one no signed-in user reaches either.
+	HumanOnlyReason agentHumanOnlyReason
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -240,6 +288,15 @@ var agentPolicies = map[string]agentPolicy{
 		// Written only where declared, so the marker stands out in the table.
 		if p.ServedBy != "" {
 			fmt.Fprintf(&b, ", ServedBy: %q", p.ServedBy)
+		}
+		if p.Router != "" {
+			fmt.Fprintf(&b, ", Router: %q, Action: %q", p.Router, p.Action)
+		}
+		if p.AskFirst {
+			b.WriteString(", AskUserFirst: true")
+		}
+		if p.HumanOnlyReason != "" {
+			fmt.Fprintf(&b, ", HumanOnlyReason: %q", p.HumanOnlyReason)
 		}
 		b.WriteString("},\n")
 	}

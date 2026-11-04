@@ -6,7 +6,11 @@ import {
   problemCode,
   problemFieldErrors,
 } from "./problembody";
-import { heldByColleagueCopy, PROBLEM_CODE_COPY } from "./problemcodecopy";
+import {
+  heldByColleagueCopy,
+  PROBLEM_CODE_COPY,
+  roleCannotCaptureCopy,
+} from "./problemcodecopy";
 
 export type { FieldProblem } from "./problembody";
 export {
@@ -57,6 +61,7 @@ function problemDetail(
 ): string | null {
   const copyKey =
     heldByColleagueCopy(problem) ??
+    roleCannotCaptureCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);

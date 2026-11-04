@@ -190,7 +190,7 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	err := tx.QueryRow(ctx, `
 		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE contact_id = $1 AND occurred_at >= $2
+		WHERE contact_id = $1 AND occurred_at >= $2 AND retracted_at IS NULL
 		ORDER BY occurred_at DESC
 		LIMIT 1`, contactID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {

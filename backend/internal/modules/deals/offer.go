@@ -68,8 +68,11 @@ type CreateOfferInput struct {
 	TemplateID *ids.OfferTemplateID
 	// LegalEntityID names the issuing entity; unset is the author's.
 	LegalEntityID *ids.LegalEntityID
-	LineItems     []OfferLineInputRow
-	Source        string
+	// Language is the language new lines take product text in; unset is the
+	// issuing entity's, else the template's.
+	Language  *string
+	LineItems []OfferLineInputRow
+	Source    string
 }
 
 func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOfferInput) (crmcontracts.Offer, error) {
@@ -87,7 +90,12 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 		if err != nil {
 			return err
 		}
-		out, err = createOfferTx(ctx, tx, dealID, in, entity, by)
+		language, err := s.offerLanguage(ctx, tx, entity, in.TemplateID, in.Language)
+		if err != nil {
+			return err
+		}
+		in.Language = &language
+		out, err = createOfferTx(ctx, tx, dealID, in, entity, s.draftTaxBasis(ctx, tx, &entity), by)
 		return err
 	})
 	return out, err
@@ -95,8 +103,8 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 
 // createOfferTx resolves the buyer company, mints the offer number, inserts
 // the offer and its lines, derives the totals, and runs the write shape. All
-// of it runs inside the caller's transaction. entity is the issuing legal entity.
-func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, by string) (crmcontracts.Offer, error) {
+// of it runs inside the caller's transaction, for the issuing entity and its tax basis.
+func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, basis lazyTaxBasis, by string) (crmcontracts.Offer, error) {
 	wsID := storekit.MustWorkspace(ctx)
 	var err error
 	in, err = admitOfferCreation(ctx, tx, dealID, in)
@@ -113,13 +121,13 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by,
-		                    legal_entity_id)
-		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		                    legal_entity_id, language)
+		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
-		in.TemplateID, in.Source, by, entity); err != nil {
+		in.TemplateID, in.Source, by, entity, in.Language); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
-	if err := insertOfferLines(ctx, tx, id, in.Currency, in.LineItems); err != nil {
+	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), basis, in.LineItems); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	if _, err := recomputeOfferTotals(ctx, tx, id); err != nil {
@@ -253,7 +261,7 @@ func offerTotalsImage(f OfferFigures) map[string]any {
 //
 //craft:ignore naked-any a line image carries whatever SQL types its columns hold, exactly as the audit seam takes them
 func lineFieldEvidence(lineID ids.UUID, was, now map[string]any) map[string]any {
-	return map[string]any{"line_id": lineID, "line_before": was, "line_after": now}
+	return map[string]any{lineIDKey: lineID, "line_before": was, "line_after": now}
 }
 
 // recomputeOfferTotals re-derives net/tax/gross from the offer's live
@@ -385,6 +393,7 @@ type UpdateOfferInput struct {
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
 	LegalEntityID  *ids.LegalEntityID
+	Language       *string
 	// Clear are the fields the caller sent as an explicit null, which is a
 	// request to empty them rather than to leave them alone.
 	Clear     []string
@@ -419,19 +428,8 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err != nil {
 			return err
 		}
-		if in.LegalEntityID != nil {
-			entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
-			if err != nil {
-				return err
-			}
-			// Naming the entity the draft already names is no edit. Another
-			// issuer retires the rendering, which prints the old one.
-			if current.LegalEntityId == nil || ids.UUID(*current.LegalEntityId) != entity.UUID {
-				p.Set("legal_entity_id", current.LegalEntityId, entity)
-				if dropped == nil {
-					dropped = retireRendering(p, current)
-				}
-			}
+		if dropped, err = s.issuerPatch(ctx, tx, p, current, in, dropped); err != nil {
+			return err
 		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
@@ -443,8 +441,8 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply offer patch: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After()); err != nil {
-			return fmt.Errorf("audit offer update: %w", err)
+		if err := s.auditHeaderEdit(ctx, tx, id, p, in.LegalEntityID); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read updated offer: %w", err)

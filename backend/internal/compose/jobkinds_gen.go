@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "ca91e077598e84cdfae8664b5e9c53a69bfbd08d8e9ff2af89f560367b12f0bb"
+const jobContractHash = "8c1ddda6f9e2f3dbe8a56a588dc93088281550338cd9ed905fee40996a61d050"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -32,7 +32,6 @@ func (ApprovalAutoApplyArgs) declaredJobType(ApprovalAutoApplyArgs)             
 func (ApprovalExpiryArgs) declaredJobType(ApprovalExpiryArgs)                     {}
 func (ApprovalNoticeReconcileArgs) declaredJobType(ApprovalNoticeReconcileArgs)   {}
 func (AssuranceDealRescanArgs) declaredJobType(AssuranceDealRescanArgs)           {}
-func (AssuranceReviewDeliveryArgs) declaredJobType(AssuranceReviewDeliveryArgs)   {}
 func (AssuranceRunArgs) declaredJobType(AssuranceRunArgs)                         {}
 func (AssuranceSweepArgs) declaredJobType(AssuranceSweepArgs)                     {}
 func (BriefGenerateArgs) declaredJobType(BriefGenerateArgs)                       {}
@@ -98,6 +97,7 @@ func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)         
 func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)   {}
 func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)             {}
 func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                 {}
+func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)               {}
 func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)           {}
 func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)         {}
 func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)               {}
@@ -175,6 +175,7 @@ var (
 	_ jobs.FleetWide = NotificationDigestArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
+	_ jobs.FleetWide = ProjectHealthScanArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = ReportScheduleSweepArgs{}
@@ -194,7 +195,6 @@ var (
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
 	_ jobs.WorkspaceScoped = AssuranceDealRescanArgs{}
-	_ jobs.WorkspaceScoped = AssuranceReviewDeliveryArgs{}
 	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}

@@ -139,6 +139,11 @@ longer, since coming back early only gets refused again. Anything else ends the 
 ladder of failures that may pass is capped at 10 **in a row**. A committed page sets it back to zero, so
 faults the import already passed never end it.
 
+A run whose member may no longer capture ends with the class `forbidden`, before the page reads a
+credential. The start is refused the same way (`403 role_cannot_capture`). An admin can give the
+member a role that captures again. The next sync that works then puts the run back in the queue,
+as it does for a run a revoked credential ended.
+
 ## What the run learns about itself
 
 While it pages, the run measures its own yield, and that makes the *next* preview correct.

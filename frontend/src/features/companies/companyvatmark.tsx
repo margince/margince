@@ -10,10 +10,10 @@ import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Popover } from "../../design-system/popover";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./companyvatmark.css";
 
 type VatCheck = components["schemas"]["CompanyVatCheck"];
@@ -147,7 +147,7 @@ export function VatMark({
 }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
 
   // 404 is the honest "never consulted", and leaves the mark saying so rather
   // than reporting a failure nobody caused.

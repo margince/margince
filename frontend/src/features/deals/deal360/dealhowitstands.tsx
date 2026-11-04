@@ -27,8 +27,8 @@ import {
   useLossReasons,
 } from "../../../lib/lossreasons.queries";
 import { dealRoleLabel } from "../../../lib/recordlabels";
-import { useRecordZone } from "../../../lib/recordzone";
 import { routeHash } from "../../../lib/router";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { DealStageLadder } from "../deals.stepper";
 import { DealFigures, DealTimeline } from "./dealfigures";
 import { closeWords } from "./dealheaderfacts";
@@ -70,7 +70,7 @@ export function DealHowItStands({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
   const closed = deal.status !== "open";

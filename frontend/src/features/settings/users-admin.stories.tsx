@@ -217,6 +217,23 @@ export const LongContent: Story = {
   render: story(roster([LARS, LONG, DANA]), ADMIN, true),
 };
 
+// The relay refused Ivy's invitation mail: the row says so, and its menu
+// offers a resend.
+export const InvitationMailFailed: Story = {
+  render: story(
+    roster([
+      LARS,
+      {
+        ...IVY,
+        invite_email_state: "failed",
+        allowed_actions: ["resend_invite", ...(EVERY_VERB ?? [])],
+      },
+    ]),
+    ADMIN,
+    true,
+  ),
+};
+
 export const OnlyTheAdmin: Story = { render: story(roster([LARS])) };
 
 export const Empty: Story = { render: story(roster([])) };

@@ -16,7 +16,7 @@ import type {
 } from "../../design-system/pipelineboard";
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
 import {
@@ -28,11 +28,12 @@ import {
 import { useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
+import { probabilitySetNote } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { buildColumns } from "./deals.columns";
 
@@ -73,6 +74,7 @@ function closingFields(input: AdvanceInput) {
 export function useAdvanceDeal() {
   const toast = useToast();
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   return useMutation({
     // No single record: one instance serves every card on the board, and the
@@ -102,7 +104,8 @@ export function useAdvanceDeal() {
       // returns. Without this, a reader who clicks a second stage at once would
       // pin the version this write replaced and read a 409 they did not cause.
       if (deal) {
-        queryClient.setQueryData(["deal", input.dealId], deal);
+        const { probability_set: _, ...record } = deal;
+        queryClient.setQueryData(["deal", input.dealId], record);
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       for (const queryKey of dealRecordKeys(input.dealId)) {
@@ -116,7 +119,11 @@ export function useAdvanceDeal() {
       for (const queryKey of dealWinKeys(deal)) {
         queryClient.invalidateQueries({ queryKey });
       }
-      toast.show(t("deals.advanced", { stage: input.toStage.name }));
+      // The probability note names the stage too, so it stands for the move.
+      toast.show(
+        probabilitySetNote(deal, t, locale) ??
+          t("deals.advanced", { stage: input.toStage.name }),
+      );
     },
   });
 }
@@ -159,7 +166,7 @@ export function DealBoardBody({
   >["columnDropHandlers"];
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // Named by id, batched into one request for every card's owner at once.
   // An unowned deal contributes no id, so a board of them asks nothing.
   const ownerNames = useMemberNames(
@@ -198,7 +205,7 @@ export function DealBoardBody({
             <>
               <DealPipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
-                zone={recordZone}
+                zone={readerZone}
                 columns={buildColumns(
                   effectivePipeline.stages ?? [],
                   loadedDeals,

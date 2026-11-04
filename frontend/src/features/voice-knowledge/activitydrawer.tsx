@@ -22,10 +22,11 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
+import { callOutcomeLabel } from "../../lib/calloutcome";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
@@ -192,10 +193,16 @@ function ActivityBody({
               {" "}
               ·{" "}
               {t("co.next.due", {
-                when: formatDate(activity.due_at, locale, zone),
+                when: formatDue(
+                  activity.due_at,
+                  activity.due_has_time,
+                  locale,
+                  zone,
+                ),
               })}
             </>
-          )}{" "}
+          )}
+          <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
@@ -448,4 +455,13 @@ function activityTitle(
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
   return activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
+}
+
+/** How a call ended, after its time. Nothing on a call without an outcome. */
+function CallOutcomeNote({
+  activity,
+}: Readonly<{ activity: Pick<Activity, "kind" | "call_outcome"> }>) {
+  const t = useT();
+  const label = callOutcomeLabel(activity, t);
+  return label ? <> · {label}</> : null;
 }

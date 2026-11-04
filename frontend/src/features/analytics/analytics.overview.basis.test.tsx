@@ -55,9 +55,9 @@ const money = (value: number) =>
 
 it("keeps committed business and modelled outcomes in different labelled readings", async () => {
   openScenario("modelCommitDivergence");
-  const finish = await card("Won + confirmed commit");
-  expect(finish.getByText("€0")).toBeVisible();
-  expect(finish.queryByText(/€1.4m/)).toBeNull();
+  const finish = await card("Won + Likely deals");
+  expect(finish.getByText("0 EUR")).toBeVisible();
+  expect(finish.queryByText(/1,400,000 EUR/)).toBeNull();
   const model = await card("Modelled quarter finish");
   expect(
     model.getByText(`${money(140000000)} – ${money(260000000)}`),
@@ -80,7 +80,7 @@ it("keeps a measured zero distinct from a missing model range", async () => {
         : m,
     ),
   });
-  expect((await card("Won + confirmed commit")).getByText("€0")).toBeVisible();
+  expect((await card("Won + Likely deals")).getByText("0 EUR")).toBeVisible();
   expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
   expect(
     screen.queryByText("No modelled range was drawn for this period."),
@@ -90,15 +90,15 @@ it("keeps a measured zero distinct from a missing model range", async () => {
 it("does not invent a forecast basis for an older response", async () => {
   openScenario("legacyLanding");
   const finish = await card("Landing");
-  expect(finish.getByText("€760k")).toBeVisible();
-  expect(finish.queryByText("Won + confirmed commit")).toBeNull();
+  expect(finish.getByText("760,000 EUR")).toBeVisible();
+  expect(finish.queryByText("Won + Likely deals")).toBeNull();
 });
 
 it.each([
   {
-    measure: "commit_evidence",
+    measure: "likely",
     amount: 14000,
-    label: "Won + confirmed commit",
+    label: "Won + Likely deals",
   },
   { measure: "weighted", amount: 17000, label: "Won + weighted open deals" },
   { measure: "manager_call", amount: 19000, label: "Manager’s call" },

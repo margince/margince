@@ -97,7 +97,7 @@ func TestAWorkItemMarksItsCauseAndDeadlineWithStatusDots(t *testing.T) {
 	}
 	var content emailview.Content
 	content.Item(row)
-	markup := emailview.Render(content.Message("Your priorities", "en", ""))
+	markup := emailview.Render(content.Message("Your priorities", "en", ""), emailview.Letterhead{})
 	for _, want := range []string{`class="bg-warningText"`, "</span>" + cause + "</span>", `class="bg-infoText"`} {
 		if !strings.Contains(markup, want) {
 			t.Errorf("the row lost %q", want)

@@ -184,7 +184,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
-| `reviewoutcomes_test.go` | H3 | The answer sheet offers a customer review only the outcomes the server accepts. |
 | `risksignalcheck_test.go` | H2 | A frozen forecast row accepts the same risk signals the assessment can answer. |
 | `riskverdictretention_test.go` | H1 | The queue's recorded verdicts live as long as the figure that reads them, and no longer. |
 | `rowscopetables_test.go` | H2 | Which table a row-scope call bounds, and which column names a reference to one. |
@@ -194,6 +193,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this contact currently employed?" the way the product asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap is the same number in the contract, the send's Go bound and each sending connector's carriage. |
+| `serverroutes_test.go` | H2 | The server bundle's front nginx sends every path the api mounts to the api. |
 | `servertrimparity_test.go` | H3 | The browser and the server must agree on which values are empty, or a form refuses what the save would have taken. |
 | `settingbounds_test.go` | H3 | A bounded setting's range is one fact stated in three places: the entry's validator, which refuses past it; api/crm.yaml's minimum and maximum, which a caller reads; and the screen that refuses an out-of-range value in the box before the request. |
 | `shippingloopreachesthelane_test.go` | H2 | A backend change cannot land without the integration lane. |
@@ -222,6 +222,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `activityidentityspine_test.go` | H2 | Every door that mints an activity asks whether the record already has one. |
 | `activitykindsets_test.go` | H3 | The two activity-kind sets relstrength holds, against the vocabulary the contract actually publishes. |
 | `activityprojectionfields_test.go` | H2 | Every writer of `Activity.AudienceReason` is named here with the test that proves it withholds the reason from a reader who may not see the content. |
+| `activityrowfinish_test.go` | H2 | Every function that scans activity rows also finishes them, inside the activities module and outside it. |
 | `agentauthority_test.go` | H2 | An agent principal names the human whose authority it acts under, or says here why there is none. |
 | `agentgrantscopes_test.go` | H2 | A credential that does not fund the tools its agent declares buys a run that starts, discovers it cannot do its job, and stops. |
 | `agentwritepin_test.go` | H2 | A tool whose tier is resolved by reading a record carries that reading's version into its write. |
@@ -325,6 +326,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `gatelanetrigger_test.go` | H2 | A gate runs in a lane that every path it reads can trigger. |
 | `governedkindseams_test.go` | H2 | The two halves of automatic apply agree about which kinds it covers. |
 | `historyfieldlabels_test.go` | H2 | Every field name the History tab can print has a word for it. |
+| `humanonlypending_test.go` | H1 | An agent may do what its user may do in the app, unless security says no. Every human-only operation a signed-in user reaches says why in the contract, as x-human-only-reason: security, covered by another tool, or pending, which tools/gen-agentpolicy requires. |
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the transport, not only in the gate. |
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
@@ -376,6 +378,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onedownloadheader_test.go` | H2 | A download's headers are spelled once, in platform/httperr's Download. |
 | `oneidlebase_test.go` | H2 | The idle base (a record's newest activity when one is recorded, else the instant it was created) is spelled once, in shared/kernel/idlebase. |
 | `onejitteredbackoff_test.go` | H2 | The jittered retry ladder is spelled once, in shared/kernel/backoff. |
+| `oneprojecthealthwriter_test.go` | H2 | project\_health\_assessment has one INSERT, in projects' insertHealthRow. |
 | `oneretryafter_test.go` | H2 | The Retry-After header is read in one place, shared/kernel/retryafter. |
 | `onesqlliteralreader_test.go` | H2 | A census over the censuses: whoever judges this tree's SQL must read it the way Postgres receives it. |
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |
@@ -431,6 +434,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has one reader, and it answers one question. |
 | `sendingsystemmail_test.go` | H2 | A query that reads captured mail through the company reach set must leave out mail from a sending system. |
+| `sentmailreaders_test.go` | H2 | A voice learns from its owner's sent mail only when the owner presses the button. |
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | Every registered setting key is unique, well-formed and governed, names the module that declares it, and does not also exist in margince.yaml's runtime surface. |
 | `singleliteralcheck_test.go` | H2 | A CHECK that admits one value and no other is a discriminator or it is nothing. |
@@ -448,6 +452,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
+| `usertimezonewriters_test.go` | H2 | A user's time zone has one writer after their row exists: writeTimezoneTx in identity/usertimezone.go. |
 | `uuidkeydefault_test.go` | H2 | Every uuid `id` column defaults to uuidv7(). |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
@@ -570,6 +575,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in one function, because putting one into the registry is a decision about reachability and that decision has been wrong once. |
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
 | `harnesstransport_test.go` | H2 | A harness transport stays in the harness: only the cert lane hands the router a client of its own, and only an allowlisted directory shells out. |
+| `individualperformancefloor_test.go` | H2 | The small-group floor of "Show individual performance" is compared in one function, belowFloor, and nowhere else. |
 | `integrationmigrateonce_test.go` | H2 | Every file the integration lane compiles migrates the schema once per test process and resets between tests, rather than migrating on every setup. |
 | `jobargscontent_test.go` | H2 | Job args carry references, never content. |
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |

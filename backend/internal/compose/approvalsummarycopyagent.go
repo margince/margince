@@ -30,7 +30,7 @@ var agentActsEnglish = agentActVocabulary{operations: opPhrases}
 
 //nolint:goconst // the keys are the contract's own tool verbs, and a constant per verb would be a second spelling of the generated policy table.
 var agentActsGerman = agentActVocabulary{
-	verbs: map[string]string{
+	verbs: withRouteVerbs(routeVerbsGerman, map[string]string{
 		"advance_deal":             "Deal weiterbringen",
 		"advance_project_phase":    "Projekt in die nächste Phase bringen",
 		"annotate_brief":           "Anmerkung zum Morgenbericht hinzufügen",
@@ -67,7 +67,7 @@ var agentActsGerman = agentActVocabulary{
 		"update_tag":               "Tag ändern",
 		"archive_tag":              "Tag stilllegen",
 		"change_record_parts":      "Teile eines Datensatzes ändern",
-	},
+	}),
 	recordFrames: map[string]string{
 		toolCreateRecord:  "%s erstellen",
 		toolUpdateRecord:  "%s ändern",
@@ -84,7 +84,7 @@ var agentActsGerman = agentActVocabulary{
 }
 
 var agentActsVietnamese = agentActVocabulary{
-	verbs: map[string]string{
+	verbs: withRouteVerbs(routeVerbsVietnamese, map[string]string{
 		"advance_deal":             "Chuyển giai đoạn của deal",
 		"advance_project_phase":    "Chuyển dự án sang giai đoạn kế tiếp",
 		"annotate_brief":           "Thêm ghi chú vào bản tóm tắt",
@@ -121,7 +121,7 @@ var agentActsVietnamese = agentActVocabulary{
 		"update_tag":               "Cập nhật thẻ",
 		"archive_tag":              "Ngừng dùng thẻ",
 		"change_record_parts":      "Thay đổi các phần của hồ sơ",
-	},
+	}),
 	recordFrames: map[string]string{
 		toolCreateRecord:  "Tạo %s",
 		toolUpdateRecord:  "Cập nhật %s",

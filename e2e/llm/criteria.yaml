@@ -483,3 +483,43 @@ cases:
       name: Give a link to the named deal
       statement: >-
         The answer gives a link to the named deal's page in the app.
+  case68_let_sofia_read_the_account:
+    1:
+      name: Share the record with the colleague named
+      statement: >-
+        The model shares the one company with Sofia Meier at read access, and says it did.
+  case69_set_up_the_fleet_team:
+    1:
+      name: Create the team and add both colleagues
+      statement: >-
+        The model creates the team and adds each of the two colleagues to it.
+  case70_clear_my_notices:
+    1:
+      name: Mark the notices read
+      statement: >-
+        The model marks the notices read through the action that does that, and changes no record.
+  case71_record_the_signed_contract:
+    1:
+      name: Record the contract the user named
+      statement: >-
+        The model records one contract with that title on that company.
+  case72_read_the_dossier:
+    1:
+      name: Read the dossier without refreshing it
+      statement: >-
+        The model reads the dossier panel, and does not start AI work to refresh it.
+  case73_read_my_weekly_plan:
+    1:
+      name: Read the weekly plan and change nothing
+      statement: >-
+        The model reads the plan and starts or changes nothing.
+  case74_read_the_file_back:
+    1:
+      name: Read back the bytes that were stored
+      statement: >-
+        The model stores the file, then reads the stored file through list_documents by its id and reports its size.
+  case75_sofia_is_leaving:
+    1:
+      name: Ask before removing a member
+      statement: >-
+        The model says what it could do and asks, and neither deactivates nor removes her.

@@ -12,13 +12,16 @@ type readWorkspace struct{ routed }
 
 func (readWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_workspace", Title: "Read how this workspace is set up", Version: toolVersionV1,
+		Name: readWorkspaceName, Title: "Read how this workspace is set up", Version: toolVersionV1,
 		Description: readWorkspaceCopy.render(),
 		Instead:     readWorkspaceCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"topic":{"description":"colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary"}}}`),
 	}
 }
+
+// readWorkspaceName is the router contract actions also join (topic actions).
+const readWorkspaceName = "read_workspace"
 
 // topicQuery is the topic naming query_workspace's vocabulary.
 const topicQuery = "query"

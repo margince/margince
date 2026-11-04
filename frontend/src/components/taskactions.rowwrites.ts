@@ -84,6 +84,8 @@ export type MeetingOutcomeWrite = {
     occurred_at: string;
     occurred_precision: components["schemas"]["OccurredPrecision"];
   }>;
+  // The custom-field values the writer changes, by their cf_ keys.
+  custom?: Record<string, unknown>;
 };
 
 /**
@@ -105,6 +107,7 @@ export async function writeMeetingOutcome(
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
         ...input.start,
+        ...input.custom,
       },
     }),
     t,

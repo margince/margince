@@ -115,6 +115,10 @@ func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
 }
 
+func (stubs) RenderActivityForReader(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RenderActivityForReader")
+}
+
 func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RelinkActivityParams) {
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
@@ -1479,6 +1483,10 @@ func (stubs) GetContactAccess(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "GetContactAccess")
 }
 
+func (stubs) RetractAcquisitionRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetractAcquisitionRequest")
+}
+
 func (stubs) GetContactBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetContactBrief")
 }
@@ -1529,6 +1537,10 @@ func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
+}
+
+func (stubs) RetractQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, eventId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RetractQualifyingEvent")
 }
 
 func (stubs) SuppressContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -2131,28 +2143,12 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
-func (stubs) GetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "GetForecastAssuranceEnforcement")
-}
-
-func (stubs) SetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "SetForecastAssuranceEnforcement")
-}
-
 func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
-func (stubs) CloseLostInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "CloseLostInputCheck")
-}
-
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
-}
-
-func (stubs) WaitInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "WaitInputCheck")
 }
 
 func (stubs) PreviewForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2803,6 +2799,10 @@ func (stubs) RevokeMySession(w nethttp.ResponseWriter, r *nethttp.Request, sessi
 	httperr.NotImplemented(w, r, "RevokeMySession")
 }
 
+func (stubs) SaveMyTimezone(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyTimezone")
+}
+
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyWorkingHours")
 }
@@ -3047,6 +3047,18 @@ func (stubs) UpdateProduct(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "UpdateProduct")
 }
 
+func (stubs) ListProductTranslations(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListProductTranslations")
+}
+
+func (stubs) DeleteProductTranslation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, language string) {
+	httperr.NotImplemented(w, r, "DeleteProductTranslation")
+}
+
+func (stubs) PutProductTranslation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, language string) {
+	httperr.NotImplemented(w, r, "PutProductTranslation")
+}
+
 func (stubs) ListProjects(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProjectsParams) {
 	httperr.NotImplemented(w, r, "ListProjects")
 }
@@ -3101,6 +3113,10 @@ func (stubs) CreateProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.
 
 func (stubs) CorrectProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.CorrectProjectHealthAssessmentParams) {
 	httperr.NotImplemented(w, r, "CorrectProjectHealthAssessment")
+}
+
+func (stubs) UndoProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.UndoProjectHealthAssessmentParams) {
+	httperr.NotImplemented(w, r, "UndoProjectHealthAssessment")
 }
 
 func (stubs) ListProjectStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3439,6 +3455,10 @@ func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key strin
 	httperr.NotImplemented(w, r, "RestoreRole")
 }
 
+func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {
+	httperr.NotImplemented(w, r, "DescribeRouterActions")
+}
+
 func (stubs) ListScheduledSends(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListScheduledSendsParams) {
 	httperr.NotImplemented(w, r, "ListScheduledSends")
 }
@@ -3643,6 +3663,14 @@ func (stubs) CreateTask(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateTask")
 }
 
+func (stubs) ListTaxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTaxRatesParams) {
+	httperr.NotImplemented(w, r, "ListTaxRates")
+}
+
+func (stubs) RecordTaxRate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RecordTaxRate")
+}
+
 func (stubs) ListTeams(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTeamsParams) {
 	httperr.NotImplemented(w, r, "ListTeams")
 }
@@ -3739,6 +3767,10 @@ func (stubs) RemoveMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 	httperr.NotImplemented(w, r, "RemoveMember")
 }
 
+func (stubs) ResendUserInvite(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ResendUserInvite")
+}
+
 func (stubs) PreviewMemberRetirement(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewMemberRetirementParams) {
 	httperr.NotImplemented(w, r, "PreviewMemberRetirement")
 }
@@ -3829,6 +3861,10 @@ func (stubs) IngestVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) PreviewVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "PreviewVoiceCorpusSource")
+}
+
+func (stubs) LearnVoiceFromSentMail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LearnVoiceFromSentMailParams) {
+	httperr.NotImplemented(w, r, "LearnVoiceFromSentMail")
 }
 
 func (stubs) DeleteVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, sourceId openapi_types.UUID, params crmcontracts.DeleteVoiceCorpusSourceParams) {

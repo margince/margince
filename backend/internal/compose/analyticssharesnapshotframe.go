@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // snapshotFrame reads the period, zone and currency a frozen state was computed
@@ -72,9 +73,13 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 func frozenShareLanding(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, readings forecasting.Readings, frame shareFrame,
 ) (crmcontracts.ForecastLanding, error) {
-	measure := forecasting.ForwardMeasure(*frame.LandingMeasure)
+	stored := frame.LandingMeasure
 	if frame.ForwardMeasure != nil {
-		measure = forecasting.ForwardMeasure(*frame.ForwardMeasure)
+		stored = frame.ForwardMeasure
+	}
+	measure, err := values.ParseForwardMeasure(stored, "forward_measure")
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
 	}
 	var call *int64
 	if frame.LandingCallMinor != nil {

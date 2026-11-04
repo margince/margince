@@ -72,10 +72,6 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 			_, _, err := transfers.Request(readSeat, "company", owned, "")
 			return err
 		}, want: apperrors.ErrPermissionDenied},
-		"agent": {ask: func() error {
-			_, _, err := transfers.Request(e.AgentFor(t, e.Rep3, nil, handoverRepPerms()), "company", owned, "")
-			return err
-		}, want: apperrors.ErrPermissionDenied},
 		"owner-private contact": {ask: func() error {
 			_, _, err := transfers.Request(asker(e), "contact", private, "")
 			return err

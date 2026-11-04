@@ -29,7 +29,7 @@ import { useTruncationTooltip } from "../../../design-system/tooltip";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import "./closetasks.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -255,7 +255,7 @@ function CloseTasksPreview({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const hidden = tasks.length - PREVIEW_ROWS;
   return (
     <div className="closetasks-preview">

@@ -235,3 +235,8 @@
 .analytics-outlook-prose > p + p {
   margin-block-start: var(--paragraphSpacing);
 }
+
+.analytics-lead > .panel,
+.analytics-pair > .panel {
+  align-self: start;
+}

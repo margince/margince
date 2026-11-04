@@ -12,7 +12,6 @@ import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -20,6 +19,7 @@ import { unwrap } from "../../lib/problem";
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The human surface for the two human-only automation ops
 // (listAutomationRuns / previewAutomation), in its own file so automations.tsx
@@ -88,7 +88,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // A run is an audit-style event: read its time in the VIEWER's own timezone
   // (as audit.tsx / aicalls.tsx do), never a fixed one — an operator in any
   // region sees the firing in their local wall-clock.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <li className="auto-run">
       <div className="auto-run-head">

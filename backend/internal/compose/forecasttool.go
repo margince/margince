@@ -200,7 +200,7 @@ func forecastToolResult(
 		ScopeKind:          scope.Kind,
 		WonMinor:           in.WonMinor,
 		EvidenceMinor:      in.EvidenceMinor,
-		BestCaseMinor:      in.BestCaseMinor,
+		LikelyThreshold:    in.LikelyThreshold,
 		OpenMinor:          in.OpenMinor,
 		WeightedMinor:      in.WeightedMinor,
 		EligibleCount:      in.EligibleCount,
@@ -219,14 +219,6 @@ func forecastToolResult(
 	}
 	if in.Range != nil {
 		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
-	}
-	if q := in.Qualified; q != nil {
-		out.Qualified = &agents.ForecastQualifiedResult{
-			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
-			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
-			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
-			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
-		}
 	}
 	return out
 }

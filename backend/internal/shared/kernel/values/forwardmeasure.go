@@ -12,15 +12,19 @@ package values
 // other enforces — and the drift is invisible until an installation saves a
 // measure the projection then refuses on every read.
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // ForwardMeasure names which reading the forward half of a landing comes from.
 type ForwardMeasure string
 
 const (
-	// MeasureCommitEvidence adds the commit-category deals with confirmed close
-	// dates. The strictest reading: a provisional date is a guess and stays out.
-	MeasureCommitEvidence ForwardMeasure = "commit_evidence"
+	// MeasureLikely adds the open deals at or above the Likely threshold with
+	// confirmed close dates. The strictest reading: a provisional date is a
+	// guess and stays out.
+	MeasureLikely ForwardMeasure = "likely"
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted ForwardMeasure = "weighted"
 	// MeasureManagerCall takes the authored call as the whole period's landing.
@@ -29,28 +33,48 @@ const (
 	MeasureManagerCall ForwardMeasure = "manager_call"
 )
 
-// ForwardMeasures is every measure, in the order a chooser should offer them:
-// strictest first, then the two that soften it.
+// ForwardMeasures is every measure, strictest first, as a chooser offers them.
+// A fresh slice, so no caller can reorder another's chooser.
 //
-// Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go),
-// which derives the contract's own enums and requires them to agree with this
-// set — a measure the settings screen admits and the projection refuses saves
-// cleanly and then errors on every forecast read.
-//
-// Returned as a fresh slice because a package-level array would let one caller
-// reorder every other caller's chooser.
+// Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go).
 func ForwardMeasures() []ForwardMeasure {
-	return []ForwardMeasure{MeasureCommitEvidence, MeasureWeighted, MeasureManagerCall}
+	return []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall}
+}
+
+// RetiredForwardMeasures are the measures of the retired qualified forecast. A
+// frozen weekly review keeps the word it was read under; nothing builds them.
+func RetiredForwardMeasures() []string {
+	return []string{"qualified_likely", "qualified_weighted"}
+}
+
+// RetiredForwardMeasure names the retired measure a stored spelling means, the
+// older qualified_commit_evidence included.
+func RetiredForwardMeasure(raw string) (string, bool) {
+	if raw == "qualified_commit_evidence" {
+		return "qualified_likely", true
+	}
+	return raw, slices.Contains(RetiredForwardMeasures(), raw)
+}
+
+// legacyForwardMeasures are the spellings stored rows still hold. A qualified
+// measure reads as the baseline reading it restricted.
+var legacyForwardMeasures = map[string]ForwardMeasure{
+	"commit_evidence":           MeasureLikely,
+	"qualified_commit_evidence": MeasureLikely,
+	"qualified_likely":          MeasureLikely,
+	"qualified_weighted":        MeasureWeighted,
 }
 
 // ParseForwardMeasure turns a stored or wire value into a measure.
 //
-// The default is deliberate: an ABSENT measure is commit evidence, which is
-// what every installation's landing was computed from before the setting
-// existed, so one that never touches it sees no change.
+// An absent measure is Likely, the strictest reading, so an installation
+// that never touches the setting sees no change.
 func ParseForwardMeasure(raw *string, field string) (ForwardMeasure, error) {
 	if raw == nil || *raw == "" {
-		return MeasureCommitEvidence, nil
+		return MeasureLikely, nil
+	}
+	if measure, ok := legacyForwardMeasures[*raw]; ok {
+		return measure, nil
 	}
 	for _, known := range ForwardMeasures() {
 		if ForwardMeasure(*raw) == known {

@@ -54,6 +54,7 @@ does in this state.
 | `owed_verdict` | Unanswered-message triage | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `propose_roles` | Buying-role reading | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `rate_extract` | Exchange rate extraction | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
+| `reader_rendering` | Showing a message in your language | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `report_interpret` | Assessing a sales report | interactive | `premium` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
 | `report_setup` | Setting up a report from a description | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `request_settlement` | Checking whether the reply answered the request | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |

@@ -156,6 +156,9 @@ const (
 	connectAppUnusable connectResult = "app_unusable"
 	// connectUnsupported: this deployment does not serve the provider at all.
 	connectUnsupported connectResult = "unsupported"
+	// connectRoleCannotCapture: the caller's role or seat cannot record what
+	// capture writes, whichever provider they pick.
+	connectRoleCannotCapture connectResult = "role_cannot_capture"
 )
 
 // connectAvailability is what connectability reports for one provider.
@@ -180,6 +183,9 @@ type connectAvailability struct {
 // rather than each carrying its own copy of the decision, so a refusal a
 // click gives can never surprise a screen that just reported readiness.
 func (h connectorHandlers) connectability(ctx context.Context, provider string) connectAvailability {
+	if callerCaptureRefusal(ctx) != nil {
+		return connectAvailability{reason: connectRoleCannotCapture}
+	}
 	if provider == providerIMAP {
 		// IMAP never needs an OAuth app: its credentials are per-connection,
 		// vault-sealed, so the registry alone decides.
