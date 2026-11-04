@@ -19834,7 +19834,7 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
-  "aiTask.name.deal_verdict": "Checking a deal’s dates, amount and chances",
+  "aiTask.name.deal_verdict": "Checking the dates, amount and chances of a deal",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",

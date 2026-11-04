@@ -96,7 +96,7 @@ var taskDisplayNames = map[Task]string{
 	TaskColdStart:                     "Onboarding read",
 	TaskCorpusAsk:                     "Document corpus question",
 	TaskDealHealth:                    "Deal status card",
-	TaskDealVerdict:                   "Checking a deal's dates, amount and chances",
+	TaskDealVerdict:                   "Checking the dates, amount and chances of a deal",
 	TaskDocumentExtract:               "Document extraction",
 	TaskDraftReply:                    "Reply drafting",
 	TaskEnrich:                        "Signature enrichment",
@@ -198,7 +198,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "8fd62fbb97b63f040ba143bd8974e48b347555fd6d7ecd5cb6450d1937cd38fc"
+const TaskContractHash = "06bdde5180b75781d0030f2d2a06dcc5e8c17c5229215ceadb9b198c913f69ae"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
