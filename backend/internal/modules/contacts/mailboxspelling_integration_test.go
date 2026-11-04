@@ -85,7 +85,7 @@ func TestMailFromTheOtherSpellingLandsOnTheSameContact(t *testing.T) {
 }
 
 // An address erased under one spelling of its domain stays erased under the
-// other, so the punycode twin cannot bring the person back.
+// other, so the punycode twin cannot bring the contact back.
 func TestAnAddressErasedInUnicodeStaysDeadInPunycode(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
