@@ -124,10 +124,10 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 type attentionBookingHealth struct{ store *activities.Store }
 
 // newAttentionBookingHealth reads the blocker from the stored calendar grant,
-// through the bare registry every health lane reads. The settings screen also
-// checks the credential. That check needs the capture connectors and the
-// vault, which a feed built for the worker does not have. A failure there is
-// the operator's to fix, not the host's.
+// through the bare registry every health lane reads. The credential check the
+// settings screen adds needs the capture connectors and the vault, which this
+// constructor does not have.
+// Known gap: Home misses a blocker only that credential check finds.
 func newAttentionBookingHealth(pool *pgxpool.Pool, db *database.DB) attentionBookingHealth {
 	calendar := bookingGrantCalendar{newSchedulingCalendar(pool, captureHealthRegistry(db))}
 	return attentionBookingHealth{store: activities.NewStore(db).WithSchedulingCalendar(calendar)}

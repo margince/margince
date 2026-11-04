@@ -40,41 +40,43 @@ func (s *Store) MarkBookingPageShared(ctx context.Context) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
-			return err
-		}
-		args := schedulingArgs{}
-		var page ids.UUID
-		var used *time.Time
-		var policy *crmcontracts.SchedulingProfile
-		err := tx.QueryRow(ctx, `SELECT id, first_used_at, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-			` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &used, &policy)
-		if errors.Is(err, pgx.ErrNoRows) {
+		found, err := stampBookingPageUseTx(ctx, tx, host, s.now())
+		if err == nil && !found {
 			return apperrors.ErrNotFound
 		}
-		if err != nil || used != nil {
-			return err
-		}
-		now := s.now()
-		args = schedulingArgs{}
-		if _, err := tx.Exec(ctx, `UPDATE booking_page SET first_used_at=`+args.add(now)+` WHERE id=`+args.add(page), args...); err != nil {
-			return err
-		}
-		audit, err := storekit.Audit(ctx, tx, "update", "booking_page", page, bookingPageUse{}, bookingPageUse{FirstUsedAt: &now})
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: policy != nil && policy.Enabled})
+		return err
 	})
 }
 
-// markBookingPageBookedTx stamps the host's live page as used by a booking.
-// The booking's own write audits and emits, so this derived stamp adds neither.
-func markBookingPageBookedTx(ctx context.Context, tx pgx.Tx, host ids.UserID, at time.Time) error {
+// stampBookingPageUseTx records a page's first use, for a booking and a link
+// copy alike. It holds the page's write identity, so a link replaced at the
+// same moment cannot carry an unstamped page forward. It answers false when
+// the host has no live page.
+func stampBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, at time.Time) (bool, error) {
+	if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
+		return false, err
+	}
 	args := schedulingArgs{}
-	_, err := tx.Exec(ctx, `UPDATE booking_page SET first_used_at=`+args.add(at)+` WHERE host_user_id=`+args.add(host)+
-		` AND revoked_at IS NULL AND first_used_at IS NULL`, args...)
-	return err
+	var page ids.UUID
+	var used *time.Time
+	var policy *crmcontracts.SchedulingProfile
+	err := tx.QueryRow(ctx, `SELECT id, first_used_at, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
+		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &used, &policy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil || used != nil {
+		return err == nil, err
+	}
+	args = schedulingArgs{}
+	if _, err := tx.Exec(ctx, `UPDATE booking_page SET first_used_at=`+args.add(at)+` WHERE id=`+args.add(page), args...); err != nil {
+		return true, err
+	}
+	audit, err := storekit.Audit(ctx, tx, "update", "booking_page", page, bookingPageUse{}, bookingPageUse{FirstUsedAt: &at})
+	if err != nil {
+		return true, err
+	}
+	return true, storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: policy != nil && policy.Enabled})
 }
 
 // carryBookingPageUseTx copies the host's first use onto their new page, so

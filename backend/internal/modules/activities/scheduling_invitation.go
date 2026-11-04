@@ -321,7 +321,7 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 			return err
 		}
 		if row.PublicIntent != nil {
-			if err := markBookingPageBookedTx(ctx, tx, host, s.now()); err != nil {
+			if _, err := stampBookingPageUseTx(ctx, tx, host, s.now()); err != nil {
 				return err
 			}
 		}
