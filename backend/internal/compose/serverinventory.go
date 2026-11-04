@@ -41,9 +41,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
-// Server satisfies crmcontracts.ServerInterface by embedding: every
-// module transport handler set together covers the full contract
-// surface.
+// Server satisfies crmcontracts.ServerInterface by embedding: every module
+// transport handler set together covers the full contract surface.
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
@@ -163,6 +162,7 @@ type Server struct {
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
+	readerRenderingHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers

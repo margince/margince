@@ -162,3 +162,21 @@ export function deliveringProject360(
     ...overrides,
   });
 }
+
+// The same project, judged by the health job rather than by a user.
+export function aiJudgedProject360(): Project360 {
+  return deliveringProject360({
+    health: {
+      current: {
+        id: "h-ai",
+        project_id: "pr-1",
+        state: "at_risk",
+        note: "Nothing has been filed on this project for at least 30 days.",
+        assessed_at: "2026-08-13T06:00:00Z",
+        source: "ai",
+        created_at: "2026-08-13T06:00:00Z",
+        superseded: false,
+      },
+    },
+  });
+}

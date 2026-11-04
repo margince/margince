@@ -40,7 +40,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `invitation_sender` | `uuid` |  | Points at `app_user.id`. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
-| `language` | `text` |  | What language this message is written in, read from its own text when it was captured. |
+| `language` | `text` |  | What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `occurred_precision` | `text`, default `'instant'::text` | yes | How to read `occurred_at`. |

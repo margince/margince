@@ -19472,6 +19472,14 @@ components:
           description: >-
             How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
         thread_key: {type: [string, 'null']}
+        language:
+          type: [string, 'null']
+          readOnly: true
+          enum: [de, en, vi, null]
+          description: |-
+            The language the message is written in, as `Activity.language` records it. Null
+            when withheld, and when it could not be told. A client offers the reader's own
+            language beside a message in another one or in an unknown one.
         from:
           type: array
           items: {$ref: '#/components/schemas/EmailParty'}
@@ -21158,7 +21166,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system]
+      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
     NotificationDelivery:
       type: string
       description: |-
@@ -27883,7 +27891,11 @@ components:
           format: date-time
           description: >-
             When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
-        source: {type: string, readOnly: true, description: What recorded this assessment.}
+        source:
+          type: string
+          readOnly: true
+          description: >-
+            What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
         source_author:
           type: string
           readOnly: true
@@ -29051,7 +29063,7 @@ components:
           readOnly: true
           enum: [de, en, vi, null]
           description: >-
-            What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+            What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
         occurred_at: {type: string, format: date-time}
         occurred_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
@@ -36442,6 +36454,7 @@ components:
         - owed_verdict
         - propose_roles
         - rate_extract
+        - reader_rendering
         - report_interpret
         - report_setup
         - request_settlement
@@ -36459,7 +36472,7 @@ components:
         - weekly_review
     AiActivityKind:
       type: string
-      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret]
+      enum: [morning_brief, overnight_at_risk_sweep, document_extract, site_read, brief_ranking, capture_classify, capture_confidentiality_verdict, capture_counterparty_verdict, cert_judge, cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search, offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract, site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build, corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict, request_settlement, account_scan, tag_suggest, report_setup, report_interpret, reader_rendering]
       description: |-
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.

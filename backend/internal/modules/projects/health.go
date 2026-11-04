@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -34,6 +35,7 @@ import (
 
 const (
 	healthTable       = "project_health_assessment"
+	healthObject      = "project_health_assessment"
 	healthStateColumn = "state"
 	healthNoteColumn  = "note"
 	healthMaxNote     = 4000
@@ -65,6 +67,19 @@ type CorrectHealthInput struct {
 func (s *Store) RecordHealth(
 	ctx context.Context, in RecordHealthInput,
 ) (crmcontracts.ProjectHealthAssessment, error) {
+	var out crmcontracts.ProjectHealthAssessment
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.RecordHealthTx(ctx, tx, in)
+		return err
+	})
+	return out, err
+}
+
+// RecordHealthTx is RecordHealth inside a caller-opened transaction.
+func (s *Store) RecordHealthTx(
+	ctx context.Context, tx pgx.Tx, in RecordHealthInput,
+) (crmcontracts.ProjectHealthAssessment, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.ProjectHealthAssessment{}, err
 	}
@@ -89,33 +104,18 @@ func (s *Store) RecordHealth(
 			Message: "a judgement cannot be dated in the future",
 		}
 	}
-	var out crmcontracts.ProjectHealthAssessment
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		// The project is HELD, not merely probed: an archive committing between
-		// the check and the insert would file a judgement on a closed record,
-		// and the foreign key would not notice because archiving does not
-		// delete the row. Holding the parent first is also the order Art. 17
-		// erasure takes, so this writer never deadlocks against it.
-		if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
-			return err
-		}
-		id := ids.NewV7()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO project_health_assessment
-			  (id, project_id, state, note, assessed_at, source, source_author, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			id, in.ProjectID, string(in.State), note, assessedAt,
-			sourceHuman, trimmedOrNil(in.SourceAuthor), by); err != nil {
-			return fmt.Errorf("insert project health assessment: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "create", "project_health_assessment", id, nil,
-			map[string]any{"project_id": in.ProjectID.String(), healthStateColumn: string(in.State)}); err != nil {
-			return err
-		}
-		out, err = readHealthAssessment(ctx, tx, id)
-		return err
+	// The project is held, not only probed. An archive committing between the
+	// check and the insert would file a judgement on a closed record. The
+	// foreign key would not notice, because archiving does not delete the row.
+	// Holding the parent first is also the order Art. 17 erasure takes, so this
+	// writer never deadlocks against it.
+	if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
+		return crmcontracts.ProjectHealthAssessment{}, err
+	}
+	return insertHealthRow(ctx, tx, healthRow{
+		ProjectID: in.ProjectID, State: in.State, Note: note, AssessedAt: assessedAt,
+		Source: sourceHuman, SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
 	})
-	return out, err
 }
 
 // CorrectHealth replaces one reading with a corrected one, keeping when it was
@@ -139,66 +139,122 @@ func (s *Store) CorrectHealth(
 		if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
 			return err
 		}
-		// FOR UPDATE, and it is what keeps the chain linear. Read without it,
-		// two colleagues correcting the same reading both find it uncorrected, both
-		// insert a successor, and the unique index refuses the loser at commit
-		// with nothing to say why. The lock makes them take turns, so the
-		// second sees the first's correction and is told the row is already
-		// corrected.
-		//
-		// The project id is in the WHERE clause, so a correction naming another
-		// project's reading finds nothing here rather than relying on the
-		// composite foreign key to catch it later.
-		var assessedAt time.Time
-		var supersededBy *ids.UUID
-		err := tx.QueryRow(ctx, `
-			SELECT a.assessed_at,
-			       (SELECT s.id FROM project_health_assessment s
-			         WHERE s.supersedes_assessment_id = a.id)
-			FROM project_health_assessment a
-			WHERE a.id = $1 AND a.project_id = $2
-			FOR UPDATE OF a`,
-			in.AssessmentID, in.ProjectID).Scan(&assessedAt, &supersededBy)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		target, err := lockHealthTarget(ctx, tx, in.ProjectID, in.AssessmentID)
 		if err != nil {
-			return fmt.Errorf("lock project health assessment: %w", err)
-		}
-		if supersededBy != nil {
-			// Correcting a correction would fork the chain. Correct the reading
-			// that stands instead.
-			return apperrors.ErrConflict
-		}
-		id := ids.NewV7()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO project_health_assessment
-			  (id, project_id, state, note, assessed_at, source, source_author, captured_by,
-			   supersedes_assessment_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			id, in.ProjectID, string(in.State), note, assessedAt,
-			sourceHuman, trimmedOrNil(in.SourceAuthor), by, in.AssessmentID); err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return apperrors.ErrConflict
-			}
-			return fmt.Errorf("insert project health correction: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "create", "project_health_assessment", id, nil,
-			map[string]any{
-				"project_id":      in.ProjectID.String(),
-				healthStateColumn: string(in.State),
-				"corrects":        in.AssessmentID.String(),
-			}); err != nil {
 			return err
 		}
-		out, err = readHealthAssessment(ctx, tx, id)
+		// An undo row withdraws the AI reading it replaced and counts for
+		// nothing itself, so it holds no judgement to correct.
+		if target.Source == sourceUndo {
+			return apperrors.ErrConflict
+		}
+		out, err = insertHealthRow(ctx, tx, healthRow{
+			ProjectID: in.ProjectID, State: in.State, Note: note, AssessedAt: target.AssessedAt,
+			Source: sourceHuman, SourceAuthor: trimmedOrNil(in.SourceAuthor), CapturedBy: by,
+			Supersedes: &in.AssessmentID,
+		})
 		return err
 	})
 	return out, err
 }
 
+// healthTarget is the reading a correction or an undo replaces.
+type healthTarget struct {
+	AssessedAt time.Time
+	Source     string
+}
+
+// lockHealthTarget locks the reading a successor will replace, and refuses one
+// that already has a successor.
+//
+// `FOR UPDATE` keeps the chain linear. Without it, two colleagues correcting
+// one reading both find it uncorrected and both insert a successor. The unique
+// index then refuses the loser at commit with nothing to say why. The lock makes
+// them take turns, so the second is told the row is already corrected.
+//
+// The project id is in the `WHERE` clause. A successor naming another project's
+// reading finds nothing here, without waiting for the composite foreign key.
+func lockHealthTarget(
+	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID, assessmentID ids.UUID,
+) (healthTarget, error) {
+	var target healthTarget
+	var supersededBy *ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT a.assessed_at, a.source,
+		       (SELECT s.id FROM project_health_assessment s
+		         WHERE s.supersedes_assessment_id = a.id)
+		FROM project_health_assessment a
+		WHERE a.id = $1 AND a.project_id = $2
+		FOR UPDATE OF a`,
+		assessmentID, projectID).Scan(&target.AssessedAt, &target.Source, &supersededBy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return healthTarget{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return healthTarget{}, fmt.Errorf("lock project health assessment: %w", err)
+	}
+	if supersededBy != nil {
+		// A second successor would fork the chain. Replace the reading that
+		// stands instead.
+		return healthTarget{}, apperrors.ErrConflict
+	}
+	return target, nil
+}
+
+// healthRow is one row of the history, as every writer appends it.
+type healthRow struct {
+	ProjectID    ids.ProjectID
+	State        crmcontracts.ProjectHealthState
+	Note         *string
+	AssessedAt   time.Time
+	Source       string
+	SourceAuthor *string
+	CapturedBy   string
+	Supersedes   *ids.UUID
+}
+
+// insertHealthRow is the one INSERT into project_health_assessment. A user's
+// reading, a correction, the health job's reading and an undo all append
+// through it. So each of them writes its audit row and its event the same way.
+func insertHealthRow(
+	ctx context.Context, tx pgx.Tx, row healthRow,
+) (crmcontracts.ProjectHealthAssessment, error) {
+	id := ids.NewV7()
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := storekit.SQLf(`
+		INSERT INTO project_health_assessment
+		  (id, project_id, state, note, assessed_at, source, source_author, captured_by,
+		   supersedes_assessment_id)
+		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)`,
+		arg(id), arg(row.ProjectID), arg(string(row.State)), arg(row.Note), arg(row.AssessedAt),
+		arg(row.Source), arg(row.SourceAuthor), arg(row.CapturedBy), arg(row.Supersedes))
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
+		if storekit.IsUniqueViolation(err) {
+			return crmcontracts.ProjectHealthAssessment{}, apperrors.ErrConflict
+		}
+		return crmcontracts.ProjectHealthAssessment{}, fmt.Errorf("insert project health assessment: %w", err)
+	}
+	after := map[string]any{
+		"project_id": row.ProjectID.String(), healthStateColumn: string(row.State), "source": row.Source,
+	}
+	if row.Supersedes != nil {
+		after["corrects"] = row.Supersedes.String()
+	}
+	auditID, err := storekit.Audit(ctx, tx, "create", healthObject, id, nil, after)
+	if err != nil {
+		return crmcontracts.ProjectHealthAssessment{}, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, row.ProjectID.UUID, crmcontracts.PublicEventProjectHealthAssessed{
+		AssessmentId: openapi_types.UUID(id), State: string(row.State), Source: row.Source,
+	}); err != nil {
+		return crmcontracts.ProjectHealthAssessment{}, fmt.Errorf("emit project.health_assessed: %w", err)
+	}
+	return readHealthAssessment(ctx, tx, id)
+}
+
 // checkHealthJudgement holds the rules a judgement must satisfy, applied by
-// both the append and the correction.
+// the append, the correction and the health job.
 func checkHealthJudgement(
 	state crmcontracts.ProjectHealthState, note *string,
 ) (*string, error) {

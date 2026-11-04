@@ -10,6 +10,10 @@
 // surfaces a company and a contact page read, and the quiet-project predicate
 // the signal scan and the reports share.
 //
+// It also holds the project's health history, which has two writers: users, and
+// the health job through RecordAIHealthTx. A user undoes an AI reading with
+// UndoAIHealth. All of them append through insertHealthRow.
+//
 // Tables owned: docs/reference/entity-model/projects.md.
 // A project's stakeholders are `relationship` rows of kind project_stakeholder,
 // and that table is contacts's.
