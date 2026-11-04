@@ -15,7 +15,6 @@ func (in UpdateActivityInput) changesNothing(current crmcontracts.Activity) bool
 	return !in.movesAField(current) && !in.clearsAValue(current) && !in.changesCustom(current)
 }
 
-// movesAField compares each sent field with the row, the way a patch does.
 func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	p := storekit.NewPatch()
 	if in.Subject != nil {
@@ -57,7 +56,6 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	return !p.Empty()
 }
 
-// clearsAValue is true when a null names a field that currently holds one.
 func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
 	return (in.clears("due_at") && current.DueAt != nil) ||
 		(in.clears("remind_at") && current.RemindAt != nil) ||

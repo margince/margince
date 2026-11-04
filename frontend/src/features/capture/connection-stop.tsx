@@ -80,10 +80,13 @@ export function StopConfirm({
   );
   const whole = services.length > 0 && services.length === held.length;
   // The account can lose a service while the confirm is open. With nothing left
-  // to stop, the stop is over, and a follow-up connect still has to run. Once a
-  // disconnect has started, its own outcome ends the stop, and only once.
+  // to stop, the stop is over, and a follow-up connect still has to run. A
+  // disconnect that is running or succeeded ends the stop itself, and only once.
   const nothingLeft =
-    stop !== null && services.length === 0 && disconnect.isIdle;
+    stop !== null &&
+    services.length === 0 &&
+    !disconnect.isPending &&
+    !disconnect.isSuccess;
   useEffect(() => {
     if (nothingLeft) {
       onStopped(stop.afterwards);

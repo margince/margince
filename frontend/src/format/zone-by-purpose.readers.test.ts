@@ -163,6 +163,21 @@ function zoneSourceRefs(
     const source = program.getSourceFile(root);
     if (!source) continue;
     const file = relative(srcRoot, root).split("\\").join("/");
+    const record = (found: ts.Symbol | undefined, at: ts.Node): void => {
+      const symbol =
+        found && found.flags & ts.SymbolFlags.Alias
+          ? checker.getAliasedSymbol(found)
+          : found;
+      const kind = symbol && targets.get(symbol);
+      if (kind) {
+        refs.push({
+          source: kind,
+          file,
+          line:
+            source.getLineAndCharacterOfPosition(at.getStart(source)).line + 1,
+        });
+      }
+    };
     const visit = (node: ts.Node): void => {
       // An import or export names the source without using it.
       if (
@@ -174,37 +189,31 @@ function zoneSourceRefs(
       ) {
         return;
       }
-      // `zones["browserZone"]()` names the export with a string, and the checker
-      // resolves that string to the same symbol.
-      const namedByString =
-        ts.isStringLiteralLike(node) &&
-        ts.isElementAccessExpression(node.parent) &&
-        node.parent.argumentExpression === node;
-      if (ts.isIdentifier(node) || namedByString) {
+      // `zones["browserZone"]()` and `zones[key]()` name the export by a string
+      // type, whether written in place or held in a constant.
+      if (ts.isElementAccessExpression(node)) {
+        const key = checker.getTypeAtLocation(node.argumentExpression);
+        if (key.isStringLiteral()) {
+          const read = checker.getPropertyOfType(
+            checker.getTypeAtLocation(node.expression),
+            key.value,
+          );
+          record(read, node);
+        }
+      }
+      if (ts.isIdentifier(node)) {
         const declares =
           (ts.isFunctionDeclaration(node.parent) ||
             ts.isVariableDeclaration(node.parent)) &&
           node.parent.name === node;
         // A shorthand property `{ browserZone }` names the property first, and
         // the value it reads is a second symbol the checker keeps apart.
-        let symbol = declares
+        const symbol = declares
           ? undefined
           : ts.isShorthandPropertyAssignment(node.parent)
             ? checker.getShorthandAssignmentValueSymbol(node.parent)
             : checker.getSymbolAtLocation(node);
-        if (symbol && symbol.flags & ts.SymbolFlags.Alias) {
-          symbol = checker.getAliasedSymbol(symbol);
-        }
-        const kind = symbol && targets.get(symbol);
-        if (kind) {
-          refs.push({
-            source: kind,
-            file,
-            line:
-              source.getLineAndCharacterOfPosition(node.getStart(source)).line +
-              1,
-          });
-        }
+        record(symbol, node);
       }
       ts.forEachChild(node, visit);
     };
@@ -252,7 +261,9 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
             "  const d = companyClock();",
             "  const e = { browserZone };",
             '  const f = zones["browserZone"]();',
-            "  return [a, b, c, d, e, f].join();",
+            '  const key = "browserZone";',
+            "  const g = zones[key]();",
+            "  return [a, b, c, d, e, f, g].join();",
             "}",
             "export type Zone = ReturnType<typeof browserZone>;",
           ].join("\n"),
@@ -266,6 +277,7 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
       { source: "useCompanyZone", file: "features/zzplanted.tsx", line: 9 },
       { source: "browserZone", file: "features/zzplanted.tsx", line: 10 },
       { source: "browserZone", file: "features/zzplanted.tsx", line: 11 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 13 },
     ]);
     expect(listed.browserZone.has("features/zzplanted.tsx")).toBe(false);
     expect(listed.useCompanyZone.has("features/zzplanted.tsx")).toBe(false);

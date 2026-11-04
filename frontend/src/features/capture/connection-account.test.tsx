@@ -434,8 +434,9 @@ describe("the account's own verbs", () => {
         </LocaleProvider>
       </QueryClientProvider>
     );
+    const user = userEvent.setup();
     const view = rtlRender(confirm([gmail, gcal]));
-    await userEvent.click(
+    await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "Disconnect",
       }),
@@ -450,6 +451,49 @@ describe("the account's own verbs", () => {
     finish(new Response(null, { status: 204 }));
     await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
     expect(onStopped).toHaveBeenCalledOnce();
+  });
+
+  it("ends a stop whose disconnect failed once its service left the account", async () => {
+    stubApi({
+      "POST /disconnect": () => jsonResponse({ code: "internal" }, 500),
+    });
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const client = new QueryClient();
+    const confirm = (connections: CaptureConnection[]) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail"], afterwards }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(confirm([gmail, gcal]));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("dialog")).getByRole("alert"),
+      ).toBeInTheDocument(),
+    );
+    expect(onStopped).not.toHaveBeenCalled();
+
+    view.rerender(confirm([gcal]));
+
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("ends a later stop whose services left, after an earlier stop succeeded", async () => {
@@ -478,10 +522,11 @@ describe("the account's own verbs", () => {
         </LocaleProvider>
       </QueryClientProvider>
     );
+    const user = userEvent.setup();
     const view = rtlRender(
       confirm([gmail, gcal], { services: ["mail"], afterwards: null }),
     );
-    await userEvent.click(
+    await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "Disconnect",
       }),

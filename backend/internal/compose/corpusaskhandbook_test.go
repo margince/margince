@@ -147,8 +147,9 @@ func TestNeighbouringSectionsOpenTheirOwnSettingsPages(t *testing.T) {
 		{DocumentName: settingsPage, Line: &company},
 	}
 	stampHandbookSections(claims)
-	if claims[0].Opens == nil || claims[1].Opens == nil || claims[0].Opens.SettingsPage == claims[1].Opens.SettingsPage {
-		t.Fatalf("personal opens %+v, company opens %+v; want two different settings pages", claims[0].Opens, claims[1].Opens)
+	if claims[0].Opens == nil || claims[1].Opens == nil ||
+		claims[0].Opens.SettingsPage != "account" || claims[1].Opens.SettingsPage != "company" {
+		t.Fatalf("personal opens %+v, company opens %+v; want account and company", claims[0].Opens, claims[1].Opens)
 	}
 }
 
