@@ -31,8 +31,8 @@ type failureReason struct {
 	code     string
 }
 
-// failureReasons is the one table both directions read: sanitizedReason writes
-// the sentence and runReasonCode reads the code back from it.
+// failureReasons is read both ways: sanitizedReason writes the sentence and
+// runReasonCode reads the code back from it.
 var failureReasons = []failureReason{
 	{apperrors.ErrNotFound, "the target record could not be found", RunReasonTargetMissing},
 	{apperrors.ErrPermissionDenied, "the action is no longer permitted", RunReasonNotPermitted},

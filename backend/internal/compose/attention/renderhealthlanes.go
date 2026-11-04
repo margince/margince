@@ -233,6 +233,10 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 		reason := run.Reason
 		item.Detail = &reason
 	}
+	if run.ReasonCode != "" {
+		code := run.ReasonCode
+		item.RunReasonCode = &code
+	}
 	return item
 }
 

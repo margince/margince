@@ -19,7 +19,7 @@ import { unwrap } from "../../lib/problem";
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
-import { RUN_OUTCOME_WORD } from "../../lib/automationrun";
+import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The human surface for the two human-only automation ops
@@ -115,10 +115,14 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
       {run.action_result && (
         <DetailLine label={t("auto.runs.result")} value={run.action_result} />
       )}
-      {run.reason && (
+      {(run.reason_code || run.reason) && (
         <DetailLine
           label={t("auto.runs.reason")}
-          value={run.reason}
+          value={
+            run.reason_code
+              ? runReasonWords(run.reason_code, t)
+              : (run.reason ?? "")
+          }
           color={reasonColor(run.outcome)}
         />
       )}

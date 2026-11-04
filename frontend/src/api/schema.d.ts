@@ -50176,6 +50176,12 @@ export interface components {
             action_result?: string | null;
             /** @description For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail. */
             reason?: string | null;
+            /**
+             * @description For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+             *     target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+             *     not_completed or blocked. A code a client does not know reads as not_completed.
+             */
+            reason_code?: string | null;
             /** @description Link into the audit_log row for this run. */
             audit_id?: string | null;
         };
@@ -53304,6 +53310,12 @@ export interface components {
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            /**
+             * @description On an `automation_run` item: why the firing stopped, in the code set of
+             *     AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+             *     engine's English sentence.
+             */
+            run_reason_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
@@ -54921,6 +54933,12 @@ export interface components {
             domain_reason_code?: string;
             /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
             domain_note?: string;
+            /**
+             * @description On an `automation_run` item: why the firing stopped, in the code set of
+             *     AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+             *     engine's English sentence.
+             */
+            run_reason_code?: string;
             domain_context?: components["schemas"]["DomainQuestionContext"];
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
