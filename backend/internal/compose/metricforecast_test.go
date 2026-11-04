@@ -18,14 +18,14 @@ func TestForecastContributionsKeepWonSupportedAndUpsideDisjoint(t *testing.T) {
 	owner := ids.NewV7().String()
 	contributions := []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InWon: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true, InBestCase: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InBestCase: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InOpen: true},
 	}
 	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureLikely}, &call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_landing": 20000, "forecast_call": 45000}
+	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_period_deals": 10000, "forecast_landing": 20000, "forecast_call": 45000}
 	if len(facts) != len(want) {
 		t.Fatalf("double-counted support: %+v", facts)
 	}

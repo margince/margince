@@ -78,9 +78,9 @@ func setupForecast(t *testing.T) *forecastEnv {
 		Rep1: ids.NewV7(), Rep3: ids.NewV7(), Team1: ids.NewV7(), Team2: ids.NewV7(),
 		stages: map[int]ids.UUID{},
 	}
-	// The installation's identity as settings rows: the forecast's
-	// slipped-category dimension resolves its zone from the SETTING now, and
-	// this env builds its workspace by raw SQL, so bootstrap never seeded them.
+	// The installation's identity as settings rows: the report periods resolve
+	// their zone from the SETTING, and this env builds its workspace by raw
+	// SQL, so bootstrap never seeded them.
 	if _, err := owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Forecast"'::jsonb),
 			('installation.base_currency', '"EUR"'::jsonb),
@@ -141,15 +141,15 @@ func (e *forecastEnv) seedID(t *testing.T, sql string, args ...any) ids.UUID {
 	return id
 }
 
-// seedOpenDeal plants one live open deal; amountMinor/category/owner may
-// be nil (the honest NULL cases every roll-up must survive). The close
+// seedOpenDeal plants one live open deal following its stage; amountMinor and
+// owner may be nil (the honest NULL cases every roll-up must survive). The close
 // date is comfortably future so the §11 hygiene exclusion stays out of
 // these roll-up suites — the exclusion has its own suite.
-func (e *forecastEnv) seedOpenDeal(t *testing.T, name string, probability int, owner *ids.UUID, amountMinor *int64, category *string) ids.UUID {
+func (e *forecastEnv) seedOpenDeal(t *testing.T, name string, probability int, owner *ids.UUID, amountMinor *int64) ids.UUID {
 	t.Helper()
-	return e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, forecast_category, expected_close_date, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6::bigint IS NULL THEN NULL ELSE 'EUR' END, $7, (now() + interval '30 days')::date, 'manual', 'human:x')`,
-		name, e.pipeline, e.stages[probability], owner, amountMinor, category)
+	return e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, expected_close_date, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6::bigint IS NULL THEN NULL ELSE 'EUR' END, (now() + interval '30 days')::date, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[probability], owner, amountMinor)
 }
 
 func (e *forecastEnv) dealReadCtx(userID ids.UUID, teams []ids.UUID, scope principal.RowScope) context.Context {
@@ -252,6 +252,22 @@ func wireInt(t *testing.T, row map[string]any, key string) int64 {
 // weightedMinor mirrors formulas-and-rules §6: round(amount ×
 // probability / 100) per deal, half away from zero — the ground truth
 // the report must reconcile to.
+// probabilityBand is the band the forecast report groups a probability under.
+func probabilityBand(p int64) string {
+	switch {
+	case p == 0:
+		return "zero"
+	case p < 30:
+		return "1_29"
+	case p < 60:
+		return "30_59"
+	case p < 90:
+		return "60_89"
+	default:
+		return "90_plus"
+	}
+}
+
 func weightedMinor(amountMinor, probability int64) int64 {
 	return (amountMinor*probability + 50) / 100
 }
@@ -264,17 +280,16 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 	type constituent struct {
 		amount      *int64
 		probability int64
-		category    *string
 	}
 	constituents := []constituent{
-		{new(int64(100000)), 20, new("commit")},
-		{new(int64(12341)), 60, new("commit")},
-		{nil, 60, new("commit")}, // no amount: counted, sums untouched
-		{new(int64(999)), 55, new("best_case")},
-		{new(int64(54321)), 55, nil}, // no category: the NULL group
+		{new(int64(100000)), 20},
+		{new(int64(12341)), 60},
+		{nil, 60}, // no amount: counted, sums untouched
+		{new(int64(999)), 55},
+		{new(int64(54321)), 55},
 	}
 	for i, c := range constituents {
-		e.seedOpenDeal(t, fmt.Sprintf("Deal %d", i), int(c.probability), nil, c.amount, c.category)
+		e.seedOpenDeal(t, fmt.Sprintf("Deal %d", i), int(c.probability), nil, c.amount)
 	}
 	// Closed and archived deals are not forecast.
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, status, closed_at, source, captured_by)
@@ -284,13 +299,13 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 
 	// Grouped by currency as well, which a native money sum requires — a total
 	// spanning currencies has no unit. Four rows, not three: the amountless
-	// deal carries no currency either, so `commit` splits into its EUR rows and
-	// that one. The categories are what this reconciles, so the currency
+	// deal carries no currency either, so the 60_89 band splits into its EUR
+	// row and that one. The bands are what this reconciles, so the currency
 	// dimension is folded back up below rather than asserted on.
 	result := e.runReport(e.Admin(), t, "forecast",
-		`{"group_by":["forecast_category","currency"]}`)
+		`{"group_by":["win_probability_band","currency"]}`)
 	if len(result.Rows) != 4 {
-		t.Fatalf("rows = %d (%+v), want commit in two currencies, best_case, and the NULL category",
+		t.Fatalf("rows = %d (%+v), want 60_89 in two currencies, 1_29 and 30_59",
 			len(result.Rows), result.Rows)
 	}
 	if result.DerivationURL == "" {
@@ -301,10 +316,7 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 	// the sum over the seeded constituent deals — zero tolerance.
 	wantByCategory := map[string]struct{ deals, unweighted, weighted int64 }{}
 	for _, c := range constituents {
-		key := ""
-		if c.category != nil {
-			key = *c.category
-		}
+		key := probabilityBand(c.probability)
 		want := wantByCategory[key]
 		want.deals++
 		if c.amount != nil {
@@ -313,14 +325,14 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 		}
 		wantByCategory[key] = want
 	}
-	// Folded back to categories before comparing. The currency rows of one
-	// category are that category, and summing them is safe HERE for the reason
+	// Folded back to bands before comparing. The currency rows of one band
+	// are that band, and summing them is safe HERE for the reason
 	// the engine cannot rely on in general: every priced deal seeded is EUR.
 	gotByCategory := map[string]struct{ deals, unweighted, weighted int64 }{}
 	var gotDeals, gotUnweighted, gotWeighted int64
 	for _, row := range result.Rows {
 		key := ""
-		if s, ok := row["forecast_category"].(string); ok {
+		if s, ok := row["win_probability_band"].(string); ok {
 			key = s
 		}
 		if _, known := wantByCategory[key]; !known {
@@ -355,7 +367,7 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 // a deal with two stakeholders counts once in the per-owner grouping.
 func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 	e := setupForecast(t)
-	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, new(int64(50000)), new("commit"))
+	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, new(int64(50000)))
 	for _, role := range []string{"champion", "economic_buyer"} {
 		contactID := e.seedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, "Stakeholder "+role)
 		e.seedID(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
@@ -387,10 +399,10 @@ func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 // to its base inputs, so the lineage bottoms out with no opaque step.
 func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Alpha", 20, &e.Rep1, new(int64(100000)), new("commit"))
-	e.seedOpenDeal(t, "Beta", 60, &e.Rep1, new(int64(12341)), new("best_case"))
-	e.seedOpenDeal(t, "Gamma", 55, &e.Rep1, nil, new("commit"))
-	e.seedOpenDeal(t, "Foreign owner", 60, &e.Rep3, new(int64(999999)), new("commit"))
+	e.seedOpenDeal(t, "Alpha", 20, &e.Rep1, new(int64(100000)))
+	e.seedOpenDeal(t, "Beta", 60, &e.Rep1, new(int64(12341)))
+	e.seedOpenDeal(t, "Gamma", 55, &e.Rep1, nil)
+	e.seedOpenDeal(t, "Foreign owner", 60, &e.Rep3, new(int64(999999)))
 
 	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id","currency"]}`)
 	var row map[string]any
@@ -482,9 +494,9 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 // explained from.
 func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, new(int64(10000)), new("commit"))
-	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, new(int64(20000)), new("commit"))
-	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, new(int64(40000)), new("commit"))
+	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, new(int64(10000)))
+	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, new(int64(20000)))
+	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, new(int64(40000)))
 
 	rep := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(rep, t, "forecast", `{"group_by":["owner_id","currency"]}`)
@@ -522,12 +534,6 @@ func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T)
 	}
 }
 
-// forecastStatus runs the forecast and reports only the status code, for the
-// cases where the interesting outcome is a refusal rather than a result.
-func (e *forecastEnv) forecastStatus(ctx context.Context, body string) int {
-	return e.reportStatus(ctx, "forecast", body)
-}
-
 // reportStatus runs a plan against any report key and yields only the status,
 // for the refusals whose whole assertion is which status a caller gets.
 func (e *forecastEnv) reportStatus(ctx context.Context, report, body string) int {
@@ -535,40 +541,6 @@ func (e *forecastEnv) reportStatus(ctx context.Context, report, body string) int
 	rec := httptest.NewRecorder()
 	e.handlers.RunReport(rec, req, report)
 	return rec.Code
-}
-
-// The forecast's "today" comes from the installation SETTING's zone.
-//
-// It asserts a FLIP rather than a message. Asserting on a date would be
-// flaky — any two real zones agree about the date for part of every day, so
-// the outcome would turn on the hour the suite ran. And the zone never reaches
-// the response body: an unresolvable zone is a Postgres fault, which httperr
-// masks to an opaque 500 exactly as it should. So the fixture holds everything
-// constant and moves only the setting: the same report that answered 200
-// stops answering once the SETTING names a zone Postgres cannot resolve, which
-// is the proof that the zone is consulted at all.
-func TestTheForecastBucketsInTheZoneTheSettingNames(t *testing.T) {
-	e := setupForecast(t)
-	// A commit deal WITH a close date, because the zone sits inside a CASE
-	// that Postgres evaluates per row: over an empty result the expression is
-	// never reached, and the fixture would report success in both directions
-	// without ever consulting a zone at all.
-	commit := "commit"
-	amount := int64(100000)
-	e.seedOpenDeal(t, "Zoned", 60, nil, &amount, &commit)
-	body := `{"group_by":["forecast_category","currency"]}`
-	if got := e.forecastStatus(e.Admin(), body); got != http.StatusOK {
-		t.Fatalf("the control run answered %d, want 200 — the fixture is broken before the setting moves", got)
-	}
-
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.forecastStatus(e.Admin(), body); got == http.StatusOK {
-		t.Error("the forecast still answered 200 with an unresolvable zone in the setting; " +
-			"the slipped-category dimension never consulted it")
-	}
 }
 
 // What is a partner bringing us THIS quarter — the pipeline question, asked of
@@ -683,16 +655,16 @@ func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
 	e := setupForecast(t)
 	mine := int64(100_000)
 	theirs := int64(250_000)
-	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, &mine, new("commit"))
-	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, &theirs, new("commit"))
+	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, &mine)
+	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, &theirs)
 
 	rep := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn))
 	result := e.runReport(rep, t, "forecast",
-		`{"group_by":["forecast_category","currency"],`+
+		`{"group_by":["win_probability_band","currency"],`+
 			`"aggregates":[{"fn":"count","as":"deals"},`+
 			`{"fn":"sum","field":"amount_minor","as":"unweighted_minor"}]}`)
 	if len(result.Rows) != 1 {
-		t.Fatalf("rows = %d, want the rep's one commit group: %+v", len(result.Rows), result.Rows)
+		t.Fatalf("rows = %d, want the rep's one 60_89 group: %+v", len(result.Rows), result.Rows)
 	}
 	row := result.Rows[0]
 	if got := wireInt(t, row, "deals"); got != 1 {
@@ -723,7 +695,7 @@ func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
 // Summing money in each row's own currency across a grouping that does not
 // split by currency is REFUSED.
 //
-// Two open deals — 2,500,000 EUR and 1,000,000 USD — grouped by category
+// Two open deals — 2,500,000 EUR and 1,000,000 USD — grouped by band
 // alone answered 3,500,000: euros added to dollars and returned as a plain
 // integer, where the honest converted total is 3,420,000 EUR. The default
 // plans append currency, so the invariant was held by a default rather than by
@@ -733,11 +705,11 @@ func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
 	e := setupForecast(t)
 	eur := int64(2_500_000)
 	usd := int64(1_000_000)
-	e.seedOpenDeal(t, "Home", 20, &e.Rep1, &eur, nil)
-	e.seedOpenDeal(t, "Abroad", 20, &e.Rep1, &usd, nil)
+	e.seedOpenDeal(t, "Home", 20, &e.Rep1, &eur)
+	e.seedOpenDeal(t, "Abroad", 20, &e.Rep1, &usd)
 
 	status, body := e.runReportStatus(e.Admin(), t, "forecast",
-		`{"group_by":["forecast_category"],`+
+		`{"group_by":["win_probability_band"],`+
 			`"aggregates":[{"fn":"sum","field":"amount_minor","as":"bad"}]}`)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("summing amount_minor without a currency grouping answered %d, want 422 — "+
@@ -752,7 +724,7 @@ func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
 	// combination rather than the measure — a report that could no longer
 	// report its own money would be a worse fix than the defect.
 	ok, _ := e.runReportStatus(e.Admin(), t, "forecast",
-		`{"group_by":["forecast_category","currency"],`+
+		`{"group_by":["win_probability_band","currency"],`+
 			`"aggregates":[{"fn":"sum","field":"amount_minor","as":"native"}]}`)
 	if ok != http.StatusOK {
 		t.Errorf("the same sum grouped by currency answered %d, want 200", ok)
@@ -764,7 +736,7 @@ func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
 	// the values. Refusing it would have made "how many deals are priced"
 	// unanswerable without a grouping the question does not need.
 	counted, _ := e.runReportStatus(e.Admin(), t, "forecast",
-		`{"group_by":["forecast_category"],`+
+		`{"group_by":["win_probability_band"],`+
 			`"aggregates":[{"fn":"count","field":"amount_minor","as":"priced"}]}`)
 	if counted != http.StatusOK {
 		t.Errorf("counting amount_minor without a currency grouping answered %d, want 200 — "+

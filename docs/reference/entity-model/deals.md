@@ -72,7 +72,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-46 columns · primary key `(id)` · referenced by 29 foreign keys
+48 columns · primary key `(id)` · referenced by 29 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -81,7 +81,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `amount_minor` | `bigint` |  |  |
 | `amount_minor_base` | `bigint` |  |  |
 | `arr_source_offer_id` | `uuid` |  | The accepted offer `expected_arr_minor` came from, or null where a human set the figure. |
-| `close_date_provisional` | `boolean`, default `false` | yes | True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. |
+| `close_date_provisional` | `boolean`, default `false` | yes | True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. |
 | `closed_at` | `timestamp with time zone` |  |  |
 | `commercial_motion` | `text` |  | Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). |
 | `company_id` | `uuid` |  | Primary company; never a raw lead. |
@@ -111,6 +111,8 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `stage_id` | `uuid` | yes | The deal's current stage; must belong to pipeline_id. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `won`, `lost`. |
 | `wait_until` | `date` |  | 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag. |
+| `win_probability_override` | `smallint` |  |  |
+| `win_probability_set_by` | `text` |  | One of `human`, `margince`. |
 | `won_without_contract_detail` | `text` |  | Required when the reason is `other`, which explains nothing on its own. |
 | `won_without_contract_reason` | `text` |  | Why this deal was won with no contract behind it. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -162,6 +164,9 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `deal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
 - `deal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `deal_win_probability_override_range`: `CHECK (((win_probability_override IS NULL) OR ((win_probability_override >= 0) AND (win_probability_override <= 100))))`
+- `deal_win_probability_pairing`: `CHECK (((win_probability_override IS NULL) = (win_probability_set_by IS NULL)))`
+- `deal_win_probability_set_by_known`: `CHECK (((win_probability_set_by IS NULL) OR (win_probability_set_by = ANY (ARRAY['human', 'margince']))))`
 - `deal_won_without_contract_detail`: `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
 - `deal_won_without_contract_only_when_won`: `CHECK (((won_without_contract_reason IS NULL) OR (status = 'won')))`
 - `deal_won_without_contract_reason`: `CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported', 'purchase_order', 'verbal', 'renewal_by_email', 'other']))))`

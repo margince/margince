@@ -176,7 +176,7 @@ func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
-		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount)
 	}
 	e.addMembers(t, e.Team2, "third@forecast.test")
 	byOwner := analyticsquery.Query{

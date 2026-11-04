@@ -134,7 +134,7 @@ func TestACallIsIgnoredUnderTheOtherTwoMeasures(t *testing.T) {
 // reported a week as a quarter one file over.
 func TestAnUnknownForwardMeasureIsRefused(t *testing.T) {
 	t.Parallel()
-	if _, err := ProjectLanding(measured(1, 1, 1), ForwardMeasure("best_case"), nil); err == nil {
+	if _, err := ProjectLanding(measured(1, 1, 1), ForwardMeasure("best_guess"), nil); err == nil {
 		t.Fatal("an unrecognised measure produced a landing, which is some other measure's number")
 	}
 }

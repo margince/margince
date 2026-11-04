@@ -25,7 +25,7 @@ var ForecastLikelyThreshold = config.DefineStored(config.Spec[int]{
 		}
 		return nil
 	},
-	Doc: "The win probability, in percent, from which an open deal with a confirmed close date counts in the Likely forecast.",
+	Doc: "The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date.",
 }, config.Store{
 	RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true,
 	MachineryApplied: true, // every forecast reader applies it, whatever their grants

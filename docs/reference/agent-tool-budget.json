@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32174,
-    "median_tool_tokens": 611,
-    "mean_tool_tokens": 714
+    "tokens": 32137,
+    "median_tool_tokens": 593,
+    "mean_tool_tokens": 713
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 45,
-      "tokens": 4300,
-      "listing_tokens": 2126,
-      "step_schema_tokens": 1582,
+      "tokens": 4317,
+      "listing_tokens": 2133,
+      "step_schema_tokens": 1591,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18910,
+      "headroom_tokens": 18893,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 45,
-      "tokens": 6404,
+      "tokens": 6400,
       "listing_tokens": 3365,
-      "step_schema_tokens": 2446,
+      "step_schema_tokens": 2442,
       "percent_of_ceiling": 19,
-      "headroom_tokens": 16806,
+      "headroom_tokens": 16810,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,15 +85,15 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2310
+      "tokens": 2311
     },
     {
       "name": "find_records",
-      "tokens": 1863
+      "tokens": 1873
     },
     {
       "name": "change_activities",
-      "tokens": 1856
+      "tokens": 1840
     },
     {
       "name": "change_state",
@@ -109,7 +109,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1309
+      "tokens": 1314
     },
     {
       "name": "read_view",
@@ -132,12 +132,12 @@
       "tokens": 798
     },
     {
-      "name": "create_record",
-      "tokens": 794
-    },
-    {
       "name": "change_attention",
       "tokens": 781
+    },
+    {
+      "name": "create_record",
+      "tokens": 776
     },
     {
       "name": "read_lists",
@@ -173,7 +173,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 611
+      "tokens": 593
     },
     {
       "name": "change_tags",

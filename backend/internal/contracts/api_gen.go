@@ -53676,6 +53676,9 @@ type ProgressDealResult struct {
 
 	// NoteActivityId The note logged on the deal, absent when the call carried none.
 	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+
+	// ProbabilityNote The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
+	ProbabilityNote *string `json:"probability_note,omitempty"`
 }
 
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.

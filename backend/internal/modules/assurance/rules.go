@@ -25,8 +25,11 @@ type Subject struct {
 	// The close date the deal carries, and whether anybody confirmed it.
 	ExpectedClose    *time.Time
 	CloseProvisional bool
-	Category         string
-	StageName        string
+	// WinProbability is the deal's effective probability, and Likely whether
+	// it reaches the installation's Likely threshold.
+	WinProbability int
+	Likely         bool
+	StageName      string
 	// StageID is the deal's stage, and StageEnteredAt when it last entered it,
 	// or its creation when it never moved.
 	StageID        string
@@ -121,16 +124,9 @@ func DealAmountTypes() []string {
 	return []string{TypeAmountVsOffer, TypeAmountVsContract}
 }
 
-// The forecast categories a rule asks about. Named because a category spelled
-// four times can come to be spelled four ways, and a rule comparing against the
-// wrong spelling is quietly never true.
-const (
-	categoryCommit   = "commit"
-	categoryBestCase = "best_case"
-)
-
-// slotCategory is the claim key naming which category a finding is about.
-const slotCategory = "category"
+// slotWinProbability is the claim key naming the probability a finding is
+// about.
+const slotWinProbability = "win_probability"
 
 // Severities, ordered by how much a reader should drop to look.
 const (
@@ -215,17 +211,17 @@ func closePast() Rule {
 	}}
 }
 
-// A committed deal whose date nobody confirmed. It is in the forecast on a
+// A Likely deal whose date nobody confirmed. It is in the forecast on a
 // guess, which is exactly what the evidence reading excludes and what a manager
 // asking "are we sure" is asking about.
 func closeUnconfirmed() Rule {
-	return Rule{Type: TypeCloseUnconfirmed, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || !s.CloseProvisional {
+	return Rule{Type: TypeCloseUnconfirmed, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || !s.CloseProvisional {
 			return nil
 		}
 		return &Finding{
 			Type: TypeCloseUnconfirmed, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"close_provisional": true},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
@@ -295,12 +291,12 @@ func amountDisagreement(kind string, s Subject, against *int64, slot string, cfg
 	}
 }
 
-// A deal in the forecast with nobody's next move written down. Not a
+// A Likely deal with nobody's next move written down. Not a
 // bookkeeping complaint: a deal nobody can say the next step for is usually a
 // deal that has stopped moving.
 func noNextStep() Rule {
-	return Rule{Type: TypeNoNextStep, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit && s.Category != categoryBestCase {
+	return Rule{Type: TypeNoNextStep, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely {
 			return nil
 		}
 		if s.HasNextStep {
@@ -308,23 +304,23 @@ func noNextStep() Rule {
 		}
 		return &Finding{
 			Type: TypeNoNextStep, SubjectID: s.DealID, Severity: SeverityLow,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"has_next_step": false},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
 }
 
-// A committed deal with nobody identified who can sign. Late-stage deals
+// A Likely deal with nobody identified who can sign. Late-stage deals
 // without an economic buyer are where forecasts go to die.
 func noEconomicBuyer() Rule {
-	return Rule{Type: TypeNoEconomicBuyer, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || s.HasEconomicBuyer {
+	return Rule{Type: TypeNoEconomicBuyer, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || s.HasEconomicBuyer {
 			return nil
 		}
 		return &Finding{
 			Type: TypeNoEconomicBuyer, SubjectID: s.DealID, Severity: SeverityHigh,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"economic_buyer": false},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
@@ -360,17 +356,17 @@ func dealViability() Rule {
 	}
 }
 
-// A committed deal with no price on it. It is counted as eligible pipeline and
-// contributes nothing to the money, which is honest — and a commit nobody has
-// priced is worth asking about.
+// A Likely deal with no price on it. It is counted as eligible pipeline and
+// contributes nothing to the money, which is honest — and a deal rated that
+// high that nobody has priced is worth asking about.
 func commitUnpriced() Rule {
-	return Rule{Type: TypeCommitUnpriced, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || s.AmountMinor != nil {
+	return Rule{Type: TypeCommitUnpriced, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || s.AmountMinor != nil {
 			return nil
 		}
 		return &Finding{
 			Type: TypeCommitUnpriced, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:    map[string]any{slotCategory: s.Category},
+			Claim:    map[string]any{slotWinProbability: s.WinProbability},
 			Observed: map[string]any{"amount_minor": nil},
 		}
 	}}
@@ -393,7 +389,7 @@ func day(at time.Time) time.Time {
 
 // A deal in a stage whose own exit criteria are not met.
 //
-// Asked of every category, unlike the forecast rules. The stage is what
+// Asked of every deal, unlike the Likely rules. The stage is what
 // declares the bar: a criterion exists only where an installation wrote one,
 // so a stage nobody configured produces no finding.
 //

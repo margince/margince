@@ -3867,6 +3867,9 @@ public.deal.deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
 public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
 public.deal.deal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.deal.deal_win_probability_override_range CHECK (((win_probability_override IS NULL) OR ((win_probability_override >= 0) AND (win_probability_override <= 100))))
+public.deal.deal_win_probability_pairing CHECK (((win_probability_override IS NULL) = (win_probability_set_by IS NULL)))
+public.deal.deal_win_probability_set_by_known CHECK (((win_probability_set_by IS NULL) OR (win_probability_set_by = ANY (ARRAY['human'::text, 'margince'::text]))))
 public.deal.deal_won_without_contract_detail CHECK (((won_without_contract_reason IS DISTINCT FROM 'other'::text) OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''::text))))
 public.deal.deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text)))
 public.deal.deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
@@ -3912,6 +3915,8 @@ public.deal.trg_deal_updated CREATE TRIGGER trg_deal_updated BEFORE UPDATE ON pu
 public.deal.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.version bigint NOT NULL gen=- def=1
 public.deal.wait_until date gen=- def=-
+public.deal.win_probability_override smallint gen=- def=-
+public.deal.win_probability_set_by text gen=- def=-
 public.deal.won_without_contract_detail text gen=- def=-
 public.deal.won_without_contract_reason text gen=- def=-
 public.deal_acquisition_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4788,6 +4793,7 @@ public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK 
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
+public.forecast_contribution.forecast_contribution_probability_source_known CHECK (((probability_source IS NULL) OR (probability_source = ANY (ARRAY['stage'::text, 'human'::text, 'margince'::text]))))
 public.forecast_contribution.forecast_contribution_qualification_check CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible'::text, 'excluded'::text, 'unsupported'::text, 'unknown'::text]))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
@@ -4809,6 +4815,7 @@ public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
+public.forecast_contribution.probability_source text gen=- def=-
 public.forecast_contribution.qualification text gen=- def=-
 public.forecast_contribution.qualification_complete boolean gen=- def=-
 public.forecast_contribution.qualified_policy_version text gen=- def=-
@@ -4834,7 +4841,7 @@ END
 public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
 public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_snapshot.base_currency currency_code NOT NULL gen=- def=-
-public.forecast_snapshot.best_case_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.best_case_minor bigint gen=- def=-
 public.forecast_snapshot.call_id uuid gen=- def=-
 public.forecast_snapshot.captured_by text NOT NULL gen=- def=-
 public.forecast_snapshot.confirmed_date_count integer NOT NULL gen=- def=-
@@ -4847,11 +4854,12 @@ public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
-public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
+public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_is_frozen CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()
 public.forecast_snapshot.forecast_snapshot_landing_call_is_the_landing CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'::text))))
 public.forecast_snapshot.forecast_snapshot_landing_call_minor_js_safe CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))
-public.forecast_snapshot.forecast_snapshot_landing_measure_known CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
+public.forecast_snapshot.forecast_snapshot_landing_measure_known CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
+public.forecast_snapshot.forecast_snapshot_likely_threshold_range CHECK (((likely_threshold IS NULL) OR ((likely_threshold >= 1) AND (likely_threshold <= 100))))
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
@@ -4878,6 +4886,7 @@ public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_snapshot.input_fingerprint text gen=- def=-
 public.forecast_snapshot.landing_call_minor bigint gen=- def=-
 public.forecast_snapshot.landing_measure text gen=- def=-
+public.forecast_snapshot.likely_threshold smallint gen=- def=-
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
 public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.period_end date NOT NULL gen=- def=-
@@ -8509,7 +8518,7 @@ public.team_weekly_review_outlook.team_weekly_review_outlook_best_case_minor_js_
 public.team_weekly_review_outlook.team_weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))
-public.team_weekly_review_outlook.team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
+public.team_weekly_review_outlook.team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))
@@ -9467,7 +9476,7 @@ public.weekly_review_outlook.weekly_review_outlook_best_case_minor_js_safe CHECK
 public.weekly_review_outlook.weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))
-public.weekly_review_outlook.weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
+public.weekly_review_outlook.weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text]))))
 public.weekly_review_outlook.weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
 public.weekly_review_outlook.weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))

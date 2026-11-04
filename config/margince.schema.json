@@ -1302,7 +1302,7 @@
           "default": "likely"
         },
         "forecast_likely_threshold": {
-          "description": "The win probability, in percent, from which an open deal with a confirmed close date counts in the Likely forecast.",
+          "description": "The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date.",
           "type": [
             "integer",
             "null"

@@ -194,7 +194,7 @@ const (
 	SourceMargince ProbabilitySource = "margince"
 )
 
-// ProbabilitySources is every source, in the order a reader is shown them.
+// ProbabilitySources lists the sources in the order a reader is shown them.
 func ProbabilitySources() []ProbabilitySource {
 	return []ProbabilitySource{SourceStage, SourceHuman, SourceMargince}
 }

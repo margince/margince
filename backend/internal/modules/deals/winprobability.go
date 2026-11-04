@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // Source names where a deal's win probability comes from.
@@ -35,9 +36,7 @@ const (
 // EffectiveWinProbability is the same rule for a caller holding both halves;
 // winprobability_integration_test.go holds the two equal.
 func WinProbabilitySQL(alias string) string {
-	deal := dealRef(alias)
-	return fmt.Sprintf("COALESCE(%[1]s.win_probability_override, "+
-		"(SELECT wp_stage.win_probability FROM stage wp_stage WHERE wp_stage.id = %[1]s.stage_id))", deal)
+	return winprobability.SQL(dealRef(alias))
 }
 
 // WinProbabilitySourceSQL is where WinProbabilitySQL's value comes from.
@@ -67,9 +66,9 @@ func EffectiveWinProbability(override *int, setBy *string, stage int) (int, Sour
 	return *override, Source(*setBy)
 }
 
-// setWinProbability is the one writer of a deal's own probability: the
-// human edit, the stage move (nil, back to the stage) and the close-date
-// sweep. It writes nothing when the value and source already hold, so a
+// setWinProbability writes a deal's own probability for the human edit, the
+// stage move (nil, back to the stage) and the close-date sweep. It writes
+// nothing when the value and source already hold, so a
 // repeated write leaves no audit row behind.
 func setWinProbability(p *storekit.Patch, current *int, currentSource *string, override *int, setBy Source) {
 	var nextSource *string
@@ -104,9 +103,11 @@ func sameString(a, b *string) bool {
 }
 
 // AdvancedDeal is a deal after a stage move, with the probability the move
-// set. Probability is nil when the move changed no stage.
+// set. Probability is nil when the move changed no stage. The deal is
+// embedded, so a caller reads its fields as on any deal read; Wire is how it
+// reaches the contract, since Deal's own JSON would drop Probability.
 type AdvancedDeal struct {
-	Deal        crmcontracts.Deal
+	crmcontracts.Deal
 	Probability *ProbabilitySet
 }
 

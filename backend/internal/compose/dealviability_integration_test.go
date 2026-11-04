@@ -91,7 +91,7 @@ func (v *viabilityEnv) commitDeal(
 ) ids.UUID {
 	t.Helper()
 	owner := ids.From[ids.UserKind](v.Rep1)
-	currency, commit := "EUR", "commit"
+	currency := "EUR"
 	created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
 		Name: name, PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &v.closeDate,
@@ -101,7 +101,7 @@ func (v *viabilityEnv) commitDeal(
 	}
 	deal := ids.UUID(created.Id)
 	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{
-		ForecastCategory: &commit,
+		WinProbability: new(95),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func (v *viabilityEnv) forecast(t *testing.T) forecasting.Readings {
 		if err != nil {
 			return err
 		}
-		out, err = forecasting.Compute(period, period.LocalDay(v.now), dealsIn)
+		out, err = forecasting.Compute(period, dealsIn, forecasting.Rules{LikelyThreshold: 90})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the forecast: %v", err)
@@ -303,15 +303,15 @@ func TestCloseDateSweepLowersNoCategoryWhileTheQualifiedForecastIsEnforced(t *te
 	if err := config.Save(e.Admin(), StoredConfig(e.Pool), assurance.QualifiedForecastEnforced, true); err != nil {
 		t.Fatal(err)
 	}
-	id := e.seedSweepDeal(t, "Gone quiet under enforcement", e.late, new("commit"), new(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet under enforcement", e.late, new(95), new(30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		t.Errorf("forecast_category = %v, want commit kept while the review decides what counts", swept.forecastCat)
+	if swept.probability == nil || *swept.probability != 95 {
+		t.Errorf("probability = %v, want 95 kept while the review decides what counts", swept.probability)
 	}
 	if want := today().AddDate(0, 0, 30); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
 		t.Errorf("date = %v, want retained %s", swept.expectedClose, want)

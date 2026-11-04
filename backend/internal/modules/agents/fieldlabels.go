@@ -61,7 +61,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "Expected ARR",
 		"expected_close_date":      "Expected close",
 		"first_name":               "First name",
-		"forecast_category":        "Forecast category",
 		"full_name":                "Name",
 		"fx_rate_date":             "FX rate date",
 		"fx_rate_to_base":          "FX rate",
@@ -116,6 +115,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Valid until",
 		"visibility":               "Visibility",
 		"wait_until":               "Waiting until",
+		"win_probability":          "Win probability",
 	},
 	textlang.German: {
 		"acquisition_source":       "Akquisitionsquelle",
@@ -153,7 +153,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "Erwarteter ARR",
 		"expected_close_date":      "Voraussichtlicher Abschluss",
 		"first_name":               "Vorname",
-		"forecast_category":        "Prognosekategorie",
 		"full_name":                "Name",
 		"fx_rate_date":             "Datum des Wechselkurses",
 		"fx_rate_to_base":          "Wechselkurs",
@@ -208,6 +207,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Gültig bis",
 		"visibility":               "Sichtbarkeit",
 		"wait_until":               "Wartet bis",
+		"win_probability":          "Abschlusswahrscheinlichkeit",
 	},
 	textlang.Vietnamese: {
 		"acquisition_source":       "Nguồn tiếp cận",
@@ -245,7 +245,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "ARR dự kiến",
 		"expected_close_date":      "Ngày chốt dự kiến",
 		"first_name":               "Tên",
-		"forecast_category":        "Danh mục dự báo",
 		"full_name":                "Tên",
 		"fx_rate_date":             "Ngày tỷ giá",
 		"fx_rate_to_base":          "Tỷ giá",
@@ -300,6 +299,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Có hiệu lực đến",
 		"visibility":               "Phạm vi hiển thị",
 		"wait_until":               "Chờ đến",
+		"win_probability":          "Xác suất thắng",
 	},
 }
 

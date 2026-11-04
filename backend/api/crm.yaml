@@ -49440,6 +49440,9 @@ components:
           type: string
           format: uuid
           description: The note logged on the deal, absent when the call carried none.
+        probability_note:
+          type: string
+          description: The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
     QualifyLeadRequest:
       type: object
       description: What `qualify_lead` takes besides the lead, which the path names.
