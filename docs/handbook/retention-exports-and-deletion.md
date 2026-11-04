@@ -64,6 +64,8 @@ Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
+
+Team lead, Management, Ops and Admin may archive a contact, company or deal. So may its owner, if they created it or were given it.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?

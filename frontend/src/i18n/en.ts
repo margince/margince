@@ -115,6 +115,7 @@ export const en = {
   "users.clearSearch": "Clear search",
   "users.resultCount": "{matching} of {total} members",
   "users.noSearchResults": "No members match this search.",
+  "teams.searchMembers": "Search team members",
   "users.edit": "Edit member",
   "users.editTitle": "Edit {name}",
   "users.saved": "Member saved.",
@@ -6013,6 +6014,10 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
+  "contact.archiveRefused":
+    "Only the contact’s owner or a manager can archive this contact.",
+  "company.archiveRefused":
+    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
@@ -12458,6 +12463,18 @@ export const en = {
   "auto.runs.outcomeBlocked": "Blocked",
   "auto.runs.outcomeSkipped": "Skipped",
   "auto.runs.outcomeQueued": "Queued for approval",
+  "auto.runs.reasonCode.target_missing":
+    "the record it acts on no longer exists",
+  "auto.runs.reasonCode.not_permitted": "its owner may no longer do this",
+  "auto.runs.reasonCode.conflict":
+    "the record was in a state that did not allow it",
+  "auto.runs.reasonCode.record_changed":
+    "the record changed before the rule could act",
+  "auto.runs.reasonCode.no_consent": "the contact has not agreed to this",
+  "auto.runs.reasonCode.budget_exhausted": "the budget for this has run out",
+  "auto.runs.reasonCode.not_completed": "something went wrong while it ran",
+  "auto.runs.reasonCode.blocked":
+    "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
 
   "auto.preview.open": "Preview",
@@ -18199,7 +18216,48 @@ export const en = {
   "worklist.handled.closeLostUndone":
     "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
   "worklist.handled.verdictUndone":
-    "Undone. Margince will not change this again until something new happens on this deal.",
+    "Undone. Margince will not change the {field} again until something new happens on this deal.",
+  "changes.field.closeDate": "close date",
+  "changes.field.amount": "amount",
+  "changes.field.probability": "probability",
+  "changes.field.status": "status",
+  "changes.fieldJoin": "{first} and {second}",
+  "changes.kind.close_lost": "Closed as lost",
+  "changes.kind.deal_close_date": "New close date",
+  "changes.kind.deal_amount": "New amount",
+  "changes.kind.deal_probability": "New probability",
+  "changes.summary_one": "Margince updated {count} of your deals: {parts}",
+  "changes.summary_other": "Margince updated {count} of your deals: {parts}",
+  "changes.part.closed_one": "{count} closed",
+  "changes.part.closed_other": "{count} closed",
+  "changes.part.redated_one": "{count} re-dated",
+  "changes.part.redated_other": "{count} re-dated",
+  "changes.part.revalued_one": "{count} re-valued",
+  "changes.part.revalued_other": "{count} re-valued",
+  "changes.part.probabilities_one": "{count} probability",
+  "changes.part.probabilities_other": "{count} probabilities",
+  "changes.viewAll": "View all",
+  "changes.undoAll": "Undo all",
+  "changes.undoAllDone_one": "Undone on {count} deal.",
+  "changes.undoAllDone_other": "Undone on {count} deals.",
+  "changes.undoAllPartly":
+    "Undone on {undone} deals. {kept} kept a change that was edited since Margince made it.",
+  "changes.partly":
+    "Undone, except the {field}, which was changed since Margince set it.",
+  "changes.refused":
+    "Not undone. The deal changed since you opened this page. Reload and try again.",
+  "changes.alreadyAccepted": "You already accepted this change, so it stays.",
+  "changes.deal.title": "Changes by Margince",
+  "changes.deal.loading": "Loading changes…",
+  "changes.team.title": "Changes by Margince on your team",
+  "changes.team.empty": "Margince changed no deals on your team this week.",
+  "changes.team.loading": "Loading team changes…",
+  "changes.team.owner": "Owner",
+  "changes.team.kind": "Change",
+  "changes.team.deals": "Deals",
+  "changes.team.value": "Value",
+  "changes.team.undone": "Undone",
+  "changes.team.truncated": "List truncated. More changes exist.",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
@@ -19203,7 +19261,8 @@ export const en = {
   "magic.action.send_email": "A message was sent",
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
-  "magic.action.automation_troubled": "{name} is in trouble: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} could not finish ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
@@ -19838,7 +19897,8 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
-  "aiTask.name.deal_verdict": "Checking the dates, amount and chances of a deal",
+  "aiTask.name.deal_verdict":
+    "Checking the dates, amount and chances of a deal",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",

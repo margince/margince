@@ -16,6 +16,7 @@
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { changeFieldKey } from "../lib/changecopy";
 import type { Receipt } from "../lib/handled";
 import { useReceiptUndo } from "../lib/receiptundo";
 
@@ -33,11 +34,13 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (receiptUndo.undone && receipt.kind === "deal_close_lost") {
     return <span role="status">{t("worklist.handled.closeLostUndone")}</span>;
   }
-  if (
-    receiptUndo.undone &&
-    (receipt.kind === "deal_amount" || receipt.kind === "deal_probability")
-  ) {
-    return <span role="status">{t("worklist.handled.verdictUndone")}</span>;
+  const field = changeFieldKey(receipt.kind);
+  if (receiptUndo.undone && field) {
+    return (
+      <span role="status">
+        {t("worklist.handled.verdictUndone", { field: t(field) })}
+      </span>
+    );
   }
   if (undo.reversed || receiptUndo.undone) {
     return <span>{t("worklist.handled.putBackDone")}</span>;

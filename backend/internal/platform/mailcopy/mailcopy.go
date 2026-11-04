@@ -359,6 +359,11 @@ type Copy struct {
 	// heading over an empty list reads as a message that failed to render.
 	MorningQuiet   string
 	MorningOpenDay string
+	// MorningChanges heads the deals Margince changed overnight ("%d" deals);
+	// the four kinds label each deal's line.
+	MorningChanges, MorningChangesUndo                                 string
+	MorningChangeClosed, MorningChangeRedated                          string
+	MorningChangeRevalued, MorningChangeProbability, MorningChangeMore string
 
 	// The one notice that leaves the product: a decision waiting on a
 	// colleague, mailed because they asked for that class by mail.
