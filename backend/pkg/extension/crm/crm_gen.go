@@ -1743,7 +1743,7 @@ type Activity struct {
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
 	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
-	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
+	GuestsLeftOut *int `json:"guests_left_out,omitempty" minimum:"0"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
@@ -1807,7 +1807,7 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
@@ -2058,7 +2058,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
-	ContactCount *int      `json:"contact_count,omitempty"`
+	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
 	// CreatedBy Who created the company, from its earliest create audit row, read the way
@@ -2116,7 +2116,7 @@ type Company struct {
 	MergedIntoId *string `json:"merged_into_id,omitempty"`
 
 	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
-	OpenDealCount *int    `json:"open_deal_count,omitempty"`
+	OpenDealCount *int    `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *string `json:"owner_id,omitempty"`
 
 	// ParentCompanyId Single-level hierarchy FK; no cycles.
@@ -2148,7 +2148,7 @@ type Company struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
@@ -2432,7 +2432,7 @@ type Deal struct {
 	StageId *string `json:"stage_id"`
 
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
-	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
@@ -2444,13 +2444,13 @@ type Deal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *string `json:"wait_until,omitempty"`
 
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
-	WinProbability *int `json:"win_probability,omitempty"`
+	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
@@ -2739,10 +2739,10 @@ type Partner struct {
 	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
 
 	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty"`
+	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
+	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -2775,7 +2775,7 @@ type Partner struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
@@ -2866,14 +2866,14 @@ type RelationshipStrength struct {
 
 	// Factors The 0..1 sub-scores the composite was built from (the explanation).
 	Factors struct {
-		Direction   float32 `json:"direction"`
-		Frequency   float32 `json:"frequency"`
-		Recency     float32 `json:"recency"`
-		Reciprocity float32 `json:"reciprocity"`
+		Direction   float32 `json:"direction" maximum:"1" minimum:"0"`
+		Frequency   float32 `json:"frequency" maximum:"1" minimum:"0"`
+		Recency     float32 `json:"recency" maximum:"1" minimum:"0"`
+		Reciprocity float32 `json:"reciprocity" maximum:"1" minimum:"0"`
 	} `json:"factors"`
 
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
-	Inbound90d *int `json:"inbound_90d,omitempty"`
+	Inbound90d *int `json:"inbound_90d,omitempty" minimum:"0"`
 
 	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
 	LastEngaged *time.Time `json:"last_engaged,omitempty"`
@@ -2882,10 +2882,10 @@ type RelationshipStrength struct {
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`
 
 	// Outbound90d Count of qualifying outbound interactions in the trailing 90-day window.
-	Outbound90d *int `json:"outbound_90d,omitempty"`
+	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
 
 	// Score 0..100 composite.
-	Score int `json:"score"`
+	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
 // RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
@@ -2954,7 +2954,7 @@ type Signal struct {
 	// says how it stands now. Every append is kept, and an audit reader
 	// is where the earlier ones belong.
 	Resolution           *SignalResolution `json:"resolution,omitempty"`
-	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -2982,7 +2982,7 @@ type Signal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
@@ -3091,10 +3091,10 @@ type SourceAuthor struct {
 // SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
 	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
-	Cut    *int   `json:"cut,omitempty"`
-	End    int    `json:"end"`
+	Cut    *int   `json:"cut,omitempty" minimum:"0"`
+	End    int    `json:"end" minimum:"1"`
 	Sha256 string `json:"sha256"`
-	Start  int    `json:"start"`
+	Start  int    `json:"start" minimum:"0"`
 }
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.

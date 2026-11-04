@@ -1524,7 +1524,7 @@ type PublicEventConsentSuppressionLifted struct {
 	RecordedAtLevel string `json:"recorded_at_level"`
 
 	// RemainingSuppressions How many stops are still live for this contact after the lift, counted inside the same transaction that did the lifting.
-	RemainingSuppressions *int `json:"remaining_suppressions,omitempty"`
+	RemainingSuppressions *int `json:"remaining_suppressions,omitempty" minimum:"0"`
 
 	// StillSuppressed Whether this contact is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
 	StillSuppressed *bool `json:"still_suppressed,omitempty"`
@@ -2736,7 +2736,7 @@ type PublicEventUserMfaRemoved struct {
 	By openapi_types.UUID `json:"by"`
 
 	// SessionsEnded How many live sessions of the member the removal ended.
-	SessionsEnded int `json:"sessions_ended"`
+	SessionsEnded int `json:"sessions_ended" minimum:"0"`
 
 	// UserId The member whose second factor was removed.
 	UserId openapi_types.UUID `json:"user_id"`

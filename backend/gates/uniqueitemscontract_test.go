@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package gates
 
 import (
@@ -27,6 +29,7 @@ import (
 // Compared as sets of Schema.property names, so a missing tag cannot be hidden
 // by an extra one elsewhere.
 func TestEveryUniqueItemsListIsTaggedForTheDecoders(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
