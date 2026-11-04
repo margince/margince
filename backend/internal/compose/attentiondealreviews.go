@@ -58,6 +58,7 @@ func (r attentionDealReviews) OpenDealReviews(
 		if scope == "" {
 			scope = sqlUnnarrowed
 		}
+		owners := reviewOwnerClause(asked, arg)
 		rows, err := tx.Query(ctx, `
 			SELECT x.id, d.id, d.name, COALESCE(t.assignee_id, d.owner_id), x.task_activity_id,
 			       t.id IS NOT NULL AND NOT t.is_done, x.first_seen_at
@@ -65,7 +66,7 @@ func (r attentionDealReviews) OpenDealReviews(
 			  JOIN deal d ON d.id = x.subject_id
 			  LEFT JOIN activity t ON t.id = x.task_activity_id AND t.archived_at IS NULL
 			 WHERE x.type = $1 AND `+openFindingOnLiveDealSQL("x", "d")+` AND `+scope+`
-			   AND `+reviewOwnerClause(asked, arg)+`
+			   AND `+owners+`
 			 ORDER BY x.first_seen_at, x.id
 			 LIMIT $2`, args...)
 		if err != nil {
