@@ -2867,18 +2867,19 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `deal_verdict` / `deal_verdict`
 
-`system 1,909 B (~477 tok)`: rules 1,636 B · boundary 273 B · after boundary 0 B · **cacheable 85%**
+`system 2,453 B (~613 tok)`: rules 2,180 B · boundary 273 B · after boundary 0 B · **cacheable 88%**
 
 <details><summary>system prompt</summary>
 
 ```
 You read one open sales deal: its fields, its offers, its stage moves and the activities logged on it, oldest first.
-Say whether the evidence shows that the deal's expected close date, its amount or its win probability should change.
+Say whether the evidence shows that the deal's expected close date, its amount, its win probability or its stage should change.
 
 You may propose at most one of each:
 "set_close_date": the customer named or agreed a decision, signing or start date, or the evidence makes the current date impossible. "date" is that date as YYYY-MM-DD, in the future.
 "set_amount": the customer or our offer states a price for this deal in words. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
 "set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen. "probability" is a whole number from 0 to 100.
+"move_stage": the evidence shows the deal has reached a later stage, judged by the stage's name and what a sale at that point looks like. "stage_id" is one of the later stages listed; it may skip stages. The deal leaves its own stage and every stage it skips, so each exit criterion listed for those stages needs an entry in "criteria": its "criterion_id", the cited "activity_id" that meets it, and "quoted_words" copied verbatim from that activity. If one is not met, do not move. Never move a deal back, and never to won or lost.
 
 Propose nothing when the evidence does not say it. An empty "actions" list is the usual answer.
 Never propose a value the deal already holds. Never close or reopen the deal; that is not yours.
@@ -2922,6 +2923,36 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "confidence": {
             "type": "number"
           },
+          "criteria": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "activity_id": {
+                  "enum": [
+                    "<id minted for this call>",
+                    "<id minted for this call>"
+                  ],
+                  "type": "string"
+                },
+                "criterion_id": {
+                  "enum": [
+                    ""
+                  ],
+                  "type": "string"
+                },
+                "quoted_words": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "criterion_id",
+                "activity_id",
+                "quoted_words"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
           "currency": {
             "type": "string"
           },
@@ -2932,7 +2963,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "enum": [
               "set_close_date",
               "set_amount",
-              "set_probability"
+              "set_probability",
+              "move_stage"
             ],
             "type": "string"
           },
@@ -2944,6 +2976,12 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "reason": {
             "type": "string"
+          },
+          "stage_id": {
+            "enum": [
+              ""
+            ],
+            "type": "string"
           }
         },
         "required": [
@@ -2953,6 +2991,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "currency",
           "quoted_words",
           "probability",
+          "stage_id",
+          "criteria",
           "cited_activity_ids",
           "reason",
           "confidence"

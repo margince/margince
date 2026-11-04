@@ -112,11 +112,13 @@ func StageAutopilotModeTx(
 	// The kill switch first, because it is the cheapest question and the one
 	// an admin expects to answer everything. Nothing below it is consulted
 	// when the installation has said no.
-	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
+	// The setting defaults on for Margince's own stage moves. This older path
+	// applies a card only where somebody switched it on.
+	on, chosen, err := config.StoredApplyChosenTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
 	if err != nil {
 		return refused(), fmt.Errorf("read whether stage automation is on: %w", err)
 	}
-	if !on {
+	if !on || !chosen {
 		return AutopilotVerdict{
 			Mode: ModePropose,
 			Why:  "stage automation is switched off for this installation",
@@ -292,8 +294,8 @@ func (s *Store) StageAutomationEnabled(ctx context.Context) (bool, error) {
 	}
 	var on bool
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		on, err = config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
+		value, chosen, err := config.StoredApplyChosenTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
+		on = value && chosen
 		return err
 	})
 	if err != nil {

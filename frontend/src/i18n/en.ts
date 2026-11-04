@@ -15272,6 +15272,9 @@ export const en = {
   "autonomy.kind.deal_probability.label": "Win probabilities",
   "autonomy.kind.deal_probability.help":
     "Sets a deal’s win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
+  "autonomy.kind.deal_stage_move.label": "Stage moves",
+  "autonomy.kind.deal_stage_move.help":
+    "Moves a deal to a later stage when the customer’s own words show it got there, such as a request for the contract draft. Never to Won and never back. Each move shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18252,11 +18255,13 @@ export const en = {
   "changes.field.amount": "amount",
   "changes.field.probability": "probability",
   "changes.field.status": "status",
+  "changes.field.stage": "stage",
   "changes.fieldJoin": "{first} and {second}",
   "changes.kind.close_lost": "Closed as lost",
   "changes.kind.deal_close_date": "New close date",
   "changes.kind.deal_amount": "New amount",
   "changes.kind.deal_probability": "New probability",
+  "changes.kind.stage_move": "Moved to a later stage",
   "changes.summary_one": "Margince updated {count} of your deals: {parts}",
   "changes.summary_other": "Margince updated {count} of your deals: {parts}",
   "changes.part.closed_one": "{count} closed",
@@ -18267,6 +18272,8 @@ export const en = {
   "changes.part.revalued_other": "{count} re-valued",
   "changes.part.probabilities_one": "{count} probability",
   "changes.part.probabilities_other": "{count} probabilities",
+  "changes.part.moved_one": "{count} moved",
+  "changes.part.moved_other": "{count} moved",
   "changes.viewAll": "View all",
   "changes.undoAll": "Undo all",
   "changes.undoAllDone_one": "Undone on {count} deal.",

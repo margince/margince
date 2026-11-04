@@ -11,8 +11,10 @@ package compose
 // mints the activity ids, so a cited id is one the model was handed.
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -38,6 +40,21 @@ type dealVerdictDealFixture struct {
 	Currency    string `json:"currency"`
 	CloseDate   string `json:"close_date"`
 	Probability int    `json:"probability"`
+	// Later are the open stages after the deal's, in order. ExitCriteria
+	// belong to the deal's own stage unless they name a later one.
+	Later        []dealVerdictStageFixture     `json:"later"`
+	ExitCriteria []dealVerdictCriterionFixture `json:"exit_criteria"`
+}
+
+type dealVerdictStageFixture struct {
+	Name        string `json:"name"`
+	Probability int    `json:"probability"`
+}
+
+type dealVerdictCriterionFixture struct {
+	Stage string `json:"stage"`
+	Label string `json:"label"`
+	Kind  string `json:"kind"`
 }
 
 type dealVerdictActivityFixture struct {
@@ -54,6 +71,8 @@ type dealVerdictExpectation struct {
 	Kind   string `json:"kind"`
 	Date   string `json:"date,omitempty"`
 	Amount int64  `json:"amount,omitempty"`
+	// Stage is the name of the stage a move goes to.
+	Stage string `json:"stage,omitempty"`
 }
 
 type dealVerdictCases struct{}
@@ -88,7 +107,7 @@ func (dealVerdictCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 func dealVerdictFixtureInput(f dealVerdictFixture) (dealverdict.Input, error) {
 	today, err := time.Parse(time.DateOnly, f.Today)
 	if err != nil || len(f.Activities) == 0 {
-		return dealverdict.Input{}, fmt.Errorf("deal_verdict/deal_verdict: the fixture needs a today date and at least one activity")
+		return dealverdict.Input{}, errors.New("deal_verdict/deal_verdict: the fixture needs a today date and at least one activity")
 	}
 	amount, currency := f.Deal.Amount*100, f.Deal.Currency
 	in := dealverdict.Input{
@@ -98,6 +117,7 @@ func dealVerdictFixtureInput(f dealVerdictFixture) (dealverdict.Input, error) {
 	if close, err := time.Parse(time.DateOnly, f.Deal.CloseDate); err == nil {
 		in.CloseDate = &close
 	}
+	stageFixtureInput(f.Deal, &in)
 	for _, a := range f.Activities {
 		at, err := time.Parse(time.DateOnly, a.At)
 		if err != nil {
@@ -108,6 +128,25 @@ func dealVerdictFixtureInput(f dealVerdictFixture) (dealverdict.Input, error) {
 		})
 	}
 	return in, nil
+}
+
+// stageFixtureInput places the deal's stage at position 1 and the later
+// stages after it, each criterion on the stage it names.
+func stageFixtureInput(deal dealVerdictDealFixture, in *dealverdict.Input) {
+	in.StagePosition = 1
+	positions := map[string]int{deal.Stage: 1}
+	for i, stage := range deal.Later {
+		positions[stage.Name] = i + 2
+		in.Later = append(in.Later, dealverdict.StageOption{
+			ID: ids.NewV7().String(), Name: stage.Name, Position: i + 2, Probability: stage.Probability,
+		})
+	}
+	for _, c := range deal.ExitCriteria {
+		stage := cmp.Or(c.Stage, deal.Stage)
+		in.ExitCriteria = append(in.ExitCriteria, dealverdict.ExitCriterion{
+			ID: ids.NewV7().String(), StagePosition: positions[stage], Stage: stage, Label: c.Label, Kind: c.Kind,
+		})
+	}
 }
 
 type dealVerdictCase struct {
@@ -135,13 +174,13 @@ func (c *dealVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	if faults := dealVerdictFaults(payload, c.expected); len(faults) > 0 {
+	if faults := dealVerdictFaults(payload, c.expected, c.in); len(faults) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(faults, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
-func dealVerdictFaults(payload dealverdict.Payload, want []dealVerdictExpectation) []string {
+func dealVerdictFaults(payload dealverdict.Payload, want []dealVerdictExpectation, in dealverdict.Input) []string {
 	var faults []string
 	var proposed []string
 	for _, action := range payload.Actions {
@@ -157,6 +196,9 @@ func dealVerdictFaults(payload dealverdict.Payload, want []dealVerdictExpectatio
 		if want[i].Amount != 0 && action.Amount != want[i].Amount {
 			faults = append(faults, fmt.Sprintf("set the amount to %d, want %d", action.Amount, want[i].Amount))
 		}
+		if want[i].Stage != "" && stageNamed(in, action.StageID) != want[i].Stage {
+			faults = append(faults, fmt.Sprintf("moved to %q, want %q", stageNamed(in, action.StageID), want[i].Stage))
+		}
 	}
 	for _, w := range want {
 		if !slices.Contains(proposed, w.Kind) {
@@ -164,4 +206,13 @@ func dealVerdictFaults(payload dealverdict.Payload, want []dealVerdictExpectatio
 		}
 	}
 	return faults
+}
+
+func stageNamed(in dealverdict.Input, id string) string {
+	for _, stage := range in.Later {
+		if stage.ID == id {
+			return stage.Name
+		}
+	}
+	return ""
 }

@@ -29,6 +29,7 @@ const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   deal_close_date: "changes.kind.deal_close_date",
   deal_amount: "changes.kind.deal_amount",
   deal_probability: "changes.kind.deal_probability",
+  stage_move: "changes.kind.stage_move",
 };
 
 /** What changed on one deal, in words. */
@@ -52,6 +53,10 @@ export function ChangeSummaryRow({
     summary.closed > 0 &&
       plural("changes.part.closed", summary.closed, {
         count: count(summary.closed),
+      }),
+    summary.moved > 0 &&
+      plural("changes.part.moved", summary.moved, {
+        count: count(summary.moved),
       }),
     summary.redated > 0 &&
       plural("changes.part.redated", summary.redated, {

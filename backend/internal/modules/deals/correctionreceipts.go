@@ -63,11 +63,18 @@ type CorrectionReceipt struct {
 	// Accepted reports that the owner kept the change.
 	Accepted bool
 	OwnerID  *ids.UUID
+	// FromStage and ToStage name the stages a stage move or a close went
+	// between, as they are called today.
+	FromStage, ToStage *string
+	// StageProbability is the probability the deal took with the stage it
+	// was moved to.
+	StageProbability *int
 }
 
 // heldCorrections stay on Home until their owner accepts or undoes them.
 var heldCorrections = []string{
 	CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection, VerdictProbabilityCorrection,
+	VerdictStageMoveCorrection,
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals
@@ -144,7 +151,8 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
 		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
 		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
-		&row.Currency, &row.Accepted, &row.OwnerID); err != nil {
+		&row.Currency, &row.Accepted, &row.OwnerID, &row.FromStage, &row.ToStage,
+		&row.StageProbability); err != nil {
 		return row, err
 	}
 	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
@@ -204,7 +212,10 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
 			       coalesce(a.evidence->>'amount_currency', d.currency::text),
-			       c.accepted_at IS NOT NULL, d.owner_id
+			       c.accepted_at IS NOT NULL, d.owner_id,
+			       (SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id'),
+			       (SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id'),
+			       (SELECT h.win_probability_at_change::int FROM deal_stage_history h WHERE h.id = c.stage_history_id)
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id

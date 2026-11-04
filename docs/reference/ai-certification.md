@@ -888,7 +888,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 167 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 168 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 25 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1277,7 +1277,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `partial` | 1 |
 | … best state `stale` | 16 |
 | … `absent` on every binding | 6 |
-| Scenarios in the corpus | 292 |
+| Scenarios in the corpus | 293 |
 | Committed records | 355 |
 | Bindings measured | 18 |
 
@@ -1361,7 +1361,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 13 |
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 11 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 13 |
-| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | - | - | - | `absent` | 3 | 0 |
+| [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | - | - | - | `absent` | 4 | 0 |
 | [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.6-flash · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 1 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 2 |
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
@@ -2319,18 +2319,19 @@ Records (13):
 #### `deal_verdict`
 
 <details>
-<summary><code>deal_verdict/deal_verdict</code>: 3 scenario(s), 0 record(s), best state absent</summary>
+<summary><code>deal_verdict/deal_verdict</code>: 4 scenario(s), 0 record(s), best state absent</summary>
 
 ##### `deal_verdict/deal_verdict`
 
 Scope a run of it can claim: `full_invocation`.
 
-Scenarios (3):
+Scenarios (4):
 
 | Scenario | Expects | Quality | Case |
 |---|---|---|---|
 | `a_friendly_check_in_changes_nothing` | `accepted` | judge | [small_talk_changes_nothing_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/small_talk_changes_nothing_01.yaml) |
 | `a_verbal_yes_names_the_price_and_moves_the_chances` | `accepted` | judge | [a_verbal_yes_and_a_price_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/a_verbal_yes_and_a_price_01.yaml) |
+| `the_buyer_asks_for_the_contract_and_the_deal_moves_on` | `accepted` | judge | [the_buyer_asks_for_the_contract_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/the_buyer_asks_for_the_contract_01.yaml) |
 | `the_customer_names_a_new_signing_date` | `accepted` | judge | [the_customer_moved_the_start_01.yaml](../../backend/internal/compose/aicert/corpus/deal_verdict/the_customer_moved_the_start_01.yaml) |
 
 No record: this site has never been certified on any binding.

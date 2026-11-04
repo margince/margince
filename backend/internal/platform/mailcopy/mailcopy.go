@@ -364,6 +364,7 @@ type Copy struct {
 	MorningChanges, MorningChangesUndo                                 string
 	MorningChangeClosed, MorningChangeRedated                          string
 	MorningChangeRevalued, MorningChangeProbability, MorningChangeMore string
+	MorningChangeMoved                                                 string
 
 	// The one notice that leaves the product: a decision waiting on a
 	// colleague, mailed because they asked for that class by mail.

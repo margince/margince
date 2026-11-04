@@ -14961,6 +14961,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.deal_probability.label": "Xác suất thắng",
   "autonomy.kind.deal_probability.help":
     "Đặt xác suất thắng của deal khi bằng chứng thay đổi rõ ràng, ví dụ khách đồng ý miệng hoặc ngân sách bị đóng băng. Xác suất do bạn tự đặt không bao giờ bị thay đổi. Mỗi thay đổi hiện trên Home kèm nút Hoàn tác.",
+  "autonomy.kind.deal_stage_move.label": "Chuyển giai đoạn",
+  "autonomy.kind.deal_stage_move.help":
+    "Chuyển deal sang giai đoạn sau khi chính lời của khách cho thấy deal đã tới đó, ví dụ khách yêu cầu bản nháp hợp đồng. Không bao giờ chuyển sang Thắng và không bao giờ lùi lại. Mỗi lần chuyển hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -17958,11 +17961,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.field.amount": "giá trị",
   "changes.field.probability": "xác suất",
   "changes.field.status": "trạng thái",
+  "changes.field.stage": "giai đoạn",
   "changes.fieldJoin": "{first} và {second}",
   "changes.kind.close_lost": "Đã đóng, thua",
   "changes.kind.deal_close_date": "Ngày chốt mới",
   "changes.kind.deal_amount": "Giá trị mới",
   "changes.kind.deal_probability": "Xác suất mới",
+  "changes.kind.stage_move": "Chuyển sang giai đoạn sau",
   "changes.summary_one":
     "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
   "changes.summary_other":
@@ -17975,6 +17980,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.part.revalued_other": "{count} đổi giá trị",
   "changes.part.probabilities_one": "{count} xác suất",
   "changes.part.probabilities_other": "{count} xác suất",
+  "changes.part.moved_one": "{count} chuyển giai đoạn",
+  "changes.part.moved_other": "{count} chuyển giai đoạn",
   "changes.viewAll": "Xem tất cả",
   "changes.undoAll": "Hoàn tác tất cả",
   "changes.undoAllDone_one": "Đã hoàn tác trên {count} giao dịch.",
