@@ -4174,6 +4174,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.title": "Aufgaben",
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
+  "deal.products.emptyTakesOffer":
+    "Speicherst du eine leere Liste, gelten die Produkte eines angenommenen Angebots, falls es eines gibt.",
+  "deal.products.title": "Produkte",
+  "deal.products.denied": "Du darfst die Produkte dieses Deals nicht sehen.",
+  "deal.products.empty":
+    "Noch keine Produkte. Das angenommene Angebot legt sie fest, oder du legst sie selbst fest.",
+  "deal.products.edit": "Produkte festlegen",
+  "deal.products.editTitle": "Produkte dieses Deals festlegen",
+  "deal.products.save": "Produkte speichern",
+  "deal.products.intro":
+    "Produktberichte zählen diesen Deal unter den hier aufgeführten Produkten.",
+  "deal.products.replacesOffer":
+    "Diese Produkte stammen aus dem angenommenen Angebot. Speichern ersetzt sie, und ein später angenommenes Angebot lässt deine Liste unverändert.",
+  "deal.products.amount": "Betrag für {name}",
+  "deal.products.remove": "{name} entfernen",
+  "deal.products.add": "Produkt hinzufügen",
+  "deal.products.alreadyListed": "Bereits aufgeführt",
+  "deal.products.fromOffer": "Aus dem Angebot",
+  "deal.products.setByHand": "Selbst festgelegt",
   "deal.commitments.title": "Zusagen des Kunden",
   "deal.commitments.empty":
     "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
