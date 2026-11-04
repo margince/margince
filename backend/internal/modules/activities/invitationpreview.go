@@ -56,7 +56,7 @@ func (s *Store) PreviewInvitation(ctx context.Context, host ids.UserID, in crmco
 	if s.calendar == nil {
 		return appointment, nil
 	}
-	roster, err := s.invitationRoster(ctx, host, in, invitationIntent{})
+	roster, err := s.resolveRoster(ctx, host, in, invitationIntent{})
 	if err != nil {
 		return connector.CalendarAppointment{}, err
 	}

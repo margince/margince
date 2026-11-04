@@ -38,6 +38,8 @@ import (
 // which is one of the two spellings this seam removed.
 type restCommandDeps struct {
 	records datasource.SystemOfRecordProvider
+	// invitations resolves an invitation's addresses for its staged summary.
+	invitations agents.InvitationRoster
 	// stages resolves a pipeline stage's configured SEMANTIC, which is what
 	// makes a deal move a close, a reopen or a routine step — three opposite
 	// decisions wearing one shape, so the summary a human reads cannot be

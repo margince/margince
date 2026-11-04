@@ -821,8 +821,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Người chủ trì",
   "approval.preview.intendedAttendee":
     "Người dự kiến tham dự (không được thông báo)",
-  "approval.preview.hostNamedAttendee":
-    "Chỉ mời theo địa chỉ (không kiểm tra sự đồng ý)",
+  "approval.preview.hostNamedAttendee": "Địa chỉ được nhập",
   "approval.preview.htmlBody": "Nội dung có định dạng",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
