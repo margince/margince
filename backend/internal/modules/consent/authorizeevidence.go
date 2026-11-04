@@ -352,6 +352,9 @@ const liveStakeholderSQL = `d.status = 'open'
 //     also where a rep's confirmation from the review form lands, so it is
 //     asked once and reused;
 //   - the acquisition request the contact came in with, when it cites the deal.
+//
+// The two request arms count a request a merge carried over only for its own
+// addresses (requestCoversSQL).
 func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subject subjectRef) (bool, error) {
 	if len(deals) == 0 || subject.Kind != entityContact {
 		return false, nil
@@ -380,14 +383,16 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			          AND q.about_deal_id = d.id
 			          AND q.kind = ANY($7::text[])
 			          AND q.occurred_at <= $9
-			          AND q.retracted_at IS NULL)
+			          AND q.retracted_at IS NULL
+			          AND `+requestCoversSQL("q.recorded_for_addresses", "$3")+`)
 			  OR EXISTS (
 			       SELECT 1 FROM contact_acquisition_evidence e
 			        WHERE e.contact_id = $2::uuid
 			          AND e.source_entity_type = 'deal' AND e.source_entity_id = d.id
 			          AND e.kind = ANY($8::text[])
 			          AND coalesce(e.occurred_at, e.captured_at) <= $9
-			          AND e.request_retracted_at IS NULL))
+			          AND e.request_retracted_at IS NULL
+			          AND `+requestCoversSQL("e.recorded_for_addresses", "$3")+`))
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
 		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
 		time.Now().Add(clockSkewAllowance)).Scan(&found)
@@ -432,6 +437,9 @@ var (
 // from us, within scope. That is a request a rep recorded, a form enquiry, or
 // acquisition evidence of a request.
 //
+// A request carried over by a merge covers only the addresses of the record it
+// was made on (requestCoversSQL).
+//
 // No age limit: a request covers the follow-up at the agreed timing. A stop or
 // a retraction ends it (RetractQualifyingEvent, and the acquisition request's
 // own retraction). occurred_at is caller-stated, so a future date does not count.
@@ -461,6 +469,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND e.request_retracted_at IS NULL
 			   AND (NOT $6 OR e.source_entity_type IS DISTINCT FROM 'deal'
 			        OR e.source_entity_id = $7::uuid)
+			   AND `+requestCoversSQL("e.recorded_for_addresses", "$8")+`
 			UNION ALL
 			SELECT q.occurred_at
 			  FROM consent_qualifying_event q
@@ -470,8 +479,10 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND q.retracted_at IS NULL
 			   AND (q.asks_for_quote OR NOT $5)
 			   AND (NOT $6 OR q.about_deal_id IS NULL OR q.about_deal_id = $7::uuid)
+			   AND `+requestCoversSQL("q.recorded_for_addresses", "$8")+`
 		) requests`, subject.ID, time.Now().Add(clockSkewAllowance),
-		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal)).Scan(&newest)
+		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal),
+		subject.Address).Scan(&newest)
 	if err != nil {
 		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}

@@ -432,17 +432,18 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`), the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back. |
 | `about_deal_id` | `uuid` |  |  |
 | `asks_for_quote` | `boolean`, default `false` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `kind` | `text` | yes | One of `inbound_message`, `inquiry`, `active_deal`, `in_person`, `meeting`, `requested_by_subject`. |
 | `note` | `text` |  | The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |

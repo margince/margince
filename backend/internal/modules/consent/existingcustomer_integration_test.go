@@ -25,7 +25,7 @@ func (e *resolveEnv) marketingVerdict(t *testing.T, marketing MarketingContext) 
 	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = VerdictForContact(e.ctx, tx, e.contact.String(), purpose, time.Now().Add(-defaultReplyWindow), marketing)
+		out, err = GuardVerdictForContact(e.ctx, tx, e.contact.String(), purpose, time.Now().Add(-defaultReplyWindow), marketing)
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)
