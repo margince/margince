@@ -7,8 +7,10 @@ import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import {
   useSetPlanContract,
+  useWeeklyPlan,
   type WeeklyPlan,
 } from "../worklist/weeklyplan.queries";
 
@@ -38,6 +40,30 @@ type Capacity = NonNullable<WeeklyPlan["capacity"]>;
 // never refuses. A rep who knows their week better than this arithmetic does is
 // right, and a plan that argued with them would be a worse plan.
 const crowdedWeek = 8;
+
+/**
+ * Whether the week's plan takes edits. A closed week is history: the weekly
+ * job freezes its outcome into the review, so an edit would make the two
+ * disagree.
+ */
+export function planEditable(
+  canEdit: boolean,
+  plan: Readonly<{ status: string }> | null | undefined,
+): boolean {
+  return canEdit && plan?.status === "open";
+}
+
+/** What the week is up against, on its own, for the report's side column. */
+export function PlanConstraints() {
+  const plan = useWeeklyPlan();
+  const canEdit = useCanWrite("weekly_plan", "update");
+  return (
+    <PlanContract
+      plan={plan.data}
+      editable={planEditable(canEdit, plan.data)}
+    />
+  );
+}
 
 export function PlanContract({
   plan,

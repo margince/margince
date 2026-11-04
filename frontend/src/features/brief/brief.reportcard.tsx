@@ -19,8 +19,8 @@ export function ReportTitle({
 }
 
 /**
- * One section of the week as a card: its name and a reading at the head's
- * end, then what it lists, on the card's own rows.
+ * One section of the week as a card. Its name and a reading share the head;
+ * what it lists sits on the card's own rows.
  */
 export function ReportCard({
   icon,
@@ -38,7 +38,6 @@ export function ReportCard({
   return (
     <Panel
       flatHead
-      className="brief-report-card"
       title={<ReportTitle icon={icon}>{title}</ReportTitle>}
       titleAction={aside}
       footer={footer}

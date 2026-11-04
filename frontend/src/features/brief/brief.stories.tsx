@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { isoDay } from "../../format/calendarday";
 import { en } from "../../i18n/en";
 import {
   type Approval,
@@ -553,14 +554,11 @@ function onWeekly() {
   };
 }
 
-// One pane as wide as the morning's two, so the dial stays put across views.
 // Eight weeks of reports, newest first, each with what it won.
 const ARCHIVE = (() => {
   const won = [3, 1, 2, 0, 1, 4, 1, 2];
   const weeks = won.map((_, back) =>
-    new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5)
-      .toISOString()
-      .slice(0, 10),
+    isoDay(new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5)),
   );
   return {
     weeks,

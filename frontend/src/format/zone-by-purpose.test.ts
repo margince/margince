@@ -214,6 +214,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/brief/brief.taskcard.words.test.ts",
+    why: "A task card counts the days a task is late in the zone it is given; the fixture pins UTC so the count does not move with the test machine.",
+  },
+  {
     file: "features/deals/deals.columns.test.tsx",
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },

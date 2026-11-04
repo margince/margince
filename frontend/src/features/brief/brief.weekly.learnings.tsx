@@ -49,9 +49,8 @@ export function LearningsPanel({
     <>
       {learnings.items.map((item) => (
         <LearningItem
-          // Keyed on what the learning RESTS ON rather than its position:
-          // the first citation is present on every learning, because one
-          // that cites nothing is refused before it is stored.
+          // Keyed on what the learning RESTS ON, not its position. Every
+          // learning has a first citation: one citing nothing is refused.
           key={`${item.citations[0]?.subject_id}-${item.kind}`}
           learning={item}
         />

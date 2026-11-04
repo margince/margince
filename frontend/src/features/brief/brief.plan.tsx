@@ -30,7 +30,7 @@ import {
   type WeeklyPlanCommitment,
 } from "../worklist/weeklyplan.queries";
 import { AddCommitment } from "./brief.plan.add";
-import { PlanContract } from "./brief.plan.contract";
+import { PlanContract, planEditable } from "./brief.plan.contract";
 import { ReportTitle } from "./brief.reportcard";
 
 import "./brief.plan.css";
@@ -124,30 +124,6 @@ function hasFoot(
   reading: Readonly<{ editable: boolean; staged: number; unsaved: number }>,
 ): boolean {
   return reading.unsaved > 0 || (reading.editable && reading.staged > 0);
-}
-
-/**
- * Whether the week's plan takes edits. A closed week is history: the weekly
- * job freezes its outcome into the review, so an edit would make the two
- * disagree.
- */
-function planEditable(
-  canEdit: boolean,
-  plan: Readonly<{ status: string }> | null | undefined,
-): boolean {
-  return canEdit && plan?.status === "open";
-}
-
-/** What the week is up against, on its own, for the report's side column. */
-export function PlanConstraints() {
-  const plan = useWeeklyPlan();
-  const canEdit = useCanWrite("weekly_plan", "update");
-  return (
-    <PlanContract
-      plan={plan.data}
-      editable={planEditable(canEdit, plan.data)}
-    />
-  );
 }
 
 export function PlanSection({
@@ -245,7 +221,6 @@ export function PlanSection({
     <section id="brief-plan">
       <Panel
         flatHead
-        className="brief-report-card"
         title={
           <ReportTitle icon={SquareCheck}>
             {plan.data

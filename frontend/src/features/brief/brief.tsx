@@ -44,14 +44,16 @@ import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
-import { PlanConstraints, PlanSection } from "./brief.plan";
+import { PlanSection } from "./brief.plan";
+import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
-import { WeeklyRail, WeeklySection, WeekStepper } from "./brief.weekly";
+import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
