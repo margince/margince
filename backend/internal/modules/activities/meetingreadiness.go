@@ -199,7 +199,8 @@ type meetingFacts struct {
 
 // lockMeetingFacts reads the meeting the attendee confirms, holding the row so
 // its start and agenda cannot move between the compare and the write. A row
-// that is not a meeting, or not one the attendee attends, answers 422.
+// that is not a meeting, or not one the attendee attends, answers 422. A row
+// with no host reads its responsibility as NULL, which is not attending.
 func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (meetingFacts, error) {
 	var (
 		kind, precision, agenda string
@@ -209,7 +210,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 		current                 meetingFacts
 	)
 	query := storekit.SQLf(`
-		SELECT a.kind, a.occurred_at, a.occurred_precision, COALESCE(a.agenda_fingerprint, ''), %s, %s
+		SELECT a.kind, a.occurred_at, a.occurred_precision, COALESCE(a.agenda_fingerprint, ''), %s, COALESCE(%s, false)
 		  FROM activity a WHERE a.id = $1 AND `+activityLive+`
 		   FOR SHARE OF a`, participantsSQL, storekit.MeetingResponsibilitySQL("a", "$2"))
 	if err := tx.QueryRow(ctx, query, id, attendee).Scan(

@@ -304,12 +304,6 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, e)
 		return
 	}
-	if notPromoted, ok := errors.AsType[*NotPromotedError](err); ok {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "not_promoted", Detail: notPromoted.Error(),
-		})
-		return
-	}
 	if notDisqualified, ok := errors.AsType[*NotDisqualifiedError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "not_disqualified", Detail: notDisqualified.Error(),

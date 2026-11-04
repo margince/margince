@@ -259,3 +259,24 @@ func TestAHostOutsideTheMeetingsAudienceIsNotFoundAndKeepsNoReadiness(t *testing
 		t.Errorf("the refused writes left %d audit rows and %d events, want none", audited, announced)
 	}
 }
+
+func TestATaskHasNoPreparationToBeReadyFor(t *testing.T) {
+	e := setupSend(t)
+	subject := "Send the deck"
+	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	task := ids.From[ids.ActivityKind](ids.UUID(out.Id))
+	for name, write := range map[string]func(context.Context, ids.ActivityID, string) (MeetingPreparation, error){
+		"confirming": meetingStore(e).ConfirmMeetingReady, "withdrawing": meetingStore(e).WithdrawMeetingReady,
+	} {
+		_, err := write(meetingCtx(e), task, "any")
+		var refusal *values.ParseError
+		if !errors.As(err, &refusal) || refusal.Code != codeNotAMeeting {
+			t.Errorf("%s readiness for a task answered %v, want %s", name, err, codeNotAMeeting)
+		}
+	}
+}
