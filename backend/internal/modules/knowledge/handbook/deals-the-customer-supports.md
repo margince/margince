@@ -97,6 +97,14 @@ changes.
 since. After an Undo, Margince does not make that change on the deal again.
 That lasts until a new message, offer or stage move arrives on the deal.
 
-The switches are **Close dates**, **Deal amounts** and **Win probabilities**
-among the automatic changes. Margince checks the switch again just before it
-writes.
+The switches are **Close dates**, **Deal amounts**, **Win probabilities** and
+**Stage moves** among the automatic changes. Margince checks the switch again
+just before it writes.
+
+## When the deal reached a later stage
+
+Margince may move an open deal to a later stage. It never moves a deal back,
+and never to won or lost. It moves a deal only across stages that list
+criteria. A message, meeting or note on the deal must show each of the
+criteria of each stage the deal leaves. **Undo** moves the deal back, unless someone moved it since. An admin
+can stop all stage moves in the installation settings.

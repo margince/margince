@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -29,6 +30,10 @@ const DealStageMoveKind = "deal_stage_move"
 // target is no longer a later open stage, or an exit criterion is not
 // settled, or the move's own gates refused it.
 const VerdictDroppedStageRefused = "dropped:stage_refused"
+
+// VerdictDroppedNoCriteria is a move across a stage with no required exit
+// criteria. Margince moves deals only across stages that say what they ask.
+const VerdictDroppedNoCriteria = "dropped:no_exit_criteria"
 
 // stageMoveMovedSince refuses an Undo once the deal moved after Margince's
 // move: moving it back then would undo a colleague's move.
@@ -71,13 +76,11 @@ func (s *Store) applyVerdictStageMove(
 		return VerdictDroppedHuman, current, err
 	}
 	admitted, err := s.stageMoveAdmitted(ctx, tx, in.DealID, current.StageID, change)
-	if err != nil || !admitted {
-		return VerdictDroppedStageRefused, current, err
+	if err != nil || admitted != VerdictApplied {
+		return admitted, current, err
 	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, "basis_owner": in.Owner.String()}
-	for key, value := range change.Evidence {
-		evidence[key] = value
-	}
+	maps.Copy(evidence, change.Evidence)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: change.ToStageID, auditEvidence: evidence,
 		// The target is an open stage, so the move claims no win.
@@ -94,41 +97,110 @@ func (s *Store) applyVerdictStageMove(
 }
 
 // stageMoveAdmitted asks under the row lock whether the target is still a
-// later open stage of the deal's pipeline. Each required exit criterion of
-// each stage the deal leaves must be settled by the activity cited for it.
-func (s *Store) stageMoveAdmitted(ctx context.Context, tx pgx.Tx, deal ids.DealID, from ids.UUID, change VerdictChange) (bool, error) {
-	var forward bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM deal d JOIN stage cur ON cur.id = $2 JOIN stage tgt ON tgt.id = $3
-		                WHERE d.id = $1 AND tgt.pipeline_id = d.pipeline_id AND cur.pipeline_id = d.pipeline_id
-		                  AND tgt.archived_at IS NULL AND tgt.semantic = $4 AND tgt.position > cur.position)`,
-		deal, from, change.ToStageID, string(SemanticOpen)).Scan(&forward)
-	if err != nil || !forward {
-		return false, err
+// later open stage of the deal's pipeline. Each stage the deal leaves needs
+// exit criteria. Each required one must be settled by the activity cited for
+// it. It answers VerdictApplied or the reason to drop the move.
+func (s *Store) stageMoveAdmitted(ctx context.Context, tx pgx.Tx, deal ids.DealID, from ids.UUID, change VerdictChange) (string, error) {
+	left, ok, err := lockStagesMovedPast(ctx, tx, deal, from, change.ToStageID)
+	if err != nil || !ok {
+		return VerdictDroppedStageRefused, err
 	}
-	var required []ids.UUID
-	var kinds []string
-	err = tx.QueryRow(ctx, `
-		SELECT coalesce(array_agg(c.id ORDER BY c.id), '{}'), coalesce(array_agg(c.kind ORDER BY c.id), '{}')
-		  FROM stage cur JOIN stage tgt ON tgt.id = $2
-		  JOIN stage st ON st.pipeline_id = cur.pipeline_id AND st.archived_at IS NULL
-		               AND st.position >= cur.position AND st.position < tgt.position
-		  JOIN stage_exit_criterion c ON c.stage_id = st.id AND c.archived_at IS NULL AND c.required
-		 WHERE cur.id = $1`, from, change.ToStageID).Scan(&required, &kinds)
+	rows, err := tx.Query(ctx, `
+		SELECT c.id, c.stage_id, c.kind FROM stage_exit_criterion c
+		 WHERE c.stage_id = ANY($1) AND c.archived_at IS NULL AND c.required
+		 ORDER BY c.id`, left)
 	if err != nil {
-		return false, fmt.Errorf("deals: rechecking the exit criteria a verdict moves past: %w", err)
+		return "", fmt.Errorf("deals: rechecking the exit criteria a verdict moves past: %w", err)
 	}
-	for i, criterion := range required {
-		activity, ok := citedFor(change.CriteriaMet, criterion)
+	type required struct {
+		id, stage ids.UUID
+		kind      string
+	}
+	criteria, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (required, error) {
+		var r required
+		return r, row.Scan(&r.id, &r.stage, &r.kind)
+	})
+	if err != nil {
+		return "", fmt.Errorf("deals: rechecking the exit criteria a verdict moves past: %w", err)
+	}
+	asking := map[ids.UUID]bool{}
+	for _, c := range criteria {
+		asking[c.stage] = true
+	}
+	if len(left) == 0 || len(asking) != len(left) {
+		return VerdictDroppedNoCriteria, nil
+	}
+	for _, c := range criteria {
+		activity, ok := citedFor(change.CriteriaMet, c.id)
 		if !ok {
-			return false, nil
+			return VerdictDroppedStageRefused, nil
 		}
-		settled, err := s.activitySettlesCriterion(ctx, tx, deal, CriterionKind(kinds[i]), activity)
+		settled, err := s.activitySettlesCriterion(ctx, tx, deal, criterionAt{stage: c.stage, id: c.id, kind: CriterionKind(c.kind)}, activity)
 		if err != nil || !settled {
-			return false, err
+			return VerdictDroppedStageRefused, err
 		}
 	}
-	return true, nil
+	return VerdictApplied, nil
+}
+
+// lockStagesMovedPast holds the pipeline and the stages from the deal's own
+// to the target FOR SHARE. No reorder, semantic change or criterion edit then
+// commits before the move does. The pipeline row comes first and the stages
+// in id order, as the ladder writers take them. It answers the stages the
+// deal leaves, and false when the target is not a later open stage.
+func lockStagesMovedPast(ctx context.Context, tx pgx.Tx, deal ids.DealID, from ids.UUID, to ids.StageID) ([]ids.UUID, bool, error) {
+	var pipeline ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT p.id FROM deal d JOIN pipeline p ON p.id = d.pipeline_id
+		 WHERE d.id = $1 AND p.archived_at IS NULL FOR SHARE OF p`, deal).Scan(&pipeline)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("deals: holding the deal's pipeline: %w", err)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, position, semantic, archived_at IS NULL FROM stage
+		 WHERE pipeline_id = $1 AND id = ANY($2)
+		    OR (pipeline_id = $1 AND position > (SELECT position FROM stage WHERE id = $3)
+		        AND position < (SELECT position FROM stage WHERE id = $4))
+		 ORDER BY id FOR SHARE`, pipeline, []ids.UUID{from, to.UUID}, from, to.UUID)
+	if err != nil {
+		return nil, false, fmt.Errorf("deals: holding the stages a move passes: %w", err)
+	}
+	type held struct {
+		id       ids.UUID
+		position int
+		semantic string
+		live     bool
+	}
+	stages, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (held, error) {
+		var h held
+		return h, row.Scan(&h.id, &h.position, &h.semantic, &h.live)
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("deals: holding the stages a move passes: %w", err)
+	}
+	var fromAt, toAt *held
+	for i := range stages {
+		switch stages[i].id {
+		case from:
+			fromAt = &stages[i]
+		case to.UUID:
+			toAt = &stages[i]
+		}
+	}
+	if fromAt == nil || toAt == nil || !toAt.live || StageSemantic(toAt.semantic) != SemanticOpen ||
+		toAt.position <= fromAt.position {
+		return nil, false, nil
+	}
+	var left []ids.UUID
+	for _, stage := range stages {
+		if stage.live && stage.position >= fromAt.position && stage.position < toAt.position {
+			left = append(left, stage.id)
+		}
+	}
+	return left, true, nil
 }
 
 func citedFor(met []CriterionCitation, criterion ids.UUID) (ids.UUID, bool) {
@@ -146,20 +218,28 @@ type CriterionCitation struct {
 	ActivityID  ids.UUID
 }
 
+// criterionAt is one required criterion of a stage the deal leaves.
+type criterionAt struct {
+	stage, id ids.UUID
+	kind      CriterionKind
+}
+
 // activitySettlesCriterion is the criterion ledger's rule for one activity.
 // A held event is a meeting MeetingWasHeld accepts. A buyer milestone is mail
-// a buyer of the deal wrote (buyerWrote). A custom criterion rests on the
-// cited words. Every other kind is settled by its own record, never by mail.
+// a buyer of the deal wrote (buyerWrote). A custom criterion counts only as
+// the ledger records it (ledgerSettles). Every other kind is settled by its
+// own record, never by mail.
 func (s *Store) activitySettlesCriterion(
-	ctx context.Context, tx pgx.Tx, deal ids.DealID, kind CriterionKind, activity ids.UUID,
+	ctx context.Context, tx pgx.Tx, deal ids.DealID, criterion criterionAt, activity ids.UUID,
 ) (bool, error) {
-	linked, err := activityOnDeal(ctx, tx, deal, activity)
+	linked, err := holdActivityOnDeal(ctx, tx, deal, activity)
 	if err != nil || !linked {
 		return false, err
 	}
+	kind := criterion.kind
 	switch {
 	case kind == CriterionCustom:
-		return true, nil
+		return s.ledgerSettles(ctx, tx, deal, criterion)
 	case kind == CriterionEventHeld:
 		if s.ownDomains == nil {
 			return false, nil
@@ -172,14 +252,39 @@ func (s *Store) activitySettlesCriterion(
 	return false, nil
 }
 
-func activityOnDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, activity ids.UUID) (bool, error) {
-	var linked bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL)`, deal, activity).Scan(&linked)
+// ledgerSettles reports whether the criterion ledger counts a custom
+// criterion met as DecideStageMove would move on it. That is met, agreed,
+// uncontradicted and at the ledger's own confidence.
+func (s *Store) ledgerSettles(ctx context.Context, tx pgx.Tx, deal ids.DealID, criterion criterionAt) (bool, error) {
+	standing, err := s.readProgressionCriteria(ctx, tx, ids.StageID{UUID: criterion.stage}, deal)
 	if err != nil {
-		return false, fmt.Errorf("deals: reading a cited activity: %w", err)
+		return false, err
 	}
-	return linked, nil
+	for _, c := range standing {
+		if c.CriterionID.UUID != criterion.id {
+			continue
+		}
+		decision := DecideStageMove(StageMoveFacts{
+			Criteria: []CriterionFact{c.CriterionFact}, SingleStep: true, SamePipeline: true,
+		})
+		return decision.Outcome == OutcomePropose, nil
+	}
+	return false, nil
+}
+
+// holdActivityOnDeal reports whether the cited activity is live and linked to
+// the deal, and holds both rows until the move commits.
+func holdActivityOnDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, activity ids.UUID) (bool, error) {
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL FOR SHARE OF l, a`, deal, activity)
+	if err != nil {
+		return false, fmt.Errorf("deals: holding a cited activity: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return false, fmt.Errorf("deals: holding a cited activity: %w", err)
+	}
+	return len(held) > 0, nil
 }
 
 // buyerWrote reports whether the activity is inbound mail the ledger judges
@@ -193,16 +298,20 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 	if err != nil {
 		return false, err
 	}
+	// The participants are held first, so the side judged below is the one
+	// the move commits on.
+	if _, err := shareActivityParticipants(ctx, tx, activity); err != nil {
+		return false, err
+	}
 	side, found, err := judgeActivityAuthor(ctx, tx, activity, domains)
 	if err != nil || !found || side != AuthorBuyer {
 		return false, err
 	}
-	var buyer bool
 	// The ledger already judged the side, so the mail's direction is asked
-	// no further here: this is about who sent it.
-	err = tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM activity a
+	// no further here: this is about who sent it. The relationship the
+	// answer rests on is held until the move commits.
+	rows, err := tx.Query(ctx, `
+		SELECT r.id FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id AND p.role = 'from'
 		  JOIN deal d ON d.id = $1
 		  JOIN relationship r ON r.archived_at IS NULL
@@ -211,12 +320,16 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 		 WHERE a.id = $2 AND a.kind = 'email'
 		   AND (r.contact_id = p.contact_id
 		        OR EXISTS (SELECT 1 FROM contact_email ce
-		                    WHERE ce.contact_id = r.contact_id AND lower(ce.email) = lower(p.address))))`,
-		deal, activity).Scan(&buyer)
+		                    WHERE ce.contact_id = r.contact_id AND lower(ce.email) = lower(p.address)))
+		   FOR SHARE OF r`, deal, activity)
 	if err != nil {
 		return false, fmt.Errorf("deals: reading who wrote a cited mail: %w", err)
 	}
-	return buyer, nil
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return false, fmt.Errorf("deals: reading who wrote a cited mail: %w", err)
+	}
+	return len(held) > 0, nil
 }
 
 // advanceInSavepoint moves the deal, and rolls back only the move when one of
@@ -230,7 +343,14 @@ func (s *Store) advanceInSavepoint(
 	}
 	moved, err := s.advanceOnTx(ctx, savepoint, deal, in, active)
 	if err == nil {
-		return moved, false, savepoint.Commit(ctx)
+		forward, checkErr := movedForwardToOpen(ctx, savepoint, moved)
+		if checkErr != nil || forward {
+			if checkErr != nil {
+				return AdvancedDeal{}, false, errors.Join(checkErr, savepoint.Rollback(ctx))
+			}
+			return moved, false, savepoint.Commit(ctx)
+		}
+		return AdvancedDeal{}, true, savepoint.Rollback(ctx)
 	}
 	if rollbackErr := savepoint.Rollback(ctx); rollbackErr != nil {
 		return AdvancedDeal{}, false, fmt.Errorf("deals: rolling back a refused stage move: %w", rollbackErr)
@@ -239,6 +359,22 @@ func (s *Store) advanceInSavepoint(
 		return AdvancedDeal{}, true, nil
 	}
 	return AdvancedDeal{}, false, err
+}
+
+// movedForwardToOpen asks the history row the move wrote whether it went
+// forward to an open stage, as the move itself recorded it.
+func movedForwardToOpen(ctx context.Context, tx pgx.Tx, moved AdvancedDeal) (bool, error) {
+	var forward bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(semantic_at_change = $2 AND to_position_at_change > from_position_at_change, false)
+		  FROM deal_stage_history WHERE id = $1`, moved.HistoryID, string(SemanticOpen)).Scan(&forward)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("deals: reading the stage move just written: %w", err)
+	}
+	return forward, nil
 }
 
 // readVerdictValues reads the fields a verdict may change, under a lock the

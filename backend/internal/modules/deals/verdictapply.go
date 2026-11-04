@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -257,9 +258,7 @@ func applyVerdictChange(
 		return VerdictDroppedNoChange, nil
 	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
-	for key, value := range change.Evidence {
-		evidence[key] = value
-	}
+	maps.Copy(evidence, change.Evidence)
 	_, err = commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},

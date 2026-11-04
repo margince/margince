@@ -56,6 +56,13 @@ type stageMoveEnv struct {
 // criterion the note meets in its own words.
 func setupStageMove(t *testing.T) *stageMoveEnv {
 	t.Helper()
+	return setupStageMoveLedger(t, true)
+}
+
+// setupStageMoveLedger is setupStageMove, with the ledger recording the
+// criterion met only when ledger is set.
+func setupStageMoveLedger(t *testing.T, ledger bool) *stageMoveEnv {
+	t.Helper()
 	v := setupDealVerdict(t)
 	next := nextOpenStage(t, v, v.stage)
 	criterion, err := v.Deals.CreateStageExitCriterion(v.Admin(), deals.CreateCriterionInput{
@@ -64,10 +71,36 @@ func setupStageMove(t *testing.T) *stageMoveEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if ledger {
+		recordLedger(t, v, criterion.Id.String(), v.note)
+	}
 	move := &stageMoveLane{note: v.note, to: next.String(), criterion: criterion.Id.String(), quote: "The board agreed"}
 	v.pass = newDealVerdictPass(v.Pool, move, slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return &stageMoveEnv{dealVerdictEnv: v, next: next, move: move}
+}
+
+// recordLedger records the criterion met on the activity through the
+// ledger's own writer, as the evidence pass does.
+func recordLedger(t *testing.T, v *dealVerdictEnv, criterion, activity string) {
+	t.Helper()
+	criterionID, err := ids.ParseAs[ids.ExitCriterionKind](criterion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activityID, err := ids.Parse(activity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confidence, quote := 0.9, "The board agreed"
+	if _, err := v.Deals.RecordStageEvidence(v.Admin(), deals.EvidenceInput{
+		DealID: ids.From[ids.DealKind](v.deal), CriterionID: criterionID,
+		SourceType: deals.SourceActivity, SourceID: activityID, Snippet: &quote,
+		AuthorSide: deals.AuthorBuyer, Commitment: deals.CommitmentAgreed, Met: true,
+		Confidence: &confidence, ObservedAt: v.now, ExtractedBy: stageEvidenceExtractedBy,
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // nextOpenStage is the open stage after from in its pipeline.
@@ -293,5 +326,72 @@ func TestAMeetingThatWasNotHeldMeetsNoHeldEvent(t *testing.T) {
 	}
 	if got := v.outcomes(t); got != "move_stage="+deals.VerdictDroppedStageRefused {
 		t.Fatalf("outcomes = %s, want the row lock to refuse the cancelled meeting", got)
+	}
+}
+
+func TestACustomCriterionTheLedgerDoesNotRecordMovesNothing(t *testing.T) {
+	v := setupStageMoveLedger(t, false)
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.stage.String() {
+		t.Fatalf("stage = %s, want it left at %s: only the quote matched (outcomes %s)", got, v.stage, v.outcomes(t))
+	}
+}
+
+func TestAStageThatAsksForNothingGetsNoMove(t *testing.T) {
+	v := setupStageMove(t)
+	v.WsExec(t, `UPDATE stage_exit_criterion SET archived_at = now() WHERE stage_id = $1`, v.stage)
+	v.move.criterion = ""
+	v.run(t)
+	if got := v.outcomes(t); got != "move_stage="+deals.VerdictDroppedNoCriteria {
+		t.Fatalf("outcomes = %s, want the move refused for a stage with no exit criteria", got)
+	}
+}
+
+func TestAStageChangeBetweenTheReadAndTheWriteStopsTheMove(t *testing.T) {
+	cases := map[string]func(v *stageMoveEnv){
+		"the stages were reordered": func(v *stageMoveEnv) {
+			order := strings.Split(v.WsScalar(t, `SELECT string_agg(id::text, ',' ORDER BY position) FROM stage
+				WHERE pipeline_id = $1 AND archived_at IS NULL`, v.pipeline), ",")
+			for i, id := range order {
+				switch id {
+				case v.stage.String():
+					order[i] = v.next.String()
+				case v.next.String():
+					order[i] = v.stage.String()
+				}
+			}
+			stageIDs := make([]ids.UUID, 0, len(order))
+			for _, id := range order {
+				parsed, err := ids.Parse(id)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				stageIDs = append(stageIDs, parsed)
+			}
+			if _, err := v.Deals.ReorderStages(v.Admin(), v.pipeline, stageIDs, nil); err != nil {
+				t.Error(err)
+			}
+		},
+		"a criterion became required": func(v *stageMoveEnv) {
+			if _, err := v.Deals.CreateStageExitCriterion(v.Admin(), deals.CreateCriterionInput{
+				StageID: v.stage, Key: "signed_nda", Label: "NDA signed", Kind: string(deals.CriterionCustom),
+			}); err != nil {
+				t.Error(err)
+			}
+		},
+		"the cited note was unlinked": func(v *stageMoveEnv) {
+			v.WsExec(t, `DELETE FROM activity_link WHERE deal_id = $1 AND activity_id = $2`, v.deal, v.note)
+		},
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			v := setupStageMove(t)
+			v.move.during = func() { change(v) }
+			v.run(t)
+			if got := v.field(t, "stage_id"); got == v.next.String() {
+				t.Fatalf("the deal moved although %s while the model read (outcomes %s)", name, v.outcomes(t))
+			}
+		})
 	}
 }

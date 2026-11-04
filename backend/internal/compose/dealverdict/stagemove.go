@@ -12,10 +12,12 @@ import (
 const (
 	DroppedNotForward     = "dropped:stage_not_forward"
 	DroppedCriterionUnmet = "dropped:criterion_unmet"
+	// DroppedNoExitCriteria is a move across a stage that asks for nothing.
+	DroppedNoExitCriteria = deals.VerdictDroppedNoCriteria
 )
 
-// decideMoveStage lets a move through only to a later open stage. Each
-// required exit criterion of each stage the deal leaves must rest on a cited
+// decideMoveStage lets a move through only to a later open stage. Each stage
+// the deal leaves needs required exit criteria. Each one must rest on a cited
 // activity that holds the quoted words and fits the criterion's kind.
 func decideMoveStage(in Input, action Action, change *deals.VerdictChange) string {
 	target, ok := laterStage(in, action.StageID)
@@ -25,6 +27,9 @@ func decideMoveStage(in Input, action Action, change *deals.VerdictChange) strin
 	toStage, err := ids.ParseAs[ids.StageKind](target.ID)
 	if err != nil {
 		return DroppedNotForward
+	}
+	if !everyStageLeftAsks(in, target) {
+		return DroppedNoExitCriteria
 	}
 	met := make([]deals.CriterionCitation, 0, len(in.ExitCriteria))
 	for _, criterion := range in.ExitCriteria {
@@ -49,6 +54,24 @@ func decideMoveStage(in Input, action Action, change *deals.VerdictChange) strin
 	change.CriteriaMet = met
 	change.Evidence["to_stage"] = target.Name
 	return ""
+}
+
+// everyStageLeftAsks reports whether the deal's stage and each stage the move
+// skips has at least one required exit criterion.
+func everyStageLeftAsks(in Input, target StageOption) bool {
+	asking := map[int]bool{}
+	for _, criterion := range in.ExitCriteria {
+		asking[criterion.StagePosition] = true
+	}
+	if !asking[in.StagePosition] {
+		return false
+	}
+	for _, stage := range in.Later {
+		if stage.Position < target.Position && !asking[stage.Position] {
+			return false
+		}
+	}
+	return true
 }
 
 func laterStage(in Input, id string) (StageOption, bool) {

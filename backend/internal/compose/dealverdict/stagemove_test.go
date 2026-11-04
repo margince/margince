@@ -164,3 +164,24 @@ func TestTheValidatorRefusesAMoveToAStageNotListed(t *testing.T) {
 		t.Fatal("a criterion resting on an activity the move does not cite passed the validator")
 	}
 }
+
+func TestAStageWithNoExitCriteriaGetsNoMove(t *testing.T) {
+	t.Parallel()
+	in := moveInput()
+	in.ExitCriteria = in.ExitCriteria[:1]
+	got, err := Decide(in, moveState(), Payload{Actions: []Action{moveAction(contractID, buyerAsked)}}, fixedRates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Outcome != DroppedNoExitCriteria {
+		t.Fatalf("a skip across Negotiation, which asks nothing: outcome = %q, want %q", got[0].Outcome, DroppedNoExitCriteria)
+	}
+	in.ExitCriteria = nil
+	got, err = Decide(in, moveState(), Payload{Actions: []Action{moveAction(negotiationID)}}, fixedRates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Outcome != DroppedNoExitCriteria {
+		t.Fatalf("a move from a stage that asks nothing: outcome = %q, want %q", got[0].Outcome, DroppedNoExitCriteria)
+	}
+}
