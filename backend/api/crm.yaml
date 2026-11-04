@@ -66270,7 +66270,7 @@ components:
         What one reading of one transcript did. The three outcomes are kept apart on purpose: still
         reading, read it and it stated nothing, and could not read it are different answers, and
         collapsing the last two makes a correct empty result look like a broken feature.
-      required: [read_id, activity_id, status, line_count, proposal_ids, created_at]
+      required: [read_id, activity_id, status, line_count, proposal_ids, proposals, created_at]
       properties:
         read_id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid }
@@ -66278,8 +66278,23 @@ components:
         status_detail:
           type: [string, 'null']
           description: >-
-            Why it ended as it did, in words a rep can act on. Set on failure, and on a done reading
-            that produced nothing so an empty result explains itself.
+            The sentence stored when the reading finished, in the installation's base language and
+            naming nobody. Kept for readings finished before `detail` existed; a client shows
+            `detail` when it is set.
+        detail:
+          type: [string, 'null']
+          description: >-
+            What the reading did, phrased for the caller in their display language: tasks it added
+            "for you" or for a named colleague, proposals waiting on the caller, proposals "sent to"
+            a named colleague to confirm, commitments it withheld and why, or why it could not be
+            used. Null while the reading runs, and on a reading finished before the outcome was
+            kept as facts, where `status_detail` is the account.
+        proposals:
+          type: array
+          description: >-
+            The approvals this reading staged, each with the colleague it waits on. Empty on a
+            reading finished before the outcome was kept as facts; `proposal_ids` still lists those.
+          items: { $ref: '#/components/schemas/TranscriptReadProposal' }
         line_count:
           type: integer
           description: >-
@@ -66293,6 +66308,26 @@ components:
         started_at: { type: [string, 'null'], format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+
+    TranscriptReadProposal:
+      type: object
+      description: One approval a transcript reading staged, and who it waits on.
+      required: [id, asked_of]
+      properties:
+        id: { type: string, format: uuid }
+        asked_of: { $ref: '#/components/schemas/TranscriptReadAskedOf' }
+
+    TranscriptReadAskedOf:
+      type: object
+      description: >-
+        The colleague a staged approval waits on. A client reads the approval's status only when
+        `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the
+        caller's to read.
+      required: [seat_id, is_you]
+      properties:
+        seat_id: { type: string, format: uuid }
+        name: { type: [string, 'null'], description: 'The colleague as the roster names them; null for a seat with no name to show.' }
+        is_you: { type: boolean }
 
     SiteReadStarted:
       type: object
