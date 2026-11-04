@@ -3,23 +3,22 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import type { CreateField } from "../../components/create";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
 import {
   Button,
   Field,
   Modal,
   SearchField,
   TextInput,
-} from "../../design-system/atoms";
-import { DateInput, type ISODate } from "../../design-system/dateinput";
-import { Heading } from "../../design-system/heading";
-import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { isOption } from "../../lib/options";
-import { unwrap } from "../../lib/problem";
+} from "../design-system/atoms";
+import { DateInput, type ISODate } from "../design-system/dateinput";
+import { Heading } from "../design-system/heading";
+import { Select } from "../design-system/select";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { isOption } from "../lib/options";
+import { unwrap } from "../lib/problem";
 import {
   BILLING_ROLES,
   DEAL_ROLES,
@@ -27,18 +26,16 @@ import {
   PROJECT_ROLES,
   type RoleVocabulary,
   roleFromTyped,
-} from "../../lib/recordlabels";
-import {
-  type Candidate,
-  searchByEntity,
-} from "../../lib/relationshipcandidates";
-import { KIND_LABELS } from "../../lib/relationshipkinds";
-import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
+} from "../lib/recordlabels";
+import { type Candidate, searchByEntity } from "../lib/relationshipcandidates";
+import { KIND_LABELS } from "../lib/relationshipkinds";
+import { SEARCH_HIT_KIND_KEY } from "../lib/searchkinds";
+import type { CreateField } from "./create";
 import "./candidatepicker.css";
-import "../../design-system/querystates.css";
+import "../design-system/querystates.css";
 import "./relationships.css";
-import { ErrorLine } from "../../design-system/errorline";
-import { refuseUnreadableField } from "../../design-system/formvalidity";
+import { ErrorLine } from "../design-system/errorline";
+import { refuseUnreadableField } from "../design-system/formvalidity";
 import {
   type EdgeOption,
   edgeOptions,

@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
-import { translate } from "../../i18n";
+import { translate } from "../i18n";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
-} from "../../testing/story-utils";
+} from "../testing/story-utils";
 import { RelationshipRows } from "./relationshiprows";
 
 // The rows without their panel, the shape the deal's committee card mounts.

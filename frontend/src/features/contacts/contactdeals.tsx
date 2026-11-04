@@ -10,10 +10,10 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import "./contact360.css";
+import { AddRelationshipAction } from "../../components/relationships";
 import { closeDayOf } from "../../lib/closeday";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerZone } from "../../lib/viewerzone";
-import { AddRelationshipAction } from "../records/relationships";
 import { ContactDealRooms } from "./contactdealrooms";
 import "./contacttabs.css";
 

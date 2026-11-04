@@ -5,9 +5,9 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type Locale, LocaleProvider, translate } from "../../i18n";
-import { renderWithQueryClient } from "../../testing/queryrender";
-import { jsonResponse, stubWithSession } from "../../testing/story-utils";
+import { type Locale, LocaleProvider, translate } from "../i18n";
+import { renderWithQueryClient } from "../testing/queryrender";
+import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
 
 const DEAL = "01a02e25-a5ac-7099-8099-581cbf001a99";

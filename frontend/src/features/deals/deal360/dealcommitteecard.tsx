@@ -3,6 +3,8 @@
 
 import type { components } from "../../../api/schema";
 import { useRecordAssignments } from "../../../components/recordassignments.queries";
+import { RelationshipRows } from "../../../components/relationshiprows";
+import { AddRelationshipAction } from "../../../components/relationships";
 import { Disclosure } from "../../../design-system/disclosure";
 import { OverviewCard } from "../../../design-system/overviewcard";
 import { activityDay } from "../../../format/activitywhen";
@@ -10,8 +12,6 @@ import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
 import { useViewerZone } from "../../../lib/viewerzone";
-import { RelationshipRows } from "../../records/relationshiprows";
-import { AddRelationshipAction } from "../../records/relationships";
 import { type AddSeat, CommitteeReading, committeeFoot } from "./dealcommittee";
 import { committeeTeam } from "./dealcommitteeteam";
 

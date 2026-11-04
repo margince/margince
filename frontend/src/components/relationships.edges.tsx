@@ -1,12 +1,12 @@
 import type { useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import type { MessageKey } from "../../i18n/en";
-import { DEAL_COVERAGE_KEY } from "../../lib/activitykeys";
-import type { EntityKind } from "../../lib/entity";
-import { unwrap } from "../../lib/problem";
-import type { RelationshipEntity } from "../../lib/relationshipcandidates";
-import { KIND_LABELS } from "../../lib/relationshipkinds";
-import { worklistKey } from "../../lib/workkeys";
+import { api } from "../api/client";
+import type { MessageKey } from "../i18n/en";
+import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import type { RelationshipEntity } from "../lib/relationshipcandidates";
+import { KIND_LABELS } from "../lib/relationshipkinds";
+import { worklistKey } from "../lib/workkeys";
 import type {
   CreatableRelationshipKind,
   CreateRelationshipRequest,
