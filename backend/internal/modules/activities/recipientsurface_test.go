@@ -70,8 +70,7 @@ func TestACcRecipientAdvertisedToGetsTheAdvertisingDuties(t *testing.T) {
 		Recipients: []string{"a@example.test", "b@example.test"},
 		Cc:         []string{"b@example.test"},
 	})
-	var shared *SharedUnsubscribeTokenError
-	if !errors.As(err, &shared) {
+	if _, shared := errors.AsType[*SharedUnsubscribeTokenError](err); !shared {
 		t.Errorf("the reply with an advertised Cc was derived with err %v, want the one-addressee refusal", err)
 	}
 

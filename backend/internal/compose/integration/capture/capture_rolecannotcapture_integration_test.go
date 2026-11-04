@@ -106,7 +106,7 @@ func TestConnectRefusesAMemberWhoseRoleCannotCapture(t *testing.T) {
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "read_only")
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), identity.NewService(e.Pool), newTestKeyvault(t, e))
-	registry.Register(&countingConnector{moodyConnector: moodyConnector{name: "gmail"}})
+	registry.Register(&countingConnector{name: "gmail"})
 
 	_, err := registry.Connect(humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead}), "gmail", connector.Auth("token"))
 	if _, refused := errors.AsType[*capturemod.RoleCannotCaptureError](err); !refused {
@@ -140,7 +140,7 @@ func TestAMemberMovedToReadOnlyStopsWithoutAProviderCallAndResumesWhenRestored(t
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "rep")
-	provider := &countingConnector{moodyConnector: moodyConnector{name: "gmail"}}
+	provider := &countingConnector{name: "gmail"}
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), identity.NewService(e.Pool), newTestKeyvault(t, e))
 	registry.Register(provider)
 	connID, err := registry.Connect(humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead}), "gmail", connector.Auth("token"))
