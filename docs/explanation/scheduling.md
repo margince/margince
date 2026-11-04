@@ -128,10 +128,11 @@ A booking with no guest is refused with `invitee_required`. To record a meeting 
 log it. Agents book with `invite_meeting` only.
 
 Each further address is matched under the host's row scope. A contact comes first, then a live
-colleague, then a lead. An address that matches none of them counts as typed by the host. The
-provider save matches it again. It asks the consent gate only about addresses a contact or lead
-holds. A colleague and an address no record holds get the invite without that check, and the
-approval preview marks the second kind.
+colleague, then a lead. An address that matches none of them counts as typed by the host.
+
+The provider save matches it again. It asks the consent gate only about addresses a contact or lead
+holds. A colleague and an address no record holds get the invite without that check. The approval
+preview and the staged summary mark the second kind.
 
 `/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
 says so. No email or ICS file stands in when a provider write fails. So a failed write never turns

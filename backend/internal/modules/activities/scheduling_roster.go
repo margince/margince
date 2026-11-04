@@ -78,15 +78,16 @@ func (s *Store) invitationRoster(ctx context.Context, host ids.UserID, in crmcon
 	if err != nil {
 		return nil, err
 	}
-	roster := []connector.CalendarAttendee{primary}
-	if len(further) == 0 {
-		return roster, nil
-	}
-	resolved, err := s.calendar.ResolveAttendees(ctx, host, further)
+	// The invitee's own address is resolved too, only for the name: it is
+	// taken when the address resolves to the very record the meeting names.
+	resolved, err := s.calendar.ResolveAttendees(ctx, host, append([]string{primary.Address}, further...))
 	if err != nil {
 		return nil, err
 	}
-	return append(roster, resolved...), nil
+	if len(resolved) > 0 && resolved[0].ID == primary.ID {
+		primary.Name = resolved[0].Name
+	}
+	return append([]connector.CalendarAttendee{primary}, resolved[min(1, len(resolved)):]...), nil
 }
 
 // rosterAudit is the roster as the History tab shows it: each address with
@@ -129,29 +130,43 @@ func invitationLinks(in crmcontracts.MeetingInvitationRequest, intent invitation
 }
 
 // stampInvitationAttendees records who is in the room: the host as organizer
-// and every invited address as attendee. A contact or colleague is written by
+// and every invited address as attendee, under the name its record gives it. A contact or colleague is written by
 // id. A lead or a host-named address is written by the bare address, as
 // capture records a party who is no contact here yet. A contact the host
 // cannot see resolved as host-named, so its id never lands on this row.
 func stampInvitationAttendees(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, host ids.UserID, roster []connector.CalendarAttendee) error {
 	hostID := host.UUID
-	if err := insertParticipantRow(ctx, tx, activityID, "organizer", &hostID, nil, ""); err != nil {
+	if err := insertParticipantRow(ctx, tx, activityID, "organizer", &hostID, nil, "", nil); err != nil {
 		return err
 	}
 	for _, attendee := range roster {
-		id := attendee.ID
+		id, name := attendee.ID, attendee.Name
 		var err error
 		switch attendee.Basis {
 		case connector.AttendeeContact:
-			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, &id, "")
+			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, &id, "", &name)
 		case connector.AttendeeColleague:
-			err = insertParticipantRow(ctx, tx, activityID, "attendee", &id, nil, "")
+			err = insertParticipantRow(ctx, tx, activityID, "attendee", &id, nil, "", &name)
 		default:
-			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, nil, attendee.Address)
+			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, nil, attendee.Address, &name)
 		}
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// InvitationRoster resolves an invitation request's addresses for the acting
+// host, as delivery will, without reserving anything. Staging reads it to show
+// which addresses no consent check clears.
+func (s *Store) InvitationRoster(ctx context.Context, in crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	if s.calendar == nil {
+		return nil, nil
+	}
+	host, err := schedulingHost(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.invitationRoster(ctx, host, in, invitationIntent{})
 }

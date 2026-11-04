@@ -269,7 +269,7 @@ func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, a
 	out := make([]connector.CalendarAttendee, 0, len(addresses))
 	for _, address := range addresses {
 		if id, ok := c.contacts[address]; ok {
-			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, AskConsent: true})
+			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, Name: "Contact " + address, AskConsent: true})
 			continue
 		}
 		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})

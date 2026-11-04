@@ -28,7 +28,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 	if previewUnavailable(err) {
 		return out, nil
 	}
-	call := agents.NewMeetingInvitationCall(r.records, nil, in)
+	call := agents.NewMeetingInvitationCall(r.records, nil, nil, in)
 	if err := call.Guards(ctx); err != nil {
 		var invalid *agents.BadArgsError
 		if previewUnavailable(err) || errors.As(err, &invalid) {

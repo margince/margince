@@ -76,11 +76,14 @@ func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	colleagueName := w.e.WsScalar(t, `SELECT display_name FROM app_user WHERE id = $1`, w.e.Rep2)
+	// Each resolved attendee carries its record's name; the hidden contact's
+	// name never leaves with it.
 	want := []connector.CalendarAttendee{
-		{Address: "visible@buyer.test", Basis: connector.AttendeeContact, ID: visible, AskConsent: true},
+		{Address: "visible@buyer.test", Basis: connector.AttendeeContact, ID: visible, Name: "visible@buyer.test", AskConsent: true},
 		{Address: "hidden@buyer.test", Basis: connector.AttendeeHostNamed, AskConsent: true},
-		{Address: colleague, Basis: connector.AttendeeColleague, ID: w.e.Rep2},
-		{Address: alsoContact, Basis: connector.AttendeeContact, ID: shared, AskConsent: true},
+		{Address: colleague, Basis: connector.AttendeeColleague, ID: w.e.Rep2, Name: colleagueName},
+		{Address: alsoContact, Basis: connector.AttendeeContact, ID: shared, Name: alsoContact, AskConsent: true},
 		{Address: "stranger@elsewhere.test", Basis: connector.AttendeeHostNamed},
 	}
 	if !slices.Equal(got, want) {

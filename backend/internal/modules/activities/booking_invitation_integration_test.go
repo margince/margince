@@ -62,6 +62,7 @@ func (f bookingFixture) booking(links ...ActivityLinkInput) BookMeetingInput {
 func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
 	f := setupBooking(t)
 	contact := f.contactWithEmail(t, "guest@example.test")
+	f.calendar.contacts = map[string]ids.UUID{"guest@example.test": contact}
 	in := f.booking(ActivityLinkInput{EntityType: linkEntityContact, EntityID: contact})
 	in.AttendeeEmails = []string{"Second@Example.test", "guest@example.test", "third@example.test", "second@example.test"}
 
@@ -82,7 +83,7 @@ func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
 	if got := f.calendar.requests[0].Attendees; !slices.Equal(got, want) {
 		t.Errorf("event attendees = %v, want %v", got, want)
 	}
-	rows, err := f.e.owner.Query(f.ctx, `SELECT role, user_id IS NOT NULL, contact_id IS NOT NULL, coalesce(address,'') FROM activity_participant
+	rows, err := f.e.owner.Query(f.ctx, `SELECT role, user_id IS NOT NULL, contact_id IS NOT NULL, coalesce(address,''), coalesce(display_name,'<none>') FROM activity_participant
 		WHERE activity_id = $1 AND role IN ('organizer','attendee') ORDER BY role DESC, address NULLS FIRST`, meeting.Id)
 	if err != nil {
 		t.Fatal(err)
@@ -90,9 +91,9 @@ func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
 	defer rows.Close()
 	var got []string
 	for rows.Next() {
-		var role, address string
+		var role, address, name string
 		var user, byContact bool
-		if err := rows.Scan(&role, &user, &byContact, &address); err != nil {
+		if err := rows.Scan(&role, &user, &byContact, &address, &name); err != nil {
 			t.Fatal(err)
 		}
 		switch {
@@ -101,9 +102,10 @@ func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
 		case byContact:
 			address = "contact"
 		}
-		got = append(got, role+":"+address)
+		got = append(got, role+":"+address+":"+name)
 	}
-	if want := []string{"organizer:user", "attendee:contact", "attendee:second@example.test", "attendee:third@example.test"}; !slices.Equal(got, want) {
+	// An attendee carries its record's name; a host-named address has none to give.
+	if want := []string{"organizer:user:<none>", "attendee:contact:Contact guest@example.test", "attendee:second@example.test:", "attendee:third@example.test:"}; !slices.Equal(got, want) {
 		t.Errorf("participants = %v, want %v", got, want)
 	}
 }

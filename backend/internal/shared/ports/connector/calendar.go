@@ -84,6 +84,9 @@ type CalendarAttendee struct {
 	Address string   `json:"Address"`
 	Basis   string   `json:"Basis"`
 	ID      ids.UUID `json:"ID"`
+	// Name is what the resolved record calls the attendee, as the host may
+	// read it; empty for a host-named address.
+	Name string `json:"Name,omitempty"`
 	// AskConsent says the consent gate must clear this address before the
 	// provider sends. It holds for every contact and lead. It also holds for a
 	// host-named address that a hidden contact or lead still holds. Only a
