@@ -2572,7 +2572,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1489,
+      "tokens": 1507,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",

@@ -34055,6 +34055,16 @@ paths:
 
         404 when this attachment has never been read — the honest difference between
         nobody asking and a reading that got nothing.
+
+        `question` picks which reading: the newest one for that question, `deal_facts` when
+        absent, so a chat reading never stands in for the deal facts. An agent cannot read a
+        `chat_capture` reading (403): it is the model's transcript of an image that no quote
+        could be checked against, a suggestion until someone files it, and not evidence.
+      parameters:
+        - name: question
+          in: query
+          required: false
+          schema: { type: string, enum: [deal_facts, chat_capture] }
       responses:
         '200':
           description: The newest reading of this attachment.
@@ -34062,6 +34072,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AttachmentExtraction' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     post:

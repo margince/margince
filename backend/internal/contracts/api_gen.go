@@ -26800,6 +26800,24 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 	}
 }
 
+// Defines values for GetAttachmentExtractionParamsQuestion.
+const (
+	GetAttachmentExtractionParamsQuestionChatCapture GetAttachmentExtractionParamsQuestion = "chat_capture"
+	GetAttachmentExtractionParamsQuestionDealFacts   GetAttachmentExtractionParamsQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the GetAttachmentExtractionParamsQuestion enum.
+func (e GetAttachmentExtractionParamsQuestion) Valid() bool {
+	switch e {
+	case GetAttachmentExtractionParamsQuestionChatCapture:
+		return true
+	case GetAttachmentExtractionParamsQuestionDealFacts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OidcSignInCallbackParamsProvider.
 const (
 	OidcSignInCallbackParamsProviderGoogle    OidcSignInCallbackParamsProvider = "google"
@@ -67025,6 +67043,14 @@ type UploadAttachmentMultipartBody struct {
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
 
+// GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParams struct {
+	Question *GetAttachmentExtractionParamsQuestion `form:"question,omitempty" json:"question,omitempty"`
+}
+
+// GetAttachmentExtractionParamsQuestion defines parameters for GetAttachmentExtraction.
+type GetAttachmentExtractionParamsQuestion string
+
 // ListAuditLogParams defines parameters for ListAuditLog.
 type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -88008,7 +88034,7 @@ type ServerInterface interface {
 	DownloadAttachment(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 	// (GET /attachments/{id}/extraction)
-	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams)
 	// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 	// (POST /attachments/{id}/extraction)
 	ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -91578,7 +91604,7 @@ func (_ Unimplemented) DownloadAttachment(w http.ResponseWriter, r *http.Request
 
 // The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 // (GET /attachments/{id}/extraction)
-func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id, params GetAttachmentExtractionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104367,8 +104393,24 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAttachmentExtractionParams
+
+	// ------------- Optional query parameter "question" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "question", r.URL.Query(), &params.Question, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "question"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "question", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAttachmentExtraction(w, r, id)
+		siw.Handler.GetAttachmentExtraction(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

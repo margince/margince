@@ -695,7 +695,7 @@ func (stubs) DownloadAttachment(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "DownloadAttachment")
 }
 
-func (stubs) GetAttachmentExtraction(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) GetAttachmentExtraction(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetAttachmentExtractionParams) {
 	httperr.NotImplemented(w, r, "GetAttachmentExtraction")
 }
 

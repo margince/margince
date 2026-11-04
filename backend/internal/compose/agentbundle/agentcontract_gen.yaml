@@ -17610,6 +17610,11 @@ paths:
         Every returned field carries a non-empty source_quote/page_or_section/confidence,
         or is listed in `omitted` with reason "not_stated_in_file" — never a guessed value. Valid for any entity_type; the same parent-visibility gate as
         `downloadAttachment`/`listAttachments` applies.
+      parameters:
+        - name: question
+          in: query
+          required: false
+          schema: {type: string, enum: [deal_facts, chat_capture]}
       responses:
         '200':
           description: The newest reading of this attachment.
@@ -17617,6 +17622,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AttachmentExtraction'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:

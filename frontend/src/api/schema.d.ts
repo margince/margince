@@ -23086,6 +23086,11 @@ export interface paths {
          *
          *     404 when this attachment has never been read — the honest difference between
          *     nobody asking and a reading that got nothing.
+         *
+         *     `question` picks which reading: the newest one for that question, `deal_facts` when
+         *     absent, so a chat reading never stands in for the deal facts. An agent cannot read a
+         *     `chat_capture` reading (403): it is the model's transcript of an image that no quote
+         *     could be checked against, a suggestion until someone files it, and not evidence.
          */
         get: operations["getAttachmentExtraction"];
         put?: never;
@@ -91884,7 +91889,9 @@ export interface operations {
     };
     getAttachmentExtraction: {
         parameters: {
-            query?: never;
+            query?: {
+                question?: "deal_facts" | "chat_capture";
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -91904,6 +91911,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
