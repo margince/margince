@@ -17,7 +17,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { accountsOf } from "../../format/connectorprovider";
 import { LocaleProvider } from "../../i18n";
-import type { ImportWindow } from "../../lib/connect-account";
+import type {
+  ConnectAccountInput,
+  ImportWindow,
+} from "../../lib/connect-account";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
 import { StopConfirm } from "./connection-stop";
@@ -377,10 +380,13 @@ describe("the account's settings", () => {
 });
 
 describe("the account's own verbs", () => {
-  it("names the one service when the account lost another while the confirm was open", async () => {
-    const calls = stubApi({
-      "POST /disconnect": () => new Response(null, { status: 204 }),
-    });
+  it("ends a stop whose services left the account, and keeps the follow-up connect", () => {
+    const calls = stubApi({});
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
     const [account] = accountsOf([gcal]);
     rtlRender(
       <QueryClientProvider client={new QueryClient()}>
@@ -388,17 +394,16 @@ describe("the account's own verbs", () => {
           <StopConfirm
             account={account}
             title="lars@example.de"
-            stop={{ services: ["mail"], afterwards: null }}
+            stop={{ services: ["mail"], afterwards }}
             onClose={() => undefined}
-            onStopped={() => undefined}
+            onStopped={onStopped}
           />
         </LocaleProvider>
       </QueryClientProvider>,
     );
 
-    expect(
-      screen.queryByRole("dialog", { name: "Disconnect lars@example.de?" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onStopped).toHaveBeenCalledWith(afterwards);
     expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(0);
   });
 

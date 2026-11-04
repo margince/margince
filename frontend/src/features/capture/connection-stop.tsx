@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -73,10 +74,19 @@ export function StopConfirm({
   const t = useT();
   const disconnect = useDisconnectServices();
   const vendor = vendorOfAccount(account);
-  const services = stop?.services ?? [];
   const held = servicesOf(account);
-  const whole =
-    held.length > 0 && held.every((service) => services.includes(service));
+  const services = (stop?.services ?? []).filter((service) =>
+    held.includes(service),
+  );
+  const whole = services.length > 0 && services.length === held.length;
+  // The account can lose a service while the confirm is open. With nothing left
+  // to stop, the stop is over, and a follow-up connect still has to run.
+  const nothingLeft = stop !== null && services.length === 0;
+  useEffect(() => {
+    if (nothingLeft) {
+      onStopped(stop.afterwards);
+    }
+  }, [nothingLeft, stop, onStopped]);
   const providers = services
     .map((service) =>
       service === "mail" ? account.mail?.provider : account.calendar?.provider,
@@ -84,7 +94,7 @@ export function StopConfirm({
     .filter((provider): provider is Provider => provider !== undefined);
   return (
     <ConfirmModal
-      open={stop !== null}
+      open={stop !== null && !nothingLeft}
       onClose={() => {
         disconnect.reset();
         onClose();

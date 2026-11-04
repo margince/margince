@@ -168,7 +168,9 @@ function zoneSourceRefs(
       if (
         ts.isImportDeclaration(node) ||
         ts.isExportDeclaration(node) ||
-        ts.isImportEqualsDeclaration(node)
+        ts.isImportEqualsDeclaration(node) ||
+        ts.isTypeQueryNode(node) ||
+        ts.isTypeReferenceNode(node)
       ) {
         return;
       }
@@ -245,6 +247,7 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
             "  const e = { browserZone };",
             "  return [a, b, c, d, e].join();",
             "}",
+            "export type Zone = ReturnType<typeof browserZone>;",
           ].join("\n"),
         ],
       ]),

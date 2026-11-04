@@ -72,7 +72,9 @@ var equivalentContent = map[string]map[string][]equivalence{
 			source:  "b6f75f1f2ece9b3ce25de15c04bdc2855fa75b516ba54f3403c91c0fb793df3a",
 		}},
 		// Only the down half differs: it restores the older vocabulary `NOT VALID`, so
-		// a rollback takes no scan under ACCESS EXCLUSIVE. The up half is unchanged.
+		// a rollback takes no scan under ACCESS EXCLUSIVE. Checked for rollback: the
+		// one schema difference is that flag, the down rewrites the value it refuses
+		// first, and the next up replaces the check.
 		"1793784484": {{
 			applied: "d5ec53c23e2347fadc65f9bdd9d63e9dfae40c6897c1e1b8c59f046c8e99eb0e",
 			source:  "76336c558410fc1ee67862f22fb4689b5f9655917af35617f55c11b31f154669",
