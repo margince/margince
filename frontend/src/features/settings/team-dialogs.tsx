@@ -70,7 +70,9 @@ export function TeamMembersModal({
   // is gone. Pressed holds the press's place until the write succeeds; a
   // search typed meanwhile moves no focus.
   const pressed = useRef<number | null>(null);
-  const [refocus, setRefocus] = useState<{
+  // A ref, not state: the roster refetch after the write is the render that
+  // moves focus, so holding the target needs no render of its own.
+  const refocus = useRef<{
     at: number;
     userId: string;
     member: boolean;
@@ -99,7 +101,11 @@ export function TeamMembersModal({
       const at = pressed.current;
       pressed.current = null;
       if (at !== null) {
-        setRefocus({ at, userId: written.userId, member: written.member });
+        refocus.current = {
+          at,
+          userId: written.userId,
+          member: written.member,
+        };
       }
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["teams"] });
@@ -126,20 +132,21 @@ export function TeamMembersModal({
   // Runs once the roster shows the landed write: the removed member is off the
   // team, or the added one is on it. Not on a search, which changes the rows
   // shown but writes nothing.
-  const landed =
-    refocus !== null &&
-    everyMember.some((member) => member.id === refocus.userId) ===
-      refocus.member;
   useEffect(() => {
-    if (!landed || refocus === null) {
+    const target = refocus.current;
+    if (
+      target === null ||
+      everyMember.some((member) => member.id === target.userId) !==
+        target.member
+    ) {
       return;
     }
-    setRefocus(null);
+    refocus.current = null;
     const verbs = list.current?.querySelectorAll("button") ?? [];
-    const at = refocus.at;
-    const next = at < 0 ? undefined : verbs[Math.min(at, verbs.length - 1)];
+    const next =
+      target.at < 0 ? undefined : verbs[Math.min(target.at, verbs.length - 1)];
     (next ?? document.getElementById(titleId))?.focus();
-  }, [landed, refocus, titleId]);
+  }, [everyMember, titleId]);
 
   const pick = (value: string) => {
     const user = candidates.find((candidate) => candidate.id === value);
