@@ -22,9 +22,7 @@ const (
 	BucketPulledIn  = "pulled_in"
 	BucketPushedOut = "pushed_out"
 	BucketAmount    = "amount"
-	// BucketCategory is a probability set on the deal that moved, or a deal
-	// that took or left its own probability. The wire keeps the word
-	// "category", which frozen movements before Likely carry.
+	// BucketCategory is a deal's own probability moving; the wire keeps "category" for frozen movements.
 	BucketCategory    = "category"
 	BucketStageWeight = "stage_weight"
 	// BucketRecordChanged is a deal whose weight moved while its stage did
@@ -464,8 +462,7 @@ func dealDelta(
 	return out
 }
 
-// probabilitySetMoved reports whether the deal took or left a probability of
-// its own, or whether one it holds moved.
+// probabilitySetMoved reports a deal taking, leaving or moving its own probability.
 func probabilitySetMoved(was, now Contribution) bool {
 	if was.Source != now.Source {
 		return true

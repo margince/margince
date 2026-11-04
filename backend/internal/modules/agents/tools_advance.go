@@ -171,3 +171,10 @@ func readBackRecord(ctx context.Context, p datasource.SystemOfRecordProvider, re
 	}
 	return newWireRecord(ctx, rec), nil
 }
+
+// AdvancedDealRecord is what advance_deal answers: the deal as it now stands
+// and the probability the move set from the new stage.
+type AdvancedDealRecord struct {
+	wireRecord
+	ProbabilityNote string `json:"probability_note,omitempty"`
+}

@@ -388,13 +388,6 @@ type ProgressDealResult struct {
 	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
 }
 
-// AdvancedDealRecord is what advance_deal answers: the deal as it now stands
-// and the probability the move set from the new stage.
-type AdvancedDealRecord struct {
-	wireRecord
-	ProbabilityNote string `json:"probability_note,omitempty"`
-}
-
 // SlippingEvidence is one reason a deal is reported as slipping, named by the
 // field it was read off.
 type SlippingEvidence struct {
