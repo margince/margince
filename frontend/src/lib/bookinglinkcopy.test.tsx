@@ -6,10 +6,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api } from "../api/client";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { useCopyBookingLink } from "./bookinglinkcopy";
+
+type ShareAnswer = Readonly<{ data?: unknown; error?: unknown }>;
+
+// The client narrowed to the one call the hook makes. Spying on the generated
+// client's POST asks the compiler to expand every route's types.
+const { post } = vi.hoisted(() => ({
+  post: vi.fn<(path: string) => Promise<ShareAnswer>>(),
+}));
+vi.mock("../api/client", () => ({ api: { POST: post } }));
 
 const LABELS = {
   copy: "Copy link",
@@ -19,6 +27,7 @@ const LABELS = {
 
 afterEach(() => {
   cleanup();
+  post.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -49,9 +58,7 @@ function renderCopy() {
 }
 
 function stubShare() {
-  return vi
-    .spyOn(api, "POST")
-    .mockResolvedValue({ data: undefined, error: undefined } as never);
+  return post.mockResolvedValue({ data: undefined, error: undefined });
 }
 
 describe("useCopyBookingLink", () => {
@@ -84,10 +91,9 @@ describe("useCopyBookingLink", () => {
     const user = userEvent.setup();
     stubClipboard("accepts");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const share = vi
-      .spyOn(api, "POST")
+    const share = post
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockResolvedValue({ data: undefined, error: undefined } as never);
+      .mockResolvedValue({ data: undefined, error: undefined });
     renderCopy();
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -100,10 +106,10 @@ describe("useCopyBookingLink", () => {
     const user = userEvent.setup();
     stubClipboard("accepts");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const share = vi.spyOn(api, "POST").mockResolvedValue({
+    const share = post.mockResolvedValue({
       data: undefined,
       error: { status: 404, title: "Not found" },
-    } as never);
+    });
     renderCopy();
 
     await user.click(screen.getByRole("button", { name: "Copy link" }));
