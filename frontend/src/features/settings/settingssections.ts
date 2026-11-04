@@ -100,6 +100,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.companyTitle",
     "legalEntities.title",
     "settings.rates.fxTitle",
+    "taxRates.title",
     "followUpSettings.title",
     "signatureTemplate.title",
     "installationSettings.timezone",

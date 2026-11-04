@@ -770,7 +770,12 @@ function overlayOf(baseElement: HTMLElement): HTMLElement {
 function NoteDialog({
   onClose,
   unsaved,
-}: Readonly<{ onClose: () => void; unsaved?: boolean }>) {
+  closeDisabled,
+}: Readonly<{
+  onClose: () => void;
+  unsaved?: boolean;
+  closeDisabled?: boolean;
+}>) {
   return (
     <Modal
       open
@@ -778,6 +783,7 @@ function NoteDialog({
       labelledBy="n"
       intent="drawer"
       unsaved={unsaved}
+      closeDisabled={closeDisabled}
     >
       <Heading size="large" id="n">
         Log activity
@@ -819,6 +825,16 @@ describe("a backdrop click closes only a press that starts and ends there", () =
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("stays open on the second press of the double-click that opened it", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(<NoteDialog onClose={onClose} />);
+    const overlay = overlayOf(baseElement);
+    fireEvent.pointerDown(overlay);
+    fireEvent.pointerUp(overlay);
+    fireEvent.click(overlay, { detail: 2 });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("stays open when a press on the backdrop is released inside", () => {
     const onClose = vi.fn();
     const { baseElement } = render(<NoteDialog onClose={onClose} />);
@@ -831,6 +847,32 @@ describe("a backdrop click closes only a press that starts and ends there", () =
 });
 
 type User = ReturnType<typeof userEvent.setup>;
+
+describe("a dialog whose write is out holds every way out", () => {
+  it("ignores Escape", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<NoteDialog onClose={onClose} closeDisabled />);
+    await user.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(question()).toBeNull();
+  });
+
+  it("ignores the backdrop, even with a draft to ask about", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(
+      <NoteDialog onClose={onClose} unsaved closeDisabled />,
+    );
+    pressBackdrop(overlayOf(baseElement));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(question()).toBeNull();
+  });
+
+  it("disables the corner X", () => {
+    render(<NoteDialog onClose={vi.fn()} closeDisabled />);
+    expect(closeControl()).toHaveProperty("disabled", true);
+  });
+});
 
 describe("a dialog holding typed text asks before it closes", () => {
   const ways = {

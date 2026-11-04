@@ -206,7 +206,7 @@ func holdLeadSubject(ctx context.Context, tx pgx.Tx, lead ids.LeadID) error {
 func validWithdrawalMint(in WithdrawalMintInput) error {
 	if normalizeAddress(in.Address) == "" {
 		return &ValidationError{
-			Field:  "address",
+			Field:  fieldAddress,
 			Reason: "a withdrawal link is written to an address, and this one is empty",
 		}
 	}

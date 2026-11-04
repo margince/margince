@@ -93,7 +93,11 @@ target "role" {
   # the release without running the image — which is the only way to read it
   # off the web image, whose runtime is nginx and runs none of our code.
   labels = {
-    "org.opencontainers.image.version" = VERSION
+    "org.opencontainers.image.version"  = VERSION
+    "org.opencontainers.image.revision" = MARGINCE_BUILD_REVISION
+    # Links a package pushed to ghcr.io to this repository, so the package
+    # page names its source and takes the repository's access.
+    "org.opencontainers.image.source" = "https://github.com/margince/margince"
   }
 }
 
@@ -119,4 +123,14 @@ target "worker" {
   tags       = ["${REPO}/worker:${VERSION}"]
   cache-from = CACHE == "gha" ? ["type=gha,scope=margince-worker"] : []
   cache-to   = CACHE == "gha" ? ["type=gha,scope=margince-worker,mode=max,ignore-error=true"] : []
+}
+
+# The server bundle: the Dockerfile's `bundle` stage, exported as files, one
+# folder per platform under dist/bundle/ (linux_amd64/, linux_arm64/). Not in the
+# default group, because it is not an image; release-tag.yml bakes it after the
+# images, on the same builder, so the stages the two share are built once.
+target "bundle" {
+  inherits = ["role"]
+  target   = "bundle"
+  output   = ["type=local,dest=dist/bundle"]
 }

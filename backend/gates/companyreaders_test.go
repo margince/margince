@@ -98,6 +98,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
 	"internal/compose/company360/viewbaseline.go:keyVisitsSQL":                  "the visit-mark keying data task, run by KeyVisitsTx behind auth.RequireSystem: `company` appears only in an EXISTS that decides whether a mark's record is gone. It answers user_record_view ids and nothing of a company",
 	"internal/modules/contacts/geocodecopy.go:CopyCompanyPointsTx":              "the same data task's batch: it reads the company's address and old point to copy them onto the side row, under auth.RequireSystem (foldStep). It answers ids and a count; no company column reaches any caller",
 	"internal/modules/contacts/geocodecopy.go:uncopiedCompanyPoints":            "the data task that moves each company's point onto the side row, under the system principal behind auth.RequireSystem (foldStep). It reads a company's address and its old point columns to copy them; no company column reaches any caller",
@@ -217,7 +218,7 @@ var notTheCompanyTable = gatekit.Waive(map[string]string{
 // the issue that will close it.
 var deferredCompanyReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/offer_render.go:resolveRenderBuyerBlock": "the buyer block of a rendered offer — the account's display name and legal name, on the document a buyer signs. Gated on offer:read and offer:update and never on company. Deferred rather than fixed because the answer is a product ruling and not a patch: an offer with its buyer block withheld is not a smaller document, it is a wrong one, and refusing the render would stop a seat sending an offer they are otherwise entitled to send. Whether offer:update implies seeing the buyer's name is the question. #5586",
-	"internal/modules/deals/offer_lifecycle.go:sendSnapshots":        "the same two columns, snapshotted onto the offer at SEND time so the document cannot change under a buyer afterwards. Same gate, same open question, and the pair must be answered together — snapshotting what the render may not show would put the two surfaces into disagreement about one offer. #5586",
+	"internal/modules/deals/offer_issuer.go:sendSnapshots":           "the same two columns, snapshotted onto the offer at SEND time so the document cannot change under a buyer afterwards. Same gate, same open question, and the pair must be answered together — snapshotting what the render may not show would put the two surfaces into disagreement about one offer. #5586",
 })
 
 var companyVerdicts = []namedVerdict{

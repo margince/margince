@@ -169,10 +169,16 @@ func (w *WeeklyForecast) closeHorizon(
 // commit evidence the fallback landing would have used, which is the closest
 // honest account of what the pipeline did.
 func movementReadingFor(measure forecasting.ForwardMeasure) forecasting.Reading {
-	if measure == forecasting.MeasureWeighted {
+	switch measure {
+	case forecasting.MeasureWeighted:
 		return forecasting.ReadingWeighted
+	case forecasting.MeasureQualifiedWeighted:
+		return forecasting.ReadingQualifiedWeighted
+	case forecasting.MeasureQualifiedCommitEvidence:
+		return forecasting.ReadingQualifiedEvidence
+	default:
+		return forecasting.ReadingEvidence
 	}
-	return forecasting.ReadingEvidence
 }
 
 // topDrivers picks the deals worth naming under each bar, with the labels they

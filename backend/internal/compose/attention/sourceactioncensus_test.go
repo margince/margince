@@ -56,6 +56,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"meeting_follow_up": {"open", "reply"},
 	"lead_response":     {"open"},
 	"deal_at_risk":      {"open"},
+	"deal_review":       {"open"},
 	// `complete` settles the claim as done, through POST /claims/{id}/settle.
 	"conversation_claim": {"open", "complete"},
 	"meeting":            {"open"},
@@ -152,6 +153,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 		"lead_response":     "the same lane shape as customer_waiting, and unreachable for the same reason",
 		"awaiting_reply":    "read beside Assemble like the plan lane; awaitinglane_test exercises its rows",
 		"meeting_follow_up": "read beside Assemble with awaiting_reply; awaitinglane_test exercises its rows",
+		"deal_review":       "read beside Assemble like the plan lane and folded on the worklist; dealreviewlane_test exercises its rows",
 	}
 	reached := map[string]bool{}
 	for _, items := range lanes {

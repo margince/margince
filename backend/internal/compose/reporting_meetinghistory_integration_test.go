@@ -21,7 +21,7 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 	human := reportingActor(e)
 	at := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return at }
-	customer, err := contacts.NewStore(InstallationDB(e.Pool)).WithClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(e.Pool)).SetClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.
 	rep2 := ids.NewV7()
 	exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep2@forecast.test', 'Rep Two')`, rep2)
 	exec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, e.Team1, rep2)
-	customer, err := contacts.NewStore(InstallationDB(e.Pool)).WithClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(e.Pool)).SetClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}

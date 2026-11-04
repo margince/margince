@@ -142,7 +142,7 @@ func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, c
 		   SET status = $2, source = $3, company_id = $4,
 		       evidence = 'a human put a company on this domain',
 		       -- A settled row holds no open question (pending_reason_shape).
-		       pending_reason = NULL,
+		       pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1
 		   AND (status <> $2 OR company_id IS DISTINCT FROM $4)

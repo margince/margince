@@ -193,6 +193,9 @@ func (h analyticsShareHandlers) serveSnapshot(
 	// its base currency or its fiscal year.
 	out.AsOf = &frame.TakenAt
 	shared.Readings.Range = frozen.Range
+	if err := applySharedQualified(ctx, tx, *share.SnapshotID, frame, &shared.Readings); err != nil {
+		return err
+	}
 	out.Readings = forecasting.ReadingsToWire(
 		frame.Period, share.Scope, shared.Readings, frame.BaseCurrency, frame.TakenAt)
 	out.Readings.SelfCorrecting = frame.SelfCorrecting

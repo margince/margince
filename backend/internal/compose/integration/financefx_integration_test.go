@@ -32,8 +32,8 @@ func linkedForeignLedger(
 	t *testing.T, e *Env, source testBooksSource,
 ) (*finance.Store, context.Context, ids.CompanyID) {
 	t.Helper()
-	e.Deals.WithClock(func() time.Time { return financeFxNow })
-	store := financeStoreFor(e, source).WithClock(func() time.Time { return financeFxNow })
+	e.Deals.SetClock(func() time.Time { return financeFxNow })
+	store := financeStoreFor(e, source).SetClock(func() time.Time { return financeFxNow })
 	admin := financeAdmin(e)
 	if _, err := store.Connect(admin, testBooks); err != nil {
 		t.Fatal(err)

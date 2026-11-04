@@ -32,6 +32,14 @@ type invitationCalendar struct {
 	busyErr    error
 	// saved runs once the provider holds the event, before its receipt is filed.
 	saved func()
+	// contacts are the addresses ResolveAttendees answers as a visible contact.
+	contacts map[string]ids.UUID
+	// invitees are the address each linked contact or lead is invited at.
+	invitees map[ids.UUID]string
+	// reconnectedAt is when the host last granted the calendar.
+	reconnectedAt time.Time
+	// judging runs while Blocker judges the calendar.
+	judging func()
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
@@ -253,6 +261,43 @@ func (c *invitationCalendar) Lookup(context.Context, ids.UserID, string, connect
 
 func (c *invitationCalendar) CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error {
 	return nil
+}
+
+// ResolveAttendees answers an address in contacts as that contact, and every
+// other one as host-named.
+func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, addresses []string) ([]connector.CalendarAttendee, error) {
+	out := make([]connector.CalendarAttendee, 0, len(addresses))
+	for _, address := range addresses {
+		if id, ok := c.contacts[address]; ok {
+			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, AskConsent: true})
+			continue
+		}
+		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})
+	}
+	return out, nil
+}
+
+func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kind string, id ids.UUID, _ []string) (string, ids.UUID, error) {
+	if kind == linkEntityLead {
+		return c.invitees[id], ids.Nil, nil
+	}
+	return c.invitees[id], id, nil
+}
+
+func (c *invitationCalendar) ReconnectedSince(_ context.Context, _ ids.UserID, _ string, since time.Time) (bool, error) {
+	return c.reconnectedAt.After(since), nil
+}
+
+// Blocker reads a refused Check as an unusable calendar, as the seam does.
+func (c *invitationCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	if c.judging != nil {
+		c.judging()
+	}
+	blocker := crmcontracts.SchedulingProfileBlockerNone
+	if c.checkErr != nil {
+		blocker = crmcontracts.SchedulingProfileBlockerCalendarUnavailable
+	}
+	return blocker, nil
 }
 
 func (c *invitationCalendar) List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error) {

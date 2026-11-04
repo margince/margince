@@ -82,6 +82,8 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		LegalEntityID:  idArg[ids.LegalEntityKind](req.LegalEntityId),
+		Language:       req.Language,
 		Source:         source,
 	}
 	if req.ValidUntil != nil {
@@ -104,6 +106,8 @@ func offerUpdateInput(req crmcontracts.UpdateOfferRequest, cleared []string, ifV
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		LegalEntityID:  idArg[ids.LegalEntityKind](req.LegalEntityId),
+		Language:       req.Language,
 		IfVersion:      ifVersion,
 		Clear:          cleared,
 	}
@@ -153,6 +157,7 @@ func updateLineInput(raw []byte) (UpdateOfferLineInput, error) {
 		Description:    req.Description,
 		Unit:           req.Unit,
 		UnitPriceMinor: req.UnitPriceMinor,
+		TaxCategory:    componentKindOf(req.TaxCategory),
 	}
 	if req.Quantity != nil {
 		v := wireDecimal(*req.Quantity)

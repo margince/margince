@@ -44,7 +44,7 @@ func valueSortRates() map[string]string {
 
 func TestSortingDealsByValueComparesThemInTheBaseCurrency(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
 
 	for _, tc := range []struct {
@@ -64,7 +64,7 @@ func TestSortingDealsByValueComparesThemInTheBaseCurrency(t *testing.T) {
 // installation_settings gate, so a seat holding only deal.read can use it.
 func TestASeatWithoutInstallationSettingsCanSortDealsByValue(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
 
 	perms := activityLifecyclePerms
@@ -82,7 +82,7 @@ func TestASeatWithoutInstallationSettingsCanSortDealsByValue(t *testing.T) {
 // visible amounts, the base values would give the masked currency away.
 func TestACurrencyMaskRefusesTheValueSort(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
 
 	perms := activityLifecyclePerms
@@ -107,7 +107,7 @@ func TestACurrencyMaskRefusesTheValueSort(t *testing.T) {
 func TestTheValueSortConvertsAtTodaysRateInTheInstallationZone(t *testing.T) {
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	localToday := fxTestNow.Truncate(24*time.Hour).AddDate(0, 0, 1)
 	pipeline := seedValueSortDeals(t, e, localToday, map[string]string{"JPY": "0.01"}, []valueSortDeal{
 		{"Euro thousand", 100_000, "EUR"}, // €1,000.00
@@ -125,7 +125,7 @@ func TestTheValueSortConvertsAtTodaysRateInTheInstallationZone(t *testing.T) {
 // repeating deals.
 func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
 
 	sort, limit := "-amount_minor", 2
@@ -133,7 +133,7 @@ func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
 	if err != nil || !page.HasMore {
 		t.Fatalf("first page: has more %t, err %v", page.HasMore, err)
 	}
-	e.Deals.WithClock(func() time.Time { return fxTestNow.AddDate(0, 0, 1) })
+	e.Deals.SetClock(func() time.Time { return fxTestNow.AddDate(0, 0, 1) })
 	_, _, err = e.Deals.ListDeals(e.Admin(), deals.ListDealsInput{
 		PipelineID: &pipeline, Sort: &sort, Limit: &limit, Cursor: &page.NextCursor,
 	})

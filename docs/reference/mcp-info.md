@@ -13,12 +13,12 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 37 |
-| Resources | 9 |
-| Tool catalog | 130.3 KB |
-| Resource catalog | 3.5 KB |
-| Approx. wire tokens | 34242 |
-| Largest tool | `preview_import` (8.5 KB) |
+| Tools | 38 |
+| Resources | 13 |
+| Tool catalog | 158.6 KB |
+| Resource catalog | 5.1 KB |
+| Approx. wire tokens | 41921 |
+| Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,18 +32,18 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 27.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.7 KB | 25% | Yes, every step |
-| Input schemas | 61.3 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **94.0 KB** | **72%** | **the recurring cost** |
+| Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
+| Input schemas | 66.1 KB | 41% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
+| **Description + input schema** | **100.8 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (9)
+### Resources (13)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -53,46 +53,51 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
+- [`ui://margince/approval-queue.html`](#approval_queue_view): Waiting for your decision
+- [`ui://margince/attention.html`](#attention_view): What needs attention
+- [`ui://margince/forecast.html`](#forecast_view): The forecast
+- [`ui://margince/context.html`](#context_view): The story so far
 - [`ui://margince/update.html`](#update_view): What changed
 
-### Tools (37)
+### Tools (38)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 821 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 553 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 548 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1794 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
+| [`find_records`](#find_records) | Find records | yes |  | 1866 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
-| [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
+| [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 908 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1958 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1010 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1008 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -212,6 +217,122 @@ duplicate to merge or keep apart, and a tag word offered for it.
 
 ```text
 A change an assistant proposed, what it would do, and the choice to approve or reject it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### approval_queue_view
+
+`ui://margince/approval-queue.html` · text/html;profile=mcp-app
+
+**Waiting for your decision**
+
+```text
+Every proposal waiting for a human, what each would change and when it runs out, with Approve and
+Reject on each.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### attention_view
+
+`ui://margince/attention.html` · text/html;profile=mcp-app
+
+**What needs attention**
+
+```text
+Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for
+each and a way to ask about it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### forecast_view
+
+`ui://margince/forecast.html` · text/html;profile=mcp-app
+
+**The forecast**
+
+```text
+What a period is expected to close, as bars from won to weighted, or what moved the forecast between
+two snapshots.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### context_view
+
+`ui://margince/context.html` · text/html;profile=mcp-app
+
+**The story so far**
+
+```text
+Who is coming to a meeting, the open threads and what was promised, what has been happening on one
+record, or this morning's brief.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -368,6 +489,9 @@ requires passport scope "write".)
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -449,7 +573,9 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; requires passport scope "write".)
+carries their approval has answered. (Runs immediately; it cannot be undone, so tell the user what
+the call will change and get their yes before calling, unless they asked for this call themselves;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -537,6 +663,9 @@ carries their approval has answered. (Runs immediately; requires passport scope 
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -618,10 +747,12 @@ commitment_needs_the_user. Call mode preview first and show the user what it say
 change, which are left alone and why, and the sample rows. Execute only after they agree. Each
 record is changed only if it still has the version you sent and you may change it. To undo, pass the
 batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
-undone once, and records changed since are left alone. update_record and archive_record change one
-record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
-once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; requires
-passport scope "write".)
+undone once, and records changed since are left alone. Ask in words even when the host also shows a
+form. update_record and archive_record change one record. Above 10 records, execute and undo need
+the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names
+the change by it. (Runs immediately; it cannot be undone, so tell the user what the call will change
+and get their yes before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -984,6 +1115,9 @@ passport scope "write".)
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -1059,13 +1193,14 @@ passport scope "write".)
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message that already
 happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
-moves one activity to another record; relink_many moves a named set. relink and relink_many wait for
-a human when they file under a project, and run at once anywhere else. attach checks the record
-first; read list_documents before attaching the same file again. Use schedule_meeting to book a
-meeting still to come, and change_state with move_deal when the same event moves a deal, so move and
-note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what
-the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its
-arguments for relink, relink_many; requires passport scope "write".)
+moves one activity to another record; relink_many moves a named set. ready says the user is ready
+for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user
+before you file under a project, which only a member can undo from the activity. attach checks the
+record first; read list_documents before attaching the same file again. Use schedule_meeting to book
+a meeting still to come, and change_state with move_deal when the same event moves a deal, so move
+and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is
+what the retry carries. (Governance: runs immediately for attach, log, ready, task, unready; decided
+per call from its arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1074,18 +1209,20 @@ arguments for relink, relink_many; requires passport scope "write".)
 {
   "properties": {
     "action": {
-      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set",
+      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back",
       "enum": [
         "attach",
         "log",
+        "ready",
         "relink",
         "relink_many",
-        "task"
+        "task",
+        "unready"
       ],
       "type": "string"
     },
     "activity_id": {
-      "description": "relink only: The captured activity to re-associate",
+      "description": "ready, relink, unready only: The meeting",
       "format": "uuid",
       "type": "string"
     },
@@ -1253,6 +1390,12 @@ arguments for relink, relink_many; requires passport scope "write".)
         "instant",
         "day"
       ]
+    },
+    "preparation_revision": {
+      "description": "ready, unready only: The preparation revision read_context with about=meeting answered",
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
     },
     "replace_existing_of_type": {
       "default": false,
@@ -1496,6 +1639,9 @@ and its new version from the answer. (Runs immediately; requires passport scope 
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -1668,7 +1814,17 @@ record's own fields, and create_record with record_type offer to make an offer w
         "quantity": {
           "type": "number"
         },
+        "tax_category": {
+          "description": "Take the rate from the tax rate sheet instead; not together with tax_rate",
+          "enum": [
+            "standard",
+            "reduced",
+            "exempt"
+          ],
+          "type": "string"
+        },
         "tax_rate": {
+          "description": "A typed rate; the line then keeps it",
           "type": "number"
         },
         "unit": {
@@ -1730,6 +1886,9 @@ record's own fields, and create_record with record_type offer to make an offer w
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -1799,6 +1958,237 @@ record's own fields, and create_record with record_type offer to make an offer w
 
 </details>
 
+### change_reports
+
+**Prepare saved reports**
+
+```text
+Change saved reports for a human to review. draft saves a report's next charts as a draft of a
+report they edit, or with no report_id creates a new report only they see. A draft waits for a human
+to publish it in Analytics, and is refused on a report that already has one. Publishing, discarding,
+sharing, scheduling and archiving a report stay a human's. Use read_reports to read reports and
+their metric catalog. Keep the report id and draft_revision to preview the draft with read_reports.
+(Runs immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "action": {
+      "description": "draft: save a report's next charts as a draft for a human to publish, or create a new report only they see",
+      "enum": [
+        "draft"
+      ],
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "report_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "selection": {
+      "description": "The report's metrics, charts and sections; a pipeline_id comes from the workspace's pipeline list",
+      "properties": {
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "close_window": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "interval": {
+          "properties": {
+            "end_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
+              "format": "date-time",
+              "type": "string"
+            },
+            "start_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_at",
+            "start_at"
+          ],
+          "type": "object"
+        },
+        "layout": {
+          "items": {
+            "properties": {
+              "cards": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
+                        "entity": {
+                          "type": "string"
+                        },
+                        "group_by": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "measures": {
+                          "items": {
+                            "properties": {
+                              "as": {
+                                "type": "string"
+                              },
+                              "field": {
+                                "type": "string"
+                              },
+                              "fn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fn"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "entity",
+                        "measures"
+                      ],
+                      "type": "object"
+                    },
+                    "width": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "width"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cards"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "period": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "scope": {
+          "properties": {
+            "id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "target_basis": {
+          "type": "string"
+        },
+        "value_basis": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocks",
+        "close_window",
+        "metrics",
+        "period",
+        "scope",
+        "target_basis"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "action",
+    "selection"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### change_state
 
 **Move a lead, deal, project or partner**
@@ -1810,20 +2200,22 @@ qualify fills what a lead's own data already implies, today the company name fro
 and names the fields still empty. promote turns a lead who has genuinely engaged into a contact.
 disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a
 stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts
-a partner program on a company, with company_id, partner_role and optionally relationship_stage,
+a partner program on a company, with company_id, partner_kinds and optionally relationship_stage,
 next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody
 answered never promotes. demote needs a reason and is refused once the contact owns a deal.
 set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's
 Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost
-stage waits for a human; to an open stage it runs at once. move_project to closed needs a reason and
-leaves the project's tasks open. When the user asked for the close, report what is still open and
-close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines
-gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a
-company from its website. A promotion answers with the new contact's id. A staged answer's approval
-id is what the retry carries; do not report the change until the retry has answered. (Governance:
-runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
-merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; requires
-passport scope "write".)
+stage closes or reopens the deal, which is the user's decision: unless they named the deal and
+stage, name them and get their yes first. move_project to closed needs a reason and leaves the
+project's tasks open. When the user asked for the close, report what is still open and close: an
+open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the
+stage ids. Use update_record for a record's other fields, and enrich to learn about a company from
+its website. A promotion answers with the new contact's id. A staged answer's approval id is what
+the retry carries; do not report the change until the retry has answered. (Governance: runs
+immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
+merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the action
+disqualify cannot be undone, so tell the user what the call will change and get their yes before
+calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1854,6 +2246,36 @@ passport scope "write".)
       "format": "uuid",
       "type": "string"
     },
+    "create_company": {
+      "description": "promote only",
+      "type": "boolean"
+    },
+    "deal": {
+      "additionalProperties": false,
+      "description": "promote only",
+      "properties": {
+        "amount_minor": {
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "stage_id": {
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "deal_id": {
       "description": "move_deal only",
       "format": "uuid",
@@ -1861,6 +2283,11 @@ passport scope "write".)
     },
     "evidence_note": {
       "description": "promote only",
+      "type": "string"
+    },
+    "existing_deal_id": {
+      "description": "promote only",
+      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
@@ -1878,7 +2305,11 @@ passport scope "write".)
       "type": "string"
     },
     "lost_reason": {
-      "description": "move_deal only: Required when the target stage closes the deal as lost",
+      "description": "move_deal only: A free note explaining a loss",
+      "type": "string"
+    },
+    "lost_reason_code": {
+      "description": "move_deal only: An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped",
       "type": "string"
     },
     "next_step": {
@@ -1894,8 +2325,22 @@ passport scope "write".)
       "description": "move_deal only: Logged as a note on the deal's timeline after the move",
       "type": "string"
     },
+    "partner_kinds": {
+      "description": "set_up_partner, required: one or more of hosting, consulting, strategic or referral",
+      "items": {
+        "enum": [
+          "hosting",
+          "consulting",
+          "strategic",
+          "referral"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
     "partner_role": {
-      "description": "set_up_partner, required: hosting, consulting or strategic",
+      "description": "set_up_partner, deprecated: send partner_kinds",
       "enum": [
         "hosting",
         "consulting",
@@ -1919,19 +2364,7 @@ passport scope "write".)
       "type": "string"
     },
     "relationship_stage": {
-      "description": "set_up_partner only",
-      "enum": [
-        "research",
-        "identified",
-        "contacted",
-        "in_conversation",
-        "fit_confirmed",
-        "agreement_pending",
-        "active",
-        "active_referring",
-        "dormant",
-        "no_fit"
-      ],
+      "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
       "type": "string"
     },
     "source_id": {
@@ -2003,15 +2436,16 @@ passport scope "write".)
 Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
 deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
 word. update renames, recolours or describes one; fields left out are unchanged. merge folds a
-duplicate word into the one kept, once a human approves. apply never creates a tag: an unknown name
-is refused, a name matches case-insensitively, an archived word is refused as archived, and the same
-tag twice is a conflict. Before create, read the list — a near-duplicate splits records that
-belong together, and a taken name is a conflict, even a retired one, which only Settings restores.
-create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag
-right before editing; it changes what a word is called, never what carries it. Removing a tag that
-is not there succeeds. archive retires a word for every record; the records keep it. (Governance:
-runs immediately for apply, archive, create, remove, update; a human approves first for merge;
-requires passport scope "write".)
+duplicate word into the one kept. apply never creates a tag: an unknown name is refused, a name
+matches case-insensitively, an archived word is refused as archived, and the same tag twice is a
+conflict. Before create, read the list — a near-duplicate splits records that belong together, and
+a taken name is a conflict, even a retired one, which only Settings restores. create and update need
+tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
+changes what a word is called, never what carries it. Removing a tag that is not there succeeds.
+archive retires a word for every record; the records keep it. (Governance: runs immediately for
+apply, archive, create, remove, update; a human approves first for merge; the action archive cannot
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2115,10 +2549,10 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
 meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
 occupancy was checked. This never checks invitees' availability. Use schedule_meeting with
-action=invite to request an approved calendar invitation after a time is agreed. schedule_meeting
-with action=book only records a meeting. read_context with about=meeting prepares for an existing
-meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag.
-Availability is checked again when reserving the time.
+action=invite to request an approved calendar invitation after a time is agreed. change_activities
+with action=log records a meeting without inviting anyone. read_context with about=meeting prepares
+for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated
+flag. Availability is checked again when reserving the time.
 ```
 
 <details><summary>Input schema</summary>
@@ -2219,6 +2653,9 @@ Availability is checked again when reserving the time.
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -2300,8 +2737,9 @@ web app. A request to get a file in is not a review of it: unless the asker says
 been through these rows, show the counts and the mapping and wait for their go-ahead. Use
 read_import for the report first: numbers nobody read are not a check. The write goes on after this
 answers. Read read_import's report until its state is complete or failed, then report what landed:
-the counts and the mapping the run used, each column by the field it went to. (Runs immediately;
-requires passport scope "write".)
+the counts and the mapping the run used, each column by the field it went to. (Runs immediately; it
+cannot be undone, so tell the user what the call will change and get their yes before calling,
+unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2379,6 +2817,9 @@ requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -2609,6 +3050,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "can_merge": {
+                "type": "boolean"
+              },
               "candidate_id": {
                 "type": "string"
               },
@@ -2644,11 +3088,15 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
                 },
                 "type": "array"
               },
+              "keep_id": {
+                "type": "string"
+              },
               "other_record_id": {
                 "type": "string"
               }
             },
             "required": [
+              "can_merge",
               "candidate_id",
               "confidence",
               "evidence",
@@ -2719,6 +3167,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -2804,8 +3255,9 @@ theirs to release in the CRM. An item already answered, or lapsed, is reported a
 is written; each bundle member is answered and reported on its own, and a bundle holding none of
 theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
 where both ids come from. If the proposal is your OWN refused call, approving does not perform it
-— re-issue that same call with approval_id set. (Runs immediately; requires passport scope
-"write".)
+— re-issue that same call with approval_id set. (Runs immediately; the actions bundle, one cannot
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3031,6 +3483,9 @@ it runs; requires passport scope "enrich".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -3316,16 +3771,28 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "participant_email": {
           "type": "string"
         },
+        "partner_accepted": {
+          "type": "string"
+        },
         "partner_attribution": {
           "type": "string"
         },
         "partner_company_id": {
           "type": "string"
         },
+        "partner_kind": {
+          "type": "string"
+        },
         "partner_role": {
           "type": "string"
         },
         "partner_sourced": {
+          "type": "string"
+        },
+        "partner_stage": {
+          "type": "string"
+        },
+        "partner_stage_meaning": {
           "type": "string"
         },
         "phase": {
@@ -3343,10 +3810,16 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "relationship_mark": {
           "type": "string"
         },
+        "relationship_stage": {
+          "type": "string"
+        },
         "relationship_type": {
           "type": "string"
         },
         "reminder_due": {
+          "type": "string"
+        },
+        "shared_with_me": {
           "type": "string"
         },
         "size_band": {
@@ -3373,6 +3846,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "stage_id": {
           "type": "string"
         },
+        "stage_meaning": {
+          "type": "string"
+        },
         "stalled": {
           "type": "string"
         },
@@ -3386,6 +3862,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "tag_mode": {
+          "type": "string"
+        },
+        "tax_category": {
           "type": "string"
         },
         "thread_key": {
@@ -3497,6 +3976,8 @@ for a complete authorized bundle review. Each item carries its one-line summary,
 itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
 staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
+
+Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -3646,8 +4127,70 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
                 "format": "uuid",
                 "type": "string"
               },
+              "details": {
+                "items": {
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "label",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "diff_hash": {
                 "type": "string"
+              },
+              "effects": {
+                "items": {
+                  "properties": {
+                    "effect": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "effect",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "evidence": {
                 "items": {
@@ -3696,6 +4239,12 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
                 ],
                 "type": "object"
               },
+              "preview_note": {
+                "type": "string"
+              },
+              "preview_state": {
+                "type": "string"
+              },
               "proposed_by": {
                 "type": "string"
               },
@@ -3711,6 +4260,40 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
               },
               "summary": {
                 "type": "string"
+              },
+              "summary_parts": {
+                "properties": {
+                  "fields": {
+                    "items": {
+                      "properties": {
+                        "field": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "field",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "more_fields": {
+                    "type": "integer"
+                  },
+                  "sentence": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "more_fields",
+                  "sentence"
+                ],
+                "type": "object"
               },
               "target_id": {
                 "format": "uuid",
@@ -3757,6 +4340,9 @@ staged_action_id you mean to act on, the bundle_id when one act staged several, 
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4001,6 +4587,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4595,6 +5184,9 @@ make. (Runs immediately; requires passport scope "write".)
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -4730,6 +5322,16 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                         "close_window": {
                           "type": "string"
                         },
+                        "country": {
+                          "type": "string"
+                        },
+                        "industry": {
+                          "type": "string"
+                        },
+                        "initiative_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
                         "interval": {
                           "properties": {
                             "end_at": {
@@ -4749,86 +5351,6 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           ],
                           "type": "object"
                         },
-                        "layout": {
-                          "items": {
-                            "properties": {
-                              "cards": {
-                                "items": {
-                                  "properties": {
-                                    "id": {
-                                      "type": "string"
-                                    },
-                                    "kind": {
-                                      "type": "string"
-                                    },
-                                    "metric": {
-                                      "type": "string"
-                                    },
-                                    "question": {
-                                      "properties": {
-                                        "entity": {
-                                          "type": "string"
-                                        },
-                                        "group_by": {
-                                          "items": {
-                                            "type": "string"
-                                          },
-                                          "type": "array"
-                                        },
-                                        "limit": {
-                                          "type": "integer"
-                                        },
-                                        "measures": {
-                                          "items": {
-                                            "properties": {
-                                              "as": {
-                                                "type": "string"
-                                              },
-                                              "field": {
-                                                "type": "string"
-                                              },
-                                              "fn": {
-                                                "type": "string"
-                                              }
-                                            },
-                                            "required": [
-                                              "fn"
-                                            ],
-                                            "type": "object"
-                                          },
-                                          "type": "array"
-                                        }
-                                      },
-                                      "required": [
-                                        "entity",
-                                        "measures"
-                                      ],
-                                      "type": "object"
-                                    },
-                                    "width": {
-                                      "type": "string"
-                                    }
-                                  },
-                                  "required": [
-                                    "id",
-                                    "kind",
-                                    "width"
-                                  ],
-                                  "type": "object"
-                                },
-                                "type": "array"
-                              },
-                              "title": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "cards"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
                         "metrics": {
                           "items": {
                             "type": "string"
@@ -4839,6 +5361,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "string"
                         },
                         "pipeline_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "product_id": {
                           "format": "uuid",
                           "type": "string"
                         },
@@ -4861,6 +5387,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                           "type": "object"
                         },
                         "target_basis": {
+                          "type": "string"
+                        },
+                        "value_basis": {
                           "type": "string"
                         }
                       },
@@ -5146,8 +5675,70 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "format": "uuid",
           "type": "string"
         },
+        "details": {
+          "items": {
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "field",
+              "label",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "diff_hash": {
           "type": "string"
+        },
+        "effects": {
+          "items": {
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "evidence": {
           "items": {
@@ -5196,6 +5787,12 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           ],
           "type": "object"
         },
+        "preview_note": {
+          "type": "string"
+        },
+        "preview_state": {
+          "type": "string"
+        },
         "proposed_by": {
           "type": "string"
         },
@@ -5211,6 +5808,40 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         },
         "summary": {
           "type": "string"
+        },
+        "summary_parts": {
+          "properties": {
+            "fields": {
+              "items": {
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "more_fields": {
+              "type": "integer"
+            },
+            "sentence": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "fields",
+            "more_fields",
+            "sentence"
+          ],
+          "type": "object"
         },
         "target_id": {
           "format": "uuid",
@@ -5246,6 +5877,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -5326,6 +5960,8 @@ made to customers that are still open. Each view covers only what you may see, a
 item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.
 ```
 
+Renders its result in [`ui://margince/attention.html`](#attention_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -5373,6 +6009,290 @@ item is on it. Use read_context to dig into one item. Keep each item's record id
 
 </details>
 
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "commitments": {
+          "items": {
+            "properties": {
+              "about": {
+                "items": {
+                  "properties": {
+                    "entity_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "entity_id",
+                    "entity_type"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "assignee_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "assignee_name": {
+                "type": "string"
+              },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "days_overdue": {
+                "type": "integer"
+              },
+              "due_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "task_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "about",
+              "source",
+              "state",
+              "subject"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "coverage_withheld": {
+          "type": "boolean"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deal_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "snippet",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rank": {
+                "type": "integer"
+              },
+              "risks": {
+                "items": {
+                  "properties": {
+                    "contact_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "contacts": {
+                      "items": {
+                        "properties": {
+                          "contact_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "contact_id",
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "days_since_touch": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "deal_id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "deals_scanned": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "web_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### read_context
 
 **Get the story so far**
@@ -5385,6 +6305,8 @@ timeline; a field's current value is read_record's. brief answers the brief alre
 fresh one. Use read_attention for what is at risk across the whole pipeline. Keep the ids the answer
 cites to read or change those records next.
 ```
+
+Renders its result in [`ui://margince/context.html`](#context_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -5442,6 +6364,1057 @@ cites to read or change those records next.
 
 </details>
 
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "anchor": {
+          "properties": {
+            "record_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "record_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ],
+          "type": "object"
+        },
+        "as_of": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "brief": {
+          "properties": {
+            "activity_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "generated_at": {
+              "type": "string"
+            },
+            "generated_by": {
+              "type": "string"
+            },
+            "plan": {
+              "properties": {
+                "advance": {
+                  "properties": {
+                    "best": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "fallback": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "minimum": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "best",
+                    "fallback",
+                    "minimum"
+                  ],
+                  "type": "object"
+                },
+                "company_arc": {
+                  "items": {
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "summary",
+                      "to"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "likely_asks": {
+                  "items": {
+                    "properties": {
+                      "basis": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "prepare": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "relevance": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "basis",
+                      "prepare",
+                      "question",
+                      "relevance"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "manager_coaching": {
+                  "properties": {
+                    "failure_mode": {
+                      "type": "string"
+                    },
+                    "focus": {
+                      "type": "string"
+                    },
+                    "intervene_if": {
+                      "type": "string"
+                    },
+                    "listen_for": {
+                      "type": "string"
+                    },
+                    "paths": {
+                      "items": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "play": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "label",
+                          "play"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "watch_for": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "failure_mode",
+                    "focus",
+                    "intervene_if",
+                    "listen_for",
+                    "watch_for"
+                  ],
+                  "type": "object"
+                },
+                "meeting_type": {
+                  "type": "string"
+                },
+                "meeting_type_confidence": {
+                  "type": "string"
+                },
+                "objective": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "objective_caveat": {
+                  "type": "string"
+                },
+                "opening": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "questions": {
+                  "items": {
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "listen_for": {
+                        "type": "string"
+                      },
+                      "why": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "evidence",
+                      "listen_for",
+                      "why"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "readiness": {
+                  "type": "string"
+                },
+                "scenarios": {
+                  "items": {
+                    "properties": {
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "play": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence",
+                      "label",
+                      "play"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "top_risk": {
+                  "properties": {
+                    "avoid": {
+                      "type": "string"
+                    },
+                    "say": {
+                      "type": "string"
+                    },
+                    "show": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "avoid",
+                    "say",
+                    "show",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "unknowns": {
+                  "items": {
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "question"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "advance",
+                "meeting_type",
+                "meeting_type_confidence",
+                "readiness"
+              ],
+              "type": "object"
+            },
+            "project_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "sections": {
+              "items": {
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "sentences": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "sentences"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "activity_id",
+            "generated_at",
+            "generated_by",
+            "sections"
+          ],
+          "type": "object"
+        },
+        "brief_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "briefing": {
+          "properties": {
+            "anchor": {
+              "properties": {
+                "record_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_id",
+                "record_type"
+              ],
+              "type": "object"
+            },
+            "sections": {
+              "items": {
+                "properties": {
+                  "items": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "snippet": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "snippet",
+                              "source"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "occurred_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "occurred_precision": {
+                          "type": "string"
+                        },
+                        "record_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "record_type": {
+                          "type": "string"
+                        },
+                        "summary": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "record_id",
+                        "record_type",
+                        "summary"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "items",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "anchor",
+            "sections"
+          ],
+          "type": "object"
+        },
+        "candidate_count": {
+          "type": "integer"
+        },
+        "factors_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "properties": {
+              "composite": {
+                "type": "number"
+              },
+              "deal_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "evidence_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "factors": {
+                "properties": {
+                  "momentum": {
+                    "type": "number"
+                  },
+                  "revenue": {
+                    "type": "number"
+                  },
+                  "timing": {
+                    "type": "number"
+                  },
+                  "warmth": {
+                    "type": "number"
+                  },
+                  "winnability": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "momentum",
+                  "revenue",
+                  "timing",
+                  "warmth",
+                  "winnability"
+                ],
+                "type": "object"
+              },
+              "item_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "lineage": {
+                "properties": {
+                  "dismissed_on": {
+                    "type": "string"
+                  },
+                  "returned_with_activity_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dismissed_on",
+                  "returned_with_activity_at"
+                ],
+                "type": "object"
+              },
+              "previous_rank": {
+                "type": "integer"
+              },
+              "rank": {
+                "type": "integer"
+              },
+              "reopen_on": {
+                "type": "string"
+              },
+              "reopen_ref": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "snoozed_until": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "state_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "composite",
+              "deal_id",
+              "evidence_ids",
+              "factors",
+              "item_id",
+              "rank",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "local_day": {
+          "type": "string"
+        },
+        "meeting_focus": {
+          "items": {
+            "properties": {
+              "record_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "record_id",
+              "summary"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "preparation": {
+          "properties": {
+            "activity_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "changed": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "revision": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "activity_id",
+            "changed",
+            "revision",
+            "state"
+          ],
+          "type": "object"
+        },
+        "previous_local_day": {
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "properties": {
+              "items": {
+                "items": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "snippet": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "snippet",
+                          "source"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "occurred_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "occurred_precision": {
+                      "type": "string"
+                    },
+                    "record_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "record_type": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "record_id",
+                    "record_type",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "items",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "web_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### read_forecast
 
 **Read the forecast and how it moved**
@@ -5468,6 +7441,8 @@ section, use read_analytics: query with save, then compose. Quote `as_of`, `time
 in EUR is EUR 31,000.
 ```
 
+Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -5477,6 +7452,10 @@ in EUR is EUR 31,000.
       "description": "readings only: Which period to read, by naming a day inside it. Omit for the current one.",
       "format": "date",
       "type": "string"
+    },
+    "contributions": {
+      "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
+      "type": "boolean"
     },
     "from": {
       "description": "movement only: The opening snapshot.",
@@ -5493,12 +7472,15 @@ in EUR is EUR 31,000.
       "type": "string"
     },
     "reading": {
-      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
       "enum": [
         "open",
         "weighted",
         "evidence",
-        "best_case"
+        "best_case",
+        "qualified_evidence",
+        "qualified_best_case",
+        "qualified_weighted"
       ],
       "type": "string"
     },
@@ -5535,6 +7517,650 @@ in EUR is EUR 31,000.
   },
   "required": [
     "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "base_currency": {
+          "type": "string"
+        },
+        "best_case_minor": {
+          "type": "integer"
+        },
+        "buckets": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "deal_count": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "deal_count",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "closing_minor": {
+          "type": "integer"
+        },
+        "confirmed_date_count": {
+          "type": "integer"
+        },
+        "contributions": {
+          "items": {
+            "properties": {
+              "applied_probability": {
+                "type": "integer"
+              },
+              "base_minor": {
+                "type": "integer"
+              },
+              "category": {
+                "type": "string"
+              },
+              "chance_in_use": {
+                "type": "integer"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "deal_name": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "number"
+              },
+              "evidence_n": {
+                "type": "integer"
+              },
+              "exclusion_reason": {
+                "type": "string"
+              },
+              "in_best_case": {
+                "type": "boolean"
+              },
+              "in_evidence": {
+                "type": "boolean"
+              },
+              "in_open": {
+                "type": "boolean"
+              },
+              "in_won": {
+                "type": "boolean"
+              },
+              "owner_id": {
+                "type": "string"
+              },
+              "signals": {
+                "items": {
+                  "properties": {
+                    "close_passed": {
+                      "type": "boolean"
+                    },
+                    "closes_in_days": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "days": {
+                      "type": "integer"
+                    },
+                    "stage_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "typed_probability": {
+                "type": "integer"
+              },
+              "weighted_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "applied_probability",
+              "chance_in_use",
+              "deal_id",
+              "deal_name",
+              "in_best_case",
+              "in_evidence",
+              "in_open",
+              "in_won",
+              "signals",
+              "weighted_minor"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "contributions_limited": {
+          "type": "boolean"
+        },
+        "coverage_note": {
+          "type": "string"
+        },
+        "current_call": {
+          "type": "object"
+        },
+        "data": {
+          "items": {
+            "properties": {
+              "affected_minor": {
+                "type": "integer"
+              },
+              "claim": {
+                "type": "object"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "destination": {
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "screen": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "screen"
+                ],
+                "type": "object"
+              },
+              "first_seen_at": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "inputs_changed": {
+                "type": "boolean"
+              },
+              "last_seen_at": {
+                "type": "string"
+              },
+              "observed": {
+                "type": "object"
+              },
+              "severity": {
+                "type": "string"
+              },
+              "subject_id": {
+                "type": "string"
+              },
+              "subject_kind": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "claim",
+              "first_seen_at",
+              "id",
+              "last_seen_at",
+              "observed",
+              "severity",
+              "subject_id",
+              "subject_kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "approval_id": {
+                "type": "string"
+              },
+              "audit_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "from_minor": {
+                "type": "integer"
+              },
+              "to_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "bucket",
+              "deal_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "eligible_count": {
+          "type": "integer"
+        },
+        "eligible_deals": {
+          "type": "integer"
+        },
+        "eligible_signals": {
+          "type": "integer"
+        },
+        "evidence_minor": {
+          "type": "integer"
+        },
+        "freshness": {
+          "properties": {
+            "changed_deals": {
+              "type": "integer"
+            },
+            "changed_signals": {
+              "type": "integer"
+            },
+            "changed_since": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "workspace_changed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "changed_deals",
+            "changed_signals",
+            "state",
+            "workspace_changed"
+          ],
+          "type": "object"
+        },
+        "fx_missing_count": {
+          "type": "integer"
+        },
+        "groups": {
+          "items": {
+            "properties": {
+              "deals": {
+                "type": "integer"
+              },
+              "destination": {
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "screen": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "screen"
+                ],
+                "type": "object"
+              },
+              "exposure": {
+                "items": {
+                  "properties": {
+                    "amount_minor": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount_minor",
+                    "currency"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "findings": {
+                "type": "integer"
+              },
+              "other_findings": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "deals",
+              "destination",
+              "exposure",
+              "findings",
+              "other_findings",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "landing": {
+          "properties": {
+            "amount_minor": {
+              "type": "integer"
+            },
+            "caveat": {
+              "type": "string"
+            },
+            "measure": {
+              "type": "string"
+            },
+            "remaining_minor": {
+              "type": "integer"
+            },
+            "system_minor": {
+              "type": "integer"
+            },
+            "won_minor": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "amount_minor",
+            "measure",
+            "remaining_minor",
+            "won_minor"
+          ],
+          "type": "object"
+        },
+        "open_minor": {
+          "type": "integer"
+        },
+        "opening_minor": {
+          "type": "integer"
+        },
+        "period_end": {
+          "type": "string"
+        },
+        "period_start": {
+          "type": "string"
+        },
+        "priced_count": {
+          "type": "integer"
+        },
+        "qualification_mode": {
+          "type": "string"
+        },
+        "qualified": {
+          "properties": {
+            "amounts_partial": {
+              "type": "boolean"
+            },
+            "best_case_minor": {
+              "type": "integer"
+            },
+            "evidence_minor": {
+              "type": "integer"
+            },
+            "excluded_count": {
+              "type": "integer"
+            },
+            "excluded_minor": {
+              "type": "integer"
+            },
+            "unknown_count": {
+              "type": "integer"
+            },
+            "unknown_minor": {
+              "type": "integer"
+            },
+            "unsupported_count": {
+              "type": "integer"
+            },
+            "unsupported_minor": {
+              "type": "integer"
+            },
+            "weighted_minor": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "amounts_partial",
+            "best_case_minor",
+            "evidence_minor",
+            "excluded_count",
+            "excluded_minor",
+            "unknown_count",
+            "unknown_minor",
+            "unsupported_count",
+            "unsupported_minor",
+            "weighted_minor"
+          ],
+          "type": "object"
+        },
+        "range_high_minor": {
+          "type": "integer"
+        },
+        "range_low_minor": {
+          "type": "integer"
+        },
+        "readiness": {
+          "type": "string"
+        },
+        "reading": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "scope_id": {
+          "type": "string"
+        },
+        "scope_kind": {
+          "type": "string"
+        },
+        "scope_limited": {
+          "type": "boolean"
+        },
+        "self_correcting": {
+          "type": "boolean"
+        },
+        "snapshots": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "taken_at": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "taken_at",
+              "trigger"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "properties": {
+              "checked_through": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "totals": {
+          "properties": {
+            "deals": {
+              "type": "integer"
+            },
+            "findings": {
+              "type": "integer"
+            },
+            "other_findings": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "deals",
+            "findings",
+            "other_findings"
+          ],
+          "type": "object"
+        },
+        "weighted_minor": {
+          "type": "integer"
+        },
+        "won_minor": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "web_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }
@@ -5789,6 +8415,9 @@ Keep list_id, the version for a later change, and next_cursor to read the next p
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -6021,6 +8650,9 @@ the record were unowned.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -6351,6 +8983,16 @@ search its evidence, and quote coverage with each number.
         "close_window": {
           "type": "string"
         },
+        "country": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "initiative_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "interval": {
           "properties": {
             "end_at": {
@@ -6387,6 +9029,9 @@ search its evidence, and quote coverage with each number.
                     },
                     "question": {
                       "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
                         "entity": {
                           "type": "string"
                         },
@@ -6418,6 +9063,10 @@ search its evidence, and quote coverage with each number.
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -6463,6 +9112,10 @@ search its evidence, and quote coverage with each number.
           "format": "uuid",
           "type": "string"
         },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
         "scope": {
           "properties": {
             "id": {
@@ -6482,6 +9135,9 @@ search its evidence, and quote coverage with each number.
           "type": "object"
         },
         "target_basis": {
+          "type": "string"
+        },
+        "value_basis": {
           "type": "string"
         }
       },
@@ -6577,11 +9233,8 @@ which offers it without applying it.
 **Read a view**
 
 ```text
-Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
-deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
-record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly
-what the matching REST route answers. Name the view, then the id it reads and any of its filters. A
-view refuses an argument it does not take and names the ones it does.
+Read derived record views, workspace reference lists and reporting objects through their REST
+routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.
 ```
 
 <details><summary>Input schema</summary>
@@ -6697,7 +9350,16 @@ view refuses an argument it does not take and names the ones it does.
     "period": {
       "type": "string"
     },
+    "period_month": {
+      "type": "string"
+    },
+    "period_quarter": {
+      "type": "string"
+    },
     "period_start": {
+      "type": "string"
+    },
+    "period_year": {
       "type": "string"
     },
     "pinned_only": {
@@ -6789,6 +9451,9 @@ view refuses an argument it does not take and names the ones it does.
         "company_vat_check",
         "consent_purposes",
         "contact_360",
+        "contact_case",
+        "contact_cases",
+        "contact_conversation_suggestions",
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
@@ -6798,6 +9463,7 @@ view refuses an argument it does not take and names the ones it does.
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",
+        "deal_viability",
         "dedupe_candidate",
         "dedupe_candidates",
         "email_presentation",
@@ -6809,18 +9475,22 @@ view refuses an argument it does not take and names the ones it does.
         "follow_up_settings",
         "forecast_calls",
         "import_run",
+        "latest_inbound",
         "latest_site_read",
         "latest_technical_enrich",
         "latest_transcript_read",
+        "lead_conversation_suggestions",
         "lead_disqualify_reasons",
         "lead_origins",
         "lead_settings",
         "lead_sources",
         "list_members",
         "lists",
+        "loss_reasons",
         "meeting_brief",
         "meeting_invitation",
         "name_seats",
+        "partner_stages",
         "pipeline",
         "preview_contact_employment_import",
         "project_health_assessments",
@@ -6888,6 +9558,9 @@ view refuses an argument it does not take and names the ones it does.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -7051,11 +9724,14 @@ Settle two records that may be one. With candidate_id and decision: a pair creat
 duplicate_candidates — not_the_same says they are two, so the pair is not flagged again, and
 reopen takes that back; neither record changes. With record_type, source_id and target_id: merge two
 contacts or two companies into one, moving the source's activities, deals and links onto the
-survivor. A merge archives the source and redirects it to the target; it cannot be reversed by
+survivor. With record_type contact, contact_id, member_ids, survivor_id, owner_id and revision:
+merge a contact case read through read_view in one step; preview true answers who keeps access and
+writes nothing. A merge archives the source and redirects it to the target; it cannot be reversed by
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
 survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-requires passport scope "write".)
+the action merge cannot be undone, so tell the user what the call will change and get their yes
+before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7073,6 +9749,11 @@ requires passport scope "write".)
       "format": "uuid",
       "type": "string"
     },
+    "contact_id": {
+      "description": "Any member of a contact case, to merge the case instead of a pair",
+      "format": "uuid",
+      "type": "string"
+    },
     "decision": {
       "description": "not_the_same dismisses the pair; reopen takes a dismissal back",
       "enum": [
@@ -7086,6 +9767,23 @@ requires passport scope "write".)
       "maxLength": 255,
       "type": "string"
     },
+    "member_ids": {
+      "description": "The contacts of one case to merge into one; leave out with candidate_id",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "owner_id": {
+      "description": "Who owns the remaining contact: the owner of one selected member",
+      "format": "uuid",
+      "type": "string"
+    },
+    "preview": {
+      "description": "Answer what the case merge would do and write nothing",
+      "type": "boolean"
+    },
     "record_type": {
       "enum": [
         "contact",
@@ -7093,8 +9791,17 @@ requires passport scope "write".)
       ],
       "type": "string"
     },
+    "revision": {
+      "description": "The case revision you read",
+      "type": "string"
+    },
     "source_id": {
       "description": "The record merged away (archived, redirected to the survivor); leave out with candidate_id",
+      "format": "uuid",
+      "type": "string"
+    },
+    "survivor_id": {
+      "description": "The case member that remains",
       "format": "uuid",
       "type": "string"
     },
@@ -7112,15 +9819,16 @@ requires passport scope "write".)
 
 ### schedule_meeting
 
-**Book or invite to a meeting**
+**Invite to a meeting**
 
 ```text
-Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for.
-invite sends the invitation to its attendees. book runs at once; invite reaches attendees outside
-the workspace and waits for a human. Read check_availability before booking a time. Use
-change_activities with log to record a meeting that already happened. Keep the meeting's id to send
-its invitation. (Governance: runs immediately for book; a human approves first for invite; requires
-passport scope "send".)
+Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
+invitation to every attendee: the contact, and any further addresses. invite reaches attendees
+outside the workspace, so name them and the time and get the user's yes first; the call stages for
+approval. Read check_availability before choosing a time. Use change_activities with log to record a
+meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
+its status before claiming it was delivered. (Governance: a human approves every call before it
+runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7129,39 +9837,31 @@ passport scope "send".)
 {
   "properties": {
     "action": {
-      "description": "book: put a meeting on the calendar; invite: send the invitation to the attendees",
+      "description": "invite: put the meeting on the host's calendar and send the invitation to every attendee",
       "enum": [
-        "book",
         "invite"
       ],
       "type": "string"
     },
-    "approval_id": {
-      "description": "book only: Set on approved retry",
-      "format": "uuid",
+    "attendee_email": {
       "type": "string"
     },
-    "attendee_email": {
-      "description": "invite only",
-      "type": "string"
+    "attendee_emails": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "contact_id": {
-      "description": "invite only",
       "format": "uuid",
       "type": "string"
     },
     "description": {
-      "description": "invite only",
       "type": "string"
     },
     "end": {
       "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
-      "type": "string"
-    },
-    "host_user_id": {
-      "description": "book only",
-      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
@@ -7170,37 +9870,25 @@ passport scope "send".)
       "type": "string"
     },
     "links": {
-      "description": "book only: Who and what the meeting is about; at least one. The booking is refused without it.",
       "items": {
-        "additionalProperties": false,
         "properties": {
           "entity_id": {
             "format": "uuid",
             "type": "string"
           },
           "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
             "type": "string"
           }
         },
         "required": [
-          "entity_type",
-          "entity_id"
+          "entity_id",
+          "entity_type"
         ],
         "type": "object"
       },
-      "maxItems": 25,
-      "minItems": 1,
       "type": "array"
     },
     "location": {
-      "description": "invite only",
       "type": "string"
     },
     "start": {
@@ -7212,14 +9900,18 @@ passport scope "send".)
       "type": "string"
     },
     "video_call": {
-      "description": "invite only",
       "type": "boolean"
     }
   },
   "required": [
     "action",
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
     "start",
-    "end"
+    "subject"
   ],
   "type": "object"
 }
@@ -7242,8 +9934,10 @@ instead. chat_reply cannot start a conversation or choose a channel. Use draft_o
 the message does not exist yet, and change_activities with action=log to record that something was
 said rather than say it. Send the subject, body and activity_id or links the draft produced, and
 keep the staged approval id: the approval binds that exact message, so changed text needs a new one.
-email_new answers with the new conversation's activity_id. (Runs immediately; requires passport
-scope "send".)
+email_new answers with the new conversation's activity_id. (Runs immediately; the actions
+chat_reply, email_new, email_reply cannot be undone, so tell the user what the call will change and
+get their yes before calling, unless they asked for this call themselves; requires passport scope
+"send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7589,6 +10283,9 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -7730,6 +10427,9 @@ answered, where locale is absent until this contact chooses one.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },

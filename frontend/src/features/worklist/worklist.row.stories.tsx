@@ -865,6 +865,34 @@ export const TheRowInHand: Story = {
 // the FOLD, holding the reasons past the third together with why this row beat
 // the one below it — one press for a reader who disagrees with the order, and
 // no line of height for the many who do not.
+// One open customer-support review: its task and the deal's quiet row fold
+// into this one row, which stays while the review is open.
+export const ADealUnderReview: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "01a05500-0000-7000-8000-0000000000db",
+      source: "deal_review",
+      category: "deals_at_risk",
+      level: 4,
+      consequence: "deal_drifts",
+      title: "Turbinenbau retrofit",
+      because: [{ kind: "quiet_days", value: { kind: "days", days: 196 } }],
+      actions: ["open"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000da",
+        label: "Turbinenbau retrofit",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,

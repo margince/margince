@@ -58,7 +58,7 @@ var preservedResetTables = map[string]bool{
 	"audit_log": true, "system_log": true,
 	// installation configuration and secrets
 	"setting": true, "vault_secret": true, "ai_call_config": true,
-	"embed_store_binding": true,
+	"embed_store_binding": true, "tax_rate": true,
 	// The derived channel-provider registry: installation-global reference data,
 	// not this workspace's records, on the SAME footing as `setting` above — a
 	// reset that cleared it would leave the installation unable to recognise the

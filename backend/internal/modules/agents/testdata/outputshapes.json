@@ -977,102 +977,6 @@
       "warnings"
     ]
   },
-  "book_meeting": {
-    "type": "object",
-    "properties": {
-      "data": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "id"
-        ]
-      },
-      "evidence": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "captured_by": {
-              "type": "string"
-            },
-            "record_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "record_type": {
-              "type": "string"
-            },
-            "source": {
-              "type": "string"
-            },
-            "web_url": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "record_id",
-            "record_type"
-          ]
-        }
-      },
-      "freshness": {
-        "type": "object",
-        "properties": {
-          "authoritative": {
-            "type": "boolean"
-          },
-          "last_synced_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "authoritative"
-        ]
-      },
-      "schema_version": {
-        "type": "string"
-      },
-      "trace_id": {
-        "type": "string"
-      },
-      "trust": {
-        "type": "string"
-      },
-      "warnings": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "message"
-          ]
-        }
-      }
-    },
-    "required": [
-      "data",
-      "evidence",
-      "freshness",
-      "schema_version",
-      "trace_id",
-      "trust",
-      "warnings"
-    ]
-  },
   "bulk_update_records": {
     "type": "object",
     "properties": {
@@ -5980,6 +5884,9 @@
           "priced_count": {
             "type": "integer"
           },
+          "qualification_mode": {
+            "type": "string"
+          },
           "qualified": {
             "type": "object",
             "properties": {
@@ -6089,6 +5996,7 @@
           "period_end",
           "period_start",
           "priced_count",
+          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -6576,6 +6484,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "attention_reason": {
+            "type": "string"
+          },
           "calendar_url": {
             "type": "string"
           },
@@ -13372,6 +13283,9 @@
           },
           "priced_count": {
             "type": "integer"
+          },
+          "qualification_mode": {
+            "type": "string"
           },
           "qualified": {
             "properties": {
