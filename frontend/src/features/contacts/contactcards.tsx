@@ -11,8 +11,8 @@ import { Panel, PanelRow } from "../../design-system/panel";
 import { badgeTone } from "../../design-system/readingtone";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
@@ -107,8 +107,8 @@ export function ContactDealCard({
 }: Readonly<{ view: Contact360; firstName: string; onOpenDeals: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const card = dealCard(view, t, locale, recordZone);
+  const readerZone = useViewerZone();
+  const card = dealCard(view, t, locale, readerZone);
   const title = t("contact.card.dealTitle", { name: firstName });
   if (card.state !== "deal") {
     return (

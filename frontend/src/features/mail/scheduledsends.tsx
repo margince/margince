@@ -14,11 +14,11 @@ import { QueryStates, WriteRefused } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { formatCountdown, useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useMailboxConnected } from "../../lib/connectors";
 import { problemMessageOf } from "../../lib/problem";
 import "./scheduledsends.css";
+import { useViewerZone } from "../../lib/viewerzone";
 // The queue behind "send later", and the reason it has to exist: a rep who can
 // schedule a message must be able to reach it again. Without this page the
 // endpoints, the store and the fire path all existed and nothing in the client
@@ -120,7 +120,7 @@ export function ScheduledSendsScreen() {
   const { locale } = useLocale();
   // A moment a rep chose is a personal one, so the page reads in the viewer's
   // own zone unless the send names another (see Moment).
-  const readerZone = viewerZone();
+  const readerZone = useViewerZone();
   const [withdrawing, setWithdrawing] = useState<ScheduledSend | null>(null);
   const [editing, setEditing] = useState<ScheduledSend | null>(null);
   const [view, setView] = useState<View>("all");

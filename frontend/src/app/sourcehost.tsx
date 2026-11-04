@@ -4,9 +4,9 @@
 import { type ReactNode, useCallback, useState } from "react";
 import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
 import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
-import { viewerZone } from "../format/timezone";
 import { useActivity } from "../lib/activityread";
 import { OpenSourceProvider } from "../lib/opensource";
+import { useViewerZone } from "../lib/viewerzone";
 
 /** The shell's drawer for a source opened anywhere under it. */
 export function SourceHost({ children }: Readonly<{ children: ReactNode }>) {
@@ -37,7 +37,7 @@ function SourceDrawer({
   const read = useActivity(activityId);
   const answered = read.data !== undefined || read.isError;
   const email = read.data?.kind === "email";
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <>
       <OpenEmailDrawer

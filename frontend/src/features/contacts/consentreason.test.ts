@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import { vi } from "../../i18n/vi";
@@ -56,7 +56,7 @@ describe("the consent panel in the reader's language", () => {
         entry({ reason_code: code }),
         tVi,
         "vi",
-        viewerZone(),
+        browserZone(),
       );
       expect(said).not.toBe("the server's English sentence");
       expect(Object.values(vi)).toContain(said);
@@ -77,7 +77,7 @@ describe("the consent panel in the reader's language", () => {
       }),
       tVi,
       "vi",
-      viewerZone(),
+      browserZone(),
     );
     expect(said).toMatch(/^Họ đã viết cho bạn ngày /);
     expect(said).not.toContain("{date}");
@@ -97,7 +97,7 @@ describe("the consent panel in the reader's language", () => {
     const fromNewerServer = Object.assign(entry({}), {
       reason_code: "a_newer_code",
     });
-    expect(consentReason(fromNewerServer, tVi, "vi", viewerZone())).toBe(
+    expect(consentReason(fromNewerServer, tVi, "vi", browserZone())).toBe(
       "the server's English sentence",
     );
   });

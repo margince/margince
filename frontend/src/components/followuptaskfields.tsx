@@ -8,7 +8,7 @@ import { formatClockTime, timePattern } from "../format/timepattern";
 import { wallClockTime } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { TaskDraft } from "../lib/activitybody";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 
@@ -101,7 +101,7 @@ export function TaskTimeField({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const pattern = timePattern(locale, useDateTimePreferences().timeFormat);
   const lands = landedTime(day, value, zone);
   return (

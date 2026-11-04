@@ -14,7 +14,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VatMark } from "./companyvatmark";
 import { derivedSource } from "./evidencesource";
 import { profileFieldsKey } from "./evidenceverdict";
@@ -87,7 +87,7 @@ export function SidecarFieldValue({
 }: SidecarFieldProps) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
@@ -126,7 +126,7 @@ export function SidecarFieldValue({
   // A value a machine read keeps its receipt. Absent for a value a human typed:
   // a mark with nothing behind it teaches the reader to stop opening them.
   const source = current
-    ? derivedSource(current, locale, recordZone)
+    ? derivedSource(current, locale, readerZone)
     : undefined;
   return (
     <>

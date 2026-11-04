@@ -31,10 +31,10 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
@@ -84,7 +84,7 @@ function DealAsideBody({
     deal,
     t,
     locale,
-    zone: useRecordZone(),
+    zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
   };
   const owner = useMemberName(deal.owner_id).data;

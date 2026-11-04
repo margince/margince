@@ -8,11 +8,11 @@ import { formatDayMonth, formatMoneyCompact } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import "./contact360.css";
 import { closeDayOf } from "../../lib/closeday";
 import { dealRoleLabel } from "../../lib/recordlabels";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AddRelationshipAction } from "../records/relationships";
 import { ContactDealRooms } from "./contactdealrooms";
 import "./contacttabs.css";
@@ -106,7 +106,7 @@ function closeLine(
 function DealRow({ role }: Readonly<{ role: DealRole }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const deal = useDealSummary(role.deal_id).data;
   const company = useDealCompany(deal?.company_id).data;
   const roleWord = dealRoleLabel(role.role, t);
@@ -115,7 +115,7 @@ function DealRow({ role }: Readonly<{ role: DealRole }>) {
       ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
       : null,
     role.deal_stage ?? t("contact.deals.noStage"),
-    closeLine(deal, t, locale, recordZone),
+    closeLine(deal, t, locale, readerZone),
     company?.display_name ?? null,
   ]
     .filter(Boolean)

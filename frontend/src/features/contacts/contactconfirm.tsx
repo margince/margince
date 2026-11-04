@@ -8,7 +8,7 @@ import { Callout } from "../../design-system/callout";
 import { forReader } from "../../format/collate";
 import { formatDayMonth, formatNumber, INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -35,7 +35,7 @@ export function ContactConfirmCallout({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const pending = (view.profile_fields ?? []).filter(
     (field) => field.verdict === undefined,
   );

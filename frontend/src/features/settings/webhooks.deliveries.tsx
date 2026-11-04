@@ -16,9 +16,9 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable } from "../../design-system/datatable";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type {
   WebhookDelivery,
   WebhookDeliveryListResponse,
@@ -168,6 +168,7 @@ function deliveryColumns(
   locale: ReturnType<typeof useLocale>["locale"],
   subscriptionId: string,
   canReplay: boolean,
+  zone: string,
 ): {
   key: string;
   header: string;
@@ -211,7 +212,7 @@ function deliveryColumns(
       header: t("webhooks.deliveries.column.created"),
       render: (delivery: WebhookDelivery) =>
         delivery.created_at
-          ? formatDateTime(delivery.created_at, locale, viewerZone())
+          ? formatDateTime(delivery.created_at, locale, zone)
           : "—",
     },
     {
@@ -219,7 +220,7 @@ function deliveryColumns(
       header: t("webhooks.deliveries.column.resolved"),
       render: (delivery: WebhookDelivery) => {
         const at = deliveryResolvedAt(delivery);
-        return at ? formatDateTime(at, locale, viewerZone()) : "—";
+        return at ? formatDateTime(at, locale, zone) : "—";
       },
     },
   ];
@@ -300,13 +301,20 @@ function DeliveriesBody({
     fetchNextPage: () => unknown;
   };
 }>) {
+  const readerZone = useViewerZone();
   const deliveries = response?.data ?? [];
   if (deliveries.length === 0) {
     return <EmptyState>{t("webhooks.deliveries.empty")}</EmptyState>;
   }
   const deadLettered = deliveries.filter((d) => d.status === "dead_lettered");
   const others = deliveries.filter((d) => d.status !== "dead_lettered");
-  const columns = deliveryColumns(t, locale, subscriptionId, canReplay);
+  const columns = deliveryColumns(
+    t,
+    locale,
+    subscriptionId,
+    canReplay,
+    readerZone,
+  );
   return (
     <>
       {deadLettered.length > 0 && (

@@ -15,7 +15,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Receipt = components["schemas"]["ClaimEvidence"];
 type SourceKind = Receipt["source_kind"];
@@ -266,20 +266,20 @@ function EvidenceTimes({
   locale: Locale;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <>
       {retrievedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.retrievedAt", {
-            when: formatDateTime(retrievedAt, locale, recordZone),
+            when: formatDateTime(retrievedAt, locale, readerZone),
           })}
         </p>
       )}
       {lastVerifiedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.verifiedAt", {
-            when: formatDateTime(lastVerifiedAt, locale, recordZone),
+            when: formatDateTime(lastVerifiedAt, locale, readerZone),
           })}
         </p>
       )}

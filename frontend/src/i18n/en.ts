@@ -12074,9 +12074,9 @@ export const en = {
   "setup.baseLanguage": "Base language",
   "setup.baseLanguageHint":
     "The language AI writes in when the whole team reads the text. Each person chooses their own display language, and customer replies follow the language of the thread.",
-  "setup.timezone": "Reporting timezone",
+  "setup.timezone": "Company time zone",
   "setup.timezoneHint":
-    "IANA timezone name. All reporting periods are computed in it. Guessed from this browser; change it if the team works elsewhere.",
+    "IANA time zone name. Report periods, scheduled jobs and documents sent out use it. Guessed from this browser; change it if the company works elsewhere. Everyone sets their own time zone for the times they see.",
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Password",
@@ -14343,9 +14343,9 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.timezone": "Reporting timezone",
+  "installationSettings.timezone": "Company time zone",
   "installationSettings.timezoneHint":
-    "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
+    "IANA name, for example Europe/Berlin. Report periods, scheduled jobs and documents sent out use it for the whole company. Everyone sees times in their own time zone, set under Settings → Account.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
     "Reports group by this year and quarter. Changing it relabels every report. A saved period such as 2026 keeps the months it covered.",

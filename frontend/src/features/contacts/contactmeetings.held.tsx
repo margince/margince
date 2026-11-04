@@ -8,7 +8,7 @@ import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MeetingStatus,
   MeetingTitle,
@@ -33,7 +33,7 @@ export function HeldMeetingsTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const hosts = useMemberNames(
     held.map((meeting) => meeting.host_user_id ?? ""),
   );

@@ -36,7 +36,6 @@ import {
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { listQueryParams } from "../../lib/tagfilter";
@@ -55,6 +54,7 @@ import {
 } from "./leads.companydials";
 import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 
@@ -168,7 +168,7 @@ function LeadsWorkbench({
   );
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
   // Bulk selection, by lead id; cleared after any bulk run, since the rows
@@ -320,7 +320,7 @@ function LeadsWorkbench({
             ]}
           />
         }
-        columns={leadColumns(t, locale, recordZone, origins.data, partners)}
+        columns={leadColumns(t, locale, readerZone, origins.data, partners)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,

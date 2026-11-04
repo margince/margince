@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 it("offers source assessment without claiming a duty or offering a notice", async () => {
-  vi.spyOn(timezone, "viewerZone").mockReturnValue("Asia/Ho_Chi_Minh");
+  vi.spyOn(timezone, "browserZone").mockReturnValue("Asia/Ho_Chi_Minh");
   const user = userEvent.setup();
   const writes: unknown[] = [];
   let current: NoticeCase = duty;
@@ -132,7 +132,7 @@ it("keeps an unconfirmed source visible to a read-only privacy officer", async (
 });
 
 it("submits the entered acquisition date in the selected calendar timezone", async () => {
-  vi.spyOn(timezone, "viewerZone").mockReturnValue("Asia/Ho_Chi_Minh");
+  vi.spyOn(timezone, "browserZone").mockReturnValue("Asia/Ho_Chi_Minh");
   const user = userEvent.setup();
   const writes: unknown[] = [];
   stubWithSession(

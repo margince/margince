@@ -2,7 +2,7 @@
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import {
   installFetchStub,
@@ -35,7 +35,7 @@ it.each([403, 404])(
     renderWithQueryClient(
       <OpenActivityDrawer
         activityId="source"
-        zone={viewerZone()}
+        zone={browserZone()}
         onClose={() => {}}
       />,
     );
@@ -63,7 +63,7 @@ it("labels archived evidence while keeping its permitted text", async () => {
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="source"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );
@@ -99,7 +99,7 @@ it("lists the activity's files and offers an upload while it is live", async () 
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="source"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );
@@ -146,7 +146,7 @@ it("reads out the value of a field the workspace added to activities", async () 
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="source"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );
@@ -174,7 +174,7 @@ it("names a meeting's outside guests beside the contacts who attended", async ()
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="source"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );
@@ -227,7 +227,7 @@ it("labels each guest's answer, and counts the guests a crowd leaves out", async
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="source"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );
@@ -268,7 +268,7 @@ it("shows a website form's fields under their labels instead of the note's text"
   renderWithQueryClient(
     <OpenActivityDrawer
       activityId="form"
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={() => {}}
     />,
   );

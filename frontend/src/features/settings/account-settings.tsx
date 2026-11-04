@@ -18,7 +18,6 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
-import { viewerZone } from "../../format/timezone";
 import {
   LOCALES,
   type Locale,
@@ -35,7 +34,7 @@ import {
   type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
-import { useSaveMyTimezone } from "../../lib/viewerzone";
+import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
 import { reloadReaderLanguageReads } from "./languagereads";
@@ -236,11 +235,12 @@ function LanguageSettingRow() {
 // them follow it. Saving marks it as chosen, so a later browser guess never
 // replaces it.
 function TimeZoneSettingRow() {
+  const readerZone = useViewerZone();
   const me = useMe();
   // Drawn once /me has answered, so the row never shows a guess first.
   if (!me.data) return null;
   return (
-    <TimeZoneSettingControl stored={me.data.user.timezone ?? viewerZone()} />
+    <TimeZoneSettingControl stored={me.data.user.timezone ?? readerZone} />
   );
 }
 

@@ -9,9 +9,9 @@ import { PanelBody } from "../../design-system/panel";
 import { reasonText, STATUS_TONE } from "../../design-system/pipelineladder";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { SectionSummary } from "./companyrailshared";
 import "./companytriage.css";
 
@@ -35,7 +35,7 @@ export function CompanyTriageSection({
 }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const query = useQuery({
     queryKey: ["company-capture-triage", companyId],
     queryFn: async () => {

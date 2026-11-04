@@ -29,8 +29,8 @@ import { taskWriteKeys, timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { useViewerZone } from "../lib/viewerzone";
 import "./latestinbound.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -166,7 +166,7 @@ function oneLine(text: string): string {
 function When({ activity }: Readonly<{ activity: Activity }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // A minute is the finest unit the label shows.
   const now = useNow(60_000);
   const moment = {
