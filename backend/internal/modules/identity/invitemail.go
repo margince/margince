@@ -94,6 +94,34 @@ func (s *Service) RecordInviteMailOutcome(ctx context.Context, actor Identity, r
 	})
 }
 
+// InviteMailRecipient answers where the invitation carrying rawToken may still
+// be mailed: the member's current address, while the link is live and the
+// member is still an invited human. ok is false once the link was superseded,
+// revoked or redeemed, or the member set a password, left or was archived.
+// The detached send asks it just before it mails, so a mail queued before
+// any of those never goes out.
+func (s *Service) InviteMailRecipient(ctx context.Context, actor Identity, rawToken string) (email string, ok bool, err error) {
+	ctx = actorCtx(ctx, actor)
+	if err := auth.RequireAny(ctx, objectUserAdmin, principal.ActionCreate, principal.ActionUpdate); err != nil {
+		return "", false, err
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT u.email FROM auth_token t JOIN app_user u ON u.id = t.user_id
+			  WHERE t.token_hash = $1 AND t.purpose = 'password_reset'
+			    AND t.used_at IS NULL AND t.expires_at > now()
+			    AND u.status = '`+userStatusInvited+`' AND NOT u.is_agent AND u.archived_at IS NULL`,
+			hashToken(rawToken)).Scan(&email)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return email, true, nil
+}
+
 // ResendInvite mints a new set-password link for an invited member, the way
 // IssuePasswordLink does, and returns it for the caller to mail.
 func (s *Service) ResendInvite(ctx context.Context, actor Identity, userID ids.UserID) (string, error) {
