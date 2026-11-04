@@ -150,9 +150,11 @@ func RecordSubjectInquiry(
 	return nil
 }
 
-// The `source` column's two machine values. A human's own claim writes 'human'
-// (qualifyingevent.go) and neither of these.
+// The `source` column's values. A user's own claim writes sourceKindHuman and
+// their agent's writes sourceKindAgent (qualifyingevent.go). The rest are machine.
 const (
+	sourceKindHuman = "human"
+	sourceKindAgent = "agent"
 	// sourceKindDerived: read off the timeline at send time.
 	sourceKindDerived = "derived"
 	// sourceKindCaptured: the door that took the event wrote it as it happened.

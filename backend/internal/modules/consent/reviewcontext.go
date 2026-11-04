@@ -118,12 +118,10 @@ func (s *Store) RecordContext(
 	if err := httperr.RequireBodyID(fieldSubjectID, in.SubjectID.UUID); err != nil {
 		return Review{}, err
 	}
-	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
-	// lets connectors through, and a connector runs with the granting human's
-	// own grants — so it would hold whatever this is gated on and could assert,
-	// in a named employee's name, that a phone call happened. This is a
-	// statement about what somebody remembers.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants and could assert, in an employee's name, that a phone call happened.
+	// The evidence row names an agent as its author.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	review, err := s.ReviewForReader(ctx, reviewID)

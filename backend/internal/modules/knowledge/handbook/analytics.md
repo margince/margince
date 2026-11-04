@@ -396,4 +396,4 @@ link cannot be copied from it.
 A link also stops when it expires or when you lose forecast access. A seat
 without permission to share sees neither button.
 
-A link that no longer works shows **not found**, no matter the reason. An agent can neither create one nor open one.
+A link that no longer works shows **not found**, no matter the reason. An agent can make and open one for its user. What a link shows is worked out for whoever opens it, with their own rights.

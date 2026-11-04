@@ -49,6 +49,7 @@ const (
 	DomainSourceSiteRead  = "site_read"
 	DomainSourceHeuristic = "heuristic"
 	DomainSourceHuman     = "human"
+	DomainSourceAgent     = "agent"
 )
 
 // The retry bound and backoff for a domain whose triage keeps failing — the

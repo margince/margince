@@ -26,6 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// codeRequired is the wire code of a field a request left out.
+const codeRequired = "required"
+
 // The contract's maxLength for each text field, in characters. A reason is a
 // paragraph and a note is a short mail; the colleague deciding is the one who
 // pays for a wall of text.
@@ -209,7 +212,7 @@ func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, erro
 	}
 	if strings.TrimSpace(req.InternalReason) == "" {
 		return principal.Principal{}, &values.ParseError{
-			Field: "internal_reason", Code: "required",
+			Field: "internal_reason", Code: codeRequired,
 			Message: "an ask says why it is worth making; give the colleague a reason",
 		}
 	}
@@ -248,7 +251,7 @@ func (s *Store) Decide(
 	}
 	if answer == StatusSuggestOther && suggested == nil {
 		return &values.ParseError{
-			Field: "suggested_user_id", Code: "required",
+			Field: "suggested_user_id", Code: codeRequired,
 			Message: "name the colleague to suggest in suggested_user_id",
 		}
 	}

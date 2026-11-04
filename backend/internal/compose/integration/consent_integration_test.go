@@ -45,7 +45,13 @@ func setupConsent(t *testing.T) *consentEnv {
 	// sealed it (confirmlinkmail_integration_test.go).
 	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
+	return seedConsentSubject(t, e)
+}
 
+// seedConsentSubject gives a signed-in workspace one contact with an inbound mail
+// to answer.
+func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
+	t.Helper()
 	var contact struct {
 		ID string `json:"id"`
 	}

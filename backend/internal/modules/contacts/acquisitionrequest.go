@@ -25,7 +25,7 @@ var requestKinds = []string{AcquiredRequestedQuoteOrMeeting, AcquiredInPersonPer
 // records. The rows stay as the record of how the contact was obtained; no send
 // rests on them any more. Human-only, as recording a request by hand is.
 func (s *Store) RetractAcquisitionRequest(ctx context.Context, contactID ids.ContactID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

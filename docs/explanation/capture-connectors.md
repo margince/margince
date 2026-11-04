@@ -58,9 +58,10 @@ Four rules sit on top of that write:
   - Neither can be reached from the capture path. The `comms` module owns the outbound side. It stages
     a lasting row, checks the seat of the staging human again at send time, and gates on consent. See
     [outbound-messaging.md](outbound-messaging.md).
-- **Only humans connect.** Every connector operation is `x-agent-access: human-only` (except the OAuth
-  callback, which has no session). An agent must never grant itself read access to a human's personal
-  mail.
+- **Only humans connect.** Every connect flow is `x-agent-access: human-only` (except the OAuth
+  callback, which has no session), because the provider's consent needs a browser. An agent must never
+  grant itself read access to a human's personal mail. Once connected, an agent may change the mailbox's
+  settings or disconnect it for its user, and asks first where a change reaches colleagues.
 
 ## The connector interface
 

@@ -146,8 +146,8 @@ Anna" stops being true when Anna leaves:
 Resuming uses the held message again, so a resumed review stages one delivery and not a second copy
 of the message. A review can be read by the user who started it, or by a user who holds
 `communication_exception:read`. Any other user gets 404, not 403. The fact that a refused message
-about a named subject exists is itself something to keep private. A principal that is not human is
-refused before the query runs.
+about a named subject exists is itself something to keep private. A principal that is neither a user
+nor a user's agent is refused before the query runs.
 
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal
@@ -187,8 +187,11 @@ something that never happened:
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the
 rules. This decides who may act against the answer those rules gave about one contact. An
-installation that handed over the first has not handed over the second with it. The check is
-`auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
+installation that handed over the first has not handed over the second with it.
+
+The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
+carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
+`directed_by` names the user who took it on and `directed_by_agent` names the agent.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can

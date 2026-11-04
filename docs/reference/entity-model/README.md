@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4228 |
+| Columns | 4230 |
 | Foreign keys | 585 |
 | Owning areas | 38 |
 
@@ -214,7 +214,7 @@ erDiagram
 | [`capture_party_source`](capture.md#capture_party_source) | capture | 12 | 0 |
 | [`capture_party_source_replay`](capture.md#capture_party_source_replay) | capture | 2 | 0 |
 | [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 22 | 0 |
-| [`capture_sender_override`](capture.md#capture_sender_override) | capture | 7 | 0 |
+| [`capture_sender_override`](capture.md#capture_sender_override) | capture | 8 | 0 |
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |
 | [`capture_sync_state`](capture.md#capture_sync_state) | capture | 11 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
@@ -228,7 +228,7 @@ erDiagram
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
-| [`communication_instruction`](consent.md#communication_instruction) | consent | 18 | 2 |
+| [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |

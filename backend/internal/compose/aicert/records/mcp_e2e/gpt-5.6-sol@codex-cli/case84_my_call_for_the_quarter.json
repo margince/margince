@@ -1,0 +1,23 @@
+{
+  "scenario": "case84_my_call_for_the_quarter",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 57796,
+    "output_tokens": 2494,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 627840,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

@@ -15780,9 +15780,7 @@
     "properties": {
       "data": {
         "properties": {
-          "status": {
-            "type": "integer"
-          },
+          "status": {},
           "truncated": {
             "type": "boolean"
           }

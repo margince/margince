@@ -106,7 +106,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_instruction
 
-18 columns · primary key `(id)` · referenced by 2 foreign keys
+19 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -117,6 +117,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `delivery_id` | `uuid` |  |  |
 | `directed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `directed_by` | `uuid` | yes | Points at `app_user.id`. |
+| `directed_by_agent` | `text` |  |  |
 | `explanation` | `text` | yes |  |
 | `facts_as_of` | `timestamp with time zone` | yes |  |
 | `given_by_admin` | `boolean`, default `false` | yes |  |

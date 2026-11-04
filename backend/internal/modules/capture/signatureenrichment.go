@@ -37,8 +37,8 @@ import (
 // not exist as far as this statement is concerned.
 func (r *Registry) SetSignatureEnrichment(ctx context.Context, name string, enabled *bool) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return ConnectionView{}, fmt.Errorf("capture: only a human sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
