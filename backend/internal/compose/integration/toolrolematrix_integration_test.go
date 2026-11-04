@@ -23,10 +23,9 @@ const (
 	toolRoleUser  = "tool-role-matrix@fable.test"
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
-	// adminUnprovenCeiling is how many calls the admin control may fail and the
-	// sweep still pass. It only goes down: a filler or seed that proves more
-	// calls lowers it in the same change.
-	adminUnprovenCeiling = 171
+	// unprovenCeiling is how many cells may reach no verdict and the sweep
+	// still pass. It only goes down, and at zero every new cell is proven.
+	unprovenCeiling = 171
 )
 
 // TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
@@ -35,8 +34,7 @@ const (
 // so neither is a second list. A cell holds what the gate says, not what the seed
 // document claims.
 func TestTheToolRoleMatrixIsPublished(t *testing.T) {
-	d := newTwoDoors(t, "tool-role-matrix", "read", "write", "send", "draft", "enrich")
-	d.e.DescribeCompany(t)
+	d := toolRoleApp(t)
 	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
 	if len(calls) == 0 {
 		t.Fatal("the registry serves no tool, so this measured nothing")
@@ -54,7 +52,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		pool := seedToolRoleRecords(t, d.e, calls, "")
 		assignRoleTo(t, d.e, toolRoleUser, role.key)
 		for n, call := range calls {
-			got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, call.args(pool))
+			got := callThroughApproval(t, d.e, clients[n/toolRoleCallsPerPassport], call.verb, call.args(pool))
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
 			}
@@ -71,7 +69,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 
 	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
 	doc := toolRolesDocument(roles, calls, verdicts, colleague)
-	holdTheAdminControlRatchet(t, doc)
+	holdTheUnprovenRatchet(t, doc)
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -113,28 +111,37 @@ func holdTheMeasurementHasTeeth(t *testing.T, roles []seededRole, calls int, ver
 // calls, which would otherwise stay in the table and fill nothing.
 func holdEveryFixtureNamesACall(t *testing.T, calls []toolRoleCall) {
 	t.Helper()
-	for verb := range toolRoleFixtures {
-		if !slices.ContainsFunc(calls, func(call toolRoleCall) bool { return call.verb == verb }) {
-			t.Errorf("toolRoleFixtures has %s, which no swept call names; remove it or rename it to the verb it was for", verb)
+	for _, fixtures := range []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures} {
+		for verb := range fixtures {
+			if !slices.ContainsFunc(calls, func(call toolRoleCall) bool { return call.verb == verb }) {
+				t.Errorf("the fixtures have %s, which no swept call names; remove it or rename it to the verb it was for", verb)
+			}
+		}
+	}
+	for verb := range routeVerbFixtures {
+		if _, twice := toolRoleFixtures[verb]; twice {
+			t.Errorf("%s has a fixture in both tables, so one of them fills nothing", verb)
 		}
 	}
 }
 
-// holdTheAdminControlRatchet fails a sweep whose admin control proves fewer
-// calls than the ceiling allows, and one that proves more without lowering it.
-func holdTheAdminControlRatchet(t *testing.T, doc toolRolesFileShape) {
+// holdTheUnprovenRatchet fails a sweep with more cells that reached no verdict
+// than the ceiling allows, and names each. It fails one with fewer too, so
+// the ceiling comes down with them.
+func holdTheUnprovenRatchet(t *testing.T, doc toolRolesFileShape) {
 	t.Helper()
-	unproven := 0
+	var unproven []string
 	for _, row := range doc.Rows {
-		if slices.Contains(row.Unproven, "admin") {
-			unproven++
+		for _, role := range row.Unproven {
+			unproven = append(unproven, fmt.Sprintf("%s as %s: %s", row.Verb, role, row.UnprovenReasons[role]))
 		}
 	}
 	switch {
-	case unproven > adminUnprovenCeiling:
-		t.Errorf("the admin control fails %d calls, above its ceiling of %d; the calls that stopped name why in unproven_reasons", unproven, adminUnprovenCeiling)
-	case unproven < adminUnprovenCeiling:
-		t.Errorf("the admin control fails %d calls, below its ceiling of %d; lower adminUnprovenCeiling to %d", unproven, adminUnprovenCeiling, unproven)
+	case len(unproven) > unprovenCeiling:
+		t.Errorf("%d cells reached no verdict, above the ceiling of %d. Each must run, or be refused by a permission gate:\n%s",
+			len(unproven), unprovenCeiling, strings.Join(unproven, "\n"))
+	case len(unproven) < unprovenCeiling:
+		t.Errorf("%d cells reached no verdict, below the ceiling of %d; lower unprovenCeiling to %d", len(unproven), unprovenCeiling, len(unproven))
 	}
 }
 
@@ -242,7 +249,7 @@ const (
 
 // stopReasonMeanings is what each reason says, which the page prints.
 //
-// gatekit:fixture the published meaning of each stop reason — expected data, not a waived cost
+// gatekit:fixture the published meaning of each stop reason: expected data, not a waived cost
 var stopReasonMeanings = map[string]string{
 	stopValidation:  "An argument was refused: a value the filler cannot make.",
 	stopNotFound:    "No such record: a kind the sweep does not seed, or a record it does not relate.",

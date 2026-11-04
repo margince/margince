@@ -30,12 +30,36 @@ type recordPool struct {
 	sweepStart time.Time
 	// taken, when set, collects the records handed out by kind.
 	taken map[string][]string
+	// facts are what a seed made beside its record, by record and name. A
+	// preview's token is one; the deal an attachment is filed on is another.
+	facts map[string]map[string]string
+	// late seeds a kind as a call takes it, for a state an earlier call in
+	// the same sweep takes away.
+	late map[string]func() string
+}
+
+// fact is what the seed of a record noted beside it. Counting mode has none.
+func (p *recordPool) fact(id, name string) string {
+	if p.wanted != nil {
+		return placeholderUUID
+	}
+	return p.facts[id][name]
+}
+
+func (p *recordPool) note(id, name, value string) {
+	if p.facts[id] == nil {
+		p.facts[id] = map[string]string{}
+	}
+	p.facts[id][name] = value
 }
 
 func (p *recordPool) take(kind string) string {
 	if p.wanted != nil {
 		p.wanted[kind]++
 		return placeholderUUID
+	}
+	if seed, late := p.late[kind]; late {
+		p.fresh[kind] = append(p.fresh[kind], seed())
 	}
 	ids := p.fresh[kind]
 	p.fresh[kind] = ids[1:]
@@ -48,7 +72,7 @@ func (p *recordPool) take(kind string) string {
 // recordKinds names the record a sweep seeds for an argument, or for the path
 // segment before a route's parameter.
 //
-// gatekit:fixture the record kind each argument or collection names — expected data, not a waived cost
+// gatekit:fixture the record kind each argument or collection names: expected data, not a waived cost
 var recordKinds = map[string]string{
 	"company_id": "company", "entity_id": "company", "record_id": "company", "companies": "company", "records": "company",
 	"contact_id": "contact", "contacts": "contact",
@@ -69,6 +93,7 @@ var recordKinds = map[string]string{
 	"web-forms": "web_form", "views": "saved_view", "lists": "list", "list_id": "list",
 	"initiatives": "initiative", "initiative_id": "initiative",
 	"commitments": "commitment", "assignments": "assignment",
+	"subject_id": "user", "source_id": "user", "record-grants": "record_grant",
 }
 
 func recordKindOf(name string) string { return recordKinds[name] }
@@ -96,7 +121,7 @@ func (c toolRoleCall) args(pool *recordPool) map[string]any {
 	if _, takesBody := args["request_body"]; takesBody && len(c.route.Body) > 0 {
 		args["request_body"] = fillSchema(c.route.Body, "", pool)
 	}
-	if fixture, ok := toolRoleFixtures[c.verb]; ok {
+	if fixture, ok := fixtureOf(c.verb); ok {
 		for name, value := range fixture(pool) {
 			if body, isBody := value.(map[string]any); isBody && name == "request_body" {
 				merged, _ := args["request_body"].(map[string]any)
@@ -171,14 +196,18 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 
 // namedValues are the strings a field's name settles, whatever the schema says.
 //
-// gatekit:fixture a valid value for each well-known field name — expected data, not a waived cost
+// gatekit:fixture a valid value for each well-known field name: expected data, not a waived cost
 var namedValues = map[string]string{
 	"country": "de", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
 	"content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 role sweep")), "filename": "role-sweep.pdf",
 	"scheduled_tz": "Europe/Berlin", "timezone": "Europe/Berlin", "source": "manual",
 	"text_hash": strings.Repeat("0", 32), "url": "https://example.test/role-sweep",
-	"role": "rep", "group_key": "commercial", "name": "Role Sweep",
+	"role": "rep", "group_key": "commercial",
 }
+
+// uniquelyNamed fields name a record a workspace holds once, so each call
+// names its own and one role's create never collides with the next one's.
+var uniquelyNamed = map[string]bool{"name": true, "label": true}
 
 //craft:ignore naked-any a JSON schema's value takes whichever type the schema names
 func fillValue(name string, raw json.RawMessage, pattern string, pool *recordPool) any {
@@ -193,6 +222,9 @@ func fillValue(name string, raw json.RawMessage, pattern string, pool *recordPoo
 	}
 	if value, named := namedValues[name]; named {
 		return value
+	}
+	if uniquelyNamed[name] {
+		return uniqueName()
 	}
 	var prop schemaProp
 	if err := json.Unmarshal(raw, &prop); err != nil {

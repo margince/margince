@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"maps"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -25,13 +26,31 @@ func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, 
 	for _, call := range calls {
 		call.args(counting)
 	}
-	start := counting.sweepStart
-	create := toolRoleSeeders(t, e, owner)
-	pool := &recordPool{fresh: map[string][]string{}, sweepStart: start}
-	for kind, n := range counting.wanted {
+	pool := &recordPool{fresh: map[string][]string{}, facts: map[string]map[string]string{}, sweepStart: counting.sweepStart}
+	create := toolRoleSeeders(t, e, owner, pool)
+	batched := map[string]bool{}
+	for _, batch := range toolRoleBatchSeeders(t, e) {
+		wanted := map[string]int{}
+		for _, kind := range batch.kinds {
+			batched[kind], wanted[kind] = true, counting.wanted[kind]
+		}
+		if slices.ContainsFunc(batch.kinds, func(kind string) bool { return wanted[kind] > 0 }) {
+			maps.Copy(pool.fresh, batch.seed(wanted))
+		}
+	}
+	pool.late = map[string]func() string{}
+	for _, kind := range slices.Sorted(maps.Keys(counting.wanted)) {
+		n := counting.wanted[kind]
+		if batched[kind] {
+			continue
+		}
 		seed, known := create[kind]
 		if !known {
 			t.Fatalf("a call takes a %s and the sweep has no way to seed one", kind)
+		}
+		if lateKinds[kind] {
+			pool.late[kind] = seed
+			continue
 		}
 		for range n {
 			pool.fresh[kind] = append(pool.fresh[kind], seed())
@@ -40,9 +59,14 @@ func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, 
 	return pool
 }
 
+// lateKinds are seeded as a call takes them. The anchor company's logo is one:
+// the sweep's own calls take the logo off before the reads run.
+var lateKinds = map[string]bool{"anchor_logo": true}
+
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when
-// named, owns the records that carry one; the admin owns them otherwise.
-func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string) map[string]func() string {
+// named, owns the records that carry one; the admin owns them otherwise. A seed
+// notes in the pool what it made beside its record.
+func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *recordPool) map[string]func() string {
 	t.Helper()
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	owned := func(body AnyMap) AnyMap {
@@ -81,6 +105,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string) map[string]f
 		return attachmentIDOf(t, raw)
 	}
 	maps.Copy(create, configSeeders(post, unique, create))
+	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create}))
 	create["voice_profile"] = func() string { return liveVoiceProfile(t, e) }
 	create["commitment"] = func() string {
 		if status := e.Call(t, "POST", "/v1/weekly-plans/current", AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
@@ -91,16 +116,13 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string) map[string]f
 	return create
 }
 
-// configSeeders make the workspace's own records: users, vocabulary, settings
+// configSeeders make the workspace's own records: teams, vocabulary, settings
 // rows and the sales documents that hang off a deal.
 func configSeeders(post func(string, AnyMap) string, unique func(string) string, create map[string]func() string) map[string]func() string {
 	label := func(path string) func() string {
 		return func() string { return post(path, AnyMap{"label": unique("Role Sweep")}) }
 	}
 	return map[string]func() string{
-		"user": func() string {
-			return post("/v1/users", AnyMap{"email": "sweep-" + ids.NewV7().String() + "@role-sweep.test", "display_name": "Role Sweep", "role": "rep"})
-		},
 		"team":                   func() string { return post("/v1/teams", AnyMap{"name": unique("Role Sweep")}) },
 		"tag":                    func() string { return post("/v1/tags", AnyMap{"name": unique("Sweep")}) },
 		"lead_source":            label("/v1/lead-sources"),

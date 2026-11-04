@@ -16,7 +16,7 @@ import (
 // ownedKinds are the records that carry an owner, which row scope is about, by
 // the collection that serves each.
 //
-// gatekit:fixture the route that reads each owned record — expected data, not a waived cost
+// gatekit:fixture the route that reads each owned record: expected data, not a waived cost
 var ownedKinds = map[string]string{
 	"company": "/v1/companies/", "contact": "/v1/contacts/", "deal": "/v1/deals/", "lead": "/v1/leads/", "project": "/v1/projects/",
 }
