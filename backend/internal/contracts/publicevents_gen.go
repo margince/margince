@@ -2416,7 +2416,7 @@ type PublicEventProjectCreated struct {
 	Phase string `json:"phase"`
 }
 
-// PublicEventProjectHealthAssessed Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts, whether a user or the health job wrote it, and whether it is a new reading, a correction or the undo of an AI reading. The project row itself is not written, so no project.updated goes with it.
+// PublicEventProjectHealthAssessed Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it.
 type PublicEventProjectHealthAssessed struct {
 	// AssessmentId The appended reading.
 	AssessmentId openapi_types.UUID `json:"assessment_id"`

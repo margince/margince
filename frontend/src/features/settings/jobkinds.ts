@@ -84,6 +84,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   past_activity_clock_refold: "systemJob.past_activity_clock_refold",
   privacy_request_proof_expiry: "systemJob.privacy_request_proof_expiry",
   privacy_retention: "jobs.kind.privacy_retention",
+  project_health_scan: "jobs.kind.project_health_scan",
   provider_lookup_sweep: "jobs.kind.provider_lookup_sweep",
   provider_run_poll_sweep: "jobs.kind.provider_run_poll_sweep",
   provider_run_submit: "jobs.kind.provider_run_submit",

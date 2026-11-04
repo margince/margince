@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -40,6 +40,14 @@ That holds for the call that first finds the credit gone, the key refused or the
 Requests you make yourself fail at once, with a message to contact your system administrator.
 Your administrator sees why under **Settings**, **System health**, **Diagnostics**, then **AI availability**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
+
+### Why does a project's health say the AI set it?
+Once a day, Margince checks each project in the **Pursuing** or **Delivering** phase. The AI marks it **At risk** when nothing was filed on it for 30 days. It does the same when an open task on it is past its due date. When both are true, it marks it **Off track**.
+The reading on the project page carries the AI tag and one sentence that says why. The project's owner gets a notice with the same sentence.
+
+To take the reading back, press **Undo the AI reading** beside it. The reading from before stands again; if there was none, the project reads as not judged. After a reading you record or an undo, the AI leaves the project alone until something new is filed on it.
+To stop the notices, change **Project health set by the AI** under Settings → **Notifications**.
+Also called: automatic project health, AI project status.
 
 ## What the AI does for you
 

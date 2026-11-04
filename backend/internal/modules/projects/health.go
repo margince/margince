@@ -104,11 +104,11 @@ func (s *Store) RecordHealthTx(
 			Message: "a judgement cannot be dated in the future",
 		}
 	}
-	// The project is HELD, not merely probed: an archive committing between
-	// the check and the insert would file a judgement on a closed record,
-	// and the foreign key would not notice because archiving does not
-	// delete the row. Holding the parent first is also the order Art. 17
-	// erasure takes, so this writer never deadlocks against it.
+	// The project is held, not only probed. An archive committing between the
+	// check and the insert would file a judgement on a closed record. The
+	// foreign key would not notice, because archiving does not delete the row.
+	// Holding the parent first is also the order Art. 17 erasure takes, so this
+	// writer never deadlocks against it.
 	if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
 		return crmcontracts.ProjectHealthAssessment{}, err
 	}
@@ -167,15 +167,13 @@ type healthTarget struct {
 // lockHealthTarget locks the reading a successor will replace, and refuses one
 // that already has a successor.
 //
-// FOR UPDATE keeps the chain linear. Read without it, two colleagues
-// correcting the same reading both find it uncorrected, both insert a
-// successor, and the unique index refuses the loser at commit with nothing to
-// say why. The lock makes them take turns, so the second is told the row is
-// already corrected.
+// `FOR UPDATE` keeps the chain linear. Without it, two colleagues correcting
+// one reading both find it uncorrected and both insert a successor. The unique
+// index then refuses the loser at commit with nothing to say why. The lock makes
+// them take turns, so the second is told the row is already corrected.
 //
-// The project id is in the WHERE clause, so a successor naming another
-// project's reading finds nothing here rather than relying on the composite
-// foreign key to catch it later.
+// The project id is in the `WHERE` clause. A successor naming another project's
+// reading finds nothing here, without waiting for the composite foreign key.
 func lockHealthTarget(
 	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID, assessmentID ids.UUID,
 ) (healthTarget, error) {
@@ -217,7 +215,7 @@ type healthRow struct {
 
 // insertHealthRow is the one INSERT into project_health_assessment. A user's
 // reading, a correction, the health job's reading and an undo all append
-// through it, so each of them writes its audit row and its event the same way.
+// through it. So each of them writes its audit row and its event the same way.
 func insertHealthRow(
 	ctx context.Context, tx pgx.Tx, row healthRow,
 ) (crmcontracts.ProjectHealthAssessment, error) {

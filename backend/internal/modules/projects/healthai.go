@@ -6,10 +6,10 @@ package projects
 // The health job's own reading of a project, and a user's undo of it.
 //
 // The job appends to the same history a user does, through the same insert,
-// marked source "ai". Two rules keep it from talking over people: a reading a
-// user made stands until new activity is filed after it, and the job writes
-// only a state that differs from the one standing. Both are read under the
-// project lock, so a user's write racing the job is seen, not overwritten.
+// marked source "ai". Two rules keep it from talking over users. A user's
+// reading stands until new activity is filed after it. The job writes only a
+// state that differs from the one standing. Both are read under the project
+// lock, so a user's write racing the job is seen, not overwritten.
 
 import (
 	"context"
@@ -66,7 +66,7 @@ func (s *Store) RecordAIHealthTx(
 	if err != nil {
 		return crmcontracts.ProjectHealthAssessment{}, 0, err
 	}
-	// The lock comes BEFORE the standing is read. A user's reading
+	// The lock comes before the standing is read. A user's reading
 	// committing between the read and the insert would otherwise be
 	// overwritten by a job that never saw it.
 	if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
@@ -93,7 +93,7 @@ func (s *Store) RecordAIHealthTx(
 type aiHealthStanding struct {
 	// Current is the reading that stands; nil when nobody has judged the project.
 	Current *crmcontracts.ProjectHealthAssessment
-	// UserSaidAt is the newest assessed_at among the rows people wrote:
+	// UserSaidAt is the newest assessed_at among the rows users wrote:
 	// readings, corrections and undos. Nil when no user has spoken.
 	UserSaidAt *time.Time
 	// ActiveAt is the instant the quiet rule measures from: the last filed
@@ -104,8 +104,8 @@ type aiHealthStanding struct {
 // decide answers whether the health job may append a reading of proposed.
 //
 // An on_track reading only takes back the job's own alarm. Over a user's old
-// reading, or over none, it would be a judgement the activity cannot support:
-// that nothing is wrong is not something the quiet rule can see.
+// reading, or over none, the activity cannot support it. The quiet rule can see
+// trouble, but not that nothing is wrong.
 func (st aiHealthStanding) decide(proposed crmcontracts.ProjectHealthState) AIHealthOutcome {
 	if st.UserSaidAt != nil && !st.ActiveAt.After(*st.UserSaidAt) {
 		return AIHealthHeldByUser
@@ -143,9 +143,9 @@ func (s *Store) readAIHealthStanding(
 // UndoAIHealth withdraws a reading the health job wrote.
 //
 // It appends an undo row that supersedes the AI reading, so the history keeps
-// both. The undo row is never the current reading: what stood before the AI's
+// both. The undo row is never the current reading. What stood before the AI's
 // stands again, and a project whose only reading was the AI's reads as not
-// judged. The undo row carries that earlier reading's state and note because
+// judged. The undo row copies that earlier reading's state and note, because
 // the table requires a state. A user wrote it, so it also holds the job off
 // until new activity is filed.
 func (s *Store) UndoAIHealth(
@@ -185,8 +185,8 @@ func (s *Store) UndoAIHealth(
 }
 
 // restoreEarlierReading copies onto the undo row the state and note of the
-// reading that stood before the AI's: the newest one before it in the
-// history's own order that nothing superseded. With none, the row keeps the
+// reading that stood before the AI's. That is the newest earlier row, in the
+// history's own order, that nothing superseded. With none, the row keeps the
 // on_track it was given.
 func restoreEarlierReading(
 	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID, aiReading ids.UUID, row *healthRow,

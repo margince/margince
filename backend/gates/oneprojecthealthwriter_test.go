@@ -9,10 +9,10 @@ package gates
 //
 // Four writers append to the history: a user's reading, a correction, the
 // health job's reading and the undo of it. The audit row, the event and the
-// read-back live in that one function, so a fifth writer with its own INSERT
-// would be a row with no event, or an AI reading nobody can tell from a
-// user's. The scope proves no INSERT into the table sits outside the module,
-// and the count proves the one inside it is in insertHealthRow.
+// read-back live in that one function. A fifth writer with its own INSERT would
+// write a row with no event, or an AI reading nobody can tell from a user's.
+// The scope proves no INSERT into the table sits outside the module. The count
+// proves the one inside it is in insertHealthRow.
 
 import (
 	"go/ast"
@@ -49,8 +49,8 @@ func TestProjectHealthHasOneWriter(t *testing.T) {
 			}
 		}
 	}
-	// EXACTLY one. Zero is the direction a census fails silently in: the
-	// writer was renamed or moved, and "no second writer" reads the same.
+	// One, not at most one. Zero is the direction a census fails silently in:
+	// the writer was renamed or moved, and "no second writer" reads the same.
 	if total != 1 {
 		t.Errorf("%s is written by %d INSERTs in functions, want exactly 1 in %s", projectHealthTable, total, projectHealthWriter)
 	}

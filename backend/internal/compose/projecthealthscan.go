@@ -3,14 +3,14 @@
 
 package compose
 
-// The project health job: once a day, each in-flight project's quiet and
-// overdue state becomes a reading in its health history, written as the AI and
-// marked so, and its owner is told what was set and why.
+// The project health job. Once a day, each in-flight project's quiet and
+// overdue state becomes a reading in its health history, written as the AI.
+// Its owner is told what was set and why.
 //
-// It judges from two rules that already exist and spells neither again: the
-// quiet rule of projects/quiet.go, and an open task past its due date as the
-// project page's commitments section counts it. Whether a reading may land at
-// all is the projects store's call, made under the project lock.
+// It judges from two rules that already exist and spells neither again. One is
+// the quiet rule of projects/quiet.go. The other is an open task past its due
+// date, as the project page's commitments section counts it. Whether a reading
+// may land at all is the projects store's call, made under the project lock.
 
 import (
 	"context"

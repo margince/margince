@@ -2397,6 +2397,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.lifecycle_change": "Cập nhật vòng đời",
   "agentJob.offer_drafting": "Soạn báo giá",
   "agentJob.overnight": "Trợ lý AI qua đêm",
+  "agentJob.project_health": "Kiểm tra tình trạng dự án",
   "agentJob.propose_roles": "Phân tích nhóm quyết định mua",
   "agentJob.rate_refresh": "Cập nhật tỷ giá",
   "agentJob.scrape": "Thu thập từ trang web",
@@ -9418,6 +9419,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.list_evaluate": "Kiểm tra danh sách tự cập nhật",
   "jobs.kind.notification_email": "Thư thông báo",
   "jobs.kind.privacy_retention": "Áp dụng chính sách lưu giữ",
+  "jobs.kind.project_health_scan": "Kiểm tra tình trạng dự án",
   "jobs.kind.provider_lookup_sweep": "Bổ sung dữ liệu cho liên hệ sẵn có",
   "jobs.kind.provider_run_poll_sweep": "Kiểm tra kết quả bổ sung dữ liệu",
   "jobs.kind.provider_run_submit": "Yêu cầu tới nhà cung cấp bổ sung dữ liệu",
@@ -9861,6 +9863,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
   "notifications.class.approval_pending.help":
     "Đồng nghiệp cần bạn quyết định để công việc của họ tiếp tục.",
+  "notifications.class.project_health.label": "Tình trạng dự án do AI đặt",
+  "notifications.class.project_health.help":
+    "AI đã đánh dấu một dự án của bạn là có rủi ro, chệch kế hoạch hoặc đúng kế hoạch trở lại, kèm lý do và cách hoàn tác.",
   "notifications.class.automation.label": "Tự động hóa đã chạy",
   "notifications.class.automation.help":
     "Một quy tắc do công ty đặt ra đã chạy, hoặc không thể chạy.",
@@ -15658,6 +15663,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.project.phase_changed.label": "Dự án đã chuyển giai đoạn",
   "webhooks.event.project.phase_changed.when":
     "Dự án chuyển sang giai đoạn mới.",
+  "webhooks.event.project.health_assessed.label":
+    "Đã ghi nhận tình trạng dự án",
+  "webhooks.event.project.health_assessed.when":
+    "Thành viên nhóm hoặc AI ghi nhận tình hình dự án, sửa một đánh giá hoặc hoàn tác đánh giá của AI.",
   "webhooks.event.project.archived.label": "Đã chuyển dự án vào kho lưu trữ",
   "webhooks.event.project.archived.when":
     "Một dự án được chuyển vào kho lưu trữ.",
@@ -17384,6 +17393,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "projectHealth.state.offTrack": "Ch\u1ec7ch k\u1ebf ho\u1ea1ch",
   "projectHealth.record": "Ghi nhận đánh giá",
   "projectHealth.correct": "Sửa đánh giá",
+  "projectHealth.undoAI": "Hoàn tác đánh giá của AI",
   "projectHealth.recordTitle": "Ghi nhận tình trạng triển khai",
   "projectHealth.correctTitle": "Sửa lại đánh giá này",
   "projectHealth.stateLabel": "Tình trạng",

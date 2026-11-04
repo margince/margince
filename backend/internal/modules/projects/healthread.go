@@ -48,11 +48,10 @@ const healthColumns = `a.id, a.project_id, a.state, a.note, a.assessed_at,
 // currentHealthWhere narrows to the judgement that STANDS for a project: the
 // newest one nothing has corrected.
 //
-// Superseded rows are excluded rather than ordered around. A correction is the
-// statement that its target was wrong, so a corrected reading is not a stale
-// answer to be outranked — it is not an answer at all. An undo row is excluded
-// too: it carries a state only because the column demands one, and counting it
-// would make an undone first reading read as a judgement.
+// Superseded rows are excluded rather than ordered around. A correction says
+// its target was wrong, so a corrected reading is no answer at all. An undo row
+// is excluded too. It carries a state only because the column demands one, and
+// counting it would make an undone first reading read as a judgement.
 const currentHealthWhere = `a.project_id = $%d
 	AND a.source <> '` + sourceUndo + `'
 	AND NOT EXISTS (SELECT 1 FROM project_health_assessment s WHERE s.supersedes_assessment_id = a.id)

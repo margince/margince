@@ -5,8 +5,8 @@
 
 package integration
 
-// The project health job over real rows: it writes a reading with a reason as
-// the AI, tells the owner, keeps a user's newer reading, and an undo puts back
+// The project health job over real rows. It writes a reading with a reason as
+// the AI, tells the owner and keeps a user's newer reading. An undo puts back
 // what stood before it.
 
 import (
@@ -29,8 +29,8 @@ import (
 )
 
 // wallNow is the instant these tests date their rows from. It is wall time and
-// not clocktest.Now: the harness's projects store stamps a user's reading with
-// the wall clock and refuses one dated after it, so a fixture moved into the
+// not clocktest.Now. The harness's projects store stamps a user's reading with
+// the wall clock and refuses one dated after it. A fixture moved into the
 // future would be refused rather than tested.
 func wallNow() time.Time { return time.Now().UTC() }
 
@@ -157,7 +157,7 @@ func TestAUsersReadingNewerThanTheLastActivityIsKept(t *testing.T) {
 	}
 
 	// A call filed after the user spoke is the new activity. An open task
-	// past its due date is what the job then finds; filing a task does not
+	// past its due date is what the job then finds. Filing a task does not
 	// move the project's clock, so the call is needed beside it.
 	fileTask(e.Admin(), t, e, erp, now.AddDate(0, 0, -2))
 	fileActivity(e.Admin(), t, e, "call", now, &erp)
