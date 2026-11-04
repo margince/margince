@@ -59,6 +59,7 @@ function roster(
 ): ConnectorsResult {
   return {
     notConfigured: false,
+    captureAllowed: true,
     data: [...rows],
     providers: MAIL_PROVIDERS.map((provider) => ({
       provider,
@@ -395,10 +396,32 @@ describe("deriveSetupSteps", () => {
     ).toEqual(["mail", "calendar"]);
   });
 
+  it("asks a role that cannot capture to connect nothing", () => {
+    const steps = summary(
+      reads({
+        connectors: {
+          ...roster([connection("gmail", "error")], {
+            gmail: "role_cannot_capture",
+            graph: "role_cannot_capture",
+            imap: "role_cannot_capture",
+          }),
+          captureAllowed: false,
+        },
+      }),
+    );
+
+    expect(steps.map((step) => step.id)).toEqual(["voice"]);
+  });
+
   it("still counts a booking link that is on, whatever the roster says", () => {
     const steps = summary(
       reads({
-        connectors: { notConfigured: true, data: [], providers: [] },
+        connectors: {
+          notConfigured: true,
+          captureAllowed: true,
+          data: [],
+          providers: [],
+        },
         scheduling: scheduling(true),
       }),
     );

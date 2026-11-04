@@ -16,7 +16,6 @@ import type { MessageKey } from "../../i18n/en";
 import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
@@ -24,6 +23,7 @@ import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's documents: the offers, legal files and loose paper a rep goes
 // looking for before a call.
@@ -327,7 +327,7 @@ function DocumentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The staged reading is OPENED, never mounted by the list. Each panel asks
   // the server for its own document's reading on mount, so a list that opened
   // them all fired one request per deal file and stacked a wall of panels over
@@ -371,7 +371,7 @@ function DocumentRow({
               <span>{doc.filename}</span>
             )}
             <span>{doc.source}</span>
-            <span>{formatDateTime(doc.created_at, locale, recordZone)}</span>
+            <span>{formatDateTime(doc.created_at, locale, readerZone)}</span>
           </span>
         </div>
         <div className="rec-end">

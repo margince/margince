@@ -50,7 +50,9 @@ type ForwardMeasure = NonNullable<
 
 const FORWARD_MEASURES = [
   "commit_evidence",
+  "qualified_commit_evidence",
   "weighted",
+  "qualified_weighted",
   "manager_call",
 ] as const satisfies readonly ForwardMeasure[];
 

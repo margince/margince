@@ -96,6 +96,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		return withheldPresentation(out, activity), nil
 	}
 	out.BodyCompleteness = activity.BodyCompleteness
+	if activity.Language != nil {
+		out.Language = new(crmcontracts.EmailPresentationLanguage(*activity.Language))
+	}
 
 	parties, err := readEmailParties(ctx, tx, id)
 	if err != nil {

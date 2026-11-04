@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -32,6 +32,16 @@ To fill deal fields from a file, open the company's **Documents** tab and file t
 Margince shows each field it found with the text it read it from. Choose **Accept {count} fields** to save them, or **Dismiss**. Nothing is written to the deal until you accept. A document filed on the company offers no reading.
 Also called: extract from contract, read a PDF, parse an offer.
 
+### Can I read a note or an email in my own language?
+Yes. Under a note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
+
+The button also shows when Margince cannot tell which language a text is in. If the text is already in your language, it says so. Nothing is saved: the version in your language is for you, and nobody else sees it. A text that is too long is refused with that reason; read the original instead.
+Also called: translation, show in English, read in German.
+
+### Which language does the AI write in?
+Summaries on a record, such as the company overview or the relationship summary, are read by everyone who can open the record. They use the language your administrator set for the installation. An answer only you see, such as **Ask about this company**, uses the language you set for yourself.
+Also called: AI language, wrong language, summary in English.
+
 ### What happens to my mail and enrichment while the AI provider is down?
 While an AI provider is down, out of credit or refusing its key, Margince stops calling it.
 Mail questions and company enrichment wait, and try again at the next check, without using up their tries.
@@ -40,6 +50,14 @@ That holds for the call that first finds the credit gone, the key refused or the
 Requests you make yourself fail at once, with a message to contact your system administrator.
 Your administrator sees why under **Settings**, **System health**, **Diagnostics**, then **AI availability**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
+
+### Why does a project's health say the AI set it?
+Once a day, Margince checks each project in the **Pursuing** or **Delivering** phase. The AI marks it **At risk** when nothing was filed on it for 30 days. It does the same when an open task on it is past its due date. When both are true, it marks it **Off track**.
+The reading on the project page carries the AI tag and one sentence that says why. The project's owner gets a notice with the same sentence.
+
+To take the reading back, press **Undo the AI reading** beside it. The reading from before stands again; if there was none, the project reads as not judged. After a reading you record or an undo, the AI leaves the project alone until something new is filed on it.
+To stop the notices, change **Project health set by the AI** under Settings → **Notifications**.
+Also called: automatic project health, AI project status.
 
 ## What the AI does for you
 

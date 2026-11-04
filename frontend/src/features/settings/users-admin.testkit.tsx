@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
@@ -126,8 +127,8 @@ export const TEAMS = [
   { id: "t-nordics", name: "Nordics" },
 ];
 
-// The open chooser, else the resting value that opens it. Narrowed by instance,
-// so a control that stopped being a button fails by name.
+// The resting value that opens the role dialog. Narrowed by instance, so a
+// control that stopped being a button fails by name.
 export function roleSelect(row: HTMLElement, name: string) {
   const control = roleControl(row, name);
   if (!(control instanceof HTMLButtonElement)) {
@@ -138,11 +139,17 @@ export function roleSelect(row: HTMLElement, name: string) {
 
 // Null where the reader may not change this member's role: the value is words.
 export function roleControl(row: HTMLElement, name: string) {
-  const named = new RegExp(`${name}’s role`, "i");
-  return (
-    within(row).queryByRole("combobox", { name: named }) ??
-    within(row).queryByRole("button", { name: named })
-  );
+  return within(row).queryByRole("button", { name: roleOf(name) });
+}
+
+const roleOf = (name: string) => new RegExp(`${name}’s role`, "i");
+
+export async function openRoleDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  row: HTMLElement,
+  name: string,
+) {
+  return openChoiceDialog(user, roleOf(name), roleSelect(row, name));
 }
 
 // What the role cell reads, open or at rest: neither its screen-reader text (a
@@ -211,6 +218,21 @@ const ADMIN_USER_ADMIN: Record<string, string[]> = {
 };
 type BackendPrincipal = { roles: string[]; allow?: Record<string, string[]> };
 
+// The legal entities the roster's entity column reads: the default alone
+// unless a case names more, and who each further entity lists as its members.
+export type BackendEntities = Readonly<{
+  entities: readonly {
+    id: string;
+    is_default: boolean;
+    display_name: string;
+  }[];
+  members: Readonly<Record<string, readonly string[]>>;
+}>;
+const DEFAULT_ENTITY_ONLY: BackendEntities = {
+  entities: [{ id: "le-default", is_default: true, display_name: "Acme" }],
+  members: {},
+};
+
 /** The signed-in admin a caller gets when it names no principal. */
 const ADMIN_PRINCIPAL: BackendPrincipal = {
   roles: ["admin"],
@@ -220,8 +242,16 @@ const ADMIN_PRINCIPAL: BackendPrincipal = {
 export function backend(
   calls: { method: string; url: string; body?: unknown }[],
   me: BackendPrincipal = ADMIN_PRINCIPAL,
+  legal: BackendEntities = DEFAULT_ENTITY_ONLY,
 ) {
   const allow = me.allow ?? {};
+  // The assignments as the server holds them, so a move shows on the next read.
+  const members = new Map(
+    Object.entries(legal.members).map(([entityId, users]) => [
+      entityId,
+      [...users],
+    ]),
+  );
   const objects: Record<string, Record<string, boolean>> = {};
   for (const [object, verbs] of Object.entries(allow)) {
     objects[object] = {
@@ -254,7 +284,8 @@ export function backend(
         admin_password_link: true,
       });
     }
-    const read = readRoute(req, allow);
+    const read =
+      readRoute(req, allow) ?? entityRoute(req, legal.entities, members);
     if (read !== undefined) {
       return read;
     }
@@ -265,6 +296,10 @@ export function backend(
       body = undefined;
     }
     calls.push({ method: req.method, url: req.url, body });
+    const assigned = assignMember(req, body, legal.entities, members);
+    if (assigned !== undefined) {
+      return assigned;
+    }
     // The link mint answers its own shape. With admin_password_link on, the
     // invite flow opens the link dialog itself, and a generic user row handed
     // to it renders an expiry from `undefined` — an unhandled error rather
@@ -350,6 +385,69 @@ function readRoute(
             ...rest
           }) => rest,
         ),
+    });
+  }
+  return undefined;
+}
+
+const MEMBERS_PATH = /\/legal-entities\/([^/]+)\/members$/;
+
+// A PUT moves the user out of every list, and into the chosen one unless it is
+// the default. The default's members are the users no list names.
+function assignMember(
+  req: Request,
+  body: unknown,
+  entities: BackendEntities["entities"],
+  members: Map<string, string[]>,
+): Response | undefined {
+  const path = MEMBERS_PATH.exec(new URL(req.url).pathname);
+  if (req.method !== "PUT" || !path) return undefined;
+  const userId =
+    typeof body === "object" && body !== null
+      ? Reflect.get(body, "user_id")
+      : undefined;
+  if (typeof userId !== "string") return jsonResponse({}, 422);
+  for (const [entityId, users] of members) {
+    members.set(
+      entityId,
+      users.filter((user) => user !== userId),
+    );
+  }
+  const entityId = path[1] ?? "";
+  const chosen = entities.find((entity) => entity.id === entityId);
+  if (chosen && !chosen.is_default) {
+    members.set(entityId, [...(members.get(entityId) ?? []), userId]);
+  }
+  return new Response(null, { status: 204 });
+}
+
+function entityRoute(
+  req: Request,
+  entities: BackendEntities["entities"],
+  members: ReadonlyMap<string, readonly string[]>,
+): Response | undefined {
+  if (req.method !== "GET") return undefined;
+  const listed = MEMBERS_PATH.exec(new URL(req.url).pathname);
+  if (listed) {
+    const entityId = listed[1] ?? "";
+    return jsonResponse({
+      data: (members.get(entityId) ?? []).map((userId) => ({
+        user_id: userId,
+        legal_entity_id: entityId,
+        assigned_at: "2026-10-01T08:00:00Z",
+      })),
+    });
+  }
+  if (new URL(req.url).pathname.endsWith("/legal-entities")) {
+    return jsonResponse({
+      data: entities.map((entity) => ({
+        address: {},
+        member_count: 0,
+        version: 1,
+        created_at: "2026-10-01T08:00:00Z",
+        updated_at: "2026-10-01T08:00:00Z",
+        ...entity,
+      })),
     });
   }
   return undefined;

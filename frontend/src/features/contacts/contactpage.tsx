@@ -21,7 +21,6 @@ import { contactPageState, contactQuery } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { BriefQueue } from "../brief/brief.queue";
@@ -41,6 +40,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
   WorklistReturnLink,
@@ -97,7 +97,7 @@ export function ContactPageV2({
   // the aside and a row in the body lead to the same place.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const record = useQuery(contactQuery(id));
   // The server refuses the 360 and the guard for an archived row. The 360
   // runs beside the row read; the guard waits for its answer.
@@ -283,7 +283,7 @@ export function ContactPageV2({
                 refusedReasonId={refusedReasonId}
               />
             }
-            zone={recordZone}
+            zone={readerZone}
             // Stated once for the page, where both columns and every tab can see
             // it. Every control the record refuses points at its reason by id.
             band={band}
@@ -328,7 +328,7 @@ export function ContactPageV2({
           aside and one who finds it in the body land in the same place. */}
             <OpenEmailDrawer
               activityId={openEmail}
-              zone={recordZone}
+              zone={readerZone}
               onClose={() => setOpenEmail(null)}
             />
             <ContactMailDrawer
@@ -403,7 +403,7 @@ function useBriefedMeeting(): [
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
 }
 
-// The record with its name renamed in place, through the details' own edit.
+// The record renamed from its heading, through the details' own edit.
 function ContactRecordView({
   contact,
   ...view

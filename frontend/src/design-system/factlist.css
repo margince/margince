@@ -97,26 +97,28 @@
 .factlist-flat .factlist-row:not(.factlist-row-block) .factlist-value {
   overflow-wrap: anywhere;
 }
-/* A glyph riding the value's line overhangs it to keep its target, and a
- * value holding one lays out its own shrinking, so nothing here cuts it. */
-.factlist-flat .factlist-value:has(.icon-action-inline, .overflow-menu-inline) {
+/* An inline glyph or an edit pill's fill overhangs the value; keep it unclipped. */
+.factlist-flat
+.factlist-value:has(
+  .icon-action-inline,
+  .overflow-menu-inline,
+  .editable-value
+) {
   overflow: visible;
 }
-/* A value that is a link starts where a plain value does; the link
- * affordance's own side padding would push it in. A handle (a link with its
- * kind, mark or glyph) leads with its link the same way. An inline edit
- * already starts there: its negative margin pays back its padding. */
+/* A link, or a handle's leading link, starts where a plain value does. */
+.factlist-flat .factlist-value > :is(.btn.btn-link, .cell-link, .link-button),
 .factlist-flat
   .factlist-value
-  > :is(.btn.btn-link, .cell-link, .link-button):not(.inline-editable),
-.factlist-flat .factlist-value > .fieldgrid-handle > .link-button:first-child {
+  .editable-value-face
+  > :is(.btn.btn-link, .cell-link, .link-button),
+.factlist-flat .factlist-value > .fieldgrid-handle > .link-button:first-child,
+.factlist-flat
+  .factlist-value
+  .editable-value-face
+  > .fieldgrid-handle
+  > .link-button:first-child {
   padding-inline: 0;
-}
-/* A value that opens its edit is a button, and a button holds one centred
- * line. Here it wraps from its start edge, so a long address stays in view. */
-.factlist-flat .factlist-value .inline-editable {
-  justify-content: flex-start;
-  white-space: normal;
 }
 /* A handle spans the column, so a link that runs long shortens inside it
  * and never pushes its glyphs past the card's edge. */

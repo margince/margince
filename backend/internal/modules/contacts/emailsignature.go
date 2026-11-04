@@ -65,7 +65,8 @@ type EmailSignature struct {
 	HTML string
 	// Title and Phone fill the workspace template's placeholders.
 	Title, Phone string
-	// TemplateActive says the workspace has a template for members without personal HTML.
+	// TemplateActive says the caller's mail has a template for when they have no
+	// personal HTML: their legal entity's own, or the workspace's.
 	TemplateActive bool
 	UpdatedAt      *time.Time
 }
@@ -77,13 +78,48 @@ type SaveSignatureInput struct {
 	Title, Phone, HTML *string
 }
 
-// SenderSignature is what a send needs to sign as the caller: their own text and markup,
-// their template values, and the workspace's template.
+// SenderSignature is what a send needs to sign as the caller. That is their own
+// text and markup, their template values, and their legal entity's template.
 type SenderSignature struct {
 	Body, HTML, Title, Phone, Template string
-	// LogoKey is the stored object of the workspace's own logo, empty when it
+	// Imprint is the legal notice of the sender's entity, empty when it has none.
+	Imprint string
+	// LogoKey is the stored object of the sender's entity logo, empty when it
 	// has none. A send stages this key, so a retry embeds the same picture.
 	LogoKey string
+}
+
+// signingEntity is what the legal entity a user works for gives their mail:
+// its template, falling back to the workspace's, and its imprint and logo.
+type signingEntity struct {
+	template, imprint string
+	// logoKey is set only on a further entity. The default entity wears the
+	// company logo, which the send reads through the company grant.
+	logoKey   string
+	isDefault bool
+}
+
+func signingEntityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (signingEntity, error) {
+	workspace, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
+	if err != nil {
+		return signingEntity{}, err
+	}
+	entityID, err := UserLegalEntity(ctx, tx, ids.From[ids.UserKind](user))
+	if err != nil {
+		return signingEntity{}, err
+	}
+	entity, err := ResolveEntityIdentity(ctx, tx, entityID)
+	if err != nil {
+		return signingEntity{}, err
+	}
+	out := signingEntity{template: workspace, imprint: deref(entity.Imprint), isDefault: entity.IsDefault}
+	if own := strings.TrimSpace(deref(entity.SignatureTemplate)); own != "" {
+		out.template = own
+	}
+	if !entity.IsDefault {
+		out.logoKey = deref(entity.LogoObjectKey)
+	}
+	return out, nil
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
@@ -96,11 +132,11 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	}
 	var out EmailSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
+		entity, err := signingEntityTx(ctx, tx, actor.UserID)
 		if err != nil {
 			return err
 		}
-		out.TemplateActive = strings.TrimSpace(template) != ""
+		out.TemplateActive = strings.TrimSpace(entity.template) != ""
 		err = tx.QueryRow(ctx, `
 			SELECT body, html, title, phone, updated_at FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, actor.UserID).
@@ -199,12 +235,14 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 		return SenderSignature{}, apperrors.ErrPermissionDenied
 	}
 	var out SenderSignature
+	var entity signingEntity
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
+		var err error
+		entity, err = signingEntityTx(ctx, tx, userID)
 		if err != nil {
 			return err
 		}
-		out.Template = template
+		out.Template, out.Imprint = entity.template, entity.imprint
 		err = tx.QueryRow(ctx, `
 			SELECT body, html, title, phone FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.HTML, &out.Title, &out.Phone)
@@ -216,8 +254,14 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	if err != nil {
 		return SenderSignature{}, fmt.Errorf("contacts: reading the sender's email signature: %w", err)
 	}
-	// Read even with no template stored, so a preview of an unsaved one shows
-	// the logo too. A seat that may not read companies signs without it.
+	// A further entity's logo is its own, or none: it never borrows the
+	// company's. Read even with no template stored, so a preview of an unsaved
+	// one shows the logo too.
+	if !entity.isDefault {
+		out.LogoKey = entity.logoKey
+		return out, nil
+	}
+	// A seat that may not read companies signs without the company logo.
 	out.LogoKey, err = s.AnchorLogoKey(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return out, nil

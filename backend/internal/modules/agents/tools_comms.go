@@ -5,7 +5,7 @@ package agents
 
 // The communication verbs on the MCP surface (crm.yaml x-mcp-tool):
 // draft_email / check_availability are 🟢 (propose, never commit);
-// send_email / send_message / book_meeting are 🟢 with scope send. A passport
+// send_email / send_message are 🟢 with scope send. A passport
 // without send is refused, and a tier floor stages them for approval instead. The
 // module never touches activities' internals: compose injects the
 // Comms seam, which delegates to the SAME store methods the HTTP
@@ -57,7 +57,6 @@ type Comms interface {
 	// reaches that resolver holding the question alone (commandcomms.go).
 	ChannelKinds
 	Availability(ctx context.Context, host *ids.UUID, from, to time.Time, durationMinutes int) (AvailabilityResult, error)
-	BookMeeting(ctx context.Context, in BookMeetingArgs) (json.RawMessage, error)
 }
 
 type SendEmailArgs struct {
@@ -124,14 +123,6 @@ type SendMessageArgs struct {
 	SendContextArgs
 }
 
-type BookMeetingArgs struct {
-	HostUserID *ids.UUID    `json:"host_user_id"`
-	Start      time.Time    `json:"start"`
-	End        time.Time    `json:"end"`
-	Subject    string       `json:"subject"`
-	Links      []RecordLink `json:"links"`
-}
-
 // RegisterCommsTools wires the six verbs over the injected seam. The provider
 // is the record reader the four send verbs stage against; draft_email and
 // check_availability propose nothing durable and never read it.
@@ -148,7 +139,7 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 	}
 	if p == nil {
 		//craft:ignore panic-in-domain composition-time wiring assertion — fires only while cmd wiring runs, never on a request path
-		panic("crmagents: RegisterCommsTools needs a record provider — send_email, send_message, the account-started send and book_meeting all read the records they stage against")
+		panic("crmagents: RegisterCommsTools needs a record provider — send_email, send_message and the account-started send all read the records they stage against")
 	}
 	r.Register(draftEmailTool{comms: comms, p: p})
 	r.Register(sendEmailTool{comms: comms, p: p, language: r.language})
@@ -156,7 +147,6 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 	r.Register(sendMessageTool{comms: comms, p: p, language: r.language})
 	r.Register(sendOutbound{})
 	r.Register(checkAvailability{comms: comms})
-	r.Register(bookMeetingTool{comms: comms, p: p, language: r.language})
 }
 
 // --- draft_email (🟢: proposes, never sends) ---

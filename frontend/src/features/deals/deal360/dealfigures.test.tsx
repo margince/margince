@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { ViewerZoneProvider } from "../../../lib/viewerzone";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
@@ -43,7 +44,9 @@ function show(over: Partial<DealStandingInputs>) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
-        <DealFigures inputs={inputs} />
+        <ViewerZoneProvider zone={UTC_ZONE}>
+          <DealFigures inputs={inputs} />
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

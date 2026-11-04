@@ -31,6 +31,7 @@ const (
 	actionRemove            memberAction = "remove"
 	actionChangeRole        memberAction = "change_role"
 	actionIssuePasswordLink memberAction = "issue_password_link"
+	actionResendInvite      memberAction = "resend_invite"
 	actionRemoveMFA         memberAction = "remove_mfa"
 	actionDeactivate        memberAction = "deactivate"
 	actionReactivate        memberAction = "reactivate"
@@ -112,6 +113,8 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		actionIssuePasswordLink: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole &&
 			refusePasswordLinkTarget(status, target.row.IsAgent) == nil,
+		actionResendInvite: inviteMailRefused(target.row) && callerOutranks(actor, target.grants, reachTakeover) == nil &&
+			!target.holdsArchivedRole && refuseResendTarget(status, target.row.IsAgent) == nil,
 		actionRemoveMFA: target.hasFactor && userID != actor.UserID && !target.holdsArchivedRole &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil,
 		actionDeactivate: callerOutranks(actor, target.grants, reachDenial) == nil &&
@@ -126,7 +129,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 	}
 	out := []memberAction{}
 	for _, action := range []memberAction{
-		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver, actionEdit, actionMerge, actionRemove,
+		actionChangeRole, actionIssuePasswordLink, actionResendInvite, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver, actionEdit, actionMerge, actionRemove,
 	} {
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)

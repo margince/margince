@@ -128,6 +128,17 @@ describe("a money figure abbreviated for a KPI slot", () => {
     );
   });
 
+  // One decimal of a million is a step of €100k, so €1,062,548 and €1,094,000
+  // both read "€1m" with it. Millions keep three significant digits.
+  it("keeps three significant digits on a million", () => {
+    expect(formatMoneyCompact(106_254_800, "EUR", "en").toLowerCase()).toBe(
+      "€1.06m",
+    );
+    expect(formatMoneyCompact(109_400_000, "EUR", "en").toLowerCase()).toBe(
+      "€1.09m",
+    );
+  });
+
   // Below the threshold the long form is no wider and carries every digit, so
   // abbreviating buys nothing — and the currency's own decimals go with it,
   // because "€8,332.00" is what the slot has no room for.

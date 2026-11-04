@@ -37,7 +37,7 @@ func reportingWrittenClose(t *testing.T, e *forecastEnv) (crmcontracts.Deal, *de
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:reporting-fixture")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	won := e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Won',10,'won',100)`, e.pipeline)
-	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC) })
+	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC) })
 	owner := ids.From[ids.UserKind](e.Rep1)
 	amount := int64(21600000)
 	currency := "EUR"

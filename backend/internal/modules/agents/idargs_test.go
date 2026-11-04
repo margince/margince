@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -192,6 +193,8 @@ func (seamProbeRetriever) AssembleContext(context.Context, datasource.EntityRef,
 // them" — the whole point of the probe.
 type seamProbeLifecycle struct{}
 
+func (seamProbeLifecycle) CheckDisqualifyReason(context.Context, ids.UUID) error { return nil }
+
 func (seamProbeLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
 	return MeetingPreparationResult{}, false, errSeamReached
 }
@@ -212,7 +215,7 @@ func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, 
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, LeadDisqualification, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -370,6 +373,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
+		return json.RawMessage(`{}`), nil
+	})
 	RegisterDocumentTools(r, seamProbeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
@@ -656,6 +662,11 @@ func absentIDArgs(t *testing.T, tool string, inputSchema json.RawMessage, omit s
 }
 
 type seamProbeInviter struct{}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (seamProbeInviter) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
+}
 
 func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
 	return crmcontracts.MeetingInvitation{}, errSeamReached

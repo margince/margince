@@ -103,6 +103,9 @@ func (s *ThreadVerdictStore) EnsureTx(
 		// no conversation for a verdict to be about.
 		return nil
 	}
+	if err := LockThreadHoldTx(ctx, tx, threadKey); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
 		VALUES ($1, $2, $3, 'pending', $4)

@@ -289,13 +289,12 @@ A date Margince set is a guess, marked "provisional close date, not confirmed by
 
 ## Reading the numbers
 
-The deals board in Margince loads 100 deals at a time. But the totals at the top
-of each column count every matching deal, the ones not loaded yet too. Each
-column header carries the stage name, its win probability, how many deals are in
-it, the stage total, and under that the weighted total.
+The deals board in Margince loads 100 deals at a time. But the totals at the top of each column count every matching deal, the ones not loaded yet too. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
-The totals count every deal you may see, which are the deals the board shows as
-cards. They are held back when a tag filter is on ("Loaded deals only. No total
+A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
+
+The totals count every matching deal you may see, loaded as a card or not. They
+are held back when a tag filter is on ("Loaded deals only. No total
 while a tag filter is on."). They are also held back when the owner filter names
 someone whose numbers you may not measure ("Loaded deals only. This owner’s
 totals are outside what you may measure."). You may measure yourself, the

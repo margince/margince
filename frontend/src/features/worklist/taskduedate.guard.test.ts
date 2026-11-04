@@ -39,12 +39,13 @@ describe("snoozing a task by a day", () => {
     // 2026-03-28 23:59:59 Berlin. The next day is the 29th, the day the clocks
     // move — an hour shorter, and still one day away.
     const from = "2026-03-28T22:59:59.000Z";
-    expect(snoozedDueAt(from, "Europe/Berlin")).toBe(
-      "2026-03-29T21:59:59.000Z",
-    );
+    expect(snoozedDueAt(from, false, "Europe/Berlin")).toEqual({
+      due_at: "2026-03-29T21:59:59.000Z",
+      due_has_time: false,
+    });
     expect(
       calendarDay(
-        new Date(snoozedDueAt(from, "Europe/Berlin") as string),
+        new Date(snoozedDueAt(from, false, "Europe/Berlin")?.due_at as string),
         "Europe/Berlin",
       ),
     ).toBe("2026-03-29");
@@ -54,7 +55,7 @@ describe("snoozing a task by a day", () => {
     const from = "2026-10-24T21:59:59.000Z";
     expect(
       calendarDay(
-        new Date(snoozedDueAt(from, "Europe/Berlin") as string),
+        new Date(snoozedDueAt(from, false, "Europe/Berlin")?.due_at as string),
         "Europe/Berlin",
       ),
     ).toBe("2026-10-25");
@@ -64,13 +65,25 @@ describe("snoozing a task by a day", () => {
     const from = "2026-01-31T22:59:59.000Z";
     expect(
       calendarDay(
-        new Date(snoozedDueAt(from, "Europe/Berlin") as string),
+        new Date(snoozedDueAt(from, false, "Europe/Berlin")?.due_at as string),
         "Europe/Berlin",
       ),
     ).toBe("2026-02-01");
   });
 
+  // One snooze must not drop the hour the rep agreed with the customer.
+  it("keeps a callback time on the next day, across the autumn change", () => {
+    // 15:00 Berlin on 24 October (summer time) lands on 15:00 on the 25th,
+    // which is winter time: an hour later in UTC, the same hour on the wall.
+    expect(
+      snoozedDueAt("2026-10-24T13:00:00.000Z", true, "Europe/Berlin"),
+    ).toEqual({
+      due_at: "2026-10-25T14:00:00.000Z",
+      due_has_time: true,
+    });
+  });
+
   it("has nothing to move on an undated task", () => {
-    expect(snoozedDueAt(null, "Europe/Berlin")).toBeNull();
+    expect(snoozedDueAt(null, false, "Europe/Berlin")).toBeNull();
   });
 });

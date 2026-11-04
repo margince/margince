@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -10,7 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { formatMoney } from "../../format/format";
+import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
@@ -364,11 +365,11 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     await waitFor(() =>
       expect(
-        screen.getByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
+        screen.getByText(formatMoneyCompact(9_999_999, "EUR", "en")),
       ).toBeTruthy(),
     );
     expect(
-      screen.getByText(`weighted ${formatMoney(1_234_567, "EUR", "en")}`),
+      screen.getByText(formatMoneyCompact(1_234_567, "EUR", "en")),
     ).toBeTruthy();
     // The true stage count (250), not "1" (the single loaded card's count).
     expect(screen.getByText("250 deals")).toBeTruthy();
@@ -399,9 +400,10 @@ describe("DealsScreen", () => {
       }),
     );
     render(<DealsScreen />);
-    expect(
-      await screen.findByText(`Converted · rates as of ${day}`),
-    ).toBeTruthy();
+    fireEvent.focus(await screen.findByText("€100"));
+    expect(screen.getByRole("tooltip").textContent).toContain(
+      `Converted at rates as of ${day}.`,
+    );
   });
 
   // The report measures every deal the reader may see, which is the set the
@@ -498,7 +500,7 @@ describe("DealsScreen", () => {
     expect(screen.getByText(reason)).toBeTruthy();
     expect(screen.queryByText("250 deals")).toBeNull();
     expect(
-      screen.queryByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
+      screen.queryByText(formatMoneyCompact(9_999_999, "EUR", "en")),
     ).toBeNull();
   });
 

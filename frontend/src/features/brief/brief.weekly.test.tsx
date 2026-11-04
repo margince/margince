@@ -5,7 +5,8 @@ import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { vi as viCopy } from "../../i18n/vi";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   beforeHistoryWeeklyNumbers,
   partlyRecordedWeeklyNumbers,
@@ -297,24 +298,22 @@ describe("BriefScreen — the weekly retrospective", () => {
       "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
-    // A zone the TEST chooses, and not the product's fallback.
-    //
-    // The fallback is importable by its own reader alone (held by
-    // format/zone-by-purpose.test.ts), and rightly: a test asserting against it
-    // would be checking the component against the same constant the component
-    // reads, which passes however wrong the zone decision is. Naming one here
-    // means the assertion fails if the panel ever renders in the viewer's zone
-    // instead of the installation's.
+    // Zones the TEST chooses, and not the product's fallback. The moment the
+    // week was written is a time like any other, so it is shown on the
+    // reader's clock, never the company's (#7894).
     const installationZone = "Asia/Ho_Chi_Minh";
+    const readerZone = "America/New_York";
     render(
-      <RecordZoneProvider zone={installationZone}>
-        <BriefScreen />
-      </RecordZoneProvider>,
+      <CompanyZoneProvider zone={installationZone}>
+        <ViewerZoneProvider zone={readerZone}>
+          <BriefScreen />
+        </ViewerZoneProvider>
+      </CompanyZoneProvider>,
     );
 
     const frozen = en["brief.report.frozenAt"].replace(
       "{at}",
-      formatDateTime(review.generated_at, "en", installationZone),
+      formatDateTime(review.generated_at, "en", readerZone),
     );
     expect(await screen.findByText(frozen)).toBeTruthy();
   });
@@ -794,9 +793,9 @@ describe("BriefScreen — figures whose source had not started", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone={recordZone}>
+      <CompanyZoneProvider zone={recordZone}>
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
     return screen.findByTestId("weekly-strip");
   };
@@ -921,9 +920,9 @@ describe("BriefScreen — figures whose source had not started", () => {
     });
     render(
       <LocaleProvider initial="vi">
-        <RecordZoneProvider zone={recordZone}>
+        <CompanyZoneProvider zone={recordZone}>
           <BriefScreen />
-        </RecordZoneProvider>
+        </CompanyZoneProvider>
       </LocaleProvider>,
     );
     const strip = await screen.findByTestId("weekly-strip");

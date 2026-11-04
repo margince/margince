@@ -10,7 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type ProjectFiling = components["schemas"]["ProjectFiling"];
 type RefusalCode = components["schemas"]["ProjectFilingRefusal"]["code"];
@@ -266,7 +266,7 @@ function Decisions({
 }: Readonly<{ decisions: ProjectFiling["undone"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (decisions.length === 0) return null;
   return (
     <section aria-label={t("projectFiling.decisions")}>

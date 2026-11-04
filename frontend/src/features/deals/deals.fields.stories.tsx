@@ -87,17 +87,21 @@ export const ReaderOfCompanies: Story = {
   render: () => <Details />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The editor and its choices open outside the story's canvas.
+    const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Change Referring partner" }),
+      await canvas.findByRole("button", { name: /^Change Referring partner/ }),
     );
+    const dialog = await page.findByRole("dialog", {
+      name: "Referring partner",
+    });
     await userEvent.click(
-      await canvas.findByRole("combobox", { name: "Referring partner" }),
-    );
-    // The choices open in a popover outside the story's canvas.
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByRole("option", {
-        name: partnerCompany.display_name,
+      await within(dialog).findByRole("combobox", {
+        name: "Referring partner",
       }),
+    );
+    await expect(
+      await page.findByRole("option", { name: partnerCompany.display_name }),
     ).toBeInTheDocument();
     await expect(partnerReads.count).toBe(1);
   },
@@ -112,10 +116,10 @@ export const NoCompanyRead: Story = {
     const canvas = within(canvasElement);
     // The edit affordance waits on /me, which settles after every mount query
     // has already been sent, so the count below is final.
-    await canvas.findByRole("button", { name: "Change Deal brief" });
+    await canvas.findByRole("button", { name: /^Change Deal brief/ });
     await waitFor(() =>
       expect(
-        canvas.queryByRole("button", { name: "Change Referring partner" }),
+        canvas.queryByRole("button", { name: /^Change Referring partner/ }),
       ).toBeNull(),
     );
     await expect(partnerReads.count).toBe(0);

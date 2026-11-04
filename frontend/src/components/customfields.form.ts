@@ -12,7 +12,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
@@ -249,7 +249,7 @@ export function customFieldDisplay(
     case "multiselect":
       return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
     case "date":
-      return formatDateAbbrev(String(raw), opts.locale, viewerZone());
+      return formatDateAbbrev(String(raw), opts.locale, browserZone());
     default:
       return String(raw);
   }

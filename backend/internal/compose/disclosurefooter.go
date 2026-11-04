@@ -40,9 +40,9 @@ type disclosureAdapter struct {
 // putting an objection route under what may be an invoice reads as an
 // invitation to stop receiving invoices.
 func (a disclosureAdapter) DisclosuresFor(
-	ctx context.Context, category string,
+	ctx context.Context, category string, recipients []string,
 ) ([]activities.DisclosureLine, error) {
-	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category))
+	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category), recipients)
 	if err != nil {
 		return nil, err
 	}

@@ -40,9 +40,6 @@ const meetingHistoryRecorder = "recordMeetingTransition"
 // no transition.
 var writesMeetingStatusWithoutHistory = gatekit.Waive(map[string]string{
 	"internal/modules/activities/scheduling_change.go": "settles provider delivery through updateActivityInTx, which records the meeting transition in the same transaction",
-	"internal/modules/activities/booking.go": "books through LogActivity, which records the " +
-		"transition for it. The status is set here because booking a meeting is what `booked` " +
-		"means, and the store beside it owns the history",
 	"internal/modules/activities/mapping.go": "maps a request onto LogActivityInput and executes " +
 		"nothing; the store it hands that input to records the transition",
 })

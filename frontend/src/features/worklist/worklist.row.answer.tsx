@@ -83,35 +83,34 @@ const ANSWER_BY_SOURCE: Partial<
   Record<
     WorklistItem["source"],
     {
-      verb: WorklistItem["actions"][number];
+      verbs: readonly WorklistItem["actions"][number][];
       draw: (item: WorklistItem) => RowPlacement;
     }
   >
 > = {
   notice: {
-    verb: "acknowledge",
+    verbs: ["acknowledge"],
     draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
   },
   failed_approval: {
-    verb: "acknowledge",
+    verbs: ["acknowledge"],
     draw: (item) => ({ primary: <FailedApprovalAnswer item={item} /> }),
   },
   automation_run: {
-    verb: "retry",
+    verbs: ["retry"],
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
-  // Keyed on `keep`, the server's signal that this row may be answered at all.
-  // The control then asks the row again for each button, so a seat offered one
-  // of the two draws only that one. Like meeting_outcome: one entry per source.
+  // Any answering verb draws the answer: a redirected site offers discard and
+  // reopen but never keep. The control asks the row again for each button.
   domain_question: {
-    verb: "keep",
+    verbs: ["keep", "keep_as_vendor", "discard", "reopen"],
     draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
   // Verbs of equal weight, so the row has no primary. Any answer is plausible
   // about a meeting the product knows nothing about. A filled verb would claim
   // an expectation it has not got.
   meeting_outcome: {
-    verb: "decide",
+    verbs: ["decide"],
     draw: (item) => ({
       equals: (
         <MeetingOutcome
@@ -129,11 +128,11 @@ const ANSWER_BY_SOURCE: Partial<
     }),
   },
   conversation_claim: {
-    verb: "complete",
+    verbs: ["complete"],
     draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
   task: {
-    verb: "complete",
+    verbs: ["complete"],
     draw: (item) => ({
       primary: <TaskComplete id={item.id} version={item.version} />,
     }),
@@ -142,7 +141,7 @@ const ANSWER_BY_SOURCE: Partial<
   // takes, so this verb is offered on this lane alone. `dismiss` on brief_item
   // means something else and posts elsewhere, so this table is keyed by source.
   relationship_decay: {
-    verb: "dismiss",
+    verbs: ["dismiss"],
     draw: (item) => ({
       primary: <NudgeDismiss contactId={item.id} permanent={false} />,
       equals: <NudgeDismiss contactId={item.id} permanent />,
@@ -166,7 +165,11 @@ export function rowAnswer(
   // Never a batch: a group row stands for a pile and names no single record.
   // Every id-keyed answer below would act on the wrong one.
   const keyed = ANSWER_BY_SOURCE[item.source];
-  if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
+  if (
+    keyed &&
+    !item.batch &&
+    keyed.verbs.some((verb) => item.actions.includes(verb))
+  ) {
     return keyed.draw(item);
   }
   // Its own branch: this answer needs more than the row's id. The composer

@@ -143,42 +143,6 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	return out, err
 }
 
-// List answers the caller's own decisions.
-//
-// Own rows only, and there is no id that reaches a colleague's: whose senders a
-// contact keeps out is itself private, and an admin view of it would be a list
-// of somebody's private correspondents.
-func (s *SenderOverrideStore) List(ctx context.Context) ([]SenderOverride, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return nil, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	var out []SenderOverride
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id, address, decision, coalesce(overruled_kind, '')
-			  FROM capture_sender_override
-			 WHERE user_id = $1
-			 ORDER BY created_at DESC`, actor.UserID)
-		if err != nil {
-			return fmt.Errorf("capture: listing sender decisions: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var o SenderOverride
-			if err := rows.Scan(&o.ID, &o.Address, &o.Decision, &o.OverruledKind); err != nil {
-				return fmt.Errorf("capture: listing sender decisions: %w", err)
-			}
-			out = append(out, o)
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
 // Remove withdraws a decision, handing the sender back to the machine.
 func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error {
 	if err := auth.RequireHuman(ctx); err != nil {

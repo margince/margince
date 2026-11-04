@@ -48,9 +48,11 @@ const emailsField: CreateField = {
 function Harness({
   fields,
   onSubmit,
+  dialog,
 }: Readonly<{
   fields: CreateField[];
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
+  dialog?: { open: boolean; title: string };
 }>) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<FormRows>({});
@@ -66,6 +68,7 @@ function Harness({
       onSubmit={onSubmit}
       onClose={vi.fn()}
       intent="create"
+      dialog={dialog}
     />
   );
 }
@@ -77,6 +80,43 @@ describe("repeatable-row fields", () => {
     await userEvent.click(screen.getByText("Add email"));
     expect(screen.getByLabelText("Email *")).toBeTruthy();
     expect(screen.getByLabelText("Type")).toBeTruthy();
+  });
+
+  it("names the group above its rows outside a dialog", () => {
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    expect(screen.getByText("Email")).toBeTruthy();
+  });
+
+  it("leaves the naming to a dialog that edits this field alone", () => {
+    render(
+      <Harness
+        fields={[emailsField]}
+        onSubmit={vi.fn()}
+        dialog={{ open: true, title: "Email" }}
+      />,
+    );
+    expect(screen.getAllByText("Email")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "Email" })).toBeTruthy();
+  });
+
+  it("names the group in a dialog that holds other fields too", () => {
+    render(
+      <Harness
+        fields={[{ key: "full_name", label: "create.fullName" }, emailsField]}
+        onSubmit={vi.fn()}
+        dialog={{ open: true, title: "New contact" }}
+      />,
+    );
+    expect(screen.getByText("Email")).toBeTruthy();
+  });
+
+  it("keeps every row's fields named once later rows hide their labels", async () => {
+    const user = userEvent.setup();
+    render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    expect(screen.getAllByLabelText("Email *")).toHaveLength(2);
+    expect(screen.getAllByLabelText("Type")).toHaveLength(2);
   });
 
   it("updates a row's values as the user types and selects", async () => {
@@ -110,11 +150,12 @@ describe("repeatable-row fields", () => {
   });
 
   it("removes a row", async () => {
+    const user = userEvent.setup();
     render(<Harness fields={[emailsField]} onSubmit={vi.fn()} />);
-    await userEvent.click(screen.getByText("Add email"));
-    await userEvent.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
     expect(screen.getAllByLabelText("Email *")).toHaveLength(2);
-    await userEvent.click(screen.getAllByText("Remove")[0]);
+    await user.click(screen.getByRole("button", { name: "Remove row 1" }));
     expect(screen.getAllByLabelText("Email *")).toHaveLength(1);
   });
 

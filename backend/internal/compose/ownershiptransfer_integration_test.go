@@ -363,3 +363,53 @@ func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 		t.Errorf("a refused accept left the request %s, want it still pending to decline", status)
 	}
 }
+
+// A colleague and their agent hold one request. Each reads and withdraws what the
+// other filed, and a third colleague's agent reads nothing.
+func TestAColleagueAndTheirAgentHoldOneOwnershipRequest(t *testing.T) {
+	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
+	transfers := newOwnershipTransfers(e.Pool)
+	passport := ids.NewV7()
+	e.WsExec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
+		VALUES ($1, $2, $2, 'handover agent', ARRAY['read','write'], $3, now() + interval '1 day')`,
+		passport, e.Rep3, "hash-"+passport.String())
+	agent := e.AgentOnPassport(t, e.Rep3, nil, handoverRepPerms(), ids.From[ids.PassportKind](passport))
+	stranger := e.AgentFor(t, e.Rep2, nil, handoverRepPerms())
+
+	for name, tc := range map[string]struct{ files, reads context.Context }{
+		"the agent files it, the colleague withdraws": {agent, asker(e)},
+		"the colleague files it, the agent withdraws": {asker(e), agent},
+	} {
+		t.Run(name, func(t *testing.T) {
+			company := e.SeedCompany(t, "Handed "+name, &e.Rep1)
+			filed, created := requestHandover(tc.files, t, e, "company", company)
+			if !created {
+				t.Fatal("the request did not open")
+			}
+			if _, err := transfers.Own(stranger, "company", company, transferAsked); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Errorf("another colleague's agent read the request: %v", err)
+			}
+			own, err := transfers.Own(tc.reads, "company", company, transferAsked)
+			if err != nil {
+				t.Fatalf("the other hand reading the request: %v", err)
+			}
+			if own.ApprovalID != filed.ApprovalID {
+				t.Errorf("read request %s, want %s", own.ApprovalID, filed.ApprovalID)
+			}
+			if err := transfers.Withdraw(tc.reads, "company", company, transferAsked); err != nil {
+				t.Fatalf("the other hand withdrawing the request: %v", err)
+			}
+		})
+	}
+
+	// What an agent files reaches the owner, who answers it as any request.
+	company := e.SeedCompany(t, "Handed and answered", &e.Rep1)
+	filed, _ := requestHandover(agent, t, e, "company", company)
+	if n := transfersInInbox(giver(e), t, e); n != 1 {
+		t.Errorf("the owner sees %d requests, want the one the agent filed", n)
+	}
+	if err := decideHandover(giver(e), t, e, filed.ApprovalID, true); err != nil {
+		t.Errorf("the owner accepting the agent's request: %v", err)
+	}
+}

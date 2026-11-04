@@ -160,6 +160,12 @@ function bucketLabel(name: string): string {
       return "Forecast category changes";
     case "stage_weight":
       return "Stage weight changes";
+    case "excluded":
+      return "Left out after review";
+    case "reinstated":
+      return "Counted again after review";
+    case "not_checked":
+      return "Not checked";
     case "won":
       return "Won";
     case "lost":

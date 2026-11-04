@@ -4,6 +4,7 @@ import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
 import type { MessageKey } from "../i18n/en";
+import { useCompanyZone } from "./companyzone";
 import {
   CLOSE_DAY_DIAL,
   closeDayRange,
@@ -12,7 +13,6 @@ import {
   rangeQueryParams,
 } from "./dealranges";
 import { throwProblem, unwrap } from "./problem";
-import { useRecordZone } from "./recordzone";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
 
@@ -112,7 +112,7 @@ export function dealsQueryParams(f: DealFilters) {
 // The close-day dial as days. "This quarter" is the fiscal quarter holding
 // today in the installation's zone, the one the reports count.
 function useCloseDay(value: string | undefined): DayRange | undefined {
-  const today = dayInZone(useNow(0), useRecordZone());
+  const today = dayInZone(useNow(0), useCompanyZone());
   const fiscalStart =
     useInstallationSettings().data?.fiscal_year_start_month ?? 1;
   return closeDayRange(value, today, fiscalStart);

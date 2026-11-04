@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import {
   type Locale,
   type Translator,
@@ -173,7 +173,7 @@ function SampleDetails({ chart }: Readonly<{ chart: ReportingChart }>) {
           {point.observations == null
             ? t("reporting.observationsUnavailable")
             : plural("reporting.observations", point.observations, {
-                count: formatNumber(point.observations, locale),
+                count: formatAnalyticsNumber(point.observations, locale),
               })}
           {point.value == null
             ? ` · ${t("reporting.status.insufficient_sample")}`
@@ -251,7 +251,7 @@ function OwnerAttainmentNotes({
       {elapsed != null && (
         <span className="t-caption">
           {t("reporting.targetPeriodElapsed", {
-            percent: formatNumber(Math.round(elapsed * 100), locale),
+            percent: formatAnalyticsNumber(Math.round(elapsed * 100), locale),
           })}
         </span>
       )}

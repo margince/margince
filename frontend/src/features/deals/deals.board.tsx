@@ -28,8 +28,8 @@ import {
 import { useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
@@ -159,7 +159,7 @@ export function DealBoardBody({
   >["columnDropHandlers"];
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // Named by id, batched into one request for every card's owner at once.
   // An unowned deal contributes no id, so a board of them asks nothing.
   const ownerNames = useMemberNames(
@@ -198,7 +198,7 @@ export function DealBoardBody({
             <>
               <DealPipelineBoard
                 cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
-                zone={recordZone}
+                zone={readerZone}
                 columns={buildColumns(
                   effectivePipeline.stages ?? [],
                   loadedDeals,

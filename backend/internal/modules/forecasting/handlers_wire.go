@@ -36,6 +36,7 @@ func ReadingsToWire(
 		AsOf:               asOf,
 		Timezone:           period.Zone.String(),
 		BaseCurrency:       baseCurrency,
+		QualificationMode:  crmcontracts.ForecastReadingsQualificationMode(in.QualificationMode()),
 	}
 	if scope.ID != nil {
 		id := openapi_types.UUID(*scope.ID)

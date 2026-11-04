@@ -28,8 +28,9 @@ var readContextCopy = toolCopy{
 		"threads and what was promised. brief reads this morning's brief for the seat.",
 	Limits: "It reads and writes nothing. catch_up summarises the timeline; a field's current " +
 		"value is read_record's. brief answers the brief already made, never a fresh one.",
-	Instead: "Use read_attention for what is at risk across the whole pipeline.",
-	Retain:  "Keep the ids the answer cites to read or change those records next.",
+	Instead: "Use read_attention for what is at risk across the whole pipeline, and read_details " +
+		"for a company's dossier, growth fit, scan or brief.",
+	Retain: "Keep the ids the answer cites to read or change those records next.",
 }
 
 var readAttentionCopy = toolCopy{
@@ -48,7 +49,8 @@ var readReportsCopy = toolCopy{
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
 	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
-		"query with save, then compose. Use read_forecast for what a period is expected to close.",
+		"query with save, then compose. Use read_forecast for what a period is expected to close, and " +
+		"data_coverage for how complete the data behind a number is.",
 	Retain: "Keep a run's id to search its evidence, and quote coverage with each number.",
 }
 
@@ -78,12 +80,14 @@ var changeActivitiesCopy = toolCopy{
 }
 
 var scheduleMeetingCopy = toolCopy{
-	Purpose: "Put a meeting on the calendar. book places it on the calendar of the seat this " +
-		"passport acts for and tells nobody else. invite sends the invitation to its attendees.",
+	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
+		"provider sends the invitation to every attendee: the contact, and any further addresses.",
 	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
-		"the user's yes first. Read check_availability before booking a time.",
-	Instead: "Use change_activities with log to record a meeting that already happened.",
-	Retain:  "Keep the meeting's id to send its invitation.",
+		"the user's yes first; the call stages for approval. Read check_availability before " +
+		"choosing a time.",
+	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
+		"that already happened.",
+	Retain: "Keep the invitation id and inspect its status before claiming it was delivered.",
 }
 
 var changeStateCopy = toolCopy{
@@ -121,7 +125,8 @@ var readWorkspaceCopy = toolCopy{
 	Limits: "A q matching nobody answers with every colleague and a warning. A stage's semantic, " +
 		"not its name, says whether it closes a deal. None of the name topics is a " +
 		"prerequisite: each tool refuses an unknown name with the accepted list.",
-	Instead: "Use find_records to find a customer contact; colleagues are seats here.",
+	Instead: "Use find_records to find a customer contact; colleagues are seats here. Use " +
+		"data_coverage to learn whether a number can be trusted: how complete and current the data is.",
 	Retain: "user_id is what assignee_id and owner_id take; never assign to an is_agent seat. " +
 		"Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is " +
 		"spelled cf_<slug>.",

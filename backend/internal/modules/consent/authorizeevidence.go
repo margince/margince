@@ -48,6 +48,9 @@ type subjectRef struct {
 	// connector.Recipient.
 	ChannelProvider string
 	ChannelUserID   string
+	// Country is the recipient's country as the decision resolved it once,
+	// before deciding (recipientCountries).
+	Country RecipientCountry
 }
 
 // recipientSubjectAddress derives how a subjectRef names the recipient a

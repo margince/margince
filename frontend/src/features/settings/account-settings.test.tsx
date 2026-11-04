@@ -55,3 +55,38 @@ it("says so on the save bar and under the field when the account refuses the new
   const named = (language.getAttribute("aria-describedby") ?? "").split(" ");
   expect(alerts.some((alert) => named.includes(alert.id))).toBe(true);
 });
+
+it("saves the picked time zone as the user's own choice", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "PUT /me/timezone": (body) => {
+      writes.push(body);
+      return jsonResponse({
+        ...meFixture({}).user,
+        timezone: "America/New_York",
+        timezone_chosen: true,
+      });
+    },
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+        <PageSaveBar />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  const picker = await screen.findByRole("combobox", { name: "Time zone" });
+  expect(picker).toHaveTextContent("Berlin (Europe)");
+  await user.click(picker);
+  await user.keyboard("New York{Enter}");
+  expect(picker).toHaveTextContent("New York (America)");
+  await user.click(await screen.findByRole("button", { name: "Save" }));
+  await vi.waitFor(() =>
+    expect(writes).toEqual([
+      { timezone: "America/New_York", source: "chosen" },
+    ]),
+  );
+});

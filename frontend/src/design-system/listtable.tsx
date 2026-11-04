@@ -13,6 +13,7 @@ import {
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
+import { orderedColumns, useColumnOrder } from "./listtable.order";
 import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
@@ -297,9 +298,11 @@ export function ListTable<Row>({
   saveView?: ReactNode;
 }>) {
   const display = useColumnDisplay(columns);
+  const order = useColumnOrder(widthsKey);
+  const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
-  const shown = columns.filter((column) => !display.hidden.has(column.key));
+  const shown = placed.filter((column) => !display.hidden.has(column.key));
   // The width observer re-attaches when the scroller comes or goes.
   const drawsOwnTable = body === undefined || body === null;
   const layout = useColumnWidths(
@@ -404,7 +407,8 @@ export function ListTable<Row>({
           ? undefined
           : (menu) => (
               <DisplayMenu
-                optional={columns.filter((column) => !column.fixed)}
+                optional={placed.filter((column) => !column.fixed)}
+                onReorder={order.onReorder}
                 {...display}
                 {...menu}
               />

@@ -35,7 +35,7 @@ func newStageCohortFixture(t *testing.T) *stageCohortFixture {
 	e := setupForecast(t)
 	f := &stageCohortFixture{env: e, at: clocktest.Now(t).Add(-30 * 24 * time.Hour)}
 	f.writer = principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:cohort-fixture"), ids.NewV7())
-	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return f.at })
+	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return f.at })
 	f.won = e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Cohort won',20,'won',100)`, e.pipeline)
 	f.lost = e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Cohort lost',21,'lost',0)`, e.pipeline)
 	return f

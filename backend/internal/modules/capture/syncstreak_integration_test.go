@@ -89,7 +89,7 @@ func TestAPostponingConnectionReportsAGrowingFailureDuration(t *testing.T) {
 
 	start := time.Date(2026, 5, 4, 8, 0, 0, 0, time.UTC)
 	at := start
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 
 	if err := syncOnceOf(ctx, t, reg, haltingProvider); !errors.Is(err, connector.ErrUnreachable) {
 		t.Fatalf("SyncOnce = %v, want the connector's own failure", err)
@@ -135,7 +135,7 @@ func TestASuccessfulSyncEndsTheFailureStreak(t *testing.T) {
 
 	start := time.Date(2026, 5, 4, 8, 0, 0, 0, time.UTC)
 	at := start
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 
 	if err := syncOnceOf(ctx, t, reg, haltingProvider); !errors.Is(err, connector.ErrUnreachable) {
 		t.Fatalf("SyncOnce = %v, want the connector's own failure", err)

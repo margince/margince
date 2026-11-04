@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// bookingAt shapes one /v1/bookings body for a fixed Tuesday slot,
+// bookingAt shapes one /v1/bookings body for a slot,
 // linked to the contact; extra fields merge over the base.
 func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 	body := AnyMap{
@@ -37,19 +37,20 @@ func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 }
 
 func TestBookingConsentPassthrough(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := apptest.SetupBookingApp(t)
 	purposeID := seededTransactionalPurposeID(t, e)
 
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Carla Consenting"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Carla Consenting",
+		"emails": []AnyMap{{"email": "carla@corp.example", "email_type": "work", "is_primary": true}},
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 
-	// A fixed Tuesday keeps every slot inside business hours.
-	tuesday := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
+	tuesday := apptest.NextBookableMorning()
 	consent := AnyMap{
 		"purpose_id":     purposeID,
 		"policy_version": "pp-2026-01",
@@ -187,8 +188,7 @@ func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, 
 // hold are the ones the database can state: the meeting landed, no confirmation
 // token was minted, and the withdrawal is exactly where it was.
 func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
+	e := apptest.SetupBookingApp(t)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
 
@@ -207,7 +207,7 @@ func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
 		t.Fatalf("withdrawing the purpose → %d", status)
 	}
 
-	tuesday := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
+	tuesday := apptest.NextBookableMorning()
 	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
 		"consent": AnyMap{
 			"purpose_id": transactional, "policy_version": "pp-2026-01",
