@@ -110,7 +110,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		if err != nil {
 			return err
 		}
-		query := correctionReceiptSelect + storekit.SQLf(`
+		query := correctionReceiptSelect(ownerPos) + storekit.SQLf(`
 			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
 			 WHERE (c.applied_at >= $%d
 			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
@@ -147,9 +147,12 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	return row, nil
 }
 
-// correctionReceiptSelect reads one correction the way every reader shows it.
-// Each reader adds its own WHERE and ORDER BY; scanCorrectionReceipt scans it.
-const correctionReceiptSelect = `
+// correctionReceiptSelect reads one correction the way every reader shows it,
+// with the reason and evidence only for the reader at readerPos who is the
+// deal's owner and whose grants composed them. Each reader adds its own WHERE
+// and ORDER BY; scanCorrectionReceipt scans it.
+func correctionReceiptSelect(readerPos int) string {
+	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
 			       --
@@ -166,12 +169,12 @@ const correctionReceiptSelect = `
 			       -- against NULL is NULL — so that test would withhold the reason on
 			       -- every unowned deal, whose sentence names nobody and was
 			       -- composed under no seat's grants at all.
-			       CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+			       CASE WHEN %[1]s
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
 			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
-			       CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+			       CASE WHEN %[1]s
 			            THEN a.evidence ELSE '{}'::jsonb END,
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
 			       (a.before->>'amount_minor')::bigint, (a.after->>'amount_minor')::bigint,
@@ -181,4 +184,13 @@ const correctionReceiptSelect = `
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`
+`, basisReadable(readerPos))
+}
+
+// basisReadable is when the reader may read a correction's reason: the deal
+// is unowned, or the reader owns it and the reason was composed under their
+// grants. A colleague with row scope still sees what changed, never why.
+func basisReadable(readerPos int) string {
+	return storekit.SQLf(`(nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+			                 AND (d.owner_id IS NULL OR d.owner_id = $%d))`, readerPos)
+}

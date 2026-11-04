@@ -11,6 +11,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,7 +66,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 	}
 	var out ChangeSummary
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		base, err := s.installation.BaseCurrency(ctx, tx)
+		base, err := s.installation.BaseCurrencyApplied(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -151,7 +152,7 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 		}
 		args := []any{dealID}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		query := correctionReceiptSelect + " WHERE c.deal_id = $1"
+		query := correctionReceiptSelect(arg(readerOf(ctx))) + " WHERE c.deal_id = $1"
 		if after != nil {
 			query += storekit.SQLf(" AND (c.applied_at, c.audit_log_id) < ($%d, $%d)", arg(after.AppliedAt), arg(after.AuditLogID))
 		}
@@ -206,14 +207,14 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		return out, nil
 	}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		base, err := s.installation.BaseCurrency(ctx, tx)
+		base, err := s.installation.BaseCurrencyApplied(ctx, tx)
 		if err != nil {
 			return err
 		}
 		out.BaseCurrency = base
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		ownersPos, sincePos, basePos := arg(owners), arg(since), arg(base)
+		ownersPos, sincePos := arg(owners), arg(since)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 		if err != nil {
 			return err
@@ -222,6 +223,10 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if scope != "" {
 			where += " AND " + scope
 		}
+		// The two reads share the filter and differ in one last argument: the
+		// counts price in the base currency, the rows gate the reason on the
+		// reader.
+		last := len(args) + 1
 		// One row per deal and kind first, so a deal changed twice in one kind
 		// counts and sums once.
 		groups, err := tx.Query(ctx, storekit.SQLf(`
@@ -232,7 +237,7 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
 			 GROUP BY owner_id, correction
 			 ORDER BY owner_id, correction`,
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", basePos), "d"), where), args...)
+			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", last), "d"), where), append(slices.Clone(args), base)...)
 		if err != nil {
 			return fmt.Errorf("deals: counting the team's changes: %w", err)
 		}
@@ -243,8 +248,8 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, correctionReceiptSelect+where+
-			storekit.SQLf(" ORDER BY c.applied_at DESC, c.audit_log_id DESC LIMIT %d", teamRowCap+1), args...)
+		rows, err := tx.Query(ctx, correctionReceiptSelect(last)+where+
+			storekit.SQLf(" ORDER BY c.applied_at DESC, c.audit_log_id DESC LIMIT %d", teamRowCap+1), append(args, readerOf(ctx))...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the team's changes: %w", err)
 		}
@@ -258,4 +263,12 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		out.Rows, out.Truncated = out.Rows[:teamRowCap], true
 	}
 	return out, nil
+}
+
+// readerOf is the seat reading; a caller with no seat reads no reason.
+func readerOf(ctx context.Context) ids.UUID {
+	if actor, ok := principal.Actor(ctx); ok {
+		return actor.UserID
+	}
+	return ids.Nil
 }
