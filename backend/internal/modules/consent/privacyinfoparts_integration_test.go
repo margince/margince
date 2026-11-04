@@ -74,14 +74,14 @@ func TestTheDataCategoriesAreWhatTheRecordHolds(t *testing.T) {
 		t.Fatalf("categories %v, want %v: the fixture holds a name and an address and nothing else", info.DataCategories, want)
 	}
 
-	// The installation's own notice is not correspondence with the person.
+	// The installation's own notice is not correspondence with the reader.
 	linkActivity(t, e, "system_notice")
 	if info := noticeFor(t, e, ConfirmRef{ContactID: e.contact}); slices.Contains(info.DataCategories, "correspondence") {
 		t.Error("the notice mail itself was disclosed as correspondence")
 	}
 	linkActivity(t, e, "human")
 	if info := noticeFor(t, e, ConfirmRef{ContactID: e.contact}); !slices.Contains(info.DataCategories, "correspondence") {
-		t.Errorf("categories %v leave out the mail exchanged with the person", info.DataCategories)
+		t.Errorf("categories %v leave out the mail exchanged with the reader", info.DataCategories)
 	}
 }
 
@@ -100,7 +100,7 @@ func linkActivity(t *testing.T, e *channelConsentEnv, origin string) {
 	}
 }
 
-func TestTheRetentionShownIsTheActingRulesThatReachThePerson(t *testing.T) {
+func TestTheRetentionShownIsTheActingRulesThatReachTheReader(t *testing.T) {
 	e := setupChannelConsent(t)
 	e.store = e.store.WithRetentionReader(fixedRetention{
 		{Scope: "activity", RetainDays: 1095, Action: "archive"},

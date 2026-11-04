@@ -181,9 +181,9 @@ func (s *Store) confirmLink(token string) string {
 	return s.publicBaseURL + confirmRoute + token
 }
 
-// linkInLanguage adds the language the mail is written in, the way a send's
-// unsubscribe link carries it, so the page opens in that language even when
-// the link has expired and the server answers nothing about it.
+// linkInLanguage adds the language the mail is written in, as a send's
+// unsubscribe link does. The page then opens in that language even when the
+// link has expired and the server answers nothing about it.
 func linkInLanguage(link, language string) string {
 	if !mailcopy.Known(language) {
 		return link

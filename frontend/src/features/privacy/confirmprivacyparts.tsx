@@ -42,7 +42,7 @@ const RECIPIENT_LABEL: Readonly<
   service_providers: "privacynotice.recipient.serviceProviders",
 };
 
-// Only the scopes the server discloses to a person; any other scope it could
+// Only the scopes the server discloses to a reader; any other scope it could
 // send is named by the general sentence below the list instead.
 const SCOPE_LABEL: Partial<Record<Retention["scope"], MessageKey>> = {
   activity: "privacynotice.retention.scope.activity",
@@ -125,7 +125,7 @@ export function HeldCard({ card }: Readonly<{ card: PrivacyInformationPage }>) {
   );
 }
 
-/** The retention rules that act on this person's data, then the rest. */
+/** The retention rules that act on the reader's data, then the rest. */
 export function RetentionCard({
   retention,
 }: Readonly<{ retention: readonly Retention[] }>) {

@@ -49954,14 +49954,14 @@ export interface components {
              */
             purpose_bases: ("consent" | "legitimate_interests" | "contract")[];
             /**
-             * @description The kinds of data held about this person, read from what the record holds today. Codes
+             * @description The kinds of data held about the reader, read from what the record holds today. Codes
              *     only: the page names each kind and never shows a value.
              */
             data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "correspondence")[];
             /** @description Who the data is shared with, as codes the page names in its reader's language. */
             recipients: ("colleagues" | "service_providers")[];
             /**
-             * @description The retention rules that act on this person's data today, from the installation's own
+             * @description The retention rules that act on the reader's data today, from the installation's own
              *     retention settings. A rule switched off, or held back by the retain-only setting, is not
              *     listed. Empty means no rule removes the data by age.
              */
@@ -50005,7 +50005,7 @@ export interface components {
             /** @description How to object, where the installation states a way of its own. */
             objection_route?: string;
         };
-        /** @description One retention rule that acts on this person's data. */
+        /** @description One retention rule that acts on the reader's data. */
         PrivacyInformationRetention: {
             scope: components["schemas"]["RetentionScope"];
             retain_days: number;

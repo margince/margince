@@ -76,9 +76,8 @@ export const Purchased: Story = {
   }),
 };
 
-// Everything a stated installation discloses: who is responsible, why each
-// purpose is allowed, the kinds of data held, the retention rules that act, and
-// the right to object with the installation's own way to say it.
+// Everything an installation that stated its particulars discloses. The right
+// to object carries the installation's own way to say it.
 export const Complete: Story = {
   render: notice({
     kind: "privacy_notice",

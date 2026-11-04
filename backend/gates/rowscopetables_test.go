@@ -631,5 +631,9 @@ const (
 	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
 	// guests onto the meeting that stays, under a system job or a calendar sync.
 	// The contacts move between two rows of one meeting, and nothing is returned.
-	modulesTierUnscopedCeiling = 152
+	//
+	// 153: consent's privacy page names the kinds of data a notice link's own
+	// contact or lead holds (privacyinfoparts.go). It reads presence flags only,
+	// for the record the link resolved, and returns no reference.
+	modulesTierUnscopedCeiling = 153
 )

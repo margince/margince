@@ -4,8 +4,8 @@
 package consent
 
 // The rest of what a privacy page owes its reader beside the source, the
-// purposes and the rights: who is responsible, why each purpose is allowed,
-// which kinds of data are held, who sees them, and how long they are kept.
+// purposes and the rights. That is who is responsible, why each purpose is
+// allowed, which kinds of data are held, who sees them and how long they stay.
 // Each one is read from what the installation holds or has set, never typed
 // in as a number or a name.
 
@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -48,18 +49,18 @@ func (h Handlers) WithRetentionReader(r RetentionReader) Handlers {
 	return h
 }
 
-// Retention scopes that hold data about a person. Every other scope (deals,
+// Retention scopes that hold data about the reader. Every other scope (deals,
 // report editions, daily risk records) holds the installation's own figures.
 var (
-	personRetentionScopes = []string{
+	subjectRetentionScopes = []string{
 		"activity", "activity/transcript", "raw_capture", "ai_call_payload/content",
 	}
-	contactRetentionScopes = append(slices.Clone(personRetentionScopes), "contact/no_consent_no_deal")
-	leadRetentionScopes    = append(slices.Clone(personRetentionScopes), "lead/unconverted")
+	contactRetentionScopes = append(slices.Clone(subjectRetentionScopes), "contact/no_consent_no_deal")
+	leadRetentionScopes    = append(slices.Clone(subjectRetentionScopes), "lead/unconverted")
 )
 
-// disclosureRecipients is who sees a person's data: the controller's own
-// people, and the providers who host the CRM and deliver its mail for it.
+// disclosureRecipients is who sees the reader's data: the controller's own
+// staff, and the providers who host the CRM and deliver its mail for it.
 // Both are true of every installation, so the list is fixed like the rights.
 func disclosureRecipients() []string {
 	return []string{"colleagues", "service_providers"}
@@ -138,10 +139,10 @@ func readLeadCategoriesTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, out
 	return nil
 }
 
-// correspondenceSQL is an exchange with the person. The installation's own
-// notices are left out: the notice that led here is not why data is held.
-const correspondenceSQL = `a.kind IN ('email', 'meeting', 'call', 'message')
-	AND a.origin <> 'system_notice' AND a.archived_at IS NULL`
+// correspondenceSQL is an exchange with the reader. What the product wrote
+// itself is left out: the notice that led here is not why data is held.
+var correspondenceSQL = `a.kind IN ('email', 'meeting', 'call', 'message') AND a.archived_at IS NULL` +
+	auth.OriginIsEngagement("a")
 
 // heldCategories turns the presence flags, in the order both reads select
 // them, into the codes the page names.
@@ -156,7 +157,7 @@ func heldCategories(held [6]bool) []string {
 	return out
 }
 
-// readRetention lists the acting rules that reach a person of this kind.
+// readRetention lists the acting rules that reach a reader of this kind.
 func (s *Store) readRetention(ctx context.Context, scopes []string, out *PrivacyInformation) error {
 	out.Retention = []RetentionRule{}
 	if s.retention == nil {

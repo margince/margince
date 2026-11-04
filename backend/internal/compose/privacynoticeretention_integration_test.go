@@ -18,8 +18,8 @@ import (
 )
 
 // TestThePrivacyPageShowsTheRetentionSettingsThatAct opens a notice link through
-// the public edge and the handlers the server assembles, so the page reads the
-// same retention rules the settings screen shows.
+// the public edge and the handlers the server assembles. The page must show the
+// retention rules the settings screen shows.
 func TestThePrivacyPageShowsTheRetentionSettingsThatAct(t *testing.T) {
 	l := setupConfirmLane(t)
 	rules := privacy.NewPolicyStore(InstallationDB(l.e.Pool))

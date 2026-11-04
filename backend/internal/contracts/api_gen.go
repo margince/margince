@@ -53255,7 +53255,7 @@ type PrivacyInformationPage struct {
 	// the installation has not filled in is absent, never invented.
 	Controller *PrivacyInformationController `json:"controller,omitempty"`
 
-	// DataCategories The kinds of data held about this person, read from what the record holds today. Codes
+	// DataCategories The kinds of data held about the reader, read from what the record holds today. Codes
 	// only: the page names each kind and never shows a value.
 	DataCategories []PrivacyInformationPageDataCategories `json:"data_categories"`
 	Kind           PrivacyInformationPageKind             `json:"kind"`
@@ -53279,7 +53279,7 @@ type PrivacyInformationPage struct {
 	// Recipients Who the data is shared with, as codes the page names in its reader's language.
 	Recipients []PrivacyInformationPageRecipients `json:"recipients"`
 
-	// Retention The retention rules that act on this person's data today, from the installation's own
+	// Retention The retention rules that act on the reader's data today, from the installation's own
 	// retention settings. A rule switched off, or held back by the retain-only setting, is not
 	// listed. Empty means no rule removes the data by age.
 	Retention []PrivacyInformationRetention `json:"retention"`
@@ -53304,7 +53304,7 @@ type PrivacyInformationPageRecipients string
 // PrivacyInformationPageRights defines model for PrivacyInformationPage.Rights.
 type PrivacyInformationPageRights string
 
-// PrivacyInformationRetention One retention rule that acts on this person's data.
+// PrivacyInformationRetention One retention rule that acts on the reader's data.
 type PrivacyInformationRetention struct {
 	// Action What happens to a record past its window. One action per policy row — a ladder is separate
 	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;

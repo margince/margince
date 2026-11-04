@@ -68359,7 +68359,7 @@ components:
         data_categories:
           type: array
           description: |
-            The kinds of data held about this person, read from what the record holds today. Codes
+            The kinds of data held about the reader, read from what the record holds today. Codes
             only: the page names each kind and never shows a value.
           items:
             type: string
@@ -68373,7 +68373,7 @@ components:
         retention:
           type: array
           description: |
-            The retention rules that act on this person's data today, from the installation's own
+            The retention rules that act on the reader's data today, from the installation's own
             retention settings. A rule switched off, or held back by the retain-only setting, is not
             listed. Empty means no rule removes the data by age.
           items: { $ref: '#/components/schemas/PrivacyInformationRetention' }
@@ -68423,7 +68423,7 @@ components:
 
     PrivacyInformationRetention:
       type: object
-      description: One retention rule that acts on this person's data.
+      description: One retention rule that acts on the reader's data.
       required: [scope, retain_days, action]
       properties:
         scope: { $ref: '#/components/schemas/RetentionScope' }
