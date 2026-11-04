@@ -349,7 +349,7 @@ export interface components {
             /** @description Why it moved; required by the API when to_phase is `closed`. */
             reason?: string;
         };
-        /** @description Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it. */
+        /** @description Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it. */
         PublicEventProjectHealthAssessed: {
             /**
              * Format: uuid
@@ -358,7 +358,7 @@ export interface components {
             assessment_id: string;
             /** @description on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again. */
             state: string;
-            /** @description human for a user, ai for the health job, undo for a user undoing an AI reading. */
+            /** @description human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading. */
             source: string;
         };
         /** @description Payload for project.archived — a project was archived. Carries no data. */

@@ -171,6 +171,8 @@ So:
   itself.
 - The passport also carries its own narrower limits (see **Passports** below).
   Your permissions are the most an agent can ever have.
+- An agent can record consent, a stop or a legal hold for you, and work a privacy
+  request. It asks you first where the act has legal weight, and the record names it.
 
 ## Things the AI is refused outright
 
@@ -206,26 +208,21 @@ no limit.
 An agent *may* reject its own proposal. Rejecting drops the proposal and cannot
 widen anything. So an agent can take its own request back off your list.
 
-**Consent and privacy decisions.** Granting consent or taking it back, and
-carrying out or rejecting a privacy request, are for humans only.
-
-**Asking a document set.** Asking a set, and setting up or changing one, are a
-human's work. An answer that rests on passages is only good if the
-reader can open the passage under each sentence and disagree with it. An agent
-acting on that answer with nobody watching cannot do that. This is why the
-question box works over a named set of documents rather than over everything.
+**Decisions that remove data or set company rules.** An agent cannot carry out an erasure
+request, lift a legal hold, release a held record or change retention rules. It cannot destroy
+the mail from an address, or change what you decided about one. Those stay with you in the app.
 
 **Changing the pipeline or its stages.** The stage ladder is what the "advance
 a deal" approval is judged against. An agent that could edit the ladder could
 change the meaning of the approval it was asking for.
 
-**Custom fields, webhooks, saved views and sharing.** These are settings for
-members, and an agent can neither read nor change them. It can still read which
-custom fields exist, so it can search on them.
+**Custom fields and webhooks.** These are settings for members, and an agent can
+neither read nor change them. It can still read which custom fields exist, so it
+can search on them.
 
-For these and for consent, document sets and pipeline settings, a passport
-cannot sign in at all. Approvals work in another way: the passport is let in,
-and the check happens on the card itself.
+For these and for pipeline settings, a passport cannot sign in at all. Approvals
+work in another way: the passport is let in, and the check happens on the card
+itself.
 
 **New actions that change data.** Agents cannot use a new action that changes
 data until it is given a label. A missing label means the agent cannot do it,
@@ -246,6 +243,9 @@ active consent, with its evidence, exists for the *purpose* that send falls unde
 for a different purpose does not count. "Unknown" blocks, and so does "Withdrawn".
 Where a purpose requires double opt-in, consent that was granted but not yet
 confirmed does not send. Every recipient is checked, including anyone copied in.
+
+Where a refusal allows it, someone with that permission can read the warning and still send.
+An agent does so only after you have seen the warning and said yes. The record names you both.
 
 **Your seat, checked again at sending.** It is checked when the message goes
 out, not only when the message is staged. Someone moved to a read-only seat
@@ -308,7 +308,7 @@ get it back for you.
 A passport does the same through the REST API as through MCP. It sees the same
 records, filters, permissions and approvals; an MCP page holds 50 rows. Some
 reads are for humans only either way: installation, capture and integration
-settings, the digest, backfill progress, rates, AI prices, access and consent.
+settings, the digest, backfill progress, rates, AI prices and access.
 
 Revoking takes effect at the agent's next call. So does moving the colleague
 behind it to a lower role. Margince checks the colleague's rights on every call,
@@ -381,7 +381,7 @@ Yes. A connected agent whose connection has **Change records** ticked can put a 
 - The agent can also file it against one of the account's contracts, as you can when you upload.
 - A file can be up to about 6.2 MB, or your installation's upload limit if that is smaller.
 - The same kinds of file are taken as in the app; see [Which kinds of file can I upload?](documents-and-files.md#which-kinds-of-file-can-i-upload).
-An agent can also list the files on a record, but it cannot download a file or read what is in it. A scheduled agent never puts a file on a record.
+An agent can also list the files on a record and read one back, up to the same size. A scheduled agent never puts a file on a record.
 Also called: agent attach file, upload a file from Claude, add a PDF through an agent.
 
 ## What is not cleaned: attachments

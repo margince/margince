@@ -290,7 +290,7 @@ The default is **deny**. A purpose with no record for a contact is not consent.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
-Agents cannot write consent at all; see [What the AI does](what-the-ai-does.md).
+An agent can record consent for its user, and it asks them first. It cannot record a purpose that needs double opt-in; only the contact can confirm that. The Proof log names it as an Agent, so the entry never reads as the user's own. See [What the AI does](what-the-ai-does.md).
 
 ## The audit trail
 

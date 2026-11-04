@@ -106,8 +106,26 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: consent.Review{},
 		},
 		{
-			// An agent cannot route: the door refuses non-humans outright.
-			name: "an agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
+			// No user behind it, so nobody's send to direct.
+			name: "a passportless agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
+		},
+		{
+			name: "a user's agent holding the grant",
+			actor: principal.Principal{
+				Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
+				Permissions: principal.Permissions{
+					Objects: map[string]principal.ObjectGrant{
+						consent.EntityCommunicationException: {Create: true},
+					},
+				},
+			},
+			review: held, want: []string{"direct_send"},
+		},
+		{
+			// A rep may overrule this refusal, but no tool lets an agent do it.
+			name:   "a user's agent without the grant",
+			actor:  principal.Principal{Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7()},
+			review: held,
 		},
 		{
 			// A connector runs with its granting human's grants and is still

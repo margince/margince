@@ -2100,6 +2100,7 @@ public.capture_sender_override.capture_sender_override_decision_check CHECK ((de
 public.capture_sender_override.capture_sender_override_pkey PRIMARY KEY (id)
 public.capture_sender_override.capture_sender_override_user_address_key UNIQUE (user_id, address)
 public.capture_sender_override.capture_sender_override_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_sender_override.captured_by text gen=- def=-
 public.capture_sender_override.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_sender_override.decision text NOT NULL gen=- def=-
 public.capture_sender_override.id uuid NOT NULL gen=- def=uuidv7()
@@ -2496,6 +2497,7 @@ public.communication_instruction.consumed_at timestamp with time zone gen=- def=
 public.communication_instruction.delivery_id uuid gen=- def=-
 public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
+public.communication_instruction.directed_by_agent text gen=- def=-
 public.communication_instruction.explanation text NOT NULL gen=- def=-
 public.communication_instruction.facts_as_of timestamp with time zone NOT NULL gen=- def=-
 public.communication_instruction.given_by_admin boolean NOT NULL gen=- def=false
@@ -2532,21 +2534,21 @@ BEGIN
      AND NEW.id IS NOT DISTINCT FROM OLD.id
      AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
      AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
-     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code
-     AND NEW.given_by_admin IS NOT DISTINCT FROM OLD.given_by_admin THEN
+     AND NEW.directed_by_agent IS NOT DISTINCT FROM OLD.directed_by_agent
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
     RETURN NEW;
   END IF;
   IF NEW.id IS DISTINCT FROM OLD.id
      OR NEW.review_id IS DISTINCT FROM OLD.review_id
      OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
+     OR NEW.directed_by_agent IS DISTINCT FROM OLD.directed_by_agent
      OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
      OR NEW.explanation IS DISTINCT FROM OLD.explanation
      OR NEW.warning_version IS DISTINCT FROM OLD.warning_version
      OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
      OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
      OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
-     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at
-     OR NEW.given_by_admin IS DISTINCT FROM OLD.given_by_admin THEN
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
     RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
@@ -2765,7 +2767,7 @@ public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
 public.company_domain_disposition.candidate_company_id uuid gen=- def=-
 public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
 public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
-public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text, 'agent'::text]))))
 public.company_domain_disposition.company_domain_disposition_candidate_company_fkey FOREIGN KEY (candidate_company_id) REFERENCES company(id) ON DELETE SET NULL
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
@@ -2775,7 +2777,7 @@ public.company_domain_disposition.company_domain_disposition_pending_reason_shap
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
 public.company_domain_disposition.company_domain_disposition_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
-public.company_domain_disposition.company_domain_disposition_source_check CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_source_check CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read'::text, 'heuristic'::text, 'human'::text, 'agent'::text]))))
 public.company_domain_disposition.company_domain_disposition_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'company'::text, 'personal'::text, 'provider'::text, 'no_site'::text])))
 public.company_domain_disposition.company_id uuid gen=- def=-
 public.company_domain_disposition.created_at timestamp with time zone NOT NULL gen=- def=now()

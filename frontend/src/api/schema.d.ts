@@ -1736,8 +1736,8 @@ export interface paths {
          *     Anyone who can read the contact can read the recorded row. Both seats must be live
          *     members of the workspace and must differ.
          *
-         *     Recording the same pair for the same contact twice answers `409`. Recording is a
-         *     human's claim about two colleagues, so no agent tool does it.
+         *     Recording the same pair for the same contact twice answers `409`. Recording is a claim
+         *     about two colleagues, so an agent records one only when its user says it happened.
          */
         post: operations["recordIntroduction"];
         delete?: never;
@@ -3923,8 +3923,8 @@ export interface paths {
         put?: never;
         /**
          * Approve, pay, or void one entry.
-         * @description Human-only. Approving and paying commit money to a partner, and voiding takes it
-         *     back; none is a decision an assistant makes on someone's behalf.
+         * @description Approving and paying commit money to a partner, and voiding takes it back. An agent asks
+         *     its user first, and the audit row names it.
          *
          *     `void` requires a reason and writes a reversal row alongside the void, so the
          *     ledger records what was undone and why rather than losing the original.
@@ -4591,10 +4591,7 @@ export interface paths {
         /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
         get: operations["listSalesDecisions"];
         put?: never;
-        /**
-         * Record a decision from a sales review as a task on its deal. An open decision with the
-         *     same text on the same deal is returned instead of a second one.
-         */
+        /** Record a decision from a sales review as a task on its deal. An open decision with the same text on the same deal is returned instead of a second one. */
         post: operations["recordSalesDecision"];
         delete?: never;
         options?: never;
@@ -4628,13 +4625,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * The Sales review's assessment of one selection: a few sentences on what the measured
-         *     figures show, each citing the cells it rests on, and one next decision on a deal the
-         *     reader may see. Written by the model and kept per reader until the figures or the
-         *     recorded decisions move; without a model, or when the model's reply cannot be grounded,
-         *     it answers no sentences and `generated_by` says so, and the page shows its own summary.
-         */
+        /** The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary. */
         post: operations["assessSalesReview"];
         delete?: never;
         options?: never;
@@ -4651,13 +4642,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * A sales initiative or a custom report proposed from a description in plain words:
-         *     the filters, metrics and charts the words name, resolved against what the reader may
-         *     use, with the phrase each came from, the questions the words leave open and the phrases
-         *     nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
-         *     a model it answers 409 `ai_not_configured`.
-         */
+        /** A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`. */
         post: operations["proposeReportSetup"];
         delete?: never;
         options?: never;
@@ -4672,12 +4657,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * The accounts at risk in one population: single-threaded deals, accounts in pipeline
-         *     nobody has exchanged a word with, and won accounts gone silent. Each row carries the
-         *     facts behind its verdict. Counts for every view come with each answer; rows come for
-         *     the view asked for. The thresholds are the framework's, and the answer prints them.
-         */
+        /** The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
         get: operations["getAccountCoverage"];
         put?: never;
         post?: never;
@@ -9335,7 +9315,7 @@ export interface paths {
         /**
          * Count and sample what a filter would select, before it is saved (LVS-EXT-9).
          * @description The match count and one bounded page for a candidate filter tree —
-         *     the filter a human is still editing, which nothing else in the contract
+         *     the filter a user is still editing, which nothing else in the contract
          *     can evaluate. The object list operations take flat scalar parameters and
          *     cannot express a tree; membership needs a stored list; and the filtered
          *     export is audit-logged, so driving a live recount through it would write
@@ -9344,7 +9324,7 @@ export interface paths {
          *     POST because the filter tree is a structured body, not because anything
          *     is created. Nothing is: no row, no audit entry, no outbox event. That is
          *     the property that separates this from the export, and it is deliberate —
-         *     a preview a human triggers by typing must not be indistinguishable from
+         *     a preview a user triggers by typing must not be indistinguishable from
          *     an extraction they chose to perform.
          *
          *     Row-scoped like every read: the count and the page are what THIS caller
@@ -9377,8 +9357,8 @@ export interface paths {
          * Propose filter clauses for a list described in plain words.
          * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
          *     and answers the filter tree it describes, for the builder to show as ordinary
-         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
-         *     count the preview answers for it, and presses Save themselves.
+         *     editable clauses. Nothing is saved: the reader looks at the proposal, sees the match
+         *     count the preview answers for it, and saves it themselves.
          *
          *     **The model proposes, the engine decides.** The model sees the record type,
          *     the sentence, this caller's own filter vocabulary (field names, types,
@@ -11875,8 +11855,8 @@ export interface paths {
         put?: never;
         /**
          * Keep an address or a domain out of capture.
-         * @description A `workspace` rule takes admin or ops; a `user` rule takes any human seat and names the
-         *     caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
+         * @description A `workspace` rule takes admin or ops; a `user` rule takes any user or their agent and names
+         *     the caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
          */
         post: operations["createCaptureExclusion"];
         delete?: never;
@@ -12152,7 +12132,7 @@ export interface paths {
         put?: never;
         /**
          * Keep one party's mail to the contacts on it.
-         * @description Any human seat, for their own mail only — the hold names the caller and binds their
+         * @description Any user or their agent, for their own mail only — the hold names the caller and binds their
          *     connections. A domain hold covers its subdomains.
          *
          *     Holds mail captured from here on. Narrowing what is ALREADY captured is a separate call:
@@ -12254,7 +12234,7 @@ export interface paths {
         put?: never;
         /**
          * Declare another address as your own.
-         * @description Takes a human seat and nothing more: claiming your own address needs no grant, and the claim
+         * @description Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
          *     binds only your own mail. Not retroactive — mail already captured under the old reading
          *     stays, and a contact already minted from an alias stays until it is merged or removed.
          *     Idempotent on the folded value.
@@ -12528,7 +12508,8 @@ export interface paths {
          *     performed — the user removes the grant at the provider themselves. The stored credential
          *     IS deleted from the vault as part of this call, not merely retired for a later sweep.
          *     Idempotent. Already-captured activities are retained — they are real history; capture
-         *     simply stops. Human-only.
+         *     simply stops. Connecting again needs the provider's consent in a browser, so an agent asks
+         *     its user first.
          */
         post: operations["disconnectConnector"];
         delete?: never;
@@ -12567,7 +12548,7 @@ export interface paths {
          *
          *     Switched off, nothing from this mailbox is selected for the pass at all — the mail is
          *     not read for enrichment and then discarded, it is never read. Audited like every other
-         *     change to a connection. Human-only: an agent never changes a capture posture.
+         *     change to a connection.
          */
         put: operations["setConnectorSignatureEnrichment"];
         post?: never;
@@ -12652,7 +12633,7 @@ export interface paths {
         put?: never;
         /**
          * Dismiss the owner's current mailbox silence warning.
-         * @description Only the authenticated human owner's mailbox is changed. Dismissal lasts until
+         * @description Only the authenticated owner's mailbox is changed. Dismissal lasts until
          *     another mail delivery followed by three days of silence. Errors and stalled syncs
          *     cannot be dismissed. Repeating a dismissal of the same episode is harmless.
          *     The connection lifecycle audit records this setting without correspondence.
@@ -12700,8 +12681,8 @@ export interface paths {
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
          *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
-         *     separate, deliberate call. Human-only: an agent never decides what a contact's colleagues
-         *     may read of their correspondence.
+         *     separate, deliberate call. It decides what the owner's colleagues may read of their
+         *     correspondence, so an agent asks its user first.
          */
         put: operations["setConnectorMailPosture"];
         post?: never;
@@ -12750,7 +12731,7 @@ export interface paths {
          *
          *     A null `date` clears it. Setting, moving or clearing the date completes, archives and
          *     deletes nothing: it changes which new automatic suggestions are admitted. Audited like
-         *     every other change to a connection. Human-only, like every per-mailbox setting.
+         *     every other change to a connection.
          */
         put: operations["setConnectorHistoryBaseline"];
         post?: never;
@@ -12800,9 +12781,6 @@ export interface paths {
          *     It governs what this connector creates AFTERWARDS. Records already captured keep the
          *     filing they have — refiling a year of history under a word chosen today would claim
          *     they arrived with it.
-         *
-         *     Human-only: which word a source is filed under is a decision about a shared
-         *     vocabulary, not one an agent makes as a side effect of syncing.
          */
         put: operations["setConnectorContextTag"];
         post?: never;
@@ -14231,7 +14209,7 @@ export interface paths {
         put?: never;
         /**
          * Add a consumer-mail domain, or carve one out.
-         * @description Human session only — an agent never changes a workspace-wide capture posture. `kind:
+         * @description It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
          *     extra` marks a domain the baseline missed as consumer mail; any seat holding
          *     `capture_settings:create` (every seeded role but read_only) may contribute a NEW one.
          *     `kind: never` takes a domain back out of the baseline and wins over it — the only way
@@ -14299,12 +14277,11 @@ export interface paths {
          *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
-         *     Every role may read the list; changing an entry demands `company:update`
-         *     (admin/ops).
+         *     Every role may read the list; changing an entry demands `company:update`.
          */
         get: operations["listBlockedDomains"];
         /**
-         * Block a domain, or unblock one (admin/ops).
+         * Block a domain, or unblock one.
          * @description `admission: suppressed` refuses the domain a company; `admission: admitted` lets it in
          *     and KEEPS it in — a human decision is sticky, so no later verdict or heuristic may
          *     re-refuse a domain a contact deliberately admitted.
@@ -14440,7 +14417,7 @@ export interface paths {
          *     It does not destroy mail already captured. Purging what a rule matched is
          *     `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
          *
-         *     Takes a human seat and nothing more, because a personal exclusion is the caller's own
+         *     Takes a user or their agent and nothing more, because a personal exclusion is the caller's own
          *     boundary. Idempotent: pressing it twice answers the rule that already exists.
          */
         post: operations["discardDomainQuestion"];
@@ -15862,8 +15839,8 @@ export interface paths {
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
-         *     Gated on `privacy_request` at `read` and human-only, the same gate the subject-request
-         *     queue uses. A notice case says how a named contact was obtained and whether we have told
+         *     Gated on `privacy_request` at `read`, for a user or their agent, the same gate the
+         *     subject-request queue uses. A notice case says how a named contact was obtained and whether we have told
          *     them, which is the same disclosure that queue makes about who exercised a right — so an
          *     installation that delegated its privacy inbox delegated this with it, and no second grant
          *     has to be handed out.
@@ -15996,7 +15973,7 @@ export interface paths {
         };
         /**
          * Disclosure duties this installation owes, soonest deadline first.
-         * @description Acquisition-source reviews and notice duties, under human privacy-request read authority.
+         * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
          *     Pages use due time for duties and recorded time for reviews, with id as the tie-breaker.
@@ -16106,7 +16083,7 @@ export interface paths {
          *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
          *     confirm the id exists and disclose a message the caller may not see.
          *
-         *     Human-only. An agent that could read these would enumerate one seat's refused correspondence.
+         *     A connector is refused, because it would enumerate one seat's refused correspondence.
          */
         get: operations["getCommunicationReview"];
         put?: never;
@@ -16183,11 +16160,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     HUMAN-ONLY, AND THAT IS THE POINT. An agent running under somebody's passport inherits their
-         *     grants, so without this an agent could mint the very record that says a human decided. It
-         *     also needs the `communication_exception` object at `create`: directing a send is its own
-         *     authority, and a seat that may edit a contact has not thereby been given the right to act
-         *     against the engine's answer about them.
+         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
+         *     row names that user as the one who took it on, and names the agent that acted for them. A
+         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     a send is its own authority, and a seat that may edit a contact has not thereby been given
+         *     the right to act against the engine's answer about them.
          *
          *     The acknowledgement is required and the explanation must say something. Both are frozen on
          *     the record once written: an account of an override that its author could improve afterwards
@@ -16797,7 +16774,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pin a record to the retention floor, restricting it. Requires a stated reason; audited. */
+        /** Pin an activity to the retention floor, restricting it. Requires a stated reason; audited. */
         post: operations["pinActivityToFloor"];
         delete?: never;
         options?: never;
@@ -17364,7 +17341,7 @@ export interface paths {
          *     whether an ordinary business email may be sent — which is the question the
          *     confirm-your-details flow has to answer before it can send anything at all.
          *
-         *     Human-only. An agent never asserts that a contact met somebody or rang up.
+         *     An agent asks its user first, and its row names it, because the row is evidence.
          */
         post: operations["recordQualifyingEvent"];
         delete?: never;
@@ -17395,8 +17372,8 @@ export interface paths {
          *     POST /contacts/{id}/acquisition-request/retract, for the request the contact's acquisition
          *     records. Recording the same exchange again returns the withdrawn row and does not revive it.
          *
-         *     Human-only for the reason recording is: the exchange is a human's own statement about what
-         *     a contact said, and only a human withdraws it.
+         *     Open to a user's agent as recording is, and the agent asks first: the exchange is the
+         *     user's statement about what a contact said.
          */
         post: operations["retractQualifyingEvent"];
         delete?: never;
@@ -17425,8 +17402,8 @@ export interface paths {
          *     contact was obtained, with the moment and the seat that withdrew the request. No send rests
          *     on them any more, including a message already queued on them.
          *
-         *     Human-only for the reason a hand-recorded request is: a request is a human's statement about
-         *     what a contact said, and only a human withdraws it.
+         *     Open to a user's agent as a hand-recorded request is, and the agent asks first: a request
+         *     is the user's statement about what a contact said.
          */
         post: operations["retractAcquisitionRequest"];
         delete?: never;
@@ -23389,10 +23366,8 @@ export interface paths {
          *     that `version` changes nothing and answers 200.
          *
          *     Supersede and `import_source_busy` work as they do for
-         *     `createImportRun`. This call never answers `import_agent_busy`: only a
-         *     human session calls it, and the test it queues is that human's. That
-         *     409 holds an agent to one test at a time, and an agent tests through
-         *     `createImportRun`, which documents it.
+         *     `createImportRun`, including `import_agent_busy`, which holds an agent to
+         *     one test at a time.
          */
         post: operations["validateImportRun"];
         delete?: never;
@@ -26172,7 +26147,8 @@ export interface components {
             company_name?: string;
             /**
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
-             *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+             *     `human` decisions outrank every other. `agent`, an agent deciding for its user, outranks
+             *     every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
@@ -26180,7 +26156,7 @@ export interface components {
              *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -37079,7 +37055,7 @@ export interface components {
              * @description When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
              */
             assessed_at: string;
-            /** @description What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
+            /** @description What recorded this assessment: `human` for a user, `agent` for the agent acting for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
             readonly source: string;
             /** @description Who is on record as having judged it, when that is not whoever typed it in. */
             readonly source_author?: string;
@@ -71022,6 +70998,14 @@ export interface operations {
             query?: never;
             header?: {
                 /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+                /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -71146,6 +71130,14 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
