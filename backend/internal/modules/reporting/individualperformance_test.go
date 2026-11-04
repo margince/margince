@@ -20,7 +20,7 @@ func TestEvidenceKeepsAWithheldOwnerOutOfItsGroupAndItsRows(t *testing.T) {
 	readerID, colleagueID := openapi_types.UUID(reader), openapi_types.UUID(colleague)
 	facts := []Fact{
 		{Metric: "bookings_won", ContextID: "interval", OwnerID: reader, Row: crmcontracts.ReportingEvidenceRow{Key: "mine", OwnerId: &readerID}},
-		{Metric: "bookings_won", ContextID: "interval", OwnerID: colleague, OwnerWithheld: true, Row: crmcontracts.ReportingEvidenceRow{Key: "theirs", OwnerId: &colleagueID}},
+		{Metric: "bookings_won", ContextID: "interval", OwnerID: colleague, OwnerLabel: "Hidden colleague", StageLabel: "Proposal", OwnerWithheld: true, Row: crmcontracts.ReportingEvidenceRow{Key: "theirs", OwnerId: &colleagueID}},
 	}
 	grouped, err := evidencePage(crmcontracts.ReportingContext{}, facts, "bookings_won", "interval", "owner:"+colleague.String(), nil, nil, 50)
 	if err != nil {
@@ -33,7 +33,7 @@ func TestEvidenceKeepsAWithheldOwnerOutOfItsGroupAndItsRows(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(all.Rows) != 2 || all.Rows[0].OwnerId == nil || all.Rows[1].OwnerId != nil {
+	if len(all.Rows) != 2 || all.Rows[0].OwnerId == nil || all.Rows[1].OwnerId != nil || all.Rows[1].OwnerLabel != nil {
 		t.Errorf("ungrouped evidence rows = %+v, want both rows, the withheld one with no owner", all.Rows)
 	}
 }

@@ -3,8 +3,9 @@
 
 package consent
 
-// Where this installation is established, which is what selects the messaging
-// rules an outbound decision is taken under.
+// Where the installation's default legal entity is established. It is the
+// data-protection selector's answer for a sender with no entity of their own
+// (ruleselectors.go). Marketing rules follow each recipient instead.
 //
 // The setting lives in identity, and a module never imports a sibling — so the
 // reader is injected and this file holds only the seam.
@@ -38,14 +39,9 @@ func (f InstallationCountryFunc) InstallationCountryTx(ctx context.Context, tx p
 	return f(ctx, tx)
 }
 
-// WithInstallationCountry injects the reader behind jurisdiction resolution.
-//
-// It lands on the STORE rather than the gate because two callers need the
-// jurisdiction's windows and only one of them is a gate: the send path asks
-// through the engine, and GET /contacts/{id}/consent/guard asks through the
-// store. A preview that answered on a different window than the send would be
-// the second answer to one question, which is the failure this repository
-// spends most of its gates preventing.
+// WithInstallationCountry injects the reader behind the data-protection
+// selector's default. It lands on the STORE, which both the send path and the
+// request writers read through.
 func (g *Gate) WithInstallationCountry(r InstallationCountryReader) *Gate {
 	g.store.country = r
 	return g
@@ -58,25 +54,17 @@ func (s *Store) WithInstallationCountry(r InstallationCountryReader) *Store {
 	return s
 }
 
-// WithInstallationCountry is the handlers-side spelling. The consent guard
-// endpoint reads the same windows the send path binds a decision to, so it
-// needs the same jurisdiction.
+// WithInstallationCountry is the handlers-side spelling, for the request
+// deadline the handlers preview.
 func (h Handlers) WithInstallationCountry(r InstallationCountryReader) Handlers {
 	h.store = h.store.WithInstallationCountry(r)
 	return h
 }
 
-// installationCountry resolves the code, or empty when nothing is wired or
-// nothing is set.
-//
-// An unwired reader answers empty rather than failing, and empty selects NO
-// jurisdiction rules. That direction is the safe one for what currently reads
-// this: the frequency cap is a ceiling a pack adds, so its absence leaves the
-// consent requirement — which binds everywhere and is enforced before any pack
-// is consulted — doing exactly what it did before. A reader added later that
-// RELAXES a rule on the strength of a country must not use this, because it
-// would then relax on an unstated one.
-func (s *Store) installationCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
+// defaultEntityCountry resolves the default entity's code, or empty when
+// nothing is wired or nothing is set. Empty selects no pack: the GDPR month for
+// request deadlines and no pack disclosures.
+func (s *Store) defaultEntityCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 	if s.country == nil {
 		return "", nil
 	}

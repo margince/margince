@@ -26,8 +26,8 @@ import {
   useT,
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { companyActivityVerdict } from "./companyactivity";
 import {
   companyDimRows,
@@ -65,7 +65,7 @@ export function CompanyHowItStands({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
   // The 360's page seeds the line; a wider zoom pages older rows from the list.

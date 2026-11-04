@@ -527,7 +527,6 @@ head
 header's
 headings
 health
-healthy
 held
 help
 here
@@ -1263,7 +1262,6 @@ two
 type
 unarchive
 unassigned
-unchecked
 undelete
 under
 undo

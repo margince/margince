@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go -->
+<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
 # The ingress gate, auto-capture, and the verdict engine
 
 What happens to a message **after** a connector pulled it from an outside provider, and before it
@@ -332,6 +332,23 @@ mailbox owner alone:
   colleague which companies this user is going after. The record opens up on its own the first time that address replies.
 - **The thread is on a privacy hold.** A contact visible to the whole workspace, created from mail on
   hold, would show the counterparty that the hold exists to keep private.
+
+A privacy hold on a contact ends when nothing holds it any more. That happens when the thread
+verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
+with its ID and its mail. Every check that kept it private is asked again first:
+
+- Every live message with any of the contact's addresses must have stopped holding it. That covers a
+  colleague's mailbox, a legal hold and a marked subject. It also covers a held conversation that
+  started after the sender was judged.
+- Every address of the contact must have been judged a business contact, and nothing else. A
+  sender question still open, an erased address or any other answer keeps the contact private.
+- A contact a user made private stays private, and so does a contact with no record of why it is
+  private.
+- Mail the owner wrote to an address that never answered keeps the contact private for that reason
+  instead. It opens up when the address replies, as above.
+
+The engine checks this when a thread clears, and its next pass checks what that missed. A background
+data task checks the contacts held before this check existed.
 
 Marking the domain is a separate step from hiding the mail. A newsletter company has a real web
 site. Without the mark, the company check would create it the next time someone from that company

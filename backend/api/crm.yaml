@@ -8768,6 +8768,13 @@ paths:
         - name: kind
           in: query
           schema: { type: string, enum: [email, call, meeting, note, task, message] }
+        - name: call_outcome
+          in: query
+          description: Calls that ended this way. Matches calls only.
+          schema:
+            type: string
+            enum: [reached, not_reached, voicemail, call_back_later, put_through]
+            x-enum-varnames: [ListCallOutcomeReached, ListCallOutcomeNotReached, ListCallOutcomeVoicemail, ListCallOutcomeCallBackLater, ListCallOutcomePutThrough]
         - name: channel_provider
           in: query
           description: |
@@ -9289,6 +9296,70 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/{id}/reader-rendering:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities, AI]
+      operationId: renderActivityForReader
+      # on-miss: text already in the reader's language, or past the limit, answers
+      # without a model call.
+      x-waits-on-model: on-miss
+      # Human-only: a reading aid for the member at the screen, paid from the
+      # workspace's model budget. An agent reads the original text through
+      # read_record and writes in any language itself.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: Show one note, mail or meeting in the reader's own language.
+      description: |
+        Writes what one note, email, meeting or call says in the reader's language, for that
+        reader alone. It is not a word-for-word translation: names, numbers, amounts, dates,
+        addresses, links, commitments and questions are kept exactly, and the phrasing is
+        what a native speaker of the target language would write. Nothing is stored: no
+        copy, no audit row and no event, and the AI call keeps no payload. The original stays
+        where it is, one click away in the client.
+
+        The target is `locale` when sent, else the language the reader chose for their seat,
+        else the installation's base language. A mail is rendered from its current message,
+        without the quoted history below it.
+
+        The source language is read from the text as it stands; the stored `language` label
+        decides only when the text cannot be placed. When the text is already in the target
+        language the answer is `unchanged: true` and the original text, with no model call.
+        That holds for a known source language equal to the target, and for an unknown one the
+        model judges to be in the target already.
+
+        Answers 404 for an activity the caller cannot read the content of: missing, outside
+        their scope, outside its audience, held under a retention obligation, archived, or of
+        a kind with no text (`task`, a row with neither subject nor body). The activity is read
+        again after the model answers, and one that stopped being readable or whose text or
+        version changed meanwhile answers 404 too. With no AI model it answers 409
+        `ai_not_configured`. Text past the limit the model can write back in one answer is 422
+        `too_long`, also when it is already in the target language. A model that was asked
+        and did not answer is 503 `assistant_unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivityReaderRenderingRequest' }
+      responses:
+        '200':
+          description: The text in the reader's language, or the original marked unchanged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReaderRendering' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'The model was asked and did not answer (`code: assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /activities/{id}/pipeline:
     parameters:
@@ -19081,6 +19152,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ConnectConnectorResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/callback:
@@ -19484,6 +19556,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BackfillPreview' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502':
@@ -19519,6 +19592,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BackfillStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
     get:
@@ -19792,7 +19866,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -27846,6 +27920,43 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /voice-profiles/{id}/sources/sent-mail:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Voice]
+      operationId: learnVoiceFromSentMail
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Learn the owner's voice from their own most recent sent mail, once, on request.
+      description: |
+        Reads up to the caller's 200 most recent sent mails and files the words they wrote
+        in each as an email source of their own voice profile. It reads only mail sent from
+        the caller's own connected mailbox: never a colleague's mail, a colleague's copy, or
+        a shared mailbox. Mail limited to its participants or to selected readers, and mail
+        whose subject marks it confidential, is left out.
+
+        Quoted replies, forwards, signatures and legal footers are cut before a mail is
+        stored. A mail that is already a source is left as it is, so a mail the owner removed
+        or excluded stays out. The call reads mail only when it is made; nothing reads sent
+        mail on a schedule. It makes no model call: the stored text reaches a model only in
+        the next build the owner starts.
+
+        Human-only for security: reading a mailbox into a voice profile is the owner's own
+        decision, made by pressing the button.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: What this call learned, and the meter after it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSentMailLearned' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /voice-profiles/{id}/sources/{sourceId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33280,9 +33391,8 @@ paths:
         colleague's working hours through this API, for the reason the setting
         exists at all.
 
-        The times are read on the timezone sent with them, which is also stored:
-        it is the contact's own zone and the product had no author for it before
-        this. Sending the browser's zone is the expected first write.
+        The times are read on the caller's own time zone, which is set through
+        `saveMyTimezone` and is not part of this request.
 
         Narrowing these hours narrows what a customer can book. A screen that
         does not say so at the moment of saving has built a trap rather than a
@@ -33291,13 +33401,49 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/WorkingHours' }
+            schema: { $ref: '#/components/schemas/SaveWorkingHoursRequest' }
       responses:
         '200':
           description: The hours as stored.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MyWorkingHoursResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/timezone:
+    put:
+      tags: [Identity]
+      operationId: saveMyTimezone
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Set the time zone your own times are shown in.
+      description: |
+        Always the CALLER's own, never anybody else's. An admin does not set a
+        colleague's time zone through this API.
+
+        One zone per user. Booking reads your working hours on it, and mail
+        sent to you is timed by it.
+
+        `source` says who picked the zone. `browser` is the app's first guess
+        from the browser, and is stored only while no zone is stored. `chosen`
+        is the user's own pick: it is always stored and marks the zone as
+        chosen. Saving the zone already stored writes nothing.
+
+        Not open to agents: an agent acting for a user must not change the
+        clock that user's times, bookings and mail are read on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMyTimezoneRequest' }
+      responses:
+        '200':
+          description: The caller's seat, with the zone as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -35722,6 +35868,18 @@ components:
           examples:
             rbac:
               value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
+    RoleCannotCapture:
+      description: |
+        The caller's role or seat cannot record what capture writes (activities, and the contacts
+        and leads a mailbox brings in), so no mailbox of theirs can be captured
+        (`code: role_cannot_capture`). Nothing is stored. An admin changes their role.
+        `details.missing` names what is lacking, as `SeatCapture.missing` does.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            role:
+              value: { type: 'https://errors.gradion.com/role_cannot_capture', title: Forbidden, status: 403, code: role_cannot_capture, detail: 'Your role cannot record activities, so this mailbox cannot be captured. Ask an admin to change your role.' }
     PermissionDenied:
       description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
       content:
@@ -38681,6 +38839,9 @@ components:
         concern: { $ref: '#/components/schemas/CaptureConcernKind' }
         since: { type: [string, 'null'], format: date-time }
         last_success_at: { type: [string, 'null'], format: date-time }
+        error_class:
+          type: [string, 'null']
+          description: The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
 
     CaptureConnection:
       type: object
@@ -38709,7 +38870,7 @@ components:
         concern_since: { type: [string, 'null'], format: date-time, description: When the current concern began. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
         last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
-        last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
+        last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member''s role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
@@ -39546,6 +39707,14 @@ components:
             How much of a mail's text Margince could decode. Absent when the content is
             withheld or the body was erased.
         thread_key: { type: [string, 'null'] }
+        language:
+          type: [string, 'null']
+          readOnly: true
+          enum: [de, en, vi, null]
+          description: |
+            The language the message is written in, as `Activity.language` records it. Null
+            when withheld, and when it could not be told. A client offers the reader's own
+            language beside a message in another one or in an unknown one.
         from:
           type: array
           items: { $ref: '#/components/schemas/EmailParty' }
@@ -39893,6 +40062,27 @@ components:
           description: |
             Whether a connect started right now would proceed, per provider a contact can choose
             between, so the connect screen can say so before the click rather than after a 501.
+        seat_capture: { $ref: '#/components/schemas/SeatCapture' }
+    SeatCapture:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether the caller's own role and seat let capture write, asked by the same check connect
+        and every sync ask. False hides every connect button; a connected mailbox stops at its
+        next sync.
+      required: [allowed]
+      properties:
+        allowed: { type: boolean }
+        reason:
+          type: [string, 'null']
+          enum: [role_cannot_capture, null]
+          description: Why `allowed` is false; null when it is true.
+        missing:
+          type: [string, 'null']
+          enum: [activity, contact, lead, seat, null]
+          description: |
+            What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+            `lead`, or `seat` for a read seat. Null when `allowed` is true.
     CaptureProviderAvailability:
       type: object
       description: |
@@ -39906,12 +40096,13 @@ components:
         provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between. }
         reason:
           type: string
-          enum: [ready, app_missing, app_unusable, unsupported]
+          enum: [ready, app_missing, app_unusable, unsupported, role_cannot_capture]
           description: |
             `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
             app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
             is a different fix from registering one. `unsupported`: this deployment does not serve the
-            provider at all.
+            provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+            capture writes, for every provider alike (`seat_capture` says so once).
     PublicOriginStatus:
       type: object
       description: |
@@ -45510,6 +45701,7 @@ components:
             listed here, so a task read out of a message the reader may not open never reaches
             this field.
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.' }
         overdue: { type: boolean }
         assignee_id: { type: [string, 'null'], format: uuid }
         assignee_name:
@@ -48619,6 +48811,7 @@ components:
         claim_id: { type: string, format: uuid }
         days_overdue: { type: integer }
         due_at: { type: string }
+        due_has_time: { type: boolean, description: True when due_at is an agreed time of day. }
         quote: { type: string }
         source: { type: string }
         source_activity_id: { type: string, format: uuid }
@@ -48851,6 +49044,7 @@ components:
       required: [as_of, commitments]
       properties:
         as_of: { type: string }
+        time_zone: { type: string, description: 'The installation zone, where a due date is a day.' }
         commitments: { type: array, items: { $ref: '#/components/schemas/AgentCommitment' } }
     IntroPaths:
       description: 'What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.'
@@ -49395,11 +49589,9 @@ components:
       properties:
         start_time:
           type: string
-          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
           description: The first minute of the working day, `HH:MM` on the contact's own clock.
         end_time:
           type: string
-          pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
           description: |
             The minute the working day ends, exclusive. `24:00` is the honest
             spelling of "until midnight" and is why this is not the same pattern
@@ -49413,10 +49605,55 @@ components:
         timezone:
           type: string
           description: |
-            The IANA zone the two times are read on. A contact who has never
-            chosen one is read on the installation's reporting timezone, which
-            is what makes the unset case work rather than scheduling everybody
-            on UTC.
+            The IANA zone the two times are read on: the caller's own time zone.
+            A contact with no stored zone is read on the installation's
+            reporting timezone, which is what makes the unset case work rather
+            than scheduling everybody on UTC. Read-only here; it is set through
+            `saveMyTimezone`.
+
+    SaveWorkingHoursRequest:
+      type: object
+      required: [start_time, end_time, days]
+      description: |
+        The hours and days to store. The zone they are read on is the caller's
+        own time zone, set through `saveMyTimezone`.
+      properties:
+        timezone:
+          type: string
+          deprecated: true
+          description: |
+            An older client's way to set the caller's time zone with the hours. When
+            present it is stored as the caller's own chosen zone, in the same
+            transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+        start_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: The first minute of the working day, `HH:MM` on the contact's own clock.
+        end_time:
+          type: string
+          pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$'
+          description: The minute the working day ends, exclusive. `24:00` means until midnight.
+        days:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+          description: The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+
+    SaveMyTimezoneRequest:
+      type: object
+      additionalProperties: false
+      required: [timezone, source]
+      properties:
+        timezone:
+          type: string
+          description: An IANA zone name, such as `Europe/Berlin`.
+        source:
+          type: string
+          enum: [browser, chosen]
+          description: |
+            `browser` is the app's guess from the browser, stored only while no
+            zone is stored. `chosen` is the user's own pick, always stored.
 
     MyWorkingHoursResponse:
       type: object
@@ -50243,7 +50480,8 @@ components:
       properties:
         id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
         label: { type: string }
-        value: { type: string }
+        value: { type: string, description: Raw source quantity with its unit. }
+        display: { type: string, description: Locale-formatted quantity for reader text. }
       additionalProperties: false
     ReportSetupRequest:
       type: object
@@ -53130,9 +53368,10 @@ components:
           enum: [de, en, vi, null]
           description: >-
             What language this message is written in, read from its own text when it
-            was captured. Null on a message whose text was too short to tell, on
-            anything hand-logged, and on every row captured before this was recorded —
-            all of which mean "not known", never "not any of these".
+            was captured, or when a note, meeting or call was logged or its text edited.
+            Null on a message whose text was too short to tell, on a hand-logged email or
+            task, and on every row written before this was recorded — all of which mean
+            "not known", never "not any of these".
 
             A detector's observation, not a declaration by its author, and it describes
             the message rather than the contact: the same contact writes in two languages
@@ -53147,6 +53386,7 @@ components:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
         due_at: { type: [string, 'null'], format: date-time, description: Task only. }
+        due_has_time: { type: boolean, readOnly: true, description: 'Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.' }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid, description: Task only. }
         is_done: { type: boolean, default: false, description: Task only. }
@@ -53252,13 +53492,14 @@ components:
           type: string
           nullable: true
           readOnly: true
-          enum: [product, calendar, sending_system]
+          enum: [product, calendar, sending_system, bulk]
           description: >-
             What sent this activity when no human wrote it, or null when a human did. `product`
             is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a
-            response or a cancellation, and `sending_system` mail from a sending system such as a
-            file-share notice, a notification or a delivery report. Such a row is never counted as
-            an exchange, a last contact or a direction of the relationship.
+            response or a cancellation, `sending_system` mail from a sending system such as a
+            file-share notice, a notification or a delivery report, and `bulk` mail that carried a
+            List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted
+            as an exchange, a last contact or a direction of the relationship.
         voice:
           allOf: [{ $ref: '#/components/schemas/ActivityVoice' }]
           readOnly: true
@@ -53302,8 +53543,13 @@ components:
             Whether this response carries the activity's content. `withheld` means the caller may
             discover the row (a linked record is theirs to read) but is not in its audience: only the
             safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience,
-            links, is_done/due_at for a task, provenance and timestamps — and subject, body,
+            links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body,
             thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [ActivityCallOutcomeNone, ActivityCallOutcomeReached, ActivityCallOutcomeNotReached, ActivityCallOutcomeVoicemail, ActivityCallOutcomeCallBackLater, ActivityCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
         invitation_status:
           type: [string, 'null']
@@ -53546,6 +53792,7 @@ components:
         subject: { type: string, minLength: 1 }
         body: { type: [string, 'null'] }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean }
         assignee_id: { type: [string, 'null'], format: uuid }
 
     CreateTaskRequest:
@@ -53576,6 +53823,7 @@ components:
         subject: { type: string, minLength: 1, description: 'What has to be done, as one line.' }
         body: { type: [string, 'null'], description: 'Detail, if one line is not enough.' }
         due_at: { type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.' }
+        due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.' }
         assignee_id: { type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.' }
         links:
           type: array
@@ -53644,6 +53892,7 @@ components:
             stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`.
             `day` without `occurred_at` is refused with 422.
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'Task only. True: `due_at` is a time of day; `remind_at` defaults to it.' }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid }
         host_user_id:
@@ -53672,6 +53921,11 @@ components:
             than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [CreateCallOutcomeNone, CreateCallOutcomeReached, CreateCallOutcomeNotReached, CreateCallOutcomeVoicemail, CreateCallOutcomeCallBackLater, CreateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -53963,9 +54217,15 @@ components:
             instant falls on in the installation's zone. `instant` on a `day` activity needs
             `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.' }
         assignee_id: { type: [string, 'null'], format: uuid }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [UpdateCallOutcomeNone, UpdateCallOutcomeReached, UpdateCallOutcomeNotReached, UpdateCallOutcomeVoicemail, UpdateCallOutcomeCallBackLater, UpdateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -57375,6 +57635,47 @@ components:
           type: [string, 'null']
           description: Opaque cursor for the next page, or null if none.
 
+    ActivityReaderRenderingRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        locale:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The language to show the text in, normally the reader's interface language.
+            Absent means the language the reader chose for their seat, else the
+            installation's base language.
+    ActivityReaderRendering:
+      type: object
+      description: |
+        One activity's text in one reader's language, written for this reader and stored
+        nowhere.
+      required: [activity_id, target_language, unchanged, generated_at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        source_language:
+          type: [string, 'null']
+          enum: [de, en, vi, null]
+          description: The language the original is written in, null when it could not be told.
+        target_language:
+          type: string
+          enum: [de, en, vi]
+        subject:
+          type: [string, 'null']
+          description: The subject in the target language, null when the activity has none.
+        body:
+          type: [string, 'null']
+          description: The text in the target language, null when the activity has none.
+        unchanged:
+          type: boolean
+          description: |
+            True when the original is already in the target language. `subject` and `body`
+            are then the original text.
+        model_used:
+          type: string
+          description: The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
+        generated_at: { type: string, format: date-time }
     FilterProposalRequest:
       type: object
       description: A list described in plain words, to be turned into filter clauses.
@@ -57393,7 +57694,8 @@ components:
           enum: [en, de, vi]
           description: |
             The reader's interface language, which the reasons in `unsupported` are
-            written in. Absent means the installation's base language.
+            written in. Absent means the language the reader chose for their seat, else the
+            installation's base language.
 
     FilterProposal:
       type: object
@@ -57846,6 +58148,7 @@ components:
       - leads_qualified
       - lead_first_response
       - leads_awaiting_response
+      - leads_awaiting_response_now
       - partner_pipeline
       - partner_won
       - partner_commission
@@ -58801,6 +59104,13 @@ components:
         `priced_count` and by `fx_missing_count`.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Open deals eligible for this forecast period.
+        open_evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline_minor:
           type: integer
           format: int64
@@ -59420,6 +59730,8 @@ components:
           description: >-
             How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC
             date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+        owner_label: { type: string }
+        stage_label: { type: string }
         owner_id: *id002
         source_type:
           type: string
@@ -59700,7 +60012,16 @@ components:
             The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said.
             Read through one rule on both sides: this when set, else the first word of
             `display_name`. Present on the caller's own seat; absent on the roster.
-        timezone: { type: string, default: UTC, description: IANA name. }
+        timezone:
+          type: string
+          description: >
+            The IANA zone this user's own times are shown in. Absent when no zone is stored;
+            UTC is a zone somebody can pick, so absent is not UTC.
+        timezone_chosen:
+          type: boolean
+          description: >
+            Whether the user chose `timezone` themselves, rather than the app storing the
+            browser's guess. Present on the caller's own seat; absent on the roster.
         locale:
           type: string
           enum: [en, de, vi]
@@ -59764,6 +60085,10 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        connected_mailboxes:
+          type: integer
+          readOnly: true
+          description: How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
         invite_email_state:
           type: [string, 'null']
           enum: [sending, sent, failed, null]
@@ -62495,6 +62820,10 @@ components:
         key: { type: string, description: The role key an invite or a role change sends. }
         name: { type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this. }
         is_system: { type: boolean, description: True for a role the product ships. }
+        captures_mail:
+          type: boolean
+          readOnly: true
+          description: Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
 
     CreateRoleRequest:
       type: object
@@ -64390,6 +64719,7 @@ components:
         - owed_verdict
         - propose_roles
         - rate_extract
+        - reader_rendering
         - report_interpret
         - report_setup
         - request_settlement
@@ -64415,7 +64745,8 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         request_settlement, account_scan, tag_suggest, report_setup, report_interpret]
+         request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
+         reader_rendering]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -68525,6 +68856,19 @@ components:
         included: { type: boolean }
         weight: { type: number, minimum: 0, maximum: 2 }
 
+    VoiceSentMailLearned:
+      type: object
+      description: |
+        The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+        each of them is `added`, `already_present` (a source already, left as it is), or
+        `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+      required: [read, added, already_present, no_own_words, summary]
+      properties:
+        read: { type: integer, minimum: 0 }
+        added: { type: integer, minimum: 0 }
+        already_present: { type: integer, minimum: 0 }
+        no_own_words: { type: integer, minimum: 0 }
+        summary: { $ref: '#/components/schemas/VoiceCorpusSummary' }
     VoiceIngestStats:
       type: object
       description: What the speaker filter did to one ingested source; kept words are the only words that count.
@@ -71883,6 +72227,7 @@ components:
             is not the reader's. Without this those rows read identically to their own,
             and the row nobody owns — the whole point of that scope — cannot say so.
         due_at: { type: string, format: date-time, description: "When this is due (tasks), or when it lapses (approvals)." }
+        due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
@@ -72266,7 +72611,7 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: { $ref: '#/components/schemas/TeamWeekReach' }
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
@@ -73648,6 +73993,7 @@ components:
             the meeting and no colleague organized it. `label` follows
             `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
+        due_has_time: { type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string

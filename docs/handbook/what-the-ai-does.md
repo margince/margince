@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -31,6 +31,16 @@ To fill deal fields from a file, open the company's **Documents** tab and file t
 
 Margince shows each field it found with the text it read it from. Choose **Accept {count} fields** to save them, or **Dismiss**. Nothing is written to the deal until you accept. A document filed on the company offers no reading.
 Also called: extract from contract, read a PDF, parse an offer.
+
+### Can I read a note or an email in my own language?
+Yes. Under a note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
+
+The button also shows when Margince cannot tell which language a text is in. If the text is already in your language, it says so. Nothing is saved: the version in your language is for you, and nobody else sees it. A text that is too long is refused with that reason; read the original instead.
+Also called: translation, show in English, read in German.
+
+### Which language does the AI write in?
+Summaries on a record, such as the company overview or the relationship summary, are read by everyone who can open the record. They use the language your administrator set for the installation. An answer only you see, such as **Ask about this company**, uses the language you set for yourself.
+Also called: AI language, wrong language, summary in English.
 
 ### What happens to my mail and enrichment while the AI provider is down?
 While an AI provider is down, out of credit or refusing its key, Margince stops calling it.

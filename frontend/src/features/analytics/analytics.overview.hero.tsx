@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import { Meter } from "../../design-system/readings";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
 import {
@@ -90,7 +90,7 @@ function TargetProgress({
               target: money(comparison.target),
             })
           : t("analytics.hero.attained", {
-              percent: formatNumber(Math.round(percent), locale),
+              percent: formatAnalyticsNumber(Math.round(percent), locale),
               target: money(comparison.target),
             })}
       </p>

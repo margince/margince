@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "../ai/ai-price-sync";
@@ -22,7 +22,7 @@ import { FxRatesCard } from "./rates";
 const viewer = vi.hoisted(() => ({ zone: undefined as string | undefined }));
 vi.mock("../../format/timezone", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../format/timezone")>();
-  return { ...actual, viewerZone: () => viewer.zone ?? actual.viewerZone() };
+  return { ...actual, browserZone: () => viewer.zone ?? actual.browserZone() };
 });
 
 // Each price sheet has three honest states, and a grant picks which one:
@@ -416,7 +416,7 @@ describe("the rate sheets", () => {
     await user.click(pickToday);
 
     expect(effective.value).toBe(
-      formatDate(todayIn(AI_RATE_DAY_ZONE), "en", viewerZone()),
+      formatDate(todayIn(AI_RATE_DAY_ZONE), "en", browserZone()),
     );
   });
 
@@ -439,7 +439,7 @@ describe("the rate sheets", () => {
       name: "Effective",
     });
 
-    expect(effective.value).toBe(formatDate("2026-07-21", "en", viewerZone()));
+    expect(effective.value).toBe(formatDate("2026-07-21", "en", browserZone()));
   });
 
   it("shows write affordances for an admin", async () => {

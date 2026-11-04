@@ -13,7 +13,6 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { isMessageKey, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -22,6 +21,7 @@ import {
   leadWriteKeys,
 } from "../../lib/leadkeys";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./leadsignals.css";
 
 type SetSignalRequest = components["schemas"]["SetLeadManualSignalRequest"];
@@ -157,7 +157,7 @@ export function LeadManualSignals({
 }: Readonly<{ id: string; readOnlyReason?: string; onSaved?: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const signals = useManualSignals(id);
   const catalog = useLeadSignalCatalog();

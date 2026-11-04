@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -55,6 +56,9 @@ const (
 	classAuth        errorClass = "auth"
 	classHistoryGone errorClass = "history_gone"
 	classInternal    errorClass = "internal"
+	// classForbidden is a member whose role or seat no longer lets capture
+	// write. Their admin, not the provider, has to fix it.
+	classForbidden errorClass = "forbidden"
 )
 
 // classifySyncError maps a connector failure onto the shared vocabulary. Any
@@ -69,6 +73,8 @@ func classifySyncError(err error) errorClass {
 		return classUnreachable
 	case errors.Is(err, connector.ErrCursorGone):
 		return classHistoryGone
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return classForbidden
 	default:
 		return classInternal
 	}
@@ -131,12 +137,12 @@ func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectio
 //
 // Three guards, each of which is a way this could otherwise go wrong:
 //
-//   - Only a run the CREDENTIAL ended. `auth` is the one class whose remedy is a
-//     human reconnecting, and a sync succeeding on this connection is the proof
-//     they did — the same evidence, arriving on the same write, that flips the
-//     connection back to connected. That makes the revival self-limiting: while
-//     the grant is still refused no sync succeeds, so nothing revives. Every
-//     other class is left alone, because no reconnection answers it and retrying
+//   - Only a run a human fix ended: `auth` (they reconnect) or `forbidden`
+//     (an admin restores their role). A sync succeeding on this connection is
+//     the proof of either — the same evidence, arriving on the same write, that
+//     flips the connection back to connected. That makes the revival
+//     self-limiting: while the cause stands no sync succeeds, so nothing
+//     revives. Every other class is left alone, because no reconnection answers it and retrying
 //     it on a two-minute sync interval would be a loop. The transient ladder is
 //     deliberately NOT spent here: a run ended by a revoked grant needs its
 //     human, not a retry, and that ladder measures something else.
@@ -166,14 +172,14 @@ func reviveTruncatedBackfillTx(ctx context.Context, tx pgx.Tx, connectionID ids.
 		         SELECT id FROM capture_backfill
 		          WHERE connection_id = $1
 		            AND status = 'error'
-		            AND last_error_class = $2
+		            AND last_error_class = ANY($2)
 		            AND cursor IS NOT NULL
 		          ORDER BY started_at DESC
 		          LIMIT 1)
 		   AND NOT EXISTS (
 		         SELECT 1 FROM capture_backfill
 		          WHERE connection_id = $1 AND status IN ('queued','running'))`,
-		connectionID, string(classAuth))
+		connectionID, []string{string(classAuth), string(classForbidden)})
 	if err != nil {
 		return fmt.Errorf("capture: reviving a truncated backfill: %w", err)
 	}
@@ -222,6 +228,10 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 		}
 		now := r.now()
 
+		priorClass, err := priorErrorClassTx(ctx, tx, connectionID)
+		if err != nil {
+			return err
+		}
 		var failures int
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_sync_state (connection_id, next_sync_at,
@@ -261,10 +271,18 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			if errors.As(syncErr, &rl) && rl.RetryAfter > delay {
 				delay = rl.RetryAfter
 			}
+		case classForbidden:
+			// No retry can fix a role, so the screen shows the error at once.
+			// The check repeats at the normal mail interval rather than on the
+			// backoff ladder, so a restored role resumes on the next tick.
+			var parkErr error
+			if delay, parkErr = parkForbiddenTx(ctx, tx, connectionID); parkErr != nil {
+				return parkErr
+			}
 		default:
 		}
 
-		if failures >= degradeAfterFailures {
+		if failures >= degradeAfterFailures && class != classForbidden {
 			// Degraded, probed daily — never a tombstone. One success in the
 			// daily probe flips the status back (recordSyncSuccess).
 			delay = errProbeInterval
@@ -282,16 +300,52 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			return err
 		}
 
-		// The class is on the row; the detail belongs to the operational
-		// ledger (0078's rationale, kept).
-		if _, err := storekit.LogSystem(ctx, tx, "capture_sync_error", map[string]any{
-			detailConnectionID: connectionID.String(),
-			"class":            string(class),
-			"failures":         failures,
-			"detail":           syncErr.Error(),
-		}); err != nil {
-			return err
-		}
-		return nil
+		return logSyncFailureTx(ctx, tx, connectionID, class, priorClass, failures, syncErr)
 	})
+}
+
+// priorErrorClassTx is the class the connection's last failure left; empty
+// before any failure.
+func priorErrorClassTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) (errorClass, error) {
+	var prior *string
+	err := tx.QueryRow(ctx, `SELECT last_error_class FROM capture_sync_state WHERE connection_id = $1`,
+		connectionID).Scan(&prior)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	if prior == nil {
+		return "", nil
+	}
+	return errorClass(*prior), nil
+}
+
+// logSyncFailureTx writes the failure's detail to the operational ledger; the
+// row carries only the class (0078's rationale, kept). A forbidden mailbox
+// fails on every tick until an admin acts, so it logs once per streak.
+func logSyncFailureTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, class, prior errorClass, failures int, syncErr error) error {
+	if class == classForbidden && prior == classForbidden {
+		return nil
+	}
+	_, err := storekit.LogSystem(ctx, tx, "capture_sync_error", map[string]any{
+		detailConnectionID: connectionID.String(),
+		"class":            string(class),
+		"failures":         failures,
+		"detail":           syncErr.Error(),
+	})
+	return err
+}
+
+// parkForbiddenTx marks a connection whose member may no longer capture as
+// failed and answers the delay until the next check: the mail interval.
+func parkForbiddenTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) (time.Duration, error) {
+	if _, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'error'
+		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID); err != nil {
+		return 0, err
+	}
+	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(interval) * time.Second, nil
 }

@@ -18,11 +18,11 @@ import { useToast } from "../../design-system/toast";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./capture-senders.css";
 
 // What the classifier decided about each sender this mailbox brought in, and
@@ -203,7 +203,7 @@ function SenderTable({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const columns: DataTableColumn<SenderDecision>[] = [
     {
       key: "address",
@@ -350,7 +350,7 @@ export function AwaitingContacts({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const name = (row: AwaitingContact) =>
     row.display_name ?? row.emails[0] ?? null;
   const open = (row: AwaitingContact) =>
@@ -416,7 +416,7 @@ export function AwaitingContacts({
 function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   if (row.overruled) {
     return (
       <CellStack>

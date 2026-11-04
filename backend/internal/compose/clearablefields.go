@@ -57,7 +57,8 @@ var clearableFields = map[string][]string{
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},
-	"activity": {},
+	// How a call ended: a wrong pick goes back to "no outcome".
+	"activity": {"call_outcome"},
 }
 
 // canClear reports whether this record type's update path can set the field to

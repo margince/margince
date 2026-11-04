@@ -10,7 +10,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { activityDay } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 // The question a promise task asks once we wrote to its recipient after the
@@ -20,7 +20,7 @@ import { type WorklistItem, worklistKey } from "./worklist.queries";
 export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const question = item.may_be_done;
   const refresh = [

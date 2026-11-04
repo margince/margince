@@ -93,9 +93,12 @@ It creates a new contact for the sender, as it does for any sender.
 
 Margince then lists the two contacts as a possible duplicate, so a colleague can merge them. The pair is listed when the names match, also with "oe" for "ö" ("Bjoern" and "Björn").
 It is also listed when the names are close and the mail domain is the employer's or under it (`cloud.example.com`). Two addresses that differ only by a `+tag` are listed too.
+So are two Gmail addresses that differ only by dots or by `gmail.com` and `googlemail.com` (`a.b@gmail.com` and `ab@googlemail.com`).
 
 Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
 Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
+
+A contact kept private because its conversation was held opens to colleagues once nothing holds it any more. That is when the conversation is judged ordinary, or when you share it. A contact you made private yourself stays private. A contact you only wrote to stays yours until the address replies.
 
 ### Mail with a lead on it
 

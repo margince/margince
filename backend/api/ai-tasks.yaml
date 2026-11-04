@@ -337,6 +337,18 @@ tasks:
     no_payload: true
     doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable."
 
+  reader_rendering:
+    display_name: "Showing a message in your language"
+    summary: "Shows a note, email or meeting in the reader's own language when they ask for it."
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [activity_text]
+    company_context: none
+    no_payload: true
+    doc: "activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to."
+
   corpus_ask:
     display_name: "Document corpus question"
     summary: "Answers questions from the documents your company filed, citing where each answer comes from."

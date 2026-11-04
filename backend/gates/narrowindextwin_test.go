@@ -47,6 +47,9 @@ var deliberateNarrowTwins = gatekit.Waive(map[narrowTwin]string{
 		"are a small slice of the threads it has ever had, so the narrow index stays small and the wide one would " +
 		"scan more heap to answer the same question. Measurement could still retire it; the rule the others were " +
 		"dropped under does not reach it",
+	"capture_pending_counterparty(email):idx_capture_pending_counterparty_noise": "the noise sweep lists every " +
+		"`status = 'noise'` row with no address in hand (disownedSenders, pendingsweeps.go). The partial index " +
+		"holds only those rows, so that scan reads them alone; the full address index would read the whole ledger",
 })
 
 // btreeIndex reads one index record: its name, table, column list and whatever

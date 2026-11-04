@@ -10,9 +10,9 @@ import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { contactTabRoute } from "../../lib/contacttab";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
@@ -37,7 +37,7 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const words: StandingWords = { t, locale, zone };
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
   const history = useRecordTimeline("contact", view.contact.id, {
@@ -135,7 +135,7 @@ function StrengthHero({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const strength = view.strength;
   if (!strength) {
     return null;

@@ -10,9 +10,10 @@ import {
   formatDateTime,
   INTL_LOCALE,
 } from "../../format/format";
-import { viewerZone, zoneNameAndOffset } from "../../format/timezone";
+import { browserZone, zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // Choosing WHEN a message goes, extracted from compose.tsx unchanged.
 //
@@ -61,7 +62,7 @@ export function scheduleFields(local: string): {
   if (Number.isNaN(at.getTime())) return {};
   return {
     scheduled_at: at.toISOString(),
-    scheduled_tz: viewerZone(),
+    scheduled_tz: browserZone(),
   };
 }
 
@@ -144,7 +145,7 @@ export function ScheduleDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const headingId = useId();
   const [picking, setPicking] = useState(false);
   const chosen = momentOf(sendAt) ?? now;

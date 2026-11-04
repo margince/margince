@@ -240,6 +240,9 @@ export const ACTIVITY_LINE: Readonly<
   deal_health: notDisplayed(
     "the deal page's status card answers under the reader's own eyes; a rail line would announce the card already on screen",
   ),
+  reader_rendering: notDisplayed(
+    "a rendering answers beside the message the reader pressed it on, under their own eyes; a rail line would announce a result already on screen",
+  ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),
@@ -250,7 +253,7 @@ export const ACTIVITY_LINE: Readonly<
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
   ),
   report_interpret: notDisplayed(
-    "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
+    "passive Analytics interpretation reports progress inside its own panel",
   ),
 };
 

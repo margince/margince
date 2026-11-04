@@ -16,6 +16,7 @@ import {
   todayIn,
 } from "./calendarday";
 import { displayDay } from "./format.dates";
+import { dueTimeOf } from "./timezone";
 
 // The zone the machine running this suite happens to be in. Every assertion
 // below is written against it rather than against a fixed offset, because the
@@ -150,6 +151,84 @@ describe("dueInstant", () => {
     expect(calendarDay(new Date(dueInstant("1969-12-31", "UTC")), "UTC")).toBe(
       "1969-12-31",
     );
+  });
+});
+
+describe("dueInstant with a callback time", () => {
+  it("is due at that wall-clock time in the record's zone", () => {
+    expect(dueInstant("2026-10-27", "Europe/Berlin", "15:00")).toBe(
+      "2026-10-27T14:00:00.000Z",
+    );
+    expect(dueInstant("2026-07-05", "America/Los_Angeles", "09:30")).toBe(
+      "2026-07-05T16:30:00.000Z",
+    );
+  });
+
+  it("without a time is due at the end of the day, as before", () => {
+    expect(dueInstant("2026-10-27", "Europe/Berlin", "")).toBe(
+      dueInstant("2026-10-27", "Europe/Berlin"),
+    );
+  });
+
+  // 02:30 does not exist in Berlin on 29 March 2026: the clock jumps to 03:00.
+  // The time field says so under the box (followuptaskfields.test.tsx), so
+  // the rep sees the 03:00 the task will carry.
+  it("puts a skipped time on the first minute after the gap", () => {
+    expect(dueInstant("2026-03-29", "Europe/Berlin", "02:30")).toBe(
+      "2026-03-29T01:00:00.000Z",
+    );
+  });
+
+  // 02:30 happens twice in Berlin on 25 October 2026: the earlier one counts.
+  it("puts a repeated time on its first reading", () => {
+    expect(dueInstant("2026-10-25", "Europe/Berlin", "02:30")).toBe(
+      "2026-10-25T00:30:00.000Z",
+    );
+  });
+
+  it("refuses a time that is not HH:MM", () => {
+    for (const bad of ["24:00", "9:00", "15:60", "15:00:00", "noon"]) {
+      expect(() => dueInstant("2026-10-27", "Europe/Berlin", bad)).toThrow();
+    }
+  });
+
+  it("keeps a picked 23:59 as a time, apart from the no-time end of day", () => {
+    const due = dueInstant("2026-10-27", "Europe/Berlin", "23:59");
+    expect(due).toBe("2026-10-27T22:59:00.000Z");
+    expect(dueTimeOf(due, true, "Europe/Berlin")).toBe("23:59");
+  });
+});
+
+describe("dueTimeOf", () => {
+  it("reads no time on a task due by its day, whatever its stored hour", () => {
+    expect(
+      dueTimeOf(
+        dueInstant("2026-10-27", "Europe/Berlin"),
+        false,
+        "Europe/Berlin",
+      ),
+    ).toBe("");
+    expect(dueTimeOf("2026-10-27T14:00:00.000Z", false, "Europe/Berlin")).toBe(
+      "",
+    );
+    expect(
+      dueTimeOf("2026-10-27T14:00:00.000Z", undefined, "Europe/Berlin"),
+    ).toBe("");
+  });
+
+  it("reads back the time of day the task was minted with", () => {
+    for (const zone of ["Europe/Berlin", "America/Los_Angeles"]) {
+      expect(
+        dueTimeOf(dueInstant("2026-10-27", zone, "15:00"), true, zone),
+      ).toBe("15:00");
+    }
+  });
+
+  it("reads the time on the record's clock, not on UTC's", () => {
+    expect(dueTimeOf("2026-10-27T14:00:00Z", true, "Europe/Berlin")).toBe(
+      "15:00",
+    );
+    expect(dueTimeOf("2026-10-27T14:00:00Z", true, "UTC")).toBe("14:00");
   });
 });
 

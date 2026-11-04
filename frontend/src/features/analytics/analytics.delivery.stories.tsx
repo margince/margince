@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
 import {
   ProjectCommitmentsTable,
@@ -69,7 +69,7 @@ export const Commitments: Story = {
 export const NothingGoneQuiet: Story = {
   render: () => (
     <StoryProviders>
-      <ProjectsGoneQuietTable locale="en" timezone={viewerZone()} rows={[]} />
+      <ProjectsGoneQuietTable locale="en" timezone={browserZone()} rows={[]} />
     </StoryProviders>
   ),
 };

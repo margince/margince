@@ -11,6 +11,7 @@ import {
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { translatePlural, useLocale, useT } from "../i18n";
+import { useCompanyZone } from "../lib/companyzone";
 import type { BoardMoneyColumn } from "./pipelineboard";
 import { Meter } from "./readings";
 import { useDetailTooltip } from "./tooltip";
@@ -42,13 +43,14 @@ export function largestStageTotal(
 export function ColumnTotals({
   money,
   scaleMinor,
-  zone,
 }: Readonly<{
   money: BoardMoneyColumn;
   scaleMinor: number;
-  zone?: string;
 }>) {
   const t = useT();
+  // An older response names no zone for its rates; the rates day is the
+  // company's, counted on its clock like every report figure.
+  const companyZone = useCompanyZone();
   const { locale } = useLocale();
   const compact = (minor: number | null) =>
     formatMoneyOrWord(
@@ -59,7 +61,7 @@ export function ColumnTotals({
       formatMoneyCompact,
     );
   const unpriced = money.unpricedCount ?? 0;
-  const reportZone = money.timezone ?? zone;
+  const reportZone = money.timezone ?? companyZone;
   const rates =
     money.asOf && reportZone ? { at: money.asOf, zone: reportZone } : null;
   const { ref, trigger, tip } = useDetailTooltip<HTMLSpanElement>(

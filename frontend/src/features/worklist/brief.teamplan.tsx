@@ -13,7 +13,7 @@ import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import {
   useAnswerCommitment,
   useTeammateWeeklyPlan,
@@ -57,7 +57,7 @@ function TeamPlanDialog({
   const plan = useTeammateWeeklyPlan(owner);
   const canAnswer = useCanWrite("weekly_plan", "update");
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const headingId = useId();
   return (
     <Modal open labelledBy={headingId} onClose={onClose} intent="drawer">
@@ -121,7 +121,7 @@ function TeamCommitment({
   const t = useT();
   const answer = useAnswerCommitment(owner);
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [response, setResponse] = useState(commitment.manager_response ?? "");
   return (
     <PanelRow>

@@ -107,7 +107,7 @@ it("compares frozen editions and opens evidence from the selected side", async (
   );
   await screen.findByRole("cell", { name: "Sales won" });
   expect(screen.getByText(/25%/)).toBeVisible();
-  const bar = screen.getByRole("button", { name: "€172,800.00" });
+  const bar = screen.getByRole("button", { name: "172,800 EUR" });
   if (!bar) throw new Error("Missing comparison observation");
   await user.click(bar);
   expect(await screen.findByText("August purchase order")).toBeVisible();

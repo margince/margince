@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/shared/kernel/langcopy/langcopy.go backend/internal/shared/ports/baselanguage/baselanguage.go backend/internal/modules/identity/baselanguage.go backend/internal/shared/kernel/dealrole/words.go backend/internal/shared/kernel/owedwork/duecopy.go -->
+<!-- describes: backend/internal/modules/identity/readerlanguage.go backend/internal/compose/readerrendering backend/internal/compose/companybrief/service.go backend/internal/shared/kernel/langcopy/langcopy.go backend/internal/shared/ports/baselanguage/baselanguage.go backend/internal/modules/identity/baselanguage.go backend/internal/shared/kernel/dealrole/words.go backend/internal/shared/kernel/owedwork/duecopy.go -->
 # Language in shared explanations
 
 A shared record needs a stable explanation. A reader changing their interface language must not
@@ -45,6 +45,35 @@ code or missing parameters leaves the stored sentence readable. A human's note r
 Voice review reasons store a code, parameters and compatibility text together. The persistence writer
 creates both representations from the same reasons. Unknown codes, incomplete parameters or mismatched
 metadata retain the original explanation.
+
+## Text for one reader
+
+Two kinds of AI text get two languages:
+
+- Shared or stored text uses the base language. An account summary, a relationship summary, a
+  growth fit, a signal or a task subject is written once and read by everyone who can see the
+  record. Writing it once per reader's language would multiply the model cost by the number of
+  languages in use, and two colleagues would read two texts on one record.
+- Text for one reader, stored for nobody else, uses that reader's language. The answer to a
+  prepared question under **Ask about this company**, a document corpus answer and a plain-words
+  filter's reasons go to the member who asked and are kept nowhere.
+
+[ReaderLanguageForPrompt](../../backend/internal/modules/identity/readerlanguage.go) resolves the
+reader's language: the display language the member chose, carried on their sign-in, else the base
+language, else English when the setting cannot be read. `ReaderLanguageForRecord` answers the same
+question inside a transaction. A system caller and an agent have no display language, so they get
+the base language.
+
+**Show in my language** on a note, mail, meeting or call is the same rule
+([readerrendering](../../backend/internal/compose/readerrendering)). The press renders one text for
+the reader who pressed it, and stores no copy, no audit row, no event and no AI payload. The button
+also shows when the text's language is not known. When the text is already in the reader's
+language, the answer says so and no model is called. A text longer than one model answer can carry
+back is refused with that reason.
+
+A note, meeting or call records its language when it is logged or its text is edited, read by
+`textlang.OfMessage`, the function capture uses for mail. So a hand-logged German note shows the
+button to an English reader and not to a German one.
 
 ## Keep evidence separate
 

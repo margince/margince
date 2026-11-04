@@ -5,11 +5,11 @@ import { Button } from "../design-system/button";
 import { Disclosure } from "../design-system/disclosure";
 import { type Fact, FactList } from "../design-system/factlist";
 import { formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { Receipt } from "../lib/handled";
 import { magicByKey } from "../lib/magickeys";
 import { useOpenSource } from "../lib/opensource";
+import { useViewerZone } from "../lib/viewerzone";
 import { ChangeList } from "./changelist";
 
 /**
@@ -18,6 +18,7 @@ import { ChangeList } from "./changelist";
  * sends none, and then nothing opens.
  */
 export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const openSource = useOpenSource();
@@ -40,7 +41,7 @@ export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
   facts.push({
     key: "when",
     term: t("receipt.detail.when"),
-    value: formatDateTime(receipt.occurred_at, locale, viewerZone()),
+    value: formatDateTime(receipt.occurred_at, locale, readerZone),
   });
   if (source !== null) {
     facts.push({

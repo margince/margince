@@ -22,7 +22,7 @@ import { calendarDay } from "../format/calendarday";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import {
@@ -169,9 +169,9 @@ function render(zone = ZONE) {
   rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>
+        <ViewerZoneProvider zone={zone}>
           <LogActivity entityType="contact" entityId="p1" />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

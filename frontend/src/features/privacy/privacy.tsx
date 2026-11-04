@@ -34,7 +34,6 @@ import {
 import { Select } from "../../design-system/select";
 import { Stack } from "../../design-system/stack";
 import { useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { isOption } from "../../lib/options";
@@ -56,6 +55,7 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
   type DeadlineDraft,
@@ -119,7 +119,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const formId = useId();
   // Minted in the operator's zone, the one the row renders it back in. A bare
   // `new Date(day)` reads the day as UTC midnight and rolls it back west of UTC.
-  const tz = viewerZone();
+  const tz = useViewerZone();
 
   const deadline = useRequestDeadline(draft.kind, draft.deadline, tz);
 

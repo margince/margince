@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
 import type { ReportingEvaluation } from "./reporting.model";
@@ -17,12 +17,12 @@ export function useForecastCoverage(evaluation: ReportingEvaluation) {
   const parts = [
     unpriced > 0
       ? plural("analytics.decision.unpriced", unpriced, {
-          count: formatNumber(unpriced, locale),
+          count: formatAnalyticsNumber(unpriced, locale),
         })
       : undefined,
     basis.fx_missing_count > 0
       ? plural("analytics.decision.fx", basis.fx_missing_count, {
-          count: formatNumber(basis.fx_missing_count, locale),
+          count: formatAnalyticsNumber(basis.fx_missing_count, locale),
         })
       : undefined,
   ].filter((part) => part !== undefined);
@@ -32,15 +32,15 @@ export function useForecastCoverage(evaluation: ReportingEvaluation) {
       basis.included_count == null
         ? undefined
         : t("analytics.decision.included", {
-            included: formatNumber(basis.included_count, locale),
-            eligible: formatNumber(basis.eligible_count, locale),
+            included: formatAnalyticsNumber(basis.included_count, locale),
+            eligible: formatAnalyticsNumber(basis.eligible_count, locale),
           }),
     summary:
       basis.included_count == null
         ? undefined
         : t("analytics.outlook.valuedCount", {
-            included: formatNumber(basis.included_count, locale),
-            eligible: formatNumber(basis.eligible_count, locale),
+            included: formatAnalyticsNumber(basis.included_count, locale),
+            eligible: formatAnalyticsNumber(basis.eligible_count, locale),
           }),
     excluded: t("analytics.decision.excluded", { parts: parts.join(", ") }),
   };

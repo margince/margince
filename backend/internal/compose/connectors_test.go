@@ -82,6 +82,9 @@ func humanCtx() context.Context {
 		ID:     "human:22222222-2222-2222-2222-222222222222",
 		UserID: ids.MustParse("22222222-2222-2222-2222-222222222222"),
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
+		// A signed-in member whose role lets capture write, as a rep's does.
+		SeatType:    principal.SeatFull,
+		Permissions: capturingPermissions(),
 	})
 }
 

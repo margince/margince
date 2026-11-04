@@ -115,6 +115,10 @@ func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
 }
 
+func (stubs) RenderActivityForReader(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RenderActivityForReader")
+}
+
 func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RelinkActivityParams) {
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
@@ -2807,6 +2811,10 @@ func (stubs) RevokeMySession(w nethttp.ResponseWriter, r *nethttp.Request, sessi
 	httperr.NotImplemented(w, r, "RevokeMySession")
 }
 
+func (stubs) SaveMyTimezone(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SaveMyTimezone")
+}
+
 func (stubs) GetMyWorkingHours(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyWorkingHours")
 }
@@ -3865,6 +3873,10 @@ func (stubs) IngestVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) PreviewVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "PreviewVoiceCorpusSource")
+}
+
+func (stubs) LearnVoiceFromSentMail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LearnVoiceFromSentMailParams) {
+	httperr.NotImplemented(w, r, "LearnVoiceFromSentMail")
 }
 
 func (stubs) DeleteVoiceCorpusSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, sourceId openapi_types.UUID, params crmcontracts.DeleteVoiceCorpusSourceParams) {

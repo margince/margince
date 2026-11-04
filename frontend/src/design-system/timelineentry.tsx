@@ -174,6 +174,11 @@ export type TimelineEntry = {
    * request. That is why this is optional rather than empty string.
    */
   body?: string | null;
+  /**
+   * The language the activity is written in, as the server read it. Null when
+   * it could not be told; absent on a row that is not an activity.
+   */
+  language?: "de" | "en" | "vi" | null;
   /** A pasted or uploaded transcript, drawn as its lines rather than markdown. */
   transcript?: boolean;
   /**
@@ -418,6 +423,7 @@ const AUTOMATIC_LABEL: Record<AutomaticKind, MessageKey> = {
   calendar: "timeline.automatic.calendar",
   sending_system: "timeline.automatic.sending_system",
   product: "timeline.automatic.product",
+  bulk: "timeline.automatic.bulk",
 };
 
 export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {

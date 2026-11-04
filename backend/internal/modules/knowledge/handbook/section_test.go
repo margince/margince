@@ -14,8 +14,8 @@ func TestSectionForNamesTheTimeZoneSectionAndItsSettingsPage(t *testing.T) {
 	if !ok {
 		t.Fatalf("SectionFor(%q, %d) found no section", ownSettings, line)
 	}
-	if got.Title != "How do I change my time zone?" || got.Opens != "meetings" || got.Line != line-2 {
-		t.Fatalf("SectionFor(%q, %d) = %+v, want the time zone section two lines up, opening meetings", ownSettings, line, got)
+	if got.Title != "How do I change my time zone?" || got.Opens != "account" || got.Line != line-2 {
+		t.Fatalf("SectionFor(%q, %d) = %+v, want the time zone section two lines up, opening account", ownSettings, line, got)
 	}
 }
 
@@ -39,7 +39,7 @@ func TestSectionForAnswersNothingAboveTheFirstSectionOrForAPageNotShipped(t *tes
 func TestASpanRunningIntoALaterHeadingIsAboutThatSection(t *testing.T) {
 	heading := lineOf(t, "### How do I change my time zone?")
 	got, ok := SectionFor(ownSettings, heading-3, heading+2)
-	if !ok || got.Line != heading || got.Opens != "meetings" {
+	if !ok || got.Line != heading || got.Opens != "account" {
 		t.Fatalf("a span from the section above into the time zone section = %+v, %v; want the time zone section", got, ok)
 	}
 	above, ok := SectionFor(ownSettings, heading-3, heading-1)

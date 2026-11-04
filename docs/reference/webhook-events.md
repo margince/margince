@@ -177,6 +177,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user_display_name.changed`](#user_display_namechanged) | user | 1 |
 | [`user_greeting_name.changed`](#user_greeting_namechanged) | user | 1 |
 | [`user_locale.changed`](#user_localechanged) | user | 1 |
+| [`user_timezone.changed`](#user_timezonechanged) | user | 1 |
 | [`voice.build_changed`](#voicebuild_changed) | voice_profile | 1 |
 | [`voice.corpus_changed`](#voicecorpus_changed) | voice_profile | 1 |
 | [`voice.draft_outcome_recorded`](#voicedraft_outcome_recorded) | voice_profile | 1 |
@@ -1791,6 +1792,17 @@ Payload for user_locale.changed, a member chose the language their own interface
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.locale` | string | yes | The language now chosen, one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. |
+
+### `user_timezone.changed`
+
+Record: `user` · version 1
+
+Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.chosen` | boolean | yes | True when the member picked the zone themselves. A later browser guess never replaces a chosen zone. |
+| `data.timezone` | string | yes | The IANA name now stored, such as Europe/Berlin. |
 
 ### `voice.build_changed`
 

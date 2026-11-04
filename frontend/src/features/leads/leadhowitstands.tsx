@@ -9,12 +9,11 @@ import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { addedViaFor } from "../../lib/leadorigins";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 import { useLeadDisqualifyReasons } from "./leadhandling";
 import { useLeadStatusChanges } from "./leadhistory";
@@ -59,9 +58,8 @@ export function LeadHowItStands({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  const record = useRecordZone();
-  const ctx: ReadingContext = { t, locale, zone, record, asOf };
+  const zone = useViewerZone();
+  const ctx: ReadingContext = { t, locale, zone, record: zone, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
   const reasons = useLeadDisqualifyReasons();
@@ -71,7 +69,7 @@ export function LeadHowItStands({
     t,
     locale,
     zone,
-    record,
+    zone,
     standingReasons(reasons),
   );
   const factors =
@@ -140,7 +138,7 @@ export function LeadHowItStands({
             name: leadIdentityName(lead) || t("lead.unnamed"),
           })}
           asOf={asOf}
-          record={record}
+          record={zone}
           events={timeline.events}
           gap={timeline.gap}
           history={thread}

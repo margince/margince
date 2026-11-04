@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -111,7 +111,7 @@ describe("Team prospecting", () => {
     // The catalog's own names, in the order the cards stand.
     expect(
       screen.getByRole("region", { name: "Opening readings" }).textContent,
-    ).toMatch(/Accepted.*Meetings held.*Leads still waiting/);
+    ).toMatch(/Accepted.*Meetings held.*Leads awaiting a first reply now/);
     const panel = await standing();
     expect(
       panel.getByText(/Of the 6 rounds handed on in this period/),
@@ -230,7 +230,7 @@ describe("Team prospecting", () => {
       asked.some(
         ({ url }) =>
           url.pathname.endsWith("/analytics/evidence") &&
-          url.searchParams.get("metric") === "leads_awaiting_response",
+          url.searchParams.get("metric") === "leads_awaiting_response_now",
       ),
     ).toBe(true);
   });
@@ -277,7 +277,7 @@ describe("Team prospecting", () => {
       "Member",
       "Qualified",
       "Meetings held",
-      "Unanswered",
+      "Period arrivals awaiting reply",
       "Monthly target",
     ]);
     const rows = within(members).getAllByRole("row");
@@ -342,7 +342,7 @@ describe("Team prospecting", () => {
       return {
         ...base,
         metrics: base.metrics.map((reading) =>
-          reading.id === "leads_awaiting_response"
+          reading.id === "leads_awaiting_response_now"
             ? metric("leads_awaiting_response", 0)
             : reading,
         ),
@@ -408,7 +408,11 @@ describe("Team prospecting", () => {
       ),
     });
     const members = await screen.findByRole("table", { name: "Members" });
-    expect(headers(members)).toEqual(["Member", "Meetings held", "Unanswered"]);
+    expect(headers(members)).toEqual([
+      "Member",
+      "Meetings held",
+      "Period arrivals awaiting reply",
+    ]);
     expect(
       screen.getByText("Qualified leads are hidden from you."),
     ).toBeVisible();
@@ -418,6 +422,17 @@ describe("Team prospecting", () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
       team: served(teamReview({ members_withheld: true, members: [] })),
+      summary: () =>
+        jsonResponse({
+          as_of: "2026-09-21T09:00:00Z",
+          scope: TEAM,
+          workflow: "handoff",
+          upcoming_meetings: 2,
+          upcoming_window: {
+            start_at: "2026-09-21T09:00:00Z",
+            end_at: "2026-10-05T09:00:00Z",
+          },
+        }),
     });
     expect(
       await screen.findByText(
@@ -429,6 +444,9 @@ describe("Team prospecting", () => {
     expect(screen.queryByRole("table", { name: "Members" })).toBeNull();
     expect(screen.queryByText("Riley Rep")).toBeNull();
     expect(screen.queryByText("Sam SDR")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "View booked meetings" }),
+    ).toBeNull();
   });
 
   it("asks both reads for the one team the scope names", async () => {
