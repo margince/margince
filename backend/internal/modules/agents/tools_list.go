@@ -192,8 +192,7 @@ func (t listRecords) publishedFilterNames() (names, patterns []string) {
 // describeFilters points at the per-type vocabulary rather than reciting it:
 // recited, it rode in every prompt and grew with each type a list serves.
 func (t listRecords) describeFilters() string {
-	lines := []string{"Narrow the list. Every operand is a string. Which filters each record_type takes, " +
-		"and the values each takes, is in describe_list_filters."}
+	lines := []string{"String operands. describe_list_filters lists each record_type's filters and values."}
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
 }
 
