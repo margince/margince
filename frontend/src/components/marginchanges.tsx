@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -18,7 +19,6 @@ import {
   type MarginceChangeSummary,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
-import { problemMessageOf } from "../lib/problem";
 import { EntityRef } from "./entityref";
 
 /** How many deals the summary row names; the rest are behind "View all". */
@@ -152,7 +152,7 @@ export function BundleUndo({
       >
         {label}
       </Button>
-      {undo.isError && <p>{problemMessageOf(undo.error, t)}</p>}
+      {undo.isError && <ErrorLine error={undo.error} />}
     </>
   );
 }

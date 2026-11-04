@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { en } from "../i18n/en";
+import { en, type MessageKey } from "../i18n/en";
 import { undoResultText } from "./changecopy";
 
 // The English catalogue with its {name} slots filled, as useT fills them.
-const t = (key: keyof typeof en, params?: Record<string, string>) =>
+const t = (key: MessageKey, params?: Record<string, string>): string =>
   Object.entries(params ?? {}).reduce(
     (text, [name, value]) => text.replace(`{${name}}`, value),
-    en[key],
+    `${en[key]}`,
   );
 
 const result = (undone: string[], kept: { kind: string }[] = []) => ({

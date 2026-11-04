@@ -22,10 +22,10 @@ import {
   CHANGE_SUMMARY_FLOOR,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
+import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
 
 // The changes made for the reader that they can still accept or take back, in
 // Home's rail. Drawn only when there is one: a heading over "none" would be a

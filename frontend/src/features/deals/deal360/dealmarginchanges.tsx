@@ -11,11 +11,8 @@ import {
 import { formatDayMonth } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useDealMarginceChanges } from "../../../lib/marginchanges";
+import { receiptBasis, receiptSummary } from "../../../lib/receiptcopy";
 import { useViewerZone } from "../../../lib/viewerzone";
-import {
-  receiptBasis,
-  receiptSummary,
-} from "../../worklist/worklist.receiptcopy";
 
 /**
  * Every change Margince made to this deal, newest first, with its reason and
