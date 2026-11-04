@@ -344,8 +344,10 @@ const liveStakeholderSQL = `d.status = 'open'
 // and a request about one deal does not carry another.
 //
 // Asking about the deal is one of three things, none bounded by age while the
-// deal is open:
-//   - mail they wrote, or a meeting they took part in, filed on the deal;
+// deal is open, and none dated in the future:
+//   - mail they wrote that a connector captured and whose sender was
+//     authenticated, or a captured meeting they took part in
+//     (capturedMeetingSQL), filed on the deal. A hand-typed activity is not;
 //   - a request recorded by hand that names the deal (about_deal_id), which is
 //     also where a rep's confirmation from the review form lands, so it is
 //     asked once and reused;
@@ -370,22 +372,25 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			         JOIN activity_participant p ON p.activity_id = a.id
 			        WHERE l.entity_type = 'deal' AND l.deal_id = d.id
 			          AND a.archived_at IS NULL
-			          AND ((a.direction = 'inbound' AND `+authorIsTheSubject+`)
-			               OR (a.kind = 'meeting' AND `+participantIsTheSubject+`)))
+			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
+			               OR (`+capturedMeetingSQL+` AND `+participantIsTheSubject+`)))
 			  OR EXISTS (
 			       SELECT 1 FROM consent_qualifying_event q
 			        WHERE q.contact_id = $2::uuid
 			          AND q.about_deal_id = d.id
 			          AND q.kind = ANY($7::text[])
+			          AND q.occurred_at <= $9
 			          AND q.retracted_at IS NULL)
 			  OR EXISTS (
 			       SELECT 1 FROM contact_acquisition_evidence e
 			        WHERE e.contact_id = $2::uuid
 			          AND e.source_entity_type = 'deal' AND e.source_entity_id = d.id
 			          AND e.kind = ANY($8::text[])
+			          AND coalesce(e.occurred_at, e.captured_at) <= $9
 			          AND e.request_retracted_at IS NULL))
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
-		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds).Scan(&found)
+		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
+		time.Now().Add(clockSkewAllowance)).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read whether the contact asked about this deal: %w", err)
 	}

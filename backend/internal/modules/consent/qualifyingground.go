@@ -321,14 +321,10 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
-		  AND a.counterparty_email IS NULL
-		  AND a.captured_by LIKE 'connector:%'
-		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		WHERE `+capturedMeetingSQL+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
-		  AND a.occurred_at <= now() + $3::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -340,6 +336,20 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
+
+// capturedMeetingSQL is "activity a is a meeting that counts as evidence": a
+// connector captured it, it names no counterparty string, it was not declined
+// or abandoned, and it lies inside the diary horizon. A meeting a rep typed by
+// hand is not evidence of anything the contact did. meetingQualifyingEvent and
+// requestedNegotiation share it, so the two cannot drift.
+//
+// occurred_at is compared raw: a day entry near the far edge of a 90-day
+// horizon decides nothing.
+const capturedMeetingSQL = `a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.counterparty_email IS NULL
+		  AND a.captured_by LIKE 'connector:%'
+		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		  AND a.occurred_at <= now() + interval '` + meetingHorizonInterval + `'`
 
 // meetingHorizonInterval is how far into the diary a meeting still says a
 // relationship is live.

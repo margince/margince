@@ -605,3 +605,96 @@ func TestANewerRequestForOneQuoteDoesNotCarryItsSibling(t *testing.T) {
 		t.Fatalf("quote A after they asked again = %s %q, want it allowed", d.Verdict, d.ReasonCode)
 	}
 }
+
+// meetingOnDeal plants a meeting the contact attended a day ago, filed on the
+// deal, captured by capturedBy with the given status.
+func (e *resolveEnv) meetingOnDeal(t *testing.T, deal ids.UUID, capturedBy, status string) {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status)
+		VALUES ($1, 'meeting', 'gcal', $2, $3, NULLIF($4, ''))`,
+		id, clocktest.Now(t).Add(-24*time.Hour), capturedBy, status); err != nil {
+		t.Fatalf("planting the meeting: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`,
+		id, e.contact); err != nil {
+		t.Fatalf("planting the attendee: %v", err)
+	}
+	e.fileOnDeal(t, id, deal)
+}
+
+// mailOnDeal plants mail from the contact filed on the deal, captured by
+// capturedBy, from a sender the receiving server did or did not authenticate.
+func (e *resolveEnv) mailOnDeal(t *testing.T, deal ids.UUID, capturedBy string, authenticated bool) {
+	t.Helper()
+	mail := e.inboundFrom(t, "mail-on-"+deal.String(), e.address, clocktest.Now(t).Add(-24*time.Hour))
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE activity SET captured_by = $2, inbound_sender_authenticated = $3 WHERE id = $1`,
+		mail, capturedBy, authenticated); err != nil {
+		t.Fatalf("marking the mail: %v", err)
+	}
+	e.fileOnDeal(t, mail, deal)
+}
+
+// requestAboutDealAt plants a request about the deal dated at, as a row the
+// recording door would refuse when at is in the future.
+func (e *resolveEnv) requestAboutDealAt(t *testing.T, deal ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_qualifying_event (contact_id, kind, note, occurred_at, source, captured_by, about_deal_id)
+		VALUES ($1, 'requested_by_subject', 'asked', $2, 'human', 'human:x', $3)`,
+		e.contact, at, deal); err != nil {
+		t.Fatalf("planting the request: %v", err)
+	}
+}
+
+// acquiredAboutDealAt plants the acquisition request citing the deal, dated at.
+func (e *resolveEnv) acquiredAboutDealAt(t *testing.T, deal ids.UUID, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, source_entity_type, source_entity_id)
+		VALUES ($1, 'requested_quote_or_meeting', $2, 'human:x', 'deal', $3)`, e.contact, at, deal); err != nil {
+		t.Fatalf("planting the acquisition request: %v", err)
+	}
+}
+
+// Evidence on a deal is the contact's own act. A meeting a connector captured,
+// or authenticated mail from them, carries the deal; a meeting or mail a rep
+// typed by hand, a canceled meeting and an unauthenticated sender do not. A
+// request dated in the future is not a memory and carries nothing.
+//
+// Mutation: replace capturedMeetingSQL or AuthenticatedInboundSQL in
+// requestedNegotiation with the bare kind or direction, or drop either
+// occurred_at bound, and the matching case carries the deal.
+func TestOnlyTheContactsOwnActOnTheDealCarriesIt(t *testing.T) {
+	future := func() time.Time { return clocktest.Now(t).Add(2 * time.Hour) }
+	past := func() time.Time { return clocktest.Now(t).Add(-time.Hour) }
+	for name, tc := range map[string]struct {
+		seed    func(e *resolveEnv, deal ids.UUID)
+		carries bool
+	}{
+		"a captured meeting":           {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "connector:gcal", "") }, true},
+		"a hand-logged meeting":        {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "human:x", "") }, false},
+		"a canceled captured meeting":  {func(e *resolveEnv, d ids.UUID) { e.meetingOnDeal(t, d, "connector:gcal", "canceled") }, false},
+		"authenticated captured mail":  {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "connector:gmail", true) }, true},
+		"hand-typed mail":              {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "human:x", true) }, false},
+		"an unauthenticated sender":    {func(e *resolveEnv, d ids.UUID) { e.mailOnDeal(t, d, "connector:gmail", false) }, false},
+		"a past request":               {func(e *resolveEnv, d ids.UUID) { e.requestAboutDealAt(t, d, past()) }, true},
+		"a future request":             {func(e *resolveEnv, d ids.UUID) { e.requestAboutDealAt(t, d, future()) }, false},
+		"a past acquisition request":   {func(e *resolveEnv, d ids.UUID) { e.acquiredAboutDealAt(t, d, past()) }, true},
+		"a future acquisition request": {func(e *resolveEnv, d ids.UUID) { e.acquiredAboutDealAt(t, d, future()) }, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			deal := e.openDeal(t, "open", true)
+			tc.seed(e, deal)
+
+			got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
+			if got.Supported != tc.carries {
+				t.Fatalf("supported = %v as %q, want %v", got.Supported, got.Category, tc.carries)
+			}
+		})
+	}
+}
