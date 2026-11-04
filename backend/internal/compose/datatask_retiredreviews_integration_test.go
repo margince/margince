@@ -42,7 +42,7 @@ func seedRetiredReviews(t *testing.T, e *integration.Env) retiredReviewFixture {
 	finding := func(kind, status string, task *ids.UUID) ids.UUID {
 		return integration.SeedIDRow(t, owner, `INSERT INTO assurance_exception
 			(id, logical_key, type, subject_kind, subject_id, severity, status, task_activity_id, captured_by)
-			VALUES ($1, $2 || ':' || $4::text || ':' || $3, $2, 'deal', $4, 'high', $3, $5, 'test')`,
+			VALUES ($1, $2 || ':' || $4::text || ':' || $3, $2, 'deal', $4::uuid, 'high', $3, $5::uuid, 'test')`,
 			kind, status, deal, task)
 	}
 	var out retiredReviewFixture
