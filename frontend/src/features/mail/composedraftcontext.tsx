@@ -194,7 +194,7 @@ export function DraftOffer({
               value={intent}
               onChange={(event) => onIntentChange(event.target.value)}
             />
-            {/* Outlined with its ✦: Send is the composer's one filled
+            {/* Outlined with its sparkle: Send is the composer's one filled
                 verb, and the mark alone says "Margince does this". */}
             <Button
               variant="aiQuiet"

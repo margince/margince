@@ -198,7 +198,7 @@
 /* The agent's own verb as the one filled control of its screen, panel or
    card. --ai does not lift in dark, so the ink is --textOnAccent, the light
    ink every fill that stays put takes: the dark --textOnAccentControl reads
-   3.26:1 on it. The ✦ takes the label's ink. */
+   3.26:1 on it. The sparkle takes the label's ink. */
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccent);
@@ -208,7 +208,7 @@
 }
 /* Every other agent verb is a ghost that also carries this class (see
    `faceClass` in button.tsx), so a row of verbs reads as one volume, and only
-   the ✦ in --aiText says the press starts a model. */
+   the sparkle in --aiText says the press starts a model. */
 .btn-aiQuiet .lucide-sparkles {
   color: var(--aiText);
 }
