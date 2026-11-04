@@ -192,7 +192,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/movement": {
-		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case"}, Array: false, Explode: true},
+		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case", "qualified_evidence", "qualified_best_case", "qualified_weighted"}, Array: false, Explode: true},
 	},
 	"GET /v1/imports": {
 		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
@@ -242,6 +242,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/privacy/notice-cases": {
 		{Name: "state", Values: []string{"open", "assigned", "queued", "delivery_failed", "completed", "provided_elsewhere", "exempt_with_reason", "blocked", "not_required"}, Array: true, Explode: true},
+	},
+	"GET /v1/products": {
+		{Name: "tax_category", Values: []string{"standard", "reduced", "exempt", "unclassified"}, Array: false, Explode: true},
 	},
 	"GET /v1/projects": {
 		{Name: "phase", Values: []string{"initiative", "pursuing", "delivering", "closed"}, Array: false, Explode: true},

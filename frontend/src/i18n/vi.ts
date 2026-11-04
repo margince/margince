@@ -920,6 +920,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Deal mới",
   "reporting.movement.pulled_in": "Kéo vào kỳ này",
   "reporting.movement.pushed_out": "Đẩy ra khỏi kỳ này",
+  "reporting.movement.excluded": "Bị loại sau rà soát",
+  "reporting.movement.reinstated": "Được tính lại sau rà soát",
+  "reporting.movement.not_checked": "Chưa kiểm tra",
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
@@ -1502,6 +1505,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Kết quả dự kiến {landing}, theo {basis}",
   "reporting.compare.basis.commit_evidence": "deal cam kết có bằng chứng",
   "reporting.compare.basis.weighted": "pipeline có trọng số",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "deal cam kết có bằng chứng được ủng hộ",
+  "reporting.compare.basis.qualified_weighted":
+    "pipeline có trọng số được ủng hộ",
   "reporting.compare.basis.manager_call": "ước tính của quản lý",
   "reporting.compare.remaining": "Còn phải thắng",
   "reporting.compare.remainingBasis": "Đã thắng {won} trên {target}",
@@ -5459,6 +5466,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Xác nhận",
   "deals.cancel": "Hủy",
   "deals.advanced": "Đã chuyển sang {stage}",
+  "deals.viability.title": "Sự ủng hộ của khách hàng",
+  "deals.viability.standing": "Dự báo deal được ủng hộ",
+  "deals.viability.enforced":
+    "Dự báo chỉ tính các deal được khách hàng ủng hộ.",
+  "deals.viability.notEnforced":
+    "Dự báo tính mọi deal; mục này chỉ để tham khảo.",
+  "deals.viability.qualification.eligible": "Được tính",
+  "deals.viability.qualification.excluded": "Tạm loại để rà soát",
+  "deals.viability.qualification.unsupported": "Bị loại: không được ủng hộ",
+  "deals.viability.qualification.unknown": "Chưa kiểm tra",
+  "deals.viability.qualification.closed": "Đã đóng: không nằm trong dự báo",
+  "deals.viability.checkOutOfDate":
+    "Lần kiểm tra này không còn được tính, nên deal được xem là chưa kiểm tra.",
+  "deals.viability.assessed": "Kiểm tra lần cuối",
+  "deals.viability.review": "Rà soát sự ủng hộ",
+  "deals.viability.reviewOpenedOn": "Mở ngày {date}",
+  "deals.viability.reviewOpen": "Đang mở",
+  "deals.viability.taskDoneReviewOpen": "Đã xong việc, vẫn mở",
 
   "deal.ownerKeep": "Giữ người chịu trách nhiệm hiện tại",
   "deal.ownerMe": "Giao cho tôi",
@@ -6266,6 +6291,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Mở dự báo",
   "brief.weekly.outlook.measure.commit_evidence": "Theo bằng chứng Commit",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "Theo bằng chứng Commit được ủng hộ",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "Theo deal có trọng số được ủng hộ",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
   "brief.weekly.bridge": "Biến động trong tuần",
   "brief.weekly.bridge.opening": "Thứ Hai",
@@ -6277,6 +6306,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Mới tạo",
   "brief.weekly.bar.advanced": "Tiến lên",
   "brief.weekly.bar.slipped": "Bị lùi",
+  "brief.weekly.bar.excluded": "Bị loại sau rà soát",
+  "brief.weekly.bar.reinstated": "Được tính lại sau rà soát",
+  "brief.weekly.bar.not_checked": "Chưa kiểm tra",
   "brief.weekly.bar.won": "Thắng",
   "brief.weekly.bar.lost": "Thua",
   "brief.weekly.bar.other": "Tỷ giá và định nghĩa",
@@ -12832,6 +12864,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Chưa có giá mô hình nào.",
   "settings.rates.modelModalTitle": "Nhập giá mô hình",
   "settings.rates.notSaved": "Không thể lưu tỷ giá",
+  "taxRates.title": "Thuế suất",
+  "taxRates.withheld": "Chỉ Admin hoặc Ops xem được thuế suất.",
+  "taxRates.intro":
+    "Thuế suất tiêu chuẩn và thuế suất giảm của từng quốc gia, mỗi mức có hiệu lực từ một ngày. Không sửa một mức đã ghi: hãy ghi mức mới từ một ngày sau đó.",
+  "taxRates.empty": "Chưa có thuế suất nào.",
+  "taxRates.add": "Ghi thuế suất",
+  "taxRates.modalTitle": "Ghi một thuế suất",
+  "taxRates.colCountry": "Quốc gia",
+  "taxRates.colCategory": "Loại",
+  "taxRates.colRate": "Thuế suất",
+  "taxRates.colFrom": "Từ ngày",
+  "taxRates.category.standard": "Tiêu chuẩn",
+  "taxRates.category.reduced": "Giảm",
+  "taxRates.category.exempt": "Miễn thuế",
+  "taxRates.countryPlaceholder": "Chọn quốc gia",
+  "taxRates.rateHint": "Phần trăm, ví dụ 19 hoặc 7,7.",
+  "taxRates.fromHint":
+    "Hôm nay hoặc sau đó. Một ngày trước mức đầu tiên của quốc gia sẽ bổ sung lịch sử.",
+  "taxRates.notSaved": "Chưa lưu thuế suất",
+  "taxRates.save": "Ghi thuế suất",
+  "taxRates.recorded_one": "Đã ghi thuế suất. Đã phân loại {count} sản phẩm.",
+  "taxRates.recorded_other": "Đã ghi thuế suất. Đã phân loại {count} sản phẩm.",
   "settings.rates.setRate": "Lưu",
   "settings.rates.refresh": "Cập nhật từ nguồn",
   "settings.rates.refreshEnqueued":
@@ -13208,6 +13262,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.import_run": "Nhập dữ liệu",
   "roles.object.finance": "Dữ liệu tài chính",
   "roles.object.fx_rate": "Tỷ giá",
+  "roles.object.tax_rate": "Thuế suất",
   "roles.object.data_coverage": "Độ bao phủ dữ liệu",
   "roles.object.knowledge_corpus": "Kho tài liệu",
   "roles.object.knowledge_document": "Tài liệu",
@@ -13562,6 +13617,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "product.settingsSub": "Các mục bảng giá để sao chép vào dòng báo giá.",
   "product.new": "Sản phẩm mới",
   "product.edit": "Sửa sản phẩm",
+  "product.taxCategory": "Loại thuế",
+  "product.taxCategoryUnset": "Chưa phân loại",
+  "product.taxCategoryFilter": "Loại thuế",
+  "product.taxCategoryFilterAll": "Mọi loại thuế",
   "product.translations": "Bản dịch",
   "product.translationsTitle": "{name} bằng ngôn ngữ khác",
   "product.translationsHint":
@@ -13883,6 +13942,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bằng chứng Commit: chỉ ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":
     "Có trọng số: mọi deal đang mở theo xác suất giai đoạn",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Bằng chứng Commit được ủng hộ: ngày chốt đã xác nhận mà khách hàng vẫn ủng hộ",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Có trọng số được ủng hộ: deal đang mở mà khách hàng vẫn ủng hộ, theo xác suất giai đoạn",
   "installationSettings.forwardMeasure.manager_call":
     "Nhận định của quản lý: con số đã nhập cho kỳ",
   "forecast.landing": "Dự kiến cuối kỳ",
@@ -13890,6 +13953,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.commit_evidence": "Đã chốt + cam kết đã xác nhận",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
+  "forecast.basis.qualified_commit_evidence":
+    "Đã chốt + cam kết đã xác nhận được ủng hộ",
+  "forecast.basis.qualified_weighted": "Đã chốt + deal có trọng số được ủng hộ",
   "forecast.basis.manager_call": "Ước tính của quản lý",
   "forecast.basis.unknown": "Chưa ghi nhận cơ sở",
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
@@ -13918,6 +13984,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "Việc đếm deal được ủng hộ đang tắt, nên số này hiển thị mọi deal.",
   "forecast.landing.caveat.call_below_actual":
     "Nhận định thấp hơn số tiền đã chốt. Số này hiển thị đúng như đã ghi, không chỉnh sửa.",
   "forecast.pipelineNeeded": "Giá trị deal cần có",

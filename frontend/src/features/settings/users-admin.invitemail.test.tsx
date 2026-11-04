@@ -22,7 +22,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const REFUSED: User = {
+const REFUSED: Omit<User, "timezone"> = {
   id: "u-refused",
   email: "refused@acme.test",
   display_name: "Rhea Refused",
@@ -32,7 +32,6 @@ const REFUSED: User = {
   allowed_actions: ["issue_password_link", "resend_invite", "deactivate"],
   invite_email_state: "failed",
   team_ids: [],
-  timezone: "UTC",
   created_at: "2026-11-03T08:59:00Z",
 };
 
@@ -153,7 +152,7 @@ describe("UsersAdminCard invitation mail", () => {
   });
 
   it("polls only while a mail is on its way", () => {
-    const member = (state: User["invite_email_state"]): User => ({
+    const member = (state: User["invite_email_state"]) => ({
       ...REFUSED,
       invite_email_state: state,
     });

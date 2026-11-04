@@ -27919,6 +27919,10 @@ paths:
           in: query
           schema: { type: string }
           description: Case-insensitive name/SKU substring match.
+        - name: tax_category
+          in: query
+          schema: { type: string, enum: [standard, reduced, exempt, unclassified] }
+          description: Only products in this tax category; `unclassified` lists those nobody has classified yet.
       responses:
         '200':
           description: A page of products.
@@ -29265,7 +29269,10 @@ paths:
         exist yet. HUMAN-ONLY: an agent principal is refused outright (403 `permission_denied`),
         with no staging path — this IS the commercial commitment, since a sent revision is never
         mutated in place and its rate to base is fixed from here on. An offer whose `valid_until`
-        day has passed is refused 422 `offer_lapsed`; regenerate it with a later date.
+        day has passed is refused 422 `offer_lapsed`; regenerate it with a later date. Every line
+        with a `tax_category` takes the send day's rate from the tax rate sheet, and the totals
+        follow; a category with no rate on the sheet refuses the send (422 `tax_rate_missing`).
+        A typed rate is left as it is.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -30479,10 +30486,13 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: { type: string, enum: [open, weighted, evidence, best_case], default: open }
+          schema: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted], default: open }
           description: >-
-            Which of the four money answers this movement explains. A waterfall is drawn
-            for ONE of them; mixing two adds figures that do not belong in one total.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them;
+            mixing two adds figures that do not belong in one total. The `qualified_` readings
+            are the baseline ones over the deals the customer still supports. Against a snapshot
+            frozen with no viability policy, or under another one, a qualified movement puts its
+            whole difference in `definition`.
       x-mcp-tool: { verb: forecast_movement, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -32360,6 +32370,38 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealCoverage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deals/{id}/viability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealViability
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Whether the customer still supports this deal, and the review behind the answer.
+      description: |
+        The deal's treatment in the qualified forecast and what it rests on: the input check's
+        last receipt and its reasons, the close date's standing, the stage chance, and the open
+        `deal_viability` review with its task. The review is shown while it is open, even when
+        its task is done: completing the task does not answer the review.
+
+        Needs `forecast:read` and the deal under the caller's row scope, checked in the same
+        transaction as the read; a deal outside it answers 404. The review's task is shown only
+        while it is still linked to this deal and the caller may discover it. Carries no amount,
+        so nothing here needs masking.
+        `qualification` is computed whether or not the installation enforces it;
+        `qualification_mode` says whether the qualified forecast applies it.
+      responses:
+        '200':
+          description: The deal's viability.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealViability' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -34320,6 +34362,65 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /tax-rates:
+    get:
+      tags: [Rates]
+      operationId: listTaxRates
+      security: [ { cookieAuth: [] } ]   # human session only — the sheet is an admin view, not an agent surface
+      x-agent-access: human-only
+      summary: The tax rate sheet, every recorded rate, newest first within each country and category.
+      description: |
+        Needs `tax_rate:read`, which admin and ops hold. With `country`, only that country's
+        rates. A rate is in force from its `valid_from` until the next rate of the same country
+        and category starts.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema: { type: string, pattern: '^[A-Za-z]{2}$' }
+          description: ISO 3166-1 alpha-2.
+      responses:
+        '200':
+          description: The rates.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Rates]
+      operationId: recordTaxRate
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Record a standard or reduced tax rate for a country from a day on.
+      description: |
+        Needs `tax_rate:create`. A rate is added and never changed or removed: to change a
+        rate, record a new one from a later day. `valid_from` is today or later in the
+        installation's zone, or a day before the earliest rate of that country and category,
+        which extends the history back (422 `tax_rate_past` otherwise). A second rate for the
+        same country, category and day is refused as 409.
+
+        The first rate recorded for a category of the installation's own country classifies
+        the rate card: every unclassified live product whose `default_tax_rate` equals the
+        rate is put in that category, in the same transaction. A product with any other rate,
+        a typed 0% included, stays unclassified for the admin to decide.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordTaxRateRequest' }
+      responses:
+        '201':
+          description: The recorded rate, and how many products it classified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxRateRecorded' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /ai-model-rates:
     get:
       tags: [Rates]
@@ -36253,8 +36354,8 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
-          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureManagerCall]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureQualifiedCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureQualifiedWeighted, SettingsForwardMeasureManagerCall]
           description: |
             Which remaining-pipeline reading a projected landing is built from. A setting
             rather than a fixed choice, because it is a question about how this installation
@@ -36262,11 +36363,18 @@ components:
             something by it, and one that commits everything does not — their weighted number
             is the honest one.
 
-            `commit_evidence` is the default and the strictest: committed deals whose close
-            date somebody confirmed, a provisional date being a guess that stays out.
+            `commit_evidence` is the strictest baseline: committed deals whose close date
+            somebody confirmed, a provisional date being a guess that stays out.
+            `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+            the deals the customer still supports (the `qualified` block on `GET /forecast`).
             `manager_call` takes the authored call as the whole period's landing and is not
             added to what is already won; with no current call the read falls back to
             `commit_evidence` and says so in the landing's `caveat`.
+
+            With no measure saved, the landing uses `qualified_commit_evidence` while the
+            installation enforces viability reviews and `commit_evidence` otherwise; this field
+            then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+            client shows an unknown value by its name.
     UpdateInstallationSettingsRequest:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
@@ -36441,7 +36549,7 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: |
             Which remaining-pipeline reading a projected landing is built from. Never frozen:
             it is applied on READ and stores nothing, so changing it re-computes every landing
@@ -58353,7 +58461,7 @@ components:
         target: *id003
         basis:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing: *id003
         won: *id003
@@ -59883,6 +59991,7 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
+        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -59970,6 +60079,14 @@ components:
             a different population. Empty when nothing was frozen, and always empty for
             `managed_teams`, which nothing is frozen against.
         qualified: { $ref: '#/components/schemas/ForecastQualifiedReadings' }
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: >-
+            Whether the installation enforced viability reviews for this read. `enforcing` always
+            comes with a `qualified` block, a zero one when the period and scope hold no visible
+            deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by
+            this field, not by whether `qualified` is present.
         self_correcting:
           type: boolean
           description: >-
@@ -60123,6 +60240,94 @@ components:
           description: The estimated share of those deals that end won. Absent when none closed.
         chance_in_use: { type: integer, minimum: 0, maximum: 100 }
       additionalProperties: false
+    DealViability:
+      type: object
+      additionalProperties: false
+      required: [deal_id, qualification_mode, qualification, stage_probability, close_date_provisional, close_date_overdue]
+      properties:
+        deal_id: { type: string, format: uuid }
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: Whether the installation's qualified forecast applies `qualification`.
+        qualification:
+          type: string
+          enum: [eligible, excluded, unsupported, unknown, closed]
+          description: >-
+            The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies:
+            `excluded` under an open review, `unsupported` judged unsupported with no review,
+            `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no
+            open reading counts.
+        assessed_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the input check last assessed the deal; null when it never did.
+        disposition:
+          type: string
+          enum: [none, open_review, override, unsupported]
+          description: The review standing the qualification rests on.
+        complete:
+          type: boolean
+          description: Whether the deal was judged on its current evidence under the current policy.
+        policy_version: { type: string }
+        receipt:
+          $ref: '#/components/schemas/DealViabilityReceipt'
+        expected_close_date: { type: [string, 'null'], format: date }
+        close_date_provisional: { type: boolean }
+        close_date_overdue:
+          type: boolean
+          description: True when the expected close date is before today in the installation's zone.
+        stage_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The baseline chance, the deal's stage probability.
+        review:
+          $ref: '#/components/schemas/DealViabilityReview'
+    DealViabilityReceipt:
+      type: object
+      additionalProperties: false
+      description: The input check's last answer about the deal. Absent when it never assessed it.
+      required: [outcome, reasons, valid_until, policy_version, current]
+      properties:
+        outcome: { type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.' }
+        policy_version: { type: string, description: The viability policy the check applied. }
+        current:
+          type: boolean
+          description: >-
+            Whether the forecast still takes this receipt, by its rule: the current policy, an
+            outcome the check could judge, not past `valid_until`, and the deal's evidence
+            unchanged since. False makes the deal `unknown`.
+        reasons:
+          type: array
+          items: { type: string }
+          description: The reason codes the check recorded.
+        valid_until: { type: string, format: date-time }
+    DealViabilityReview:
+      type: object
+      additionalProperties: false
+      description: >-
+        The open `deal_viability` review on the deal. Absent when none is open. It stays while
+        the review is open even when its task is done.
+      required: [id, opened_at, episode]
+      properties:
+        id: { type: string, format: uuid }
+        opened_at: { type: string, format: date-time }
+        episode: { type: integer, minimum: 1 }
+        delivery_state:
+          type: [string, 'null']
+          enum: [pending, failed, delivered, null]
+          description: How far handing the review to a task got; null before a pass queued it.
+        task:
+          $ref: '#/components/schemas/DealViabilityTask'
+    DealViabilityTask:
+      type: object
+      additionalProperties: false
+      description: The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+      required: [id, done]
+      properties:
+        id: { type: string, format: uuid }
+        done: { type: boolean }
     ForecastQualifiedReadings:
       type: object
       description: >-
@@ -60206,12 +60411,15 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
-          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureWeighted, ForwardMeasureManagerCall]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureQualifiedCommitEvidence, ForwardMeasureWeighted, ForwardMeasureQualifiedWeighted, ForwardMeasureManagerCall]
           description: >-
             Which reading the forward half was built from — the one ACTUALLY used, which
             is not always the one configured: a manager-call installation with no current
-            call falls back to commit evidence and says so in `caveat`.
+            call falls back to commit evidence and says so in `caveat`, and a qualified measure
+            on a read with no qualified block falls back to its baseline with caveat
+            `qualified_unavailable`. The set can grow, so a client shows an unknown value by
+            its name.
         won_minor:
           type: integer
           format: int64
@@ -60233,14 +60441,15 @@ components:
             amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
-          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          enum: [call_absent, call_below_actual, qualified_unavailable]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual, LandingCaveatQualifiedUnavailable]
           description: >-
             Why this answer is not the plain one, absent when it is. `call_absent` is a
             manager-call installation with no current call. `call_below_actual` is an
             authored call less than the money already won — reported and never corrected,
             because the call is somebody's stated belief and the server does not overrule
-            it.
+            it. `qualified_unavailable` is a qualified measure on a read with no qualified
+            block (enforcement off), so `measure` names the baseline reading used instead.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -60692,7 +60901,7 @@ components:
         equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: { type: string, enum: [open, weighted, evidence, best_case] }
+        reading: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted] }
         opening_minor: { type: integer, format: int64 }
         closing_minor: { type: integer, format: int64 }
         buckets:
@@ -60713,12 +60922,15 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost,
-                 reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded,
+                 reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
             `stage_weight` is a deal that changed stage and with it its chance. `record_changed`
             is a deal whose chance or risk effect moved while it stayed in its stage, because
-            outcomes were recorded since.
+            outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only
+            in a qualified reading: a deal that left it because its viability review excluded it,
+            one that came back, and one that left because its review status became unknown.
+            The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: { type: integer, format: int64 }
         deal_count: { type: integer }
       additionalProperties: false
@@ -61708,7 +61920,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate]
 
     RbacAction:
       type: string
@@ -68218,6 +68430,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.' }
         active: { type: boolean }
@@ -68230,6 +68443,40 @@ components:
       additionalProperties: true
       x-extension: true
 
+    TaxRate:
+      type: object
+      required: [id, country, category, rate, valid_from, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2.' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, description: 'Percent with two decimals, for example "19.00".' }
+        valid_from: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+    TaxRateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TaxRate' }
+    RecordTaxRateRequest:
+      type: object
+      required: [country, category, rate, valid_from]
+      additionalProperties: false
+      properties:
+        country: { type: string, pattern: '^[A-Za-z]{2}$' }
+        category: { type: string, enum: [standard, reduced] }
+        rate: { type: string, pattern: '^[0-9]{1,2}(\.[0-9]{1,2})?$', description: 'Percent, for example "19" or "7.70".' }
+        valid_from: { type: string, format: date }
+    TaxRateRecorded:
+      type: object
+      required: [rate, classified_products]
+      properties:
+        rate: { $ref: '#/components/schemas/TaxRate' }
+        classified_products:
+          type: integer
+          description: How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
     ProductListResponse:
       type: object
       required: [data, page]
@@ -68249,6 +68496,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit or send null to leave it unclassified.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0. }
         active: { type: [boolean, 'null'], description: Defaults to true. }
@@ -68267,6 +68515,7 @@ components:
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }
@@ -68964,7 +69213,8 @@ components:
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: number, format: double, description: '0–100, up to 2 decimal places.' }
-        tax_rate: { type: number, format: double, description: 'Percent, up to 2 decimal places.' }
+        tax_rate: { type: number, format: double, description: 'Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer''s legal entity: today''s on a draft, the send day''s once sent.' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.' }
         line_net_minor: { type: integer, format: int64, readOnly: true, description: 'round(qty × unit_price × (1 − discount_pct/100)) — server-computed.' }
         line_tax_minor: { type: integer, format: int64, readOnly: true, description: 'round(line_net × tax_rate/100) — server-computed.' }
         line_total_minor: { type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed. }
@@ -69081,7 +69331,8 @@ components:
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: [number, 'null'], format: double, minimum: 0, maximum: 100 }
-        tax_rate: { type: [number, 'null'], format: double, minimum: 0 }
+        tax_rate: { type: [number, 'null'], format: double, minimum: 0, description: 'A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).' }
+        tax_category: { type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Take the rate from the tax rate sheet, for the country of the offer''s legal entity, else the installation''s. Omitted with no `tax_rate`, the line takes its product''s category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).' }
 
     UpdateOfferLineItemRequest:
       type: object
@@ -69096,7 +69347,8 @@ components:
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
         interval_count: { type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.' }
         discount_pct: { type: number, format: double, minimum: 0, maximum: 100 }
-        tax_rate: { type: number, format: double, minimum: 0 }
+        tax_rate: { type: number, format: double, minimum: 0, description: 'A typed rate. It drops the line''s tax category, so the send leaves the rate alone.' }
+        tax_category: { type: string, enum: [standard, reduced, exempt], description: 'Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).' }
 
     CreateOfferRequest:
       type: object
@@ -70208,7 +70460,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: |
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
@@ -70243,12 +70495,16 @@ components:
       properties:
         bar:
           type: string
-          enum: [created, advanced, slipped, won, lost, other]
+          enum: [created, advanced, slipped, excluded, reinstated, not_checked, won, lost, other]
           x-enum-varnames: [WeeklyBarCreated, WeeklyBarAdvanced, WeeklyBarSlipped,
+                            WeeklyBarExcluded, WeeklyBarReinstated, WeeklyBarNotChecked,
                             WeeklyBarWon, WeeklyBarLost, WeeklyBarOther]
           description: |
-            Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+            Which move this is. Folded from the forecast engine's movement buckets, whose
             grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+            `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+            qualified measure: a deal that left or rejoined the qualified number on its viability
+            review alone, or left because its review status became unknown. The set can grow.
 
             `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
             reprice, a category move and a stage move each go both ways, and reading the cause
