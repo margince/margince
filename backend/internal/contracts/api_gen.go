@@ -16136,6 +16136,7 @@ const (
 	NotificationClassCapture         NotificationClass = "capture"
 	NotificationClassCoach           NotificationClass = "coach"
 	NotificationClassLeadSla         NotificationClass = "lead_sla"
+	NotificationClassProjectHealth   NotificationClass = "project_health"
 	NotificationClassSystem          NotificationClass = "system"
 )
 
@@ -16151,6 +16152,8 @@ func (e NotificationClass) Valid() bool {
 	case NotificationClassCoach:
 		return true
 	case NotificationClassLeadSla:
+		return true
+	case NotificationClassProjectHealth:
 		return true
 	case NotificationClassSystem:
 		return true
@@ -53205,7 +53208,7 @@ type ProjectHealthAssessment struct {
 	Note      *string            `json:"note,omitempty"`
 	ProjectId openapi_types.UUID `json:"project_id"`
 
-	// Source What recorded this assessment.
+	// Source What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
 	Source *string `json:"source,omitempty"`
 
 	// SourceAuthor Who is on record as having judged it, when that is not whoever typed it in.
@@ -70698,6 +70701,30 @@ type CorrectProjectHealthAssessmentParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// UndoProjectHealthAssessmentParams defines parameters for UndoProjectHealthAssessment.
+type UndoProjectHealthAssessmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
 	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
@@ -87684,6 +87711,9 @@ type ServerInterface interface {
 	// Correct one reading, keeping when it was said.
 	// (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
 	CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams)
+	// Undo a reading the health job wrote.
+	// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+	UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams)
 	// List a project's stakeholders (project↔contact relationships).
 	// (GET /projects/{id}/stakeholders)
 	ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -93045,6 +93075,12 @@ func (_ Unimplemented) CreateProjectHealthAssessment(w http.ResponseWriter, r *h
 // Correct one reading, keeping when it was said.
 // (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
 func (_ Unimplemented) CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo a reading the health job wrote.
+// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+func (_ Unimplemented) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -128038,6 +128074,71 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// UndoProjectHealthAssessment operation middleware
+func (siw *ServerInterfaceWrapper) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "assessment_id" -------------
+	var assessmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "assessment_id", chi.URLParam(r, "assessment_id"), &assessmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assessment_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoProjectHealthAssessmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoProjectHealthAssessment(w, r, id, assessmentId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -140458,6 +140559,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/corrections", wrapper.CorrectProjectHealthAssessment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/undo", wrapper.UndoProjectHealthAssessment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/stakeholders", wrapper.ListProjectStakeholders)

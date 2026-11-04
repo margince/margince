@@ -378,6 +378,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onedownloadheader_test.go` | H2 | A download's headers are spelled once, in platform/httperr's Download. |
 | `oneidlebase_test.go` | H2 | The idle base (a record's newest activity when one is recorded, else the instant it was created) is spelled once, in shared/kernel/idlebase. |
 | `onejitteredbackoff_test.go` | H2 | The jittered retry ladder is spelled once, in shared/kernel/backoff. |
+| `oneprojecthealthwriter_test.go` | H2 | project\_health\_assessment has one INSERT, in projects' insertHealthRow. |
 | `oneretryafter_test.go` | H2 | The Retry-After header is read in one place, shared/kernel/retryafter. |
 | `onesqlliteralreader_test.go` | H2 | A census over the censuses: whoever judges this tree's SQL must read it the way Postgres receives it. |
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |

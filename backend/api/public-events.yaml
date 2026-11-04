@@ -39,6 +39,7 @@ components:
         - project.created
         - project.updated
         - project.phase_changed
+        - project.health_assessed
         - project.archived
         - list.created
         - list.updated
@@ -821,6 +822,39 @@ components:
         reason:
           type: string
           description: Why it moved; required by the API when to_phase is `closed`.
+      additionalProperties: false
+
+    PublicEventProjectHealthAssessed:
+      type: object
+      x-event-type: project.health_assessed
+      x-entity-type: project
+      x-version: 1
+      description: >-
+        Payload for project.health_assessed: a reading of how the project is
+        going was appended to its history. Every row counts, whether a user
+        or the health job wrote it, and whether it is a new reading, a
+        correction or the undo of an AI reading. The project row itself is not
+        written, so no project.updated goes with it.
+      required:
+        - assessment_id
+        - state
+        - source
+      properties:
+        assessment_id:
+          type: string
+          format: uuid
+          description: The appended reading.
+        state:
+          type: string
+          description: >-
+            on_track, at_risk or off_track. On an undo row it is the reading the
+            undo restored, or on_track when the project reads as not judged
+            again.
+        source:
+          type: string
+          description: >-
+            human for a user, ai for the health job, undo for a user undoing an AI
+            reading.
       additionalProperties: false
 
     PublicEventProjectArchived:

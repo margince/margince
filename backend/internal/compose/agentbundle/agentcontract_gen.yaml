@@ -27866,7 +27866,11 @@ components:
           format: date-time
           description: >-
             When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
-        source: {type: string, readOnly: true, description: What recorded this assessment.}
+        source:
+          type: string
+          readOnly: true
+          description: >-
+            What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
         source_author:
           type: string
           readOnly: true

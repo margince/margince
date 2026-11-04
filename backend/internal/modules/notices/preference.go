@@ -59,6 +59,13 @@ const (
 	classCapture    = "capture"
 	classCoach      = "coach"
 	classSystem     = "system"
+	// classProjectHealth holds the readings the health job writes. Muting
+	// housekeeping is not asking to hear nothing when the product itself marks
+	// a project of yours at risk.
+	classProjectHealth = "project_health"
+
+	// KindProjectHealthAI tells a project's owner the health job judged it.
+	KindProjectHealthAI = "project_health_ai"
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending
@@ -74,7 +81,7 @@ const (
 // screen reads them: the lanes that carry the most first, the housekeeping
 // last.
 var noticeClasses = []string{
-	classAutomation, classLeadSLA, ClassApprovalPending, classCapture, classCoach, classSystem,
+	classAutomation, classLeadSLA, ClassApprovalPending, classProjectHealth, classCapture, classCoach, classSystem,
 }
 
 // classByKind places every kind a system flow raises.
@@ -95,6 +102,7 @@ var classByKind = map[string]string{
 	KindMeetingInvitationAttention: classSystem,
 	KindApprovalPending:            ClassApprovalPending,
 	KindExtension:                  classSystem,
+	KindProjectHealthAI:            classProjectHealth,
 	// The answer to a colleague's own request to be handed a record.
 	"ownership_request_accepted":  classSystem,
 	"ownership_request_declined":  classSystem,
