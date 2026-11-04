@@ -241,7 +241,7 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change the role, choose **Edit** on the row. To take someone off, choose **Remove** ("Remove this relationship? There is no undo.").
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
 

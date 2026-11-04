@@ -18185,6 +18185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
   "deal.committee.card": "Gremium",
+  "deal.committee.change": "Stakeholder ändern oder entfernen",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
