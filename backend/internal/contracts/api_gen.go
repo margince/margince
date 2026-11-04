@@ -987,6 +987,7 @@ const (
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
+	AiActivityKindDealVerdict                   AiActivityKind = "deal_verdict"
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
@@ -1037,6 +1038,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
+		return true
+	case AiActivityKindDealVerdict:
 		return true
 	case AiActivityKindDocumentExtract:
 		return true
@@ -1576,6 +1579,7 @@ const (
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDealVerdict                   AiTask = "deal_verdict"
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
@@ -1625,6 +1629,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCorpusAsk:
 		return true
 	case AiTaskDealHealth:
+		return true
+	case AiTaskDealVerdict:
 		return true
 	case AiTaskDocumentExtract:
 		return true
@@ -1908,17 +1914,23 @@ func (e AnalyticsScopeKind) Valid() bool {
 
 // Defines values for AppliedDealChangeReviewKind.
 const (
-	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
-	AppliedDealChangeReviewKindCloseLost AppliedDealChangeReviewKind = "close_lost"
-	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
+	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
+	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
+	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
 
 // Valid indicates whether the value is a known member of the AppliedDealChangeReviewKind enum.
 func (e AppliedDealChangeReviewKind) Valid() bool {
 	switch e {
+	case AppliedDealChangeReviewKindAmount:
+		return true
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindProbability:
 		return true
 	case AppliedDealChangeReviewKindStage:
 		return true
@@ -46046,6 +46058,9 @@ type HandoverCounts struct {
 
 	// Task Open tasks assigned to the member.
 	Task int `json:"task"`
+
+	// Webhook Live webhook subscriptions the member owns. Each delivers only while its owner is active.
+	Webhook int `json:"webhook"`
 }
 
 // HealthAction defines model for HealthAction.
@@ -61903,9 +61918,12 @@ type UpdateWebhookSubscriptionRequest struct {
 	BodyTemplate *string `json:"body_template,omitempty"`
 
 	// CustomHeaders Headers sent with every delivery. Names are unique ignoring case; reserved names are refused.
-	CustomHeaders *[]WebhookCustomHeaderInput            `json:"custom_headers,omitempty"`
-	EventTypes    *[]string                              `json:"event_types,omitempty"`
-	State         *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
+	CustomHeaders *[]WebhookCustomHeaderInput `json:"custom_headers,omitempty"`
+	EventTypes    *[]string                   `json:"event_types,omitempty"`
+
+	// OwnerId The member the subscription runs under from now on. A delivery carries what its owner may see, so naming one is acting for that member: the caller needs `user_admin` update and the reach over the new owner a handover takes (403 otherwise). The owner must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
+	OwnerId *openapi_types.UUID                    `json:"owner_id,omitempty"`
+	State   *UpdateWebhookSubscriptionRequestState `json:"state,omitempty"`
 }
 
 // UpdateWebhookSubscriptionRequestState defines model for UpdateWebhookSubscriptionRequest.State.
@@ -62736,10 +62754,15 @@ type WebhookSubscription struct {
 	CustomHeaders []WebhookCustomHeader `json:"custom_headers"`
 
 	// EventTypes The subscribed event types, each from the published event catalog.
-	EventTypes []string                 `json:"event_types"`
-	Id         openapi_types.UUID       `json:"id"`
-	OwnerId    openapi_types.UUID       `json:"owner_id"`
-	State      WebhookSubscriptionState `json:"state"`
+	EventTypes []string           `json:"event_types"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// OwnerActive Whether the owner is still an active member. False when they were deactivated or archived: they see nothing, so no event is delivered, while `state` may still read `active`. Give the subscription a new `owner_id`, or hand the member's work over.
+	OwnerActive *bool `json:"owner_active,omitempty"`
+
+	// OwnerId The member every delivery runs under: an event goes out only when they may see its record.
+	OwnerId openapi_types.UUID       `json:"owner_id"`
+	State   WebhookSubscriptionState `json:"state"`
 
 	// TargetUrl HTTPS-only delivery endpoint.
 	TargetUrl string     `json:"target_url"`
@@ -65504,7 +65527,7 @@ type ListActivitiesParams struct {
 	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
-	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. It lists for the whole team, whoever the mail is addressed to, within what the caller may read; the caller's own waiting mail is `GET /v1/worklist`.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
 
 	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.

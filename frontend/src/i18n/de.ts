@@ -13923,6 +13923,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.projects_other": "{count} Projekte",
   "users.handover.tasks_one": "{count} offene Aufgabe",
   "users.handover.tasks_other": "{count} offene Aufgaben",
+  "users.handover.webhooks_one": "{count} Webhook",
+  "users.handover.webhooks_other": "{count} Webhooks",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":
@@ -15296,6 +15298,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verstummte Deals als verloren schließen",
   "autonomy.kind.deal_close_lost.help":
     "Margince schließt einen Deal als verloren, wenn der Kunde 120 Tage nicht geantwortet hat (ein Admin kann die Zahl ändern), oder sofort, wenn der Kunde absagt. Jede Schließung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_amount.label": "Deal-Beträge",
+  "autonomy.kind.deal_amount.help":
+    "Margince setzt den Betrag eines Deals, wenn der Kunde oder dein Angebot einen Preis dafür nennt, etwa „50.000 USD für das erste Jahr“. Ein Preis in einer anderen Währung wird zum gespeicherten Kurs umgerechnet. Jede Änderung erscheint auf Home mit „Rückgängig“.",
+  "autonomy.kind.deal_probability.label": "Gewinnwahrscheinlichkeiten",
+  "autonomy.kind.deal_probability.help":
+    "Margince setzt die Gewinnwahrscheinlichkeit eines Deals, wenn die Belege sie klar verschieben, etwa eine mündliche Zusage oder ein Budgetstopp. Eine Wahrscheinlichkeit, die du selbst gesetzt hast, ändert Margince nie. Jede Änderung erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -15825,6 +15833,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.targetUrl": "Ziel-URL",
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
+  "webhooks.field.owner": "Läuft als",
+  "webhooks.field.ownerHint":
+    "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
+  "webhooks.field.ownerInactive": "Früheres Teammitglied, nicht mehr aktiv",
+  "webhooks.field.ownerCurrent": "Aktuell zuständig",
+  "webhooks.row.ownerInactive": "Gestoppt: Verantwortlicher deaktiviert",
   "webhooks.edit": "Bearbeiten",
   "webhooks.archiveDone": "Webhook archiviert",
   "webhooks.archive": "Archivieren",
@@ -17233,6 +17247,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.profile.landingTitle": "Antwort erhalten",
   "provider.profile.landing": "Wird im Datensatz gespeichert…",
   "provider.profile.lookupRefused": "Abfrage nicht ausgeführt",
+  "provider.profile.lookupNotYours":
+    "Du kannst diesen Kontakt nicht bearbeiten und ihn deshalb nicht nachschlagen. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hat keine Daten zu diesem Kontakt.",
   "provider.profile.stale":
@@ -18358,6 +18374,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
   "worklist.handled.closeLostUndone":
     "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
+  "worklist.handled.verdictUndone":
+    "Rückgängig gemacht. Margince ändert das nicht wieder, bis auf diesem Deal etwas Neues passiert.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
@@ -20024,6 +20042,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.cert_judge": "Bewertung der Modellzertifizierung",
   "aiTask.name.cold_start": "Auswertung der Einrichtung",
   "aiTask.name.corpus_ask": "Fragen zum Dokumentenbestand",
+  "aiTask.name.deal_verdict": "Prüft Termine, Betrag und Chancen eines Deals",
   "aiTask.name.deal_health": "Deal-Statusübersicht",
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",

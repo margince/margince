@@ -24,7 +24,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -346,43 +345,17 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 			// one. The version is still read, because a 🟡 staging binds to it.
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
-		if err := applyDealPatchLocked(ctx, tx, patch, lock); err != nil {
-			return fmt.Errorf("apply %s patch: %w", correction, err)
-		}
-		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {
-			return err
-		}
-		// The evidence goes on the AUDIT row, not only into the event's changed
-		// fields. The morning receipt reads its reason back out of
-		// audit_log.evidence long after the event has been consumed, so an
-		// event-only basis renders a correction with no stated reason.
 		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(auditEvidence, extra)
-		auditID, err := storekit.AuditWithEvidence(
-			ctx, tx, "update", "deal", cand.id.UUID, patch.Before(), patch.After(), auditEvidence)
-		if err != nil {
-			return fmt.Errorf("audit %s: %w", correction, err)
-		}
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
-		maps.Copy(changedFields, patch.After())
 		maps.Copy(changedFields, extra)
-		if err := storekit.EmitEvent(ctx, tx, auditID, cand.id.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}); err != nil {
-			return fmt.Errorf("emit %s: %w", correction, err)
+		if _, err := commitCorrection(ctx, tx, lock, correctionWrite{
+			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
+			changedFields: changedFields, evidence: evidence, runID: &runID,
+		}); err != nil {
+			return err
 		}
-		// The lifecycle row commits WITH the change it describes. Written in a
-		// second transaction it could be lost to a crash, and then the deal has
-		// moved while nothing records that a correction moved it — which is the
-		// state this row exists to make impossible.
-		if _, err := recordCorrection(ctx, tx, DealCorrection{
-			DealID:     cand.id,
-			AuditLogID: auditID,
-			Correction: correction,
-			// Moved, not After: After holds every column the tier SET, and a
-			// reversal that tried to restore a field which never changed would
-			// be putting back a value that is already there.
-			Fields:   movedFields(patch),
-			Evidence: evidence,
-		}, &runID); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {
 			return err
 		}
 		wrote = true

@@ -118,6 +118,9 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Correction == deals.CloseLostCorrection {
 		return closeLostReceipt(c)
 	}
+	if c.Correction == deals.VerdictAmountCorrection || c.Correction == deals.VerdictProbabilityCorrection {
+		return verdictReceipt(c)
+	}
 	summary := fmt.Sprintf("Updated close-date confidence on %q", c.DealName)
 	if slices.Contains(c.Fields, "expected_close_date") {
 		summary = fmt.Sprintf("Changed the close date on %q: %s → %s", c.DealName, correctionDate(c.BeforeClose), correctionDate(c.AfterClose))

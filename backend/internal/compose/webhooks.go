@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // newWebhookHandlers builds the outbound-webhook transport (E10/S-E10.6,
@@ -23,7 +25,7 @@ import (
 // shipping an unsigned or guessable delivery. The api role supplies the
 // deployment key via WithWebhookSigningKey.
 func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.Logger) webhooks.Handlers {
-	store := webhooks.NewStore(InstallationDB(pool), cipher)
+	store := webhookStoreOver(InstallationDB(pool), cipher)
 	// The HTTP-transport deliverer serves replay only, and it carries the
 	// principal resolver even so. Replay used to re-send an
 	// already-authorized delivery without asking anything, which is what let
@@ -34,6 +36,16 @@ func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.L
 	deliverer := webhooks.NewDeliverer(store, webhooks.NewGuardedClient(), nil,
 		identity.NewService(pool), log)
 	return webhooks.NewHandlers(store, deliverer)
+}
+
+// webhookStoreOver is the webhook store as the api serves it. Naming who a
+// webhook runs as is acting for that member, so it asks the handover's
+// member-administration check about the new owner.
+func webhookStoreOver(db *database.DB, cipher *webhooks.Cipher) *webhooks.Store {
+	return webhooks.NewStore(db, cipher).WithOwnerAdmission(
+		func(ctx context.Context, tx pgx.Tx, next ids.UserID) error {
+			return identity.AdmitMemberHandover(ctx, tx, next)
+		})
 }
 
 // NewWebhookDeliverer builds the bus-consumer / retry-sweep deliverer for
