@@ -79,3 +79,25 @@ func CloseRetiredReviewTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 	}
 	return true, nil
 }
+
+// SettledTasksTx keeps the tasks no open finding still stands on, whether the
+// finding was delivered as the task or filed under it.
+func SettledTasksTx(ctx context.Context, tx pgx.Tx, tasks []ids.UUID) ([]ids.UUID, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if len(tasks) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT t.id FROM unnest($1::uuid[]) AS t(id)
+		 WHERE NOT EXISTS (SELECT 1 FROM assurance_exception o
+		                    WHERE o.task_activity_id = t.id AND o.status = 'open')
+		   AND NOT EXISTS (SELECT 1 FROM assurance_task_item i
+		                     JOIN assurance_exception o ON o.id = i.exception_id
+		                    WHERE i.task_activity_id = t.id AND o.status = 'open')`, tasks)
+	if err != nil {
+		return nil, fmt.Errorf("assurance: reading which tasks still carry an open finding: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}

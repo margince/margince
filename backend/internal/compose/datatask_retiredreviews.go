@@ -17,9 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// retiredReviewsDataTask closes the customer-support reviews still open from
-// before Margince closed silent deals itself, and completes the task each was
-// delivered as. No rule raises the review any more, so nothing else would.
+// retiredReviewsDataTask closes the customer-support reviews still open. No
+// rule raises them any more, so nothing else would. It completes the task each
+// was delivered as, unless another open finding is filed under it.
 func retiredReviewsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793803167_close_retired_customer_reviews", Version: 1,
@@ -62,7 +62,11 @@ func closeRetiredReviewsBatch(tasks *activities.Store) func(context.Context, pgx
 				delivered = append(delivered, *review.Task)
 			}
 		}
-		if _, err := tasks.CompleteSystemTasksTx(ctx, tx, delivered); err != nil {
+		settled, err := assurance.SettledTasksTx(ctx, tx, delivered)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if _, err := tasks.CompleteSystemTasksTx(ctx, tx, settled); err != nil {
 			return datatask.BatchOut{}, err
 		}
 		return datatask.AdvanceUUID(in, scanned, changed)

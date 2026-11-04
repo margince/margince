@@ -120,3 +120,35 @@ func TestTheRetiredReviewBatchRollsBackWithItsTransaction(t *testing.T) {
 		t.Errorf("the review's task done=%s after the rollback, want false", got)
 	}
 }
+
+// A task that still carries another open finding stays open: the review closes,
+// and the close_past finding filed under the same task keeps it.
+func TestTheRetiredReviewTaskLeavesATaskOtherFindingsStillNeed(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	f := seedRetiredReviews(t, e)
+	store := assurance.NewStore(InstallationDB(e.Pool))
+	cycle, err := store.OpenCycle(ctx, "workspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied, err := store.BundleException(ctx, assurance.BundleInput{
+		CycleID: cycle, ExceptionID: f.otherType, TaskActivityID: f.systemTask,
+	}); err != nil || !applied {
+		t.Fatalf("filing the close_past finding under the review's task: applied=%v err=%v", applied, err)
+	}
+
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := retiredReviewsDataTask(e.Pool).Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsScalar(t, `SELECT status FROM assurance_exception WHERE id = $1`, f.review); got != assurance.ExceptionConditionCleared {
+		t.Fatalf("the review reads %q, want %q", got, assurance.ExceptionConditionCleared)
+	}
+	if got := e.WsScalar(t, `SELECT is_done::text FROM activity WHERE id = $1`, f.systemTask); got != "false" {
+		t.Fatalf("the task done=%s while the close_past finding filed under it is open, want false", got)
+	}
+}
