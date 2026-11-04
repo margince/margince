@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useDeferredValue, useId, useMemo, useState } from "react";
 import {
   Avatar,
   Badge,
@@ -13,6 +13,7 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
+import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import {
   formatDateAbbrev,
@@ -104,6 +105,14 @@ function MembersCard({
       ? t("users.role.withheld")
       : null;
   const loaded = read.data !== undefined && !probing;
+  // The field repaints on every key; the list follows when React has time. A
+  // roster of hundreds made each letter wait for every row to draw again.
+  const shownSearch = useDeferredValue(search);
+  const roster = read.data?.list;
+  const matching = useMemo(
+    () => (roster ? matchingMembers(roster, shownSearch) : []),
+    [roster, shownSearch],
+  );
   return (
     <>
       {loaded && canInvite && (
@@ -123,10 +132,7 @@ function MembersCard({
         caption={
           read.data
             ? t("users.resultCount", {
-                matching: formatNumber(
-                  matchingMembers(read.data.list, search).length,
-                  locale,
-                ),
+                matching: formatNumber(matching.length, locale),
                 total: formatNumber(read.data.list.length, locale),
               })
             : undefined
@@ -174,7 +180,8 @@ function MembersCard({
           </PanelBody>
         ) : (
           <MembersTable
-            list={matchingMembers(read.data.list, search)}
+            list={matching}
+            search={shownSearch}
             allMembers={read.data.list}
             roles={read.data.roles}
             management={management}
@@ -199,6 +206,7 @@ function MembersCard({
 // back; re-sorting the first page here would misstate the pages after it.
 function MembersTable({
   list,
+  search,
   allMembers,
   roles,
   management,
@@ -206,6 +214,8 @@ function MembersTable({
   refusalOf,
 }: Readonly<{
   list: User[];
+  /** The search the list answers. A new one starts again at the first batch. */
+  search: string;
   allMembers: User[];
   roles: readonly AssignableRole[];
   management: boolean;
@@ -218,6 +228,14 @@ function MembersTable({
 }>) {
   const t = useT();
   const teamNames = useTeamNames(management);
+  // Back to the first batch on every change of search, a return to an
+  // earlier one included: clearing a narrow search must not redraw at once
+  // every row a wider one had loaded.
+  const [drawn, setDrawn] = useState({ search, count: MEMBER_BATCH });
+  if (drawn.search !== search) {
+    setDrawn({ search, count: MEMBER_BATCH });
+  }
+  const count = drawn.search === search ? drawn.count : MEMBER_BATCH;
   const entity = useEntityColumn(management, canChangeRole);
   const member: DataTableColumn<User> = {
     key: "member",
@@ -267,17 +285,34 @@ function MembersTable({
         <EmptyState>{t("users.noSearchResults")}</EmptyState>
       </PanelBody>
     );
+  // The sentinel's cursor is where the next batch starts: an index, never shown.
+  const nextBatch = count < list.length ? `row-${count}` : undefined;
+  // Drawn a batch at a time: every row is a handful of cells with verbs, and a
+  // roster of a thousand drew tens of thousands of nodes before the first
+  // paint. The caption above still counts every match.
   return (
-    <DataTable
-      fold
-      bleed
-      label={t("users.membersTitle")}
-      columns={columns}
-      rows={list}
-      rowKey={(u) => u.id}
-    />
+    <>
+      <DataTable
+        fold
+        bleed
+        label={t("users.membersTitle")}
+        columns={columns}
+        rows={list.length > count ? list.slice(0, count) : list}
+        rowKey={(u) => u.id}
+      />
+      <ScrollSentinel
+        list={search}
+        cursor={nextBatch}
+        loading={false}
+        failed={false}
+        onLoadMore={() => setDrawn({ search, count: count + MEMBER_BATCH })}
+      />
+    </>
   );
 }
+
+/** How many member rows are drawn at once. */
+export const MEMBER_BATCH = 100;
 
 function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
   // roster-failure: names a member's teams only; nothing here is picked.
