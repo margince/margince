@@ -46,8 +46,8 @@ var preservedResetTables = map[string]bool{
 	// Seeded by its migration; mail captured after a reset is past it anyway.
 	"activity_own_sent_mail_repair_cutoff": true,
 	// consent_text_version is the controller's published wording, which a surviving
-	// proof row points at. tax_rate holds an admin's versioned rates. Both
-	// migrations revoke DELETE, so a sweep would abort here anyway.
+	// proof row points at; its migration revokes DELETE. tax_rate holds an admin's
+	// versioned rates, and a trigger refuses its deletes. A sweep would abort on either.
 	"consent_text_version": true,
 	"tax_rate":             true,
 	// identity and auth; an AI tool's connection stays with its passports (passport_grant_fkey is RESTRICT)
