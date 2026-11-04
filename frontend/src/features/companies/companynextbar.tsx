@@ -5,7 +5,7 @@ import {
   calendarDaysBetween,
   formatDueCompact,
 } from "../../format/format.dates";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -47,7 +47,11 @@ export function nextBarTask(view: Company360): NextStep | undefined {
     : view.next_steps?.data[0];
 }
 
-/** Whole days a task is past its date at `as_of`, or nothing when it is not. */
+/**
+ * Calendar days a task is past its date at `as_of`, counted in the reader's
+ * zone, or nothing when it is not overdue. Zero is an overdue task due earlier
+ * today. The badge and the sentence both read this one count, so they agree.
+ */
 export function daysLate(
   step: NextStep,
   asOf: string,
@@ -57,7 +61,40 @@ export function daysLate(
     return undefined;
   }
   const days = calendarDaysBetween(new Date(step.due_at), new Date(asOf), zone);
-  return days > 0 ? days : undefined;
+  return Math.max(0, days);
+}
+
+/** How late the drawn task is, as the badge and as the sentence under it. */
+export function lateness(
+  late: number,
+  words: Words,
+): { badge?: string; sentence: string } {
+  const days = { days: formatNumber(late, words.locale) };
+  if (late === 0) {
+    return { sentence: words.t("co.next.lateToday") };
+  }
+  return {
+    badge: words.plural("co.next.daysLate", late, days),
+    sentence: words.plural("co.next.lateSentence", late, days),
+  };
+}
+
+/** The drawn task's lateness as the bar shows it, or nothing when on time. */
+function lateTask(
+  task: NextStep | undefined,
+  asOf: string,
+  zone: string,
+  words: Words,
+) {
+  const late = task && daysLate(task, asOf, zone);
+  if (late === undefined) {
+    return undefined;
+  }
+  const { badge, sentence } = lateness(late, words);
+  return {
+    tag: badge ? { label: badge, tone: "danger" as const } : undefined,
+    sentence,
+  };
 }
 
 /**
@@ -113,17 +150,8 @@ export function CompanyNextBar({
       ? view.moment
       : undefined;
   const task = nextBarTask(view);
-  const late = task && daysLate(task, view.as_of, zone);
+  const said = lateTask(task, view.as_of, zone, { t, plural, locale });
   const count = otherTasks(view, task);
-  const lateTag =
-    late === undefined
-      ? undefined
-      : {
-          label: plural("co.next.daysLate", late, {
-            days: formatNumber(late, locale),
-          }),
-          tone: "danger" as const,
-        };
   const others = (view.next_steps?.data ?? []).filter(
     (step) => step.activity_id !== task?.activity_id,
   );
@@ -155,9 +183,11 @@ export function CompanyNextBar({
         // The task the moment cites is the thing to do; the headline is the
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
-        late={lateTag}
+        late={said?.tag}
         detail={task && taskDetail(task)}
-        sub={moment.why_now}
+        // The server words lateness in elapsed days; the badge counts the
+        // reader's calendar days, so an overdue task's sentence follows it.
+        sub={said?.sentence ?? moment.why_now}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
@@ -176,7 +206,7 @@ export function CompanyNextBar({
       // The Overview's "Last contact" tile already shows the last exchange.
       lastExchange={false}
       title={task?.subject}
-      late={lateTag}
+      late={said?.tag}
       detail={task && taskDetail(task)}
       sub={
         task?.due_at
