@@ -1483,6 +1483,10 @@ func (stubs) GetContactAccess(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "GetContactAccess")
 }
 
+func (stubs) RetractAcquisitionRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RetractAcquisitionRequest")
+}
+
 func (stubs) GetContactBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetContactBrief")
 }

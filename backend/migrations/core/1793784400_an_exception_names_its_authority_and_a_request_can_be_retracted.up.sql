@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
--- Two additions to what a send decision rests on.
+-- Three additions to what a send decision rests on.
 --
 -- communication_instruction.given_by_admin records whether an admin gave the
 -- one-message exception. Staging and dispatch re-check the refusals before the
@@ -10,8 +10,12 @@
 -- refusals, never more. A constant default adds the column without a rewrite.
 --
 -- consent_qualifying_event.retracted_at and retracted_by let the colleague who
--- recorded a request take it back. A retracted row is kept as the record of
--- what was said and when it was withdrawn, and no send rests on it any more.
+-- recorded a request take it back. asks_for_quote says the request was for a
+-- quote, the one kind of request a quote may rest on. Existing rows read false.
+--
+-- contact_acquisition_evidence.request_retracted_at and request_retracted_by
+-- take back the request an acquisition row records. The row stays as the
+-- record of how the contact was obtained; only sends stop resting on it.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE communication_instruction
@@ -19,7 +23,12 @@ ALTER TABLE communication_instruction
 
 ALTER TABLE consent_qualifying_event
     ADD COLUMN retracted_at timestamptz,
-    ADD COLUMN retracted_by text;
+    ADD COLUMN retracted_by text,
+    ADD COLUMN asks_for_quote boolean NOT NULL DEFAULT false;
+
+ALTER TABLE contact_acquisition_evidence
+    ADD COLUMN request_retracted_at timestamptz,
+    ADD COLUMN request_retracted_by text;
 
 -- The instruction trigger freezes what was decided. Who gave the exception is
 -- part of that, so it joins the frozen columns.

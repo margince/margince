@@ -54333,11 +54333,17 @@ type QualifyLeadRequest struct {
 
 // QualifyingEventRecord A recorded exchange, as it now stands on the contact.
 type QualifyingEventRecord struct {
+	// AsksForQuote The contact asked for a quote or an offer.
+	AsksForQuote bool `json:"asks_for_quote"`
+
 	// Id The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
 	Id         openapi_types.UUID        `json:"id"`
 	Kind       QualifyingEventRecordKind `json:"kind"`
 	Note       *string                   `json:"note"`
 	OccurredAt time.Time                 `json:"occurred_at"`
+
+	// Retracted The exchange was withdrawn. Recording it again returns it withdrawn; no send rests on it.
+	Retracted bool `json:"retracted"`
 }
 
 // QualifyingEventRecordKind defines model for QualifyingEventRecord.Kind.
@@ -54820,6 +54826,11 @@ type RecordListsResponse struct {
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
+	// AsksForQuote The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
+	// and only such a request bears out a quote sent before any deal exists. A request to be
+	// called back supports a follow-up and not a quote.
+	AsksForQuote *bool `json:"asks_for_quote,omitempty"`
+
 	// Kind The two kinds a human may state. `in_person` is an exchange that happened in a room —
 	// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 	// to them away from every system: a phone call, a conversation at a counter.
@@ -87232,6 +87243,9 @@ type ServerInterface interface {
 	// Who can open this contact and who can change it, and why.
 	// (GET /contacts/{id}/access)
 	GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams)
+	// Take back the request the contact's acquisition records.
+	// (POST /contacts/{id}/acquisition-request/retract)
+	RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The standing relationship brief — who this contact is commercially, what they care about, what changed.
 	// (GET /contacts/{id}/brief)
 	GetContactBrief(w http.ResponseWriter, r *http.Request, id Id)
@@ -91381,6 +91395,12 @@ func (_ Unimplemented) GetContact360(w http.ResponseWriter, r *http.Request, id 
 // Who can open this contact and who can change it, and why.
 // (GET /contacts/{id}/access)
 func (_ Unimplemented) GetContactAccess(w http.ResponseWriter, r *http.Request, id Id, params GetContactAccessParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back the request the contact's acquisition records.
+// (POST /contacts/{id}/acquisition-request/retract)
+func (_ Unimplemented) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111275,6 +111295,38 @@ func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactAccess(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetractAcquisitionRequest operation middleware
+func (siw *ServerInterfaceWrapper) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetractAcquisitionRequest(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140278,6 +140330,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/access", wrapper.GetContactAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/acquisition-request/retract", wrapper.RetractAcquisitionRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/brief", wrapper.GetContactBrief)

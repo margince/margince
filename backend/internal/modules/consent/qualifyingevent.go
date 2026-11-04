@@ -104,6 +104,10 @@ type RecordQualifyingEventInput struct {
 	Kind       string
 	Note       string
 	OccurredAt time.Time
+	// AsksForQuote says the contact asked for a quote or an offer. Only a
+	// request the subject made may say so, and only such a request bears out a
+	// quote; a request to be called back does not.
+	AsksForQuote bool
 }
 
 // RecordInquiry records that this contact asked for a meeting themselves.
@@ -189,6 +193,11 @@ func (s *Store) RecordQualifyingEvent(
 				"recorded by hand; the rest are derived",
 		}
 	}
+	if in.AsksForQuote && in.Kind != KindRequestedBySubject {
+		return QualifyingEvent{}, &InvalidQualifyingEventError{
+			Field: "asks_for_quote", Reason: "only a request the contact made can ask for a quote",
+		}
+	}
 	note := strings.TrimSpace(in.Note)
 	if note == "" {
 		return QualifyingEvent{}, &InvalidQualifyingEventError{
@@ -231,7 +240,7 @@ func (s *Store) RecordQualifyingEvent(
 		return QualifyingEvent{}, err
 	}
 
-	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt}
+	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt, AsksForQuote: in.AsksForQuote}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The row-scope probe first: this changes what may be SENT to a contact,
 		// which is a change to their record however little of the row it
@@ -247,21 +256,21 @@ func (s *Store) RecordQualifyingEvent(
 		//
 		// Matched on the contact, the moment and the words: two genuinely
 		// different exchanges with the same contact do not share all three.
+		// A retracted row matches too, so replaying the request that recorded
+		// it answers the row as it stands and does not bring it back.
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
-				(contact_id, kind, note, occurred_at, source, captured_by)
-			SELECT $1, $2, $3, $4, 'human', $5
+				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote)
+			SELECT $1, $2, $3, $4, 'human', $5, $6
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
-				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-				   AND retracted_at IS NULL)
+				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
 			RETURNING id::text`,
-			contactID, in.Kind, note, in.OccurredAt, by).Scan(&out.ID); err != nil {
+			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				// Already on file. The caller's claim stands and nothing was
-				// written twice, so there is nothing to audit. The id is the
-				// standing row's, so the caller can still retract it.
-				return standingExchangeID(ctx, tx, contactID, in.Kind, note, in.OccurredAt, &out.ID)
+				// Already on file. Nothing was written twice, so there is
+				// nothing to audit, and the answer is the standing row.
+				return standingExchange(ctx, tx, contactID, &out)
 			}
 			return fmt.Errorf("consent: recording the exchange: %w", err)
 		}
@@ -287,12 +296,14 @@ func (s *Store) RecordQualifyingEvent(
 	return out, nil
 }
 
-// standingExchangeID reads the id of the live exchange a retried record matched.
-func standingExchangeID(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, note string, at time.Time, out *string) error {
+// standingExchange fills out with the row a retried record matched, retracted
+// or not.
+func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *QualifyingEvent) error {
 	if err := tx.QueryRow(ctx, `
-		SELECT id::text FROM consent_qualifying_event
-		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4 AND retracted_at IS NULL
-		 ORDER BY created_at LIMIT 1`, contactID, kind, note, at).Scan(out); err != nil {
+		SELECT id::text, asks_for_quote, retracted_at IS NOT NULL FROM consent_qualifying_event
+		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
+		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt).
+		Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}
 	return nil

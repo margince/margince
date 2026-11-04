@@ -48,7 +48,12 @@ BEGIN
   RETURN NEW;
 END $$;
 
+ALTER TABLE contact_acquisition_evidence
+    DROP COLUMN request_retracted_by,
+    DROP COLUMN request_retracted_at;
+
 ALTER TABLE consent_qualifying_event
+    DROP COLUMN asks_for_quote,
     DROP COLUMN retracted_by,
     DROP COLUMN retracted_at;
 

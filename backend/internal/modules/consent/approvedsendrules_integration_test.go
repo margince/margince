@@ -41,14 +41,36 @@ func (e *resolveEnv) seatCtx(user ids.UUID) context.Context {
 }
 
 // recordRequest writes the rep's "they asked me for this" through the store's
-// own door, dated when it happened.
-func (e *resolveEnv) recordRequest(t *testing.T, when time.Time) {
+// own door, dated when it happened, and answers the recorded exchange.
+func (e *resolveEnv) recordRequest(t *testing.T, when time.Time, asksForQuote bool) QualifyingEvent {
 	t.Helper()
-	if _, err := e.store.RecordQualifyingEvent(e.seatCtx(e.user), e.contact,
+	recorded, err := e.store.RecordQualifyingEvent(e.seatCtx(e.user), e.contact,
 		RecordQualifyingEventInput{
-			Kind: KindRequestedBySubject, Note: "Asked on the phone for a follow-up next year.", OccurredAt: when,
-		}); err != nil {
+			Kind: KindRequestedBySubject, Note: "Asked on the phone to hear from us.", OccurredAt: when,
+			AsksForQuote: asksForQuote,
+		})
+	if err != nil {
 		t.Fatalf("recording the request: %v", err)
+	}
+	return recorded
+}
+
+// recordedID parses the id of a hand-recorded exchange.
+func recordedID(t *testing.T, recorded QualifyingEvent) ids.UUID {
+	t.Helper()
+	id, err := ids.Parse(recorded.ID)
+	if err != nil {
+		t.Fatalf("the recorded exchange carries no id: %v", err)
+	}
+	return id
+}
+
+// recordInquiry records a form enquiry the way the public booking door does.
+func (e *resolveEnv) recordInquiry(t *testing.T) {
+	t.Helper()
+	booking := e.activityWithoutThread(t, "inbound", e.address, "from")
+	if err := e.store.RecordInquiry(e.ctx, e.contact, booking); err != nil {
+		t.Fatalf("recording the enquiry: %v", err)
 	}
 }
 
@@ -59,7 +81,7 @@ func (e *resolveEnv) recordRequest(t *testing.T, when time.Time) {
 func TestARequestOnRecordSupportsAFollowUpAtAnyAge(t *testing.T) {
 	t.Run("recorded by the rep", func(t *testing.T) {
 		e := setupResolve(t)
-		e.recordRequest(t, clocktest.Now(t).Add(-twoYears))
+		e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false)
 
 		if got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup}); !got.Supported {
 			t.Fatalf("a request two years old did not support its follow-up: reason %q", got.Reason)
@@ -96,7 +118,7 @@ func TestAnOldMessageThatAskedNothingDoesNotSupportAFollowUp(t *testing.T) {
 // held for review.
 func TestAQuoteGoesFromTheRequestBeforeAnyDealExists(t *testing.T) {
 	for name, record := range map[string]func(e *resolveEnv){
-		"recorded by the rep":   func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour)) },
+		"recorded by the rep":   func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour), true) },
 		"recorded at acquiring": func(e *resolveEnv) { e.acquisition(t, "requested_quote_or_meeting", clocktest.Now(t)) },
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -114,17 +136,20 @@ func TestAQuoteGoesFromTheRequestBeforeAnyDealExists(t *testing.T) {
 	}
 }
 
-// A "quote" to somebody who asked for none is not a requested quote, and
-// correspondence alone is not that request. The claim is kept, so the rep is
-// told what is missing rather than told to find a newsletter consent.
+// A "quote" to somebody who asked for none is not a requested quote. Neither
+// correspondence, permission given in person, a callback asked for nor an
+// unrelated enquiry is that request. The claim is kept, so the rep is told
+// what is missing rather than told to find a newsletter consent.
 //
-// Mutation: let validateQuote ask subjectAskedUs instead of requestOnRecord and
-// the correspondence case is allowed.
+// Mutation: drop quoteOnly from quoteRequests, or let validateQuote ask
+// subjectAskedUs, and a case here is allowed.
 func TestAQuoteToSomebodyWhoAskedForNoneIsNotRequested(t *testing.T) {
 	for name, seed := range map[string]func(e *resolveEnv){
 		"nothing on record":       func(*resolveEnv) {},
 		"only correspondence":     func(e *resolveEnv) { e.inboundFrom(t, "a-chat", e.address, clocktest.Now(t).Add(-24*time.Hour)) },
 		"permission, not request": func(e *resolveEnv) { e.acquisition(t, "in_person_permission", clocktest.Now(t)) },
+		"a callback asked for":    func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-time.Hour), false) },
+		"an unrelated enquiry":    func(e *resolveEnv) { e.recordInquiry(t) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupResolve(t)
@@ -142,6 +167,24 @@ func TestAQuoteToSomebodyWhoAskedForNoneIsNotRequested(t *testing.T) {
 	}
 }
 
+// A callback asked for and a form enquiry are requests for a follow-up, so the
+// follow-up they asked for still goes.
+func TestACallbackOrAnEnquirySupportsAFollowUp(t *testing.T) {
+	for name, seed := range map[string]func(e *resolveEnv){
+		"a callback asked for": func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false) },
+		"an enquiry":           func(e *resolveEnv) { e.recordInquiry(t) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			seed(e)
+
+			if got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup}); !got.Supported {
+				t.Fatalf("the request did not support its follow-up: %q", got.Reason)
+			}
+		})
+	}
+}
+
 // A quote resting on a request alone, with no deal or offer behind it, is still
 // stopped by a broad marketing objection. A narrow one names a marketing list
 // the quote is not on.
@@ -150,7 +193,7 @@ func TestAQuoteToSomebodyWhoAskedForNoneIsNotRequested(t *testing.T) {
 // allowed past the objection.
 func TestAMarketingObjectionBindsAQuoteWithNoDealBehindIt(t *testing.T) {
 	e := setupResolve(t)
-	e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour))
+	e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour), true)
 	e.suppress(t, "marketing_objection")
 
 	d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryPrecontractQuote})
@@ -163,24 +206,17 @@ func TestAMarketingObjectionBindsAQuoteWithNoDealBehindIt(t *testing.T) {
 }
 
 // A request the rep retracts stops counting, and the withdrawal is audited.
-// Retracting it twice finds nothing live.
+// Retracting it twice finds nothing live, and replaying the request that
+// recorded it answers the withdrawn row without bringing it back.
 //
-// Mutation: drop "retracted_at IS NULL" from requestOnRecord and the follow-up
-// is still supported.
+// Mutation: drop "retracted_at IS NULL" from requestOnRecord, or let the
+// recording dedupe skip retracted rows, and the follow-up is supported again.
 func TestARetractedRequestNoLongerCounts(t *testing.T) {
 	e := setupResolve(t)
-	recorded, err := e.store.RecordQualifyingEvent(e.seatCtx(e.user), e.contact, RecordQualifyingEventInput{
-		Kind: KindRequestedBySubject, Note: "Asked for a call back in spring.", OccurredAt: clocktest.Now(t).Add(-time.Hour),
-	})
-	if err != nil {
-		t.Fatalf("recording the request: %v", err)
-	}
+	when := clocktest.Now(t).Add(-time.Hour)
+	event := recordedID(t, e.recordRequest(t, when, true))
 	if got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup}); !got.Supported {
 		t.Fatalf("the recorded request did not support its follow-up: %q", got.Reason)
-	}
-	event, err := ids.Parse(recorded.ID)
-	if err != nil {
-		t.Fatalf("the recorded request carries no id: %v", err)
 	}
 
 	if err := e.store.RetractQualifyingEvent(e.seatCtx(e.user), e.contact, event); err != nil {
@@ -201,6 +237,61 @@ func TestARetractedRequestNoLongerCounts(t *testing.T) {
 	}
 	if err := e.store.RetractQualifyingEvent(e.seatCtx(e.user), e.contact, event); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a second retraction: err = %v, want not found", err)
+	}
+
+	replayed := e.recordRequest(t, when, true)
+	if recordedID(t, replayed) != event || !replayed.Retracted {
+		t.Errorf("the replay answered %s retracted=%v, want the withdrawn row %s", replayed.ID, replayed.Retracted, event)
+	}
+	for _, category := range []commsauthz.Category{commsauthz.CategoryRequestedFollowup, commsauthz.CategoryPrecontractQuote} {
+		if got := e.resolve(t, commsauthz.Request{Context: category}); got.Supported {
+			t.Errorf("a replayed record brought the withdrawn request back for %s", category)
+		}
+	}
+}
+
+// A request withdrawn after a follow-up was queued on it stops that follow-up
+// at transmit.
+//
+// Mutation: drop "retracted_at IS NULL" from requestOnRecord and the second
+// ticket still allows the message.
+func TestAWithdrawnRequestStopsAQueuedFollowUp(t *testing.T) {
+	e := setupResolve(t)
+	event := recordedID(t, e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false))
+	delivery := e.plantDelivery(t)
+	recipients := []connector.Recipient{{Email: e.address}}
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		set, err := e.gate.AuthorizeStagingTx(e.ctx, tx, delivery, commsauthz.Request{
+			Recipients: recipients, Context: commsauthz.CategoryRequestedFollowup, Subject: "S", Body: "b",
+		})
+		if err != nil {
+			return err
+		}
+		if d := set.Decisions[0]; d.Verdict != commsauthz.VerdictAllow {
+			t.Fatalf("staging decision = %+v, want the requested follow-up allowed", d)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("staging the follow-up: %v", err)
+	}
+	transmit := func(attempt int) commsauthz.TransmitTicket {
+		ticket, err := e.gate.AuthorizeTransmit(e.ctx, commsauthz.TransmitRequest{
+			DeliveryID: delivery, Attempt: attempt, Recipients: recipients, Subject: "S", Body: "b",
+		})
+		if err != nil {
+			t.Fatalf("authorizing the transmit: %v", err)
+		}
+		return ticket
+	}
+
+	if ticket := transmit(1); !ticket.Allowed {
+		t.Fatalf("the queued follow-up was refused before the withdrawal: %q", ticket.Reason)
+	}
+	if err := e.store.RetractQualifyingEvent(e.seatCtx(e.user), e.contact, event); err != nil {
+		t.Fatalf("retracting the request: %v", err)
+	}
+	if ticket := transmit(2); ticket.Allowed {
+		t.Fatal("the queued follow-up went out after its request was withdrawn")
 	}
 }
 

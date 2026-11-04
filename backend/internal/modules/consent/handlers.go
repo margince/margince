@@ -354,9 +354,10 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
-		Kind:       string(req.Kind),
-		Note:       req.Note,
-		OccurredAt: req.OccurredAt,
+		Kind:         string(req.Kind),
+		Note:         req.Note,
+		OccurredAt:   req.OccurredAt,
+		AsksForQuote: req.AsksForQuote != nil && *req.AsksForQuote,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)
@@ -368,9 +369,11 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	out := crmcontracts.QualifyingEventRecord{
-		Id:         openapi_types.UUID(recordedID),
-		Kind:       crmcontracts.QualifyingEventRecordKind(recorded.Kind),
-		OccurredAt: recorded.OccurredAt,
+		Id:           openapi_types.UUID(recordedID),
+		Kind:         crmcontracts.QualifyingEventRecordKind(recorded.Kind),
+		OccurredAt:   recorded.OccurredAt,
+		AsksForQuote: recorded.AsksForQuote,
+		Retracted:    recorded.Retracted,
 	}
 	if recorded.Note != "" {
 		note := recorded.Note

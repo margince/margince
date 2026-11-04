@@ -145,16 +145,8 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 	if err != nil || found {
 		return found, err
 	}
-	return requestOnRecord(ctx, tx, subject, followupRequestKinds)
+	return requestOnRecord(ctx, tx, subject, followupRequests)
 }
-
-// followupRequestKinds and quoteRequestKinds are the acquisition kinds that
-// record the subject asking. Permission given in person supports a follow-up;
-// only a request for a quote or meeting supports a quote.
-var (
-	followupRequestKinds = []string{"requested_quote_or_meeting", "in_person_permission"}
-	quoteRequestKinds    = []string{"requested_quote_or_meeting"}
-)
 
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
 // recorded that they asked to hear from us, inside the window.
@@ -255,7 +247,7 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 	if err != nil || res.Supported {
 		return res, err
 	}
-	asked, err := requestOnRecord(ctx, tx, subject, quoteRequestKinds)
+	asked, err := requestOnRecord(ctx, tx, subject, quoteRequests)
 	if err != nil || !asked {
 		return res, err
 	}

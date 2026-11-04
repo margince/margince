@@ -184,10 +184,13 @@ func (s *Store) RecordContext(
 	if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
 		return Review{}, err
 	}
+	// A request stated against a refused quote is a request for that quote.
 	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
 		Kind:       in.Kind,
 		Note:       in.Note,
 		OccurredAt: in.OccurredAt,
+		AsksForQuote: in.Kind == KindRequestedBySubject &&
+			refusal.Category == string(commsauthz.CategoryPrecontractQuote),
 	}); err != nil {
 		return Review{}, err
 	}

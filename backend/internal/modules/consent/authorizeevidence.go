@@ -333,14 +333,37 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 	return found, nil
 }
 
+// requestScope names which records count as a request for one kind of message.
+type requestScope struct {
+	acquisitionKinds []string
+	eventKinds       []string
+	// quoteOnly keeps only events whose request was for a quote.
+	quoteOnly bool
+}
+
+// followupRequests and quoteRequests are the two scopes the validators read.
+// Permission given in person, a callback asked for and a form enquiry support a
+// follow-up. Only a request for a quote or meeting supports a quote.
+var (
+	followupRequests = requestScope{
+		acquisitionKinds: []string{"requested_quote_or_meeting", "in_person_permission"},
+		eventKinds:       []string{KindRequestedBySubject, KindInquiry},
+	}
+	quoteRequests = requestScope{
+		acquisitionKinds: []string{"requested_quote_or_meeting"},
+		eventKinds:       []string{KindRequestedBySubject},
+		quoteOnly:        true,
+	}
+)
+
 // requestOnRecord reports whether the record holds this contact asking to hear
-// from us. That is a request a rep recorded, an enquiry from a form, or
-// acquisition evidence of one of acquisitionKinds.
+// from us, within scope: a request a rep recorded, an enquiry from a form, or
+// acquisition evidence of a request.
 //
 // No age limit: a request covers the follow-up at the agreed timing. A stop or
-// a retraction (RetractQualifyingEvent) ends it. Where a contact came from is
-// not a request. occurred_at is caller-stated, so a future date does not count.
-func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, acquisitionKinds []string) (bool, error) {
+// a retraction ends it (RetractQualifyingEvent, and the acquisition request's
+// own retraction). occurred_at is caller-stated, so a future date does not count.
+func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope) (bool, error) {
 	if subject.Kind != entityContact {
 		// Both tables are keyed on contact_id; a lead holds neither.
 		return false, nil
@@ -352,14 +375,16 @@ func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, acquisi
 			 WHERE e.contact_id = $1::uuid
 			   AND e.kind = ANY($4::text[])
 			   AND coalesce(e.occurred_at, e.captured_at) <= $2
+			   AND e.request_retracted_at IS NULL
 		) OR EXISTS (
 			SELECT 1 FROM consent_qualifying_event q
 			 WHERE q.contact_id = $1::uuid
 			   AND q.kind = ANY($3::text[])
 			   AND q.occurred_at <= $2
 			   AND q.retracted_at IS NULL
+			   AND (q.asks_for_quote OR NOT $5)
 		)`, subject.ID, time.Now().Add(clockSkewAllowance),
-		[]string{KindRequestedBySubject, KindInquiry}, acquisitionKinds).Scan(&found)
+		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}
