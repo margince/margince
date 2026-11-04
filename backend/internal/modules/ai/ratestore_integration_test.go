@@ -97,10 +97,12 @@ func (e *rateEnv) insertRate(ctx context.Context, t *testing.T, r ModelRate) {
 	t.Helper()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO ai_model_rate (provider, model_id, input_per_mtok_microusd,
-		  output_per_mtok_microusd, cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
-		r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate); err != nil {
+		  output_per_mtok_microusd, cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date,
+		  long_context_above_tokens, long_context_input_per_mtok_microusd, long_context_output_per_mtok_microusd,
+		  long_context_cache_read_per_mtok_microusd, long_context_cache_write_per_mtok_microusd)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+		append([]any{r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
+			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate}, bandArgs(r.LongContext)...)...); err != nil {
 		t.Fatalf("insert rate %+v: %v", r, err)
 	}
 }
@@ -534,6 +536,49 @@ func TestCostReportPricesAZeroCachePriceAtTheInputRate(t *testing.T) {
 	const want = 2100
 	if got := PriceCall(Usage{TokensIn: 900, CachedTokens: 400, CacheWriteTokens: 200, TokensOut: 100}, rate); got != want {
 		t.Fatalf("PriceCall = %d, want %d", got, want)
+	}
+	if len(report) != 1 || report[0].CostMicroUSD != want {
+		t.Fatalf("report = %+v, want one line costing %d", report, want)
+	}
+}
+
+// A call whose prompt passes a row's long-context line costs the band's prices
+// in the cost report. A call at the line costs the row's own. RateFor returns
+// the band, so a Go reader prices the same call to the same figure.
+func TestCostReportPricesAPromptAboveTheBandAtTheBand(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+
+	rate := proPreviewRate()
+	rate.EffectiveDate = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	e.insertRate(ctx, t, rate)
+	day := time.Date(2026, 2, 2, 9, 0, 0, 0, time.UTC)
+	atLine := Usage{TokensIn: 200_000, TokensOut: 1_000}
+	above := Usage{TokensIn: 200_001, CachedTokens: 50_000, TokensOut: 1_000}
+	for _, u := range []Usage{atLine, above} {
+		e.insertCall(ctx, t, callFixture{
+			task: TaskSummarize, provider: rate.Provider, model: rate.ModelID,
+			tokensIn: u.TokensIn, cachedTokens: u.CachedTokens, tokensOut: u.TokensOut, occurredAt: day,
+		})
+	}
+
+	found, err := store.RateFor(wsCtx, rate.Provider, rate.ModelID, day)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found == nil || found.LongContext == nil || *found.LongContext != *rate.LongContext {
+		t.Fatalf("RateFor = %+v, want the row with its band %+v", found, *rate.LongContext)
+	}
+	// 412_000 at the line and 638_004 above it (TestPriceCall works both out).
+	const want = 412_000 + 638_004
+	if got := PriceCall(atLine, *found) + PriceCall(above, *found); got != want {
+		t.Fatalf("PriceCall over the two calls = %d, want %d", got, want)
+	}
+	report, err := store.CostReport(wsCtx, day.Truncate(24*time.Hour), day.Add(24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
 	}
 	if len(report) != 1 || report[0].CostMicroUSD != want {
 		t.Fatalf("report = %+v, want one line costing %d", report, want)

@@ -249,7 +249,7 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	lang := s.answerLanguage(ctx)
 	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in.WordedIn(lang), lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
@@ -266,6 +266,13 @@ func (s *Service) AskScoped(
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	return out, nil
+}
+
+// answerLanguage is the language a prepared answer is written in: the
+// reader's own, because the answer goes to them alone and nothing stores it.
+// The standing brief above keeps the base language and its fingerprint.
+func (s *Service) answerLanguage(ctx context.Context) string {
+	return identity.ReaderLanguageForPrompt(ctx, s.pool)
 }
 
 // storedVersion is the cached payload's shape version. A row written before

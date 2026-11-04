@@ -5108,6 +5108,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{id}/health-assessments/{assessment_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a reading the health job wrote.
+         * @description Appends a successor with source `undo` that supersedes the AI reading. The reading that
+         *     stood before it stands again; when there was none, the project reads as not judged. An
+         *     undo row never counts as the current reading, and it keeps the health job from judging
+         *     the project again until new activity is filed on it. Only a current AI reading can be
+         *     undone: a user's reading, an undo row and a reading already superseded are refused
+         *     with 409.
+         */
+        post: operations["undoProjectHealthAssessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{id}/stakeholders": {
         parameters: {
             query?: never;
@@ -6158,6 +6187,53 @@ export interface paths {
         get: operations["getMeetingBrief"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/reader-rendering": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show one note, mail or meeting in the reader's own language.
+         * @description Writes what one note, email, meeting or call says in the reader's language, for that
+         *     reader alone. It is not a word-for-word translation: names, numbers, amounts, dates,
+         *     addresses, links, commitments and questions are kept exactly, and the phrasing is
+         *     what a native speaker of the target language would write. Nothing is stored: no
+         *     copy, no audit row and no event, and the AI call keeps no payload. The original stays
+         *     where it is, one click away in the client.
+         *
+         *     The target is `locale` when sent, else the language the reader chose for their seat,
+         *     else the installation's base language. A mail is rendered from its current message,
+         *     without the quoted history below it.
+         *
+         *     The source language is read from the text as it stands; the stored `language` label
+         *     decides only when the text cannot be placed. When the text is already in the target
+         *     language the answer is `unchanged: true` and the original text, with no model call.
+         *     That holds for a known source language equal to the target, and for an unknown one the
+         *     model judges to be in the target already.
+         *
+         *     Answers 404 for an activity the caller cannot read the content of: missing, outside
+         *     their scope, outside its audience, held under a retention obligation, archived, or of
+         *     a kind with no text (`task`, a row with neither subject nor body). The activity is read
+         *     again after the model answers, and one that stopped being readable or whose text or
+         *     version changed meanwhile answers 404 too. With no AI model it answers 409
+         *     `ai_not_configured`. Text past the limit the model can write back in one answer is 422
+         *     `too_long`, also when it is already in the target language. A model that was asked
+         *     and did not answer is 503 `assistant_unavailable`.
+         */
+        post: operations["renderActivityForReader"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9284,7 +9360,7 @@ export interface paths {
         put?: never;
         /**
          * Count and sample what a filter would select, before it is saved (LVS-EXT-9).
-         * @description The match count and a bounded first page for a candidate filter tree —
+         * @description The match count and one bounded page for a candidate filter tree —
          *     the filter a human is still editing, which nothing else in the contract
          *     can evaluate. The object list operations take flat scalar parameters and
          *     cannot express a tree; membership needs a stored list; and the filtered
@@ -9302,6 +9378,10 @@ export interface paths {
          *     different numbers. `columns` and `rows` are the same projection the JSON
          *     filtered export writes for the same filter, so what you preview is what
          *     an export of it would contain.
+         *
+         *     Pages walk the matches in id order through `cursor` and `next_cursor`.
+         *     Every page applies the same row scope as the first, and carries the
+         *     same full `match_count`.
          */
         post: operations["previewFilter"];
         delete?: never;
@@ -23989,6 +24069,19 @@ export interface components {
              * @enum {string}
              */
             source: "manual" | "catalogue" | "seed";
+            long_context?: components["schemas"]["AiModelRateLongContext"];
+        };
+        /**
+         * @description The second price band of a model that charges more for a call whose prompt is longer than
+         *     `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+         *     model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+         */
+        AiModelRateLongContext: {
+            above_tokens: number;
+            input_per_mtok: string;
+            output_per_mtok: string;
+            cache_read_per_mtok: string;
+            cache_write_per_mtok: string;
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
@@ -24023,6 +24116,11 @@ export interface components {
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+            /**
+             * @description Model ids whose price carries a long-context band the catalogue does not publish, and
+             *     whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+             */
+            review?: string[];
         };
         AiPriceSync: {
             locks?: components["schemas"]["SettingLocks"];
@@ -24067,6 +24165,11 @@ export interface components {
              * @description A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
              */
             effective_date?: string;
+            /**
+             * @description True drops the model's long-context band, so every call pays the prices above. Omitted
+             *     or false keeps the band the model already carries.
+             */
+            clear_long_context?: boolean;
         };
         /**
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
@@ -26825,6 +26928,13 @@ export interface components {
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
             readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             thread_key?: string | null;
+            /**
+             * @description The language the message is written in, as `Activity.language` records it. Null
+             *     when withheld, and when it could not be told. A client offers the reader's own
+             *     language beside a message in another one or in an unknown one.
+             * @enum {string|null}
+             */
+            readonly language?: "de" | "en" | "vi" | null;
             from: components["schemas"]["EmailParty"][];
             to: components["schemas"]["EmailParty"][];
             cc: components["schemas"]["EmailParty"][];
@@ -29332,7 +29442,7 @@ export interface components {
          *     raises is placed in one of them.
          * @enum {string}
          */
-        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system";
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system" | "project_health";
         /**
          * @description Where a class of notification reaches its reader.
          *
@@ -36776,7 +36886,7 @@ export interface components {
              * @description When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
              */
             assessed_at: string;
-            /** @description What recorded this assessment. */
+            /** @description What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
             readonly source: string;
             /** @description Who is on record as having judged it, when that is not whoever typed it in. */
             readonly source_author?: string;
@@ -38287,7 +38397,7 @@ export interface components {
             subject?: string | null;
             body?: string | null;
             /**
-             * @description What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+             * @description What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
              *     A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
              *     Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
              * @enum {string|null}
@@ -41896,11 +42006,16 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * @description How many rows to sample. The COUNT is unaffected by this — it is the
-             *     full match count for the caller, not the size of the page.
+             * @description The page size. The COUNT is unaffected by this — it is the full match
+             *     count for the caller on every page, not the size of the page.
              * @default 25
              */
             limit: number;
+            /**
+             * @description Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+             *     page after it. Absent reads the first page.
+             */
+            cursor?: string;
         };
         /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
         FilterPreview: {
@@ -41919,7 +42034,8 @@ export interface components {
              */
             columns: string[];
             /**
-             * @description Up to `limit` matching rows as column→value maps, ordered by id.
+             * @description Up to `limit` matching rows as column→value maps, ordered by id,
+             *     after the request's `cursor` when it names one.
              *     Deliberately the export's projection rather than a shape invented for
              *     this screen: a preview that showed different columns than the export
              *     of the same filter would be a preview of something else.
@@ -41928,10 +42044,49 @@ export interface components {
                 [key: string]: unknown;
             }[];
             /**
-             * @description Whether `match_count` exceeds the rows returned — so a caller can say
-             *     "showing 25 of 812" without comparing lengths and guessing.
+             * @description Whether more rows follow this page. It is true exactly when
+             *     `next_cursor` is set.
              */
             truncated: boolean;
+            /** @description Opaque cursor for the next page, or null if none. */
+            next_cursor?: string | null;
+        };
+        ActivityReaderRenderingRequest: {
+            /**
+             * @description The language to show the text in, normally the reader's interface language.
+             *     Absent means the language the reader chose for their seat, else the
+             *     installation's base language.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
+        };
+        /**
+         * @description One activity's text in one reader's language, written for this reader and stored
+         *     nowhere.
+         */
+        ActivityReaderRendering: {
+            /** Format: uuid */
+            activity_id: string;
+            /**
+             * @description The language the original is written in, null when it could not be told.
+             * @enum {string|null}
+             */
+            source_language?: "de" | "en" | "vi" | null;
+            /** @enum {string} */
+            target_language: "de" | "en" | "vi";
+            /** @description The subject in the target language, null when the activity has none. */
+            subject?: string | null;
+            /** @description The text in the target language, null when the activity has none. */
+            body?: string | null;
+            /**
+             * @description True when the original is already in the target language. `subject` and `body`
+             *     are then the original text.
+             */
+            unchanged: boolean;
+            /** @description The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked. */
+            model_used?: string;
+            /** Format: date-time */
+            generated_at: string;
         };
         /** @description A list described in plain words, to be turned into filter clauses. */
         FilterProposalRequest: {
@@ -41941,7 +42096,8 @@ export interface components {
             text: string;
             /**
              * @description The reader's interface language, which the reasons in `unsupported` are
-             *     written in. Absent means the installation's base language.
+             *     written in. Absent means the language the reader chose for their seat, else the
+             *     installation's base language.
              * @enum {string}
              */
             locale?: "en" | "de" | "vi";
@@ -46552,7 +46708,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "report_interpret" | "report_setup" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -46578,7 +46734,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -64140,6 +64296,57 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    undoProjectHealthAssessment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The undo row. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHealthAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjectStakeholders: {
         parameters: {
             query?: never;
@@ -65900,6 +66107,47 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    renderActivityForReader: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityReaderRenderingRequest"];
+            };
+        };
+        responses: {
+            /** @description The text in the reader's language, or the original marked unchanged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReaderRendering"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     readActivityPipelineTrace: {
@@ -71858,7 +72106,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The count and first page. */
+            /** @description The count and one page. */
             200: {
                 headers: {
                     [name: string]: unknown;

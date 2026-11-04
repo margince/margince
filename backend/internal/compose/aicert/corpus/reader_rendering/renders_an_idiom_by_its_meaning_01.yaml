@@ -1,0 +1,22 @@
+name: reader_rendering_renders_an_idiom_by_its_meaning
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "note"
+  subject: "Stand Rahmenvertrag"
+  body: "Der Einkauf bei Nordwind Logistik hat uns zugesagt, dass das Thema noch nicht vom Tisch ist. Herr Albers meinte, wir sollen nicht die Flinte ins Korn werfen, die Entscheidung fällt erst im Dezember."
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Nordwind Logistik", "Albers"]
+    omits: ["shotgun", "corn"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The idiom 'die Flinte ins Korn werfen' is rendered by its meaning (do not give up), never word by word; a rendering that mentions a shotgun or corn fails. The rendering is natural English and says the decision comes in December."

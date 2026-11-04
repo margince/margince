@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -79,6 +79,10 @@ When an email in Margince shows "This message is not shared with you" or **Withh
 The most likely reasons: the thread is **Held until checked** and nothing has judged it yet, or its owner set their mailbox to **Always held**. Or the sender or domain is under **Private correspondence**, or an administrator turned **Email sharing** off.
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
+
+### Does showing an email in my language share it with anyone?
+No. **Show in my language** works only on an email you can read, and nobody else sees the version in your language. Margince does not save it. A message that is withheld from you offers no button, because its words are not yours to read.
+Also called: a held email in my language, who sees a translation.
 
 ### Can I read a mail I sent when only a colleague's mailbox captured it?
 Yes, that one mail. You wrote to a customer and copied a colleague, and Margince

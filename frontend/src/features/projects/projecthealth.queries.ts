@@ -93,3 +93,25 @@ export function useCorrectProjectHealth(projectId: string) {
     },
   });
 }
+
+// Undoing a reading the health job wrote. The server puts back what stood
+// before it, or leaves the project not judged, so there is no body to send.
+export function useUndoProjectHealth(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (assessmentId: string) => {
+      const { data, error, response } = await api.POST(
+        "/projects/{id}/health-assessments/{assessment_id}/undo",
+        { params: { path: { id: projectId, assessment_id: assessmentId } } },
+      );
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
+      qc.invalidateQueries({ queryKey: project360Key(projectId) });
+    },
+  });
+}
