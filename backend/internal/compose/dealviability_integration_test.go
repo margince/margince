@@ -349,10 +349,10 @@ func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
 	}
 }
 
-// ONE BROKEN MAILBOX DOES NOT BLIND THE CHECK FOR EVERY DEAL (#10350). A
-// colleague's mailbox needs re-authorising. The run is still incomplete, and
-// the colleague's own deal still reads unknown. The owner whose mailbox was read
-// on time still gets the review on their silent deal.
+// ONE BROKEN MAILBOX DOES NOT BLIND THE CHECK FOR EVERY DEAL. A colleague's
+// mailbox needs re-authorising. The run is incomplete, and the colleague's own
+// deal reads unknown. The owner whose mailbox was read on time gets the review
+// on their silent deal.
 //
 // Mutation: make dealMailCovered return runCovered alone and the silent deal
 // gets no review. Restore Needs: mail on the viability rule and the same holds.

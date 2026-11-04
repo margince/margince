@@ -340,9 +340,9 @@ func noEconomicBuyer() Rule {
 //
 // It declares no run-level Needs. Whether the mail was read is judged per deal,
 // on the owner's own mailboxes, and a deal whose mail was not read arrives as
-// unknown and raises nothing. Needing the run's mail grade made one broken
-// mailbox anywhere stop the check for every deal. A review type never clears
-// in absence, so dropping the need clears nothing either.
+// unknown and raises nothing, so one broken mailbox does not stop the check
+// for every deal. A review type never clears in absence, so declaring no need
+// clears nothing either.
 func dealViability() Rule {
 	return Rule{
 		Type: TypeDealViability, Version: viability.PolicyVersion,

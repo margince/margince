@@ -440,9 +440,8 @@ func (m mailCounts) grade(now time.Time) assurance.SourceCoverage {
 // A user with no live mailbox has no entry.
 //
 // It is what a deal's silence is judged on. A colleague's broken mailbox says
-// nothing about whether the owner's mail was read, and grading every deal on
-// the whole installation made one expired token turn every deal's check into
-// coverage_unknown.
+// nothing about whether the owner's mail was read, so it does not make the
+// owner's deals coverage_unknown.
 func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids.UUID]assurance.SourceCoverage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT c.user_id, `+mailCountsSQL+`
