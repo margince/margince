@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 194789,
+    "tool_catalog_bytes": 194908,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50012,
+    "approx_wire_tokens_total": 50041,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42642,
-      "input_schema_bytes": 93419,
+      "input_schema_bytes": 93538,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 136061
+      "description_plus_input_schema_bytes": 136180
     }
   },
   "tools": {
@@ -1132,7 +1132,7 @@
               "type": "boolean"
             },
             "request_body": {
-              "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
+              "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
               "type": "object"
             },
             "scope": {
@@ -2200,6 +2200,7 @@
                 "delete_disqualify_reason",
                 "delete_lead_origin",
                 "delete_lead_source",
+                "mark_booking_page_shared",
                 "remove_legal_entity_logo",
                 "remove_own_logo",
                 "remove_own_logo_icon",
@@ -7345,6 +7346,10 @@
             },
             "provider": {
               "description": "scheduling_calendars only",
+              "type": "string"
+            },
+            "question": {
+              "description": "document_extraction only",
               "type": "string"
             },
             "record_type": {
