@@ -79,6 +79,20 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 	return auditSatelliteCarry(ctx, tx, from, to, carry)
 }
 
+// BindRequestsToAddressesTx implements contacts.ConsentSatelliteCarrier. Gated
+// by admitACarry like the carry it comes before.
+func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+	if err := admitACarry(ctx, tx, commsauthz.ContactStopSubject(from), commsauthz.ContactStopSubject(to)); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE consent_qualifying_event q SET recorded_for_addresses = `+storekit.RequestAddressesSQL("q.contact_id")+`
+		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, []ids.UUID{from.UUID, to.UUID}); err != nil {
+		return fmt.Errorf("consent: binding the recorded requests to their addresses: %w", err)
+	}
+	return nil
+}
+
 // carrySubjectArmRows moves the two tables that can name a lead or a contact.
 // One statement sets both columns, so a promotion clears lead_id in the same
 // write that sets contact_id and the one-subject CHECK holds throughout.

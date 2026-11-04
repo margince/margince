@@ -431,7 +431,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -441,6 +441,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `kind` | `text` | yes | One of `inbound_message`, `inquiry`, `active_deal`, `in_person`, `meeting`, `requested_by_subject`. |
 | `note` | `text` |  | The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |

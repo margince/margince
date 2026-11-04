@@ -102,7 +102,7 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's notice links: %w", err)
 	}
-	// A SUPPRESSION IS DETACHED, NOT DELETED (retentionstops.go). Erasure
+	// A suppression is detached, not deleted (retentionstops.go). Erasure
 	// deletes it because it writes an erasure_suppression hash; this writes none.
 	var addresses []string
 	if address != nil && *address != "" {

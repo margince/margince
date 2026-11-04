@@ -241,7 +241,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 		// would let the timeline supply what the confirmation did not.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, nil)
 	if err != nil {
 		return Verdict{}, err
 	}

@@ -41,11 +41,9 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	}
 	legacy := g.legacyTransmitAnswer(ctx, req)
 	setID := ids.NewV7()
-	// Counted after the commit, not beside the insert. Two arms below return an
-	// error once the decisions are already written — an unanswerable legacy
-	// gate, and the wording comparison — and each rolls the rows back. A
-	// counter incremented inside the transaction would keep those, and report
-	// decisions the record does not hold.
+	// Counted after the commit, not beside the insert. Two arms return an error
+	// after the rows are written (an unanswerable legacy gate, the wording
+	// check), and each rolls them back. A count taken inside would keep them.
 	var recorded []commsauthz.Decision
 	var ticket commsauthz.TransmitTicket
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -122,11 +120,8 @@ func (g *Gate) transmitVerdictTx(
 	ticket := commsauthz.TransmitTicket{DeliveryID: req.DeliveryID, Attempt: req.Attempt, DecisionSetID: setID}
 	legacyAllowed, legacyUnanswerable, legacyErr := legacy.allowed, legacy.unanswerable, legacy.err
 	var recorded []commsauthz.Decision
-	// Read inside the transaction that binds the decision, so the posture
-	// a row records is the one that was live when it was taken. Reading it
-	// before the transaction would let a rollout change between the read
-	// and the write, leaving a row stamped with a mode that never decided
-	// it.
+	// Read inside the transaction, so the mode a row records is the one that
+	// was live when it was decided.
 	modes, err := authorizationModesTx(ctx, tx)
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err
@@ -141,55 +136,29 @@ func (g *Gate) transmitVerdictTx(
 			return commsauthz.TransmitTicket{}, nil, err
 		}
 	}
-	// AN UNANSWERABLE LEGACY GATE IS ONLY FATAL WHERE ITS ANSWER IS USED.
-	//
-	// Effective consults legacyAllowed only when no recipient's category is
-	// enforced, which the shipped posture never produces. Where it IS
-	// consulted — an operator has moved a category back to observe — a gate
-	// that failed to answer must retry rather than refuse: a refusal parks
-	// with a reason a human can act on, and a failure to LEARN the answer
-	// is not one. Treating the outage as a refusal would destroy every
-	// in-flight delivery in the window instead of deferring them.
-	// An absolute denial needs no second opinion: it refuses in every mode,
-	// so an unanswerable legacy gate changes nothing and retrying would
-	// hold a message the subject already stopped.
+	// An unanswerable legacy gate fails only where its answer is used: when no
+	// recipient's category is enforced. There an outage retries, because a
+	// refusal would park in-flight mail on a question nobody answered. An
+	// absolute denial refuses in every mode, so it needs no legacy answer.
 	if legacyUnanswerable && !set.HasAbsoluteDenial() && !set.HasEnforcedRecipient(modeFor) {
 		return commsauthz.TransmitTicket{}, nil, legacyErr
 	}
 	ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 	ticket.Reason = refusalReason(set, legacyAllowed)
-	// THIS REFUSAL IS ABOUT THE RECIPIENTS, which is the one a recorded
-	// human decision can answer — they were shown the engine's verdict
-	// about the contacts, and that is what they signed for.
-	//
-	// Set here, from the engine's own answer, and never widened below: the
-	// wording check that follows refuses for a reason NOBODY has looked at,
-	// so it must not inherit this flag. See TransmitTicket.ConsentRefused.
-	// A subject's stop recorded after staging, or a refusal beyond the
-	// authority of whoever gave the exception, keeps the flag down and the
-	// message parks.
+	// This refusal is about the recipients, which a recorded human decision can
+	// answer (TransmitTicket.ConsentRefused). The wording check below refuses
+	// for a reason nobody looked at, so it never widens this flag. A stop
+	// recorded after staging, or a refusal beyond the exception giver's
+	// authority, keeps the flag down and the message parks.
 	givenByAdmin, err := exceptionGivenByAdminTx(ctx, tx, req.DeliveryID)
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err
 	}
 	ticket.ConsentRefused = !ticket.Allowed && set.ExceptionMayAnswer(givenByAdmin)
-	// The message that goes must be the message that was authorized.
-	//
-	// ASKED OF EVERY MESSAGE THAT MIGHT ACTUALLY GO, which is not the same
-	// as every message the engine allows. A delivery the engine refused can
-	// still leave on a named human's recorded decision, and that decision
-	// was about specific words — so skipping this check for a refused
-	// delivery would let a directed send carry whatever the payload holds
-	// now rather than what was acknowledged. That was the defect: the check
-	// ran only under `if ticket.Allowed`, and a directed send is never
-	// allowed.
-	//
-	// It does not REPLACE the recipient refusal for a message that is not
-	// going anyway: an operator reading "the wording changed" about a
-	// message somebody had objected to would be told to re-approve the
-	// wrong thing. So the reason is only rewritten when the recipient
-	// verdict would otherwise have let it through, and the flag is cleared
-	// either way — a wording refusal is nobody's to waive.
+	// The message that goes must be the message that was authorized. Asked of
+	// every message that might go, refused ones included: a directed send
+	// leaves on a human's decision about specific words. applyWordingVerdict
+	// says when the reason is rewritten.
 	changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err

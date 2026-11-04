@@ -35,9 +35,29 @@ const (
 	stopsOfLead    stopSubjectColumn = "lead_id"
 )
 
-// sourceKeptFromWithdrawal is the source of a stop written from a withdrawal at
-// anonymization, so a reader can tell it from a stop the subject asked for.
+// sourceKeptFromWithdrawal marks a stop the anonymize wrote from a withdrawal.
+// A reader can tell it from a stop the subject asked for.
 const sourceKeptFromWithdrawal = "withdrawal kept when the record was anonymized"
+
+// keepContactStops keeps the stops of a contact and of every record merged
+// into it. A merge copies the merged-away records' stops onto the survivor. An
+// older merge may not have, so their own rows are pinned the same way.
+func keepContactStops(ctx context.Context, tx pgx.Tx, id ids.UUID, addresses []string) error {
+	rows, err := tx.Query(ctx, `SELECT id FROM contact WHERE merged_into_id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("read the records merged into the subject: %w", err)
+	}
+	predecessors, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("read the records merged into the subject: %w", err)
+	}
+	for _, subject := range append([]ids.UUID{id}, predecessors...) {
+		if err := keepStopsOnAddresses(ctx, tx, stopsOfContact, subject, addresses); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // keepStopsOnAddresses detaches every stop of one subject onto its addresses.
 //

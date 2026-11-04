@@ -154,8 +154,8 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 	return p.dispatchOnceWith(t, deliveryID, stampAs, nil)
 }
 
-// dispatchOnceWith is dispatchOnce with a send policy chain, for a case that
-// needs something to happen between the consent gate and the wire.
+// dispatchOnceWith is dispatchOnce with a send policy chain. A case passes one
+// when something must happen between the consent gate and the wire.
 func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stampAs string, policies []comms.SendPolicy) (comms.Outcome, sentMail, *gmail.Connector) {
 	t.Helper()
 	var captured sentMail
@@ -185,7 +185,7 @@ func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stamp
 	// the gate and the connector are the production objects; what this
 	// restates is the WIRING — so a send policy added to the composed chain
 	// would not be exercised by these tests, and the pacing knobs below are
-	// inert unless a case passes its own policies (a bound nothing here reaches).
+	// deliberately inert (no policies, a bound nothing here reaches).
 	dispatcher := comms.NewDispatcher(
 		comms.NewStore(compose.InstallationDB(p.Pool), time.Now, activities.NewStore(compose.InstallationDB(p.Pool))),
 		stubMailbox{sender: gmailConnector, auth: auth},

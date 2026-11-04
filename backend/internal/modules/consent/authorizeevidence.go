@@ -372,6 +372,9 @@ var (
 // from us, within scope. That is a request a rep recorded, a form enquiry, or
 // acquisition evidence of a request.
 //
+// A request carried over by a merge covers only the addresses of the record it
+// was made on (requestCoversSQL).
+//
 // No age limit: a request covers the follow-up at the agreed timing. A stop or
 // a retraction ends it (RetractQualifyingEvent, and the acquisition request's
 // own retraction). occurred_at is caller-stated, so a future date does not count.
@@ -396,6 +399,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND e.kind = ANY($4::text[])
 			   AND coalesce(e.occurred_at, e.captured_at) <= $2
 			   AND e.request_retracted_at IS NULL
+			   AND `+requestCoversSQL("e.recorded_for_addresses", "$6")+`
 			UNION ALL
 			SELECT q.occurred_at
 			  FROM consent_qualifying_event q
@@ -404,8 +408,9 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND q.occurred_at <= $2
 			   AND q.retracted_at IS NULL
 			   AND (q.asks_for_quote OR NOT $5)
+			   AND `+requestCoversSQL("q.recorded_for_addresses", "$6")+`
 		) requests`, subject.ID, time.Now().Add(clockSkewAllowance),
-		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly).Scan(&newest)
+		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, subject.Address).Scan(&newest)
 	if err != nil {
 		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}

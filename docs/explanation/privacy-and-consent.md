@@ -44,6 +44,12 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   itself goes into `communication_basis`, not on the decision row.) A message that reaches a provider
   always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
   in between the two.
+
+  The dispatcher asks once more at the wire (`RecheckTransmit`), after pacing and the file read. A
+  stop, or a request taken back, recorded in that time parks the message. The same answer records nothing new.
+- A request stays with the record it was made on. A merge binds each request on either record to
+  that record's addresses (`recorded_for_addresses`). After a wrong merge, one human's request does
+  not cover the other's addresses.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
@@ -347,6 +353,10 @@ into consent's handlers.
   write one. So a transcript is archived under the `activity` row, and only an Article 17 request
   destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
   with no row has none.
+
+  No retention action deletes a stop. The `anonymize` action copies a stop for the whole record onto
+  each of its addresses (`privacy/retentionstops.go`). It writes a marketing withdrawal as an
+  objection on each address. So a subject who comes back on a new record is still stopped.
 
 ## The single-transaction cross-store exception
 

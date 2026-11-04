@@ -380,6 +380,9 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if _, err := tx.Exec(ctx, `DELETE FROM contact_acquisition_evidence WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
+	if err := clearRequestAddresses(ctx, tx, id); err != nil {
+		return err
+	}
 	// Per row, not one constant. A single delivery can carry two decisions for
 	// the same subject — one message To and Cc'ing two of their addresses — and
 	// collapsing both to one tombstone collides on
@@ -414,7 +417,7 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
-	if err := keepStopsOnAddresses(ctx, tx, stopsOfContact, id, addresses); err != nil {
+	if err := keepContactStops(ctx, tx, id, addresses); err != nil {
 		return err
 	}
 	// An override has NO address column to detach onto, unlike the suppression

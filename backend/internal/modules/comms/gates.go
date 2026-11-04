@@ -332,8 +332,8 @@ func transmitRequestFor(del Delivery) commsauthz.TransmitRequest {
 }
 
 // recheckBeforeTheWire asks consent again right before the provider call. The
-// first answer came before pacing, the attachment checks and the file read,
-// and a stop or a retraction committed in that time is in no ticket.
+// first answer came before pacing, the attachment checks and the file read. A
+// stop or a retraction committed in that time is in no ticket.
 //
 // An unchanged answer keeps the issued ticket. A changed one goes through the
 // same decision and requirement gates as the first. A stop committed during the

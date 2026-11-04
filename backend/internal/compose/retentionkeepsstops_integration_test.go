@@ -7,7 +7,7 @@ package compose
 
 // An active opt-out never expires, and deleting old proof never resets anyone
 // to "permission unknown". This drives the real retention pass with every
-// authorable scope set to its most destructive action, then asks the real gate
+// authorable scope at its most destructive action. Then it asks the real gate
 // about a subject who comes back on a new record.
 
 import (
@@ -112,9 +112,8 @@ func withdrawMarketing(t *testing.T, e *integration.Env, store *consent.Store, c
 	}
 }
 
-// seedLeadWithPinnedStop is a lead whose own address is already empty, holding
-// a stop that names the address it was pressed from: the shape a one-click
-// unsubscribe leaves on a lead.
+// seedLeadWithPinnedStop is a lead whose own address is already empty. Its stop
+// names the address it was pressed from, as a one-click unsubscribe leaves it.
 func seedLeadWithPinnedStop(t *testing.T, e *integration.Env, address string) ids.UUID {
 	t.Helper()
 	var lead ids.UUID

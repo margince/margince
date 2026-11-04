@@ -49,6 +49,9 @@ import (
 func deleteConsentCapabilities(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, reason string,
 ) error {
+	if err := clearRequestAddresses(ctx, tx, contactID.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's preference-center token: %w", err)
 	}

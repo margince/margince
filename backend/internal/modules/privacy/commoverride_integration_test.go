@@ -257,9 +257,10 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 	}
 }
 
-// TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression is the stop twin
-// of the override case above.
-func TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression(t *testing.T) {
+// TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression is the stop twin
+// of the override case above, with the opposite outcome. An override goes. A
+// stop is pinned to the subject's address, so it never expires.
+func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -274,6 +275,9 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression(t *testing.T) {
 		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
 	mustExec(ctx, t, tx,
+		`INSERT INTO contact_email (contact_id, email, source, captured_by)
+		 VALUES ($1, 'hedda@anon.test', 'manual', 'user:'||$2::text)`, contact, user)
+	mustExec(ctx, t, tx,
 		`INSERT INTO contact (id, full_name, source, captured_by, merged_into_id, archived_at)
 		 VALUES ($1, 'Hedda Duplicate', 'manual', 'user:'||$2::text, $3, now())`, predecessor, user, contact)
 	mustExec(ctx, t, tx, `
@@ -284,12 +288,15 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsSuppression(t *testing.T) {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
-	var n int
-	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM communication_suppression WHERE contact_id = $1`, predecessor).Scan(&n); err != nil {
+	var onPredecessor, onAddress int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE contact_id = $1),
+		       count(*) FILTER (WHERE contact_id IS NULL AND address = 'hedda@anon.test' AND revoked_at IS NULL)
+		  FROM communication_suppression`, predecessor).Scan(&onPredecessor, &onAddress); err != nil {
 		t.Fatalf("counting the predecessor's suppressions: %v", err)
 	}
-	if n != 0 {
-		t.Errorf("%d suppression row(s) survived on the merged-away predecessor of an anonymized contact", n)
+	if onPredecessor != 0 || onAddress != 1 {
+		t.Errorf("after the anonymize %d stop(s) name the predecessor and %d stop the address, want 0 and 1",
+			onPredecessor, onAddress)
 	}
 }
