@@ -11773,6 +11773,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — see the deviation note above
       x-agent-access: human-only
       x-human-only-reason: pending
+      x-settings-audience: member
       summary: Dry-run an automation's blast radius — a read that never writes, sends, or stages an approval.
       description: |
         Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
@@ -12222,6 +12223,7 @@ paths:
       tags: [Leads]
       operationId: getLeadSettings
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      x-settings-audience: member
       summary: How this installation handles leads.
       description: |
         The first-response target (formulas §18) is opt-in: off by default. While it is off
@@ -18525,6 +18527,7 @@ paths:
         domain is captured again from the next message on; nothing already dropped comes back.
       x-mcp-tool: { verb: lift_capture_exclusion, router: change_capture, action: lift_exclusion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-settings-audience: member
       responses:
         '204': { description: Lifted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -20786,6 +20789,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       x-human-only-reason: security
+      x-settings-audience: member
       summary: Every vendor whose OAuth app this installation can hold, and whether it holds one.
       description: |
         The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
@@ -20831,6 +20835,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
       x-agent-access: human-only
       x-human-only-reason: security
+      x-settings-audience: member
       summary: Whether this installation has one vendor's OAuth app, and which one.
       description: |
         One app per vendor per installation, supplied by whoever operates it — every mailbox and
@@ -21349,6 +21354,7 @@ paths:
       operationId: addConsumerMailDomain
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: add_consumer_mail_domain, router: change_capture, action: add_consumer_mail_domain, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      x-settings-audience: member
       summary: Add a consumer-mail domain, or carve one out.
       description: |
         It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
@@ -34715,6 +34721,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — internal cost data is an admin view, not an agent surface
       x-agent-access: human-only
       x-human-only-reason: security
+      x-settings-audience: admin
       summary: List the AI model price sheet (latest-dated price per model), or one model's history.
       description: |
         Admin/ops-only view. Prices are USD per 1M tokens (strings). Without
