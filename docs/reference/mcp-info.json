@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 194687,
+    "tool_catalog_bytes": 194993,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 49986,
+    "approx_wire_tokens_total": 50063,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93540,
-      "output_schema_bytes": 47182,
-      "description_plus_input_schema_bytes": 136211
+      "input_schema_bytes": 93594,
+      "output_schema_bytes": 47434,
+      "description_plus_input_schema_bytes": 136265
     }
   },
   "tools": {
@@ -2046,6 +2046,8 @@
                                   "type": "array"
                                 },
                                 "limit": {
+                                  "maximum": 1000,
+                                  "minimum": 1,
                                   "type": "integer"
                                 },
                                 "measures": {
@@ -4248,6 +4250,7 @@
                             "type": "array"
                           },
                           "more_fields": {
+                            "minimum": 0,
                             "type": "integer"
                           },
                           "sentence": {
@@ -4602,18 +4605,23 @@
                     "disposition": {
                       "properties": {
                         "created": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "duplicates": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "skipped": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "unchanged": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "updated": {
+                          "minimum": 0,
                           "type": "integer"
                         }
                       },
@@ -4641,6 +4649,7 @@
                             "type": "string"
                           },
                           "line": {
+                            "minimum": 1,
                             "type": "integer"
                           },
                           "params": {
@@ -4669,9 +4678,11 @@
                     "links": {
                       "properties": {
                         "applied": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "offered": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "unresolved": {
@@ -4722,26 +4733,33 @@
                       "items": {
                         "properties": {
                           "closed_lost": {
+                            "minimum": 1,
                             "type": "integer"
                           },
                           "closed_won": {
+                            "minimum": 1,
                             "type": "integer"
                           },
                           "disposition": {
                             "properties": {
                               "created": {
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "duplicates": {
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "skipped": {
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "unchanged": {
+                                "minimum": 0,
                                 "type": "integer"
                               },
                               "updated": {
+                                "minimum": 0,
                                 "type": "integer"
                               }
                             },
@@ -4760,6 +4778,7 @@
                             "type": "string"
                           },
                           "rows_read": {
+                            "minimum": 0,
                             "type": "integer"
                           }
                         },
@@ -4774,6 +4793,7 @@
                       "type": "array"
                     },
                     "rows_read": {
+                      "minimum": 0,
                       "type": "integer"
                     },
                     "run_id": {
@@ -4846,6 +4866,7 @@
                           "type": "array"
                         },
                         "reversed_count": {
+                          "minimum": 0,
                           "type": "integer"
                         },
                         "run_id": {
@@ -4856,6 +4877,7 @@
                           "type": "string"
                         },
                         "updates_not_reversed": {
+                          "minimum": 0,
                           "type": "integer"
                         }
                       },
@@ -5566,6 +5588,7 @@
                       "type": "array"
                     },
                     "more_fields": {
+                      "minimum": 0,
                       "type": "integer"
                     },
                     "sentence": {
@@ -8922,6 +8945,8 @@
                                   "type": "array"
                                 },
                                 "limit": {
+                                  "maximum": 1000,
+                                  "minimum": 1,
                                   "type": "integer"
                                 },
                                 "measures": {
