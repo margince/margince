@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go frontend/src/features/settings/taxrates.tsx -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -85,7 +85,7 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 ## Send, accept, reject and revise
 
-**Send** fixes the exchange rate on the offer and records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
+**Send** fixes the exchange rate and the tax rates on the offer. It also records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
 
 **Accept** sets the deal's amount and currency to the offer's gross total, so the deal shows what the buyer agreed to. It needs permission to change both the offer and the deal.
 
@@ -113,6 +113,9 @@ Each offer has a **Language**. A new offer takes the language of the company tha
 - **A number too large to store is refused**, not rounded.
 - **No exchange rate for the day stops sending.** Margince never uses
   a rate of 1 in its place.
+- **A missing tax rate stops sending.** It also stops adding the line.
+  Margince never guesses a rate: an Admin or Ops records it on the **Tax
+  rates** card first.
 
 The billing type has its own refusals, and each one states the rule. One says "a one-off price has no billing interval, because there is nothing to repeat". Another says "a commitment covers at least one period".
 
@@ -150,7 +153,15 @@ You can leave product billing **unspecified**, which is not the same as one-time
 <!-- opens: settings/company -->
 An Admin or Ops keeps the **Tax rates** card under **Settings → Company profile**. Choose **Record a rate**, then fill **Country**, **Category** (**Standard** or **Reduced**), **Rate** and **From**. A rate is never changed or removed: to change one, record a new rate from a later day. A **From** day before the first rate of that **Country** adds to its history.
 
-**Tax category** on a product says which rate it takes: **Standard**, **Reduced** or **Exempt**. The first rate you record for a category of your own **Country** sorts the products for you. Each product whose **Default tax rate %** is that rate gets that category. A product with any other rate, 0% included, stays **Not classified** until you choose. The **Tax category** filter on the products list shows those. Offers still take each product's **Default tax rate %** for now.
+**Tax category** on a product says which rate it takes: **Standard**, **Reduced** or **Exempt**. The first rate you record for a category of your own **Country** sorts the products for you. Each product whose **Default tax rate %** is that rate gets that category. A product with any other rate, 0% included, stays **Not classified** until you choose. The **Tax category** filter on the products list shows those.
+
+### Which tax rate does an offer line take?
+
+A line from a product with a **Tax category** takes the rate of that category from the **Tax rates** card. It is the rate for the **Country** of the company that issues the offer, or your own **Country** when that company names none. The line shows its category under the rate.
+
+A draft takes today's rate. **Send** takes the rate again for the day you send, so a new rate from that day applies. After the send the line does not change. Moving a draft to another company under **Edit** takes that company's rates.
+
+A line from a product with no category takes its **Default tax rate %**. A rate you type on a line is kept as you typed it, also when you send, and the line no longer shows a category.
 
 ### Snapshots, and why a line does not move
 

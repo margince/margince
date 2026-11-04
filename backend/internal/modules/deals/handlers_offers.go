@@ -58,6 +58,7 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		Unit:           in.Unit,
 		Quantity:       wireDecimal(in.Quantity),
 		UnitPriceMinor: in.UnitPriceMinor,
+		TaxCategory:    componentKindOf(in.TaxCategory),
 	}
 	if in.DiscountPct != nil {
 		v := wireDecimal(*in.DiscountPct)
