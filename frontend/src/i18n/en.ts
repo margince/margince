@@ -1872,6 +1872,9 @@ export const en = {
   "scheduling.openCalendar": "Open in calendar",
   "scheduling.cancel": "Cancel meeting",
   "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
+  "scheduling.calendarDisconnectedTitle": "Your calendar refused Margince",
+  "scheduling.calendarDisconnectedHelp":
+    "Every invitation waiting on this calendar is paused. Reconnect it with permission to add events, and they go out on their own.",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
   "scheduling.pausedUnavailable":
@@ -19198,7 +19201,6 @@ export const en = {
   "magic.consequence.capture_history_incomplete": "History import incomplete.",
   "scheduling.linksTitle": "Booking links",
   "scheduling.status.paused": "Paused",
-  "scheduling.status.attention": "Needs attention",
   "scheduling.acceptBookings": "Accept bookings",
   "scheduling.acceptBookingsHelp":
     "Anyone with your link can pick a free time. Turn off to pause bookings; the link stays the same.",
@@ -19213,8 +19215,6 @@ export const en = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Actions",
   "scheduling.videoCall": "Video call",
-  "scheduling.row.live": "Live",
-  "scheduling.row.noInvitations": "No invitations",
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",

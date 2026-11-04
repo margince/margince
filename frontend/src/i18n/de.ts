@@ -1950,6 +1950,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Termin absagen",
   "scheduling.cancelConfirm":
     "Diesen Termin absagen und den Gast benachrichtigen?",
+  "scheduling.calendarDisconnectedTitle":
+    "Dein Kalender hat Margince abgewiesen",
+  "scheduling.calendarDisconnectedHelp":
+    "Alle Einladungen, die auf diesen Kalender warten, sind angehalten. Verbinde ihn wieder mit der Erlaubnis, Termine anzulegen, dann gehen sie von selbst raus.",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
   "scheduling.pausedUnavailable":
@@ -19377,7 +19381,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiFigures.window.30d": "30 T",
   "scheduling.linksTitle": "Buchungslinks",
   "scheduling.status.paused": "Pausiert",
-  "scheduling.status.attention": "Braucht Aufmerksamkeit",
   "scheduling.acceptBookings": "Buchungen annehmen",
   "scheduling.acceptBookingsHelp":
     "Alle mit deinem Link können eine freie Zeit wählen. Schalte es aus, um Buchungen zu pausieren; der Link bleibt gleich.",
@@ -19392,8 +19395,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Aktionen",
   "scheduling.videoCall": "Videoanruf",
-  "scheduling.row.live": "Aktiv",
-  "scheduling.row.noInvitations": "Keine Einladungen",
   "scheduling.videoNotSet": "Nicht festgelegt",
   "scheduling.video.ownShort": "Eigener Link",
   "scheduling.mainLink": "(Hauptlink)",

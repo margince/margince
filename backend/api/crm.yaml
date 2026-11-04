@@ -52655,6 +52655,14 @@ components:
         provider: { type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads. }
         video_call: { type: boolean, description: A video call link was requested for this meeting. }
         video_url: { type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one." }
+        attention_reason:
+          type: string
+          enum: [delivery_failed, calendar_disconnected]
+          description: |
+            Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+            Margince, so every queued invitation of that host and calendar was paused; they go out again on
+            their own once the calendar is reconnected with write access. `delivery_failed`: this one
+            invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
     MeetingProposal:
       type: object
       required: [id, subject, duration_minutes, options, url, created_at, expires_at]

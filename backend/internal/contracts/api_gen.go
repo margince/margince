@@ -15310,6 +15310,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationAttentionReason.
+const (
+	MeetingInvitationAttentionReasonCalendarDisconnected MeetingInvitationAttentionReason = "calendar_disconnected"
+	MeetingInvitationAttentionReasonDeliveryFailed       MeetingInvitationAttentionReason = "delivery_failed"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationAttentionReason enum.
+func (e MeetingInvitationAttentionReason) Valid() bool {
+	switch e {
+	case MeetingInvitationAttentionReasonCalendarDisconnected:
+		return true
+	case MeetingInvitationAttentionReasonDeliveryFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationProvider.
 const (
 	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
@@ -50283,11 +50301,16 @@ type MeetingGuest struct {
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string            `json:"calendar_url,omitempty"`
-	End             time.Time          `json:"end"`
-	Id              openapi_types.UUID `json:"id"`
-	Location        string             `json:"location"`
-	ManagementToken *string            `json:"management_token,omitempty"`
+	// AttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+	// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+	// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+	// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+	AttentionReason *MeetingInvitationAttentionReason `json:"attention_reason,omitempty"`
+	CalendarUrl     *string                           `json:"calendar_url,omitempty"`
+	End             time.Time                         `json:"end"`
+	Id              openapi_types.UUID                `json:"id"`
+	Location        string                            `json:"location"`
+	ManagementToken *string                           `json:"management_token,omitempty"`
 
 	// Provider The calendar provider that holds the event. Omitted on guest reads.
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
@@ -50303,6 +50326,12 @@ type MeetingInvitation struct {
 	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
 	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationAttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+type MeetingInvitationAttentionReason string
 
 // MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
 type MeetingInvitationProvider string
