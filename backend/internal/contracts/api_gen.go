@@ -9181,6 +9181,27 @@ func (e CreateProductRequestComponentKind) Valid() bool {
 	}
 }
 
+// Defines values for CreateProductRequestTaxCategory.
+const (
+	CreateProductRequestTaxCategoryExempt   CreateProductRequestTaxCategory = "exempt"
+	CreateProductRequestTaxCategoryReduced  CreateProductRequestTaxCategory = "reduced"
+	CreateProductRequestTaxCategoryStandard CreateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestTaxCategory enum.
+func (e CreateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case CreateProductRequestTaxCategoryExempt:
+		return true
+	case CreateProductRequestTaxCategoryReduced:
+		return true
+	case CreateProductRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -10285,6 +10306,96 @@ func (e DealSuggestionEvidenceKind) Valid() bool {
 	case DealSuggestionEvidenceKindMeeting:
 		return true
 	case DealSuggestionEvidenceKindSignal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityDisposition.
+const (
+	DealViabilityDispositionNone        DealViabilityDisposition = "none"
+	DealViabilityDispositionOpenReview  DealViabilityDisposition = "open_review"
+	DealViabilityDispositionOverride    DealViabilityDisposition = "override"
+	DealViabilityDispositionUnsupported DealViabilityDisposition = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityDisposition enum.
+func (e DealViabilityDisposition) Valid() bool {
+	switch e {
+	case DealViabilityDispositionNone:
+		return true
+	case DealViabilityDispositionOpenReview:
+		return true
+	case DealViabilityDispositionOverride:
+		return true
+	case DealViabilityDispositionUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualification.
+const (
+	DealViabilityQualificationClosed      DealViabilityQualification = "closed"
+	DealViabilityQualificationEligible    DealViabilityQualification = "eligible"
+	DealViabilityQualificationExcluded    DealViabilityQualification = "excluded"
+	DealViabilityQualificationUnknown     DealViabilityQualification = "unknown"
+	DealViabilityQualificationUnsupported DealViabilityQualification = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualification enum.
+func (e DealViabilityQualification) Valid() bool {
+	switch e {
+	case DealViabilityQualificationClosed:
+		return true
+	case DealViabilityQualificationEligible:
+		return true
+	case DealViabilityQualificationExcluded:
+		return true
+	case DealViabilityQualificationUnknown:
+		return true
+	case DealViabilityQualificationUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualificationMode.
+const (
+	DealViabilityQualificationModeEnforcing DealViabilityQualificationMode = "enforcing"
+	DealViabilityQualificationModeOff       DealViabilityQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualificationMode enum.
+func (e DealViabilityQualificationMode) Valid() bool {
+	switch e {
+	case DealViabilityQualificationModeEnforcing:
+		return true
+	case DealViabilityQualificationModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityReviewDeliveryState.
+const (
+	DealViabilityReviewDeliveryStateDelivered DealViabilityReviewDeliveryState = "delivered"
+	DealViabilityReviewDeliveryStateFailed    DealViabilityReviewDeliveryState = "failed"
+	DealViabilityReviewDeliveryStatePending   DealViabilityReviewDeliveryState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityReviewDeliveryState enum.
+func (e DealViabilityReviewDeliveryState) Valid() bool {
+	switch e {
+	case DealViabilityReviewDeliveryStateDelivered:
+		return true
+	case DealViabilityReviewDeliveryStateFailed:
+		return true
+	case DealViabilityReviewDeliveryStatePending:
 		return true
 	default:
 		return false
@@ -11619,8 +11730,9 @@ func (e ForecastContributionExclusionReason) Valid() bool {
 
 // Defines values for ForecastLandingCaveat.
 const (
-	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
-	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatCallAbsent           ForecastLandingCaveat = "call_absent"
+	ForecastLandingCaveatLandingCaveatCallBelowActual      ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatQualifiedUnavailable ForecastLandingCaveat = "qualified_unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -11630,6 +11742,8 @@ func (e ForecastLandingCaveat) Valid() bool {
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
 		return true
+	case ForecastLandingCaveatLandingCaveatQualifiedUnavailable:
+		return true
 	default:
 		return false
 	}
@@ -11637,9 +11751,11 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureCommitEvidence ForecastLandingMeasure = "commit_evidence"
-	ForecastLandingMeasureForwardMeasureManagerCall    ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureWeighted       ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureCommitEvidence          ForecastLandingMeasure = "commit_evidence"
+	ForecastLandingMeasureForwardMeasureManagerCall             ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence ForecastLandingMeasure = "qualified_commit_evidence"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted       ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted                ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -11648,6 +11764,10 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureCommitEvidence:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -11658,10 +11778,13 @@ func (e ForecastLandingMeasure) Valid() bool {
 
 // Defines values for ForecastMovementReading.
 const (
-	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
-	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
-	ForecastMovementReadingOpen     ForecastMovementReading = "open"
-	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
+	ForecastMovementReadingBestCase          ForecastMovementReading = "best_case"
+	ForecastMovementReadingEvidence          ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen              ForecastMovementReading = "open"
+	ForecastMovementReadingQualifiedBestCase ForecastMovementReading = "qualified_best_case"
+	ForecastMovementReadingQualifiedEvidence ForecastMovementReading = "qualified_evidence"
+	ForecastMovementReadingQualifiedWeighted ForecastMovementReading = "qualified_weighted"
+	ForecastMovementReadingWeighted          ForecastMovementReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastMovementReading enum.
@@ -11672,6 +11795,12 @@ func (e ForecastMovementReading) Valid() bool {
 	case ForecastMovementReadingEvidence:
 		return true
 	case ForecastMovementReadingOpen:
+		return true
+	case ForecastMovementReadingQualifiedBestCase:
+		return true
+	case ForecastMovementReadingQualifiedEvidence:
+		return true
+	case ForecastMovementReadingQualifiedWeighted:
 		return true
 	case ForecastMovementReadingWeighted:
 		return true
@@ -11685,13 +11814,16 @@ const (
 	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
 	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
 	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
+	ForecastMovementBucketNameExcluded           ForecastMovementBucketName = "excluded"
 	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
 	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
 	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
+	ForecastMovementBucketNameNotChecked         ForecastMovementBucketName = "not_checked"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
 	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
+	ForecastMovementBucketNameReinstated         ForecastMovementBucketName = "reinstated"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -11706,6 +11838,8 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameDefinition:
 		return true
+	case ForecastMovementBucketNameExcluded:
+		return true
 	case ForecastMovementBucketNameFx:
 		return true
 	case ForecastMovementBucketNameLost:
@@ -11714,11 +11848,15 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameNew:
 		return true
+	case ForecastMovementBucketNameNotChecked:
+		return true
 	case ForecastMovementBucketNamePulledIn:
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
 	case ForecastMovementBucketNameRecordChanged:
+		return true
+	case ForecastMovementBucketNameReinstated:
 		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
@@ -11773,6 +11911,24 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastReadingsQualificationMode.
+const (
+	ForecastReadingsQualificationModeEnforcing ForecastReadingsQualificationMode = "enforcing"
+	ForecastReadingsQualificationModeOff       ForecastReadingsQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the ForecastReadingsQualificationMode enum.
+func (e ForecastReadingsQualificationMode) Valid() bool {
+	switch e {
+	case ForecastReadingsQualificationModeEnforcing:
+		return true
+	case ForecastReadingsQualificationModeOff:
 		return true
 	default:
 		return false
@@ -13419,9 +13575,11 @@ func (e InstallationSettingsDateFormat) Valid() bool {
 
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence InstallationSettingsForecastForwardMeasure = "commit_evidence"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall    InstallationSettingsForecastForwardMeasure = "manager_call"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted       InstallationSettingsForecastForwardMeasure = "weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence          InstallationSettingsForecastForwardMeasure = "commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall             InstallationSettingsForecastForwardMeasure = "manager_call"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence InstallationSettingsForecastForwardMeasure = "qualified_commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted       InstallationSettingsForecastForwardMeasure = "qualified_weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted                InstallationSettingsForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
@@ -13430,6 +13588,10 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
 		return true
@@ -15148,6 +15310,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationAttentionReason.
+const (
+	MeetingInvitationAttentionReasonCalendarDisconnected MeetingInvitationAttentionReason = "calendar_disconnected"
+	MeetingInvitationAttentionReasonDeliveryFailed       MeetingInvitationAttentionReason = "delivery_failed"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationAttentionReason enum.
+func (e MeetingInvitationAttentionReason) Valid() bool {
+	switch e {
+	case MeetingInvitationAttentionReasonCalendarDisconnected:
+		return true
+	case MeetingInvitationAttentionReasonDeliveryFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationProvider.
 const (
 	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
@@ -16093,6 +16273,27 @@ func (e OfferLineItemBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for OfferLineItemTaxCategory.
+const (
+	OfferLineItemTaxCategoryExempt   OfferLineItemTaxCategory = "exempt"
+	OfferLineItemTaxCategoryReduced  OfferLineItemTaxCategory = "reduced"
+	OfferLineItemTaxCategoryStandard OfferLineItemTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemTaxCategory enum.
+func (e OfferLineItemTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemTaxCategoryExempt:
+		return true
+	case OfferLineItemTaxCategoryReduced:
+		return true
+	case OfferLineItemTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferLineItemInputBillingIntervalMonths.
 const (
 	OfferLineItemInputBillingIntervalMonthsN1  OfferLineItemInputBillingIntervalMonths = 1
@@ -16129,6 +16330,27 @@ func (e OfferLineItemInputBillingModel) Valid() bool {
 	case OfferLineItemInputBillingModelOneTime:
 		return true
 	case OfferLineItemInputBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemInputTaxCategory.
+const (
+	OfferLineItemInputTaxCategoryExempt   OfferLineItemInputTaxCategory = "exempt"
+	OfferLineItemInputTaxCategoryReduced  OfferLineItemInputTaxCategory = "reduced"
+	OfferLineItemInputTaxCategoryStandard OfferLineItemInputTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemInputTaxCategory enum.
+func (e OfferLineItemInputTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemInputTaxCategoryExempt:
+		return true
+	case OfferLineItemInputTaxCategoryReduced:
+		return true
+	case OfferLineItemInputTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -16828,6 +17050,27 @@ func (e ProductComponentKind) Valid() bool {
 	case ProductComponentKindOther:
 		return true
 	case ProductComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProductTaxCategory.
+const (
+	ProductTaxCategoryExempt   ProductTaxCategory = "exempt"
+	ProductTaxCategoryReduced  ProductTaxCategory = "reduced"
+	ProductTaxCategoryStandard ProductTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the ProductTaxCategory enum.
+func (e ProductTaxCategory) Valid() bool {
+	switch e {
+	case ProductTaxCategoryExempt:
+		return true
+	case ProductTaxCategoryReduced:
+		return true
+	case ProductTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -17692,6 +17935,24 @@ func (e RecordTagAssignerKind) Valid() bool {
 	case RecordTagAssignerKindHuman:
 		return true
 	case RecordTagAssignerKindImport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTaxRateRequestCategory.
+const (
+	RecordTaxRateRequestCategoryReduced  RecordTaxRateRequestCategory = "reduced"
+	RecordTaxRateRequestCategoryStandard RecordTaxRateRequestCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the RecordTaxRateRequestCategory enum.
+func (e RecordTaxRateRequestCategory) Valid() bool {
+	switch e {
+	case RecordTaxRateRequestCategoryReduced:
+		return true
+	case RecordTaxRateRequestCategoryStandard:
 		return true
 	default:
 		return false
@@ -18810,9 +19071,11 @@ func (e ReportingStatus) Valid() bool {
 
 // Defines values for ReportingTargetComparisonBasis.
 const (
-	ReportingTargetComparisonBasisCommitEvidence ReportingTargetComparisonBasis = "commit_evidence"
-	ReportingTargetComparisonBasisManagerCall    ReportingTargetComparisonBasis = "manager_call"
-	ReportingTargetComparisonBasisWeighted       ReportingTargetComparisonBasis = "weighted"
+	ReportingTargetComparisonBasisCommitEvidence          ReportingTargetComparisonBasis = "commit_evidence"
+	ReportingTargetComparisonBasisManagerCall             ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisQualifiedCommitEvidence ReportingTargetComparisonBasis = "qualified_commit_evidence"
+	ReportingTargetComparisonBasisQualifiedWeighted       ReportingTargetComparisonBasis = "qualified_weighted"
+	ReportingTargetComparisonBasisWeighted                ReportingTargetComparisonBasis = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
@@ -18821,6 +19084,10 @@ func (e ReportingTargetComparisonBasis) Valid() bool {
 	case ReportingTargetComparisonBasisCommitEvidence:
 		return true
 	case ReportingTargetComparisonBasisManagerCall:
+		return true
+	case ReportingTargetComparisonBasisQualifiedCommitEvidence:
+		return true
+	case ReportingTargetComparisonBasisQualifiedWeighted:
 		return true
 	case ReportingTargetComparisonBasisWeighted:
 		return true
@@ -19555,6 +19822,30 @@ func (e ScheduledSendStatus) Valid() bool {
 	case ScheduledSendStatusScheduled:
 		return true
 	case ScheduledSendStatusSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingProfileBlocker.
+const (
+	SchedulingProfileBlockerCalendarReadOnly    SchedulingProfileBlocker = "calendar_read_only"
+	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
+	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
+	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
+func (e SchedulingProfileBlocker) Valid() bool {
+	switch e {
+	case SchedulingProfileBlockerCalendarReadOnly:
+		return true
+	case SchedulingProfileBlockerCalendarUnavailable:
+		return true
+	case SchedulingProfileBlockerNoCalendar:
+		return true
+	case SchedulingProfileBlockerNone:
 		return true
 	default:
 		return false
@@ -21250,6 +21541,24 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TaxRateCategory.
+const (
+	TaxRateCategoryReduced  TaxRateCategory = "reduced"
+	TaxRateCategoryStandard TaxRateCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the TaxRateCategory enum.
+func (e TaxRateCategory) Valid() bool {
+	switch e {
+	case TaxRateCategoryReduced:
+		return true
+	case TaxRateCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamBoardMemberActivation.
 const (
 	TeamBoardMemberActivationActive  TeamBoardMemberActivation = "active"
@@ -22116,9 +22425,11 @@ func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
 
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
-	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
-	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall    UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
-	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence          UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall             UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted                UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
@@ -22127,6 +22438,10 @@ func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	case UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
 		return true
@@ -22240,6 +22555,27 @@ func (e UpdateOfferLineItemRequestBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for UpdateOfferLineItemRequestTaxCategory.
+const (
+	UpdateOfferLineItemRequestTaxCategoryExempt   UpdateOfferLineItemRequestTaxCategory = "exempt"
+	UpdateOfferLineItemRequestTaxCategoryReduced  UpdateOfferLineItemRequestTaxCategory = "reduced"
+	UpdateOfferLineItemRequestTaxCategoryStandard UpdateOfferLineItemRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateOfferLineItemRequestTaxCategory enum.
+func (e UpdateOfferLineItemRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateOfferLineItemRequestTaxCategoryExempt:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryReduced:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateProductRequestBillingIntervalMonths.
 const (
 	UpdateProductRequestBillingIntervalMonthsN1  UpdateProductRequestBillingIntervalMonths = 1
@@ -22300,6 +22636,27 @@ func (e UpdateProductRequestComponentKind) Valid() bool {
 	case UpdateProductRequestComponentKindOther:
 		return true
 	case UpdateProductRequestComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestTaxCategory.
+const (
+	UpdateProductRequestTaxCategoryExempt   UpdateProductRequestTaxCategory = "exempt"
+	UpdateProductRequestTaxCategoryReduced  UpdateProductRequestTaxCategory = "reduced"
+	UpdateProductRequestTaxCategoryStandard UpdateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestTaxCategory enum.
+func (e UpdateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateProductRequestTaxCategoryExempt:
+		return true
+	case UpdateProductRequestTaxCategoryReduced:
+		return true
+	case UpdateProductRequestTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -22596,6 +22953,7 @@ const (
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemove            UserAllowedActions = "remove"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
+	UserAllowedActionsResendInvite      UserAllowedActions = "resend_invite"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -22618,6 +22976,29 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsRemove:
 		return true
 	case UserAllowedActionsRemoveMfa:
+		return true
+	case UserAllowedActionsResendInvite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserInviteEmailState.
+const (
+	UserInviteEmailStateFailed  UserInviteEmailState = "failed"
+	UserInviteEmailStateSending UserInviteEmailState = "sending"
+	UserInviteEmailStateSent    UserInviteEmailState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the UserInviteEmailState enum.
+func (e UserInviteEmailState) Valid() bool {
+	switch e {
+	case UserInviteEmailStateFailed:
+		return true
+	case UserInviteEmailStateSending:
+		return true
+	case UserInviteEmailStateSent:
 		return true
 	default:
 		return false
@@ -23589,12 +23970,15 @@ func (e WeeklyReviewLearningsState) Valid() bool {
 
 // Defines values for WeeklyReviewMovementBar.
 const (
-	WeeklyReviewMovementBarWeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
-	WeeklyReviewMovementBarWeeklyBarCreated  WeeklyReviewMovementBar = "created"
-	WeeklyReviewMovementBarWeeklyBarLost     WeeklyReviewMovementBar = "lost"
-	WeeklyReviewMovementBarWeeklyBarOther    WeeklyReviewMovementBar = "other"
-	WeeklyReviewMovementBarWeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
-	WeeklyReviewMovementBarWeeklyBarWon      WeeklyReviewMovementBar = "won"
+	WeeklyReviewMovementBarWeeklyBarAdvanced   WeeklyReviewMovementBar = "advanced"
+	WeeklyReviewMovementBarWeeklyBarCreated    WeeklyReviewMovementBar = "created"
+	WeeklyReviewMovementBarWeeklyBarExcluded   WeeklyReviewMovementBar = "excluded"
+	WeeklyReviewMovementBarWeeklyBarLost       WeeklyReviewMovementBar = "lost"
+	WeeklyReviewMovementBarWeeklyBarNotChecked WeeklyReviewMovementBar = "not_checked"
+	WeeklyReviewMovementBarWeeklyBarOther      WeeklyReviewMovementBar = "other"
+	WeeklyReviewMovementBarWeeklyBarReinstated WeeklyReviewMovementBar = "reinstated"
+	WeeklyReviewMovementBarWeeklyBarSlipped    WeeklyReviewMovementBar = "slipped"
+	WeeklyReviewMovementBarWeeklyBarWon        WeeklyReviewMovementBar = "won"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
@@ -23604,9 +23988,15 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 		return true
 	case WeeklyReviewMovementBarWeeklyBarCreated:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarExcluded:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarLost:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarNotChecked:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarOther:
+		return true
+	case WeeklyReviewMovementBarWeeklyBarReinstated:
 		return true
 	case WeeklyReviewMovementBarWeeklyBarSlipped:
 		return true
@@ -23619,9 +24009,11 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureCommitEvidence WeeklyReviewOutlookForwardMeasure = "commit_evidence"
-	WeeklyReviewOutlookForwardMeasureManagerCall    WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureWeighted       WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureCommitEvidence          WeeklyReviewOutlookForwardMeasure = "commit_evidence"
+	WeeklyReviewOutlookForwardMeasureManagerCall             WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence WeeklyReviewOutlookForwardMeasure = "qualified_commit_evidence"
+	WeeklyReviewOutlookForwardMeasureQualifiedWeighted       WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
+	WeeklyReviewOutlookForwardMeasureWeighted                WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
@@ -23630,6 +24022,10 @@ func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
 	case WeeklyReviewOutlookForwardMeasureWeighted:
 		return true
@@ -24333,6 +24729,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealReview          WorklistItemSource = "deal_review"
 	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
@@ -24378,6 +24775,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealReview:
 		return true
 	case WorklistItemSourceDealSuggestion:
 		return true
@@ -24507,6 +24906,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealReview          WorklistReachSource = "deal_review"
 	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
@@ -24552,6 +24952,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealReview:
 		return true
 	case WorklistReachSourceDealSuggestion:
 		return true
@@ -27099,10 +27501,13 @@ func (e ListForecastCallsParamsScopeKind) Valid() bool {
 
 // Defines values for GetForecastMovementParamsReading.
 const (
-	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
-	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
-	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
-	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
+	GetForecastMovementParamsReadingBestCase          GetForecastMovementParamsReading = "best_case"
+	GetForecastMovementParamsReadingEvidence          GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen              GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingQualifiedBestCase GetForecastMovementParamsReading = "qualified_best_case"
+	GetForecastMovementParamsReadingQualifiedEvidence GetForecastMovementParamsReading = "qualified_evidence"
+	GetForecastMovementParamsReadingQualifiedWeighted GetForecastMovementParamsReading = "qualified_weighted"
+	GetForecastMovementParamsReadingWeighted          GetForecastMovementParamsReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
@@ -27113,6 +27518,12 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingEvidence:
 		return true
 	case GetForecastMovementParamsReadingOpen:
+		return true
+	case GetForecastMovementParamsReadingQualifiedBestCase:
+		return true
+	case GetForecastMovementParamsReadingQualifiedEvidence:
+		return true
+	case GetForecastMovementParamsReadingQualifiedWeighted:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
 		return true
@@ -27568,6 +27979,30 @@ func (e ListPartnersParamsCertStatus) Valid() bool {
 	case ListPartnersParamsCertStatusCertified:
 		return true
 	case ListPartnersParamsCertStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListProductsParamsTaxCategory.
+const (
+	ListProductsParamsTaxCategoryExempt       ListProductsParamsTaxCategory = "exempt"
+	ListProductsParamsTaxCategoryReduced      ListProductsParamsTaxCategory = "reduced"
+	ListProductsParamsTaxCategoryStandard     ListProductsParamsTaxCategory = "standard"
+	ListProductsParamsTaxCategoryUnclassified ListProductsParamsTaxCategory = "unclassified"
+)
+
+// Valid indicates whether the value is a known member of the ListProductsParamsTaxCategory enum.
+func (e ListProductsParamsTaxCategory) Valid() bool {
+	switch e {
+	case ListProductsParamsTaxCategoryExempt:
+		return true
+	case ListProductsParamsTaxCategoryReduced:
+		return true
+	case ListProductsParamsTaxCategoryStandard:
+		return true
+	case ListProductsParamsTaxCategoryUnclassified:
 		return true
 	default:
 		return false
@@ -41257,6 +41692,9 @@ type CreateOfferRequest struct {
 	Currency       string              `json:"currency"`
 	IntroText      *string             `json:"intro_text,omitempty"`
 
+	// Language The language new lines take product names in. Unset is the entity's, else the template's.
+	Language *string `json:"language,omitempty"`
+
 	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
 	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
@@ -41365,6 +41803,9 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
+	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit           *string `json:"unit,omitempty"`
 	UnitPriceMinor int64   `json:"unit_price_minor"`
@@ -41378,6 +41819,9 @@ type CreateProductRequestBillingModel string
 
 // CreateProductRequestComponentKind What kind of value the product is. Omit or send null to leave it unclassified.
 type CreateProductRequestComponentKind string
+
+// CreateProductRequestTaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+type CreateProductRequestTaxCategory string
 
 // CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
 type CreateProjectHealthAssessmentRequest struct {
@@ -42942,6 +43386,86 @@ type DealSuggestionEvidenceKind string
 type DealSuggestionListResponse struct {
 	Data []DealSuggestion `json:"data"`
 	Page PageInfo         `json:"page"`
+}
+
+// DealViability defines model for DealViability.
+type DealViability struct {
+	// AssessedAt When the input check last assessed the deal; null when it never did.
+	AssessedAt *time.Time `json:"assessed_at,omitempty"`
+
+	// CloseDateOverdue True when the expected close date is before today in the installation's zone.
+	CloseDateOverdue     bool `json:"close_date_overdue"`
+	CloseDateProvisional bool `json:"close_date_provisional"`
+
+	// Complete Whether the deal was judged on its current evidence under the current policy.
+	Complete *bool              `json:"complete,omitempty"`
+	DealId   openapi_types.UUID `json:"deal_id"`
+
+	// Disposition The review standing the qualification rests on.
+	Disposition       *DealViabilityDisposition `json:"disposition,omitempty"`
+	ExpectedCloseDate *openapi_types.Date       `json:"expected_close_date,omitempty"`
+	PolicyVersion     *string                   `json:"policy_version,omitempty"`
+
+	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+	Qualification DealViabilityQualification `json:"qualification"`
+
+	// QualificationMode Whether the installation's qualified forecast applies `qualification`.
+	QualificationMode DealViabilityQualificationMode `json:"qualification_mode"`
+
+	// Receipt The input check's last answer about the deal. Absent when it never assessed it.
+	Receipt *DealViabilityReceipt `json:"receipt,omitempty"`
+
+	// Review The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+	Review *DealViabilityReview `json:"review,omitempty"`
+
+	// StageProbability The baseline chance, the deal's stage probability.
+	StageProbability int `json:"stage_probability"`
+}
+
+// DealViabilityDisposition The review standing the qualification rests on.
+type DealViabilityDisposition string
+
+// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+type DealViabilityQualification string
+
+// DealViabilityQualificationMode Whether the installation's qualified forecast applies `qualification`.
+type DealViabilityQualificationMode string
+
+// DealViabilityReceipt The input check's last answer about the deal. Absent when it never assessed it.
+type DealViabilityReceipt struct {
+	// Current Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
+	Current bool `json:"current"`
+
+	// Outcome The check's outcome, such as `eligible` or `unsupported`.
+	Outcome string `json:"outcome"`
+
+	// PolicyVersion The viability policy the check applied.
+	PolicyVersion string `json:"policy_version"`
+
+	// Reasons The reason codes the check recorded.
+	Reasons    []string  `json:"reasons"`
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+// DealViabilityReview The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+type DealViabilityReview struct {
+	// DeliveryState How far handing the review to a task got; null before a pass queued it.
+	DeliveryState *DealViabilityReviewDeliveryState `json:"delivery_state,omitempty"`
+	Episode       int                               `json:"episode"`
+	Id            openapi_types.UUID                `json:"id"`
+	OpenedAt      time.Time                         `json:"opened_at"`
+
+	// Task The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+	Task *DealViabilityTask `json:"task,omitempty"`
+}
+
+// DealViabilityReviewDeliveryState How far handing the review to a task got; null before a pass queued it.
+type DealViabilityReviewDeliveryState string
+
+// DealViabilityTask The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+type DealViabilityTask struct {
+	Done bool               `json:"done"`
+	Id   openapi_types.UUID `json:"id"`
 }
 
 // DealWinEvidence defines model for DealWinEvidence.
@@ -44650,10 +45174,10 @@ type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -44666,10 +45190,10 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
@@ -44692,11 +45216,11 @@ type ForecastMovementBucket struct {
 	AmountMinor int64 `json:"amount_minor"`
 	DealCount   int   `json:"deal_count"`
 
-	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -44777,6 +45301,9 @@ type ForecastReadings struct {
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
 	PricedCount int `json:"priced_count"`
 
+	// QualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+	QualificationMode ForecastReadingsQualificationMode `json:"qualification_mode"`
+
 	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
@@ -44816,6 +45343,9 @@ type ForecastReadings struct {
 	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
 	WonMinor int64 `json:"won_minor"`
 }
+
+// ForecastReadingsQualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+type ForecastReadingsQualificationMode string
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
@@ -46748,11 +47278,18 @@ type InstallationSettings struct {
 	// something by it, and one that commits everything does not — their weighted number
 	// is the honest one.
 	//
-	// `commit_evidence` is the default and the strictest: committed deals whose close
-	// date somebody confirmed, a provisional date being a guess that stays out.
+	// `commit_evidence` is the strictest baseline: committed deals whose close date
+	// somebody confirmed, a provisional date being a guess that stays out.
+	// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+	// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 	// `manager_call` takes the authored call as the whole period's landing and is not
 	// added to what is already won; with no current call the read falls back to
 	// `commit_evidence` and says so in the landing's `caveat`.
+	//
+	// With no measure saved, the landing uses `qualified_commit_evidence` while the
+	// installation enforces viability reviews and `commit_evidence` otherwise; this field
+	// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+	// client shows an unknown value by its name.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
@@ -46839,11 +47376,18 @@ type InstallationSettingsDateFormat string
 // something by it, and one that commits everything does not — their weighted number
 // is the honest one.
 //
-// `commit_evidence` is the default and the strictest: committed deals whose close
-// date somebody confirmed, a provisional date being a guess that stays out.
+// `commit_evidence` is the strictest baseline: committed deals whose close date
+// somebody confirmed, a provisional date being a guess that stays out.
+// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 // `manager_call` takes the authored call as the whole period's landing and is not
 // added to what is already won; with no current call the read falls back to
 // `commit_evidence` and says so in the landing's `caveat`.
+//
+// With no measure saved, the landing uses `qualified_commit_evidence` while the
+// installation enforces viability reviews and `commit_evidence` otherwise; this field
+// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+// client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
@@ -47108,6 +47652,20 @@ type InviteDealRoomParticipantRequest struct {
 	Email      openapi_types.Email            `json:"email"`
 	FullName   string                         `json:"full_name"`
 	Source     string                         `json:"source"`
+}
+
+// InviteEmailHandoff What became of an invitation email at the time of the answer, as on the Deal Room invite.
+type InviteEmailHandoff struct {
+	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
+	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+	// refuses the address is reported a moment later as the member's
+	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	Queued bool `json:"queued"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
+	// set-password link can be mailed at all. False means the admin passes the link on by
+	// hand (`issueUserPasswordLink`).
+	Sendable bool `json:"sendable"`
 }
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
@@ -49749,11 +50307,16 @@ type MeetingGuest struct {
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string            `json:"calendar_url,omitempty"`
-	End             time.Time          `json:"end"`
-	Id              openapi_types.UUID `json:"id"`
-	Location        string             `json:"location"`
-	ManagementToken *string            `json:"management_token,omitempty"`
+	// AttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+	// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+	// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+	// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+	AttentionReason *MeetingInvitationAttentionReason `json:"attention_reason,omitempty"`
+	CalendarUrl     *string                           `json:"calendar_url,omitempty"`
+	End             time.Time                         `json:"end"`
+	Id              openapi_types.UUID                `json:"id"`
+	Location        string                            `json:"location"`
+	ManagementToken *string                           `json:"management_token,omitempty"`
 
 	// Provider The calendar provider that holds the event. Omitted on guest reads.
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
@@ -49769,6 +50332,12 @@ type MeetingInvitation struct {
 	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
 	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationAttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+type MeetingInvitationAttentionReason string
 
 // MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
 type MeetingInvitationProvider string
@@ -51025,6 +51594,12 @@ type Offer struct {
 	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
 
+	// Language The language the offer's new lines take product names in (ISO 639-1). It defaults to
+	// the issuing legal entity's `default_language`, else the language of the offer's
+	// template. Null on an offer created before offers had one: its lines take
+	// `Product.name`. The template's own fixed labels follow the template, not this.
+	Language *string `json:"language,omitempty"`
+
 	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
 	// logo are printed on the PDF. Null on an offer created before offers named one, which
 	// is issued by the default entity.
@@ -51111,7 +51686,10 @@ type OfferLineItem struct {
 	// Quantity Up to 3 decimal places (numeric 14,3); must be > 0.
 	Quantity float64 `json:"quantity"`
 
-	// TaxRate Percent, up to 2 decimal places.
+	// TaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+	TaxCategory *OfferLineItemTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer's legal entity: today's on a draft, the send day's once sent.
 	TaxRate float64 `json:"tax_rate"`
 	Unit    string  `json:"unit"`
 
@@ -51131,6 +51709,9 @@ type OfferLineItemBillingIntervalMonths int
 
 // OfferLineItemBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemBillingModel string
+
+// OfferLineItemTaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+type OfferLineItemTaxCategory string
 
 // OfferLineItemInput One line to add. With `product_id`, description/unit/unit_price_minor/tax_rate default
 // from the product (a SNAPSHOT — later product edits never touch the line); without it,
@@ -51152,8 +51733,13 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity float64  `json:"quantity"`
-	TaxRate  *float64 `json:"tax_rate,omitempty"`
+	Quantity float64 `json:"quantity"`
+
+	// TaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+	TaxCategory *OfferLineItemInputTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).
+	TaxRate *float64 `json:"tax_rate,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
 	Unit           *string `json:"unit,omitempty"`
@@ -51165,6 +51751,9 @@ type OfferLineItemInputBillingIntervalMonths int
 
 // OfferLineItemInputBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemInputBillingModel string
+
+// OfferLineItemInputTaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+type OfferLineItemInputTaxCategory string
 
 // OfferListResponse defines model for OfferListResponse.
 type OfferListResponse struct {
@@ -52171,6 +52760,9 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
+	// TaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+	TaxCategory *ProductTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
@@ -52195,10 +52787,29 @@ type ProductBillingModel string
 // ProductComponentKind What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
 type ProductComponentKind string
 
+// ProductTaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+type ProductTaxCategory string
+
 // ProductListResponse defines model for ProductListResponse.
 type ProductListResponse struct {
 	Data []Product `json:"data"`
 	Page PageInfo  `json:"page"`
+}
+
+// ProductTranslation defines model for ProductTranslation.
+type ProductTranslation struct {
+	Description *string `json:"description,omitempty"`
+
+	// Language ISO 639-1, lower case.
+	Language  string    `json:"language"`
+	Name      string    `json:"name"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int64     `json:"version"`
+}
+
+// ProductTranslationListResponse defines model for ProductTranslationListResponse.
+type ProductTranslationListResponse struct {
+	Data []ProductTranslation `json:"data"`
 }
 
 // ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
@@ -53102,6 +53713,10 @@ type PublicMeetingProposal struct {
 		End   time.Time `json:"end"`
 		Start time.Time `json:"start"`
 	} `json:"options"`
+
+	// Profile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+	// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+	// `video_app`), so the guest learns nothing about the calendar behind the page.
 	Profile PublicSchedulingProfile `json:"profile"`
 	Used    bool                    `json:"used"`
 }
@@ -53123,7 +53738,9 @@ type PublicOriginStatus struct {
 	Reachable *bool `json:"reachable,omitempty"`
 }
 
-// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+// PublicSchedulingProfile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+// `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
 	CompanyName     string `json:"company_name"`
 	DurationMinutes int    `json:"duration_minutes"`
@@ -53133,7 +53750,10 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
-	Title   string  `json:"title"`
+
+	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
+	Paused bool   `json:"paused"`
+	Title  string `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -53168,6 +53788,13 @@ type PutOnboardingStateRequestSourceMode string
 
 // PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
+
+// PutProductTranslationRequest defines model for PutProductTranslationRequest.
+type PutProductTranslationRequest struct {
+	// Description Left out or empty, the language has a name and no description.
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
@@ -53773,6 +54400,19 @@ type RecordTagsResponse struct {
 	Data     []RecordTag `json:"data"`
 	Withheld bool        `json:"withheld"`
 }
+
+// RecordTaxRateRequest defines model for RecordTaxRateRequest.
+type RecordTaxRateRequest struct {
+	Category RecordTaxRateRequestCategory `json:"category"`
+	Country  string                       `json:"country"`
+
+	// Rate Percent, for example "19" or "7.70".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// RecordTaxRateRequestCategory defines model for RecordTaxRateRequest.Category.
+type RecordTaxRateRequestCategory string
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -56371,10 +57011,16 @@ type SchedulingAliasRequest struct {
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
 	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
-	Alias             *string   `json:"alias,omitempty"`
-	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
-	BufferMinutes     int       `json:"buffer_minutes"`
-	CalendarId        string    `json:"calendar_id"`
+	Alias *string `json:"alias,omitempty"`
+
+	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+	// the page names no calendar (a page saved before the profile existed reads this way).
+	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+	// the connection is gone or refused. Answered on the host's own profile read only.
+	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
+	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int                       `json:"buffer_minutes"`
+	CalendarId        string                    `json:"calendar_id"`
 
 	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
@@ -56403,6 +57049,12 @@ type SchedulingProfile struct {
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+// the page names no calendar (a page saved before the profile existed reads this way).
+// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+// the connection is gone or refused. Answered on the host's own profile read only.
+type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
@@ -58606,6 +59258,35 @@ type TaskReminderClaimRequest struct {
 	RemindAt time.Time `json:"remind_at"`
 }
 
+// TaxRate defines model for TaxRate.
+type TaxRate struct {
+	Category TaxRateCategory `json:"category"`
+
+	// Country Lower-case ISO 3166-1 alpha-2.
+	Country   string             `json:"country"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Rate Percent with two decimals, for example "19.00".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// TaxRateCategory defines model for TaxRate.Category.
+type TaxRateCategory string
+
+// TaxRateListResponse defines model for TaxRateListResponse.
+type TaxRateListResponse struct {
+	Data []TaxRate `json:"data"`
+}
+
+// TaxRateRecorded defines model for TaxRateRecorded.
+type TaxRateRecorded struct {
+	// ClassifiedProducts How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
+	ClassifiedProducts int     `json:"classified_products"`
+	Rate               TaxRate `json:"rate"`
+}
+
 // Team Mirrors the `team` table.
 type Team struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -60305,9 +60986,14 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount  *int     `json:"interval_count,omitempty"`
-	Position       *int     `json:"position,omitempty"`
-	Quantity       *float64 `json:"quantity,omitempty"`
+	IntervalCount *int     `json:"interval_count,omitempty"`
+	Position      *int     `json:"position,omitempty"`
+	Quantity      *float64 `json:"quantity,omitempty"`
+
+	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. It drops the line's tax category, so the send leaves the rate alone.
 	TaxRate        *float64 `json:"tax_rate,omitempty"`
 	Unit           *string  `json:"unit,omitempty"`
 	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
@@ -60318,6 +61004,9 @@ type UpdateOfferLineItemRequestBillingIntervalMonths int
 
 // UpdateOfferLineItemRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type UpdateOfferLineItemRequestBillingModel string
+
+// UpdateOfferLineItemRequestTaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+type UpdateOfferLineItemRequestTaxCategory string
 
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
@@ -60331,6 +61020,9 @@ type UpdateOfferRequest struct {
 	// currency the offer already holds is not a change.
 	Currency  *string `json:"currency,omitempty"`
 	IntroText *string `json:"intro_text,omitempty"`
+
+	// Language The language lines added from now on take product names in. Lines already on the offer keep theirs.
+	Language *string `json:"language,omitempty"`
 
 	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
@@ -60384,8 +61076,11 @@ type UpdateProductRequest struct {
 	Description    *string                            `json:"description,omitempty"`
 	Name           *string                            `json:"name,omitempty"`
 	Sku            *string                            `json:"sku,omitempty"`
-	Unit           *string                            `json:"unit,omitempty"`
-	UnitPriceMinor *int64                             `json:"unit_price_minor,omitempty"`
+
+	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
+	Unit           *string                          `json:"unit,omitempty"`
+	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty"`
 }
 
 // UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -60396,6 +61091,9 @@ type UpdateProductRequestBillingModel string
 
 // UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 type UpdateProductRequestComponentKind string
+
+// UpdateProductRequestTaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
 // `key` is absent for a different reason: the server mints it from the name and
@@ -60652,7 +61350,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -60668,6 +61366,12 @@ type User struct {
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
+	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
+
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -60703,6 +61407,9 @@ type User struct {
 
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
+
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -61866,8 +62573,11 @@ type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {
-	// Bar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+	// Bar Which move this is. Folded from the forecast engine's movement buckets, whose
 	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+	// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+	// qualified measure: a deal that left or rejoined the qualified number on its viability
+	// review alone, or left because its review status became unknown. The set can grow.
 	//
 	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 	// reprice, a category move and a stage move each go both ways, and reading the cause
@@ -61888,8 +62598,11 @@ type WeeklyReviewMovement struct {
 	Drivers *[]WeeklyReviewDriver `json:"drivers,omitempty"`
 }
 
-// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's movement buckets, whose
 // grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+// qualified measure: a deal that left or rejoined the qualified number on its viability
+// review alone, or left because its review status became unknown. The set can grow.
 //
 // `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 // reprice, a category move and a stage move each go both ways, and reading the cause
@@ -63192,6 +63905,11 @@ type WorklistItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	//
+	// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+	// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+	// into it, and it stays while the review is open, even once its task is done. It offers
+	// only `open`; the review is answered on the deal.
+	//
 	// `batch` is the one that names no single record: it stands for a GROUP of
 	// routine decisions that read alike, so a hundred of them cost the reader one
 	// row rather than a hundred. Its own facts ride in `batch`.
@@ -63318,6 +64036,11 @@ type WorklistItemDueGroup string
 type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+//
+// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+// into it, and it stays while the review is open, even once its task is done. It offers
+// only `open`; the review is answered on the deal.
 //
 // `batch` is the one that names no single record: it stands for a GROUP of
 // routine decisions that read alike, so a hundred of them cost the reader one
@@ -68071,7 +68794,7 @@ type GetForecastMovementParams struct {
 	// To The closing snapshot.
 	To openapi_types.UUID `form:"to" json:"to"`
 
-	// Reading Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+	// Reading Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
 	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
 }
 
@@ -69594,7 +70317,13 @@ type ListProductsParams struct {
 
 	// Q Case-insensitive name/SKU substring match.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TaxCategory Only products in this tax category; `unclassified` lists those nobody has classified yet.
+	TaxCategory *ListProductsParamsTaxCategory `form:"tax_category,omitempty" json:"tax_category,omitempty"`
 }
+
+// ListProductsParamsTaxCategory defines parameters for ListProducts.
+type ListProductsParamsTaxCategory string
 
 // CreateProductParams defines parameters for CreateProduct.
 type CreateProductParams struct {
@@ -71070,6 +71799,12 @@ type CreateTaskParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListTaxRatesParams defines parameters for ListTaxRates.
+type ListTaxRatesParams struct {
+	// Country ISO 3166-1 alpha-2.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
 }
 
 // ListTeamsParams defines parameters for ListTeams.
@@ -72753,6 +73488,9 @@ type CreateProductJSONRequestBody = CreateProductRequest
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = UpdateProductRequest
 
+// PutProductTranslationJSONRequestBody defines body for PutProductTranslation for application/json ContentType.
+type PutProductTranslationJSONRequestBody = PutProductTranslationRequest
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
 
@@ -72947,6 +73685,9 @@ type MergeTagsJSONRequestBody = MergeTagsRequest
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskRequest
+
+// RecordTaxRateJSONRequestBody defines body for RecordTaxRate for application/json ContentType.
+type RecordTaxRateJSONRequestBody = RecordTaxRateRequest
 
 // CreateTeamJSONRequestBody defines body for CreateTeam for application/json ContentType.
 type CreateTeamJSONRequestBody = CreateTeamRequest
@@ -80800,6 +81541,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
 	if raw, found := object["legal_entity_id"]; found {
 		err = json.Unmarshal(raw, &a.LegalEntityId)
 		if err != nil {
@@ -81053,6 +81802,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
+		}
+	}
+
 	if a.LegalEntityId != nil {
 		object["legal_entity_id"], err = json.Marshal(a.LegalEntityId)
 		if err != nil {
@@ -81290,6 +82046,14 @@ func (a *Product) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["tax_category"]; found {
+		err = json.Unmarshal(raw, &a.TaxCategory)
+		if err != nil {
+			return fmt.Errorf("error reading 'tax_category': %w", err)
+		}
+		delete(object, "tax_category")
+	}
+
 	if raw, found := object["unit"]; found {
 		err = json.Unmarshal(raw, &a.Unit)
 		if err != nil {
@@ -81421,6 +82185,13 @@ func (a Product) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.TaxCategory != nil {
+		object["tax_category"], err = json.Marshal(a.TaxCategory)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tax_category': %w", err)
+		}
 	}
 
 	object["unit"], err = json.Marshal(a.Unit)
@@ -86007,6 +86778,9 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
+	// Whether the customer still supports this deal, and the review behind the answer.
+	// (GET /deals/{id}/viability)
+	GetDealViability(w http.ResponseWriter, r *http.Request, id Id)
 	// Whether the deal has the signed agreement a win rests on.
 	// (GET /deals/{id}/win-evidence)
 	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
@@ -86823,6 +87597,15 @@ type ServerInterface interface {
 	// Update a product (partial). Existing offer lines keep their price snapshot.
 	// (PATCH /products/{id})
 	UpdateProduct(w http.ResponseWriter, r *http.Request, id Id, params UpdateProductParams)
+	// The product's name and description in further languages.
+	// (GET /products/{id}/translations)
+	ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove the product's text in one language.
+	// (DELETE /products/{id}/translations/{language})
+	DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
+	// Set the product's name and description in one language.
+	// (PUT /products/{id}/translations/{language})
+	PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
 	// List projects (live by default; cursor-paginated).
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
@@ -87270,6 +88053,12 @@ type ServerInterface interface {
 	// Create a task — a commitment with an owner, on the records it is about.
 	// (POST /tasks)
 	CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams)
+	// The tax rate sheet, every recorded rate, newest first within each country and category.
+	// (GET /tax-rates)
+	ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams)
+	// Record a standard or reduced tax rate for a country from a day on.
+	// (POST /tax-rates)
+	RecordTaxRate(w http.ResponseWriter, r *http.Request)
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
@@ -87342,6 +88131,9 @@ type ServerInterface interface {
 	// Retire an account while preserving historical attribution.
 	// (POST /users/{id}/remove)
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Mail an invited member a new set-password link. Admin-only, human-only.
+	// (POST /users/{id}/resend-invite)
+	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id)
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
@@ -90477,6 +91269,12 @@ func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Whether the customer still supports this deal, and the review behind the answer.
+// (GET /deals/{id}/viability)
+func (_ Unimplemented) GetDealViability(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Whether the deal has the signed agreement a win rests on.
 // (GET /deals/{id}/win-evidence)
 func (_ Unimplemented) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id) {
@@ -92109,6 +92907,24 @@ func (_ Unimplemented) UpdateProduct(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The product's name and description in further languages.
+// (GET /products/{id}/translations)
+func (_ Unimplemented) ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the product's text in one language.
+// (DELETE /products/{id}/translations/{language})
+func (_ Unimplemented) DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the product's name and description in one language.
+// (PUT /products/{id}/translations/{language})
+func (_ Unimplemented) PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List projects (live by default; cursor-paginated).
 // (GET /projects)
 func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams) {
@@ -93003,6 +93819,18 @@ func (_ Unimplemented) CreateTask(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The tax rate sheet, every recorded rate, newest first within each country and category.
+// (GET /tax-rates)
+func (_ Unimplemented) ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a standard or reduced tax rate for a country from a day on.
+// (POST /tax-rates)
+func (_ Unimplemented) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List workspace teams — cursor-paginated. Read-only.
 // (GET /teams)
 func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams) {
@@ -93144,6 +93972,12 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 // Retire an account while preserving historical attribution.
 // (POST /users/{id}/remove)
 func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail an invited member a new set-password link. Admin-only, human-only.
+// (POST /users/{id}/resend-invite)
+func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115250,6 +116084,40 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealViability operation middleware
+func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealViability(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealWinEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
 
@@ -125312,6 +126180,19 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "tax_category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tax_category", r.URL.Query(), &params.TaxCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tax_category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tax_category", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProducts(w, r, params)
 	}))
@@ -125513,6 +126394,120 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProduct(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProductTranslations operation middleware
+func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProductTranslations(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutProductTranslation(w, r, id, language)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132335,6 +133330,65 @@ func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListTaxRates operation middleware
+func (siw *ServerInterfaceWrapper) ListTaxRates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTaxRatesParams
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTaxRates(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordTaxRate operation middleware
+func (siw *ServerInterfaceWrapper) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordTaxRate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTeams operation middleware
 func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Request) {
 
@@ -133246,6 +134300,38 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResendUserInvite operation middleware
+func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResendUserInvite(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -137750,6 +138836,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/viability", wrapper.GetDealViability)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)
 	})
 	r.Group(func(r chi.Router) {
@@ -138566,6 +139655,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/products/{id}", wrapper.UpdateProduct)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/products/{id}/translations", wrapper.ListProductTranslations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/products/{id}/translations/{language}", wrapper.DeleteProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/products/{id}/translations/{language}", wrapper.PutProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects", wrapper.ListProjects)
 	})
 	r.Group(func(r chi.Router) {
@@ -139013,6 +140111,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/tasks", wrapper.CreateTask)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tax-rates", wrapper.ListTaxRates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tax-rates", wrapper.RecordTaxRate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/teams", wrapper.ListTeams)
 	})
 	r.Group(func(r chi.Router) {
@@ -139083,6 +140187,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/remove", wrapper.RemoveMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/resend-invite", wrapper.ResendUserInvite)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/retirement-preview", wrapper.PreviewMemberRetirement)

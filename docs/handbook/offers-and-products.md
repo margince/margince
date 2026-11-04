@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -85,19 +85,21 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 ## Send, accept, reject and revise
 
-**Send** fixes the exchange rate on the offer and records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
+**Send** fixes the exchange rate and the tax rates on the offer. It also records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
 
 **Accept** sets the deal's amount and currency to the offer's gross total, so the deal shows what the buyer agreed to. It needs permission to change both the offer and the deal.
 
 **Reject** takes a reason you may leave empty. The reason is kept in the audit log, not on the offer.
 
-**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent.
+**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent. A line with a **Tax category** takes today's rate in the new version; a typed rate stays as it was.
 
 You can make an offer **PDF** at any point, draft included. Where your Margince has no file storage set up, it says "PDF rendering is not available on this installation."
 
 The PDF prints the offer's own **Intro text** above the lines and its **Terms text** under the totals. It leaves either part out when it is empty. The terms always come from the offer, never from the template.
 
 Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
+
+Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words a template prints, such as its headings, follow the template's own language.
 
 ## What an offer refuses
 
@@ -111,6 +113,9 @@ Every offer PDF prints who issues it. That is the name, address, VAT ID, registe
 - **A number too large to store is refused**, not rounded.
 - **No exchange rate for the day stops sending.** Margince never uses
   a rate of 1 in its place.
+- **A missing tax rate stops sending.** It also stops adding the line.
+  Margince never guesses a rate: an Admin or Ops records it on the **Tax
+  rates** card first.
 
 The billing type has its own refusals, and each one states the rule. One says "a one-off price has no billing interval, because there is nothing to repeat". Another says "a commitment covers at least one period".
 
@@ -143,6 +148,20 @@ A product holds a name, a SKU if you want one, a description, a unit, a unit pri
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 
 **Kind** says what a product is: **Software**, **Implementation** or **Other**. The commercial mix on Analytics groups won value by it. You can leave it empty, and the mix then shows the product's value as **Unclassified product**.
+
+### How do I keep tax rates?
+<!-- opens: settings/company -->
+An Admin or Ops keeps the **Tax rates** card under **Settings → Company profile**. Choose **Record a rate**, then fill **Country**, **Category** (**Standard** or **Reduced**), **Rate** and **From**. A rate is never changed or removed: to change one, record a new rate from a later day. A **From** day before the first rate of that **Country** adds to its history.
+
+**Tax category** on a product says which rate it takes: **Standard**, **Reduced** or **Exempt**. The first rate you record for a category of your own **Country** sorts the products for you. Each product whose **Default tax rate %** is that rate gets that category. A product with any other rate, 0% included, stays **Not classified** until you choose. The **Tax category** filter on the products list shows those.
+
+### Which tax rate does an offer line take?
+
+A line from a product with a **Tax category** takes the rate of that category from the **Tax rates** card. It is the rate for the **Country** of the company that issues the offer, or your own **Country** when that company names none. The line shows its category under the rate.
+
+A line the AI drafts from a product with a category does the same. A draft takes today's rate. **Send** takes the rate again for the day you send, so a new rate from that day applies. After the send the line does not change. Moving a draft to another company under **Edit** takes that company's rates.
+
+A line from a product with no category takes its **Default tax rate %**. A rate you type on a line is kept as you typed it, also when you send, and the line no longer shows a category.
 
 ### Snapshots, and why a line does not move
 
