@@ -549,8 +549,8 @@ func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *tes
 	}
 }
 
-// A chat reading is never accepted onto a deal, even one whose fields carry a
-// deal field's name: only a deal-facts reading holds values a deal can take.
+// A chat reading is never accepted onto a deal, even when a field carries a
+// deal field's name. Only a deal-facts reading holds values a deal can take.
 func TestAcceptAttachmentExtractionRefusesAChatReading(t *testing.T) {
 	e := Setup(t)
 	ctx := e.Admin()
