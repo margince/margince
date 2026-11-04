@@ -72,8 +72,8 @@ func TestNoReviewsLeaveTheRowsAlone(t *testing.T) {
 	}
 }
 
-// Below a lane's cap the fold above the tail cannot see the rows, so the tail
-// itself leaves a review's task and its deal's quiet row out.
+// The fold above the tail cannot see rows below a lane's cap. So the tail
+// itself leaves out a review's task and its deal's quiet row.
 func TestTheTailLeavesOutWhatAReviewReports(t *testing.T) {
 	t.Parallel()
 	deal, task := ids.NewV7(), ids.NewV7()
@@ -88,7 +88,7 @@ func TestTheTailLeavesOutWhatAReviewReports(t *testing.T) {
 }
 
 // A store's task count still holds an open review's task, which the fold moved
-// to the review row, so the task totals are left absent rather than overstated.
+// to the review row. So the task totals are left absent, not overstated.
 func TestAnOpenReviewTaskLeavesTheTaskTotalsAbsent(t *testing.T) {
 	t.Parallel()
 	task := ids.NewV7()

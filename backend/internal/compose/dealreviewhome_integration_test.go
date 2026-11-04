@@ -22,13 +22,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// homeRows reads every page of the worklist for the scope, as ctx.
-func (v *viabilityEnv) homeRows(ctx context.Context, t *testing.T, scope string) []crmcontracts.WorklistItem {
+// homeRows reads every page of the reader's own worklist, as ctx.
+func (v *viabilityEnv) homeRows(ctx context.Context, t *testing.T) []crmcontracts.WorklistItem {
 	t.Helper()
 	svc := newAttentionService(v.Pool, approvals.NewService(v.DB()), func() time.Time { return v.now })
 	var out []crmcontracts.WorklistItem
 	for cursor := ""; ; {
-		page, err := svc.Worklist(ctx, scope, "", ids.Nil, 100, cursor)
+		page, err := svc.Worklist(ctx, "mine", "", ids.Nil, 100, cursor)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -64,7 +64,7 @@ func TestOneHomeActionPerReview(t *testing.T) {
 	task := v.WsScalar(t, `SELECT task_activity_id::text FROM assurance_exception WHERE id = $1`, review)
 	owner := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
 
-	reviews, tasks, risks := rowsAbout(v.homeRows(owner, t, "mine"), review, task, v.silent.String())
+	reviews, tasks, risks := rowsAbout(v.homeRows(owner, t), review, task, v.silent.String())
 	if reviews != 1 || tasks != 0 || risks != 0 {
 		t.Fatalf("the owner's Home holds %d review, %d task and %d at-risk rows about the review, want one review row",
 			reviews, tasks, risks)
@@ -79,12 +79,12 @@ func TestOneHomeActionPerReview(t *testing.T) {
 		activities.UpdateActivityInput{IsDone: &done}); err != nil {
 		t.Fatal(err)
 	}
-	if reviews, _, _ := rowsAbout(v.homeRows(owner, t, "mine"), review, task, v.silent.String()); reviews != 1 {
+	if reviews, _, _ := rowsAbout(v.homeRows(owner, t), review, task, v.silent.String()); reviews != 1 {
 		t.Errorf("after the task was done the owner's Home holds %d review rows, want the open review still there", reviews)
 	}
 
 	colleague := v.As(v.Rep3, []ids.UUID{v.Team2}, integration.AdminPerms)
-	if reviews, _, _ := rowsAbout(v.homeRows(colleague, t, "mine"), review, task, v.silent.String()); reviews != 0 {
+	if reviews, _, _ := rowsAbout(v.homeRows(colleague, t), review, task, v.silent.String()); reviews != 0 {
 		t.Errorf("a colleague's own Home carries %d rows of Rep1's review, want none", reviews)
 	}
 }
@@ -110,8 +110,8 @@ func TestAReassignedReviewTaskPutsTheReviewOnOneHome(t *testing.T) {
 	assignee := v.As(v.Rep2, []ids.UUID{v.Team1}, integration.AdminPerms)
 	homes := func(when string) {
 		t.Helper()
-		ownerRows, _, _ := rowsAbout(v.homeRows(owner, t, "mine"), review, task, v.silent.String())
-		assigneeRows, _, _ := rowsAbout(v.homeRows(assignee, t, "mine"), review, task, v.silent.String())
+		ownerRows, _, _ := rowsAbout(v.homeRows(owner, t), review, task, v.silent.String())
+		assigneeRows, _, _ := rowsAbout(v.homeRows(assignee, t), review, task, v.silent.String())
 		if ownerRows != 0 || assigneeRows != 1 {
 			t.Errorf("%s: the deal owner's Home holds %d review rows and the assignee's %d, want 0 and 1",
 				when, ownerRows, assigneeRows)

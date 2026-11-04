@@ -128,9 +128,9 @@ func (s *Service) readingReviews(ctx context.Context, scope string) (*Service, *
 	return &scoped, nil
 }
 
-// reviewScope is the page's scope as the review read asks it, the way
-// narrowToScope narrows rows: a named owner, the reader, nobody, the reader's
-// team, or everybody the reader may see.
+// reviewScope is the page's scope as the review read asks it. It narrows the
+// way narrowToScope narrows rows: a named owner, the reader, nobody, the
+// reader's team, or everybody the reader may see.
 func (s *Service) reviewScope(ctx context.Context, scope string) (ReviewScope, *crmcontracts.WorklistSourceUnavailable) {
 	switch {
 	case !s.taskOwner.IsZero():
