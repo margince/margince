@@ -37,6 +37,7 @@ import { problemFieldErrorsOf } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
+import { useMeetingCustomFields } from "./meetingoutcome.custom";
 import { useMeetingOutcome } from "./taskactions";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
@@ -266,6 +267,7 @@ function MeetingOutcomeDialog({
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
   const managed = meeting.data?.calendar_managed === true;
+  const custom = useMeetingCustomFields(meeting.data);
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
   if (draft === null && meeting.data) {
@@ -298,12 +300,15 @@ function MeetingOutcomeDialog({
       moved: MovedStart | undefined;
       transcript: boolean;
       managed: boolean;
+      custom: Record<string, unknown>;
     }) => {
       await writeMeetingOutcome(
         {
           id,
           version: input.seed.version,
           status: input.draft.status,
+          // The workspace's own fields, which no calendar holds.
+          custom: input.custom,
           // A calendar-managed meeting keeps the calendar's subject, notes
           // and start; only its outcome is written.
           ...(input.managed
@@ -365,7 +370,14 @@ function MeetingOutcomeDialog({
                 return;
               }
               setDayRefused(false);
-              save.mutate({ draft, seed, moved, transcript, managed });
+              save.mutate({
+                draft,
+                seed,
+                moved,
+                transcript,
+                managed,
+                custom: custom.patch(),
+              });
             }}
           >
             <div className="form-row">
@@ -420,6 +432,7 @@ function MeetingOutcomeDialog({
                 onChange={setDraft}
               />
             )}
+            {custom.controls}
             {dayRefused && (
               <ErrorLine>{t("worklist.verb.meetingDayMissing")}</ErrorLine>
             )}

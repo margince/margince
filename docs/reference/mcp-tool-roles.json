@@ -3668,21 +3668,6 @@
     },
     {
       "tool": "read_details",
-      "action": "forecast_assurance_enforcement",
-      "verb": "get_forecast_assurance_enforcement",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "read_only",
-        "rep"
-      ],
-      "refused_for": [],
-      "unproven_for": []
-    },
-    {
-      "tool": "read_details",
       "action": "forecast_assurance_preview",
       "verb": "preview_forecast_assurance",
       "allowed_for": [],

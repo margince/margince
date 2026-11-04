@@ -245,6 +245,21 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 	return authority, instruction, nil
 }
 
+// exceptionGivenByAdminTx answers whether the exception this delivery goes out
+// under was given by an admin. A delivery with no exception answers false.
+func exceptionGivenByAdminTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (bool, error) {
+	var byAdmin bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(bool_or(i.given_by_admin), false)
+		  FROM comms_outbound o
+		  JOIN communication_instruction i ON i.id = o.instruction_id
+		 WHERE o.id = $1`, deliveryID).Scan(&byAdmin)
+	if err != nil {
+		return false, fmt.Errorf("consent: reading who gave the exception this delivery goes out under: %w", err)
+	}
+	return byAdmin, nil
+}
+
 // authorityFor names the instruction on a refused row and the engine's own
 // permission on an allowed one, so a mixed envelope records each recipient
 // truthfully.

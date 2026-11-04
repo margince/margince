@@ -113,7 +113,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		actionIssuePasswordLink: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole &&
 			refusePasswordLinkTarget(status, target.row.IsAgent) == nil,
-		actionResendInvite: inviteMailRefused(target.row) && callerOutranks(actor, target.grants, reachTakeover) == nil &&
+		actionResendInvite: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole && refuseResendTarget(status, target.row.IsAgent) == nil,
 		actionRemoveMFA: target.hasFactor && userID != actor.UserID && !target.holdsArchivedRole &&
 			callerOutranks(actor, target.grants, reachTakeover) == nil,

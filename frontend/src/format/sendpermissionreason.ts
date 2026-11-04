@@ -16,7 +16,7 @@ export type RefusalKind =
   | "missingPermission"
   | "restricted";
 
-// A follow-up resolved to a live deal and found none it may rest on. Its
+// A follow-up claimed or resolved for a live deal found none it may rest on. Its
 // cause is the missing deal on the message, not anything the recipient did.
 const DEAL_FOLLOWUP = "active_deal_followup";
 

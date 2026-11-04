@@ -149,9 +149,8 @@ export function ChartDetails({
             )}
           </p>
         )}
-        {chart.coverage.status !== "ok" && chart.coverage.reason && (
-          <p>{chart.coverage.reason}</p>
-        )}
+        {(chart.coverage.status !== "ok" || chart.coverage.withheld) &&
+          chart.coverage.reason && <p>{chart.coverage.reason}</p>}
         {chart.kind === "stage_age" && <SampleDetails chart={chart} />}
       </Popover>
     </div>

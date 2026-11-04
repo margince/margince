@@ -113,6 +113,13 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 			resolved := crmcontracts.CommunicationContext(d.Resolved)
 			entry.ResolvedCategory = &resolved
 		}
+		// The sender's own pick, beside the engine's reading. An unproven claim
+		// never reaches Resolved, so the composer reads this one to name the
+		// gap the sender can close, such as the deal a follow-up needs.
+		if d.Requested != "" {
+			requested := crmcontracts.CommunicationContext(d.Requested)
+			entry.RequestedCategory = &requested
+		}
 		if d.Basis != "" {
 			basis := string(d.Basis)
 			entry.Basis = &basis

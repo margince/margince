@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -54,13 +55,13 @@ func (s *Store) GetEmailPresentation(ctx context.Context, id ids.ActivityID, thr
 	}
 	var out crmcontracts.EmailPresentation
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readEmailPresentation(ctx, tx, id, threadCursor)
+		out, err = readEmailPresentation(ctx, tx, id, threadCursor, s.now())
 		return err
 	})
 	return out, err
 }
 
-func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string) (crmcontracts.EmailPresentation, error) {
+func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string, asOf time.Time) (crmcontracts.EmailPresentation, error) {
 	// The same discover gate and per-row audience test every activity read
 	// carries: a caller who may know the row exists reads it, and the audience
 	// decides whether its content comes along.
@@ -141,7 +142,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 

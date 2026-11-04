@@ -121,7 +121,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	// would consume an instruction on a send that never needed one.
 	if directed != nil && directed.wanted && refusesAnyRecipient(set) {
 		instruction, err := g.AuthorizeDirectedExecutionTx(
-			ctx, tx, directed.intentID, deliveryID, directed.authored)
+			ctx, tx, directed.intentID, deliveryID, directed.authored, set)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}

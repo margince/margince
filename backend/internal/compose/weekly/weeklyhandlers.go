@@ -205,8 +205,7 @@ func outlookToWire(horizon Outlook) crmcontracts.WeeklyReviewOutlook {
 		PeriodEnd:     openapi_types.Date{Time: horizon.PeriodEnd},
 		BaseCurrency:  horizon.BaseCurrency,
 		WonMinor:      horizon.WonMinor,
-		CommitMinor:   horizon.CommitMinor,
-		BestCaseMinor: horizon.BestCaseMinor,
+		LikelyMinor:   horizon.LikelyMinor,
 		WeightedMinor: horizon.WeightedMinor,
 		Movement:      movementToWire(horizon.Movement),
 	}
