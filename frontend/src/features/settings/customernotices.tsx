@@ -32,7 +32,6 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { useLegalEntities } from "../../lib/legalentities.queries";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import "./privacy.css";
 
 type CustomerNotice = components["schemas"]["ExistingCustomerNotice"];
 
