@@ -34303,11 +34303,11 @@ components:
         timezone:
           type: string
           description: >-
-            The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+            The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
         timezone_chosen:
           type: boolean
           description: >-
-            Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+            Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
         locale:
           type: string
           enum: [en, de, vi]

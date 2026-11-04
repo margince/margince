@@ -213,7 +213,7 @@ function AuthedApp({
   // signed in" and carries no notice.
   const hadSession = useRef(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
-  // The signed-in person's own language, handed up to the provider that sits
+  // The signed-in user's own language, handed up to the provider that sits
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
@@ -224,7 +224,7 @@ function AuthedApp({
       adoptLocale(chosen);
     }
   }, [me.data, adoptLocale]);
-  // A person with no stored zone gets the browser's as a first guess. They
+  // A user with no stored zone gets the browser's as a first guess. They
   // change it under Settings → Account.
   useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {

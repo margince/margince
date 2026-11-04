@@ -13,8 +13,8 @@ type Me = components["schemas"]["MeResponse"];
 type TimezoneSource = components["schemas"]["SaveMyTimezoneRequest"]["source"];
 
 /**
- * Writes the signed-in person's own time zone. `browser` is the app's guess,
- * stored only while no zone is stored. `chosen` is the person's pick.
+ * Writes the signed-in user's own time zone. `browser` is the app's guess,
+ * stored only while no zone is stored. `chosen` is the user's pick.
  *
  * On success `/me` is read again rather than patched from this answer. Two
  * writes can answer out of order, and the server holds the zone that won. The
@@ -41,7 +41,7 @@ export function useSaveMyTimezone() {
 
 /**
  * On a sign-in with no stored zone, stores the browser's zone as a guess, once
- * per person. The guard holds the person it was sent for, so a different person
+ * per user. The guard holds the user it was sent for, so a different user
  * signing in on the same tab is asked for too. A failed write clears it, so the
  * next read of `/me` tries again. The server keeps any zone already stored, so
  * a second browser never replaces the first one's guess or a chosen zone.
