@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Mail, Send } from "lucide-react";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { ProviderMark } from "../../design-system/provider-mark";
 import { ProviderRow } from "../../design-system/providerrow";
@@ -15,23 +12,20 @@ import { Chip } from "../../design-system/readings";
 import { SettingList } from "../../design-system/settingrow";
 import {
   ACCOUNT_NAME,
-  type AccountVendor,
   type ConnectionAccount,
   isMailbox,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { useLocale, useT } from "../../i18n";
 import { isLiveRun } from "../../lib/backfill-run";
 import {
-  type ConnectAccountInput,
   type ImportWindow,
   isOAuthConnectProvider,
   notConfiguredProvider,
   useConnectAccount,
 } from "../../lib/connect-account";
-import { connectInputFor, type Service } from "../../lib/connect-flow-draft";
+import { connectInputFor } from "../../lib/connect-flow-draft";
 import {
   accountHealth,
   healthBadge,
@@ -39,11 +33,17 @@ import {
   needsReconnect,
   serviceReason,
 } from "../../lib/connector-status";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
 import { ImportPastEmailDialog } from "./backfill";
 import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
 import { AccountServices } from "./connection-service";
 import { AccountSettings } from "./connection-settings";
+import {
+  type PendingStop,
+  StopConfirm,
+  servicesOf,
+  vendorOfAccount,
+} from "./connection-stop";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 // One account on Connections: Google, Microsoft 365, an IMAP mailbox or the
@@ -53,40 +53,6 @@ import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
-
-// Disconnecting deletes OUR stored credential and does not revoke the grant at
-// the vendor, so the confirm names where a careful reader finishes that.
-const REVOKE_NOTE: Record<AccountVendor, MessageKey> = {
-  google: "connectors.disconnectBodyGoogleNote",
-  microsoft: "connectors.disconnectBodyMicrosoftNote",
-};
-
-function vendorOfAccount(account: ConnectionAccount): AccountVendor | null {
-  return account.key === "google" || account.key === "microsoft"
-    ? account.key
-    : null;
-}
-
-function servicesLabel(services: readonly Service[], t: Translator): string {
-  if (services.length === 2) return t("connectors.servicesBoth");
-  return services[0] === "calendar"
-    ? t("connectors.bringsCalendar")
-    : t("connectors.bringsMail");
-}
-
-// What one disconnect stops: the services, and what may follow it once they
-// are gone (a service the same change ticked).
-type PendingStop = Readonly<{
-  services: readonly Service[];
-  afterwards: ConnectAccountInput | null;
-}>;
-
-function servicesOf(account: ConnectionAccount): Service[] {
-  const services: Service[] = [];
-  if (account.mail) services.push("mail");
-  if (account.calendar) services.push("calendar");
-  return services;
-}
 
 /** The services the account still holds, broken or not. */
 function liveServices(account: ConnectionAccount): CaptureConnection[] {
@@ -422,82 +388,4 @@ function ConnectRefusal({
   return connect.isError ? (
     <ErrorLine>{problemMessageOf(connect.error, t)}</ErrorLine>
   ) : null;
-}
-
-/** One confirm for every disconnect: the whole account from the overflow, or
- *  the services "Change what it brings in" unticked. */
-function StopConfirm({
-  account,
-  title,
-  stop,
-  onClose,
-  onStopped,
-}: Readonly<{
-  account: ConnectionAccount;
-  title: string;
-  stop: PendingStop | null;
-  onClose: () => void;
-  onStopped: (afterwards: ConnectAccountInput | null) => void;
-}>) {
-  const t = useT();
-  const disconnect = useDisconnectServices();
-  const vendor = vendorOfAccount(account);
-  const services = stop?.services ?? [];
-  const whole = services.length === servicesOf(account).length;
-  const providers = services
-    .map((service) =>
-      service === "mail" ? account.mail?.provider : account.calendar?.provider,
-    )
-    .filter((provider): provider is Provider => provider !== undefined);
-  return (
-    <ConfirmModal
-      open={stop !== null}
-      onClose={() => {
-        disconnect.reset();
-        onClose();
-      }}
-      title={
-        whole
-          ? t("connectors.disconnectAccountTitle", { account: title })
-          : t("connectors.stopServicesTitle", {
-              services: servicesLabel(services, t),
-            })
-      }
-      confirmLabel={t("connectors.disconnect")}
-      confirmVariant="danger"
-      pending={disconnect.isPending}
-      error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
-      onConfirm={() =>
-        disconnect.mutate(providers, {
-          onSuccess: () => onStopped(stop?.afterwards ?? null),
-        })
-      }
-    >
-      <p>
-        {t("connectors.disconnectServicesBody", {
-          services: servicesLabel(services, t),
-        })}
-      </p>
-      {vendor && <p className="t-caption">{t(REVOKE_NOTE[vendor])}</p>}
-    </ConfirmModal>
-  );
-}
-
-/** Stops each named service in turn. One failure stops the rest, and the
- *  roster read afterwards says which are still connected. */
-function useDisconnectServices() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (providers: readonly Provider[]) => {
-      for (const provider of providers) {
-        const { error } = await api.POST("/connectors/{provider}/disconnect", {
-          params: { path: { provider } },
-        });
-        if (error) {
-          throwProblem(error);
-        }
-      }
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
-  });
 }

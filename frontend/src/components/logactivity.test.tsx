@@ -1,26 +1,28 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
-  render as rtlRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
-import { calendarDay, dueInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
-import { LocaleProvider } from "../i18n";
-import { RecordZoneProvider } from "../lib/recordzone";
-import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
+import {
+  contact,
+  createdActivity,
+  INSTALLATION_ZONE,
+  jsonResponse,
+  render,
+  stubApi,
+} from "./logactivity.testkit";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed
@@ -48,34 +50,7 @@ function pretendViewerZone(timeZone: string): void {
   });
 }
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// The installation's zone this suite asserts against. Named rather than taken
-// from the fallback: what these tests prove is that a logged entry's stored
-// instant is cut on the INSTALLATION's clock, and a test that minted and read
-// back on the same default would agree with itself whichever zone the code
-// actually used.
-const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
-
-function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>{ui}</RecordZoneProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const emptyPage = { data: [], page: { next_cursor: null } };
+const _emptyPage = { data: [], page: { next_cursor: null } };
 
 const dayBox = (label: string) =>
   screen.getByRole<HTMLInputElement>("textbox", { name: label });
@@ -105,80 +80,6 @@ function postedInstant(body: unknown, key: "due_at" | "occurred_at"): string {
   }
   return instant;
 }
-
-function stubApi(
-  routes: Record<string, (body: unknown) => Response>,
-  captured?: Captured[],
-) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = new URL(
-        request ? request.url : String(input),
-        "https://test.local",
-      );
-      const method = request?.method ?? init?.method ?? "GET";
-      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-      let body: unknown = null;
-      if (method !== "GET") {
-        try {
-          body = request
-            ? await request.json()
-            : JSON.parse(String(init?.body));
-        } catch {
-          body = null;
-        }
-      }
-      captured?.push({ key, body });
-      const handler = routes[key];
-      if (handler) {
-        return handler(body);
-      }
-      // The composer asks whether this seat may log at all before it draws
-      // the form, so every spec here holds the grant the store behind the
-      // form requires — a spec that needs to withhold it names its own /me.
-      if (key === "GET /me") {
-        return jsonResponse(
-          meFixture({ allow: { activity: ["create"], contact: ["read"] } }),
-        );
-      }
-      if (url.pathname.endsWith("/context")) {
-        return jsonResponse({
-          anchor: { type: "contact", id: "p1" },
-          sections: [],
-        });
-      }
-      return jsonResponse(emptyPage);
-    }),
-  );
-}
-
-const contact = {
-  id: "p1",
-  full_name: "Petra Muster",
-  captured_by: "human:u1",
-  source: "manual",
-  version: 1,
-  created_at: "2026-07-06T08:00:00Z",
-  updated_at: "2026-07-06T08:00:00Z",
-};
-
-const createdActivity = (body: unknown) =>
-  jsonResponse(
-    {
-      id: "a-new",
-      kind: (body as { kind: string }).kind,
-      subject: (body as { subject: string }).subject,
-      occurred_at: "2026-07-06T09:00:00Z",
-      captured_by: "human:u1",
-      source: "manual",
-      version: 1,
-      created_at: "2026-07-06T09:00:00Z",
-      updated_at: "2026-07-06T09:00:00Z",
-    },
-    201,
-  );
 
 describe("log activity from a 360", () => {
   it("posts a note linked to the viewed contact and refetches the timeline", async () => {
@@ -952,122 +853,6 @@ describe("the Details field", () => {
 
     expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
     expect(screen.queryByRole("toolbar")).toBeNull();
-  });
-});
-
-describe("assigning a task at create time", () => {
-  // Two contacts and an agent seat, so the picker's eligibility is a real filter
-  // rather than an empty list agreeing with itself. The agent is who the server
-  // refuses as an assignee, so it is the one the picker must not offer.
-  const rosterUsers = {
-    data: [
-      { id: "u1", display_name: "Dana Ops", is_agent: false },
-      { id: "u2", display_name: "Priya Lead", is_agent: false },
-      { id: "agent-1", display_name: "Runner Bot", is_agent: true },
-    ],
-    page: { next_cursor: null },
-  };
-
-  function renderTaskComposer(captured?: Captured[]) {
-    stubApi(
-      {
-        "GET /contacts/p1": () => jsonResponse(contact),
-        "GET /users": () => jsonResponse(rosterUsers),
-        "POST /activities": createdActivity,
-      },
-      captured,
-    );
-    render(<LogActivity entityType="contact" entityId="p1" askedKind="task" />);
-  }
-
-  it("carries the chosen assignee on the posted task", async () => {
-    const captured: Captured[] = [];
-    renderTaskComposer(captured);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
-    await user.click(screen.getByLabelText("Assignee"));
-    await user.click(await screen.findByRole("option", { name: "Priya Lead" }));
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
-    );
-    const post = captured.find((e) => e.key === "POST /activities");
-    expect(post?.body).toMatchObject({ kind: "task", assignee_id: "u2" });
-  });
-
-  it("posts no assignee when the task is left unassigned", async () => {
-    const captured: Captured[] = [];
-    renderTaskComposer(captured);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
-    );
-    const post = captured.find((e) => e.key === "POST /activities");
-    expect(post?.body).toMatchObject({ kind: "task" });
-    expect(post?.body).not.toHaveProperty("assignee_id");
-  });
-
-  it("offers no assignee on a note, which has nobody to hold it", async () => {
-    stubApi({
-      "GET /contacts/p1": () => jsonResponse(contact),
-      "GET /users": () => jsonResponse(rosterUsers),
-    });
-    render(<LogActivity entityType="contact" entityId="p1" />);
-    await screen.findByLabelText("Subject *");
-    expect(screen.queryByLabelText("Assignee")).toBeNull();
-  });
-
-  it("posts a task's callback time as its due time, flagged as a time", async () => {
-    const captured: Captured[] = [];
-    renderTaskComposer(captured);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Subject *"), "Call back");
-    const time = screen.getByRole("textbox", { name: "Time (optional)" });
-    await user.tripleClick(screen.getByRole("textbox", { name: "Due date" }));
-    await user.keyboard("27/10/2027");
-    await user.tab();
-    await user.type(time, "15:00");
-    await user.tab();
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
-    );
-    const post = captured.find((e) => e.key === "POST /activities");
-    const due = dueInstant("2027-10-27", INSTALLATION_ZONE, "15:00");
-    expect(post?.body).toMatchObject({
-      kind: "task",
-      due_at: due,
-      due_has_time: true,
-    });
-    expect(post?.body).not.toHaveProperty("remind_at");
-  });
-
-  it("offers no callback time on a note", async () => {
-    stubApi({
-      "GET /contacts/p1": () => jsonResponse(contact),
-      "GET /users": () => jsonResponse(rosterUsers),
-    });
-    render(<LogActivity entityType="contact" entityId="p1" />);
-    await screen.findByLabelText("Subject *");
-    expect(screen.queryByLabelText("Time (optional)")).toBeNull();
-  });
-
-  it("does not offer an agent seat as an assignee", async () => {
-    renderTaskComposer();
-    const user = userEvent.setup();
-    await user.click(await screen.findByLabelText("Assignee"));
-    const listbox = screen.getByRole("listbox");
-    expect(
-      await within(listbox).findByRole("option", { name: "Dana Ops" }),
-    ).toBeTruthy();
-    expect(
-      within(listbox).queryByRole("option", { name: "Runner Bot" }),
-    ).toBeNull();
   });
 });
 
