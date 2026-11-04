@@ -481,6 +481,38 @@ describe("useSetupChecklist", () => {
     expect([result.current.done, result.current.total]).toEqual([1, 4]);
   });
 
+  it("is complete only once every read answered and every step is done", async () => {
+    const answers = {
+      "/voice-profiles": () => jsonResponse({ data: [{ profile_version: 1 }] }),
+      "/scheduling/profile": () => jsonResponse(scheduling(true)),
+    };
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({ status: 500, code: "internal", title: "Down" }, 500),
+    });
+    const failed = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(failed.result.current.settled).toBe(true));
+    // The failed read dropped mail and calendar, so the rest counts as done.
+    expect(failed.result.current.done).toBe(failed.result.current.total);
+    expect(failed.result.current.complete).toBe(false);
+    failed.unmount();
+
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({
+          data: [connection("gmail"), connection("gcal")],
+          providers: MAIL_PROVIDERS.map((provider) => ({
+            provider,
+            reason: "ready",
+          })),
+        }),
+    });
+    const answered = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(answered.result.current.complete).toBe(true));
+  });
+
   it("hides the reminder until the seat is forgotten at sign-out", async () => {
     serve({
       "/connectors": () => jsonResponse({ data: [], providers: [] }),

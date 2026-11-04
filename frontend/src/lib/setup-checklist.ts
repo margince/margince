@@ -256,6 +256,9 @@ export type SetupChecklist = Readonly<{
   steps: readonly SetupStep[];
   done: number;
   total: number;
+  /** Every read answered and every step is done. A failed read drops its
+   *  steps, so the count alone cannot say setup is finished. */
+  complete: boolean;
   /** The reader hid the reminder for the rest of this sign-in. */
   hidden: boolean;
   hide: () => void;
@@ -294,11 +297,15 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     voice: voiceRead(voice),
     scheduling: scheduling.data ?? null,
   });
+  const done = steps.filter((step) => step.state === "done").length;
   return {
     settled: asked.every((query) => query === false || !query.isPending),
     steps,
-    done: steps.filter((step) => step.state === "done").length,
+    done,
     total: steps.length,
+    complete:
+      asked.every((query) => query === false || query.isSuccess) &&
+      done === steps.length,
     hidden,
     hide: () => {
       writeStored(STORAGE_KEYS.setupReminderHidden, "1");

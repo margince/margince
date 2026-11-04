@@ -196,7 +196,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
 function YourSetup({ reach }: Readonly<{ reach: SettingsReach }>) {
   const t = useT();
   const setup = useSetupChecklist(reach);
-  if (!setup.settled || setup.total === 0 || setup.done === setup.total) {
+  if (!setup.settled || setup.total === 0 || setup.complete) {
     return null;
   }
   return (
