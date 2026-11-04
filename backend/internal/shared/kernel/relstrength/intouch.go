@@ -32,6 +32,24 @@ func MeetingCountsSQL(alias string) string {
 		sqlList(countingMeetingStatuses) + "))"
 }
 
+// countingCallOutcomes are the outcomes of a call that reached somebody. A call
+// that left a voicemail, was told to call back later, or reached nobody is not
+// contact. A call logged with no outcome counts, as every call did before the
+// outcome existed.
+var countingCallOutcomes = []string{"reached", "put_through"}
+
+// CallCountsSQL is the predicate a call row passes to count as contact.
+func CallCountsSQL(alias string) string {
+	return "(" + alias + ".call_outcome IS NULL OR " + alias + ".call_outcome IN (" +
+		sqlList(countingCallOutcomes) + "))"
+}
+
+// CallOutcomeCounts is CallCountsSQL for a reader holding the row in Go;
+// outcome is "" when the call has none.
+func CallOutcomeCounts(outcome string) bool {
+	return outcome == "" || slices.Contains(countingCallOutcomes, outcome)
+}
+
 // MeetingStatusCounts is MeetingCountsSQL for a reader holding the row in Go;
 // status is "" when the meeting has none.
 func MeetingStatusCounts(status string) bool {
@@ -40,8 +58,9 @@ func MeetingStatusCounts(status string) bool {
 
 // InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
 // automatic is the row's Evidence.Automatic, empty when a human wrote it.
-func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool {
-	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
+func InteractionCounts(kind, meetingStatus, callOutcome string, automatic AutomaticKind) bool {
+	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) &&
+		(kind != kindCall || CallOutcomeCounts(callOutcome)) && automatic == ""
 }
 
 // HappenedByNowSQL admits a row that has happened by now (occurredday.HappenedSQL),
@@ -68,9 +87,11 @@ func MeetingAheadSQL(alias, now string) string {
 }
 
 // NotCalledOffSQL admits any activity row except a meeting that was canceled or
-// a no-show. last_activity_of_deal carries this text verbatim.
+// a no-show, and a call that reached nobody (CallCountsSQL).
+// last_activity_of_deal carries this text verbatim.
 func NotCalledOffSQL(alias string) string {
-	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
+	return "((" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ") AND (" +
+		alias + ".kind <> '" + kindCall + "' OR " + CallCountsSQL(alias) + "))"
 }
 
 // lastActivityKinds are the kinds that move a record's last-activity clock. A

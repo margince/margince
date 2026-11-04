@@ -2324,6 +2324,14 @@ components:
             How the meeting went, once somebody recorded it (absent when this
             update did not touch it). Meeting rows only; the update refuses the
             field on any other kind.
+        call_outcome:
+          type: string
+          enum: [reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [CallEndedReached, CallEndedNotReached, CallEndedVoicemail, CallEndedCallBackLater, CallEndedPutThrough]
+          description: How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+        call_outcome_cleared:
+          type: boolean
+          description: True when this update removed the call's outcome, so the call has none again and counts as contact as before.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:

@@ -177,6 +177,10 @@ var erasureColumnBaseline = map[string][]string{
 		"direction",
 		"kind",
 		"meeting_status",
+		// How a call ended: a closed list (reached, voicemail, ...) about
+		// the call, never words the subject wrote, so erasure has nothing to
+		// clear here.
+		"call_outcome",
 		// Who caused the row to exist — human, agent, or the product's own
 		// remediation work. A closed enum about the WRITER, never about the
 		// subject, so erasure has nothing to clear here.

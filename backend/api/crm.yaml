@@ -8768,6 +8768,13 @@ paths:
         - name: kind
           in: query
           schema: { type: string, enum: [email, call, meeting, note, task, message] }
+        - name: call_outcome
+          in: query
+          description: Calls that ended this way. Matches calls only.
+          schema:
+            type: string
+            enum: [reached, not_reached, voicemail, call_back_later, put_through]
+            x-enum-varnames: [ListCallOutcomeReached, ListCallOutcomeNotReached, ListCallOutcomeVoicemail, ListCallOutcomeCallBackLater, ListCallOutcomePutThrough]
         - name: channel_provider
           in: query
           description: |
@@ -53495,8 +53502,13 @@ components:
             Whether this response carries the activity's content. `withheld` means the caller may
             discover the row (a linked record is theirs to read) but is not in its audience: only the
             safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience,
-            links, is_done/due_at for a task, provenance and timestamps — and subject, body,
+            links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body,
             thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [ActivityCallOutcomeNone, ActivityCallOutcomeReached, ActivityCallOutcomeNotReached, ActivityCallOutcomeVoicemail, ActivityCallOutcomeCallBackLater, ActivityCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
         invitation_status:
           type: [string, 'null']
@@ -53868,6 +53880,11 @@ components:
             than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [CreateCallOutcomeNone, CreateCallOutcomeReached, CreateCallOutcomeNotReached, CreateCallOutcomeVoicemail, CreateCallOutcomeCallBackLater, CreateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -54163,6 +54180,11 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [UpdateCallOutcomeNone, UpdateCallOutcomeReached, UpdateCallOutcomeNotReached, UpdateCallOutcomeVoicemail, UpdateCallOutcomeCallBackLater, UpdateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
