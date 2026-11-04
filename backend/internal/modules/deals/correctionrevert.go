@@ -64,6 +64,9 @@ type CorrectionReversalError struct{ Reason string }
 // hand-restored case — and three wordings would read as three situations.
 const alreadyTakenBack = "this correction has already been taken back"
 
+// AlreadyAccepted refuses the Undo of a change its owner kept.
+const AlreadyAccepted = "You already accepted this change"
+
 func (e *CorrectionReversalError) Error() string { return e.Reason }
 
 // RevertCorrection puts back every field one machine correction changed.
@@ -131,6 +134,11 @@ func (s *Store) RevertCorrection(
 		}
 		if correction.Reversed() {
 			return &CorrectionReversalError{Reason: alreadyTakenBack}
+		}
+		// Under the correction lock, so an Accept and an Undo of one change
+		// cannot both land, whichever route the Undo came through.
+		if correction.AcceptedAt != nil {
+			return &CorrectionReversalError{Reason: AlreadyAccepted}
 		}
 		if correction.Correction == CloseLostCorrection {
 			err = s.revertCloseLost(ctx, tx, correction, ifVersion, evidence, active)
@@ -225,13 +233,13 @@ func lockCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection
 	var c DealCorrection
 	err := tx.QueryRow(ctx, `
 		SELECT id, deal_id, audit_log_id, correction, fields, applied_at,
-		       reversed_at, reversed_by,
+		       reversed_at, reversed_by, accepted_at,
 		       remaining_open_stages, asking, standing_close_date, stage_history_id
 		  FROM deal_correction
 		 WHERE id = $1
 		   FOR UPDATE`, id).
 		Scan(&c.ID, &c.DealID, &c.AuditLogID, &c.Correction, &c.Fields, &c.AppliedAt,
-			&c.ReversedAt, &c.ReversedBy,
+			&c.ReversedAt, &c.ReversedBy, &c.AcceptedAt,
 			&c.Evidence.RemainingOpenStages, &c.Evidence.Asking, &c.Evidence.StandingCloseDate,
 			&c.StageHistoryID)
 	if errors.Is(err, pgx.ErrNoRows) {

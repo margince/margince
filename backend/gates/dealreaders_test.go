@@ -161,6 +161,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/correctionreceipts.go:correctionReceiptSelect": "the SELECT list and joins every change report shares; it has no WHERE of its own. Its three callers, RecentCorrectionsOwnedBy, DealChanges and TeamChanges, ask auth.Require(ctx, \"deal\", read) first and add the row scope",
 	"internal/modules/deals/verdictapply.go:lockVerdictDeal":               "the status, owner, legal hold and the fields a verdict changes, under the deal's row lock. Its one caller, ApplyVerdict, asks auth.Require(ctx, \"deal\", update) first and then auth.EnsureWritable on the row",
 	"internal/modules/deals/closelost.go:closeStillDue":                    "the status, owner and legal hold of a deal Margince is about to close, under its row lock. Its one caller, CloseAsLost, asks auth.Require(ctx, \"deal\", update) first",
 	"internal/modules/deals/closelost.go:lostStageAndCode":                 "the lost stage of the deal's pipeline. Reached only from CloseAsLost, behind the same deal update gate",

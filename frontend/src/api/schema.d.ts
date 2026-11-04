@@ -5500,6 +5500,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/margince-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Every change Margince made to this deal, newest first.
+         * @description The deal's own list of what Margince changed on it: closed as lost, a new close date,
+         *     amount or probability, and the close-date checks. Accepted and undone changes stay in
+         *     the list and say so; a change still open carries its `undo`. Dismissing a change on
+         *     Home does not remove it here. Paged newest first; `next_cursor` continues the list.
+         *     A deal the caller may not see answers 404.
+         */
+        get: operations["listDealMarginceChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-corrections/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The changes Margince made to your deals that you have not accepted or undone.
+         * @description One bundle per deal: every open change Margince made to one of the caller's own deals,
+         *     newest first inside the bundle. The counts are deals, counted in SQL over every open
+         *     change, so a deal changed twice counts once and a cut list never shrinks a count.
+         *     Bundles are ordered by the deal's value in the base currency, the largest first. At
+         *     most 500 bundles; `truncated` says when more exist.
+         */
+        get: operations["getPendingMarginceChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deal-corrections/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo several changes Margince made, one deal at a time.
+         * @description Each item names one deal and the changes on it to take back. The changes of one item
+         *     are undone newest first through the same reversal the single Undo uses; the first is
+         *     checked against `version`, the version the caller read. Like the single Undo, it is
+         *     for a signed-in human only. Items are independent: one
+         *     refused deal does not stop the next. The answer reports each deal as `undone`,
+         *     `partly_undone` (some changes kept, each with its reason) or `refused`.
+         */
+        post: operations["undoMarginceChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/stage-progressions/{approvalId}/revert": {
         parameters: {
             query?: never;
@@ -13271,6 +13347,33 @@ export interface paths {
          *     board would read as an outage.
          */
         get: operations["getTeamBoard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/team/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What Margince changed on your team's deals.
+         * @description Per teammate and kind of change: how many deals Margince changed since `since`, their
+         *     value in the base currency, and how many of those deals had the change undone. The
+         *     rows follow, newest first, at most 200; `truncated` says when more exist. The counts
+         *     are read over every change, so a cut list never shrinks them.
+         *
+         *     The teammates are the ones `/worklist/team` lists, and every deal is read under the
+         *     caller's own row scope. Requires a row scope of `team` or `all`; an own-scoped reader
+         *     is refused with 403.
+         */
+        get: operations["getTeamMarginceChanges"];
         put?: never;
         post?: never;
         delete?: never;
@@ -55458,6 +55561,128 @@ export interface components {
             reversed: boolean;
         };
         /**
+         * @description The changes Margince made to the caller's deals that are neither accepted nor undone.
+         *     Every count is a number of deals; a deal with two kinds of change counts once in
+         *     `deals` and once under each kind.
+         */
+        MarginceChangeSummary: {
+            /** Format: date-time */
+            as_of: string;
+            /** @description Deals with at least one open change. */
+            deals: number;
+            /** @description Deals Margince closed as lost. */
+            closed: number;
+            /** @description Deals given a new close date. */
+            redated: number;
+            /** @description Deals given a new amount. */
+            revalued: number;
+            /** @description Deals given a new probability. */
+            probabilities: number;
+            /** @description The currency of every `value_base_minor`. */
+            base_currency: string;
+            /** @description One per deal, the largest value first. */
+            bundles: components["schemas"]["MarginceChangeBundle"][];
+            /** @description True when more bundles exist than were returned. The counts are never cut. */
+            truncated: boolean;
+        };
+        /** @description Every open change Margince made to one deal. Its Undo takes them all back. */
+        MarginceChangeBundle: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /**
+             * Format: int64
+             * @description The deal's version as read, for the first undo of the bundle.
+             */
+            version: number;
+            /** @description The changes, newest first. */
+            audit_log_ids: string[];
+            kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability")[];
+            /**
+             * Format: int64
+             * @description The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+             */
+            value_base_minor?: number;
+            /** Format: date-time */
+            latest_at: string;
+        };
+        UndoMarginceChangesRequest: {
+            items: components["schemas"]["UndoMarginceChangeItem"][];
+        };
+        UndoMarginceChangesResult: {
+            results: components["schemas"]["UndoMarginceChangeResult"][];
+        };
+        /**
+         * @description What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
+         *     change left in place and why.
+         */
+        UndoMarginceChangeResult: {
+            /** Format: uuid */
+            deal_id: string;
+            /** @enum {string} */
+            outcome: "undone" | "partly_undone" | "refused";
+            /** @description The kinds of change taken back. */
+            undone: string[];
+            kept: components["schemas"]["UndoMarginceChangeKept"][];
+        };
+        DealMarginceChanges: {
+            /** @description The deal's changes, newest first. */
+            changes: components["schemas"]["Receipt"][];
+            /** @description Where the next page starts; absent on the last page. */
+            next_cursor?: string;
+        };
+        TeamMarginceChanges: {
+            /** Format: date-time */
+            as_of: string;
+            /** Format: date-time */
+            since: string;
+            base_currency: string;
+            groups: components["schemas"]["TeamMarginceChangeGroup"][];
+            rows: components["schemas"]["TeamMarginceChangeRow"][];
+            /** @description True when more rows exist than were returned. The groups are never cut. */
+            truncated: boolean;
+        };
+        UndoMarginceChangeItem: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * Format: int64
+             * @description The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+             */
+            version: number;
+            /** @description The changes to take back, all on this deal. */
+            audit_log_ids: string[];
+        };
+        /** @description One change an undo left in place, and why. */
+        UndoMarginceChangeKept: {
+            /** Format: uuid */
+            audit_log_id: string;
+            /** @description The kind of change; absent when the change could not be read. */
+            kind?: string;
+            /** @enum {string} */
+            reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew";
+        };
+        TeamMarginceChangeGroup: {
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            kind: string;
+            /** @description Deals changed in this kind. */
+            deals: number;
+            /** @description Of those deals, how many had the change undone. */
+            undone: number;
+            /**
+             * Format: int64
+             * @description The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+             */
+            value_base_minor: number;
+        };
+        TeamMarginceChangeRow: {
+            /** Format: uuid */
+            owner_id: string;
+            change: components["schemas"]["Receipt"];
+        };
+        /**
          * @description Whether this change can be taken back, and why not when it cannot.
          *
          *     A greyed control with no reason is the shape this replaces. The reasons are
@@ -65127,6 +65352,85 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealMarginceChanges: {
+        parameters: {
+            query?: {
+                /** @description The `next_cursor` of the page before. A token this server did not mint is refused with 422. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the deal's changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealMarginceChanges"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getPendingMarginceChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The open changes, one bundle per deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginceChangeSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    undoMarginceChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UndoMarginceChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per item, in the order asked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UndoMarginceChangesResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77964,6 +78268,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TeamBoard"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getTeamMarginceChanges: {
+        parameters: {
+            query?: {
+                /** @description Where the window starts. Seven days before now when absent. */
+                since?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The team's changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMarginceChanges"];
                 };
             };
             401: components["responses"]["Unauthorized"];
