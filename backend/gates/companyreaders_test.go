@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/companyreferrers.go:refuseIfNamedBy":                    "the company's own owner, read to compare with the owners of the deals and contacts that name it, inside a count that only ever KEEPS the company from an owner's archive. No company field leaves the predicate",
 	"internal/modules/contacts/unknownemploymentrepair.go:unknownEmploymentCandidate":  "a company liveness check only narrows the system data task repair and its relationship-authorized size estimate; no company field or identity leaves the predicate",
 	"internal/modules/contacts/sitereadlogo.go:logoUnwornByAnyCompany":                 "the NOT EXISTS that keeps a parked logo key while any company wears it, inside the release UPDATE on site_read. Nothing of a company is selected; removing it could only release more keys",
 	"internal/compose/dealscoutbuyer.go:scoutBuyerSignal":                              "company liveness only narrows verified buyer eligibility; the predicate returns no company fields, and the suggestion or signal reader separately checks the named company",

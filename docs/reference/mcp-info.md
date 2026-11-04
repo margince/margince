@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.0 KB |
+| Tool catalog | 190.4 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 49950 |
+| Approx. wire tokens | 50063 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.1 KB | 24% | **No**: a result's shape, never listed to a model |
+| Output schemas | 46.3 KB | 24% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
-| Input schemas | 91.2 KB | 48% | Yes, every step |
+| Input schemas | 91.4 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **132.9 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **133.1 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
-| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 717 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 706 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1762 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
@@ -91,14 +91,14 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1453 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1489 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 880 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2311 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2318 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 1681 |
@@ -2506,6 +2506,8 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
                           "type": "array"
                         },
                         "limit": {
+                          "maximum": 1000,
+                          "minimum": 1,
                           "type": "integer"
                         },
                         "measures": {
@@ -4864,6 +4866,7 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                     "type": "array"
                   },
                   "more_fields": {
+                    "minimum": 0,
                     "type": "integer"
                   },
                   "sentence": {
@@ -5246,18 +5249,23 @@ make. (Runs immediately; requires passport scope "write".)
             "disposition": {
               "properties": {
                 "created": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "duplicates": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "skipped": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "unchanged": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "updated": {
+                  "minimum": 0,
                   "type": "integer"
                 }
               },
@@ -5285,6 +5293,7 @@ make. (Runs immediately; requires passport scope "write".)
                     "type": "string"
                   },
                   "line": {
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "params": {
@@ -5313,9 +5322,11 @@ make. (Runs immediately; requires passport scope "write".)
             "links": {
               "properties": {
                 "applied": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "offered": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "unresolved": {
@@ -5366,26 +5377,33 @@ make. (Runs immediately; requires passport scope "write".)
               "items": {
                 "properties": {
                   "closed_lost": {
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "closed_won": {
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "disposition": {
                     "properties": {
                       "created": {
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "duplicates": {
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "skipped": {
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "unchanged": {
+                        "minimum": 0,
                         "type": "integer"
                       },
                       "updated": {
+                        "minimum": 0,
                         "type": "integer"
                       }
                     },
@@ -5404,6 +5422,7 @@ make. (Runs immediately; requires passport scope "write".)
                     "type": "string"
                   },
                   "rows_read": {
+                    "minimum": 0,
                     "type": "integer"
                   }
                 },
@@ -5418,6 +5437,7 @@ make. (Runs immediately; requires passport scope "write".)
               "type": "array"
             },
             "rows_read": {
+              "minimum": 0,
               "type": "integer"
             },
             "run_id": {
@@ -5490,6 +5510,7 @@ make. (Runs immediately; requires passport scope "write".)
                   "type": "array"
                 },
                 "reversed_count": {
+                  "minimum": 0,
                   "type": "integer"
                 },
                 "run_id": {
@@ -5500,6 +5521,7 @@ make. (Runs immediately; requires passport scope "write".)
                   "type": "string"
                 },
                 "updates_not_reversed": {
+                  "minimum": 0,
                   "type": "integer"
                 }
               },
@@ -6222,6 +6244,7 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
               "type": "array"
             },
             "more_fields": {
+              "minimum": 0,
               "type": "integer"
             },
             "sentence": {
@@ -7851,6 +7874,7 @@ own fields.
         "contact_profile_fields",
         "contract",
         "deal_legal_reviews",
+        "deal_margince_changes",
         "deal_products",
         "deal_room_brief",
         "deal_suggestion",
@@ -7893,6 +7917,7 @@ own fields.
         "ownership_offer",
         "ownership_offer_candidates",
         "ownership_request",
+        "pending_margince_changes",
         "project_filing",
         "relationship_nudge",
         "response_metrics",
@@ -7902,6 +7927,7 @@ own fields.
         "tag_suggestion",
         "team_board",
         "team_exceptions",
+        "team_margince_changes",
         "team_weekly_review",
         "teammate_weekly_plan",
         "weekly_plan",
@@ -7935,7 +7961,7 @@ own fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
+      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
       "type": "string"
     },
     "days": {
@@ -7979,7 +8005,7 @@ own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, capture_triage, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_profile_fields, contract, deal_legal_reviews, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+      "description": "activity_pipeline, capture_triage, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_profile_fields, contract, deal_legal_reviews, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
       "type": "string"
     },
     "lang": {
@@ -8023,7 +8049,7 @@ own fields.
       "type": "string"
     },
     "since": {
-      "description": "magic, magic_line_records only",
+      "description": "magic, magic_line_records, team_margince_changes only",
       "type": "string"
     },
     "stage_id": {
@@ -9680,6 +9706,8 @@ evidence, and quote coverage with each number.
                           "type": "array"
                         },
                         "limit": {
+                          "maximum": 1000,
+                          "minimum": 1,
                           "type": "integer"
                         },
                         "measures": {

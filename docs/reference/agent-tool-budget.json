@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 45,
     "system_frame_tokens": 592,
-    "tokens": 32149,
+    "tokens": 32199,
     "median_tool_tokens": 611,
-    "mean_tool_tokens": 714
+    "mean_tool_tokens": 715
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2311
+      "tokens": 2318
     },
     {
       "name": "find_records",
@@ -105,7 +105,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 1453
+      "tokens": 1489
     },
     {
       "name": "send_outbound",
@@ -145,7 +145,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 710
+      "tokens": 717
     },
     {
       "name": "change_settings",

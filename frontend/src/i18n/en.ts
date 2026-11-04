@@ -6019,6 +6019,10 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
+  "contact.archiveRefused":
+    "Only the contact’s owner or a manager can archive this contact.",
+  "company.archiveRefused":
+    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
@@ -10281,6 +10285,12 @@ export const en = {
   "privacy.erasureIrreversible":
     "This permanently erases the contact across the whole system: record, captured activity and derived values. It cannot be undone. The erasure itself is audited.",
   "privacy.erasureConfirm": "Erase and suppress",
+  "privacy.resolutionErasureHint":
+    "Used only if you reject. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureDraftReplaced":
+    "The answer you typed is not kept. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureAnswer.erased": "Erased",
+  "privacy.erasureAnswer.nothing_held": "Nothing held (already erased)",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
@@ -18217,7 +18227,48 @@ export const en = {
   "worklist.handled.closeLostUndone":
     "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
   "worklist.handled.verdictUndone":
-    "Undone. Margince will not change this again until something new happens on this deal.",
+    "Undone. Margince will not change the {field} again until something new happens on this deal.",
+  "changes.field.closeDate": "close date",
+  "changes.field.amount": "amount",
+  "changes.field.probability": "probability",
+  "changes.field.status": "status",
+  "changes.fieldJoin": "{first} and {second}",
+  "changes.kind.close_lost": "Closed as lost",
+  "changes.kind.deal_close_date": "New close date",
+  "changes.kind.deal_amount": "New amount",
+  "changes.kind.deal_probability": "New probability",
+  "changes.summary_one": "Margince updated {count} of your deals: {parts}",
+  "changes.summary_other": "Margince updated {count} of your deals: {parts}",
+  "changes.part.closed_one": "{count} closed",
+  "changes.part.closed_other": "{count} closed",
+  "changes.part.redated_one": "{count} re-dated",
+  "changes.part.redated_other": "{count} re-dated",
+  "changes.part.revalued_one": "{count} re-valued",
+  "changes.part.revalued_other": "{count} re-valued",
+  "changes.part.probabilities_one": "{count} probability",
+  "changes.part.probabilities_other": "{count} probabilities",
+  "changes.viewAll": "View all",
+  "changes.undoAll": "Undo all",
+  "changes.undoAllDone_one": "Undone on {count} deal.",
+  "changes.undoAllDone_other": "Undone on {count} deals.",
+  "changes.undoAllPartly":
+    "Undone on {undone} deals. {kept} kept a change that was edited since Margince made it.",
+  "changes.partly":
+    "Undone, except the {field}, which was changed since Margince set it.",
+  "changes.refused":
+    "Not undone. The deal changed since you opened this page. Reload and try again.",
+  "changes.alreadyAccepted": "You already accepted this change, so it stays.",
+  "changes.deal.title": "Changes by Margince",
+  "changes.deal.loading": "Loading changes…",
+  "changes.team.title": "Changes by Margince on your team",
+  "changes.team.empty": "Margince changed no deals on your team this week.",
+  "changes.team.loading": "Loading team changes…",
+  "changes.team.owner": "Owner",
+  "changes.team.kind": "Change",
+  "changes.team.deals": "Deals",
+  "changes.team.value": "Value",
+  "changes.team.undone": "Undone",
+  "changes.team.truncated": "List truncated. More changes exist.",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
