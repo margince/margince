@@ -11,7 +11,6 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -19,6 +18,7 @@ import {
   type ListHistoryEntry,
   useListHistory,
 } from "../../lib/lists.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 
 const KIND_LABEL: Record<ListHistoryEntry["kind"], MessageKey> = {
   member_added: "lists.history.added",
@@ -48,13 +48,14 @@ function isObserved(row: ListHistoryEntry): boolean {
 }
 
 export function ListHistoryPanel({ list }: Readonly<{ list: List }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const history = useListHistory(list.id);
   const live = list.list_type === "dynamic";
   const rows = history.data?.data ?? [];
   const when = (row: ListHistoryEntry) =>
-    formatDateTime(row.occurred_at, locale, viewerZone());
+    formatDateTime(row.occurred_at, locale, readerZone);
   const reasonOf = (row: ListHistoryEntry) => {
     const key = row.reason ? REASON_LABEL[row.reason] : null;
     return key ? ` · ${t(key)}` : "";
@@ -125,11 +126,12 @@ export function ListHistoryPanel({ list }: Readonly<{ list: List }>) {
  * would cut the title short. Link ink marks it pressable within prose.
  */
 function ListCheckIntro({ check }: Readonly<{ check: List["last_check"] }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   let sentence = t("lists.history.notChecked");
   if (check) {
-    const when = formatDateTime(check.checked_at, locale, viewerZone());
+    const when = formatDateTime(check.checked_at, locale, readerZone);
     sentence =
       check.outcome === "too_large"
         ? t("lists.history.tooLarge", { when })

@@ -137,6 +137,59 @@ describe("UsersAdminCard role picker", () => {
     );
   });
 
+  it("warns before Save only when the picked role cannot capture and the member has connections", async () => {
+    const user = userEvent.setup();
+    const server = backend([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.url.includes("/users/assignable-roles")) {
+          return jsonResponse({
+            roles: SEEDED_ASSIGNABLE_ROLES.map((role) => ({
+              ...role,
+              captures_mail: role.key !== "read_only",
+            })),
+          });
+        }
+        const answer = await server(req);
+        const rosterRead =
+          req.method === "GET" &&
+          new URL(req.url).pathname.endsWith("/v1/users");
+        if (!rosterRead) {
+          return answer;
+        }
+        const page: typeof ROSTER = await answer.json();
+        return jsonResponse({
+          ...page,
+          data: page.data.map((member) =>
+            member.id === "u-active"
+              ? { ...member, connected_mailboxes: 2 }
+              : member,
+          ),
+        });
+      }),
+    );
+    render(<UsersAdminCard />);
+    await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
+    const warning =
+      "Their 2 connected mailboxes and calendars will stop capturing.";
+
+    const ada = await openRoleDialog(user, rowFor("Ada Active"), "ada active");
+    await pickOption(user, ada.chooser, "Read-only");
+    expect(within(ada.dialog).getByText(warning)).toBeTruthy();
+    await pickOption(user, ada.chooser, "Team lead");
+    expect(within(ada.dialog).queryByText(warning)).toBeNull();
+    await user.click(
+      within(ada.dialog).getByRole("button", { name: "Cancel" }),
+    );
+
+    const nora = await openRoleDialog(user, rowFor("Nora None"), "nora none");
+    await pickOption(user, nora.chooser, "Read-only");
+    expect(within(nora.dialog).queryByText(/will stop capturing/)).toBeNull();
+  });
+
   it("sets a member's role through the role seam", async () => {
     const user = userEvent.setup();
     const calls: { method: string; url: string; body?: unknown }[] = [];

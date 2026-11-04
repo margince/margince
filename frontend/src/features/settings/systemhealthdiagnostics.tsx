@@ -15,11 +15,11 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 import { CaptureHealthCard } from "./capturehealth";
 import { DataTasksHealthCard } from "./datataskshealth";
@@ -127,6 +127,7 @@ function JobHistory() {
 }
 
 function JobHistoryBody() {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const [params] = useUrlParams();
@@ -169,7 +170,7 @@ function JobHistoryBody() {
                       time: formatDateTime(
                         report.runs[0].failed_at,
                         locale,
-                        viewerZone(),
+                        readerZone,
                       ),
                       state: t(jobStateLabels[report.runs[0].state]),
                     })}
@@ -208,11 +209,7 @@ function JobHistoryBody() {
               />
               <p className="t-caption">
                 {t("systemHealth.asOf", {
-                  time: formatDateTime(
-                    report.observed_at,
-                    locale,
-                    viewerZone(),
-                  ),
+                  time: formatDateTime(report.observed_at, locale, readerZone),
                 })}
               </p>
               {report.population_may_have_changed && (
@@ -255,7 +252,7 @@ function JobHistoryBody() {
                     key: "first",
                     header: t("health.firstObserved"),
                     render: (group) =>
-                      formatDateTime(group.first_at, locale, viewerZone()),
+                      formatDateTime(group.first_at, locale, readerZone),
                   },
                   {
                     key: "open",
@@ -327,7 +324,7 @@ function JobHistoryBody() {
                     key: "at",
                     header: t("jobs.col.failedAt"),
                     render: (run) =>
-                      formatDateTime(run.failed_at, locale, viewerZone()),
+                      formatDateTime(run.failed_at, locale, readerZone),
                   },
                 ]}
               />

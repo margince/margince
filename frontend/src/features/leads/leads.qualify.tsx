@@ -23,8 +23,8 @@ import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   ExistingQualificationDeal,
   type QualificationDealChoice,
@@ -198,7 +198,7 @@ function QualificationForm({
   const t = useT();
   const { locale } = useLocale();
   // The signal is an activity, so its day is the record's.
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const pipelines = usePipelines(open);
   // The money pair holds from birth: an amount travels with the

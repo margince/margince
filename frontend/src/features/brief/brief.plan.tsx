@@ -18,7 +18,7 @@ import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
 import {
   type SettableState,
@@ -367,7 +367,7 @@ function CommitmentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const settleable = editable && isSettleable(commitment);
   // The box shows what the row WILL be once saved, not what it is: a staged tick
   // that drew itself unchecked would make the stage invisible.

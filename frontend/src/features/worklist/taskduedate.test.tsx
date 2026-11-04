@@ -21,7 +21,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 
 const TASK = "01a05500-0000-7000-8000-000000000a01";
 
@@ -88,11 +88,11 @@ function renderVerbs(dueAt?: string | null, dueHasTime = false) {
   });
   return render(
     <QueryClientProvider client={client}>
-      <RecordZoneProvider zone={RECORD_ZONE}>
+      <ViewerZoneProvider zone={RECORD_ZONE}>
         <LocaleProvider initial="en">
           <Harness />
         </LocaleProvider>
-      </RecordZoneProvider>
+      </ViewerZoneProvider>
     </QueryClientProvider>,
   );
 }

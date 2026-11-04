@@ -12,13 +12,13 @@ import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { companyTabRoute } from "../../lib/companytab";
 import { ENTITY } from "../../lib/entity";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash } from "../../lib/router";
 import {
   type SearchRecordCardType,
   searchHitHasCard,
   searchHitRoute,
 } from "../../lib/searchkinds";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { OpenHit } from "./searchpanels";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -30,7 +30,7 @@ export function SearchHit({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // An email hit IS the canonical row — the same one the timeline draws, from
   // the same server projection. It replaces the generic title-and-snippet
   // rather than sitting beside it: the snippet was a raw 200-character slice

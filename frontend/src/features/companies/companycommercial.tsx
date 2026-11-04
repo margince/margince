@@ -9,13 +9,13 @@ import { offerStatusLabel } from "../../format/offerstatus";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The commercial relationship: what we last put in front of this account,
 // read from the SAME open deals the Deals tab already lists — so it is
@@ -51,7 +51,7 @@ type ContractStrip = NonNullable<
 export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const deals = view?.deals?.data ?? [];
   const truncated = view?.deals?.page?.has_more === true;
   // Offers are their own RBAC object: a reader who may see deals may not see
@@ -98,7 +98,7 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
         {offer.valid_until && (
           <span>
             {t("commercial.validUntil", {
-              when: formatDate(offer.valid_until, locale, recordZone),
+              when: formatDate(offer.valid_until, locale, readerZone),
             })}
           </span>
         )}
@@ -187,7 +187,7 @@ export function CompanyContractState({
 }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const contracts = view?.state_strip?.contracts;
 
   // Absent means the reader has no contract grant — a different fact from an
@@ -233,7 +233,7 @@ export function CompanyContractState({
                 when: formatDate(
                   contracts.cancellation_effective_on,
                   locale,
-                  recordZone,
+                  readerZone,
                 ),
               })}
             </Badge>
@@ -244,7 +244,7 @@ export function CompanyContractState({
               when: formatDate(
                 contracts.nearest_renewal_on,
                 locale,
-                recordZone,
+                readerZone,
               ),
             })}
           </span>

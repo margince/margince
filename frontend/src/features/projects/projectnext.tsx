@@ -4,10 +4,10 @@ import type { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
 import { useMe } from "../../lib/session";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PROJECT_COMMITMENTS_ANCHOR } from "./projectreadings";
 import type { Project360 } from "./projectsections";
 import { nextCommitment } from "./projectstanding";
@@ -29,7 +29,7 @@ export function ProjectNext({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const me = useMe();
   const next = nextCommitment(view);
   if (!next) {

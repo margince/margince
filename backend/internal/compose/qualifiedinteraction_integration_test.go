@@ -241,7 +241,9 @@ func TestTheGoAndSQLWrittenByHumanRulesAgree(t *testing.T) {
 		for _, origin := range []string{"human", "agent", "system_notice", "system_remediation"} {
 			for _, method := range []string{"", "REQUEST", "REPLY", "CANCEL"} {
 				for _, machine := range []bool{false, true} {
-					rows = append(rows, relstrength.Evidence{Kind: kind, Origin: origin, CalendarMethod: method, SenderIsMachine: machine})
+					for _, bulk := range []bool{false, true} {
+						rows = append(rows, relstrength.Evidence{Kind: kind, Origin: origin, CalendarMethod: method, SenderIsMachine: machine, BulkMail: bulk})
+					}
 				}
 			}
 		}
@@ -252,8 +254,9 @@ func TestTheGoAndSQLWrittenByHumanRulesAgree(t *testing.T) {
 			method = &row.CalendarMethod
 		}
 		inSQL := workspaceValue[bool](t, e, `SELECT `+relstrength.WrittenByHumanSQL("a")+`
-			FROM (SELECT $1::text AS kind, $2::text AS origin, $3::text AS calendar_method, $4::boolean AS sender_is_machine) a`,
-			row.Kind, row.Origin, method, row.SenderIsMachine)
+			FROM (SELECT $1::text AS kind, $2::text AS origin, $3::text AS calendar_method, $4::boolean AS sender_is_machine,
+			             $5::boolean AS bulk_mail_attested) a`,
+			row.Kind, row.Origin, method, row.SenderIsMachine, row.BulkMail)
 		if inGo := row.Automatic() == ""; inGo != inSQL {
 			t.Errorf("%+v: Go says a human wrote it = %v, SQL = %v", row, inGo, inSQL)
 		}

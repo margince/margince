@@ -12,13 +12,13 @@ import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { useHealthScope } from "../../lib/healthscope";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PublicOriginCard } from "./public-origin";
 import {
   healthAvailability,
@@ -235,6 +235,7 @@ function OverviewStatus({
 }
 
 function SourceReading({ source }: Readonly<{ source: Source }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -253,7 +254,7 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
       {source.observed_at && (
         <p>
           {t("systemHealth.asOf", {
-            time: formatDateTime(source.observed_at, locale, viewerZone()),
+            time: formatDateTime(source.observed_at, locale, readerZone),
           })}
         </p>
       )}

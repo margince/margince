@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { ReceiptReview } from "../../components/receiptreview";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   jsonResponse,
@@ -104,7 +104,7 @@ it("dates a change from today by its hour and an older one by its day", async ()
   });
   const { container } = render(<BriefChanges />);
   await screen.findByRole("list", { name: en["brief.changes.title"] });
-  const zone = viewerZone();
+  const zone = browserZone();
   expect(
     [...container.querySelectorAll("time")].map((time) => time.textContent),
   ).toEqual([

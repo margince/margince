@@ -19,10 +19,12 @@ func TestTheImportAndTheWireRefuseTheSameKindFields(t *testing.T) {
 	seconds := func(n int) *int { return &n }
 	held := crmcontracts.CreateActivityRequestMeetingStatus("held")
 	transport := "whatsapp"
+	reached := crmcontracts.CreateActivityRequestCallOutcome("reached")
 	cases := map[string]struct {
 		kind     string
 		duration *int
 		status   *crmcontracts.CreateActivityRequestMeetingStatus
+		outcome  *crmcontracts.CreateActivityRequestCallOutcome
 		provider *string
 	}{
 		"no kind":                     {kind: ""},
@@ -32,15 +34,25 @@ func TestTheImportAndTheWireRefuseTheSameKindFields(t *testing.T) {
 		"a message without a channel": {kind: "message"},
 		"a transport on a note":       {kind: "note", provider: &transport},
 		"a clean meeting":             {kind: "meeting", duration: seconds(1800), status: &held},
+		"an outcome on a note":        {kind: "note", outcome: &reached},
+		"an outcome on a meeting":     {kind: "meeting", outcome: &reached},
+		"an outcome on an email":      {kind: "email", outcome: &reached},
+		"an outcome on a task":        {kind: "task", outcome: &reached},
+		"a reached call":              {kind: "call", outcome: &reached},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			_, wire := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 				Kind: crmcontracts.CreateActivityRequestKind(c.kind), Source: "test",
 				DurationSeconds: c.duration, MeetingStatus: c.status, ChannelProvider: c.provider,
+				CallOutcome: c.outcome, Subject: new("Spoke to the buyer"),
 			})
 			status := meetingStatusOf(c.status)
-			imported := CheckKindFields(c.kind, c.duration, status, providerOf(c.provider))
+			var outcome *string
+			if c.outcome != nil {
+				outcome = new(string(*c.outcome))
+			}
+			imported := CheckKindFields(c.kind, c.duration, status, outcome, providerOf(c.provider))
 			if fmt.Sprintf("%T", wire) != fmt.Sprintf("%T", imported) {
 				t.Fatalf("wire refused with %T (%v), import with %T (%v)", wire, wire, imported, imported)
 			}

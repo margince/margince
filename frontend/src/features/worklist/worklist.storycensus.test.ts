@@ -4,6 +4,7 @@
 import { basename, dirname, join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { checkedProgram } from "../../../scripts/lib/source-tree";
 import { isDocsPage, storyCensus } from "../../../scripts/lib/story-files";
 import { KNOWN_SOURCES } from "../../lib/worklistcopy";
 
@@ -37,15 +38,10 @@ function everySourceDrawnInAStory(): Set<string> {
       basename(file).startsWith("worklist.") &&
       !isDocsPage(file),
   );
-  const configPath = join(frontendRoot, "tsconfig.app.json");
-  const config = ts.readConfigFile(configPath, ts.sys.readFile);
-  const parsed = ts.parseJsonConfigFileContent(
-    config.config,
-    ts.sys,
-    frontendRoot,
+  const { program, checker } = checkedProgram(
+    join(frontendRoot, "tsconfig.app.json"),
+    files,
   );
-  const program = ts.createProgram(files, parsed.options);
-  const checker = program.getTypeChecker();
   const drawn = new Set<string>();
   function visit(node: ts.Node): void {
     if (

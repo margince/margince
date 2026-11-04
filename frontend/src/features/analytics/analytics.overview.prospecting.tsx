@@ -14,8 +14,8 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AssessmentPanel } from "./analytics.assessment";
 import { scopeKey } from "./analytics.context";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
@@ -92,7 +92,7 @@ export function MyProspecting({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
   const filters = useOverviewFilters([], "this_week");
   const readsLeads = useCan("lead", "read");

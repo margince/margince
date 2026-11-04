@@ -27,7 +27,7 @@ import {
 } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
@@ -401,12 +401,12 @@ function renderUnderAToastRegion(
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>
+        <ViewerZoneProvider zone={zone}>
           <ToastProvider>
             <WorklistScreen />
             <ToastRegion />
           </ToastProvider>
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

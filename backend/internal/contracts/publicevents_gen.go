@@ -66,6 +66,33 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCallOutcome.
+const (
+	CallEndedCallBackLater PublicEventActivityChangedFieldsCallOutcome = "call_back_later"
+	CallEndedNotReached    PublicEventActivityChangedFieldsCallOutcome = "not_reached"
+	CallEndedPutThrough    PublicEventActivityChangedFieldsCallOutcome = "put_through"
+	CallEndedReached       PublicEventActivityChangedFieldsCallOutcome = "reached"
+	CallEndedVoicemail     PublicEventActivityChangedFieldsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCallOutcome enum.
+func (e PublicEventActivityChangedFieldsCallOutcome) Valid() bool {
+	switch e {
+	case CallEndedCallBackLater:
+		return true
+	case CallEndedNotReached:
+		return true
+	case CallEndedPutThrough:
+		return true
+	case CallEndedReached:
+		return true
+	case CallEndedVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
 	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
@@ -1073,6 +1100,12 @@ type PublicEventActivityChangedFields struct {
 	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
+	// CallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+	CallOutcome *PublicEventActivityChangedFieldsCallOutcome `json:"call_outcome,omitempty"`
+
+	// CallOutcomeCleared True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+	CallOutcomeCleared *bool `json:"call_outcome_cleared,omitempty"`
+
 	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
 	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
 
@@ -1130,6 +1163,9 @@ type PublicEventActivityChangedFieldsAudience string
 
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
+
+// PublicEventActivityChangedFieldsCallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+type PublicEventActivityChangedFieldsCallOutcome string
 
 // PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
@@ -3672,7 +3708,7 @@ var PublicEventSamples = map[string]string{
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",

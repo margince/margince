@@ -17,11 +17,14 @@ import (
 // The order is the order a caller fixes things in: the kind, what only a
 // meeting carries, the transport, then the duration. The wire mapper asks the
 // same four checks one at a time, where its own earlier errors win.
-func CheckKindFields(kind string, durationSeconds *int, meetingStatus *string, channelProvider string) error {
+func CheckKindFields(kind string, durationSeconds *int, meetingStatus, callOutcome *string, channelProvider string) error {
 	if err := checkKind(kind); err != nil {
 		return err
 	}
 	if err := checkMeetingStatusKind(kind, meetingStatus); err != nil {
+		return err
+	}
+	if err := checkCallOutcomeKind(kind, callOutcome); err != nil {
 		return err
 	}
 	if err := refuseKindProviderMismatch(kind, channelProvider); err != nil {
@@ -43,6 +46,36 @@ func checkKind(kind string) error {
 		return &InvalidKindError{Kind: kind}
 	}
 	return nil
+}
+
+// fieldCallOutcome is how a call ended; only a call carries one.
+const fieldCallOutcome = "call_outcome"
+
+// checkCallOutcomeKind refuses an outcome outside the contract's list, naming
+// the field, and an outcome on anything but a call.
+func checkCallOutcomeKind(kind string, callOutcome *string) error {
+	if callOutcome == nil {
+		return nil
+	}
+	if !crmcontracts.ActivityCallOutcome(*callOutcome).Valid() || *callOutcome == "" {
+		return &callOutcomeValueError{}
+	}
+	if kind != string(crmcontracts.ActivityKindCall) {
+		return &KindFieldError{Field: fieldCallOutcome, Only: "a call"}
+	}
+	return nil
+}
+
+// callOutcomeValueError is an outcome the fixed list does not hold.
+type callOutcomeValueError struct{}
+
+func (e *callOutcomeValueError) Error() string {
+	return "call_outcome takes one of reached, not_reached, voicemail, call_back_later, put_through"
+}
+
+// FieldFault names call_outcome on every surface.
+func (e *callOutcomeValueError) FieldFault() (string, string, string) {
+	return fieldCallOutcome, faultInvalid, e.Error()
 }
 
 func checkMeetingStatusKind(kind string, meetingStatus *string) error {

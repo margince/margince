@@ -393,10 +393,12 @@ var graphWeWrote = relstrength.WeWroteSQL("a")
 var graphMemberSent = `(a.kind IN ('email','message') AND ` + graphWeWrote + ` AND up.role = 'from')`
 
 // graphMet is a meeting or call of the pair that neither of them declined:
-// the contact took part whoever wrote. With the inbound date it is what the
+// the contact took part whoever wrote. A call counts only when it reached
+// somebody (relstrength.CallCountsSQL). With the inbound date it is what the
 // edge's recency counts from. up and pp are the colleague's and the contact's
 // participant rows.
-var graphMet = `(a.kind IN ('meeting','call') AND up.response IS DISTINCT FROM 'declined'
+var graphMet = `((a.kind = 'meeting' OR (a.kind = 'call' AND ` + relstrength.CallCountsSQL("a") + `))
+		AND up.response IS DISTINCT FROM 'declined'
 		AND pp.response IS DISTINCT FROM 'declined')`
 
 // graphEngagedRows adds to each counted row of a pair when the contact last

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
@@ -125,7 +125,7 @@ describe("the members table", () => {
 describe("roleRefusal", () => {
   const member = (over: Partial<User>): User => ({
     ...ROSTER.data[0],
-    timezone: viewerZone(),
+    timezone: browserZone(),
     ...over,
   });
   const context = (roster: User[], meId?: string) => ({

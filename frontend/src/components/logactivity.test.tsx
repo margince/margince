@@ -17,7 +17,7 @@ import { pickOption } from "../design-system/select-testing";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
@@ -69,7 +69,7 @@ function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>{ui}</RecordZoneProvider>
+        <ViewerZoneProvider zone={zone}>{ui}</ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -241,7 +241,8 @@ describe("log activity from a 360", () => {
     render(<LogActivity entityType="lead" entityId="l1" />);
 
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Call");
-    await userEvent.type(screen.getByLabelText("Subject *"), "No answer");
+    // A call's subject is not required: an outcome alone says what happened.
+    await userEvent.type(screen.getByLabelText("Subject"), "No answer");
     await userEvent.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
@@ -261,6 +262,8 @@ describe("log activity from a 360", () => {
     expect(post?.body).not.toHaveProperty("meeting_status");
     // And it carries no due date: a call happened, it is not owed.
     expect(post?.body).not.toHaveProperty("due_at");
+    // "No outcome" is said, not left out: an explicit null.
+    expect(post?.body).toHaveProperty("call_outcome", null);
   });
 
   // A caller that already knows which verb the reader came to perform hands it
@@ -273,6 +276,87 @@ describe("log activity from a 360", () => {
     // A call's date is the day it happened, not a deadline — the same field
     // a note gets, under the same label.
     expect(screen.getByLabelText("Date")).toBeTruthy();
+  });
+
+  // How a call ended, picked with one click: five outcomes and "No outcome".
+  it("offers a call the five outcomes and posts the one picked", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    const outcomes = screen.getByRole("group", { name: "Outcome" });
+    expect(
+      within(outcomes)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual([
+      "No outcome",
+      "Reached",
+      "Not reached",
+      "Left a voicemail",
+      "Call back later",
+      "Put through",
+    ]);
+    const log = screen.getByRole("button", { name: "Log" });
+    expect(log.hasAttribute("disabled")).toBe(true);
+
+    // An outcome alone is a whole call: no subject, no body.
+    await user.click(
+      within(outcomes).getByRole("button", { name: "Not reached" }),
+    );
+    expect(log.hasAttribute("disabled")).toBe(false);
+    await user.click(log);
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "call",
+      call_outcome: "not_reached",
+    });
+  });
+
+  it("offers a note no outcome, and sends none after a switch from Call", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    await user.click(
+      within(screen.getByRole("group", { name: "Outcome" })).getByRole(
+        "button",
+        {
+          name: "Reached",
+        },
+      ),
+    );
+    await pickOption(user, screen.getByLabelText("Type"), "Note");
+    expect(screen.queryByRole("group", { name: "Outcome" })).toBeNull();
+    await user.type(screen.getByLabelText("Subject *"), "Spoke at the fair");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "note" });
+    expect(post?.body).not.toHaveProperty("call_outcome");
   });
 
   it("renders the server's 422 detail verbatim", async () => {

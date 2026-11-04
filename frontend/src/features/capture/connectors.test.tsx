@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { locationDouble } from "../../testing/locationdouble";
 import { meFixture } from "../../testing/mefixture";
 import { type RouteMap, stubWithSession } from "../../testing/story-utils";
@@ -90,6 +91,8 @@ type StubOpts = {
   connect?: { authorize_url?: string } | { status: number };
   /** The session GET /me answers; unset, an admin holding no object grants. */
   me?: components["schemas"]["MeResponse"];
+  /** Whether the reader's role lets capture write; unset, the server omits it. */
+  seatCapture?: components["schemas"]["SeatCapture"];
 };
 
 function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
@@ -103,7 +106,10 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
         if (opts.listStatus) {
           return jsonResponse({ detail: "boom" }, opts.listStatus);
         }
-        return jsonResponse({ data: connections });
+        return jsonResponse({
+          data: connections,
+          seat_capture: opts.seatCapture,
+        });
       }
       if (path.endsWith("/me") && request.method === "GET") {
         return jsonResponse(opts.me ?? meFixture({}));
@@ -190,6 +196,39 @@ afterEach(() => {
 });
 
 describe("the connected-inboxes card", () => {
+  it("names the role as the cause of a stopped mailbox and offers no connect while the role cannot capture", async () => {
+    stubApi(
+      [
+        {
+          ...gmailConnected,
+          status: "error",
+          last_sync_error_class: "forbidden",
+        },
+      ],
+      { seatCapture: { allowed: false, reason: "role_cannot_capture" } },
+    );
+    render(<ConnectorsCard />);
+
+    expect(
+      await screen.findByText(en["connectors.roleCannotCapture"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["connectors.errForbidden"])).toBeInTheDocument();
+    expect(screen.queryByText(en["connectors.errUnknown"])).toBeNull();
+    for (const verb of ["Add account", "Reconnect", "Connect calendar"]) {
+      expect(screen.queryByRole("button", { name: verb })).toBeNull();
+    }
+    await userEvent.click(
+      screen.getByRole("button", { name: "More actions for Google" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Change what it brings in" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Import older email" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Disconnect" })).toBeEnabled();
+  });
+
   it("lists a live connection with its status and last-synced time", async () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);

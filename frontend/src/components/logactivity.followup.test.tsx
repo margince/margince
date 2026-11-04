@@ -10,8 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { dueInstant } from "../format/calendarday";
-import { viewerZone } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { browserZone } from "../format/timezone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
@@ -37,9 +37,9 @@ it("saves a note and its undated next step in one request", async () => {
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone={viewerZone()}>
+    <ViewerZoneProvider zone={browserZone()}>
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </ViewerZoneProvider>,
   );
   fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
     target: { value: "Pricing discussion" },
@@ -80,9 +80,9 @@ it("dates the next step on the day picked from its calendar", async () => {
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone={viewerZone()}>
+    <ViewerZoneProvider zone={browserZone()}>
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </ViewerZoneProvider>,
   );
   await user.type(
     screen.getByRole("textbox", { name: "Subject" }),
@@ -110,7 +110,7 @@ it("dates the next step on the day picked from its calendar", async () => {
   expect(posted[0]).toMatchObject({
     follow_up_task: {
       subject: "Send revised quote",
-      due_at: dueInstant("2026-07-10", viewerZone()),
+      due_at: dueInstant("2026-07-10", browserZone()),
     },
   });
 });
@@ -132,9 +132,9 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone="Europe/Berlin">
+    <ViewerZoneProvider zone="Europe/Berlin">
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </ViewerZoneProvider>,
   );
   await user.type(
     screen.getByRole("textbox", { name: "Subject" }),
@@ -188,9 +188,9 @@ it("sends a follow-up with no time as due by its day", async () => {
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone="Europe/Berlin">
+    <ViewerZoneProvider zone="Europe/Berlin">
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </ViewerZoneProvider>,
   );
   await user.type(
     screen.getByRole("textbox", { name: "Subject" }),

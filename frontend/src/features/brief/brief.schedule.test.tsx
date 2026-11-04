@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
@@ -89,7 +89,7 @@ describe("the schedule panel", () => {
   // and no fixture gave a meeting a time, so the panel's own suite rendered the
   // empty branch and asserted around it.
   it("draws each meeting's start time", () => {
-    const zone = viewerZone();
+    const zone = browserZone();
     const day = readingsDay({}, [
       meetingRow("m1", true, "2026-09-03T03:40:00Z"),
       meetingRow("m2", true, "2026-09-03T13:15:00Z"),
@@ -127,7 +127,7 @@ describe("the schedule panel", () => {
   // A quiet day with a meeting booked further out says when, on the day's own
   // line, with a date where today's rows carry a time.
   it("draws the next booked meeting on a day with none left", () => {
-    const zone = viewerZone();
+    const zone = browserZone();
     const day = {
       ...readingsDay({}, []),
       calendar: "connected" as const,

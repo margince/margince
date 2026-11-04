@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { StandingFigures } from "./companystanding.figures";
 
 // The four figures under How it stands. Each draws even when it has no
@@ -100,7 +100,7 @@ async function renderFigures(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {zone ? (
-          <RecordZoneProvider zone={zone}>{figures}</RecordZoneProvider>
+          <ViewerZoneProvider zone={zone}>{figures}</ViewerZoneProvider>
         ) : (
           figures
         )}
