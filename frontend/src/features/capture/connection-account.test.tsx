@@ -20,6 +20,7 @@ import { LocaleProvider } from "../../i18n";
 import type { ImportWindow } from "../../lib/connect-account";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
+import { StopConfirm } from "./connection-stop";
 
 // One account on Connections: its services each say how they are doing and
 // carry their own verb. The verbs about the whole account sit in its menu.
@@ -376,6 +377,31 @@ describe("the account's settings", () => {
 });
 
 describe("the account's own verbs", () => {
+  it("names the one service when the account lost another while the confirm was open", async () => {
+    const calls = stubApi({
+      "POST /disconnect": () => new Response(null, { status: 204 }),
+    });
+    const [account] = accountsOf([gcal]);
+    rtlRender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={account}
+            title="lars@example.de"
+            stop={{ services: ["mail"], afterwards: null }}
+            onClose={() => undefined}
+            onStopped={() => undefined}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "Disconnect lars@example.de?" }),
+    ).not.toBeInTheDocument();
+    expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(0);
+  });
+
   it("disconnects every service of the account after one confirm", async () => {
     const calls = stubApi({
       "POST /disconnect": () => new Response(null, { status: 204 }),

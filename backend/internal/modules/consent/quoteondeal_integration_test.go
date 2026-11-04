@@ -56,7 +56,7 @@ func (e *resolveEnv) anotherContact(t *testing.T, address string) *resolveEnv {
 	other := *e
 	other.contact, other.address = ids.New[ids.ContactKind](), address
 	e.ownerExec(t, `INSERT INTO contact (id, full_name, source, captured_by)
-		VALUES ($1, 'Other Person', 'manual', 'human:x')`, other.contact)
+		VALUES ($1, 'Other Contact', 'manual', 'human:x')`, other.contact)
 	e.ownerExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, $2, true, 'manual', 'human:x')`, other.contact, address)
 	return &other

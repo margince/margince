@@ -65,6 +65,18 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "95c9f28caa40048fcdf856f131e886bdc08ce249dfee2ce731d6244a3fe71f4b",
 			source:  "e96ba4f65cfffb7aad40b1eb7825602e8b2fb53015b2ab9d5f6511786de51b5c",
 		}},
+		// The applied half added the band CHECK validated, the current one `NOT VALID`;
+		// 1793792858 validates it, a no-op where it already is. The down half is unchanged.
+		"1793765139": {{
+			applied: "01cb044b9619fe806a7cf86fee9feeccd2c1c2687dc41362777538bb113e9649",
+			source:  "b6f75f1f2ece9b3ce25de15c04bdc2855fa75b516ba54f3403c91c0fb793df3a",
+		}},
+		// Only the down half differs: it restores the older vocabulary `NOT VALID`, so
+		// a rollback takes no scan under ACCESS EXCLUSIVE. The up half is unchanged.
+		"1793784484": {{
+			applied: "d5ec53c23e2347fadc65f9bdd9d63e9dfae40c6897c1e1b8c59f046c8e99eb0e",
+			source:  "76336c558410fc1ee67862f22fb4689b5f9655917af35617f55c11b31f154669",
+		}},
 	},
 }
 
