@@ -7,7 +7,8 @@ import { Logomark } from "../design-system/logomark";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
-import { type Route, useHash } from "../lib/router";
+import { entryDepth } from "../lib/historydepth";
+import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
@@ -142,19 +143,22 @@ function railClasses(
     .join(" ");
 }
 
-/** Whether More's menu is open. A new address (Back and Forward too) or a widen
+// The entry the reader stands on: its path and history depth. Read live, since
+// the router stamps the depth after the first render and re-renders nothing.
+const entryKey = (path: string) => `${path} ${entryDepth() ?? ""}`;
+
+/** Whether More's menu is open. Another entry (Back and Forward too) or a widen
  *  past the phone width closes it, during render, so no frame shows it stale. */
-function useMenuOpen(here: string, phone: boolean) {
-  const [open, setOpen] = useState(false);
-  const [openedAt, setOpenedAt] = useState(here);
-  if (openedAt !== here) {
-    setOpenedAt(here);
-    setOpen(false);
+function useMenuOpen(path: string, phone: boolean) {
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  if (openedAt !== null && (openedAt !== entryKey(path) || !phone)) {
+    setOpenedAt(null);
   }
-  if (open && !phone) {
-    setOpen(false);
-  }
-  return [open, setOpen] as const;
+  const setOpen = useCallback(
+    (next: boolean) => setOpenedAt(next ? entryKey(path) : null),
+    [path],
+  );
+  return [openedAt !== null, setOpen] as const;
 }
 
 /** Whether focus sits in the menu, or fell to the body when a press left it. */
@@ -191,8 +195,10 @@ export function WorkspaceRail({
   // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
   const phone = usePhoneViewport();
-  // The whole address, query included: Back between two filters is a new page.
-  const [open, setOpen] = useMenuOpen(useHash(), phone);
+  // A dial written in place keeps the entry, so the menu stays; Back, Forward
+  // and a pushed query land on another. useHash re-renders on each of them.
+  useHash();
+  const [open, setOpen] = useMenuOpen(routeHash(route), phone);
   const menuOpen = open && phone;
   const more = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);

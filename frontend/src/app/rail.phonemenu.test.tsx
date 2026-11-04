@@ -6,6 +6,7 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate } from "../lib/router";
+import { replaceParams } from "../lib/urlstate";
 import {
   ignoreSearch,
   render,
@@ -62,6 +63,18 @@ describe("the phone More menu", () => {
     act(() => navigate({ screen: "deals" }, new Map([["stage", "won"]])));
     await waitFor(() => expect(menu()).toBeNull());
     expect(document.querySelector<HTMLElement>(".main")?.inert).toBe(false);
+  });
+
+  // A dial written in place (a search box settling) keeps the entry and the page.
+  it("stays open when a dial is written over the current entry", async () => {
+    const user = userEvent.setup();
+    renderPhoneShell("#/deals?q=ac");
+    await user.click(more());
+    expect(menu()).not.toBeNull();
+
+    act(() => replaceParams(new Map([["q", "acme"]])));
+    expect(window.location.hash).toBe("#/deals?q=acme");
+    expect(menu()).not.toBeNull();
   });
 
   // The pressed row unmounts with the menu. More now stands for the page it
