@@ -19,6 +19,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { markdownLines } from "../design-system/markdown-text";
 import { NextBar } from "../design-system/nextbar";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
@@ -150,17 +151,21 @@ function itemWords(activity: Activity): {
   const raw = activity.body ?? "";
   const excerpt =
     summary?.preview ??
-    (activity.kind === "email" ? emailSummaryText(raw) : oneLine(raw));
+    (activity.kind === "email"
+      ? emailSummaryText(raw)
+      : oneLine(activity, raw));
   return { subject, excerpt: excerpt || undefined };
 }
 
-// A form's note is one answer per line; the row reads them as one line.
-function oneLine(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(" · ");
+// A form's note is one answer per line; the row reads them as one line. A
+// note is markdown, so its lines are the text it renders; a chat message's
+// characters are its own.
+function oneLine(activity: Activity, text: string): string {
+  const lines =
+    activity.kind === "note"
+      ? markdownLines(text)
+      : text.split("\n").map((line) => line.trim());
+  return lines.filter(Boolean).join(" · ");
 }
 
 function When({ activity }: Readonly<{ activity: Activity }>) {
