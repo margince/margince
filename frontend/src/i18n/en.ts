@@ -6522,6 +6522,8 @@ export const en = {
   "brief.weekly.rail": "The week in figures",
   "brief.report.movedCount_one": "{count} deal moved",
   "brief.report.movedCount_other": "{count} deals moved",
+  "brief.report.wonCount": "{count} won",
+  "brief.report.wonPerWeek": "won per week",
   "brief.report.next": "Next report on {date}",
   "brief.report.earlier": "Earlier week",
   "brief.report.later": "Later week",

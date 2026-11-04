@@ -225,6 +225,10 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+/* The side column scrolls as one; its panels keep their height in it. */
+.brief-weekly-page > .brief-rail > * {
+  flex: none;
+}
 
 /* ── The side column ──────────────────────────────────────────────────────
  * The headline figures as one list: the name, the count at the end, and the
@@ -271,8 +275,8 @@
 }
 .brief-weekly-week {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
   gap: var(--space-1);
   inline-size: 100%;
   padding: var(--space-2) var(--space-3);
@@ -291,4 +295,40 @@
   border-color: var(--borderSubtle);
   background: var(--bgWell);
   font-weight: var(--fontWeightMedium);
+}
+.brief-weekly-week-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* Deals won per week as columns, the shown week in the accent. */
+.brief-weekly-wins {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  block-size: 5rem;
+  padding: 0 var(--space-4) var(--space-2);
+}
+.brief-weekly-wins-bar {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: var(--space-1);
+  block-size: 100%;
+  text-align: center;
+  color: var(--textSecondary);
+}
+.brief-weekly-wins-bar > span {
+  border-radius: var(--r-xs);
+  background: var(--accentLight);
+  transition: block-size var(--dur-move) var(--ease-out);
+}
+.brief-weekly-wins-bar[data-shown="true"] > span {
+  background: var(--accent);
+}
+.brief-weekly-wins-bar[data-shown="true"] > small {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightBold);
 }

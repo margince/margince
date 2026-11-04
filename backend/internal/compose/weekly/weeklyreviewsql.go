@@ -153,9 +153,17 @@ func readReviewTx(ctx context.Context, tx pgx.Tx, reviewID, userID ids.UUID) (Re
 		tx.QueryRow(ctx, reviewSelect+` WHERE id = $1 AND user_id = $2`, reviewID, userID))
 }
 
+// WeekEntry is one door of the archive's index: the week, and what it won.
+type WeekEntry struct {
+	Week     time.Time
+	DealsWon int
+	// Won is the week's frozen won value; Known is false when it priced none.
+	Won Money
+}
+
 // ListWeeks serves the weeks this rep has a review for, newest first — the
 // archive's index. Counts only, no deal lines: the index is a list of doors.
-func (e *Engine) ListWeeks(ctx context.Context, limit int) ([]time.Time, error) {
+func (e *Engine) ListWeeks(ctx context.Context, limit int) ([]WeekEntry, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -163,21 +171,28 @@ func (e *Engine) ListWeeks(ctx context.Context, limit int) ([]time.Time, error) 
 	if err != nil {
 		return nil, err
 	}
-	var weeks []time.Time
+	var weeks []WeekEntry
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT local_week_start FROM weekly_review
+			SELECT local_week_start, deals_won, pipeline_won_minor, base_currency
+			  FROM weekly_review
 			 WHERE user_id = $1 ORDER BY local_week_start DESC LIMIT $2`, userID, limit)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var week time.Time
-			if err := rows.Scan(&week); err != nil {
+			var entry WeekEntry
+			var won *int64
+			var currency *string
+			if err := rows.Scan(&entry.Week, &entry.DealsWon, &won, &currency); err != nil {
 				return err
 			}
-			weeks = append(weeks, week)
+			// Known reads off the currency, as scanReview's does.
+			if currency != nil {
+				entry.Won = Money{WonMinor: deref(won), Currency: *currency, Known: true}
+			}
+			weeks = append(weeks, entry)
 		}
 		return rows.Err()
 	})

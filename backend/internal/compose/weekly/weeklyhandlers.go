@@ -39,10 +39,25 @@ func (h Handlers) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 	// Never null on the wire: a reader seeing `null` has to decide whether it
 	// means "no weeks yet" or "the list was not read".
 	out := make([]openapi_types.Date, 0, len(weeks))
+	entries := make([]crmcontracts.WeeklyReviewIndexEntry, 0, len(weeks))
 	for _, week := range weeks {
-		out = append(out, openapi_types.Date{Time: week})
+		out = append(out, openapi_types.Date{Time: week.Week})
+		entries = append(entries, indexEntryToWire(week))
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WeeklyReviewIndex{Weeks: out})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WeeklyReviewIndex{Weeks: out, Entries: &entries})
+}
+
+// indexEntryToWire serves a week's won value only when the week priced it.
+func indexEntryToWire(week WeekEntry) crmcontracts.WeeklyReviewIndexEntry {
+	entry := crmcontracts.WeeklyReviewIndexEntry{
+		Week:     openapi_types.Date{Time: week.Week},
+		DealsWon: week.DealsWon,
+	}
+	if week.Won.Known {
+		entry.WonMinor = &week.Won.WonMinor
+		entry.Currency = &week.Won.Currency
+	}
+	return entry
 }
 
 // GetLatestWeeklyReview implements (GET /weekly-reviews/latest): one week.

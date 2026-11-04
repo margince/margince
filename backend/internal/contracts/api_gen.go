@@ -62742,8 +62742,28 @@ type WeeklyReviewDriver struct {
 
 // WeeklyReviewIndex defines model for WeeklyReviewIndex.
 type WeeklyReviewIndex struct {
+	// Entries The same weeks in the same order, each with what it won, so the index can draw the
+	// weeks beside each other. Frozen with each review, like every figure in it. Absent
+	// from an older server.
+	Entries *[]WeeklyReviewIndexEntry `json:"entries,omitempty"`
+
 	// Weeks The Monday of each week with a review, newest first.
 	Weeks []openapi_types.Date `json:"weeks"`
+}
+
+// WeeklyReviewIndexEntry defines model for WeeklyReviewIndexEntry.
+type WeeklyReviewIndexEntry struct {
+	// Currency The currency `won_minor` is in. Present exactly when `won_minor` is.
+	Currency *string `json:"currency,omitempty"`
+
+	// DealsWon Deals the week won.
+	DealsWon int `json:"deals_won"`
+
+	// Week The Monday of the week.
+	Week openapi_types.Date `json:"week"`
+
+	// WonMinor What they were worth, in minor units of `currency`. Absent when the week priced nothing.
+	WonMinor *int64 `json:"won_minor,omitempty"`
 }
 
 // WeeklyReviewLearning One thing the week taught, with what it was drawn from.

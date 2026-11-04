@@ -148,6 +148,16 @@ func TestAPastWeekSurvivesItsDealsBeingDeleted(t *testing.T) {
 		t.Errorf("the surviving line reads %q, want the name the deal carried that week",
 			after.Deals[0].Label)
 	}
+
+	// The archive's index reads the same frozen figures as the review.
+	weeks, err := e.engine.ListWeeks(e.repCtx, 1)
+	if err != nil {
+		t.Fatalf("listing the weeks: %v", err)
+	}
+	want := Money{WonMinor: after.Money.WonMinor, Currency: after.Money.Currency, Known: after.Money.Known}
+	if len(weeks) != 1 || weeks[0].DealsWon != 1 || weeks[0].Won != want {
+		t.Errorf("the index entry = %+v, want 1 won worth %+v", weeks, want)
+	}
 }
 
 // A second run inside the same week reads the first rather than writing a

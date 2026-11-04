@@ -70224,6 +70224,29 @@ components:
           type: array
           items: { type: string, format: date }
           description: The Monday of each week with a review, newest first.
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewIndexEntry' }
+          description: |
+            The same weeks in the same order, each with what it won, so the index can draw the
+            weeks beside each other. Frozen with each review, like every figure in it. Absent
+            from an older server.
+
+    WeeklyReviewIndexEntry:
+      type: object
+      additionalProperties: false
+      required: [week, deals_won]
+      properties:
+        week: { type: string, format: date, description: The Monday of the week. }
+        deals_won: { type: integer, minimum: 0, description: Deals the week won. }
+        won_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: What they were worth, in minor units of `currency`. Absent when the week priced nothing.
+        currency:
+          type: string
+          description: The currency `won_minor` is in. Present exactly when `won_minor` is.
 
     TeamWeeklyReview:
       type: object

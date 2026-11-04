@@ -133,7 +133,7 @@ function brief({
           page: { next_cursor: null, has_more: false },
         }),
       ...approvalRoutes,
-      "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
+      "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
       "GET /digest": () =>
@@ -554,6 +554,20 @@ function onWeekly() {
 }
 
 // One pane as wide as the morning's two, so the dial stays put across views.
+// Eight weeks of reports, newest first, each with what it won.
+const ARCHIVE = (() => {
+  const won = [3, 1, 2, 0, 1, 4, 1, 2];
+  const weeks = won.map((_, back) =>
+    new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5)
+      .toISOString()
+      .slice(0, 10),
+  );
+  return {
+    weeks,
+    entries: weeks.map((week, at) => ({ week, deals_won: won[at] ?? 0 })),
+  };
+})();
+
 export const Week: Story = {
   beforeEach: onWeekly,
   render: brief({ approvals: [] }),

@@ -6524,6 +6524,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.rail": "Die Woche in Zahlen",
   "brief.report.movedCount_one": "{count} Deal bewegt",
   "brief.report.movedCount_other": "{count} Deals bewegt",
+  "brief.report.wonCount": "{count} gewonnen",
+  "brief.report.wonPerWeek": "gewonnen pro Woche",
   "brief.report.next": "Nächster Bericht am {date}",
   "brief.report.earlier": "Frühere Woche öffnen",
   "brief.report.later": "Spätere Woche öffnen",
