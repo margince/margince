@@ -202,15 +202,12 @@ func (s *Store) advanceOnTx(
 		// Checked inside the transaction that writes the transition, and
 		// checked BEFORE the patch is built, so a refusal costs nothing and a
 		// concurrent archive cannot remove the evidence between the two.
-		if StageSemantic(semantic) == SemanticWon {
-			if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
-				return err
-			}
-		}
-
-		p, status, err := s.applyStageAdvance(ctx, tx, id, current, in, semantic)
+		p, status, err := s.buildStageAdvance(ctx, tx, id, current, in, semantic)
 		if err != nil {
 			return err
+		}
+		if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
+			return fmt.Errorf("apply stage advance: %w", err)
 		}
 
 		// win_probability_at_change freezes the target stage's probability
@@ -389,20 +386,22 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 	return &frozen
 }
 
-// applyStageAdvance writes the stage move's row changes and the probability
-// the target stage sets. A preview builds the same patch and writes neither.
-func (s *Store) applyStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
+// buildStageAdvance checks a win's evidence, then builds the stage move's row
+// changes plus the probability the target stage sets.
+func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
+	if StageSemantic(semantic) == SemanticWon {
+		if err := ensureWinEvidence(ctx, tx, id, in); err != nil {
+			return nil, "", err
+		}
+	}
 	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
 	if err != nil {
 		return nil, "", err
 	}
 	stored, storedBy := storedWinProbability(current)
 	setWinProbability(p, stored, storedBy, nil, SourceStage)
-	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-		return nil, "", fmt.Errorf("apply stage advance: %w", err)
-	}
 	return p, status, nil
 }
 
