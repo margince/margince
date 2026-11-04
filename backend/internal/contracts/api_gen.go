@@ -15478,6 +15478,30 @@ func (e MailLanguage) Valid() bool {
 	}
 }
 
+// Defines values for MarginceChangeBundleKinds.
+const (
+	MarginceChangeBundleKindsCloseLost       MarginceChangeBundleKinds = "close_lost"
+	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
+	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
+	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+)
+
+// Valid indicates whether the value is a known member of the MarginceChangeBundleKinds enum.
+func (e MarginceChangeBundleKinds) Valid() bool {
+	switch e {
+	case MarginceChangeBundleKindsCloseLost:
+		return true
+	case MarginceChangeBundleKindsDealAmount:
+		return true
+	case MarginceChangeBundleKindsDealCloseDate:
+		return true
+	case MarginceChangeBundleKindsDealProbability:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeResponsePassportScopes.
 const (
 	MeResponsePassportScopesActWithApproval    MeResponsePassportScopes = "act_with_approval"
@@ -22183,6 +22207,57 @@ func (e TransitionPolicyMode) Valid() bool {
 	case TransitionPolicyModeTransitionModeAuto:
 		return true
 	case TransitionPolicyModeTransitionModePropose:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UndoMarginceChangeKeptReason.
+const (
+	UndoMarginceChangeKeptReasonAccepted      UndoMarginceChangeKeptReason = "accepted"
+	UndoMarginceChangeKeptReasonAlreadyUndone UndoMarginceChangeKeptReason = "already_undone"
+	UndoMarginceChangeKeptReasonChangedSince  UndoMarginceChangeKeptReason = "changed_since"
+	UndoMarginceChangeKeptReasonNotFound      UndoMarginceChangeKeptReason = "not_found"
+	UndoMarginceChangeKeptReasonNotPermitted  UndoMarginceChangeKeptReason = "not_permitted"
+	UndoMarginceChangeKeptReasonVersionSkew   UndoMarginceChangeKeptReason = "version_skew"
+)
+
+// Valid indicates whether the value is a known member of the UndoMarginceChangeKeptReason enum.
+func (e UndoMarginceChangeKeptReason) Valid() bool {
+	switch e {
+	case UndoMarginceChangeKeptReasonAccepted:
+		return true
+	case UndoMarginceChangeKeptReasonAlreadyUndone:
+		return true
+	case UndoMarginceChangeKeptReasonChangedSince:
+		return true
+	case UndoMarginceChangeKeptReasonNotFound:
+		return true
+	case UndoMarginceChangeKeptReasonNotPermitted:
+		return true
+	case UndoMarginceChangeKeptReasonVersionSkew:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UndoMarginceChangeResultOutcome.
+const (
+	UndoMarginceChangeResultOutcomePartlyUndone UndoMarginceChangeResultOutcome = "partly_undone"
+	UndoMarginceChangeResultOutcomeRefused      UndoMarginceChangeResultOutcome = "refused"
+	UndoMarginceChangeResultOutcomeUndone       UndoMarginceChangeResultOutcome = "undone"
+)
+
+// Valid indicates whether the value is a known member of the UndoMarginceChangeResultOutcome enum.
+func (e UndoMarginceChangeResultOutcome) Valid() bool {
+	switch e {
+	case UndoMarginceChangeResultOutcomePartlyUndone:
+		return true
+	case UndoMarginceChangeResultOutcomeRefused:
+		return true
+	case UndoMarginceChangeResultOutcomeUndone:
 		return true
 	default:
 		return false
@@ -36330,7 +36405,10 @@ type Company struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
@@ -39538,7 +39616,10 @@ type Contact struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -43283,6 +43364,15 @@ type DealLegalReviewListResponse struct {
 type DealListResponse struct {
 	Data []Deal   `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// DealMarginceChanges defines model for DealMarginceChanges.
+type DealMarginceChanges struct {
+	// Changes The deal's changes, newest first.
+	Changes []Receipt `json:"changes"`
+
+	// NextCursor Where the next page starts; absent on the last page.
+	NextCursor *string `json:"next_cursor,omitempty"`
 }
 
 // DealNextBestActionEvidence defines model for DealNextBestActionEvidence.
@@ -50586,6 +50676,56 @@ type MailHistoryBaseline struct {
 
 // MailLanguage A language this build writes the installation's own mail in.
 type MailLanguage string
+
+// MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
+type MarginceChangeBundle struct {
+	// AuditLogIds The changes, newest first.
+	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
+	DealId      openapi_types.UUID          `json:"deal_id"`
+	DealName    string                      `json:"deal_name"`
+	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
+	LatestAt    time.Time                   `json:"latest_at"`
+
+	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
+
+	// Version The deal's version as read, for the first undo of the bundle.
+	Version int64 `json:"version"`
+}
+
+// MarginceChangeBundleKinds defines model for MarginceChangeBundle.Kinds.
+type MarginceChangeBundleKinds string
+
+// MarginceChangeSummary The changes Margince made to the caller's deals that are neither accepted nor undone.
+// Every count is a number of deals; a deal with two kinds of change counts once in
+// `deals` and once under each kind.
+type MarginceChangeSummary struct {
+	AsOf time.Time `json:"as_of"`
+
+	// BaseCurrency The currency of every `value_base_minor`.
+	BaseCurrency string `json:"base_currency"`
+
+	// Bundles One per deal, the largest value first.
+	Bundles []MarginceChangeBundle `json:"bundles"`
+
+	// Closed Deals Margince closed as lost.
+	Closed int `json:"closed"`
+
+	// Deals Deals with at least one open change.
+	Deals int `json:"deals"`
+
+	// Probabilities Deals given a new probability.
+	Probabilities int `json:"probabilities"`
+
+	// Redated Deals given a new close date.
+	Redated int `json:"redated"`
+
+	// Revalued Deals given a new amount.
+	Revalued int `json:"revalued"`
+
+	// Truncated True when more bundles exist than were returned. The counts are never cut.
+	Truncated bool `json:"truncated"`
+}
 
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
@@ -60049,6 +60189,44 @@ type TeamListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// TeamMarginceChangeGroup defines model for TeamMarginceChangeGroup.
+type TeamMarginceChangeGroup struct {
+	// Deals Deals changed in this kind.
+	Deals     int                `json:"deals"`
+	Kind      string             `json:"kind"`
+	OwnerId   openapi_types.UUID `json:"owner_id"`
+	OwnerName string             `json:"owner_name"`
+
+	// Undone Of those deals, how many had the change undone.
+	Undone int `json:"undone"`
+
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	ValueBaseMinor int64 `json:"value_base_minor"`
+}
+
+// TeamMarginceChangeRow defines model for TeamMarginceChangeRow.
+type TeamMarginceChangeRow struct {
+	// Change One completed act, and the record it was about.
+	//
+	// `subject` is present only where the act named a record. Not every approval is
+	// about one, and an empty subject is a real state rather than a missing field — a
+	// client draws the summary alone rather than inventing something to open.
+	Change  Receipt            `json:"change"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+}
+
+// TeamMarginceChanges defines model for TeamMarginceChanges.
+type TeamMarginceChanges struct {
+	AsOf         time.Time                 `json:"as_of"`
+	BaseCurrency string                    `json:"base_currency"`
+	Groups       []TeamMarginceChangeGroup `json:"groups"`
+	Rows         []TeamMarginceChangeRow   `json:"rows"`
+	Since        time.Time                 `json:"since"`
+
+	// Truncated True when more rows exist than were returned. The groups are never cut.
+	Truncated bool `json:"truncated"`
+}
+
 // TeamWeekReach Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
 // answered by the rule that endpoint is served on. `every_team` for a seat holding
 // `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
@@ -60562,6 +60740,52 @@ type TransitionPolicyList struct {
 type TransitionRef struct {
 	FromStageId openapi_types.UUID `json:"from_stage_id"`
 	ToStageId   openapi_types.UUID `json:"to_stage_id"`
+}
+
+// UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
+type UndoMarginceChangeItem struct {
+	// AuditLogIds The changes to take back, all on this deal.
+	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
+	DealId      openapi_types.UUID   `json:"deal_id"`
+
+	// Version The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+	Version int64 `json:"version"`
+}
+
+// UndoMarginceChangeKept One change an undo left in place, and why.
+type UndoMarginceChangeKept struct {
+	AuditLogId openapi_types.UUID `json:"audit_log_id"`
+
+	// Kind The kind of change; absent when the change could not be read.
+	Kind   *string                      `json:"kind,omitempty"`
+	Reason UndoMarginceChangeKeptReason `json:"reason"`
+}
+
+// UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
+type UndoMarginceChangeKeptReason string
+
+// UndoMarginceChangeResult What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
+// change left in place and why.
+type UndoMarginceChangeResult struct {
+	DealId  openapi_types.UUID              `json:"deal_id"`
+	Kept    []UndoMarginceChangeKept        `json:"kept"`
+	Outcome UndoMarginceChangeResultOutcome `json:"outcome"`
+
+	// Undone The kinds of change taken back.
+	Undone []string `json:"undone"`
+}
+
+// UndoMarginceChangeResultOutcome defines model for UndoMarginceChangeResult.Outcome.
+type UndoMarginceChangeResultOutcome string
+
+// UndoMarginceChangesRequest defines model for UndoMarginceChangesRequest.
+type UndoMarginceChangesRequest struct {
+	Items []UndoMarginceChangeItem `json:"items"`
+}
+
+// UndoMarginceChangesResult defines model for UndoMarginceChangesResult.
+type UndoMarginceChangesResult struct {
+	Results []UndoMarginceChangeResult `json:"results"`
 }
 
 // Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
@@ -69115,6 +69339,12 @@ type ListDealDocumentsParams struct {
 // ListDealDocumentsParamsCategory defines parameters for ListDealDocuments.
 type ListDealDocumentsParamsCategory string
 
+// ListDealMarginceChangesParams defines parameters for ListDealMarginceChanges.
+type ListDealMarginceChangesParams struct {
+	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
 type RestoreDealMoveParams struct {
 	// Fingerprint The `fingerprint` of the move that was set aside, unchanged.
@@ -73276,6 +73506,12 @@ type GetTeamBoardParams struct {
 	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
 }
 
+// GetTeamMarginceChangesParams defines parameters for GetTeamMarginceChanges.
+type GetTeamMarginceChangesParams struct {
+	// Since Where the window starts. Seven days before now when absent.
+	Since *time.Time `form:"since,omitempty" json:"since,omitempty"`
+}
+
 // CreateAcquisitionSourceJSONRequestBody defines body for CreateAcquisitionSource for application/json ContentType.
 type CreateAcquisitionSourceJSONRequestBody = CreateAcquisitionSourceRequest
 
@@ -73776,6 +74012,9 @@ type CreateDataSubjectRequestJSONRequestBody = CreateDataSubjectRequest
 
 // UpdateDataSubjectRequestJSONRequestBody defines body for UpdateDataSubjectRequest for application/json ContentType.
 type UpdateDataSubjectRequestJSONRequestBody = UpdateDataSubjectRequest
+
+// UndoMarginceChangesJSONRequestBody defines body for UndoMarginceChanges for application/json ContentType.
+type UndoMarginceChangesJSONRequestBody = UndoMarginceChangesRequest
 
 // CreateDealRoomJSONRequestBody defines body for CreateDealRoom for application/json ContentType.
 type CreateDealRoomJSONRequestBody = CreateDealRoomRequest
@@ -75568,6 +75807,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -75913,6 +76160,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -76224,6 +76478,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -76518,6 +76780,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 
@@ -88221,6 +88490,12 @@ type ServerInterface interface {
 	// Download the Art. 15 package an access request asks for.
 	// (GET /data-subject-requests/{id}/package)
 	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The changes Margince made to your deals that you have not accepted or undone.
+	// (GET /deal-corrections/pending)
+	GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request)
+	// Undo several changes Margince made, one deal at a time.
+	// (POST /deal-corrections/undo)
+	UndoMarginceChanges(w http.ResponseWriter, r *http.Request)
 	// List Deal Rooms (live by default; cursor-paginated).
 	// (GET /deal-rooms)
 	ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams)
@@ -88359,6 +88634,9 @@ type ServerInterface interface {
 	// Ask legal to review this deal.
 	// (POST /deals/{id}/legal-reviews)
 	RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// Every change Margince made to this deal, newest first.
+	// (GET /deals/{id}/margince-changes)
+	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -89964,6 +90242,9 @@ type ServerInterface interface {
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
 	GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams)
+	// What Margince changed on your team's deals.
+	// (GET /worklist/team/changes)
+	GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams)
 	// Answer a query plan over the workspace's records.
 	// (POST /workspace-queries)
 	QueryWorkspace(w http.ResponseWriter, r *http.Request)
@@ -92547,6 +92828,18 @@ func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The changes Margince made to your deals that you have not accepted or undone.
+// (GET /deal-corrections/pending)
+func (_ Unimplemented) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Undo several changes Margince made, one deal at a time.
+// (POST /deal-corrections/undo)
+func (_ Unimplemented) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List Deal Rooms (live by default; cursor-paginated).
 // (GET /deal-rooms)
 func (_ Unimplemented) ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams) {
@@ -92820,6 +93113,12 @@ func (_ Unimplemented) ListDealLegalReviews(w http.ResponseWriter, r *http.Reque
 // Ask legal to review this deal.
 // (POST /deals/{id}/legal-reviews)
 func (_ Unimplemented) RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Every change Margince made to this deal, newest first.
+// (GET /deals/{id}/margince-changes)
+func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96030,6 +96329,12 @@ func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request
 // One row per teammate — who is carrying what, so a lead can see where to help.
 // (GET /worklist/team)
 func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What Margince changed on your team's deals.
+// (GET /worklist/team/changes)
+func (_ Unimplemented) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -114716,6 +115021,48 @@ func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// GetPendingMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPendingMarginceChanges(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoMarginceChanges(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealRooms operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRooms(w http.ResponseWriter, r *http.Request) {
 
@@ -117473,6 +117820,56 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RequestLegalReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDealMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDealMarginceChangesParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDealMarginceChanges(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -139721,6 +140118,47 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetTeamMarginceChanges operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeamMarginceChangesParams
+
+	// ------------- Optional query parameter "since" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "since", r.URL.Query(), &params.Since, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "since"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "since", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamMarginceChanges(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // QueryWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 
@@ -141138,6 +141576,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/data-subject-requests/{id}/package", wrapper.DownloadDataSubjectPackage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-corrections/pending", wrapper.GetPendingMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-corrections/undo", wrapper.UndoMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms", wrapper.ListDealRooms)
 	})
 	r.Group(func(r chi.Router) {
@@ -141274,6 +141718,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.RequestLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)
@@ -142879,6 +143326,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/team", wrapper.GetTeamBoard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/worklist/team/changes", wrapper.GetTeamMarginceChanges)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/workspace-queries", wrapper.QueryWorkspace)
