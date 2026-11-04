@@ -400,7 +400,7 @@ func TestARepRecordsAnObjectionAtTheSubjectsOwnLevel(t *testing.T) {
 // through the real lift door rather than by reasoning about CanOverrule.
 //
 // The rep records the objection on a contact they own, so every grant the lift
-// door asks for holds. What refuses them is the authority ON THE ROW, which is
+// door asks for holds. What refuses them is the authority on the row, which is
 // the subject's. Only an admin correcting a mistake gets past it
 // (TestAnAdminCorrectsAnObjectionAColleagueTyped).
 func TestNoRepLiftsAnObjectionItRecorded(t *testing.T) {
@@ -414,7 +414,7 @@ func TestNoRepLiftsAnObjectionItRecorded(t *testing.T) {
 		t.Fatalf("recording an objection: %v", err)
 	}
 
-	// THE ROW MUST BE NAMED, or this proves nothing: admitLift refuses a zero
+	// The row must be named, or this proves nothing: admitLift refuses a zero
 	// SuppressionID as a validation error before it compares authority.
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `

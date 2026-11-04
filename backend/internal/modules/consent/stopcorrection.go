@@ -12,6 +12,8 @@ package consent
 // theirs: the product, not a seat, wrote its first row.
 
 import (
+	"strings"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -26,10 +28,11 @@ const kindProcessingRestriction = "processing_restriction"
 type stopFacts struct {
 	kind    string
 	decided commsauthz.AuthorityLevel
-	// origin is who captured the first row of the stop's carry chain. A merge
-	// copies a stop and stamps the merger, so the copy's own captured_by would
-	// make the person's own press look typed by a colleague.
-	origin string
+	// origin and originSource are the captured_by and source of the first row
+	// of the stop's carry chain. A merge copies a stop and stamps the merger,
+	// so the copy's own captured_by would make the person's press look typed.
+	origin       string
+	originSource string
 	// pinned is a stop held on an address rather than on the contact. It
 	// clears when the address works again, not through this lift.
 	pinned bool
@@ -61,22 +64,35 @@ func judgeLift(caller commsauthz.AuthorityLevel, stop stopFacts) liftVerdict {
 	return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByLevel}
 }
 
-// typedObjection reports a subject-level objection that a seat recorded.
+// typedObjection reports a subject-level objection a seat typed through
+// Suppress. It is an allow-list. An agent, a connector, an import, the product
+// and a copy whose original is gone all count as the person's own act.
 func typedObjection(stop stopFacts) bool {
 	return stop.kind == commsauthz.ReasonObjection &&
 		stop.decided == commsauthz.LevelSubject &&
-		!principal.SystemMintedID(stop.origin)
+		strings.HasPrefix(stop.origin, principal.HumanIDPrefix) &&
+		recordedThroughSuppress(stop.originSource)
 }
 
-// originCapturedBySQL reads who captured the first row of the carry chain that
+// recordedThroughSuppress reports a source suppressionSource wrote. A carried
+// copy's source starts with carriedSourceMark, so a copy whose original was
+// deleted (carried_from set to NULL) fails here.
+func recordedThroughSuppress(source string) bool {
+	return source == seatSourcePrefix || strings.HasPrefix(source, seatSourcePrefix+": ")
+}
+
+// carriedSourceMark opens the source of every stop a merge copied.
+const carriedSourceMark = "carried: "
+
+// originColumnSQL reads one column of the first row of the carry chain that
 // ends at the suppression aliased `alias`. A carried row always points at an
 // older row, so the walk ends.
-func originCapturedBySQL(alias string) string {
+func originColumnSQL(alias, column string) string {
 	return `(WITH RECURSIVE chain AS (
-		    SELECT c.carried_from, c.captured_by, 0 AS depth
+		    SELECT c.carried_from, c.` + column + ` AS value, 0 AS depth
 		      FROM communication_suppression c WHERE c.id = ` + alias + `.id
 		    UNION ALL
-		    SELECT p.carried_from, p.captured_by, chain.depth + 1
+		    SELECT p.carried_from, p.` + column + `, chain.depth + 1
 		      FROM communication_suppression p JOIN chain ON p.id = chain.carried_from)
-		  SELECT captured_by FROM chain ORDER BY depth DESC LIMIT 1)`
+		  SELECT value FROM chain ORDER BY depth DESC LIMIT 1)`
 }

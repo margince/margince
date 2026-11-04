@@ -31,15 +31,20 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 		if err := auth.EnsureReadable(ctx, tx, entityContact, contactID.UUID); err != nil {
 			return err
 		}
+		admitted, err := mayLiftOn(ctx, tx, contactID.UUID)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, `
 			WITH live AS (
 			  SELECT s.id, s.kind, s.decided_by_level, s.source, s.recorded_at, s.address,
 			         s.contact_id IS NULL AS pinned, s.purpose_id,
-			         `+originCapturedBySQL("s")+` AS origin
+			         `+originColumnSQL("s", "captured_by")+` AS origin,
+			         `+originColumnSQL("s", "source")+` AS origin_source
 			    FROM communication_suppression s
 			   WHERE `+contactLiveStopsSQL+`)
 			SELECT live.id, live.kind, live.decided_by_level, live.source, live.recorded_at,
-			       live.address, live.pinned, cp.key, live.origin, u.display_name
+			       live.address, live.pinned, cp.key, live.origin, live.origin_source, u.display_name
 			  FROM live
 			  LEFT JOIN consent_purpose cp ON cp.id = live.purpose_id
 			  LEFT JOIN app_user u ON live.origin = $2 || u.id::text
@@ -49,7 +54,7 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 			return fmt.Errorf("consent: reading the contact's stops: %w", err)
 		}
 		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ContactStop, error) {
-			return scanStop(row, caller)
+			return scanStop(row, caller, admitted)
 		})
 		if err != nil {
 			return fmt.Errorf("consent: reading the contact's stops: %w", err)
@@ -62,22 +67,26 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 	return out, err
 }
 
-func scanStop(row pgx.CollectableRow, caller commsauthz.AuthorityLevel) (crmcontracts.ContactStop, error) {
+func scanStop(row pgx.CollectableRow, caller commsauthz.AuthorityLevel, admitted bool) (crmcontracts.ContactStop, error) {
 	var (
 		id                     ids.UUID
 		kind, decided, source  string
-		origin                 string
+		origin, originSource   string
 		recordedAt             time.Time
 		address, purpose, name *string
 		pinned                 bool
 	)
 	if err := row.Scan(&id, &kind, &decided, &source, &recordedAt,
-		&address, &pinned, &purpose, &origin, &name); err != nil {
+		&address, &pinned, &purpose, &origin, &originSource, &name); err != nil {
 		return crmcontracts.ContactStop{}, err
 	}
-	verdict := judgeLift(caller, stopFacts{
-		kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin, pinned: pinned,
-	})
+	verdict := liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByPermission}
+	if admitted {
+		verdict = judgeLift(caller, stopFacts{
+			kind: kind, decided: commsauthz.AuthorityLevel(decided),
+			origin: origin, originSource: originSource, pinned: pinned,
+		})
+	}
 	stop := crmcontracts.ContactStop{
 		Id:                  openapi_types.UUID(id),
 		Kind:                kind,
@@ -86,7 +95,7 @@ func scanStop(row pgx.CollectableRow, caller commsauthz.AuthorityLevel) (crmcont
 		Address:             address,
 		Reason:              reasonFromSource(source),
 		RecordedAt:          recordedAt,
-		RecordedByColleague: !principal.SystemMintedID(origin),
+		RecordedByColleague: strings.HasPrefix(origin, principal.HumanIDPrefix),
 		RecordedByName:      name,
 		MayLift:             verdict.may,
 		Correction:          verdict.correction,
@@ -98,9 +107,10 @@ func scanStop(row pgx.CollectableRow, caller commsauthz.AuthorityLevel) (crmcont
 }
 
 // reasonFromSource reads back what suppressionSource stored: the words after
-// its prefix. A row another writer stored names its door, not anybody's words.
+// its prefix, on a carried copy too. A row another writer stored names its
+// door, not anybody's words.
 func reasonFromSource(source string) *string {
-	words, ok := strings.CutPrefix(source, seatSourcePrefix+": ")
+	words, ok := strings.CutPrefix(strings.TrimPrefix(source, carriedSourceMark), seatSourcePrefix+": ")
 	if !ok || strings.TrimSpace(words) == "" {
 		return nil
 	}

@@ -8564,6 +8564,7 @@ func (e ContactStopAuthority) Valid() bool {
 const (
 	ContactStopLiftBlockedByAddress         ContactStopLiftBlockedBy = "address"
 	ContactStopLiftBlockedByLevel           ContactStopLiftBlockedBy = "level"
+	ContactStopLiftBlockedByPermission      ContactStopLiftBlockedBy = "permission"
 	ContactStopLiftBlockedByRestriction     ContactStopLiftBlockedBy = "restriction"
 	ContactStopLiftBlockedBySubjectDecision ContactStopLiftBlockedBy = "subject_decision"
 )
@@ -8574,6 +8575,8 @@ func (e ContactStopLiftBlockedBy) Valid() bool {
 	case ContactStopLiftBlockedByAddress:
 		return true
 	case ContactStopLiftBlockedByLevel:
+		return true
+	case ContactStopLiftBlockedByPermission:
 		return true
 	case ContactStopLiftBlockedByRestriction:
 		return true
@@ -41291,7 +41294,8 @@ type ContactStop struct {
 	// kind from a newer server is shown as a stop of unknown kind.
 	Kind string `json:"kind"`
 
-	// LiftBlockedBy Why `may_lift` is false. `address`: a stop on an address clears when mail to it works
+	// LiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+	// signed in to a seat. `address`: a stop on an address clears when mail to it works
 	// again. `restriction`: lifting it owes the person notice first, which Margince cannot
 	// send yet. `subject_decision`: the person set it and only they change it. `level`: it
 	// was recorded at your level or above. Null when `may_lift` is true.
@@ -41318,7 +41322,8 @@ type ContactStop struct {
 // ContactStopAuthority Whose decision the stop is. `subject` is the person's own, whoever typed it.
 type ContactStopAuthority string
 
-// ContactStopLiftBlockedBy Why `may_lift` is false. `address`: a stop on an address clears when mail to it works
+// ContactStopLiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+// signed in to a seat. `address`: a stop on an address clears when mail to it works
 // again. `restriction`: lifting it owes the person notice first, which Margince cannot
 // send yet. `subject_decision`: the person set it and only they change it. `level`: it
 // was recorded at your level or above. Null when `may_lift` is true.

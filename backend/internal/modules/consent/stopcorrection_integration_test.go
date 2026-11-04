@@ -17,6 +17,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -168,5 +170,145 @@ func TestNoSeatLiftsARestriction(t *testing.T) {
 	err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "over"})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an admin lifting a restriction answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// Only a seat typing through Suppress is correctable. Every other first
+// recorder counts as the person's own act, and so does a copy whose original
+// is gone.
+func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
+	cases := map[string]struct{ capturedBy, source string }{
+		"an agent recorded it":     {"agent:drafter", seatSourcePrefix + ": they said stop"},
+		"an import recorded it":    {"human:x", "import:legacy-crm"},
+		"a connector recorded it":  {"connector:telegram", seatSourcePrefix},
+		"its original was deleted": {"human:merger", carriedSourceMark + seatSourcePrefix + ": typed"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupChannelConsent(t)
+			row := ids.NewV7()
+			if _, err := e.owner.Exec(context.Background(), `
+				INSERT INTO communication_suppression
+				    (id, contact_id, kind, source, captured_by, decided_by_level)
+				VALUES ($1, $2, 'marketing_objection', $3, $4, 'subject')`,
+				row, e.contact, c.source, c.capturedBy); err != nil {
+				t.Fatal(err)
+			}
+			stop := onlyStop(t, e, e.ctx, e.contact)
+			if stop.MayLift || stop.LiftBlockedBy == nil ||
+				*stop.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedBySubjectDecision {
+				t.Errorf("the admin is offered %+v, want subject_decision", stop)
+			}
+			err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "resume"})
+			if !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("an admin correcting it answered %v, want ErrPermissionDenied", err)
+			}
+		})
+	}
+}
+
+// A merge marks the copy it writes, and the copy of a typed objection stays
+// correctable through its chain.
+func TestACarriedTypedObjectionIsMarkedAndCorrectable(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Survivor', 'test', 'human:x')`,
+		survivor); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "typed by mistake",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return e.store.CarryStopsTx(e.ctx, tx,
+			commsauthz.ContactStopSubject(e.contact), commsauthz.ContactStopSubject(survivor))
+	}); err != nil {
+		t.Fatalf("carrying the stop: %v", err)
+	}
+	var source string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT source FROM communication_suppression WHERE contact_id = $1`, survivor).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(source, carriedSourceMark) {
+		t.Errorf("the carried copy's source is %q, want it marked as a copy", source)
+	}
+	stop := onlyStop(t, e, e.ctx, survivor)
+	if !stop.Correction || stop.Reason == nil || *stop.Reason != "typed by mistake" {
+		t.Errorf("the carried copy reads %+v, want a correction with the typed reason", stop)
+	}
+}
+
+// typedObjectionOnContact records an objection the way a seat types one, and
+// answers its row.
+func typedObjectionOnContact(t *testing.T, e *channelConsentEnv) ids.UUID {
+	t.Helper()
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "typed by mistake",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	return ids.UUID(onlyStop(t, e, e.ctx, e.contact).Id)
+}
+
+// The list offers a lift only where Lift would take it. An admin who may only
+// read contacts is offered nothing, and Lift refuses them too.
+func TestAReadOnlyAdminIsOfferedNoLift(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := typedObjectionOnContact(t, e)
+	readOnly := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	stop := onlyStop(t, e, readOnly, e.contact)
+	if stop.MayLift || stop.LiftBlockedBy == nil ||
+		*stop.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedByPermission {
+		t.Errorf("a read-only admin is offered %+v, want no lift for want of permission", stop)
+	}
+	err := e.store.Lift(readOnly, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a read-only admin's lift answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// Only a human seat takes back a stop. The system principal and an agent
+// lent an admin role both read as LevelAdmin, and both are refused.
+func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := typedObjectionOnContact(t, e)
+	agent := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:drafter", UserID: e.user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	// An agent whose id spells a seat, so the principal type alone refuses it.
+	seatSpelled := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	for name, ctx := range map[string]context.Context{
+		"system": systemCtx(e.ws), "agent": agent, "agent spelled as a seat": seatSpelled,
+	} {
+		err := e.store.Lift(ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"})
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("the %s principal's correction answered %v, want ErrPermissionDenied", name, err)
+		}
+	}
+	if !stillLive(t, e, row) {
+		t.Error("a refused correction revoked the objection")
 	}
 }

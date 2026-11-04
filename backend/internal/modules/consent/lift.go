@@ -68,10 +68,38 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
 		return subject{}, "", err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := admitLifter(ctx); err != nil {
 		return subject{}, "", err
 	}
 	return sub, authorityOf(ctx), nil
+}
+
+// admitLifter is the caller half of a lift, which the list of stops asks too:
+// a human signed in to a seat, holding contact:update. auth.RequireHuman would
+// admit the system and connector principals, and authorityOf reads an admin
+// role off any principal, so the type is asked here by name.
+func admitLifter(ctx context.Context) error {
+	p, ok := principal.Actor(ctx)
+	if !ok || p.Type != principal.PrincipalHuman {
+		return fmt.Errorf("only a person signed in to a seat takes back a stop: %w", apperrors.ErrPermissionDenied)
+	}
+	return auth.Require(ctx, "contact", principal.ActionUpdate)
+}
+
+// mayLiftOn answers the caller half of a lift for one contact without failing
+// the read: false where Lift would refuse with a 403 or 404.
+func mayLiftOn(ctx context.Context, tx pgx.Tx, contact ids.UUID) (bool, error) {
+	err := admitLifter(ctx)
+	if err == nil {
+		err = auth.EnsureRetractable(ctx, tx, entityContact, contact)
+	}
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		return false, nil
+	}
+	return false, err
 }
 
 // fieldReason names the reason field once, so the two refusals and the audit
@@ -149,12 +177,13 @@ func (s *Store) liftAdmittedTx(
 	// only ever narrow which rows this matches, and the id already picks
 	// exactly one — there is nothing left for a purpose filter to do except
 	// occasionally answer not-found for a row that does exist.
-	var decided, kind, origin string
+	var decided, kind, origin, originSource string
 	err = tx.QueryRow(ctx, `
-		SELECT s.decided_by_level, s.kind, `+originCapturedBySQL("s")+`
+		SELECT s.decided_by_level, s.kind, `+originColumnSQL("s", "captured_by")+`,
+		       `+originColumnSQL("s", "source")+`
 		  FROM communication_suppression s
 		 WHERE s.id = $1 AND s.contact_id = $2 AND s.revoked_at IS NULL
-		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided, &kind, &origin)
+		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided, &kind, &origin, &originSource)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A row that is already revoked, belongs to another subject, or never
 		// existed all answer alike: a caller learns nothing about rows they were
@@ -165,7 +194,9 @@ func (s *Store) liftAdmittedTx(
 		return fmt.Errorf("consent: reading the suppression: %w", err)
 	}
 
-	verdict := judgeLift(level, stopFacts{kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin})
+	verdict := judgeLift(level, stopFacts{
+		kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin, originSource: originSource,
+	})
 	if !verdict.may {
 		return fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied)
 	}

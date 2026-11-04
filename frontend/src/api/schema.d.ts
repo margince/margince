@@ -52007,13 +52007,14 @@ export interface components {
              */
             correction: boolean;
             /**
-             * @description Why `may_lift` is false. `address`: a stop on an address clears when mail to it works
+             * @description Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+             *     signed in to a seat. `address`: a stop on an address clears when mail to it works
              *     again. `restriction`: lifting it owes the person notice first, which Margince cannot
              *     send yet. `subject_decision`: the person set it and only they change it. `level`: it
              *     was recorded at your level or above. Null when `may_lift` is true.
              * @enum {string|null}
              */
-            lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | null;
+            lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
         };
         /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
