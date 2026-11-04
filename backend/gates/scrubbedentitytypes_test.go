@@ -100,6 +100,10 @@ var scrubbedEntityTypes = map[string]bool{
 	"deal_stage_evidence": true,
 	// Notice history reads stored text directly; no restore surface may replay its erased images.
 	"notice": true,
+	// A signal about the erased contact, tombstoned so its audit images, which
+	// keep a corrected kind and evidence, are withheld. The weekly review
+	// rebuilds a DEAL from its own audit images and never reads a signal's.
+	"signal": true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {

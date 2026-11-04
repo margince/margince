@@ -39,7 +39,11 @@ type NoticeRequest struct {
 	Key string
 }
 
-// RecordRef names one core record. Type is "contact", "company" or "deal".
+// NoticeRecordTypes are the record types a notice may be about: the identity
+// records a reader opens by id.
+func NoticeRecordTypes() []string { return []string{"contact", "company", "deal"} }
+
+// RecordRef names one core record. Type is one of NoticeRecordTypes.
 type RecordRef struct {
 	Type string
 	ID   string

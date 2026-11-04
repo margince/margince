@@ -310,7 +310,7 @@ function lastExchange(
 ): string {
   const newest = [row.last_inbound, row.last_outbound]
     .filter((moment): moment is string => moment !== undefined)
-    .sort()
+    .sort((a, b) => Number(a > b) - Number(a < b))
     .at(-1);
   if (!newest) return t("analytics.accounts.never");
   return row.days_silent === undefined

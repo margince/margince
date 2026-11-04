@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -206,6 +207,8 @@ type UpdateSignalInput struct {
 	Status    *string
 	Note      *string
 	Severity  *string
+	Kind      *string
+	Evidence  *[]crmcontracts.SignalEvidence
 	IfVersion *int64
 }
 
@@ -232,6 +235,18 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 			return err
 		}
 		p := storekit.NewPatch()
+		// The audit before-image is where the old kind and evidence stay readable,
+		// so an erasure of the subject withholds them (privacy.tombstoneSubjectSignals).
+		// A client echoing the kind it read is not a correction, so only a move is checked.
+		if in.Kind != nil {
+			if *in.Kind != string(current.Kind) && !slices.Contains(correctableKinds, *in.Kind) {
+				return &InvalidSignalKindError{}
+			}
+			p.Set("kind", string(current.Kind), *in.Kind)
+		}
+		if in.Evidence != nil {
+			p.Set("evidence", current.Evidence, *in.Evidence)
+		}
 		if in.Status != nil {
 			p.Set("status", string(current.Status), *in.Status)
 		}
