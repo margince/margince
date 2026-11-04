@@ -53,14 +53,14 @@ After 120 days with no word from the customer, Margince closes the open deal as
 lost, with the reason **Stopped responding**. When the customer's last message
 says no, Margince closes the deal at once, with the reason **Other**. An admin
 can change the number of days with the setting `deals.silent_close_days`. It
-cannot be less than 60.
+must be 60 or more.
 
 Margince closes a deal only when all of these hold:
 
 - The deal has an owner who still works in the workspace.
 - The owner's mailbox was read in the last two days.
 - The deal is not on legal hold.
-- No wait the customer asked for, and no meeting they accepted, is still ahead.
+- No wait the customer asked for, and no meeting they accepted, is still to come.
 
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
@@ -73,7 +73,7 @@ owner accepts it or undoes it. The deal's timeline gets a note about the close.
 deal since the close stay as they are. Undo is refused when someone moved the
 deal to another stage after the close.
 
-After an Undo, add a note on why the deal is still alive. A note, a logged call
+After an Undo, add a note on why the deal is still open. A note, a logged call
 or a meeting after the Undo starts the 120 days again. With none, Margince
 closes the deal again at the next check.
 
