@@ -36400,10 +36400,17 @@ components:
         target URL that receives signed HTTP POSTs for a chosen subset of the published
         event catalog. The signing secret is NEVER returned here — it is surfaced once,
         at create/rotate, in `WebhookSubscriptionCreated`.
-      required: [id, owner_id, target_url, event_types, state, custom_headers, version]
+      required: [id, owner_id, owner_active, target_url, event_types, state, custom_headers, version]
       properties:
         id: { type: string, format: uuid }
-        owner_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: 'The member every delivery runs under: an event goes out only when they may see its record.' }
+        owner_active:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether the owner is still an active member. False when they were deactivated or
+            archived: they see nothing, so no event is delivered, while `state` may still read
+            `active`. Give the subscription a new `owner_id`, or hand the member's work over.
         target_url: { type: string, format: uri, description: HTTPS-only delivery endpoint. }
         event_types:
           type: array
@@ -36515,6 +36522,13 @@ components:
       minProperties: 1
       properties:
         state: { type: string, enum: [active, paused] }
+        owner_id:
+          type: string
+          format: uuid
+          description: >-
+            The member the subscription runs under from now on. They must be an active seat the
+            caller may assign work to; a deactivated one answers 422. The signing secret stays the
+            same.
         event_types:
           type: array
           minItems: 1
@@ -52030,7 +52044,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task]
+      required: [lead, contact, company, deal, project, task, webhook]
       properties:
         lead: { type: integer, minimum: 0 }
         contact: { type: integer, minimum: 0 }
@@ -52038,6 +52052,7 @@ components:
         deal: { type: integer, minimum: 0 }
         project: { type: integer, minimum: 0 }
         task: { type: integer, minimum: 0, description: Open tasks assigned to the member. }
+        webhook: { type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.' }
 
     UserHandover:
       type: object

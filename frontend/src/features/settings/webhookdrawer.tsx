@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import {
   DrawerBody,
@@ -41,6 +42,8 @@ type BodyFormat = "standard" | "custom";
 export type WebhookForm = Readonly<{
   targetUrl: string;
   state: WebhookSubscription["state"];
+  // The member every delivery runs under; "" before a subscription exists.
+  ownerId: string;
   eventTypes: string[];
   headers: HeaderRow[];
   format: BodyFormat;
@@ -52,6 +55,7 @@ export function formFor(subscription?: WebhookSubscription): WebhookForm {
   return {
     targetUrl: subscription?.target_url ?? "",
     state: subscription?.state ?? "active",
+    ownerId: subscription?.owner_id ?? "",
     eventTypes: [...(subscription?.event_types ?? [])],
     headers: headerRowsFrom(
       (subscription?.custom_headers ?? []).map((h) => h.name),
@@ -81,6 +85,7 @@ export function webhookBodyOf(
 
 const FIELDS_WITH_A_SLOT = new Set([
   "target_url",
+  "owner_id",
   "event_types",
   "custom_headers",
   "body_template",
@@ -105,6 +110,10 @@ async function saveSubscription({
         },
         body: {
           state: form.state,
+          // Sent only when changed: re-stating an owner who left is no handover.
+          ...(form.ownerId !== subscription.owner_id
+            ? { owner_id: form.ownerId }
+            : {}),
           ...webhookBodyOf(
             form,
             subscription.custom_headers.map((header) => header.name),
@@ -117,6 +126,53 @@ async function saveSubscription({
     await api.POST("/webhook-subscriptions", {
       body: { target_url: form.targetUrl.trim(), ...webhookBodyOf(form) },
     }),
+  );
+}
+
+// Who the subscription runs under. Deliveries stop while the owner is
+// inactive, so the current owner stays choosable by name, marked as gone, and
+// the colleagues who may own records are offered beside them.
+function WebhookOwnerField({
+  subscription,
+  value,
+  error,
+  onChange,
+}: Readonly<{
+  subscription: WebhookSubscription;
+  value: string;
+  error?: string;
+  onChange: (ownerId: string) => void;
+}>) {
+  const t = useT();
+  const { options } = useRecordOwnerOptions();
+  const current = options.some(
+    (option) => option.value === subscription.owner_id,
+  )
+    ? []
+    : [
+        {
+          value: subscription.owner_id,
+          label:
+            subscription.owner_active === false
+              ? t("webhooks.field.ownerInactive")
+              : t("webhooks.field.ownerCurrent"),
+        },
+      ];
+  return (
+    <Field
+      label={t("webhooks.field.owner")}
+      hint={t("webhooks.field.ownerHint")}
+      error={error}
+    >
+      {(field) => (
+        <Select
+          {...field}
+          value={value}
+          options={[...current, ...options]}
+          onChange={onChange}
+        />
+      )}
+    </Field>
   );
 }
 
@@ -240,6 +296,14 @@ export function WebhookSubscriptionDrawer({
                 />
               )}
             </Field>
+          )}
+          {subscription && (
+            <WebhookOwnerField
+              subscription={subscription}
+              value={form.ownerId}
+              error={fieldError("owner_id")}
+              onChange={(ownerId) => set({ ownerId })}
+            />
           )}
         </div>
         <div className="field">

@@ -28145,7 +28145,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task]
+      required: [lead, contact, company, deal, project, task, webhook]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -28153,6 +28153,7 @@ components:
         deal: {type: integer, minimum: 0}
         project: {type: integer, minimum: 0}
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
+        webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
     UserHandover:
       type: object
       required: [owned]
