@@ -189,9 +189,10 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
 }
 
 /**
- * The open setup steps the top bar reminds of; hiding that reminder leaves this
- * card alone. Once all are done it goes: each step's page is still a row below,
- * and a step that comes undone, such as an expired connection, brings it back.
+ * The open setup steps the top bar reminds of. Hiding that reminder leaves this
+ * card alone. Once all are done the card goes, and each step's page is still a
+ * row below. A step that comes undone, such as an expired connection, brings
+ * it back.
  */
 function YourSetup({ reach }: Readonly<{ reach: SettingsReach }>) {
   const t = useT();

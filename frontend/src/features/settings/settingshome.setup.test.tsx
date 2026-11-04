@@ -10,9 +10,9 @@ import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { newClient, renderWith } from "../../testing/shellharness";
 import { SettingsHome } from "./settingshome";
 
-// The "Your setup" card at the top of the settings home. It holds the same
-// steps the top bar reminds a reader of, still here after the reminder is
-// hidden, and gone once every step is done.
+// The "Your setup" card at the top of the settings home. It holds the steps the
+// top bar reminds a reader of. It stays when that reminder is hidden, and goes
+// once every step is done.
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 
