@@ -11,7 +11,6 @@ package deals
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -85,6 +84,11 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		if scope != "" {
 			where = " AND " + scope
 		}
+		value, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d",
+			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", basePos), "d"), arg)
+		if err != nil {
+			return err
+		}
 		query := storekit.SQLf(`
 			WITH bundle AS (
 			  SELECT c.deal_id,
@@ -106,7 +110,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 7 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			heldPos, sincePos, sincePos, ownerPos, where, BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", basePos), "d"),
+			heldPos, sincePos, sincePos, ownerPos, where, value,
 			closedPos, redatedPos, revaluedPos, probabilityPos, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
@@ -152,7 +156,11 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 		}
 		args := []any{dealID}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		query := correctionReceiptSelect(arg(readerOf(ctx))) + " WHERE c.deal_id = $1"
+		query, err := correctionReceiptSelect(ctx, arg)
+		if err != nil {
+			return err
+		}
+		query += " WHERE c.deal_id = $1"
 		if after != nil {
 			query += storekit.SQLf(" AND (c.applied_at, c.audit_log_id) < ($%d, $%d)", arg(after.AppliedAt), arg(after.AuditLogID))
 		}
@@ -212,23 +220,28 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			return err
 		}
 		out.BaseCurrency = base
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		ownersPos, sincePos := arg(owners), arg(since)
-		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
+		// Each read binds its own arguments; both filter alike.
+		filter := func(arg func(any) int) (string, error) {
+			where := storekit.SQLf(" WHERE c.applied_at >= $%d AND d.owner_id = ANY($%d) AND d.archived_at IS NULL", arg(since), arg(owners))
+			scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
+			if scope != "" {
+				where += " AND " + scope
+			}
+			return where, err
+		}
+		var countArgs []any
+		countArg := func(v any) int { countArgs = append(countArgs, v); return len(countArgs) }
+		where, err := filter(countArg)
 		if err != nil {
 			return err
 		}
-		where := storekit.SQLf(" WHERE c.applied_at >= $%d AND d.owner_id = ANY($%d) AND d.archived_at IS NULL", sincePos, ownersPos)
-		if scope != "" {
-			where += " AND " + scope
+		value, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d",
+			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
+		if err != nil {
+			return err
 		}
-		// The two reads share the filter and differ in one last argument: the
-		// counts price in the base currency, the rows gate the reason on the
-		// reader.
-		last := len(args) + 1
 		// One row per deal and kind first, so a deal changed twice in one kind
-		// counts and sums once.
+		// counts and sums once. A value the reader's mask withholds adds nothing.
 		groups, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT owner_id, correction, count(*), count(*) FILTER (WHERE undone), coalesce(sum(value), 0)::bigint
 			  FROM (SELECT d.owner_id, c.correction, c.deal_id,
@@ -236,8 +249,7 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			          FROM deal_correction c JOIN deal d ON d.id = c.deal_id%s
 			         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
 			 GROUP BY owner_id, correction
-			 ORDER BY owner_id, correction`,
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", last), "d"), where), append(slices.Clone(args), base)...)
+			 ORDER BY owner_id, correction`, value, where), countArgs...)
 		if err != nil {
 			return fmt.Errorf("deals: counting the team's changes: %w", err)
 		}
@@ -248,8 +260,17 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, correctionReceiptSelect(last)+where+
-			storekit.SQLf(" ORDER BY c.applied_at DESC, c.audit_log_id DESC LIMIT %d", teamRowCap+1), append(args, readerOf(ctx))...)
+		var rowArgs []any
+		rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
+		selected, err := correctionReceiptSelect(ctx, rowArg)
+		if err != nil {
+			return err
+		}
+		if where, err = filter(rowArg); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, selected+where+
+			storekit.SQLf(" ORDER BY c.applied_at DESC, c.audit_log_id DESC LIMIT %d", teamRowCap+1), rowArgs...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the team's changes: %w", err)
 		}

@@ -8277,7 +8277,7 @@ paths:
         the list and say so; a change still open carries its `undo`. Dismissing a change on
         Home does not remove it here. Paged newest first; `next_cursor` continues the list.
         A deal the caller may not see answers 404.
-      x-mcp-tool: { verb: list_deal_margince_changes, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: list_deal_margince_changes, router: read_details, action: deal_margince_changes, tier: auto_execute, scope: read, served_by: route }
       parameters:
         - name: cursor
           in: query
@@ -8307,7 +8307,7 @@ paths:
         change, so a deal changed twice counts once and a cut list never shrinks a count.
         Bundles are ordered by the deal's value in the base currency, the largest first. At
         most 500 bundles; `truncated` says when more exist.
-      x-mcp-tool: { verb: get_pending_margince_changes, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: get_pending_margince_changes, router: read_details, action: pending_margince_changes, tier: auto_execute, scope: read, served_by: route }
       responses:
         '200':
           description: The open changes, one bundle per deal.
@@ -20390,7 +20390,7 @@ paths:
         The teammates are the ones `/worklist/team` lists, and every deal is read under the
         caller's own row scope. Requires a row scope of `team` or `all`; an own-scoped reader
         is refused with 403.
-      x-mcp-tool: { verb: get_team_margince_changes, tier: auto_execute, scope: read }
+      x-mcp-tool: { verb: get_team_margince_changes, router: read_details, action: team_margince_changes, tier: auto_execute, scope: read, served_by: route }
       parameters:
         - in: query
           name: since

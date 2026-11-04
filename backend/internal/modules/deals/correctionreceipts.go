@@ -110,7 +110,11 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		if err != nil {
 			return err
 		}
-		query := correctionReceiptSelect(ownerPos) + storekit.SQLf(`
+		selected, err := correctionReceiptSelect(ctx, arg)
+		if err != nil {
+			return err
+		}
+		query := selected + storekit.SQLf(`
 			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
 			 WHERE (c.applied_at >= $%d
 			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
@@ -147,11 +151,21 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	return row, nil
 }
 
-// correctionReceiptSelect reads one correction the way every reader shows it,
-// with the reason and evidence only for the reader at readerPos who is the
-// deal's owner and whose grants composed them. Each reader adds its own WHERE
-// and ORDER BY; scanCorrectionReceipt scans it.
-func correctionReceiptSelect(readerPos int) string {
+// correctionReceiptSelect reads one correction the way every reader shows it.
+// It binds the reader through arg: the reason and evidence reach only the
+// deal's owner whose grants composed them, and the amounts follow the reader's
+// field mask. Each reader adds its own WHERE and ORDER BY;
+// scanCorrectionReceipt scans it.
+func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
+	readable := basisReadable(arg(readerOf(ctx)))
+	before, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d", "(a.before->>'amount_minor')::bigint", arg)
+	if err != nil {
+		return "", err
+	}
+	after, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d", "(a.after->>'amount_minor')::bigint", arg)
+	if err != nil {
+		return "", err
+	}
 	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
@@ -177,14 +191,14 @@ func correctionReceiptSelect(readerPos int) string {
 			       CASE WHEN %[1]s
 			            THEN a.evidence ELSE '{}'::jsonb END,
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
-			       (a.before->>'amount_minor')::bigint, (a.after->>'amount_minor')::bigint,
+			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
 			       coalesce(a.evidence->>'amount_currency', d.currency::text),
 			       c.accepted_at IS NOT NULL, d.owner_id
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`, basisReadable(readerPos))
+`, readable, before, after), nil
 }
 
 // basisReadable is when the reader may read a correction's reason: the deal
