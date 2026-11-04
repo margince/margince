@@ -320,7 +320,7 @@ around them already says who proposed it.
 A screen, panel or card in hand has one filled button at most. It is `ai` when Margince does that step and
 `primary` when the reader does. Every other verb is outlined: `aiQuiet` for an AI verb, `ghost` for
 the rest. A filled indigo beside a filled green reads as two equal choices in two colours, and down a
-list it reads as noise. A row in a list of like items has no fill at all, and `QuietVerbs` holds
+list it reads as noise. A row in a list of like items has no green or indigo fill, and `QuietVerbs` holds
 that for every verb inside the row.
 
 A verb that only opens a message, a task or a record is `ghost`. A verb that opens

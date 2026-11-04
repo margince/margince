@@ -113,15 +113,24 @@ describe("an AI verb draws its own mark", () => {
   });
 });
 
-// Any variant expression that can come out as "ai" or "aiQuiet".
+// A computed variant counts as AI, since a lookup can come out as "ai".
+// Only a literal naming another variant is known to draw no ✦.
 function isAiButton(open: ts.JsxOpeningElement): boolean {
   if (open.tagName.getText() !== "Button") return false;
   return open.attributes.properties.some(
     (attribute) =>
       ts.isJsxAttribute(attribute) &&
       attribute.name.getText() === "variant" &&
-      attribute.initializer !== undefined &&
-      /"ai(Quiet)?"/.test(attribute.initializer.getText()),
+      !namesPlainVariant(attribute.initializer),
+  );
+}
+
+function namesPlainVariant(value: ts.JsxAttributeValue | undefined): boolean {
+  const literal = value && ts.isJsxExpression(value) ? value.expression : value;
+  return (
+    literal !== undefined &&
+    ts.isStringLiteral(literal) &&
+    !/^ai(Quiet)?$/.test(literal.text)
   );
 }
 

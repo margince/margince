@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
@@ -189,7 +188,6 @@ export function DraftOffer({
       >
         {(control) => (
           <div className="compose-draftbar">
-            <Sparkles aria-hidden="true" />
             <TextInput
               {...control}
               placeholder={t(ask)}

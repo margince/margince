@@ -25,6 +25,7 @@ import {
   Skeleton,
 } from "../../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../../design-system/panel";
+import { QuietVerbs } from "../../../design-system/verbvolume";
 import { useT } from "../../../i18n";
 import "../../companies/company360.css";
 // The verb column: `.today-actions` and `.today-verb`, drawn here rather than
@@ -238,21 +239,24 @@ export function FoundMove({
         )}
         {(action || defer) && (
           <span className="co-move-do">
-            <div className="today-actions">
-              {action}
-              {defer && (
-                <span className="today-verb">
-                  <Button
-                    variant="ghost"
-                    className="co-move-defer"
-                    onClick={defer.onDefer}
-                    disabled={defer.pending}
-                  >
-                    {t("co.suggest.dismiss")}
-                  </Button>
-                </span>
-              )}
-            </div>
+            {/* One move among several, so its verbs draw outlined. */}
+            <QuietVerbs>
+              <div className="today-actions">
+                {action}
+                {defer && (
+                  <span className="today-verb">
+                    <Button
+                      variant="ghost"
+                      className="co-move-defer"
+                      onClick={defer.onDefer}
+                      disabled={defer.pending}
+                    >
+                      {t("co.suggest.dismiss")}
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </QuietVerbs>
           </span>
         )}
       </div>

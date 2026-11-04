@@ -15,7 +15,11 @@ import { faceClass } from "../../design-system/button";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
-import { atRegionVolume, useQuietVerbs } from "../../design-system/verbvolume";
+import {
+  atRegionVolume,
+  QuietVerbs,
+  useQuietVerbs,
+} from "../../design-system/verbvolume";
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
@@ -158,12 +162,15 @@ export function RowActs({
           <HandBackLines write={write} />
         </OverflowMenu>
       )}
+      {/* An open form is the panel in hand, so its confirm keeps the fill. */}
       {handingOff && (
-        <ReassignForm
-          item={item}
-          owner={owner}
-          onClose={() => setHandingOff(false)}
-        />
+        <QuietVerbs quiet={false}>
+          <ReassignForm
+            item={item}
+            owner={owner}
+            onClose={() => setHandingOff(false)}
+          />
+        </QuietVerbs>
       )}
     </div>
   );

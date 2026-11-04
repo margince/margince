@@ -65,7 +65,12 @@ type ButtonShape =
       iconOnly: true;
     }
   | {
-      variant?: ButtonVariant;
+      /** An AI verb always shows its ✦, so it never takes a glyph of its own. */
+      variant: "ai" | "aiQuiet";
+      iconOnly?: false;
+    }
+  | {
+      variant?: Exclude<ButtonVariant, "ai" | "aiQuiet">;
       /**
        * This button's whole label is its icon, so it drops the width floor that
        * keeps a short word readable and becomes square. The caller still owes
@@ -184,7 +189,7 @@ export function Button({
   const busyLabelId = useId();
   const singlePress = useSinglePress(pending);
   const drawn = atRegionVolume(variant, useQuietVerbs());
-  const marked = (drawn === "ai" || drawn === "aiQuiet") && !iconOnly;
+  const marked = drawn === "ai" || drawn === "aiQuiet";
   const classes = [
     "btn",
     faceClass(drawn),
