@@ -108,7 +108,9 @@ function MembersCard({
   // The field repaints on every key; the list follows when React has time. A
   // roster of hundreds made each letter wait for every row to draw again.
   const shownSearch = useDeferredValue(search);
-  const roster = read.data?.list;
+  // The query's own list, not `read.data.list`. `read` is handed on below, so
+  // the React Compiler cannot keep a memo that depends on it.
+  const roster = members.data;
   const matching = useMemo(
     () => (roster ? matchingMembers(roster, shownSearch) : []),
     [roster, shownSearch],

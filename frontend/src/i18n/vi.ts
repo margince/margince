@@ -9789,8 +9789,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "Chuyển từ CRM khác",
   "notice.acq.mailboxHistory": "Lịch sử hộp thư",
   "notice.acq.unknownLegacy": "Không rõ nguồn",
-  "notice.source.contactExplanation":
-    "Cần xác minh nguồn thông tin. Mở hồ sơ quyền riêng tư để xem bằng chứng.",
   "notice.source.zoneHint":
     "Chọn múi giờ nơi nhận thông tin. Múi giờ đó có thể khác nơi bạn đang ở.",
   "notice.rule.none": "Không có nghĩa vụ thông báo riêng",
@@ -9811,6 +9809,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.source.dateHint":
     "Nhập ngày thực tế nhận thông tin nếu biết. Nếu chưa rõ, nghĩa vụ đã xác nhận vẫn có thời hạn muộn nhất.",
   "notice.source.noDeadline": "Chưa có thời hạn được xác nhận",
+  "notice.source.question":
+    "Bạn nhận được thông tin liên hệ của họ bằng cách nào?",
+  "notice.source.answer.contacted": "Họ đã liên hệ trước",
+  "notice.source.answer.asked": "Họ đã yêu cầu báo giá hoặc một cuộc hẹn",
+  "notice.source.answer.met": "Gặp trực tiếp",
+  "notice.source.answer.introduced": "Được giới thiệu",
+  "notice.source.answer.other": "Nguồn khác",
+  "notice.source.answer.unsure": "Không chắc chắn",
+  "notice.source.unsureHint":
+    "Nguồn vẫn chưa được xác nhận. Không có gì được lưu.",
+  "notice.source.otherQuestion": "Đó là nguồn nào?",
+  "notice.source.leave": "Để chưa xác nhận",
+  "notice.source.evidenceHint":
+    "Ví dụ: email đầu tiên của họ, hoặc ai đã giới thiệu họ.",
+  "notice.source.effect":
+    "Khi lưu, hệ thống ghi lại thông tin của họ đến từ đâu. Nếu nguồn đó cần thông báo về quyền riêng tư, nghĩa vụ thông báo sẽ được mở cùng thời hạn. Việc lưu không gửi email và không thay đổi việc bạn có được gửi email cho họ hay không.",
+  "notice.source.whyUnknown":
+    "Không có ghi nhận nào cho biết thông tin của liên hệ này đến từ đâu.",
+  "notice.source.whyUnconfirmed":
+    "Chưa ai xác nhận nguồn đã ghi nhận của thông tin liên hệ này.",
+  "notice.source.onRecord": "Đã ghi nhận",
+  "notice.source.needsConfirmation": "Cần xác nhận nguồn",
+  "notice.source.contactExplanation":
+    "Bộ phận phụ trách quyền riêng tư sẽ xác nhận thông tin của họ đến từ đâu.",
   "notice.rule.art13": "Thông báo theo Điều 13",
   "notice.rule.art14": "Thông báo theo Điều 14",
   "notice.ruleHint.art13":
