@@ -2453,6 +2453,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.agent_task_retention": "Bereinigung von Agentenaufgaben",
   "agentJob.attachment_extractor": "Anhangsanalyse",
   "agentJob.auto_apply": "Automatische Freigabe",
+  "agentJob.margince": "Margince",
   "agentJob.capture_confidentiality_verdict": "Vertraulichkeitsprüfung",
   "agentJob.capture_counterparty": "Neuer Kontakt aus E-Mail",
   "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
@@ -15380,6 +15381,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.close_date_correction.label": "Abschlussdaten",
   "autonomy.kind.close_date_correction.help":
     "Margince pflegt Deals über Nacht. Fehlende oder überfällige Abschlussdaten werden anhand des Deal-Tempos geschätzt, und verstummte Deals werden geprüft. Deaktiviere die Option, um diese Pflege zu beenden.",
+  "autonomy.kind.deal_close_lost.label":
+    "Verstummte Deals als verloren schließen",
+  "autonomy.kind.deal_close_lost.help":
+    "Margince schließt einen Deal als verloren, wenn der Kunde 120 Tage nicht geantwortet hat (ein Admin kann die Zahl ändern), oder sofort, wenn der Kunde absagt. Jede Schließung erscheint auf Home mit „Rückgängig“.",
   "autonomy.kind.company_name_promotion.label": "Unternehmensnamen",
   "autonomy.kind.company_name_promotion.help":
     "Margince übernimmt vorgeschlagene Unternehmensnamen aus E-Mail-Signaturen für Unternehmen, die nach ihrer Domain benannt sind. Deaktiviere die Option, um diese Vorschläge selbst zu prüfen. Von unabhängigen Quellen bestätigte Namen können weiterhin automatisch aktualisiert werden.",
@@ -18444,6 +18449,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.hiddenRecord": "Datensatz nicht verfügbar",
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
+  "worklist.handled.closeLostUndone":
+    "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",

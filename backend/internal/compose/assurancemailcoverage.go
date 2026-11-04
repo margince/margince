@@ -133,6 +133,17 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 // reader computes the same list. The viability fingerprint carries it, so a
 // mailbox that delivers the deal's mail later makes the receipt stale.
 func dealMailboxesSQL(deal string) string {
+	return dealMailboxesWhereSQL(deal, " AND "+visibleToAllSQL("ma"))
+}
+
+// dealMailboxesAnyAudienceSQL is dealMailboxesSQL over mail of every audience.
+// A close counts private customer mail, so it needs the mailboxes that carried
+// it read too.
+func dealMailboxesAnyAudienceSQL(deal string) string {
+	return dealMailboxesWhereSQL(deal, "")
+}
+
+func dealMailboxesWhereSQL(deal, audience string) string {
 	return `ARRAY(SELECT DISTINCT ci.user_id::text || coalesce(':' || dm.mailbox, '')
 		          FROM capture_import ci
 		          JOIN activity ma ON ma.id = ci.activity_id
@@ -140,8 +151,7 @@ func dealMailboxesSQL(deal string) string {
 		          LEFT JOIN LATERAL unnest(ci.delivered_by) AS dm(mailbox) ON true
 		         WHERE mal.deal_id = ` + deal + `.id
 		           AND ma.kind = 'email'
-		           AND ma.archived_at IS NULL
-		           AND ` + visibleToAllSQL("ma") + `
+		           AND ma.archived_at IS NULL` + audience + `
 		         ORDER BY 1)`
 }
 

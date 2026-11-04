@@ -11,6 +11,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,6 +66,9 @@ type AdvanceDealInput struct {
 	// closedAt is the instant a closing move records as the close, set only
 	// by ImportDealTx: an imported win keeps the day its source closed it.
 	closedAt *time.Time
+	// auditEvidence rides into the move's audit row. Margince's own close sets
+	// it, so the Home receipt can say why the deal was closed.
+	auditEvidence map[string]any
 }
 
 // StagePipelineMismatchError maps to 422: the target stage exists but
@@ -223,12 +227,13 @@ func (s *Store) advanceOnTx(
 		// joining the live stage would then report an old closing as something
 		// it was not.
 		from := ids.UUID(*current.StageId)
-		if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+		out.HistoryID, err = s.recordStageHistory(ctx, tx, stageHistoryInput{
 			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
 			Amount: current.AmountMinor, Currency: current.Currency,
 			Probability: &winProbability, ApprovalID: in.ApprovalID,
 			ReversalOf: in.ReversalOf, Semantic: &semantic, LostReasonCode: lostReasonCodeFromPatch(p),
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
@@ -245,10 +250,11 @@ func (s *Store) advanceOnTx(
 			}
 		}
 
-		toStageName, err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability)
+		toStageName, auditID, err := announceStageAdvance(ctx, tx, id, in, current, p, status, winProbability)
 		if err != nil {
 			return err
 		}
+		out.AuditLogID = auditID
 		out.Probability = newProbabilitySet(winProbability, toStageName)
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
@@ -295,33 +301,36 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
-) (string, error) {
+) (string, ids.UUID, error) {
 	if err := releaseLossNote(ctx, tx, p, current); err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
-	var evidence map[string]any
+	evidence := maps.Clone(in.auditEvidence)
 	if in.ApprovalID != nil {
-		evidence = map[string]any{StageApprovalEvidenceKey: in.ApprovalID.String()}
+		if evidence == nil {
+			evidence = map[string]any{}
+		}
+		evidence[StageApprovalEvidenceKey] = in.ApprovalID.String()
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_stage", "deal", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
-		return "", fmt.Errorf("audit stage advance: %w", err)
+		return "", ids.Nil, fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
 	payload.LostReasonCode = lostReasonCodeFromPatch(p)
 	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
-		return "", fmt.Errorf("read the stage names for the change: %w", err)
+		return "", ids.Nil, fmt.Errorf("read the stage names for the change: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
-		return "", fmt.Errorf("emit deal.stage_changed: %w", err)
+		return "", ids.Nil, fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
 	var toStageName string
 	if payload.ToStageName != nil {
 		toStageName = *payload.ToStageName
 	}
-	return toStageName, nil
+	return toStageName, auditID, nil
 }
 
 // onDealWon does what winning a deal sets off, in the transaction that won it.

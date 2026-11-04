@@ -73183,7 +73183,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: { type: string, enum: [close_date, stage] }
+        kind: { type: string, enum: [close_date, close_lost, stage] }
         accepted: { type: boolean }
         reversed: { type: boolean }
         version: { type: integer, format: int64 }

@@ -255,7 +255,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -264,7 +264,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `applied_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `asking` | `text` | yes |  |
 | `audit_log_id` | `uuid` | yes | Points at `audit_log.id`. |
-| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`. |
+| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fields` | `text[]` | yes |  |
 | `remaining_open_stages` | `text` | yes |  |
@@ -272,6 +272,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
 | `run_id` | `uuid` |  | Points at `close_date_run.id`. |
+| `stage_history_id` | `uuid` |  | Points at `deal_stage_history.id`. |
 | `standing_close_date` | `text` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -286,13 +287,14 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `deal_id` | `deal` | deleting the parent deletes this row |
 | `reversal_audit_id` | `audit_log` | deleting the parent keeps this row and clears the link |
 | `run_id` | `close_date_run` | deleting the parent keeps this row and clears the link |
+| `stage_history_id` | `deal_stage_history` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `deal_correction_audit_once`: `UNIQUE (audit_log_id)`
 - `deal_correction_moves_something`: `CHECK ((cardinality(fields) > 0))`
 - `deal_correction_reversal_is_whole`: `CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))`
-- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review'])))`
+- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review', 'close_lost'])))`
 - `deal_correction_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -302,6 +304,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_correction_pkey`: `unique, btree (id)`
 - `deal_correction_reversed`: `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
 - `idx_deal_correction_deal`: `btree (deal_id)`
+- `idx_deal_correction_stage_history`: `btree (stage_history_id)`
 
 ## deal_loss_reason
 
@@ -517,7 +520,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-25 columns · primary key `(id)` · referenced by 2 foreign keys
+25 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

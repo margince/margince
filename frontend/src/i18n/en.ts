@@ -2362,6 +2362,7 @@ export const en = {
   "agentJob.agent_task_retention": "Agent task cleanup",
   "agentJob.attachment_extractor": "Attachment reader",
   "agentJob.auto_apply": "Automatic approval",
+  "agentJob.margince": "Margince",
   "agentJob.capture_confidentiality_verdict": "Confidentiality check",
   "agentJob.capture_counterparty": "New contact from mail",
   "agentJob.capture_counterparty_verdict": "Mail sender check",
@@ -15299,6 +15300,9 @@ export const en = {
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
     "Maintains deals overnight: estimates missing or overdue close dates from deal pace and reviews deals that have gone quiet. Turn off to stop this maintenance.",
+  "autonomy.kind.deal_close_lost.label": "Close silent deals as lost",
+  "autonomy.kind.deal_close_lost.help":
+    "Closes a deal as lost when the customer has not answered for 120 days (an admin can change the number), or at once when the customer declines. Each close shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18267,6 +18271,8 @@ export const en = {
   "worklist.handled.hiddenRecord": "Record not available",
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
+  "worklist.handled.closeLostUndone":
+    "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
