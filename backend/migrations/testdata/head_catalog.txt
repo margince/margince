@@ -3969,7 +3969,8 @@ public.deal_correction.deal_correction_pkey PRIMARY KEY (id)
 public.deal_correction.deal_correction_reversal_audit_id_fkey FOREIGN KEY (reversal_audit_id) REFERENCES audit_log(id) ON DELETE SET NULL
 public.deal_correction.deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))
 public.deal_correction.deal_correction_run_id_fkey FOREIGN KEY (run_id) REFERENCES close_date_run(id) ON DELETE SET NULL
-public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text])))
+public.deal_correction.deal_correction_stage_history_id_fkey FOREIGN KEY (stage_history_id) REFERENCES deal_stage_history(id) ON DELETE SET NULL
+public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text, 'close_lost'::text])))
 public.deal_correction.deal_correction_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_correction.deal_id uuid NOT NULL gen=- def=-
 public.deal_correction.fields text[] NOT NULL gen=- def=-
@@ -3979,6 +3980,7 @@ public.deal_correction.reversal_audit_id uuid gen=- def=-
 public.deal_correction.reversed_at timestamp with time zone gen=- def=-
 public.deal_correction.reversed_by text gen=- def=-
 public.deal_correction.run_id uuid gen=- def=-
+public.deal_correction.stage_history_id uuid gen=- def=-
 public.deal_correction.standing_close_date text NOT NULL gen=- def=-
 public.deal_correction.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_correction.version bigint NOT NULL gen=- def=1
@@ -5199,6 +5201,7 @@ public.idx_deal_close CREATE INDEX idx_deal_close ON public.deal USING btree (ex
 public.idx_deal_commercial_motion CREATE INDEX idx_deal_commercial_motion ON public.deal USING btree (commercial_motion) WHERE ((archived_at IS NULL) AND (commercial_motion IS NOT NULL))
 public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_correction_deal CREATE INDEX idx_deal_correction_deal ON public.deal_correction USING btree (deal_id)
+public.idx_deal_correction_stage_history CREATE INDEX idx_deal_correction_stage_history ON public.deal_correction USING btree (stage_history_id)
 public.idx_deal_document_hide_attachment CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id)
 public.idx_deal_loss_reason_mapping_reason CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key)
 public.idx_deal_lost_reason_code CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)

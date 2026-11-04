@@ -1909,6 +1909,7 @@ func (e AnalyticsScopeKind) Valid() bool {
 // Defines values for AppliedDealChangeReviewKind.
 const (
 	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindCloseLost AppliedDealChangeReviewKind = "close_lost"
 	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
 )
 
@@ -1916,6 +1917,8 @@ const (
 func (e AppliedDealChangeReviewKind) Valid() bool {
 	switch e {
 	case AppliedDealChangeReviewKindCloseDate:
+		return true
+	case AppliedDealChangeReviewKindCloseLost:
 		return true
 	case AppliedDealChangeReviewKindStage:
 		return true

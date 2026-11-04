@@ -121,6 +121,7 @@ data_tasks:
 deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true
+  silent_close_days: 120
   stage_autopilot_enabled: false
 
 email:

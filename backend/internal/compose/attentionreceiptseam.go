@@ -115,6 +115,9 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 // A changed date names both values; confidence-only changes must not claim
 // the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	if c.Correction == deals.CloseLostCorrection {
+		return closeLostReceipt(c)
+	}
 	summary := fmt.Sprintf("Updated close-date confidence on %q", c.DealName)
 	if slices.Contains(c.Fields, "expected_close_date") {
 		summary = fmt.Sprintf("Changed the close date on %q: %s → %s", c.DealName, correctionDate(c.BeforeClose), correctionDate(c.AfterClose))
@@ -139,6 +142,25 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 			Version:    c.Version,
 			Reversed:   c.Reversed,
 		},
+	}
+}
+
+// closeLostReceipt renders a deal Margince closed as lost. Its Undo reopens
+// the deal; the receipt has no close-date values to show.
+func closeLostReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	summary := fmt.Sprintf("Closed %q as lost", c.DealName)
+	if c.Basis != "" {
+		summary += " — " + c.Basis
+	}
+	return attention.Receipt{
+		ID:         c.AuditLogID,
+		Kind:       deals.DealCloseLostKind,
+		Summary:    summary,
+		OccurredAt: c.AppliedAt,
+		TargetType: approvalTargetDeal,
+		TargetID:   c.DealID.UUID,
+		Actor:      attention.ReceiptActor{Type: c.ActorType, ID: c.ActorID, OnBehalfOf: c.OnBehalfOf},
+		Undo:       &attention.ReceiptUndo{AuditLogID: c.AuditLogID, Version: c.Version, Reversed: c.Reversed},
 	}
 }
 

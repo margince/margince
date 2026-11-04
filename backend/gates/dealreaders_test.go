@@ -118,6 +118,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/dealclosefacts.go:closeFactsSQL":                          "the dates a Margince close rests on: the last Undo of a close, the newest note a colleague logged after it, and the newest customer message of any audience. Only timestamps leave. The nightly close-date pass reads them under its system principal, and the close itself runs as the owner's agent",
 	"internal/modules/deals/refilecompanies.go:refileAssociationsTx":            "RequireSystem restricts this event-recovery read to current and audited association identities. They select activities for an unattended pass; each final filing rechecks the deal under the capturing seat and exposes no deal record to a caller.",
 	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
 	"internal/modules/weeklyplan/linkedkeys.go":                                 "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
@@ -155,6 +156,8 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/closelost.go:closeStillDue":                    "the status, owner and legal hold of a deal Margince is about to close, under its row lock. Its one caller, CloseAsLost, asks auth.Require(ctx, \"deal\", update) first",
+	"internal/modules/deals/closelost.go:lostStageAndCode":                 "the lost stage of the deal's pipeline. Reached only from CloseAsLost, behind the same deal update gate",
 	"internal/modules/deals/recordhandover.go:recordDealsTx":               "the open deals one owner holds on a contact or company a handover moves. Its two callers ask auth.Require(ctx, \"deal\", read) or update first, and only ids, versions and counts leave",
 	"internal/modules/deals/lossreasonmapping.go:dropOrphanedLossMapping":  "whether any deal still carries a note, to drop the mapping decided for it; no deal column leaves the statement. Reached only from the stage advance, which asked auth.Require for deal update and locked the row through lockThenEnsureWritable",
 	"internal/compose/magic/undoversion.go":                                "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",

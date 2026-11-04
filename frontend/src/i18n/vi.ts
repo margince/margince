@@ -2385,6 +2385,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.agent_task_retention": "Dọn dẹp tác vụ của trợ lý AI",
   "agentJob.attachment_extractor": "Trình đọc tệp đính kèm",
   "agentJob.auto_apply": "Duyệt tự động",
+  "agentJob.margince": "Margince",
   "agentJob.capture_confidentiality_verdict": "Kiểm tra tính bảo mật",
   "agentJob.capture_counterparty": "Liên hệ mới từ email",
   "agentJob.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
@@ -14985,6 +14986,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "autonomy.kind.close_date_correction.label": "Ngày chốt",
   "autonomy.kind.close_date_correction.help":
     "Duy trì deal qua đêm: ước tính ngày chốt còn thiếu hoặc quá hạn theo tốc độ của deal và xem lại các deal đã im lặng. Tắt để dừng việc duy trì này.",
+  "autonomy.kind.deal_close_lost.label": "Đóng deal im lặng là thua",
+  "autonomy.kind.deal_close_lost.help":
+    "Đóng deal là thua khi khách hàng không trả lời trong 120 ngày (quản trị viên có thể đổi con số này), hoặc ngay lập tức khi khách hàng từ chối. Mỗi lần đóng hiện trên Home kèm nút Hoàn tác.",
   "autonomy.kind.company_name_promotion.label": "Tên công ty",
   "autonomy.kind.company_name_promotion.help":
     "Chấp nhận tên công ty đề xuất từ chữ ký email cho các công ty đang mang tên theo tên miền. Tắt để tự xem lại các đề xuất này. Tên được nguồn độc lập xác nhận vẫn có thể được cập nhật tự động.",
@@ -17970,6 +17974,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
   "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
+  "worklist.handled.closeLostUndone":
+    "Đã hoàn tác. Hãy thêm ghi chú vì sao deal này vẫn còn hy vọng, nếu không Margince sẽ đóng lại ở lần kiểm tra tiếp theo.",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",

@@ -262,7 +262,13 @@ func scanAssuranceSubject(
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
 func customerProgressSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) +
+	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerProgressAnyAudienceSQL is customerProgressSQL over every message,
+// those only their participants may read included. Only its date may be used.
+func customerProgressAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
@@ -273,7 +279,12 @@ func customerProgressSQL(alias, asOf string) string {
 // customerRefusalSQL admits a message a contact on the deal wrote that was
 // judged a refusal.
 func customerRefusalSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
+func customerRefusalAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 

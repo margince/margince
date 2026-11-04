@@ -129,8 +129,13 @@ func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 // across them would leave the kind half-governed with nothing saying so.
 const closeDateCorrectionKind = "close_date_correction"
 
+// kindDealCloseLost is Margince closing a deal the customer stopped answering.
+// It is never staged; the owner's mode for it is the whole of the switch.
+const kindDealCloseLost = "deal_close_lost"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
+	kindDealCloseLost:        true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
 }
