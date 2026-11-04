@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 190.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50099 |
+| Approx. wire tokens | 50108 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -83,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1866 |
+| [`find_records`](#find_records) | Find records | yes |  | 1874 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -4233,6 +4233,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "assignee_id": {
+          "type": "string"
+        },
+        "call_outcome": {
           "type": "string"
         },
         "captured_by_kind": {

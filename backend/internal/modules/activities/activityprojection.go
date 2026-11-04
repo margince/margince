@@ -58,6 +58,9 @@ type activityScan struct {
 	occurredPrecision string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, invitationStatus, threadKey, captureLabel *string
+	// callOutcome is a marker like the meeting status: how a call ended is a
+	// fact about it, not something anyone said, so a withheld row keeps it.
+	callOutcome *string
 	// audienceReason says why a derived audience is what it is. It travels with
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
@@ -123,6 +126,7 @@ var activityProjection = []activityColumn{
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
+	{"a.call_outcome", func(s *activityScan) any { return &s.callOutcome }},
 	{"(SELECT status FROM meeting_invitation WHERE activity_id=a.id AND status<>'erased')", func(s *activityScan) any { return &s.invitationStatus }},
 	{storekit.KnownMeetingHostSQL("a"), func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
@@ -317,6 +321,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)
 		a.MeetingStatus = &m
 	}
+	if s.callOutcome != nil {
+		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
+		a.CallOutcome = &outcome
+	}
 	a.ThreadKey = threadKey
 	a.AudienceReason = audienceReason
 	if captureLabel != nil {
@@ -325,11 +333,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
-	// The calendar method and the sender stamp describe what a message is, so
-	// they travel with its content. The origin is the product's own fact.
+	// The calendar method, the sender stamp and the bulk stamp describe what a
+	// message is, so they travel with its content. The origin is the product's
+	// own fact.
 	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
 	if s.contentAvailable {
 		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+		evidence.BulkMail = s.bulkMailAttested
 	}
 	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version

@@ -26241,6 +26241,8 @@ export interface components {
             since: string | null;
             /** Format: date-time */
             last_success_at: string | null;
+            /** @description The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed. */
+            error_class?: string | null;
         };
         /**
          * @description A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
@@ -26294,7 +26296,7 @@ export interface components {
              * @description Last successful sync for this mailbox; null before one succeeds.
              */
             last_success_at?: string | null;
-            /** @description rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log. */
+            /** @description rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member's role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval. */
             last_sync_error_class?: string | null;
             /**
              * Format: date-time
@@ -27272,6 +27274,26 @@ export interface components {
              *     between, so the connect screen can say so before the click rather than after a 501.
              */
             providers?: components["schemas"]["CaptureProviderAvailability"][];
+            seat_capture?: components["schemas"]["SeatCapture"];
+        };
+        /**
+         * @description Whether the caller's own role and seat let capture write, asked by the same check connect
+         *     and every sync ask. False hides every connect button; a connected mailbox stops at its
+         *     next sync.
+         */
+        SeatCapture: {
+            allowed: boolean;
+            /**
+             * @description Why `allowed` is false; null when it is true.
+             * @enum {string|null}
+             */
+            reason?: "role_cannot_capture" | null;
+            /**
+             * @description What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+             *     `lead`, or `seat` for a read seat. Null when `allowed` is true.
+             * @enum {string|null}
+             */
+            missing?: "activity" | "contact" | "lead" | "seat" | null;
         };
         /**
          * @description Whether a connect started right now would proceed, decided by the same predicate the connect
@@ -27290,10 +27312,11 @@ export interface components {
              * @description `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
              *     app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
              *     is a different fix from registering one. `unsupported`: this deployment does not serve the
-             *     provider at all.
+             *     provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+             *     capture writes, for every provider alike (`seat_capture` says so once).
              * @enum {string}
              */
-            reason: "ready" | "app_missing" | "app_unusable" | "unsupported";
+            reason: "ready" | "app_missing" | "app_unusable" | "unsupported" | "role_cannot_capture";
         };
         /**
          * @description The address this installation puts in outgoing links, and whether it answered when last asked.
@@ -38581,10 +38604,10 @@ export interface components {
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
             readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             /**
-             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
              * @enum {string|null}
              */
-            readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
+            readonly automatic_kind?: "product" | "calendar" | "sending_system" | "bulk" | null;
             /** @description Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`. */
             readonly voice?: components["schemas"]["ActivityVoice"] | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
@@ -38592,10 +38615,15 @@ export interface components {
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
             readonly audience_reason?: string | null;
             /**
-             * @description Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+             * @description Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
              * @enum {string}
              */
             readonly content_state?: "available" | "withheld";
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /**
              * @description Set only when kind=meeting.
              * @enum {string|null}
@@ -38883,6 +38911,11 @@ export interface components {
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /** @enum {string|null} */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             source_system?: string | null;
@@ -39087,6 +39120,11 @@ export interface components {
             remind_at?: string | null;
             /** @description Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family). */
             is_done?: boolean;
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /**
              * @description How the meeting went, set AFTER it happened. Meeting only, and 422 with a
              *     `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -43837,6 +43875,8 @@ export interface components {
             team_ids?: string[];
             /** @description Whether this unused member's sign-in email can still be corrected. Present only on the administration view. */
             email_editable?: boolean;
+            /** @description How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture. */
+            readonly connected_mailboxes?: number;
             /**
              * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
              * @enum {string|null}
@@ -45473,6 +45513,8 @@ export interface components {
             name: string;
             /** @description True for a role the product ships. */
             is_system: boolean;
+            /** @description Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change. */
+            readonly captures_mail?: boolean;
         };
         CreateRoleRequest: {
             /** @description The key of the live role the new one starts as a copy of. */
@@ -56144,6 +56186,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The caller's role or seat cannot record what capture writes (activities, and the contacts
+         *     and leads a mailbox brings in), so no mailbox of theirs can be captured
+         *     (`code: role_cannot_capture`). Nothing is stored. An admin changes their role.
+         *     `details.missing` names what is lacking, as `SeatCapture.missing` does.
+         */
+        RoleCannotCapture: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
         PermissionDenied: {
             headers: {
@@ -65794,6 +65850,8 @@ export interface operations {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
                 kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Calls that ended this way. Matches calls only. */
+                call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
@@ -76946,6 +77004,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77424,6 +77483,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             /** @description Provider unreachable — the estimate needs the provider (`code: provider_unreachable`). */
@@ -77510,6 +77570,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };

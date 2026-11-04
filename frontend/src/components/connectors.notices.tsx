@@ -15,23 +15,27 @@ import {
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { PairedCalendar } from "../lib/connect-account";
+import { captureRefusalCopy } from "../lib/problemcodecopy";
 
 // What a page says about a consent round trip that has just come back. It
 // takes the landing as props so Connections and Meetings draw the same answer.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
+type CaptureMissing = components["schemas"]["SeatCapture"]["missing"];
 
 // The callback lands on .../{outcome}/{provider}. Only these outcomes are
 // server-defined; any other segment is ignored rather than printed back.
-// Three failures exist so one nobody can fix by retrying does not say retry.
-// Either the provider refused the grant, or its API was never enabled, or it
-// refused this installation's client credentials.
+// A failure nobody can fix by retrying does not say retry. Four are like that.
+// The provider refused the grant, or its API was never enabled. It refused
+// this installation's client credentials, or the reader's role or seat cannot
+// capture, which names its grant apart (captureRefusalCopy).
 const OAUTH_OUTCOME_NOTE: Record<string, MessageKey> = {
   ok: "connectors.oauthOk",
   denied: "connectors.oauthDenied",
   rejected: "connectors.oauthRejected",
   misconfigured: "connectors.oauthMisconfigured",
   bad_client: "connectors.oauthBadClient",
+  role_cannot_capture: "connectors.oauthRoleCannotCapture",
   error: "connectors.oauthError",
 };
 
@@ -144,6 +148,7 @@ export function OAuthOutcomeNote({
   outcome,
   provider,
   connections,
+  captureMissing,
   connectCalendar,
 }: Readonly<{
   /** The landing's outcome segment, unvalidated. */
@@ -153,6 +158,8 @@ export function OAuthOutcomeNote({
   /** The reader's connections from GET /connectors; undefined until it
    *  answers, so a chain's landing is never read against an empty roster. */
   connections: readonly CaptureConnection[] | undefined;
+  /** The grant GET /connectors says the reader lacks, named by a role refusal. */
+  captureMissing?: CaptureMissing;
   connectCalendar?: Readonly<{
     onConnect: (calendar: PairedCalendar) => void;
     pending: boolean;
@@ -165,9 +172,11 @@ export function OAuthOutcomeNote({
   // Object.hasOwn, not a bare index: a segment like "constructor" would
   // otherwise resolve to an inherited member and render an empty note.
   const note =
-    outcome && Object.hasOwn(OAUTH_OUTCOME_NOTE, outcome)
-      ? OAUTH_OUTCOME_NOTE[outcome]
-      : undefined;
+    outcome === "role_cannot_capture" && captureMissing
+      ? captureRefusalCopy(captureMissing)
+      : outcome && Object.hasOwn(OAUTH_OUTCOME_NOTE, outcome)
+        ? OAUTH_OUTCOME_NOTE[outcome]
+        : undefined;
   if (!outcome || !note || !connections || landing === dismissed) {
     return null;
   }

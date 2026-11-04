@@ -22,7 +22,7 @@ import { AiUsageCard } from "./aiusage";
 const viewer = vi.hoisted(() => ({ zone: "UTC" }));
 vi.mock("../../format/timezone", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../format/timezone")>();
-  return { ...actual, viewerZone: () => viewer.zone };
+  return { ...actual, browserZone: () => viewer.zone };
 });
 
 const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };

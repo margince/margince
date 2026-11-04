@@ -18,6 +18,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
@@ -74,21 +75,27 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   });
 }
 
+// The reader's zone is named, so the due day and hour do not move with the
+// machine the suite runs on.
+const READER_ZONE = "Europe/Berlin";
+
 function openTask() {
   return render(
     <StoryProviders>
       <SourceHost>
-        <TaskDetailModal
-          activityId="task-1"
-          readOnly={false}
-          onClose={() => {}}
-          update={
-            {
-              mutate: () => {},
-              isPending: false,
-            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-          }
-        />
+        <ViewerZoneProvider zone={READER_ZONE}>
+          <TaskDetailModal
+            activityId="task-1"
+            readOnly={false}
+            onClose={() => {}}
+            update={
+              {
+                mutate: () => {},
+                isPending: false,
+              } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+            }
+          />
+        </ViewerZoneProvider>
       </SourceHost>
     </StoryProviders>,
   );

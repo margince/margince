@@ -19,7 +19,7 @@ import { WorklistScreen } from "./worklist";
 const viewer = vi.hoisted(() => ({ zone: "Europe/Berlin" }));
 vi.mock("../../format/timezone", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../format/timezone")>();
-  return { ...actual, viewerZone: () => viewer.zone };
+  return { ...actual, browserZone: () => viewer.zone };
 });
 
 // The clock a row is racing, drawn.

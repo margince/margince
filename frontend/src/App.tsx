@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -43,9 +44,12 @@ import {
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
 import { useLocale } from "./i18n";
+import {
+  CompanyZoneProvider,
+  useConfiguredCompanyZone,
+} from "./lib/companyzone";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { markJourney } from "./lib/journeymarks";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
@@ -58,7 +62,11 @@ import {
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
-import { useBrowserZoneOnFirstSignIn } from "./lib/viewerzone";
+import {
+  renderableViewerZone,
+  useBrowserZoneOnFirstSignIn,
+  ViewerZoneProvider,
+} from "./lib/viewerzone";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -261,7 +269,14 @@ function AuthedApp({
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
   // 401 and say nothing about the installation.
-  const recordZone = useConfiguredRecordZone(authed);
+  const companyZone = useConfiguredCompanyZone(authed);
+  // The reader's own clock, for every time a signed-in screen shows. It is
+  // the zone they stored, or their browser's until they have one.
+  const storedZone = me.data?.user.timezone;
+  const browserZone = useMemo(
+    () => renderableViewerZone(storedZone),
+    [storedZone],
+  );
 
   // The route is a dependency so the gate holds on every navigation. Otherwise
   // the palette or a typed hash walks past onboarding.
@@ -291,7 +306,8 @@ function AuthedApp({
     sessionSeenNow,
   );
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const gatesPending = companyPending || recordZone.pending || progress.pending;
+  const gatesPending =
+    companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
   const opensHome = homeMayRead({
     screen: route.screen,
@@ -389,30 +405,32 @@ function AuthedApp({
 
   return (
     <DateFormatsProvider>
-      <RecordZoneProvider zone={recordZone.zone}>
-        {/* An address pressed on any screen writes from here: the composer is
+      <CompanyZoneProvider zone={companyZone.zone}>
+        <ViewerZoneProvider zone={browserZone}>
+          {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
-        <WriteToHost>
-          <CallLogHost>
-            <SourceHost>
-              <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-                <ScreenView
-                  screen={route.screen}
-                  id={route.id}
-                  id2={route.id2}
-                />
-              </AuthedShell>
-            </SourceHost>
-          </CallLogHost>
-        </WriteToHost>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          commands={commands}
-        />
-        {/* Over whatever the reader was doing, not on a screen of its own. */}
-        <AskFromAddress />
-      </RecordZoneProvider>
+          <WriteToHost>
+            <CallLogHost>
+              <SourceHost>
+                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                  <ScreenView
+                    screen={route.screen}
+                    id={route.id}
+                    id2={route.id2}
+                  />
+                </AuthedShell>
+              </SourceHost>
+            </CallLogHost>
+          </WriteToHost>
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            commands={commands}
+          />
+          {/* Over whatever the reader was doing, not on a screen of its own. */}
+          <AskFromAddress />
+        </ViewerZoneProvider>
+      </CompanyZoneProvider>
     </DateFormatsProvider>
   );
 }

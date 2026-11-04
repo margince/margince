@@ -14,12 +14,12 @@ import {
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import {
   choosableLossReasons,
   useLossReasons,
 } from "../../lib/lossreasons.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { type ReviewActions, useReviewActions } from "../../lib/reviewactions";
 import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";
@@ -151,7 +151,7 @@ function SignalCheckAnswerSheet({
   const headingId = useId();
   const mayCreate = useCanWrite("deal", "create");
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [dealId, setDealId] = useState("");
   const [openedSource, setOpenedSource] = useState<string | null>(null);
   const mayLink = useCanWrite("deal", "update");

@@ -16,8 +16,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { IntroDecisionDrawer } from "./introdecision";
 import {
   type IntroRequest,
@@ -217,7 +217,7 @@ function AskSummary({ ask }: Readonly<{ ask: IntroRequest }>) {
 function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const channel = ask.recorded_channel;
   return (
     <>

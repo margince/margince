@@ -11,7 +11,7 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
 import { consentWord } from "./contactreadings";
@@ -186,7 +186,7 @@ function VerdictWord({
 export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
   const [manage, setManage] = useState(false);
   // Opened once, mounted from then on. The section reads consent and the

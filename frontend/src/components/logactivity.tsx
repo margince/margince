@@ -6,7 +6,13 @@ import {
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Checkbox,
+  Field,
+  SegmentedControl,
+  TextInput,
+} from "../design-system/atoms";
 import {
   DateInput,
   type ISODate,
@@ -22,6 +28,10 @@ import { useT } from "../i18n";
 import {
   type ActivityDraft,
   activityRequestBody,
+  CALL_OUTCOMES,
+  type CallOutcome,
+  draftHoldsWork,
+  draftSaysSomething,
   freshDraft,
   isActivityKind,
   KINDS_WITH_A_CONTACT,
@@ -38,13 +48,14 @@ import {
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import "./logactivity.css";
+import { CALL_OUTCOME_LABEL } from "../lib/calloutcome";
+import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
@@ -130,7 +141,7 @@ export function LogActivityForm({
   const t = useT();
   const formId = useId();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),
@@ -230,7 +241,8 @@ export function LogActivityForm({
   });
 
   // The words are the work a reader would retype; the kind and day are a pick.
-  useUnsavedGuard(draft.subject.trim() !== "" || draft.body.trim() !== "");
+  // A call's outcome is what the rep came to record, so it counts too.
+  useUnsavedGuard(draftHoldsWork(draft));
 
   // Enter in a field submits past the Save button, so the form is latched too.
   const singlePress = useSinglePress(log.isPending);
@@ -248,7 +260,7 @@ export function LogActivityForm({
       // filing a meeting against somebody who was not there is worse.
       disabled={
         !log.isPending &&
-        (!draft.subject.trim() ||
+        (!draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
             draft.followUp !== undefined &&
             !draft.followUp.subject.trim()) ||
@@ -354,7 +366,13 @@ export function LogActivityForm({
           disabled={log.isPending}
         />
       )}
-      <Field label={t("log.subject")} required>
+      {draft.kind === "call" && (
+        <CallOutcomeField
+          value={draft.callOutcome}
+          onChange={(callOutcome) => setField({ callOutcome })}
+        />
+      )}
+      <Field label={t("log.subject")} required={draft.kind !== "call"}>
         {(control) => (
           <TextInput
             {...control}
@@ -455,5 +473,41 @@ export function LogActivity({
         />
       </PanelBody>
     </Panel>
+  );
+}
+
+// "No outcome" first: the control always holds a value, and a call saved
+// without an outcome is a whole call.
+const OUTCOME_OPTIONS: readonly (CallOutcome | "")[] = ["", ...CALL_OUTCOMES];
+
+/** How the call ended, picked with one click. */
+function CallOutcomeField({
+  value,
+  onChange,
+}: Readonly<{
+  value: CallOutcome | "";
+  onChange: (outcome: CallOutcome | "") => void;
+}>) {
+  const t = useT();
+  const labels = { "": t("log.callOutcomeNone") } as Record<
+    CallOutcome | "",
+    string
+  >;
+  for (const outcome of CALL_OUTCOMES) {
+    labels[outcome] = t(CALL_OUTCOME_LABEL[outcome]);
+  }
+  return (
+    <div className="field">
+      <span className="t-label" aria-hidden>
+        {t("log.callOutcome")}
+      </span>
+      <SegmentedControl
+        label={t("log.callOutcome")}
+        options={OUTCOME_OPTIONS}
+        value={value}
+        labels={labels}
+        onChange={onChange}
+      />
+    </div>
   );
 }

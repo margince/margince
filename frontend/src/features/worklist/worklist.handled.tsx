@@ -30,9 +30,8 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
@@ -42,10 +41,7 @@ import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 export function HandledForYouPanel() {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // The READER's own zone. A receipt says when something happened to them, and
-  // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = viewerZone();
+  const readerZone = useViewerZone();
   const handled = useHandledForYou();
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
@@ -112,7 +108,7 @@ export function HandledForYouPanel() {
                     header: t("worklist.handled.what"),
                     render: (row: Receipt) => (
                       <>
-                        {receiptSummary(row, t, locale, recordZone)}
+                        {receiptSummary(row, t, locale, readerZone)}
                         {receiptBasis(row, t, locale) && (
                           <p className="t-caption">
                             {receiptBasis(row, t, locale)}
@@ -131,7 +127,7 @@ export function HandledForYouPanel() {
                     key: "when",
                     header: t("worklist.handled.when"),
                     render: (row: Receipt) =>
-                      formatDateTime(row.occurred_at, locale, zone),
+                      formatDateTime(row.occurred_at, locale, readerZone),
                   },
                   {
                     // The one verb this panel carries, and only on the rows

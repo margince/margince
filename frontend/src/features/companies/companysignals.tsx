@@ -16,8 +16,8 @@ import { webUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { signalKindLabel, signalTone } from "../../lib/recordlabels";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./company360.css";
 
 // The account's open signals, on the Tasks tab: commitments, blockers and
@@ -70,7 +70,7 @@ function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
 export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const query = useQuery({
     queryKey: ["signals", "company", companyId],
     queryFn: async () => {
@@ -131,7 +131,7 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
               <SourcePageLink signal={signal} />
             </span>
             <span className="co-row-meta t-caption">
-              {formatDate(signal.detected_at, locale, recordZone)}
+              {formatDate(signal.detected_at, locale, readerZone)}
             </span>
           </PanelRow>
         ))

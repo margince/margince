@@ -1,59 +1,54 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The two zones this product renders dates in, and the rule for which one a
+// The three zones this product renders times in, and the rule for which one a
 // screen owes its reader. `formatDate`/`formatDateTime`/`formatDateAbbrev` take
-// their zone as an argument and only attach it (format.ts, zone-by-purpose) —
-// picking the zone is the caller's judgement, and this file is where that
+// their zone as an argument and only attach it (format.ts, zone-by-purpose).
+// Picking the zone is the caller's judgement, and this file is where that
 // judgement is written down once.
 //
-// The two purposes are NOT interchangeable, and each has its own way of being
-// wrong:
+//   useViewerZone() — the signed-in user's own clock (lib/viewerzone.tsx):
+//   the zone they chose under Settings → Account, or their browser's until they
+//   have one. EVERY time a signed-in screen shows is read in it: activities,
+//   notes, captured mail, tasks, meetings, approvals, history and Home. A note
+//   saved at 16:03 in Berlin shows 16:03 to a reader in Berlin, whatever zone
+//   the installation uses. This is the default; the two below are exceptions.
 //
-//   useRecordZone() — the company's own clock, as the installation
-//   configured it (`installation.timezone`, served by lib/recordzone.tsx). Its
-//   dates belong to the record, not to whoever is looking at it. Following the
-//   reader here MISSTATES the record: a close date, a renewal, an invoice's
-//   issue day and a timeline's day headings have to read the same for every
-//   colleague, or two contacts quoting the same page quote different days. It is
-//   also the only correct answer for a date-only wire value (OpenAPI
-//   `format: date`): there is no instant in `2026-08-21` to localize, and
-//   reading it in a zone behind UTC prints the day before.
+//   useCompanyZone() — the company's own clock (`installation.timezone`, served
+//   by lib/companyzone.tsx). It is for what belongs to the company: report
+//   periods and runs, and the days and weeks the server buckets on the
+//   company's clock (the morning brief's day, the weekly's week, the server's
+//   "today" and "overdue" lists). Naming those in another zone would label a
+//   bucket with days it does not hold.
 //
-//   It is a HOOK rather than a constant because the answer belongs to the
-//   installation and arrives over the wire. A plain helper that needs it takes
-//   it as a parameter from the component that read it — never by importing the
-//   fallback below, which is a different value that only happens to agree.
+//   browserZone() — the browser's own clock. Only for screens with no
+//   signed-in reader (public booking, confirm, the buyer room, sign-in), for
+//   the reader's fallback, and for a datetime-local input, which the browser
+//   parses in its own zone.
 //
-//   viewerZone() — the reader's own clock, for a moment they relate to
-//   themselves: when a credential they are lending expires, when a paused job
-//   resumes, how stale a mailbox is, when a slot they are about to book starts.
-//   Pinning these to a fixed zone shows a reader outside it a different
-//   calendar day than the one the thing actually happens on, which is how the
-//   consent screen came to promise an expiry on a day that had not arrived.
+// The census in zone-by-purpose.test.ts lists every file that reads the
+// company or the browser zone, each with its reason. A file not on that list
+// reads the reader's zone.
 //
-// When a site is genuinely both — a personal deadline on a record page — the
-// page wins: a record surface is ONE clock, so a due date and the activity
-// beside it can never be read in two different zones.
+// A date-only wire value (OpenAPI `format: date`) has no instant to localize.
+// The formatters read it at its midday in the zone they are given, so it names
+// the same calendar day in every zone a user can live in.
 //
-// An activity's `due_at` is one of those sites, and the page wins it. A
-// deadline is a promise colleagues read back — the worklist already buckets
-// overdue on the installation's clock — so `dueInstant` mints the picked day's
-// end in the RECORD's zone and every task date is rendered in it: the tasks
-// queue, the record's next steps, the task detail, the picker that seeds from
-// it. The activity's `occurred_at` beside it is on the same clock, because when
-// something happened is a fact about the record too.
+// A task's due day is set in the zone of the user who picks it (decision A1
+// on #7894): `dueInstant` mints the picked day's end in the picker's own zone,
+// and every reader then sees that moment in theirs. Tasks stored before this
+// were minted in the company zone and keep that moment.
 //
-// It read viewerZone() until a transcript proposal approved for 9 September
-// came back as a task due the 10th. The stamp is the day's LAST SECOND, so a
-// reader one second east of the minting zone already sees tomorrow; nothing
-// about that was a preference to respect.
+// It is a HOOK rather than a constant for both stored zones, because each
+// answer arrives over the wire. A plain helper that needs one takes it as a
+// parameter from the component that read it — never by importing the fallback
+// below, which is a different value that only happens to agree.
 
 import { isRealCalendarDay } from "./calendarday";
 
 // The zone a record's dates are read in when the installation's own answer is
-// missing. It is only the last resort. `useRecordZone` in
-// lib/recordzone.tsx serves `installation.timezone`. The authenticated shell
+// missing. It is only the last resort. `useCompanyZone` in
+// lib/companyzone.tsx serves `installation.timezone`. The authenticated shell
 // holds its first paint until that read lands, so no signed-in surface renders
 // a record date against this constant.
 //
@@ -66,7 +61,7 @@ import { isRealCalendarDay } from "./calendarday";
 // that, and names this comment when it does.
 export const UTC_ZONE = "UTC";
 
-export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
+export const FALLBACK_COMPANY_ZONE = "Europe/Berlin";
 
 // IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
 // freeze DST rules without a sign, so they throw at the edge.
@@ -131,7 +126,7 @@ export function zoneNameAndOffset(
 
 // A function, so a change of zone is read on the next call. A runtime that
 // reports no zone gets UTC, since Intl throws on an empty one.
-export function viewerZone(): string {
+export function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }
 
@@ -413,7 +408,7 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
 export function timezoneOptions(locale: string, selected: string, at: Date) {
   const zones = new Set([
     UTC_ZONE,
-    viewerZone(),
+    browserZone(),
     ...(typeof Intl.supportedValuesOf === "function"
       ? Intl.supportedValuesOf("timeZone")
       : []),

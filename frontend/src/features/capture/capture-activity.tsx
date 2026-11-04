@@ -22,11 +22,11 @@ import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { useOpenEmail } from "../../lib/openemail";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureMessages } from "./capture-activity-messages";
@@ -145,6 +145,7 @@ function CaptureActivityWindow({
   scope,
   scopeRow,
 }: Readonly<{ scope: Scope; scopeRow: ReactNode }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const [filter, setFilter] = useState<Outcome | null>(null);
   // The entry rather than its id, because the drawer names the message and the
@@ -222,7 +223,7 @@ function CaptureActivityWindow({
       )}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
     </>

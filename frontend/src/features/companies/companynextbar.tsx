@@ -6,9 +6,9 @@ import {
   formatDueCompact,
 } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -99,7 +99,7 @@ export function CompanyNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deferOf } = useCompanySetAside(view.company.id);
   const fallback = momentFallbackVerb({
     view,

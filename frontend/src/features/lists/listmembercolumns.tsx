@@ -10,7 +10,6 @@ import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
 import type { ListColumn } from "../../design-system/listtable";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import {
   customColumnLabel,
@@ -19,6 +18,7 @@ import {
 } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
 import { decode, fieldsNamed } from "../../lib/segmentpredicate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { linkedText, useFieldValueText, vocabularyField } from "./listexplain";
 import { type MemberRow, memberName } from "./listmembers";
 
@@ -92,6 +92,7 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
 
 /** Who chose a Shortlist member, on which day, and the note they left. */
 function useChosenColumns(): ListColumn<MemberRow>[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return [
@@ -107,7 +108,7 @@ function useChosenColumns(): ListColumn<MemberRow>[] {
       holds: "date",
       cell: (row) =>
         row.listing?.created_at
-          ? formatDate(row.listing.created_at, locale, viewerZone())
+          ? formatDate(row.listing.created_at, locale, readerZone)
           : "—",
     },
     {

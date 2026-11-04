@@ -380,7 +380,7 @@ func (s *Sink) upsertActivity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 	fields ActivityFields, birth birthDecision,
 ) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedActivityObject, principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
 	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {

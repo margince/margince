@@ -5,7 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
 
 afterEach(cleanup);
@@ -27,7 +27,7 @@ describe("commitment review", () => {
     const user = userEvent.setup();
     render(
       <LocaleProvider initial="en">
-        <CommitmentReview zone={viewerZone()} decisions={[decision]} />
+        <CommitmentReview zone={browserZone()} decisions={[decision]} />
       </LocaleProvider>,
     );
     const summary = screen
@@ -46,7 +46,7 @@ describe("commitment review", () => {
     const { container } = render(
       <LocaleProvider initial="en">
         <CommitmentReview
-          zone={viewerZone()}
+          zone={browserZone()}
           decisions={[{ ...decision, current_work: true }]}
         />
       </LocaleProvider>,
@@ -108,7 +108,7 @@ it.each([
     const { container } = render(
       <LocaleProvider initial={locale}>
         <CommitmentReview
-          zone={viewerZone()}
+          zone={browserZone()}
           decisions={[{ ...decision, outcome }]}
         />
       </LocaleProvider>,
@@ -127,7 +127,7 @@ it("keeps the condition and deadline words visible without inventing a date", as
   const { container } = render(
     <LocaleProvider initial="en">
       <CommitmentReview
-        zone={viewerZone()}
+        zone={browserZone()}
         decisions={[
           {
             ...decision,
