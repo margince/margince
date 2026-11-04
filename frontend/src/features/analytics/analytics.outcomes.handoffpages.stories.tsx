@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { formatNumber } from "../../format/format";
 import {
   installFetchStub,
   jsonResponse,
@@ -27,7 +28,7 @@ function FirstPage() {
   return (
     <Panel>
       <PanelBody>
-        <p>{count} handoffs on this page</p>
+        <p>{formatNumber(count, "en")} handoffs on this page</p>
       </PanelBody>
       <MoreRows rows={rows} />
     </Panel>
