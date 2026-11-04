@@ -67,6 +67,9 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.purgeRawCaptures.PurgeRawCaptureTx(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
+	if err := e.purgeRawCaptures.PurgeTextCopiesTx(ctx, tx, []ids.UUID{id}); err != nil {
+		return err
+	}
 	// What a classifier concluded the message MEANT, and every human correction
 	// of that conclusion. It is derived from the text this act destroys, so it
 	// goes with it: a verdict saying somebody replied negatively is a claim

@@ -58,6 +58,11 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// A voice sample's closed vocabularies (kind, origin, register, source), the
+	// builder's version, the owner's actor stamp, and the sent-mail:<activity id>
+	// key. None carries what the mail said; the erasure clears the text, the
+	// label that holds its subject line, and the hash of the text.
+	"voice_corpus_source": {"kind", "origin", "register", "source", "extractor_version", "captured_by", "source_ref"},
 	// Provider is connector provenance from the installed adapter, never subject-authored text.
 	"capture_party_source": {"provider"},
 	// The hash identifies the promise; the version and actor identify its reader.

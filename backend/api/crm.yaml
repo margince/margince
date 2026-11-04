@@ -27910,6 +27910,43 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /voice-profiles/{id}/sources/sent-mail:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Voice]
+      operationId: learnVoiceFromSentMail
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Learn the owner's voice from their own most recent sent mail, once, on request.
+      description: |
+        Reads up to the caller's 200 most recent sent mails and files the words they wrote
+        in each as an email source of their own voice profile. It reads only mail sent from
+        the caller's own connected mailbox: never a colleague's mail, a colleague's copy, or
+        a shared mailbox. Mail limited to its participants or to selected readers, and mail
+        whose subject marks it confidential, is left out.
+
+        Quoted replies, forwards, signatures and legal footers are cut before a mail is
+        stored. A mail that is already a source is left as it is, so a mail the owner removed
+        or excluded stays out. The call reads mail only when it is made; nothing reads sent
+        mail on a schedule. It makes no model call: the stored text reaches a model only in
+        the next build the owner starts.
+
+        Human-only for security: reading a mailbox into a voice profile is the owner's own
+        decision, made by pressing the button.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: What this call learned, and the meter after it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceSentMailLearned' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /voice-profiles/{id}/sources/{sourceId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -68737,6 +68774,19 @@ components:
         included: { type: boolean }
         weight: { type: number, minimum: 0, maximum: 2 }
 
+    VoiceSentMailLearned:
+      type: object
+      description: |
+        The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+        each of them is `added`, `already_present` (a source already, left as it is), or
+        `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+      required: [read, added, already_present, no_own_words, summary]
+      properties:
+        read: { type: integer, minimum: 0 }
+        added: { type: integer, minimum: 0 }
+        already_present: { type: integer, minimum: 0 }
+        no_own_words: { type: integer, minimum: 0 }
+        summary: { $ref: '#/components/schemas/VoiceCorpusSummary' }
     VoiceIngestStats:
       type: object
       description: What the speaker filter did to one ingested source; kept words are the only words that count.

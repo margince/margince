@@ -56,6 +56,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:flow-bridge":        {SkipImported, "hands live events to the flow engine, which acts on them as news"},
 	"cg:graph-edge":         {KeepImported, "the interaction graph is built from history, so imported activity belongs in it"},
 	"cg:audience-rescope":   {KeepImported, "narrows derived signals when a message is limited, which is as true of an old message"},
+	"cg:voice-copy-recheck": {KeepImported, "empties a voice sample when its mail stops being learnable, which is as true of an old mail"},
 	"cg:intro-advance":      {SkipImported, "an old reply must not close an introduction asked for today"},
 	"cg:notice-case-open":   {SkipImported, "settles a duty on mail that arrives now, not on history"},
 	"cg:commitment-settle":  {SkipImported, "an old task update must not settle a commitment kept today"},

@@ -62131,6 +62131,17 @@ type VoiceReviewReason struct {
 	Values map[string]float64 `json:"values"`
 }
 
+// VoiceSentMailLearned The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+// each of them is `added`, `already_present` (a source already, left as it is), or
+// `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+type VoiceSentMailLearned struct {
+	Added          int                `json:"added"`
+	AlreadyPresent int                `json:"already_present"`
+	NoOwnWords     int                `json:"no_own_words"`
+	Read           int                `json:"read"`
+	Summary        VoiceCorpusSummary `json:"summary"`
+}
+
 // WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
 type WebForm struct {
 	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
@@ -72413,6 +72424,30 @@ type RejectVoiceDraftParams struct {
 
 // IngestVoiceCorpusSourceParams defines parameters for IngestVoiceCorpusSource.
 type IngestVoiceCorpusSourceParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// LearnVoiceFromSentMailParams defines parameters for LearnVoiceFromSentMail.
+type LearnVoiceFromSentMailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -88589,6 +88624,9 @@ type ServerInterface interface {
 	// Dry-run one candidate source; detect its shape and speakers without storing anything.
 	// (POST /voice-profiles/{id}/sources/preview)
 	PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id)
+	// Learn the owner's voice from their own most recent sent mail, once, on request.
+	// (POST /voice-profiles/{id}/sources/sent-mail)
+	LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams)
 	// Permanently remove one retained source and mark any active artifact stale.
 	// (DELETE /voice-profiles/{id}/sources/{sourceId})
 	DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams)
@@ -94526,6 +94564,12 @@ func (_ Unimplemented) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Re
 // Dry-run one candidate source; detect its shape and speakers without storing anything.
 // (POST /voice-profiles/{id}/sources/preview)
 func (_ Unimplemented) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Learn the owner's voice from their own most recent sent mail, once, on request.
+// (POST /voice-profiles/{id}/sources/sent-mail)
+func (_ Unimplemented) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -136537,6 +136581,62 @@ func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// LearnVoiceFromSentMail operation middleware
+func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LearnVoiceFromSentMailParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LearnVoiceFromSentMail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
 
@@ -141507,6 +141607,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/preview", wrapper.PreviewVoiceCorpusSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/sent-mail", wrapper.LearnVoiceFromSentMail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/voice-profiles/{id}/sources/{sourceId}", wrapper.DeleteVoiceCorpusSource)

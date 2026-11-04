@@ -41,7 +41,7 @@ func TestASubjectMarkerIsRecognisedInTheFormsSendersActuallyWrite(t *testing.T) 
 		{"Quarterly report", false, "ordinary mail"},
 		{"", false, "no subject at all"},
 	} {
-		if got := explicitlyConfidential(c.subject); got != c.marked {
+		if got := ExplicitlyConfidential(c.subject); got != c.marked {
 			t.Errorf("%q: marked=%v, want %v — %s", c.subject, got, c.marked, c.why)
 		}
 	}

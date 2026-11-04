@@ -2259,6 +2259,7 @@ export const en = {
   "systemJob.assign_owner_release": "Assignee release",
   "systemJob.assurance": "Forecast check",
   "systemJob.audience_rescope": "Audience update",
+  "systemJob.voice_copy_recheck": "Voice sample cleanup",
   "systemJob.authz_disagreement": "Send permission review",
   "systemJob.auto_apply": "Automatic approval",
   "systemJob.automation": "Automation",
@@ -13498,6 +13499,24 @@ export const en = {
   "settings.voice.exclusion.ownerRemoved": "Removed",
   "settings.voice.exclusion.corpusCleared":
     "Removed when the samples were cleared",
+  "settings.voice.sentMailLabel": "Learn from sent mail",
+  "settings.voice.sentMailConsent":
+    "Margince reads up to your 200 most recent sent mails, only from your own mailbox, only now and only because you press the button. Quoted replies, forwards and signatures are left out, and so is mail kept to its participants or marked confidential. Your own words are stored as writing samples and sent to the AI model when you build your Voice DNA. You can remove single mails or clear all samples at any time.",
+  "settings.voice.sentMailButton": "Learn from sent mail",
+  "settings.voice.sentMailReading": "Reading sent mail…",
+  "settings.voice.sentMailLearned_one":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use it.",
+  "settings.voice.sentMailLearned_other":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use them.",
+  "settings.voice.sentMailNothingNew":
+    "Nothing new to learn. Each sent mail found is already a sample or was removed by you.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} mail was left out: it holds only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} mails were left out: they hold only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNone":
+    "No sent mail to learn from. Only mail sent from your own connected mailbox counts, and mail kept private or marked confidential is left out.",
+  "settings.voice.sentMailFailed": "Sent mail was not read. {detail}",
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":

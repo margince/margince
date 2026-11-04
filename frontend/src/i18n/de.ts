@@ -2344,6 +2344,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.assign_owner_release": "Freigabe der Verantwortung",
   "systemJob.assurance": "Prognoseprüfung",
   "systemJob.audience_rescope": "Aktualisierung der Zielgruppe",
+  "systemJob.voice_copy_recheck": "Bereinigung der Schreibproben",
   "systemJob.authz_disagreement": "Prüfung der Versandberechtigung",
   "systemJob.auto_apply": "Automatische Freigabe",
   "systemJob.automation": "Automatisierung",
@@ -13527,6 +13528,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus deinem Schreibstil herausgenommen",
   "settings.voice.exclusion.ownerRemoved": "Entfernt",
   "settings.voice.exclusion.corpusCleared": "Beim Leeren der Proben entfernt",
+  "settings.voice.sentMailLabel": "Aus gesendeten Mails lernen",
+  "settings.voice.sentMailConsent":
+    "Margince liest bis zu deinen 200 neuesten gesendeten Mails, nur aus deinem eigenen Postfach, nur jetzt und nur, weil du den Button drückst. Zitierte Antworten, Weiterleitungen und Signaturen bleiben außen vor, ebenso Mails, die nur für die Beteiligten bestimmt oder als vertraulich markiert sind. Deine eigenen Worte werden als Schreibproben gespeichert und beim Aufbau deiner Voice DNA an das KI-Modell gesendet. Du kannst einzelne Mails jederzeit entfernen oder alle Proben leeren.",
+  "settings.voice.sentMailButton": "Aus Mails lernen",
+  "settings.voice.sentMailReading": "Gesendete Mails werden gelesen…",
+  "settings.voice.sentMailLearned_one":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailLearned_other":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailNothingNew":
+    "Nichts Neues zu lernen. Jede gefundene Mail ist schon eine Probe oder wurde von dir entfernt.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} Mail wurde ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthält.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} Mails wurden ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthalten.",
+  "settings.voice.sentMailNone":
+    "Keine gesendete Mail zum Lernen gefunden. Es zählen nur Mails aus deinem eigenen verbundenen Postfach; private oder vertrauliche Mails bleiben außen vor.",
+  "settings.voice.sentMailFailed":
+    "Gesendete Mails wurden nicht gelesen. {detail}",
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
