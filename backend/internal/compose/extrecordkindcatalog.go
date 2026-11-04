@@ -19,9 +19,9 @@ type recordKindQuerier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// kindTableShape reads, for one ext table, whether it exists, which columns it
-// has, whether a unique index covers the natural key and nothing else, and
-// whether the connected role holds all four table rights. A partial or
+// kindTableShape reads, for one ext table, whether it exists and which columns
+// it has. It also reads whether a unique index covers the natural key alone,
+// and whether the connected role holds all four table rights. A partial or
 // expression index does not count, because it lets two live rows share a key.
 const kindTableShape = `
 SELECT to_regclass($1) IS NOT NULL,

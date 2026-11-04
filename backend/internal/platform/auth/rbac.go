@@ -55,10 +55,7 @@ func refuseBuyer(p principal.Principal, what string) error {
 		what, apperrors.ErrPermissionDenied)
 }
 
-// gateObject names the RBAC object a record kind is gated on. A core kind is
-// its own object. An extension kind (`ext:<unit>:<kind>`) is gated on the object
-// its declaration derived. A kind no unit declared is refused for every
-// principal, the system one included, because the name is not a record.
+// gateObject maps an extension kind to its declared object; an undeclared one is no record, so even the system principal is refused.
 func gateObject(kind string) (string, error) {
 	if !recordkinds.IsExtensionName(kind) {
 		return kind, nil

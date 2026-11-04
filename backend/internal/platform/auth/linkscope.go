@@ -147,41 +147,12 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 		alias, column, table, probe, predicate)
 }
 
-// EnsureLinkTarget verifies an activity link's target row exists AND is
-// visible to the caller — an explicit row-scope probe, because the FK that
-// would otherwise catch a bad id is checked as the table owner and carries
-// no row scope at all: it accepts any id that exists, so without this a
-// guessed foreign UUID would persist a link to a record the caller may not
-// read. A link to an archived record is equally refused: the link would
-// outlive the row it names.
+// EnsureLinkTarget verifies a link's target exists, is live and is visible to
+// the caller. The foreign key carries no row scope, so a guessed id would
+// otherwise persist a link to a record the caller may not read.
 //
-// It HOLDS the row it answers about, and that is what separates it from
-// EnsureVisibleLive. Every caller writes the reference afterwards, in the same
-// transaction: probe, then insert. Read unlocked, an archive committing in
-// between makes the answer stale before it is used, and the reference lands on
-// a record that is no longer live — the TOCTOU storekit.LockRow's own doc warns
-// against, on the target side. Under READ COMMITTED the lock is also the
-// re-check: a waiter wakes on the archived row and the liveness filter refuses
-// it, rather than acting on what it read before waiting.
-//
-// FOR SHARE, and the pairing is the point. It conflicts with the archive, which
-// UPDATEs the row, while two references onto one record do not conflict and have
-// no reason to queue behind each other — a contact mid-ingest is referenced by
-// every message captured for them. The same pairing the activity_link trigger
-// takes on the activity it is about (migration 1788000100).
-//
-// Taken in the probe rather than at each write, unlike LockSubjectLive next door
-// in writescope.go. That lock is exclusive and would add an edge to two dozen
-// documented lock orders at once; this one is shared, so it orders nothing
-// against another reference and only ever waits for a writer of the very row
-// being referenced. Against that, forty call sites would each have to remember,
-// and the one that forgot would look exactly like the thirty-nine that did not.
-//
-// The few read paths that call this for its existence half — a contract listing
-// under a company, a relationship read under its anchor — pay for it too:
-// they hold that one anchor for the length of a short read, which delays an
-// archive of it and blocks nothing else. That is the price of the probe having
-// one meaning.
+// It takes FOR SHARE so an archive cannot commit between probe and insert.
+// Share conflicts with the archive but not with another reference.
 func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if recordkinds.IsExtensionName(table) {
 		return ensureExtensionRecord(ctx, tx, table, id, true)
@@ -211,12 +182,10 @@ func EnsureLinkTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 }
 
 // ensureExtensionRecord is the row probe for a kind an extension declared, live
-// or not as the caller asks. Core cannot see inside the unit's rows, so a caller
-// sees one when the kind's read right is theirs and the row exists. A caller
-// without the right gets the
+// or not as the caller asks. A caller without the kind's read right gets the
 // answer a missing row gets, so the probe does not disclose that the id exists.
-// The share lock is the one a core target takes: an archive committing between
-// the probe and the write must wait.
+// The share lock is the one a core target takes: an archive between the probe
+// and the write must wait.
 func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, live bool) error {
 	declared, ok := recordkinds.Lookup(kind)
 	if !ok || Require(ctx, kind, principal.ActionRead) != nil {
@@ -234,30 +203,12 @@ func ensureExtensionRecord(ctx context.Context, tx pgx.Tx, kind string, id ids.U
 	return err
 }
 
-// EnsureAttachTarget is EnsureLinkTarget for the ATTACH direction, and the
-// question that picks between them is:
+// EnsureAttachTarget is EnsureLinkTarget for the attach direction. A record
+// that gains an activity, file, membership or tag is written to, so a `read`
+// share alone is refused. A `write` grant, and the own and team arms, pass.
 //
-//	WHOSE RECORD CHANGES?
-//
-// If the shared record only supplies a VALUE to a row the caller owns — a
-// contact named on their new deal, a company on their offer, a parent named on
-// a company they are editing — that is a REFERENCE, and EnsureLinkTarget's
-// visibility answer is the whole of it. If the shared record GAINS something a
-// reader of it will now see — an activity filed onto it, a file hung on it, a
-// membership, a tag — that is a write to their record, and this is the probe.
-//
-// What it narrows is the share arm and nothing else: a record reachable only
-// through a `read` grant is refused, a `write` grant passes, and the own/team
-// arms are untouched. So it is NOT write authority — a rep may still file work
-// against a record another team owns, which is how this product works on
-// purpose and what four integration tests say with their reasons beside them.
-// Applying the write-authority predicate here would have imported the row-scope
-// half and answered a question nobody asked.
-//
-// The two refusals are different on purpose. A record the caller cannot see at
-// all answers NOT FOUND, because existence stays hidden; a record they can see
-// through a read-only share answers PERMISSION DENIED, because they already
-// know it exists — the share told them.
+// An invisible record answers not found. A record seen through a read-only
+// share answers permission denied, because the share told them it exists.
 func EnsureAttachTarget(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	// Visibility first, and it also takes the FOR SHARE lock every caller of
 	// this probe needs before it writes — the same pairing EnsureWritable makes
