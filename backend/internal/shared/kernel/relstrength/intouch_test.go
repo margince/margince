@@ -140,8 +140,29 @@ func TestTheGoAndSQLMeetingRulesAgree(t *testing.T) {
 	if !MeetingStatusCounts("") || !strings.Contains(meeting, "IS NULL") {
 		t.Error("an untracked meeting must count in both rules")
 	}
-	if InteractionCounts("meeting", "canceled", "") || !InteractionCounts("email", "", "") || InteractionCounts("note", "", "") {
+	if InteractionCounts("meeting", "canceled", "", "") || !InteractionCounts("email", "", "", "") || InteractionCounts("note", "", "", "") {
 		t.Error("InteractionCounts must refuse a canceled meeting and a note, and admit an email")
+	}
+}
+
+// Only a call that reached somebody is contact: Reached and Put through, and
+// a call logged with no outcome, as every call was before the outcome existed.
+// The SQL and the Go predicate render from one list.
+func TestOnlyACallThatReachedSomebodyCounts(t *testing.T) {
+	t.Parallel()
+	for outcome, want := range map[string]bool{
+		"": true, "reached": true, "put_through": true,
+		"not_reached": false, "voicemail": false, "call_back_later": false,
+	} {
+		if got := InteractionCounts("call", "", outcome, ""); got != want {
+			t.Errorf("a call with outcome %q counts: %v, want %v", outcome, got, want)
+		}
+		if got := strings.Contains(CallCountsSQL("a"), "'"+outcome+"'"); outcome != "" && got != want {
+			t.Errorf("the SQL rule lists %q: %v, want %v", outcome, got, want)
+		}
+	}
+	if rule := NotCalledOffSQL("a"); !strings.Contains(rule, CallCountsSQL("a")) || !strings.Contains(rule, MeetingCountsSQL("a")) {
+		t.Errorf("NotCalledOffSQL %q must carry both the meeting and the call rule", rule)
 	}
 }
 

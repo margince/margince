@@ -4773,6 +4773,12 @@ paths:
         - name: kind
           in: query
           schema: {type: string, enum: [email, call, meeting, note, task, message]}
+        - name: call_outcome
+          in: query
+          description: Calls that ended this way. Matches calls only.
+          schema:
+            type: string
+            enum: [reached, not_reached, voicemail, call_back_later, put_through]
         - name: channel_provider
           in: query
           description: |-
@@ -29162,6 +29168,10 @@ components:
           readOnly: true
           description: >-
             Whether this response carries the activity's content. An `available` row is complete.
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: {type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.'}
         invitation_status:
           type: [string, 'null']
@@ -29418,6 +29428,10 @@ components:
             Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: {type: [integer, 'null']}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -29665,6 +29679,10 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]

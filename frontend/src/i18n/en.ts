@@ -2651,6 +2651,7 @@ export const en = {
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
   "history.field.due_has_time": "Due at a set time",
+  "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
@@ -7118,6 +7119,13 @@ export const en = {
     "The activity is logged, but {filename} was not attached. {reason}",
   "log.fileUncertain":
     "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
+  "log.callOutcome": "Outcome",
+  "log.callOutcomeNone": "No outcome",
+  "activity.callOutcome.reached": "Reached",
+  "activity.callOutcome.not_reached": "Not reached",
+  "activity.callOutcome.voicemail": "Left a voicemail",
+  "activity.callOutcome.call_back_later": "Call back later",
+  "activity.callOutcome.put_through": "Put through",
   "log.dueAt": "Due date",
   "log.dueTime": "Time (optional)",
   "log.dueTimeSkipped":
