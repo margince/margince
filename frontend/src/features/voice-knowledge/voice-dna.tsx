@@ -9,7 +9,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { VoiceKinds } from "../../components/voicekinds";
-import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
+import { Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -20,13 +20,13 @@ import {
   SettingRow,
 } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
-import { identifierNumber } from "../../format/format";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
+import { DerivedVoice, VoiceStanding } from "./voice-dna.standing";
 import {
   SharpenStrip,
   VOICE_SECTIONS,
@@ -391,36 +391,6 @@ function VoiceSection({
     <div id={id} tabIndex={-1} className="vdna-section">
       {children}
     </div>
-  );
-}
-
-// The profile's standing at the end of the jump bar. A state shows only when
-// it wants something, since ready is normal. The version follows.
-function VoiceStanding({ profile }: Readonly<{ profile: VoiceProfile }>) {
-  const t = useT();
-  return (
-    <span className="vdna-status">
-      {profile.status !== "ready" && (
-        <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
-      )}
-      {/* Version 0 is a profile no build has written yet: nothing to name. */}
-      {Boolean(profile.profile_version) && (
-        <span className="t-caption">
-          {t("settings.voice.version", {
-            n: identifierNumber(profile.profile_version ?? 0),
-          })}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function DerivedVoice({ profile }: Readonly<{ profile: VoiceProfile }>) {
-  const t = useT();
-  return profile.voice_profile_md ? (
-    <p className="vdna-derived">{profile.voice_profile_md}</p>
-  ) : (
-    <p>{t("settings.voice.derivedEmpty")}</p>
   );
 }
 
