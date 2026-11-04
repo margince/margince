@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -98,48 +99,90 @@ func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error
 	return nil
 }
 
-// inviteSendTimeout bounds one invitation's lookups and relay exchange, so a
-// stuck relay cannot pin a goroutine.
-const inviteSendTimeout = 2 * time.Minute
+// inviteRelayWait is how long the invite waits for the relay's answer. A
+// relay that has not answered by then counts as not emailed, and the seller
+// copies the link. The send stops at the same moment, so a late answer cannot
+// mail the link after the seller was told it was not mailed.
+const inviteRelayWait = 10 * time.Second
 
 // inviteSendBudget is the time one invitation send may take.
 func (h Handlers) inviteSendBudget() time.Duration {
 	if h.sendBudget > 0 {
 		return h.sendBudget
 	}
-	return inviteSendTimeout
+	return inviteRelayWait
 }
 
-// sendInviteDetached mails the invitation off the request, so a slow relay does
-// not hold the seller's Invite. It reports whether it handed the mail over.
+// sendInviteAndWait mails the invitation and reports whether the relay took
+// it within the budget.
 //
-// A goroutine and not a queued job: a job table stores its arguments verbatim,
-// and the raw credential must not enter it. The relay's answer is stamped on
-// the invitation, where the roster reads it as `sent` or `failed`; until then
-// the roster reads `pending`.
+// The send runs in its own goroutine, so a seller who leaves the request does
+// not cut the exchange short, and its outcome still lands on the invitation as
+// `sent` or `failed`. A goroutine and not a queued job: a job table stores its
+// arguments verbatim, and the raw credential must not enter it.
 //
-// The send runs later than the issue, so the invitation is read again first.
-// A revoke, a resend, an address correction or an archive in between means
-// the old link must not reach the old address.
-func (h Handlers) sendInviteDetached(r *http.Request, issued IssuedInvitation) bool {
+// The invitation is read again before the send. A revoke, a resend, an
+// address correction or an archive in between means the old link must not
+// reach the old address.
+func (h Handlers) sendInviteAndWait(r *http.Request, issued IssuedInvitation) bool {
 	if !h.canSendInvite() {
 		return false
 	}
+	budget := h.inviteSendBudget()
+	verdict := newRelayVerdict()
 	httpserver.DetachedSend{
 		What:   "deal room invitation send",
-		Budget: h.inviteSendBudget(),
+		Budget: budget,
 		Done:   h.sendDone,
 		Send: func(ctx context.Context) (bool, error) {
-			return h.sendIfStillInvited(ctx, issued)
+			attempted, sendErr := h.sendIfStillInvited(ctx, issued)
+			if ctx.Err() != nil && sendErr != nil {
+				sendErr = fmt.Errorf("the mail relay did not answer within %s: %w", budget, sendErr)
+			}
+			taken := attempted && sendErr == nil
+			if verdict.settle(taken) != taken {
+				slog.WarnContext(ctx, "the relay took a deal room invitation after the invite answered that it was not emailed",
+					"participant_id", issued.Participant.Id)
+			}
+			return attempted, sendErr
 		},
 		Record: func(ctx context.Context, sendErr error) {
 			h.recordSendOutcome(ctx, issued, sendErr)
 		},
 	}.Start(r.Context())
-	return true
+	wait := time.NewTimer(budget)
+	defer wait.Stop()
+	select {
+	case <-verdict.done:
+	case <-wait.C:
+	case <-r.Context().Done():
+	}
+	return verdict.settle(false)
 }
 
-// inviteMailRecords is what the detached send reads and writes on the
+// relayVerdict is the one answer the invite gives about its mail. The send and
+// the invite's wait race to settle it, and whichever comes first holds.
+type relayVerdict struct {
+	once  sync.Once
+	taken bool
+	done  chan struct{}
+}
+
+func newRelayVerdict() *relayVerdict {
+	return &relayVerdict{done: make(chan struct{})}
+}
+
+// settle records taken unless the verdict already stands, and returns the
+// verdict that stands.
+func (v *relayVerdict) settle(taken bool) bool {
+	v.once.Do(func() {
+		v.taken = taken
+		close(v.done)
+	})
+	return v.taken
+}
+
+// inviteMailRecords is what the invitation send reads and writes on the
 // invitation it carries.
 type inviteMailRecords interface {
 	InvitationMailable(ctx context.Context, credential, email string) (bool, error)

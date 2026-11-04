@@ -51243,17 +51243,18 @@ export interface components {
             /** Format: date-time */
             credential_expires_at: string;
             /**
-             * @description Whether the invitation was handed to the mail sender. False when the
-             *     installation has no outbound mail configured: the participant and the
-             *     credential are recorded either way, and the caller is expected to pass the
-             *     link on themselves rather than being told the invitation failed.
+             * @description Whether the mail relay took the invitation. The answer waits for the relay
+             *     for at most 10 seconds. False when the installation has no outbound mail
+             *     configured, when the relay refused the mail, or when it did not answer in
+             *     time; the send stops then too. The participant and the credential are
+             *     recorded either way, and the caller is expected to pass the link on
+             *     themselves rather than being told the invitation failed.
              *
-             *     The answer does not wait for the relay. The participant's
-             *     `delivery_state` reads `pending` until the relay answers, then `sent` or
-             *     `failed`. Deliberately not `delivered`: a relay accepting a message is not a
-             *     mailbox receiving it, and an address that hard-bounces a second later was
-             *     `sent` all the same. The one attempt is stamped onto the invitation;
-             *     nothing revises it afterwards.
+             *     The relay's answer is also stamped on the participant's `delivery_state`,
+             *     as `sent` or `failed`, a moment after the answer. Deliberately not
+             *     `delivered`: a relay accepting a message is not a mailbox receiving it, and
+             *     an address that hard-bounces a second later was `sent` all the same. The
+             *     one attempt is stamped onto the invitation; nothing revises it afterwards.
              */
             queued: boolean;
         };

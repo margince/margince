@@ -3966,7 +3966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wird dir zum Kopieren angezeigt. Ist ein Mail-Relay eingerichtet, wird der Link zusätzlich per E-Mail gesendet. Die Zustellung ist aber nicht garantiert.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
-    "Für {email} vorgemerkt. Die Liste zeigt, wann sie gesendet wurde oder ob sie fehlgeschlagen ist. Du kannst den Link unten auch kopieren.",
+    "An {email} gesendet. Du kannst den Link unten auch kopieren.",
   "access.issued.notMailed":
     "Der Link wurde nicht per E-Mail gesendet. Kopiere den Link und sende ihn selbst.",
   "access.issued.mailedTitle": "Einladungs-E-Mail zum Versand vorgemerkt",
