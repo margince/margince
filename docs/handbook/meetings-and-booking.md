@@ -29,6 +29,13 @@ To fix a Margince invitation that shows **Invitation needs attention**, open the
 Retry sends the same invitation again, so the guest does not get a second one. The time stays held for you while Margince is not sure the invitation went out.
 Also called: resend invite, invitation failed, calendar refused.
 
+### What happens when my calendar refuses Margince?
+When your calendar refuses Margince, for example because its connection ran out or it lost permission to add events, Margince stops trying. Every invitation still waiting on that calendar is paused, and each shows **Your calendar refused Margince**. You get one notification about it, not one per meeting.
+1. Choose **Reconnect calendar** on any paused meeting, or go to **Settings → Connections**.
+2. Reconnect the calendar with permission to add events.
+The paused invitations then go out on their own. You do not need to retry each one.
+Also called: calendar disconnected, invitations paused, reconnect calendar.
+
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.

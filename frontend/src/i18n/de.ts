@@ -841,8 +841,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Organisiert von",
   "approval.preview.intendedAttendee":
     "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
-  "approval.preview.hostNamedAttendee":
-    "Nur per Adresse eingeladen (ohne Einwilligungsprüfung)",
+  "approval.preview.hostNamedAttendee": "Eingegebene Adresse",
   "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
@@ -1950,6 +1949,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Termin absagen",
   "scheduling.cancelConfirm":
     "Diesen Termin absagen und den Gast benachrichtigen?",
+  "scheduling.calendarDisconnectedTitle":
+    "Dein Kalender hat Margince abgewiesen",
+  "scheduling.calendarDisconnectedHelp":
+    "Alle Einladungen, die auf diesen Kalender warten, sind angehalten. Verbinde ihn wieder mit der Erlaubnis, Termine anzulegen, dann gehen sie von selbst raus.",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
   "scheduling.pausedUnavailable":
@@ -2177,6 +2180,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kalenderverbindung",
   "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
+  "brief.coverage.source.deal_review": "Prüfungen des Kundenrückhalts",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
@@ -18127,6 +18131,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
+  "worklist.ask.deal_review":
+    "Der Kunde stützt diesen Deal vielleicht nicht mehr. Öffne ihn und beantworte die Prüfung.",
   "worklist.ask.meeting":
     "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
   "worklist.ask.relationship_decay":
@@ -18531,6 +18537,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
   "worklist.untitled.deal_at_risk": "Deal stagniert",
+  "worklist.untitled.deal_review": "Prüfung des Kundenrückhalts",
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",
@@ -19377,7 +19384,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiFigures.window.30d": "30 T",
   "scheduling.linksTitle": "Buchungslinks",
   "scheduling.status.paused": "Pausiert",
-  "scheduling.status.attention": "Braucht Aufmerksamkeit",
   "scheduling.acceptBookings": "Buchungen annehmen",
   "scheduling.acceptBookingsHelp":
     "Alle mit deinem Link können eine freie Zeit wählen. Schalte es aus, um Buchungen zu pausieren; der Link bleibt gleich.",
@@ -19392,8 +19398,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Aktionen",
   "scheduling.videoCall": "Videoanruf",
-  "scheduling.row.live": "Aktiv",
-  "scheduling.row.noInvitations": "Keine Einladungen",
   "scheduling.videoNotSet": "Nicht festgelegt",
   "scheduling.video.ownShort": "Eigener Link",
   "scheduling.mainLink": "(Hauptlink)",

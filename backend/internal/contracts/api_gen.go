@@ -15310,6 +15310,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationAttentionReason.
+const (
+	MeetingInvitationAttentionReasonCalendarDisconnected MeetingInvitationAttentionReason = "calendar_disconnected"
+	MeetingInvitationAttentionReasonDeliveryFailed       MeetingInvitationAttentionReason = "delivery_failed"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationAttentionReason enum.
+func (e MeetingInvitationAttentionReason) Valid() bool {
+	switch e {
+	case MeetingInvitationAttentionReasonCalendarDisconnected:
+		return true
+	case MeetingInvitationAttentionReasonDeliveryFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationProvider.
 const (
 	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
@@ -24711,6 +24729,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealReview          WorklistItemSource = "deal_review"
 	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
@@ -24756,6 +24775,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealReview:
 		return true
 	case WorklistItemSourceDealSuggestion:
 		return true
@@ -24885,6 +24906,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealReview          WorklistReachSource = "deal_review"
 	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
@@ -24930,6 +24952,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealReview:
 		return true
 	case WorklistReachSourceDealSuggestion:
 		return true
@@ -50283,11 +50307,16 @@ type MeetingGuest struct {
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string            `json:"calendar_url,omitempty"`
-	End             time.Time          `json:"end"`
-	Id              openapi_types.UUID `json:"id"`
-	Location        string             `json:"location"`
-	ManagementToken *string            `json:"management_token,omitempty"`
+	// AttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+	// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+	// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+	// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+	AttentionReason *MeetingInvitationAttentionReason `json:"attention_reason,omitempty"`
+	CalendarUrl     *string                           `json:"calendar_url,omitempty"`
+	End             time.Time                         `json:"end"`
+	Id              openapi_types.UUID                `json:"id"`
+	Location        string                            `json:"location"`
+	ManagementToken *string                           `json:"management_token,omitempty"`
 
 	// Provider The calendar provider that holds the event. Omitted on guest reads.
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
@@ -50303,6 +50332,12 @@ type MeetingInvitation struct {
 	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
 	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationAttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+type MeetingInvitationAttentionReason string
 
 // MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
 type MeetingInvitationProvider string
@@ -63870,6 +63905,11 @@ type WorklistItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	//
+	// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+	// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+	// into it, and it stays while the review is open, even once its task is done. It offers
+	// only `open`; the review is answered on the deal.
+	//
 	// `batch` is the one that names no single record: it stands for a GROUP of
 	// routine decisions that read alike, so a hundred of them cost the reader one
 	// row rather than a hundred. Its own facts ride in `batch`.
@@ -63996,6 +64036,11 @@ type WorklistItemDueGroup string
 type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+//
+// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+// into it, and it stays while the review is open, even once its task is done. It offers
+// only `open`; the review is answered on the deal.
 //
 // `batch` is the one that names no single record: it stands for a GROUP of
 // routine decisions that read alike, so a hundred of them cost the reader one

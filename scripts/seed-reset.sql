@@ -75,6 +75,7 @@ DECLARE
     'session',
     'setting',
     'system_log',
+    'tax_rate',
     'team',
     'team_membership',
     'vault_secret',

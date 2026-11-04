@@ -36,6 +36,16 @@ func withConnectedCalendar() Option {
 
 func (privateCalendar) Check(context.Context, ids.UserID, string) error { return nil }
 
+// ResolveAttendees answers every address as host-named: this fake holds no
+// records for an address to resolve to.
+func (privateCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, addresses []string) ([]connector.CalendarAttendee, error) {
+	out := make([]connector.CalendarAttendee, 0, len(addresses))
+	for _, address := range addresses {
+		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})
+	}
+	return out, nil
+}
+
 func (privateCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
 	return crmcontracts.SchedulingProfileBlockerNone, nil
 }
