@@ -987,6 +987,7 @@ const (
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
+	AiActivityKindDealVerdict                   AiActivityKind = "deal_verdict"
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
@@ -1037,6 +1038,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
+		return true
+	case AiActivityKindDealVerdict:
 		return true
 	case AiActivityKindDocumentExtract:
 		return true
@@ -1576,6 +1579,7 @@ const (
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
+	AiTaskDealVerdict                   AiTask = "deal_verdict"
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
@@ -1625,6 +1629,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskCorpusAsk:
 		return true
 	case AiTaskDealHealth:
+		return true
+	case AiTaskDealVerdict:
 		return true
 	case AiTaskDocumentExtract:
 		return true
@@ -1908,17 +1914,23 @@ func (e AnalyticsScopeKind) Valid() bool {
 
 // Defines values for AppliedDealChangeReviewKind.
 const (
-	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
-	AppliedDealChangeReviewKindCloseLost AppliedDealChangeReviewKind = "close_lost"
-	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
+	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
+	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
+	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
 
 // Valid indicates whether the value is a known member of the AppliedDealChangeReviewKind enum.
 func (e AppliedDealChangeReviewKind) Valid() bool {
 	switch e {
+	case AppliedDealChangeReviewKindAmount:
+		return true
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindProbability:
 		return true
 	case AppliedDealChangeReviewKindStage:
 		return true
