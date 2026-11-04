@@ -65,6 +65,32 @@ describe("the phone More menu", () => {
     expect(document.querySelector<HTMLElement>(".main")?.inert).toBe(false);
   });
 
+  // Two entries that differ only in their query share a path. Their history
+  // depth is what tells Back and Forward apart from a dial written in place.
+  it("closes on Back and on Forward between two entries of one path", async () => {
+    const user = userEvent.setup();
+    renderPhoneShell("#/deals?stage=open");
+    act(() => navigate({ screen: "deals" }, new Map([["stage", "won"]])));
+    await waitFor(() => expect(window.location.hash).toBe("#/deals?stage=won"));
+    const main = () => document.querySelector<HTMLElement>(".main");
+
+    await user.click(more());
+    expect(menu()).not.toBeNull();
+    act(() => history.back());
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/deals?stage=open"),
+    );
+    await waitFor(() => expect(menu()).toBeNull());
+    expect(main()?.inert).toBe(false);
+
+    await user.click(more());
+    expect(menu()).not.toBeNull();
+    act(() => history.forward());
+    await waitFor(() => expect(window.location.hash).toBe("#/deals?stage=won"));
+    await waitFor(() => expect(menu()).toBeNull());
+    expect(main()?.inert).toBe(false);
+  });
+
   // A dial written in place (a search box settling) keeps the entry and the page.
   it("stays open when a dial is written over the current entry", async () => {
     const user = userEvent.setup();
