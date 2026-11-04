@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -157,15 +158,17 @@ func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) ([]ids
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	lowered := make([]string, 0, len(emails))
+	// Both spellings of a domain, so a Unicode address finds the contact
+	// stored under its punycode twin and the other way round.
+	var spellings []string
 	for _, e := range emails {
-		lowered = append(lowered, normalizeEmail(e))
+		spellings = append(spellings, storekit.EmailSpellings(e)...)
 	}
 	return exactContactIDs(ctx, tx, `
 		SELECT DISTINCT contact_id FROM contact_email
 		WHERE email = ANY($1) AND archived_at IS NULL
 		ORDER BY contact_id
-		LIMIT 2`, lowered)
+		LIMIT 2`, spellings)
 }
 
 // exactContactIDs collects what one exact lane's keys reach: the distinct

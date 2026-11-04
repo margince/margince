@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -91,7 +90,7 @@ func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *Lead
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, LeadEmailMatchClause("lead", "$1"), email, exclude, "email")
+	return liveLeadBy(ctx, tx, `lead.email = ANY($1::text[])`, EmailSpellings(email), exclude, "email")
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -107,13 +106,13 @@ func LiveLeadByLinkedInURL(ctx context.Context, tx pgx.Tx, normalizedURL string,
 	if normalizedURL == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `linkedin_url = $1`, normalizedURL, exclude, "linkedin_url")
+	return liveLeadBy(ctx, tx, `linkedin_url = ANY($1::text[])`, []string{normalizedURL}, exclude, "linkedin_url")
 }
 
 // liveLeadBy is the one query shape behind both probes. The predicate is a
-// fixed literal chosen by the exported wrappers, never caller text; the value
-// is always a bind parameter.
-func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude *LeadSourceKey, lane string) (ids.LeadID, bool, error) {
+// fixed literal chosen by the exported wrappers, never caller text; the values
+// are always a bind parameter.
+func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate string, values []string, exclude *LeadSourceKey, lane string) (ids.LeadID, bool, error) {
 	var excludeSystem, excludeID *string
 	if exclude != nil {
 		excludeSystem, excludeID = &exclude.SourceSystem, &exclude.SourceID
@@ -126,7 +125,7 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 		        OR source_system IS DISTINCT FROM $2
 		        OR source_id IS DISTINCT FROM $3)
 		 ORDER BY created_at, id
-		 LIMIT 1`, value, excludeSystem, excludeID).Scan(&id)
+		 LIMIT 1`, values, excludeSystem, excludeID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.LeadID{}, false, nil
 	}
@@ -167,12 +166,12 @@ const (
 
 // LeadHoldsEmail reports whether a live lead holds this address.
 func (h IdentityHolders) LeadHoldsEmail(email string) bool {
-	return h.held[heldKey{holderLead, laneEmail, foldEmail(email)}]
+	return h.held[heldKey{holderLead, laneEmail, IdentityEmail(email)}]
 }
 
 // ContactHoldsEmail reports whether a live contact holds this address.
 func (h IdentityHolders) ContactHoldsEmail(email string) bool {
-	return h.held[heldKey{holderContact, laneEmail, foldEmail(email)}]
+	return h.held[heldKey{holderContact, laneEmail, IdentityEmail(email)}]
 }
 
 // LeadHoldsLinkedIn reports whether a live lead holds this normalised profile URL.
@@ -235,7 +234,8 @@ func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ident
 	if len(keys.Emails) == 0 && len(keys.LinkedInURLs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, identityHoldersSQL, keys.Emails, keys.LinkedInURLs)
+	// A key in one spelling finds a holder stored in the other.
+	rows, err := tx.Query(ctx, identityHoldersSQL, emailSpellingsOf(keys.Emails), keys.LinkedInURLs)
 	if err != nil {
 		return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
 	}
@@ -256,6 +256,9 @@ func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ident
 }
 
 func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
+	if found.lane == laneEmail {
+		found.key = IdentityEmail(found.key)
+	}
 	h.held[found] = true
 	if found.holder == holderLead {
 		if lead := ids.From[ids.LeadKind](id); !slices.Contains(h.Leads, lead) {
@@ -267,6 +270,3 @@ func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
 		h.Contacts = append(h.Contacts, contact)
 	}
 }
-
-// foldEmail is the spelling contact_email and lead_email_norm store.
-func foldEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
