@@ -85,7 +85,7 @@ func (s *Service) promiseCandidates(
 		return nil, err
 	}
 	for _, claim := range claims {
-		if claim.Task == nil || claim.Status != string(crmcontracts.ConversationClaimStatusOpen) {
+		if claim.Task == nil || !momentaction.OpenRecipient(claim.Status) {
 			continue
 		}
 		if candidate, ok := byTask[*claim.Task]; ok {

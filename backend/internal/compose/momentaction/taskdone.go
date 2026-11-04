@@ -18,6 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// OpenRecipient says whether a recipient's claim on a promise still waits on it.
+// The Worklist and the company page both build a candidate's Recipients from it.
+func OpenRecipient(status string) bool {
+	return status == string(crmcontracts.ConversationClaimStatusOpen)
+}
+
 // DoneCandidate is a promise task the reader may be asked about: the message
 // the promise was read from, who holds it, and its open recipients.
 type DoneCandidate struct {

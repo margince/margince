@@ -381,7 +381,7 @@ func doneCandidates(tasks []attention.Task) []momentaction.DoneCandidate {
 		}
 		candidate := momentaction.DoneCandidate{TaskID: task.ID, SourceActivityID: *task.SourceActivityID, Assignee: task.AssigneeID}
 		for _, recipient := range task.Recipients {
-			if recipient.Status == crmcontracts.WorklistPromiseRecipientStatusOpen {
+			if momentaction.OpenRecipient(string(recipient.Status)) {
 				candidate.Recipients = append(candidate.Recipients, ids.UUID(recipient.ContactId))
 			}
 		}

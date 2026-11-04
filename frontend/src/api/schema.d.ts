@@ -31761,7 +31761,8 @@ export interface components {
             /**
              * @description Present on a promise task when we wrote to one of its recipients on its thread after the
              *     promise. The task then asks whether that mail kept it, as the Worklist does, with the
-             *     same key and fingerprint. Absent for an agent, which answers no such question.
+             *     same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
+             *     agent, which answers no such question.
              */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /**

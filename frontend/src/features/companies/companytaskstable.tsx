@@ -10,6 +10,7 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { taskWriteKeys } from "../../lib/activitykeys";
 import { useRecordZone } from "../../lib/recordzone";
 import { daysLate } from "./companynextbar";
 import "./companytabs.css";
@@ -19,6 +20,7 @@ type Company360 = components["schemas"]["Company360"];
 type NextStep = NonNullable<Company360["next_steps"]>["data"][number];
 
 type Cells = {
+  companyId: string;
   t: ReturnType<typeof useT>;
   plural: ReturnType<typeof usePlural>;
   locale: Locale;
@@ -59,6 +61,7 @@ export function CompanyTaskTable({
     steps.length,
   );
   const cells: Cells = {
+    companyId: view.company.id,
     t,
     plural,
     locale,
@@ -137,11 +140,11 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
 }
 
 function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
-  const { onOpenTask, renderTick } = cells;
+  const { onOpenTask, renderTick, companyId } = cells;
   return (
-    <span className="co-tasktable-task">
+    <div className="co-tasktable-task">
       {renderTick?.(step)}
-      <span className="co-tasktable-name">
+      <div className="co-tasktable-name">
         {onOpenTask ? (
           <button
             type="button"
@@ -172,11 +175,11 @@ function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
               version: step.version,
               canComplete: true,
             }}
-            refresh={[["company360"]]}
+            refresh={[...taskWriteKeys("company", companyId), ["worklist"]]}
           />
         )}
-      </span>
-    </span>
+      </div>
+    </div>
   );
 }
 
