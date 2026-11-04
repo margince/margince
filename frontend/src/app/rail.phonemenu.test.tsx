@@ -146,6 +146,19 @@ describe("the phone More menu", () => {
     expect(document.activeElement?.getAttribute("aria-current")).toBe("page");
   });
 
+  it("hands focus to the sidebar's first row on a widen where no row is current", async () => {
+    const user = userEvent.setup();
+    const viewport = renderPhoneShell("#/nowhere");
+    await user.click(more());
+    expect(menu()?.contains(document.activeElement)).toBe(true);
+
+    act(() => viewport.widen());
+
+    expect(menu()).toBeNull();
+    expect(document.querySelector(".navitem[aria-current]")).toBeNull();
+    expect(document.activeElement).toBe(document.querySelector(".navitem"));
+  });
+
   it("locks the page and the skip link while open, and frees them after", async () => {
     const user = userEvent.setup();
     renderPhoneShell("#/home");

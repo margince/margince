@@ -220,7 +220,8 @@ export function WorkspaceRail({
   const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
 
   // A new address or a widen closes the menu during render, past `closeMenu`.
-  // Its focus goes to More, or after a widen to the sidebar's current row.
+  // Its focus goes to More. After a widen it goes to the sidebar's current row,
+  // or to the first row on a page no row claims (Not Found).
   const menuWasOpen = useRef(false);
   useEffect(() => {
     const closed = menuWasOpen.current && !menuOpen;
@@ -231,9 +232,11 @@ export function WorkspaceRail({
     if (phone) {
       more.current?.focus();
     } else {
-      nav.current
-        ?.querySelector<HTMLElement>(".navitem[aria-current]")
-        ?.focus();
+      const rows = nav.current;
+      (
+        rows?.querySelector<HTMLElement>(".navitem[aria-current]") ??
+        rows?.querySelector<HTMLElement>(".navitem")
+      )?.focus();
     }
   }, [menuOpen, phone]);
 

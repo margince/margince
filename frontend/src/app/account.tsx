@@ -193,13 +193,14 @@ function AccountPanel({
     move(headless.current ? SETTINGS_SEAT : WHO_SEAT);
   }, [move]);
   // A head that arrives late takes focus only from the row focus first landed
-  // on, never from a row the reader walked to.
+  // on. Once the reader has walked, even back to that row, focus stays put.
+  const walked = useRef(false);
   useEffect(() => {
     if (!hasHead || !headless.current) {
       return;
     }
     headless.current = false;
-    if (holds(SETTINGS_SEAT)) {
+    if (!walked.current && holds(SETTINGS_SEAT)) {
       move(WHO_SEAT);
     }
   }, [hasHead, holds, move]);
@@ -223,6 +224,7 @@ function AccountPanel({
       return;
     }
     if (walk(event.key)) {
+      walked.current = true;
       event.preventDefault();
     }
   };

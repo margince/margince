@@ -552,4 +552,16 @@ describe("AccountMenu before /me names the seat", () => {
     await screen.findByRole("menuitem", { name: /account settings/ });
     expect(document.activeElement).toBe(row("Theme"));
   });
+
+  it("leaves focus on Settings when /me answers after the reader walked back to it", async () => {
+    const user = userEvent.setup();
+    const client = renderHeadless();
+    await openMenu(user, glyphTrigger());
+    await user.keyboard("{ArrowDown}{ArrowUp}");
+    expect(document.activeElement).toBe(row("Settings"));
+
+    act(() => client.setQueryData(["me"], meFixture()));
+    await screen.findByRole("menuitem", { name: /account settings/ });
+    expect(document.activeElement).toBe(row("Settings"));
+  });
 });

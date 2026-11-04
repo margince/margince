@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
@@ -293,8 +293,7 @@ describe("SetupReminder", () => {
 });
 
 describe("SetupReminder at phone width", () => {
-  const openAccount = async () => {
-    const user = userEvent.setup();
+  const openAccount = async (user: UserEvent) => {
     await user.click(screen.getByRole("button", { name: /Account/ }));
     return screen.getAllByRole("menuitem").map((row) => row.textContent ?? "");
   };
@@ -305,7 +304,7 @@ describe("SetupReminder at phone width", () => {
     await mountTopBar().answered();
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
 
-    const rows = await openAccount();
+    const rows = await openAccount(userEvent.setup());
     expect(rows.indexOf("Finish setup1 of 4")).toBe(
       rows.indexOf("Help and feedback") + 1,
     );
@@ -321,7 +320,9 @@ describe("SetupReminder at phone width", () => {
     serve();
     await mountTopBar().answered();
     expect(await trigger()).toBeTruthy();
-    expect((await openAccount()).join()).not.toContain("Finish setup");
+    expect((await openAccount(userEvent.setup())).join()).not.toContain(
+      "Finish setup",
+    );
   });
 
   it("stays out of the account menu after a hide on a wide screen", async () => {
@@ -335,7 +336,7 @@ describe("SetupReminder at phone width", () => {
     );
     act(() => viewport.narrow());
     await view.answered();
-    expect((await openAccount()).join()).not.toContain("Finish setup");
+    expect((await openAccount(user)).join()).not.toContain("Finish setup");
   });
 
   it("keeps focus and the tabstop on Sign out when the row arrives under it", async () => {
@@ -394,6 +395,8 @@ describe("SetupReminder at phone width", () => {
       bookingOn: true,
     });
     await mountTopBar().answered();
-    expect((await openAccount()).join()).not.toContain("Finish setup");
+    expect((await openAccount(userEvent.setup())).join()).not.toContain(
+      "Finish setup",
+    );
   });
 });
