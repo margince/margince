@@ -119,7 +119,7 @@ export const CouldNotRead: Story = {
 const mixed = {
   ...base,
   detail:
-    "added 1 task for you; added 1 task for Anna Example; 1 proposal awaits your decision; sent 1 suggestion to Anna Example to confirm",
+    "added 1 task for you; added 1 task for Anna Example; you were asked to confirm 1 suggestion; sent 1 suggestion to Anna Example to confirm",
   proposal_ids: ["ap-1", "ap-2"],
   proposals: [
     { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
@@ -151,7 +151,7 @@ export const MixedOutcomeGerman: Story = {
     stubbed({
       ...mixed,
       detail:
-        "1 Aufgabe für dich erstellt; 1 Aufgabe für Anna Example erstellt; 1 Vorschlag wartet auf deine Entscheidung; 1 Vorschlag an Anna Example zur Bestätigung gesendet",
+        "1 Aufgabe für dich erstellt; 1 Aufgabe für Anna Example erstellt; du wurdest gebeten, 1 Vorschlag zu bestätigen; 1 Vorschlag an Anna Example zur Bestätigung gesendet",
     });
     return (
       <StoryProviders locale="de">

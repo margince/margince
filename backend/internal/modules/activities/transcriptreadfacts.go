@@ -30,9 +30,13 @@ type TranscriptReadFacts struct {
 	// Found is how many promises the reading kept, before the rule sorted
 	// them. A reading that staged nothing says "stated nothing" at zero and
 	// "already put to you" above it.
-	Found     int                     `json:"found"`
-	Tasks     []TranscriptSeatCount   `json:"tasks,omitempty"`
-	Watched   int                     `json:"watched,omitempty"`
+	Found   int                   `json:"found"`
+	Tasks   []TranscriptSeatCount `json:"tasks,omitempty"`
+	Watched int                   `json:"watched,omitempty"`
+	// Known is how many promises were already a task, a waiting proposal or
+	// a decided one, per the seat they were put to. A zero seat is a promise
+	// the reading could name nobody for.
+	Known     []TranscriptSeatCount   `json:"known,omitempty"`
 	Proposals []TranscriptProposal    `json:"proposals,omitempty"`
 	Withheld  []TranscriptReasonCount `json:"withheld,omitempty"`
 	Failure   *TranscriptFailure      `json:"failure,omitempty"`

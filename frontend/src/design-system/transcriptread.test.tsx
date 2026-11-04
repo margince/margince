@@ -410,7 +410,7 @@ describe("reading a transcript for its next steps", () => {
     stubReads({
       stored: report({
         detail:
-          "added 1 task for Anna Example; 1 proposal awaits your decision",
+          "added 1 task for Anna Example; you were asked to confirm 1 suggestion",
         proposal_ids: ["ap-1"],
         proposals: [
           { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
@@ -421,7 +421,7 @@ describe("reading a transcript for its next steps", () => {
 
     expect(
       await screen.findByText(
-        "added 1 task for Anna Example; 1 proposal awaits your decision",
+        "added 1 task for Anna Example; you were asked to confirm 1 suggestion",
       ),
     ).toBeTruthy();
     expect(await screen.findByText("1 next step awaiting review")).toBeTruthy();

@@ -28,12 +28,13 @@ import (
 type transcriptStaging struct {
 	proposals []activities.TranscriptProposal
 	tasks     map[ids.UUID]int
+	known     map[ids.UUID]int
 	watched   int
 	withheld  map[CommitmentOutcome]int
 }
 
 func newTranscriptStaging() transcriptStaging {
-	return transcriptStaging{tasks: map[ids.UUID]int{}, withheld: map[CommitmentOutcome]int{}}
+	return transcriptStaging{tasks: map[ids.UUID]int{}, known: map[ids.UUID]int{}, withheld: map[CommitmentOutcome]int{}}
 }
 
 // approvalIDs are the staged approvals in the order they were staged.
@@ -49,9 +50,8 @@ func (s transcriptStaging) approvalIDs() []ids.UUID {
 // the reading kept before the rule sorted them.
 func (s transcriptStaging) facts(found int) *activities.TranscriptReadFacts {
 	out := &activities.TranscriptReadFacts{Found: found, Watched: s.watched, Proposals: s.proposals}
-	for _, seat := range slices.SortedFunc(maps.Keys(s.tasks), compareSeats) {
-		out.Tasks = append(out.Tasks, activities.TranscriptSeatCount{SeatID: seat, Count: s.tasks[seat]})
-	}
+	out.Tasks = seatCounts(s.tasks)
+	out.Known = seatCounts(s.known)
 	for _, reason := range slices.Sorted(maps.Keys(s.withheld)) {
 		out.Withheld = append(out.Withheld, activities.TranscriptReasonCount{Reason: string(reason), Count: s.withheld[reason]})
 	}
@@ -59,6 +59,14 @@ func (s transcriptStaging) facts(found int) *activities.TranscriptReadFacts {
 }
 
 func compareSeats(a, b ids.UUID) int { return cmp.Compare(a.String(), b.String()) }
+
+func seatCounts(bySeat map[ids.UUID]int) []activities.TranscriptSeatCount {
+	var out []activities.TranscriptSeatCount
+	for _, seat := range slices.SortedFunc(maps.Keys(bySeat), compareSeats) {
+		out = append(out, activities.TranscriptSeatCount{SeatID: seat, Count: bySeat[seat]})
+	}
+	return out
+}
 
 // transcriptTaskAssignee is the seat a task the rule wrote is assigned to.
 func transcriptTaskAssignee(ctx context.Context, tx pgx.Tx, task ids.UUID) (ids.UUID, error) {
@@ -104,6 +112,7 @@ func (said transcriptCopy) outcomeSentence(facts activities.TranscriptReadFacts,
 		details = append(details, said.count(facts.Watched, transcriptWords.WatchedOne, transcriptWords.Watched))
 	}
 	details = append(details, said.proposalPhrases(facts.Proposals, who)...)
+	details = append(details, said.knownPhrases(facts.Known, who)...)
 	for _, withheld := range facts.Withheld {
 		details = append(details, said.count(withheld.Count, transcriptWords.WithheldOne, transcriptWords.Withheld,
 			said.transcriptWithheldReason(CommitmentOutcome(withheld.Reason))))
@@ -138,6 +147,28 @@ func (said transcriptCopy) taskPhrases(tasks []activities.TranscriptSeatCount, w
 		theirs = append(theirs, said.count(task.Count, transcriptWords.TasksForOne, transcriptWords.TasksFor, said.seatName(task.SeatID, who)))
 	}
 	return append(mine, theirs...)
+}
+
+// knownPhrases says who the promises already put to someone were put to. A
+// promise nobody could be named for is only "already known".
+func (said transcriptCopy) knownPhrases(known []activities.TranscriptSeatCount, who transcriptAudience) []string {
+	var mine, theirs []string
+	nobody := 0
+	for _, entry := range known {
+		switch {
+		case entry.SeatID.IsZero() || !who.personal():
+			nobody += entry.Count
+		case entry.SeatID == who.reader:
+			mine = append(mine, said.count(entry.Count, transcriptWords.KnownYouOne, transcriptWords.KnownYou))
+		default:
+			theirs = append(theirs, said.count(entry.Count, transcriptWords.KnownToOne, transcriptWords.KnownTo, said.seatName(entry.SeatID, who)))
+		}
+	}
+	out := append(mine, theirs...)
+	if nobody > 0 {
+		out = append(out, said.count(nobody, transcriptWords.KnownOne, transcriptWords.Known))
+	}
+	return out
 }
 
 // proposalPhrases says which proposals wait on the reader and which were sent

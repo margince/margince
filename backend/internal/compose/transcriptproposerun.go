@@ -265,7 +265,8 @@ func (p *TranscriptProposer) stage(
 			out.watched++
 		case CommitmentRemembered, CommitmentRetained:
 			// Already a task, already waiting, refused or dismissed: this
-			// reading adds nothing new.
+			// reading adds nothing new, and says whom it was put to.
+			out.known[derefSeat(commitment.Seat)]++
 		}
 	}
 	return out, nil

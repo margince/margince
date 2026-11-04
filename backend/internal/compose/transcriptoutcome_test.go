@@ -28,7 +28,7 @@ func TestTheReadingSaysWhoEachTaskAndProposalWentTo(t *testing.T) {
 		t.Errorf("the logger reads %q, want %q", toLogger, want)
 	}
 	toColleague := en.outcomeSentence(facts, transcriptAudience{reader: colleague, names: names})
-	if want := "added 1 task for Lena Logger; 1 proposal awaits your decision"; toColleague != want {
+	if want := "added 1 task for Lena Logger; you were asked to confirm 1 suggestion"; toColleague != want {
 		t.Errorf("the colleague reads %q, want %q", toColleague, want)
 	}
 	unnamed := en.outcomeSentence(facts, transcriptAudience{reader: logger})

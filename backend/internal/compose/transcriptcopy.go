@@ -13,26 +13,32 @@ type transcriptCopy struct{ langcopy.Spoken }
 
 func transcriptCopyFor(language string) transcriptCopy { return transcriptCopy{langcopy.For(language)} }
 
-var transcriptWords = struct{ TasksOne, Tasks, TasksYouOne, TasksYou, TasksForOne, TasksFor, ProposalsWaitOne, ProposalsWait, SentToOne, SentTo, AColleague, WatchedOne, Watched, ProposalsOne, Proposals, WithheldOne, Withheld, Empty, AlreadyKnown, History, Incomplete, SourceUnknown, Contradicted, Cancelled, Pending, SourceMissing, Completed, Conditional, Optional, Request, Unclear, NoPromiser, NotTranscript, TooLong, Blank, Missing, Refused, NoModel langcopy.Phrase }{
+var transcriptWords = struct{ TasksOne, Tasks, TasksYouOne, TasksYou, TasksForOne, TasksFor, ProposalsWaitOne, ProposalsWait, SentToOne, SentTo, AColleague, KnownYouOne, KnownYou, KnownToOne, KnownTo, KnownOne, Known, WatchedOne, Watched, ProposalsOne, Proposals, WithheldOne, Withheld, Empty, AlreadyKnown, History, Incomplete, SourceUnknown, Contradicted, Cancelled, Pending, SourceMissing, Completed, Conditional, Optional, Request, Unclear, NoPromiser, NotTranscript, TooLong, Blank, Missing, Refused, NoModel langcopy.Phrase }{
 	TasksOne:         langcopy.Phrase{En: "added %d task", De: "%d Aufgabe erstellt", Vi: "Đã thêm %d công việc"},
 	Tasks:            langcopy.Phrase{En: "added %d tasks", De: "%d Aufgaben erstellt", Vi: "Đã thêm %d công việc"},
 	TasksYouOne:      langcopy.Phrase{En: "added %d task for you", De: "%d Aufgabe für dich erstellt", Vi: "Đã thêm %d công việc cho bạn"},
 	TasksYou:         langcopy.Phrase{En: "added %d tasks for you", De: "%d Aufgaben für dich erstellt", Vi: "Đã thêm %d công việc cho bạn"},
 	TasksForOne:      langcopy.Phrase{En: "added %d task for %s", De: "%d Aufgabe für %s erstellt", Vi: "Đã thêm %d công việc cho %s"},
 	TasksFor:         langcopy.Phrase{En: "added %d tasks for %s", De: "%d Aufgaben für %s erstellt", Vi: "Đã thêm %d công việc cho %s"},
-	ProposalsWaitOne: langcopy.Phrase{En: "%d proposal awaits a decision", De: "%d Vorschlag wartet auf eine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
-	ProposalsWait:    langcopy.Phrase{En: "%d proposals await a decision", De: "%d Vorschläge warten auf eine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
+	ProposalsWaitOne: langcopy.Phrase{En: "staged %d suggestion", De: "%d Vorschlag vorgelegt", Vi: "Đã tạo %d đề xuất"},
+	ProposalsWait:    langcopy.Phrase{En: "staged %d suggestions", De: "%d Vorschläge vorgelegt", Vi: "Đã tạo %d đề xuất"},
 	SentToOne:        langcopy.Phrase{En: "sent %d suggestion to %s to confirm", De: "%d Vorschlag an %s zur Bestätigung gesendet", Vi: "Đã gửi %d đề xuất cho %s xác nhận"},
 	SentTo:           langcopy.Phrase{En: "sent %d suggestions to %s to confirm", De: "%d Vorschläge an %s zur Bestätigung gesendet", Vi: "Đã gửi %d đề xuất cho %s xác nhận"},
 	AColleague:       langcopy.Phrase{En: "a colleague", De: "ein Teammitglied", Vi: "một đồng nghiệp"},
+	KnownYouOne:      langcopy.Phrase{En: "%d next step was already put to you", De: "%d nächster Schritt wurde dir bereits vorgelegt", Vi: "%d bước tiếp theo đã được trình cho bạn"},
+	KnownYou:         langcopy.Phrase{En: "%d next steps were already put to you", De: "%d nächste Schritte wurden dir bereits vorgelegt", Vi: "%d bước tiếp theo đã được trình cho bạn"},
+	KnownToOne:       langcopy.Phrase{En: "%d next step was already put to %s", De: "%d nächster Schritt wurde %s bereits vorgelegt", Vi: "%d bước tiếp theo đã được trình cho %s"},
+	KnownTo:          langcopy.Phrase{En: "%d next steps were already put to %s", De: "%d nächste Schritte wurden %s bereits vorgelegt", Vi: "%d bước tiếp theo đã được trình cho %s"},
+	KnownOne:         langcopy.Phrase{En: "%d next step was already known", De: "%d nächster Schritt war bereits bekannt", Vi: "%d bước tiếp theo đã được biết trước"},
+	Known:            langcopy.Phrase{En: "%d next steps were already known", De: "%d nächste Schritte waren bereits bekannt", Vi: "%d bước tiếp theo đã được biết trước"},
 	WatchedOne:       langcopy.Phrase{En: "noted %d commitment the customer made", De: "%d Zusage des Kunden erfasst", Vi: "Đã ghi nhận %d cam kết của khách hàng"},
 	Watched:          langcopy.Phrase{En: "noted %d commitments the customer made", De: "%d Zusagen des Kunden erfasst", Vi: "Đã ghi nhận %d cam kết của khách hàng"},
-	ProposalsOne:     langcopy.Phrase{En: "%d proposal awaits your decision", De: "%d Vorschlag wartet auf deine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
-	Proposals:        langcopy.Phrase{En: "%d proposals await your decision", De: "%d Vorschläge warten auf deine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
+	ProposalsOne:     langcopy.Phrase{En: "you were asked to confirm %d suggestion", De: "du wurdest gebeten, %d Vorschlag zu bestätigen", Vi: "Bạn được đề nghị xác nhận %d đề xuất"},
+	Proposals:        langcopy.Phrase{En: "you were asked to confirm %d suggestions", De: "du wurdest gebeten, %d Vorschläge zu bestätigen", Vi: "Bạn được đề nghị xác nhận %d đề xuất"},
 	WithheldOne:      langcopy.Phrase{En: "%d commitment: %s", De: "%d Zusage: %s", Vi: "%d cam kết: %s"},
 	Withheld:         langcopy.Phrase{En: "%d commitments: %s", De: "%d Zusagen: %s", Vi: "%d cam kết: %s"},
-	Empty:            langcopy.Phrase{En: "this transcript states no next steps clearly enough to propose one", De: "Dieses Transkript nennt keine nächsten Schritte eindeutig genug für einen Vorschlag.", Vi: "Bản chép lời không nêu rõ bước tiếp theo nào để đề xuất."},  //nolint:misspell // German translation uses German spelling.
-	AlreadyKnown:     langcopy.Phrase{En: "every next step this transcript states has already been put to you", De: "Alle nächsten Schritte aus diesem Transkript wurden dir bereits vorgelegt.", Vi: "Mọi bước tiếp theo trong bản chép lời đã được trình bày để xem xét."}, //nolint:misspell // German translation uses German spelling.
+	Empty:            langcopy.Phrase{En: "this transcript states no next steps clearly enough to propose one", De: "Dieses Transkript nennt keine nächsten Schritte eindeutig genug für einen Vorschlag.", Vi: "Bản chép lời không nêu rõ bước tiếp theo nào để đề xuất."}, //nolint:misspell // German translation uses German spelling.
+	AlreadyKnown:     langcopy.Phrase{En: "every next step this transcript states was already known", De: "Alle nächsten Schritte aus diesem Transkript waren bereits bekannt.", Vi: "Mọi bước tiếp theo trong bản chép lời đã được biết trước."},                           //nolint:misspell // German translation uses German spelling.
 	History:          langcopy.Phrase{En: "kept as history without creating new work", De: "als Verlauf gespeichert, ohne neue Arbeit zu erstellen", Vi: "được lưu vào lịch sử, không tạo công việc mới"},
 	Incomplete:       langcopy.Phrase{En: "needs later conversation evidence before creating work", De: "benötigt spätere Gesprächsbelege, bevor Arbeit erstellt werden kann", Vi: "cần bằng chứng từ trao đổi sau đó trước khi tạo công việc"},
 	SourceUnknown:    langcopy.Phrase{En: "needs a verified source date before creating work", De: "benötigt ein bestätigtes Quelldatum, bevor Arbeit erstellt werden kann", Vi: "cần ngày nguồn đã xác minh trước khi tạo công việc"},

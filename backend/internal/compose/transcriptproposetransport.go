@@ -123,6 +123,11 @@ func (e *transcriptReadEngine) audience(ctx context.Context, facts activities.Tr
 	for _, proposal := range facts.Proposals {
 		seats = append(seats, ids.From[ids.UserKind](proposal.SeatID))
 	}
+	for _, known := range facts.Known {
+		if !known.SeatID.IsZero() {
+			seats = append(seats, ids.From[ids.UserKind](known.SeatID))
+		}
+	}
 	names, err := e.seats.SeatNames(ctx, seats)
 	if err != nil {
 		return transcriptAudience{}, err

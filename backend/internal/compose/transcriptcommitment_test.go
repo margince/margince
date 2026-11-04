@@ -19,12 +19,12 @@ func TestTranscriptReadReportsEveryKindOfResult(t *testing.T) {
 	staged.withheld[CommitmentOutcome(activities.CommitmentHistorical)] = 1
 	staged.withheld[CommitmentOutcome(activities.CommitmentSourceUnknown)] = 1
 	detail := transcriptCopyFor("en").outcomeSentence(*staged.facts(4), transcriptAudience{})
-	for _, want := range []string{"added 1 task", "1 commitment", "1 proposal awaits a decision", "1 commitment: kept as history", "1 commitment: needs a verified source date"} {
+	for _, want := range []string{"added 1 task", "1 commitment", "staged 1 suggestion", "1 commitment: kept as history", "1 commitment: needs a verified source date"} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("detail %q omits %q", detail, want)
 		}
 	}
-	if strings.Contains(detail, "colleague") || strings.Contains(detail, "your decision") {
+	if strings.Contains(detail, "colleague") || strings.Contains(detail, "you") {
 		t.Errorf("the stored sentence %q speaks to someone; it is read by everyone who sees the record", detail)
 	}
 }

@@ -93,7 +93,7 @@ func TestTheReportSaysWhoATranscriptProposalWaitsOn(t *testing.T) {
 	}
 
 	priya := e.reportFor(t, e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms), read)
-	if got := detailOf(priya); got != "1 proposal awaits your decision" {
+	if got := detailOf(priya); got != "you were asked to confirm 1 suggestion" {
 		t.Errorf("the colleague reads %q", got)
 	}
 	if len(priya.Proposals) != 1 || !priya.Proposals[0].AskedOf.IsYou {
