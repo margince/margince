@@ -161,3 +161,42 @@ export function useRestoreTag(
     },
   });
 }
+
+/**
+ * Every write to the vocabulary refreshes the same three reads.
+ *
+ * The catalog is what the Tags card draws. The vocabulary is what the pickers and
+ * the filter dials offer, and a word coined here has to reach them or an admin
+ * adds a tag and then cannot find it. The record reads carry the words
+ * themselves, so a rename that did not reach them would leave the old spelling
+ * on every open record page.
+ */
+export function useTagVocabularyInvalidation() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ["tags"] });
+    void queryClient.invalidateQueries({ queryKey: ["tag"] });
+    void queryClient.invalidateQueries({ queryKey: ["record-tags"] });
+    // The three record LISTS carry their rows' tags inline, keyed under their
+    // own prefixes rather than under any tag key. Without these a rename or a
+    // merge leaves the old spelling on every row a reader has already loaded,
+    // for as long as that page stays fresh — and this client disables refetch
+    // on focus, so coming back to the tab does not repair it.
+    for (const list of TAGGED_LISTS) {
+      void queryClient.invalidateQueries({ queryKey: [list] });
+    }
+  };
+}
+
+/** The list reads whose rows carry tags inline. */
+const TAGGED_LISTS = ["contacts", "companies", "deals"] as const;
+
+export function useCreateTag() {
+  const invalidate = useTagVocabularyInvalidation();
+  return useMutation({
+    mutationFn: async (body: components["schemas"]["CreateTagRequest"]) => {
+      return unwrap(await api.POST("/tags", { body }));
+    },
+    onSuccess: invalidate,
+  });
+}

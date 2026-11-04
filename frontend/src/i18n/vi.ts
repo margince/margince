@@ -5074,6 +5074,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncatedTitle": "Danh sách đã cắt bớt",
   "tags.catalogTruncated":
     "Có thể thiếu một thẻ. Tìm theo tên trước khi yêu cầu thẻ mới.",
+  "tags.noMatchYouCanCreate": "Không có thẻ nào tên như vậy.",
+  "tags.createNamed": "Tạo thẻ {name}",
+  "tags.shortlistInstead": "Thay vào đó, thêm vào danh sách chọn tay",
+  "tags.manage": "Quản lý thẻ",
+  "tags.whoAdds":
+    "Cần thêm thẻ? Quản trị viên hoặc thành viên Vận hành có thể thêm trong Cài đặt → Thẻ.",
   "tags.noMatch":
     "Không có thẻ nào tên như vậy. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tagResult.gone":

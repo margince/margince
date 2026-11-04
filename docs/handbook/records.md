@@ -366,7 +366,7 @@ To tag a contact, company or deal in Margince, open the record, find its **Tags*
 
 To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
-Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, the picker says "No tag with that name. An administrator or operations user can add one."
+Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, an Admin or Ops user gets **Create tag {name}**, which creates the tag and puts it on the record. Anyone else gets **Add to a Shortlist instead**, which opens **Add to Shortlist** with a new Shortlist named after the word.
 Also called: label, add a label, categorise a record.
 
 Renaming a tag renames it everywhere, because every record shares the one tag.

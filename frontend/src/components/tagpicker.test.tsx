@@ -17,9 +17,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
 import type { RecordTag } from "../lib/tags.queries";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { AddTagPicker } from "./tagpicker";
@@ -36,12 +39,18 @@ const ON_RECORD: RecordTag = {
 function mount({
   truncated = false,
   apply = () => new Response(null, { status: 204 }),
+  routes = {},
 }: Readonly<{
   truncated?: boolean;
   apply?: () => Response | Promise<Response>;
+  routes?: RouteMap;
 }> = {}) {
   const applied: unknown[] = [];
   installFetchStub({
+    // A seat that reads the vocabulary and may coin nothing, unless the case
+    // says otherwise.
+    "GET /me": meRoute({ tag: ["read"] }, { roles: ["rep"] }),
+    ...routes,
     "GET /tags": () =>
       jsonResponse({
         data: [
@@ -202,5 +211,116 @@ describe("the add-tag picker", () => {
     const whole = await openPicker(user);
     await whole.findByRole("option", { name: "Key Account" });
     expect(whole.queryByText(en["tags.catalogTruncated"])).toBeNull();
+  });
+
+  // The vocabulary is governed. A seat that may coin a word is offered to,
+  // right where it found the word missing, and the word lands on the record.
+  it("creates and applies a missing word in one step for a seat that may create tags", async () => {
+    const user = userEvent.setup();
+    const created: unknown[] = [];
+    const appliedNew: unknown[] = [];
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "POST /tags": (body) => {
+          created.push(body);
+          return jsonResponse(
+            { id: "t-new", workspace_id: "w", name: "Spring campaign" },
+            201,
+          );
+        },
+        "POST /tags/t-new/apply": (body) => {
+          appliedNew.push(body);
+          return new Response(null, { status: 204 });
+        },
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    expect(
+      await panel.findByRole("link", { name: en["tags.manage"] }),
+    ).toHaveAttribute("href", "/#/settings/tags");
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(appliedNew).toEqual([
+        { entity_type: "company", entity_id: COMPANY },
+      ]),
+    );
+    expect(created).toEqual([{ name: "Spring campaign" }]);
+    expect(
+      panel.queryByRole("button", { name: en["tags.shortlistInstead"] }),
+    ).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // Every other seat is told who adds a word, and is offered a Shortlist for
+  // a group only they need, named with the word they typed.
+  it("offers a seat that may not create tags a Shortlist named with the word", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["rep"],
+              allow: { tag: ["read"], list: ["read", "create", "update"] },
+              settingsAvailability: { lists: true },
+            }),
+          ),
+        "GET /lists": () =>
+          jsonResponse({
+            data: [],
+            page: { has_more: false, next_cursor: null },
+          }),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    expect(await panel.findByText(en["tags.whoAdds"])).toBeInTheDocument();
+    expect(panel.queryByRole("link", { name: en["tags.manage"] })).toBeNull();
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("button", { name: /^Create tag/ })).toBeNull();
+    await user.click(
+      panel.getByRole("button", { name: en["tags.shortlistInstead"] }),
+    );
+
+    const dialog = await screen.findByRole("dialog", {
+      name: en["lists.addToShortlist"],
+    });
+    expect(
+      within(dialog).getByRole("textbox", { name: en["lists.name"] }),
+    ).toHaveValue("Spring campaign");
+  });
+
+  it("offers no Shortlist to a seat that may not make one", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        // Lists are on, so only the missing grant keeps the Shortlist away.
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["rep"],
+              allow: { tag: ["read"], list: ["read"] },
+              settingsAvailability: { lists: true },
+            }),
+          ),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+
+    expect(panel.getByText(en["tags.noMatch"])).toBeInTheDocument();
+    expect(panel.queryByRole("button")).toBeNull();
   });
 });

@@ -5209,6 +5209,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncatedTitle": "Liste gekürzt",
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
+  "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.createNamed": "Tag {name} erstellen",
+  "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
+  "tags.manage": "Tags verwalten",
+  "tags.whoAdds":
+    "Ein weiteres Tag nötig? Admins und Operations können es unter Einstellungen → Tags anlegen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":

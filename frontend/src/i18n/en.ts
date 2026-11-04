@@ -5166,6 +5166,12 @@ export const en = {
   "tags.catalogTruncatedTitle": "List shortened",
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
+  "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.createNamed": "Create tag {name}",
+  "tags.shortlistInstead": "Add to a Shortlist instead",
+  "tags.manage": "Manage tags",
+  "tags.whoAdds":
+    "Need another tag? An administrator or operations user can add one in Settings → Tags.",
   "tags.noMatch":
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
