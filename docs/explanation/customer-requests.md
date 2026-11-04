@@ -94,7 +94,7 @@ sections above say. A message that is not yet classified but is labelled as sche
 Two decisions end what is owed: a human marking the conversation not sales, and the `informs_us`
 verdict of the classifier. `/worklist/hidden` counts and lists what each one takes out of the queue. The
 verdict never takes out a request a human accepted. Mail from an obvious machine address is owed only
-as a confirmed request.
+as a confirmed request. Mail that carried a List-Unsubscribe header is owed only once a human accepted it.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
 link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of

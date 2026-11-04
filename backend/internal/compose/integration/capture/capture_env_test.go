@@ -273,7 +273,7 @@ func seedCaptureRole(t *testing.T, e *integration.SearchEnv) {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO role (key, name, permissions)
 			VALUES ('capture_rep', 'Capture Rep',
-			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"contact":{"create":true,"read":true},"company":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
+			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"contact":{"create":true,"read":true},"lead":{"create":true,"read":true},"company":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
 			RETURNING id`).Scan(&roleID); err != nil {
 			return err
 		}

@@ -19,6 +19,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
+  ["role_cannot_capture", "connectors.roleCannotCapture"],
   // The installation switched off individual performance; the detail is English.
   ["individual_performance_off", "common.individualPerformanceOff"],
   // The server's skew detail is English, worded for API and agent readers.
@@ -54,4 +55,29 @@ export function heldByColleagueCopy(problem: unknown): MessageKey | undefined {
   return problemDetails(problem)?.share_requested === true
     ? "common.heldByColleague.asked"
     : "common.heldByColleague";
+}
+
+// The grant a capture refusal names; an older server sends none, and the
+// sentence then names no grant.
+const CAPTURE_REFUSAL_COPY: Readonly<Record<string, MessageKey>> = {
+  activity: "connectors.roleCannotCapture.activity",
+  contact: "connectors.roleCannotCapture.contact",
+  lead: "connectors.roleCannotCapture.lead",
+  seat: "connectors.roleCannotCapture.seat",
+};
+
+export function captureRefusalCopy(missing: unknown): MessageKey {
+  const named =
+    typeof missing === "string" && Object.hasOwn(CAPTURE_REFUSAL_COPY, missing)
+      ? CAPTURE_REFUSAL_COPY[missing]
+      : undefined;
+  return named ?? "connectors.roleCannotCapture";
+}
+
+// A capture refusal names the grant the member lacks when the server says which.
+export function roleCannotCaptureCopy(
+  problem: unknown,
+): MessageKey | undefined {
+  if (problemCode(problem) !== "role_cannot_capture") return undefined;
+  return captureRefusalCopy(problemDetails(problem)?.missing);
 }

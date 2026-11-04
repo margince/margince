@@ -8768,6 +8768,13 @@ paths:
         - name: kind
           in: query
           schema: { type: string, enum: [email, call, meeting, note, task, message] }
+        - name: call_outcome
+          in: query
+          description: Calls that ended this way. Matches calls only.
+          schema:
+            type: string
+            enum: [reached, not_reached, voicemail, call_back_later, put_through]
+            x-enum-varnames: [ListCallOutcomeReached, ListCallOutcomeNotReached, ListCallOutcomeVoicemail, ListCallOutcomeCallBackLater, ListCallOutcomePutThrough]
         - name: channel_provider
           in: query
           description: |
@@ -19145,6 +19152,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ConnectConnectorResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/callback:
@@ -19548,6 +19556,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BackfillPreview' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '502':
@@ -19583,6 +19592,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/BackfillStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
     get:
@@ -35858,6 +35868,18 @@ components:
           examples:
             rbac:
               value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
+    RoleCannotCapture:
+      description: |
+        The caller's role or seat cannot record what capture writes (activities, and the contacts
+        and leads a mailbox brings in), so no mailbox of theirs can be captured
+        (`code: role_cannot_capture`). Nothing is stored. An admin changes their role.
+        `details.missing` names what is lacking, as `SeatCapture.missing` does.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            role:
+              value: { type: 'https://errors.gradion.com/role_cannot_capture', title: Forbidden, status: 403, code: role_cannot_capture, detail: 'Your role cannot record activities, so this mailbox cannot be captured. Ask an admin to change your role.' }
     PermissionDenied:
       description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
       content:
@@ -38817,6 +38839,9 @@ components:
         concern: { $ref: '#/components/schemas/CaptureConcernKind' }
         since: { type: [string, 'null'], format: date-time }
         last_success_at: { type: [string, 'null'], format: date-time }
+        error_class:
+          type: [string, 'null']
+          description: The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
 
     CaptureConnection:
       type: object
@@ -38845,7 +38870,7 @@ components:
         concern_since: { type: [string, 'null'], format: date-time, description: When the current concern began. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
         last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
-        last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
+        last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member''s role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.' }
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
@@ -40037,6 +40062,27 @@ components:
           description: |
             Whether a connect started right now would proceed, per provider a contact can choose
             between, so the connect screen can say so before the click rather than after a 501.
+        seat_capture: { $ref: '#/components/schemas/SeatCapture' }
+    SeatCapture:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether the caller's own role and seat let capture write, asked by the same check connect
+        and every sync ask. False hides every connect button; a connected mailbox stops at its
+        next sync.
+      required: [allowed]
+      properties:
+        allowed: { type: boolean }
+        reason:
+          type: [string, 'null']
+          enum: [role_cannot_capture, null]
+          description: Why `allowed` is false; null when it is true.
+        missing:
+          type: [string, 'null']
+          enum: [activity, contact, lead, seat, null]
+          description: |
+            What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+            `lead`, or `seat` for a read seat. Null when `allowed` is true.
     CaptureProviderAvailability:
       type: object
       description: |
@@ -40050,12 +40096,13 @@ components:
         provider: { type: string, enum: [gmail, graph, imap], description: The mail provider a seat picks between. }
         reason:
           type: string
-          enum: [ready, app_missing, app_unusable, unsupported]
+          enum: [ready, app_missing, app_unusable, unsupported, role_cannot_capture]
           description: |
             `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
             app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
             is a different fix from registering one. `unsupported`: this deployment does not serve the
-            provider at all.
+            provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+            capture writes, for every provider alike (`seat_capture` says so once).
     PublicOriginStatus:
       type: object
       description: |
@@ -53445,13 +53492,14 @@ components:
           type: string
           nullable: true
           readOnly: true
-          enum: [product, calendar, sending_system]
+          enum: [product, calendar, sending_system, bulk]
           description: >-
             What sent this activity when no human wrote it, or null when a human did. `product`
             is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a
-            response or a cancellation, and `sending_system` mail from a sending system such as a
-            file-share notice, a notification or a delivery report. Such a row is never counted as
-            an exchange, a last contact or a direction of the relationship.
+            response or a cancellation, `sending_system` mail from a sending system such as a
+            file-share notice, a notification or a delivery report, and `bulk` mail that carried a
+            List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted
+            as an exchange, a last contact or a direction of the relationship.
         voice:
           allOf: [{ $ref: '#/components/schemas/ActivityVoice' }]
           readOnly: true
@@ -53495,8 +53543,13 @@ components:
             Whether this response carries the activity's content. `withheld` means the caller may
             discover the row (a linked record is theirs to read) but is not in its audience: only the
             safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience,
-            links, is_done/due_at for a task, provenance and timestamps — and subject, body,
+            links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body,
             thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [ActivityCallOutcomeNone, ActivityCallOutcomeReached, ActivityCallOutcomeNotReached, ActivityCallOutcomeVoicemail, ActivityCallOutcomeCallBackLater, ActivityCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.' }
         invitation_status:
           type: [string, 'null']
@@ -53868,6 +53921,11 @@ components:
             than 25 ids return `422 code: too_many_attendees`.
         duration_seconds: { type: [integer, 'null'] }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [CreateCallOutcomeNone, CreateCallOutcomeReached, CreateCallOutcomeNotReached, CreateCallOutcomeVoicemail, CreateCallOutcomeCallBackLater, CreateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -54163,6 +54221,11 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
+        call_outcome:
+          type: [string, 'null']
+          enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [UpdateCallOutcomeNone, UpdateCallOutcomeReached, UpdateCallOutcomeNotReached, UpdateCallOutcomeVoicemail, UpdateCallOutcomeCallBackLater, UpdateCallOutcomePutThrough]
+          description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.'
         meeting_status:
           type: [string, 'null']
           enum: [null, booked, held, no_show, canceled]
@@ -60022,6 +60085,10 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        connected_mailboxes:
+          type: integer
+          readOnly: true
+          description: How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
         invite_email_state:
           type: [string, 'null']
           enum: [sending, sent, failed, null]
@@ -62753,6 +62820,10 @@ components:
         key: { type: string, description: The role key an invite or a role change sends. }
         name: { type: string, description: The role's name as stored. A client shows a seeded role under its own translated label and a custom role under this. }
         is_system: { type: boolean, description: True for a role the product ships. }
+        captures_mail:
+          type: boolean
+          readOnly: true
+          description: Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
 
     CreateRoleRequest:
       type: object

@@ -55,6 +55,7 @@ internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1
 internal/compose/connectors_csrf_test.go 1
 internal/compose/connectors_graph_test.go 2
+internal/compose/connectors_seatcapture_test.go 1
 internal/compose/connectors_test.go 3
 internal/compose/connectors_wiring_test.go 1
 internal/compose/correctionrevert_integration_test.go 2

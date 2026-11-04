@@ -501,3 +501,26 @@ func TestAUnitCannotReachAnotherUnitsOAuthGrant(t *testing.T) {
 		t.Fatalf("the declaring unit = %v, want past the declaration check to the unwired binding", err)
 	}
 }
+
+// readSeatAdminAuthority answers a member whose role holds the integration
+// grant but whose seat is a read seat.
+type readSeatAdminAuthority struct{ adminAuthority }
+
+func (readSeatAdminAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+	return principal.SeatRead, nil
+}
+
+func TestAReadSeatCannotConnectAnExtension(t *testing.T) {
+	f := newExtFlow(t, &vendor{exchange: `{"access_token":"a1","refresh_token":"r1"}`}, nil)
+	consent, cookie := f.connect(t)
+	f.h.authority = readSeatAdminAuthority{}
+
+	got := f.callback(t, url.Values{"code": {"the-code"}, "state": {consent.Query().Get("state")}}, cookie)
+
+	if got != landing(outcomeError) {
+		t.Fatalf("landing = %q, want %q", got, landing(outcomeError))
+	}
+	if len(f.secrets.held) != 0 || len(f.granted) != 0 {
+		t.Fatalf("a read seat's consent left %d grants held and ran OnGrant %d times, want none", len(f.secrets.held), len(f.granted))
+	}
+}

@@ -64,7 +64,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	// Checked in the registry, the one place every transport passes through, so
 	// the invariant does not rest on each caller's own check. It runs before
 	// the seal below, so a refusal leaves neither a row nor a stored secret.
-	if err := r.requireLiveGrantor(ctx, ws, actor.UserID); err != nil {
+	// The same check refuses a member whose role cannot record what capture
+	// writes, so no mailbox is connected only to fail on its first sync.
+	if err := r.requireCapturingGrantor(ctx, ws, actor.UserID); err != nil {
 		return ids.Nil, err
 	}
 	// Put-then-commit (like blobstore): seal the credential in the vault
@@ -123,21 +125,34 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	return id, nil
 }
 
-// requireLiveGrantor resolves the granting human against identity's live
-// authority. A human who is archived, suspended, or deactivated resolves to
-// ErrNotFound, which is the refusal: the grant is denied before anything is
-// sealed or written, so nothing has to be undone.
-func (r *Registry) requireLiveGrantor(ctx context.Context, ws, userID ids.UUID) error {
+// requireCapturingMember is requireCapturingGrantor for the member a history
+// import is asked for, in the caller's workspace.
+func (r *Registry) requireCapturingMember(ctx context.Context, userID ids.UserID) error {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return errors.New("capture: a history import outside workspace context")
+	}
+	return r.requireCapturingGrantor(ctx, ws, userID.UUID)
+}
+
+// requireCapturingGrantor resolves the granting human against identity's live
+// authority and asks CaptureRefusal about it. An archived, suspended, or
+// deactivated human resolves to ErrNotFound, which is the refusal. Nothing is
+// sealed or written first, so nothing has to be undone. Starting a history
+// import asks it too.
+func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.UUID) error {
 	if r.authority == nil {
 		return errors.New("capture: no authority resolver configured — a connector grant cannot be checked against live authority")
 	}
-	if _, err := r.authority.EffectiveRBAC(ctx, ws, userID); err != nil {
+	rbac, err := r.authority.EffectiveRBAC(ctx, ws, userID)
+	if err != nil {
 		return fmt.Errorf("capture: the granting human's authority does not resolve: %w", err)
 	}
-	if _, err := r.authority.SeatType(ctx, ws, userID); err != nil {
+	seat, err := r.authority.SeatType(ctx, ws, userID)
+	if err != nil {
 		return fmt.Errorf("capture: the granting human's seat does not resolve: %w", err)
 	}
-	return nil
+	return CaptureRefusal(rbac.Permissions, seat)
 }
 
 // grantedScopes runs the grant-time scope intersection and returns the
