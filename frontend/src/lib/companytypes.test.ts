@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { companyTypeLabel } from "./companytypes";
+import { companyTypeLabel } from "../features/companies/companytypes";
 
 describe("companyTypeLabel", () => {
   const directory = [{ value: "ext:acme:reseller", label: "Reseller" }];

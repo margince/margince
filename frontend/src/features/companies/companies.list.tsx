@@ -39,10 +39,6 @@ import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import {
-  companyTypeLabel,
-  useCompanyTypeDirectory,
-} from "../../lib/companytypes";
-import {
   KIND_LABELS,
   MEANING_LABELS,
   PARTNER_KINDS,
@@ -59,6 +55,7 @@ import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 async function fetchCompaniesPage(
   query: ListQuery,

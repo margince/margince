@@ -8,13 +8,10 @@ import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import {
-  companyTypeLabel,
-  useCompanyTypeDirectory,
-} from "../../lib/companytypes";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { CompanyTagsSection } from "./companyrailtags";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];

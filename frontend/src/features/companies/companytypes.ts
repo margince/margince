@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { api } from "../api/client";
-import { unwrap } from "./problem";
+import { api } from "../../api/client";
+import { unwrap } from "../../lib/problem";
 
 // The company types installed extensions add. The generated types carry no enum
 // for them, so the server answers instead. It changes only on deploy, so it is
