@@ -21,9 +21,13 @@ function call(id: string, call_outcome?: Activity["call_outcome"]): Activity {
     occurred_precision: "instant",
     links: [],
     source: "manual",
+    is_done: false,
+    offers_email: false,
+    created_at: "2026-10-20T10:00:00Z",
+    updated_at: "2026-10-20T10:00:00Z",
     captured_by: "human:u-1",
     call_outcome,
-  } as unknown as Activity;
+  };
 }
 
 // How a call ended sits where a direction sits, in the reader's words.
