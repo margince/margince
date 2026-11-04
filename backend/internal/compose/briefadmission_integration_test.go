@@ -25,7 +25,7 @@ func TestStoredBriefRankingNeedsCurrentInterventionBeforeWorklistAdmission(t *te
 	// instant read back would never equal one with finer precision.
 	now := clocktest.Now(t).Truncate(time.Microsecond)
 	clock := func() time.Time { return now }
-	store := e.Deals.WithClock(clock)
+	store := e.Deals.SetClock(clock)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner := ids.From[ids.UserKind](e.Rep1)
@@ -135,7 +135,7 @@ func TestStoredBriefDoesNotReviveAClosedDeal(t *testing.T) {
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
-	store := e.Deals.WithClock(clock)
+	store := e.Deals.SetClock(clock)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	pipeline, open, won := integration.DealFixture(t, e)
 	amount, currency, closes := int64(6000000), "EUR", now.AddDate(0, 0, 5)
@@ -167,7 +167,7 @@ func TestCurrentQuietDealObservationsExplainTheStoredSuggestion(t *testing.T) {
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
-	store := e.Deals.WithClock(clock)
+	store := e.Deals.SetClock(clock)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner := ids.From[ids.UserKind](e.Rep1)

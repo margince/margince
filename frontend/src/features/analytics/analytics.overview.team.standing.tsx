@@ -98,21 +98,15 @@ export function TeamStanding({
   const opened = useSelectionHeld<Decided | "waiting">(
     JSON.stringify([scope, review.interval]),
   );
-  const evaluation = readings.data;
   const rows = useBottlenecks(review, readings, {
     evidence: onEvidence,
     reasons: opened.open,
     waiting: () => opened.open("waiting"),
   });
-  // Nothing waits only when every input was read. A hidden, failed or pending
-  // input is a row of its own, and a handoff team needs its handoffs read.
-  const nothingWaits =
-    rows.length === 0 &&
-    (review.workflow !== "handoff" || review.handoffs !== undefined);
   return (
     <Panel title={t("analytics.team.standing")}>
       <PanelBody>
-        <TeamOutcomes review={review} evaluation={evaluation} />
+        <TeamOutcomes review={review} />
         <UpcomingLine summary={summary} />
       </PanelBody>
       {rows.map((row) => (
@@ -126,11 +120,6 @@ export function TeamStanding({
           )}
         </PanelRow>
       ))}
-      {nothingWaits && (
-        <PanelBody>
-          <p>{t("analytics.team.nothingWaits")}</p>
-        </PanelBody>
-      )}
       {opened.held && opened.held !== "waiting" && review.handoffs && (
         <ReasonsDrawer
           outcome={opened.held}
@@ -149,10 +138,7 @@ export function TeamStanding({
 
 // The period's outcome as one cohort: of what started in the period, how much
 // ended which way so far. Rates need a cohort at least the review's floor.
-function TeamOutcomes({
-  review,
-  evaluation,
-}: Readonly<{ review: Review; evaluation?: ReportingEvaluation }>) {
+function TeamOutcomes({ review }: Readonly<{ review: Review }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -184,23 +170,7 @@ function TeamOutcomes({
       </p>
     );
   }
-  const qualified = evaluation && metricOf(evaluation, "leads_promoted");
-  const arrived = qualified?.denominator;
-  if (qualified?.value == null || arrived == null) return null;
-  return (
-    <p>
-      {plural("analytics.team.qualifiedOf", arrived, {
-        qualified: count(qualified.value),
-        count: count(arrived),
-      })}{" "}
-      {arrived >= floor
-        ? t("analytics.team.qualifiedRate", {
-            rate: formatPercent(qualified.value / arrived, locale),
-          })
-        : arrived > 0 &&
-          t("analytics.team.tooFewForRate", { below: count(floor) })}
-    </p>
-  );
+  return null;
 }
 
 // Meetings booked ahead, in the window and words My prospecting uses.

@@ -33,19 +33,23 @@ const zeroPct = "0.00"
 // snapshot is copied ONCE, here — a later product edit never touches the
 // line (B-E03.17). The rate-card price only carries over when the
 // currencies agree; a silent conversion would fabricate a number.
-func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
+//
+// The name is the product's text in the offer's language where it has one,
+// and product.name otherwise.
+func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency, language string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
 	if productID == nil {
 		return in, nil
 	}
 	var pName, pUnit, pCurrency, pTax string
+	var pCategory *string
 	var pPrice int64
 	var pBillingModel *string
 	var pIntervalMonths *int
 	err := tx.QueryRow(ctx,
 		`SELECT name, unit, currency, default_tax_rate::text, unit_price_minor,
-		        billing_model, billing_interval_months
+		        billing_model, billing_interval_months, tax_category
 		 FROM product WHERE id = $1 AND archived_at IS NULL`, *productID).
-		Scan(&pName, &pUnit, &pCurrency, &pTax, &pPrice, &pBillingModel, &pIntervalMonths)
+		Scan(&pName, &pUnit, &pCurrency, &pTax, &pPrice, &pBillingModel, &pIntervalMonths, &pCategory)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return lineSnapshotDefaults{}, apperrors.ErrNotFound
@@ -53,6 +57,13 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 		return lineSnapshotDefaults{}, fmt.Errorf("read product for snapshot: %w", err)
 	}
 	if in.Description == nil {
+		names, err := productNamesInTx(ctx, tx, language, []ids.UUID{productID.UUID})
+		if err != nil {
+			return lineSnapshotDefaults{}, err
+		}
+		if name, ok := names[productID.UUID]; ok {
+			pName = name
+		}
 		in.Description = &pName
 	}
 	if in.Unit == nil {
@@ -64,8 +75,14 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 		}
 		in.Price = &pPrice
 	}
-	if in.TaxRate == nil {
-		in.TaxRate = &pTax
+	// A classified product hands the line its category, and the sheet its
+	// rate; only an unclassified product still hands over its own rate.
+	if in.TaxRate == nil && in.TaxCategory == nil {
+		if pCategory != nil {
+			in.TaxCategory = pCategory
+		} else {
+			in.TaxRate = &pTax
+		}
 	}
 	// The classification copies as a PAIR or not at all. Taking the model from
 	// the product while keeping a cadence the caller supplied — or the reverse
@@ -94,13 +111,23 @@ func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discoun
 	return unitVal, discount, tax
 }
 
-func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in OfferLineInputRow) (resolvedOfferLine, error) {
-	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
+func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency, language string, basis lazyTaxBasis, in OfferLineInputRow) (resolvedOfferLine, error) {
+	if err := checkLineTaxCategory(in.TaxCategory, in.TaxRate); err != nil {
+		return resolvedOfferLine{}, err
+	}
+	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, language, lineSnapshotDefaults{
 		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
-		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
+		TaxCategory: in.TaxCategory, BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
 	})
 	if err != nil {
 		return resolvedOfferLine{}, err
+	}
+	if defaults.TaxCategory != nil {
+		rate, err := sheetTaxRate(ctx, tx, basis, *defaults.TaxCategory)
+		if err != nil {
+			return resolvedOfferLine{}, err
+		}
+		defaults.TaxRate = &rate
 	}
 	if defaults.Description == nil || !values.HasVisibleText(*defaults.Description) {
 		return resolvedOfferLine{}, &RequiredFieldError{Field: descriptionColumn}
@@ -131,7 +158,7 @@ func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in O
 	}
 	return resolvedOfferLine{
 		Description: *defaults.Description, Unit: unitVal, Price: *defaults.Price, Discount: discount, Tax: tax,
-		BillingModel: defaults.BillingModel, IntervalMonths: defaults.IntervalMonths,
+		TaxCategory: defaults.TaxCategory, BillingModel: defaults.BillingModel, IntervalMonths: defaults.IntervalMonths,
 		IntervalCount: in.IntervalCount,
 	}, nil
 }

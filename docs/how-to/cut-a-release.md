@@ -70,14 +70,24 @@ git push origin v1.0.0
 ```
 
 `release-tag.yml` then checks the tag, the draft and the blockers, and refuses a commit that
-`merge-attest` judged bad. It then creates the release: your notes, the list of changes, and a link to
-[deploy-margince.md](deploy-margince.md) for the install.
+`merge-attest` judged bad. Then it builds the release and signs it, and only then publishes the page:
+
+1. It pushes the three images to `ghcr.io/margince`, tagged with the version.
+2. It packs one server bundle for each Linux platform, with
+   [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh).
+3. It writes the SBOMs, `images.txt` (each image pinned by its hash) and `SHA256SUMS` over the bundles, the SBOMs and `images.txt`.
+4. It signs each image and `SHA256SUMS` with cosign.
+5. It uploads those files with your notes, the changes and the install steps, then publishes the release.
+
+The install steps link [deploy-margince.md](deploy-margince.md) for the images and
+[install-on-a-server.md](install-on-a-server.md) for a bundle.
 
 A plain `v1.0.0` ships. A tag with an added part, such as `v1.0.0-rc.1`, goes out as a **pre-release**.
 So a build for tests does not become the default file to get on the release page. To tag a candidate
 deploys nothing, because a tag moves no branch.
 
-A run that fails before the release job leaves nothing behind. The lane runs one run at a time, and does
+A run that fails before the build job leaves nothing new: a plain tag's draft is still only yours. Once the build job has run, the images
+are on `ghcr.io` under the tag, even when a later job fails. The next run pushes over them. The lane runs one run at a time, and does
 not cancel a run, so no run is cut off while it writes the release. Still, check the releases page before
 you decide nothing happened. Either way, fix the
 tree, delete the tag, and tag again:
@@ -101,7 +111,7 @@ Two kinds of release live here, and they carry different versions:
 | Trigger | a `v*` tag | started by hand |
 | Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`: today `1970.<run>`, a stand-in pinned to the year 1970 |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
-| Carries | the notes and a link to the install steps | the patch of changes, SBOMs, role images |
+| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, role images |
 
 The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
 

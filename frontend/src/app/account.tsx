@@ -13,9 +13,14 @@ import {
 import type { components } from "../api/schema";
 import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
+import { StatusBadge } from "../design-system/statusbadge";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
+import {
+  bookingPagePaused,
+  useSchedulingProfile,
+} from "../lib/scheduling-profile-query";
 import { useMe } from "../lib/session";
 import { FlyoutRow, useFlyout } from "./accountflyout";
 import { SignOutRow } from "./accountfoot";
@@ -144,6 +149,9 @@ function AccountPanel({
   const { seat, walk, move } = useRovingSeats(SEAT_COUNT);
   const theme = useFlyout(THEME_SEAT, move);
   const help = useFlyout(HELP_SEAT, move);
+  // A paused booking link is dark to every guest who holds it, so the menu
+  // that opens it says so.
+  const booking = useSchedulingProfile().data;
 
   // The menu takes focus when it opens. A panel that leaves focus on the trigger
   // is one the keyboard reader has to walk into with a key nothing told them
@@ -208,6 +216,9 @@ function AccountPanel({
         onClick={onDismiss}
       >
         {t("scheduling.myLink")}
+        {booking && bookingPagePaused(booking) && (
+          <StatusBadge kind="attention" label={t("scheduling.status.paused")} />
+        )}
       </AppLink>
       <FlyoutRow
         label={t("shell.helpMenu")}

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Container entrypoint for cmd/api: apply migrations as the OWNER role, then serve
+# Entrypoint for cmd/api, in the image and in the server bundle: apply migrations as the OWNER role, then serve
 # as the APP role. Deployment-target-agnostic — every setting is read from the
 # environment (the MARGINCE_* vars in docs/reference/configuration.md and programs.md); the api
 # resolves --config/--dsn/--redis/--public-base-url from their env
@@ -56,12 +56,12 @@ margince-migrate up "$@"
 # migrations because it reads a table migrations create.
 #
 # The path is fixed, and margince.yaml's `password_file` must name the same one:
-# /app/secrets/admin-password, i.e. `secrets/admin-password` relative to the api's
-# /app working directory. It used to be overridable via
-# MARGINCE_ADMIN_PASSWORD_FILE, which nothing ever set — a deployment that wants a
-# different path changes it in margince.yaml and here together, and one knob is
-# fewer things to keep in agreement than two.
-admin_password_file="/app/secrets/admin-password"
+# `secrets/admin-password`, relative to the working directory the api starts in,
+# which is how the api resolves it too. That is /app in the image and the unit's
+# WorkingDirectory on a server. A deployment that wants a different path changes
+# it in margince.yaml and here together; one knob is fewer things to keep in
+# agreement than two.
+admin_password_file="secrets/admin-password"
 # Either condition is worth a probe. The variable being set may mean a
 # credential must be WRITTEN; the file already existing may mean a spent one
 # must be RETIRED. Gating on the variable alone would strand a file left by an

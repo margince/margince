@@ -7,11 +7,11 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import { ifMatch } from "../../api/version";
-import { postMultipart } from "../../lib/multipart";
-import { unwrap } from "../../lib/problem";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { ifMatch } from "../api/version";
+import { postMultipart } from "./multipart";
+import { unwrap } from "./problem";
 
 // The legal entities the installation trades as. The server reads the
 // default entity's name and logo from the anchor company. So this list is where

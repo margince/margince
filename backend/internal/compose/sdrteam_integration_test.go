@@ -109,7 +109,7 @@ func (f *sdrTeamFixture) review(ctx context.Context, t *testing.T, kind crmcontr
 func (f *sdrTeamFixture) holdMeeting(t *testing.T) {
 	t.Helper()
 	clock := func() time.Time { return f.at }
-	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).WithClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).SetClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Customer", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}

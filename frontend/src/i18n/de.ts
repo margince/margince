@@ -943,6 +943,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Neue Deals",
   "reporting.movement.pulled_in": "In den Zeitraum vorgezogen",
   "reporting.movement.pushed_out": "Aus dem Zeitraum geschoben",
+  "reporting.movement.excluded": "Nach Prüfung herausgenommen",
+  "reporting.movement.reinstated": "Nach Prüfung wieder gezählt",
+  "reporting.movement.not_checked": "Nicht geprüft",
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
@@ -1528,6 +1531,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
   "reporting.compare.basis.commit_evidence": "belegten Commit-Deals",
   "reporting.compare.basis.weighted": "der gewichteten Pipeline",
+  "reporting.compare.basis.qualified_commit_evidence":
+    "gestützten Commit-Deals",
+  "reporting.compare.basis.qualified_weighted":
+    "der gestützten gewichteten Pipeline",
   "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
@@ -1943,8 +1950,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Termin absagen",
   "scheduling.cancelConfirm":
     "Diesen Termin absagen und den Gast benachrichtigen?",
+  "scheduling.calendarDisconnectedTitle":
+    "Dein Kalender hat Margince abgewiesen",
+  "scheduling.calendarDisconnectedHelp":
+    "Alle Einladungen, die auf diesen Kalender warten, sind angehalten. Verbinde ihn wieder mit der Erlaubnis, Termine anzulegen, dann gehen sie von selbst raus.",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
+  "scheduling.pausedUnavailable":
+    "{host} nimmt über diese Seite gerade keine Buchungen an.",
   "scheduling.unavailable":
     "Diese Buchungsseite ist nicht verfügbar. Wende dich an die organisierende Person.",
   "scheduling.publicUrlMissing":
@@ -2168,6 +2181,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kalenderverbindung",
   "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
+  "brief.coverage.source.deal_review": "Prüfungen des Kundenrückhalts",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
@@ -5601,6 +5615,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
+  "deals.viability.title": "Rückhalt beim Kunden",
+  "deals.viability.standing": "Prognose gestützter Deals",
+  "deals.viability.enforced":
+    "Die Prognose zählt nur Deals, die der Kunde stützt.",
+  "deals.viability.notEnforced":
+    "Die Prognose zählt alle Deals; dies ist nur zur Information.",
+  "deals.viability.qualification.eligible": "Gezählt",
+  "deals.viability.qualification.excluded": "Zur Prüfung herausgenommen",
+  "deals.viability.qualification.unsupported": "Herausgenommen: kein Rückhalt",
+  "deals.viability.qualification.unknown": "Nicht geprüft",
+  "deals.viability.qualification.closed":
+    "Abgeschlossen: nicht in der Prognose",
+  "deals.viability.checkOutOfDate":
+    "Diese Prüfung zählt nicht mehr, daher ist der Deal nicht geprüft.",
+  "deals.viability.assessed": "Zuletzt geprüft",
+  "deals.viability.review": "Prüfung des Kundenrückhalts",
+  "deals.viability.reviewOpenedOn": "Geöffnet am {date}",
+  "deals.viability.reviewOpen": "Offen",
+  "deals.viability.taskDoneReviewOpen": "Aufgabe erledigt, noch offen",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -6180,6 +6213,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.buyerCompany": "Käuferunternehmen",
   "offer.buyerCompanyConfirm": "Käuferunternehmen: {name}",
   "offer.template": "Vorlage",
+  "offer.legalEntity": "Ausgestellt von",
+  "offer.legalEntityHint":
+    "Der Rechtsträger, dessen Name, Adresse, USt-IdNr., Bankverbindung und Logo das Angebot druckt.",
+  "offer.language": "Sprache",
+  "offer.languageHint":
+    "Zwei Buchstaben, zum Beispiel de. Neue Positionen übernehmen Produktnamen in dieser Sprache.",
   "offer.validUntil": "Gültig bis",
   "offer.introText": "Einleitungstext",
   "offer.termsText": "Bedingungstext",
@@ -6410,6 +6449,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.commit_evidence": "Aus Commit-Belegen",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
+  "brief.weekly.outlook.measure.qualified_commit_evidence":
+    "Aus gestützten Commit-Belegen",
+  "brief.weekly.outlook.measure.qualified_weighted":
+    "Aus gestützten gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
     "Aus der Einschätzung der Führungskraft",
   "brief.weekly.bridge": "Veränderung der Woche",
@@ -6422,6 +6465,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Neu erstellt",
   "brief.weekly.bar.advanced": "Vorangekommen",
   "brief.weekly.bar.slipped": "Verschoben",
+  "brief.weekly.bar.excluded": "Nach Prüfung raus",
+  "brief.weekly.bar.reinstated": "Nach Prüfung zurück",
+  "brief.weekly.bar.not_checked": "Nicht geprüft",
   "brief.weekly.bar.won": "Gewonnen",
   "brief.weekly.bar.lost": "Verloren",
   "brief.weekly.bar.other": "Wechselkurse und Definitionen",
@@ -7525,16 +7571,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.prospecting": "Meine Akquise",
   "analytics.overview.readings": "Wichtigste Kennzahlen",
   "analytics.overview.charts": "Diagramme",
-  "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
-  "analytics.overview.coverage": "Deckung",
   "analytics.overview.allOpen": "Gesamte offene Pipeline",
   "analytics.overview.openClosing":
     "Offene Pipeline mit Abschluss in diesem Quartal",
-  "analytics.overview.quarterOnly": "Nur dieses Quartal",
-  "analytics.overview.winRateBasis":
-    "Von den in diesem Zeitraum abgeschlossenen Deals",
-  "analytics.overview.summary": "Zusammenfassung",
-  "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
   "analytics.overview.saveViewNote":
@@ -7545,8 +7584,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
   "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
-  "analytics.overview.salesNothing":
-    "Für diesen Bereich ist keine Prognoseprüfung offen.",
   "analytics.overview.quarterOnlyTitle":
     "Das erwartete Ergebnis gilt für dieses Quartal",
   "analytics.overview.quarterOnlyBody":
@@ -7587,12 +7624,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.failed": "Konnte nicht gelesen werden",
   "analytics.prospect.failedDetail":
     "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
-  "analytics.prospect.basisAccepted":
-    "Als Deal angenommene Übergaben, {period}",
-  "analytics.prospect.noArrivals":
-    "{period} ist kein Lead eingegangen, also konnte keiner qualifiziert werden",
-  "analytics.prospect.basisQualified":
-    "Von {arrived} Leads, die {period} eingegangen sind",
   "analytics.prospect.weeksFailed":
     "Die letzten Wochen konnten nicht gelesen werden.",
   "analytics.prospect.noMeetingsWeek":
@@ -7644,7 +7675,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.doNext.all_other": "Alle {count} Einträge in deiner Worklist",
   "analytics.doNext.open": "Öffnen",
   "analytics.doNext.openNamed": "{title} öffnen",
-  "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.overview.team": "Team-Akquise",
   "analytics.team.chooseTeam": "Wähle ein Team",
   "analytics.team.chooseTeamBody":
@@ -7691,11 +7721,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{rate} dieser {rounds} Runden wurden angenommen.",
   "analytics.team.tooFewForRate":
     "Weniger als {below} sind zu wenige für eine Quote, darum steht hier keine.",
-  "analytics.team.qualifiedOf_one":
-    "{qualified} von {count} Lead aus diesem Zeitraum ist bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
-  "analytics.team.qualifiedOf_other":
-    "{qualified} von {count} Leads aus diesem Zeitraum sind bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
-  "analytics.team.qualifiedRate": "Das sind {rate} der eingegangenen Leads.",
   "analytics.team.waitingRow_one":
     "{count} Übergabe wartet auf eine Entscheidung",
   "analytics.team.waitingRow_other":
@@ -7729,8 +7754,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.handoffsHidden": "Übergaben sind für dich verborgen.",
   "analytics.team.hiddenBasis":
     "Deine Rolle umfasst das nicht. Das heißt nicht, dass es null ist.",
-  "analytics.team.nothingWaits":
-    "In diesem Zeitraum wartet nichts auf das Team.",
   "analytics.team.showHandoffs": "Übergaben zeigen",
   "analytics.team.showReasons": "Gründe zeigen",
   "analytics.team.showLeads": "Leads zeigen",
@@ -7749,12 +7772,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.target": "Monatsziel",
   "analytics.team.targetOf": "{actual} von {target}",
   "analytics.team.noTarget": "Kein Ziel",
+  "analytics.team.eventCredit":
+    "Gutschrift: verantwortliche Person bei der ersten Qualifizierung. Jeder Lead zählt einmal.",
   "analytics.team.qualificationBasis":
-    "Qualifiziert zählt die Leads aus diesem Zeitraum, die bisher qualifiziert sind. Unbeantwortet zählt die Leads, die in diesem Zeitraum geschrieben haben und noch keine Antwort haben. Beide zählen für das Teammitglied, das heute für den Lead verantwortlich ist, ein neu zugewiesener Lead also beim neuen.",
+    "Qualifiziert zählt die ersten Qualifizierungen im Zeitraum für die damals verantwortliche Person. Unbeantwortet folgt der aktuellen Verantwortung.",
   "analytics.team.handoffBasis":
     "Übergeben, zurückgegeben und abgelehnt zählen, was in diesem Zeitraum geschah. Angenommen zählt jeden Deal einmal, im Zeitraum seiner ersten Annahme. Wartet jetzt gilt für heute. Alles zählt für das Teammitglied, das damals übergeben hat.",
   "analytics.team.targetBasis":
-    "Ziele gelten pro Monat. Jedes vergleicht die bisher qualifizierten Leads vom {month} mit dem eigenen Ziel des Mitglieds.",
+    "Monatsziele vergleichen erste Qualifizierungen in {month} mit dem Ziel der Person.",
   "analytics.team.meetingsHidden": "Termine sind für dich verborgen.",
   "analytics.team.leadsHidden":
     "Qualifizierte und unbeantwortete Leads sind für dich verborgen.",
@@ -8036,6 +8061,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.myPipeline": "Meine offenen Deals",
   "analytics.sdrLeads": "Meine Leads in diesem Monat",
   "analytics.sdrReading.leads_promoted": "Qualifizierte Leads",
+  "analytics.sdrReading.leads_qualified": "Qualifizierte Leads",
   "analytics.sdrReading.lead_first_response":
     "Zeit bis zur ersten Antwort, beantwortete Leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -8338,7 +8364,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.confirmed": "Abschlussdatum bestätigt",
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Prognosekategorien",
-  "analytics.shareOfOpenPipeline": "Anteil an offener Pipeline",
+  "analytics.shareOfOpenPipeline": "Pipeline-Anteil in dieser Währung",
   "analytics.reportPipelineByCloseMonth": "Offene Pipeline nach Abschlussmonat",
   "analytics.closeMonth": "Abschlussmonat",
   "analytics.noCloseDate": "Kein Abschlussdatum",
@@ -13200,6 +13226,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "taxRates.title": "Steuersätze",
+  "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
+  "taxRates.intro":
+    "Der normale und der ermäßigte Steuersatz jedes Landes, jeweils ab dem Tag, an dem er gilt. Ein Satz wird nie geändert: Erfasse einen neuen ab einem späteren Tag.",
+  "taxRates.empty": "Noch keine Steuersätze.",
+  "taxRates.add": "Satz erfassen",
+  "taxRates.modalTitle": "Steuersatz erfassen",
+  "taxRates.colCountry": "Land",
+  "taxRates.colCategory": "Kategorie",
+  "taxRates.colRate": "Satz",
+  "taxRates.colFrom": "Ab",
+  "taxRates.category.standard": "Normal",
+  "taxRates.category.reduced": "Ermäßigt",
+  "taxRates.category.exempt": "Steuerfrei",
+  "taxRates.countryPlaceholder": "Land auswählen",
+  "taxRates.rateHint": "Prozent, zum Beispiel 19 oder 7,7.",
+  "taxRates.fromHint":
+    "Heute oder später. Ein Tag vor dem ersten Satz des Landes ergänzt dessen Verlauf.",
+  "taxRates.notSaved": "Satz nicht gespeichert",
+  "taxRates.save": "Satz erfassen",
+  "taxRates.recorded_one": "Satz erfasst. Er hat {count} Produkt eingeordnet.",
+  "taxRates.recorded_other":
+    "Satz erfasst. Er hat {count} Produkte eingeordnet.",
   "settings.rates.setRate": "Speichern",
   "settings.rates.refresh": "Aus Quellen aktualisieren",
   "settings.rates.refreshEnqueued":
@@ -13585,6 +13634,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.import_run": "Datenimporte",
   "roles.object.finance": "Finanzdaten",
   "roles.object.fx_rate": "Währungskurse",
+  "roles.object.tax_rate": "Steuersätze",
   "roles.object.data_coverage": "Datenabdeckung",
   "roles.object.knowledge_corpus": "Wissensquellen",
   "roles.object.knowledge_document": "Wissensdokumente",
@@ -13790,6 +13840,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
   "users.status.invited": "Eingeladen",
+  "users.status.inviteMailFailed": "Einladungs-E-Mail fehlgeschlagen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
   "users.handover.action": "Arbeit übergeben",
@@ -13826,6 +13877,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.resendInvite": "Einladung erneut senden",
+  "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",
   "users.link.pending": "Link wird erstellt…",
   "users.link.body":
@@ -13939,6 +13992,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.taxCategory": "Steuerkategorie",
+  "product.taxCategoryUnset": "Nicht eingeordnet",
+  "product.taxCategoryFilter": "Steuerkategorie",
+  "product.taxCategoryFilterAll": "Alle Steuerkategorien",
+  "product.translations": "Übersetzungen",
+  "product.translationsTitle": "{name} in anderen Sprachen",
+  "product.translationsHint":
+    "Ein Angebot in einer dieser Sprachen nennt das Produkt so. Eine Position, die schon auf einem Angebot steht, behält ihren Namen.",
+  "product.translationsEmpty": "Noch keine anderen Sprachen.",
+  "product.translationRemove": "{language} entfernen",
+  "product.translationLanguage": "Sprache",
+  "product.translationLanguageHint":
+    "Zwei Buchstaben, zum Beispiel de. Eine Sprache, die schon in der Liste steht, wird ersetzt.",
+  "product.translationSave": "Sprache speichern",
   "product.archive": "Produkt archivieren",
   "product.archiveConfirm":
     "Dieses Produkt archivieren? Bestehende Angebotspositionen behalten ihren Snapshot.",
@@ -14255,6 +14322,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Commit-Belege: nur bestätigte Abschlussdaten",
   "installationSettings.forwardMeasure.weighted":
     "Gewichtet: jeder offene Deal mit der Wahrscheinlichkeit seiner Phase",
+  "installationSettings.forwardMeasure.qualified_commit_evidence":
+    "Gestützte Commit-Belege: bestätigte Abschlussdaten, die der Kunde noch stützt",
+  "installationSettings.forwardMeasure.qualified_weighted":
+    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit der Wahrscheinlichkeit ihrer Phase",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
@@ -14262,6 +14333,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
+  "forecast.basis.qualified_commit_evidence":
+    "Gewonnen + gestützter bestätigter Commit",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
@@ -14294,6 +14368,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.",
+  "forecast.landing.caveat.qualified_unavailable":
+    "Die Zählung gestützter Deals ist aus, daher zeigt dies alle Deals.",
   "forecast.landing.caveat.call_below_actual":
     "Die Einschätzung liegt unter dem bereits gewonnenen Betrag. Die Einschätzung wird wie erfasst angezeigt, nicht korrigiert.",
   "forecast.pipelineNeeded": "Benötigter Deal-Wert",
@@ -18056,6 +18132,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
+  "worklist.ask.deal_review":
+    "Der Kunde stützt diesen Deal vielleicht nicht mehr. Öffne ihn und beantworte die Prüfung.",
   "worklist.ask.meeting":
     "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
   "worklist.ask.relationship_decay":
@@ -18460,6 +18538,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
   "worklist.untitled.deal_at_risk": "Deal stagniert",
+  "worklist.untitled.deal_review": "Prüfung des Kundenrückhalts",
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",
@@ -19306,7 +19385,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiFigures.window.30d": "30 T",
   "scheduling.linksTitle": "Buchungslinks",
   "scheduling.status.paused": "Pausiert",
-  "scheduling.status.attention": "Braucht Aufmerksamkeit",
   "scheduling.acceptBookings": "Buchungen annehmen",
   "scheduling.acceptBookingsHelp":
     "Alle mit deinem Link können eine freie Zeit wählen. Schalte es aus, um Buchungen zu pausieren; der Link bleibt gleich.",
@@ -19321,8 +19399,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Aktionen",
   "scheduling.videoCall": "Videoanruf",
-  "scheduling.row.live": "Aktiv",
-  "scheduling.row.noInvitations": "Keine Einladungen",
   "scheduling.videoNotSet": "Nicht festgelegt",
   "scheduling.video.ownShort": "Eigener Link",
   "scheduling.mainLink": "(Hauptlink)",
@@ -20143,34 +20219,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gewonnener Umsatz im Vergleich zum Quartalsziel",
   "analytics.hero.attained": "{percent} % des Ziels von {target}",
   "analytics.hero.remaining": "Noch {amount} zu gewinnen",
-  "analytics.hero.shortfall":
-    "Erwartete Lücke {amount}, bei einem erwarteten Abschluss von {landing}",
-  "analytics.hero.surplus":
-    "Erwarteter Überschuss {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.shortfall": "Erwartete Lücke {amount}",
+  "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
-  "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
-  "analytics.assessment.title": "Einschätzung",
-  "analytics.assessment.pending": "Zahlen werden gelesen",
+  "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
+  "analytics.outlook.periodPipeline":
+    "Pipeline mit Abschluss in diesem Quartal",
+  "analytics.outlook.sales": "Quartalsausblick",
+  "analytics.outlook.team": "Ausblick zur Teamakquise",
+  "analytics.outlook.prospecting": "Akquiseausblick",
+  "analytics.outlook.records": "Zugehörige Datensätze anzeigen",
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
-  "analytics.assessment.noSales":
-    "Keine gemessenen Verkäufe in dieser Auswahl.",
-  "analytics.assessment.deterministic":
-    "Allein aus den Zahlen geschrieben. Ein KI-Modell ergänzt hier seine Lesart, sobald eines eingerichtet ist.",
-  "analytics.assessment.nextDecision": "Nächste Entscheidung",
-  "analytics.assessment.noDecision": "Keine gestützte Entscheidung.",
-  "analytics.assessment.viewEvidence": "Belege ansehen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",
-  "analytics.assessment.evidencePurpose":
-    "Jeder Satz nennt die Zahlen, die er liest. Öffne eine Zahl, um ihre Datensätze zu sehen.",
-  "analytics.assessment.confidence": "Sicherheit: {level}",
-  "analytics.assessment.kind.observation": "Beobachtung",
-  "analytics.assessment.kind.claim": "Berichtet",
-  "analytics.assessment.kind.hypothesis": "Vermutung",
-  "analytics.assessment.level.low": "niedrig",
-  "analytics.assessment.level.medium": "mittel",
-  "analytics.assessment.level.high": "hoch",
   "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
   "analytics.decisions.purpose":
     "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
@@ -20206,9 +20268,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.profileCompany": "Unternehmensumsatz",
   "analytics.overview.profileProduct": "Produktumsatz",
   "analytics.overview.removeFilter": "{filter} entfernen",
-  "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
-  "analytics.overview.coverageNotCompared":
-    "Der Hinweis unter dem gewonnenen Umsatz sagt, warum",
   "analytics.intervention.scope":
     "Diese Prüfungen umfassen jede Pipeline und jedes Abschlussdatum in diesem Bereich.",
   "analytics.intervention.viewAll": "Alle Prüfungen ansehen",
@@ -20231,9 +20290,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "1 Datenquelle konnte bei der letzten Prüfung nicht gelesen werden.",
   "analytics.intervention.maintenanceBody_other":
     "{count} Datenquellen konnten bei der letzten Prüfung nicht gelesen werden.",
-  "analytics.decision.composition":
-    "Woraus sich der erwartete Abschluss zusammensetzt",
-  "analytics.decision.won": "Gewonnen",
   "analytics.decision.included":
     "Zählt {included} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
   "analytics.decision.excluded": "Nicht enthalten: {parts}.",
@@ -20256,8 +20312,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.writtenChecksDeals_other": "{count} Deals",
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
-  "analytics.decision.part.commit_evidence": "Bestätigter Commit",
-  "analytics.decision.part.weighted": "Gewichtete offene Deals",
   "health.needsFix": "Beheben",
   "health.needsReview": "Prüfung nötig",
   "health.actionsNeeded_one": "Problem mit Handlungsbedarf: {count}",
@@ -20522,4 +20576,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
   "health.impact.automatic":
     "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
+  "analytics.outlook.calledAt": "Prognose vom {at}",
+  "analytics.prospect.weeksByQualification":
+    "Jeder Lead zählt in der Woche seiner ersten Qualifizierung.",
+  "analytics.team.atLeast": "Mindestens {value}",
+  "analytics.team.arrivalQualified": "Qualifizierte eingegangene Leads",
+  "analytics.team.arrivalTarget": "Ziel für eingegangene Leads",
+  "analytics.team.arrivalCredit":
+    "Eingangskohorte: Leads mit Eingang im Zeitraum, nach heutiger Verantwortung.",
+  "analytics.outlook.dealCount_one": "{count} Deal",
+  "analytics.outlook.dealCount_other": "{count} Deals",
+  "analytics.team.qualificationUnattributed_one":
+    "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "analytics.team.qualificationUnattributed_other":
+    "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
 };

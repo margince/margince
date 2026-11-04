@@ -239,7 +239,7 @@ describe("MySdrWork", () => {
         upcoming_meetings: 2,
       },
     });
-    expect(await screen.findByText(en["analytics.doNext.title"])).toBeVisible();
+    expect(screen.queryByText(en["analytics.sdrNothingNeedsYou"])).toBeNull();
     await screen.findByText(en["analytics.sdrLeads"]);
     expect(screen.queryByText(en["analytics.sdrWaiting"])).toBeNull();
     expect(
@@ -273,11 +273,10 @@ describe("MySdrWork", () => {
     expect(screen.queryByText(en["analytics.sdrNothingNeedsYou"])).toBeNull();
   });
 
-  it("says nothing needs you only when every source answered empty", async () => {
+  it("omits a work panel and an assurance when every source answered empty", async () => {
     show();
-    expect(
-      await screen.findByText(en["analytics.sdrNothingNeedsYou"]),
-    ).toBeVisible();
+    await screen.findByText(en["analytics.sdrLeads"]);
+    expect(screen.queryByText(en["analytics.sdrNothingNeedsYou"])).toBeNull();
   });
 
   it("shows a failed day as failed, not as a clear one", async () => {

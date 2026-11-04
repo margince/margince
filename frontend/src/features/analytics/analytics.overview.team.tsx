@@ -18,6 +18,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { outboundDials, TEAM_PERIODS } from "./analytics.overview.context";
@@ -43,7 +44,7 @@ import {
   reportingPeriodLabel,
 } from "./reporting.model";
 import { useReportingEvaluation } from "./reporting.queries";
-import { presetRequest } from "./reporting.views";
+import { presetRequest, workflowMetrics } from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Framework = components["schemas"]["ReportingFramework"];
@@ -111,10 +112,19 @@ export function TeamProspecting({
   const { locale } = useLocale();
   const [params] = useUrlParams();
   const period = teamPeriod(params.get("period"));
-  const { metrics, blocks } = presetRequest("team", catalog);
+  const { metrics: offered, blocks } = presetRequest("team", catalog);
   // Both reads take this one scope, so the figures and the feedback below
   // them always describe the same members.
   const team = teamScope(scope);
+  const review = useSdrTeamReview(team, period);
+  const template =
+    workflow.data?.definition.template ??
+    (review.data
+      ? review.data.workflow === "handoff"
+        ? "sdr"
+        : "sales"
+      : undefined);
+  const metrics = workflowMetrics(offered, template);
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     period,
@@ -125,9 +135,10 @@ export function TeamProspecting({
   };
   const query = useReportingEvaluation(
     selection,
-    team !== undefined && metrics.length > 0,
+    team !== undefined &&
+      metrics.length > 0 &&
+      (Boolean(template) || (!workflow.isLoading && !review.isLoading)),
   );
-  const review = useSdrTeamReview(team, period);
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
     useSelectionEvidence(JSON.stringify(selection), query.data);
   const handoffWorkflow =
@@ -224,7 +235,22 @@ function TeamBody({
   // The company's clock until the evaluation names the reporting zone.
   const recordZone = useRecordZone();
   const zone = query.data?.context.timezone ?? recordZone;
-  const readings = handoffWorkflow ? HANDOFF_READINGS : QUALIFICATION_READINGS;
+  const readings = (
+    handoffWorkflow ? HANDOFF_READINGS : QUALIFICATION_READINGS
+  ).map((id) =>
+    id === "leads_qualified" &&
+    !query.data?.metrics.some((metric) => metric.id === "leads_qualified")
+      ? "leads_promoted"
+      : id,
+  );
+  const outlook = query.data && !query.isError && (
+    <AssessmentPanel
+      view="team"
+      selection={query.data.selection}
+      evaluation={query.data}
+      onEvidence={onEvidence}
+    />
+  );
   return (
     <>
       <QueryGate query={query} pendingLabel={t("analytics.overview.team")}>
@@ -272,17 +298,17 @@ function TeamBody({
             </SurfaceState>
           ) : (
             <>
-              <div className="analytics-pair analytics-pair-table">
-                <TeamStanding
-                  review={data}
-                  readings={query}
-                  summary={summary}
-                  scope={scope}
-                  zone={zone}
-                  onEvidence={onEvidence}
-                />
-                <MemberTable review={data} zone={zone} />
-              </div>
+              <TeamStanding
+                review={data}
+                readings={query}
+                summary={summary}
+                scope={scope}
+                zone={zone}
+                onEvidence={onEvidence}
+              />
+              {outlook}
+              <MemberTable review={data} zone={zone} />
+
               {data.workflow === "qualification" && <QualificationNote />}
               {data.handoffs && data.handoffs.unattributed > 0 && (
                 <Unattributed count={data.handoffs.unattributed} />
@@ -291,6 +317,7 @@ function TeamBody({
           )
         }
       </QueryGate>
+      {!review.data && outlook}
     </>
   );
 }
@@ -300,11 +327,10 @@ function TeamBody({
 const HANDOFF_READINGS = [
   "accepted_opportunities",
   "meetings_held",
-  "leads_promoted",
   "leads_awaiting_response",
 ] as const;
 const QUALIFICATION_READINGS = [
-  "leads_promoted",
+  "leads_qualified",
   "meetings_held",
   "leads_awaiting_response",
 ] as const;

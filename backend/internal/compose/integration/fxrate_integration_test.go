@@ -38,7 +38,7 @@ var fxTestNow = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 
 func TestFxRateAppendForward(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	today := fxTestNow.Truncate(24 * time.Hour)
 
@@ -80,7 +80,7 @@ func TestFxRateAppendForward(t *testing.T) {
 
 func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	today := fxTestNow.Truncate(24 * time.Hour)
 
@@ -106,7 +106,7 @@ func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 // rate some day was already priced at.
 func TestFxRateHistoryExtendsOnlyBeforeTheEarliestRate(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	today := fxTestNow.Truncate(24 * time.Hour)
 	setOn := func(rate string, day time.Time) error {
@@ -171,7 +171,7 @@ func TestFxRateReadDeniedForNonAdmin(t *testing.T) {
 
 func TestFxRateWritesAuditRow(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: fxTestNow}); err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -205,7 +205,7 @@ func fxRatePerms(g principal.ObjectGrant) principal.Permissions {
 // 403 sentinel, and a refused write leaves the sheet untouched.
 func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	today := fxTestNow.Truncate(24 * time.Hour)
 	setOn := func(ctx context.Context, rate string, day time.Time) error {
 		_, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{
@@ -256,7 +256,7 @@ func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 // create grant the insert used.
 func TestFxRateOverwriteAuditsAsUpdate(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	for _, rate := range []string{"0.9", "0.95"} {
 		if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{

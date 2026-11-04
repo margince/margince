@@ -134,8 +134,8 @@ func NewFollowUpReconciler(db *database.DB, stager FollowUpStager, log *slog.Log
 	return &FollowUpReconciler{db: db, stager: stager, log: log, now: time.Now}
 }
 
-// WithClock keeps the pass window and proposed dates on the same clock.
-func (r *FollowUpReconciler) WithClock(now func() time.Time) *FollowUpReconciler {
+// SetClock keeps the pass window and proposed dates on the same clock.
+func (r *FollowUpReconciler) SetClock(now func() time.Time) *FollowUpReconciler {
 	if now != nil {
 		r.now = now
 	}
