@@ -3942,6 +3942,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "access.state.signedInBadge": "Angemeldet",
   "access.state.invitedBadge": "Eingeladen",
   "access.state.linkRequestedBadge": "Link angefragt",
+  "access.state.mailFailedBadge": "E-Mail fehlgeschlagen",
+  "access.mail.sent": "E-Mail gesendet",
+  "access.mail.failed":
+    "Die Einladungs-E-Mail ist fehlgeschlagen. Stelle einen neuen Link aus und sende ihn selbst.",
   "access.lastSeen": "zuletzt gesehen am {when}",
   "access.downloads_one": "{count} Dokument heruntergeladen",
   "access.downloads_other": "{count} Dokumente heruntergeladen",
@@ -3961,7 +3965,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wird dir zum Kopieren angezeigt. Ist ein Mail-Relay eingerichtet, wird der Link zusätzlich per E-Mail gesendet. Die Zustellung ist aber nicht garantiert.",
   "access.issued.title": "Link für {name}",
   "access.issued.mailed":
-    "An {email} gesendet. Du kannst den Link unten auch kopieren.",
+    "Für {email} vorgemerkt. Die Liste zeigt, wann sie gesendet wurde oder ob sie fehlgeschlagen ist. Du kannst den Link unten auch kopieren.",
   "access.issued.notMailed":
     "Der Link wurde nicht per E-Mail gesendet. Kopiere den Link und sende ihn selbst.",
   "access.issued.mailedTitle": "Einladungs-E-Mail zum Versand vorgemerkt",
