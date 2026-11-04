@@ -79,9 +79,12 @@ export function StopConfirm({
     held.includes(service),
   );
   const whole = services.length > 0 && services.length === held.length;
-  // A disconnect that is running keeps naming what it stops, even once the
-  // account no longer holds it.
-  const named = services.length > 0 ? services : (stop?.services ?? []);
+  // A disconnect that has started keeps naming everything it stops, even once
+  // the account no longer holds some of it.
+  const named =
+    disconnect.isPending || disconnect.isSuccess
+      ? (stop?.services ?? [])
+      : services;
   // The account can lose a service while the confirm is open. With nothing left
   // to stop, the stop is over, and a follow-up connect still has to run. A
   // disconnect that is running or succeeded ends the stop itself, and only once.

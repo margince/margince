@@ -453,6 +453,44 @@ describe("the account's own verbs", () => {
     expect(onStopped).toHaveBeenCalledOnce();
   });
 
+  it("keeps naming both services when one leaves during a running disconnect", async () => {
+    let finish: (response: Response) => void = () => undefined;
+    stubApi({
+      "POST /disconnect": () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const client = new QueryClient();
+    const confirm = (connections: CaptureConnection[]) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail", "calendar"], afterwards: null }}
+            onClose={() => undefined}
+            onStopped={() => undefined}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(confirm([gmail, gcal]));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+
+    view.rerender(confirm([gcal]));
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      /stops Mail and Calendar/,
+    );
+    finish(new Response(null, { status: 204 }));
+  });
+
   it("ends a stop whose disconnect failed once its service left the account", async () => {
     stubApi({
       "POST /disconnect": () => jsonResponse({ code: "internal" }, 500),
