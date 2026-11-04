@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -73,7 +73,8 @@ attempt landed:
 - When an answer does not show whether a write worked, Margince looks the event up before it
   writes again.
 - Delivery takes a lease with a version number and makes a limited number of attempts. After
-  that, the meeting shows `needs attention`, and a retry works on the same invite.
+  that, the meeting shows `needs attention` with the reason `delivery_failed`, and a retry works on
+  the same invite.
 - Each saved calendar ID points to the real calendar behind it. If the host connects a different
   account, an event Margince cannot find does not turn into a wrong cancel.
 
@@ -85,6 +86,22 @@ change a managed invite behind the host's back.
 Provider capture matches the host's copy of the event to the existing activity, even before the
 first copy is committed. A provider check every 15 minutes copies changed times and cancels back to
 the same activity.
+
+## A refused calendar parks the whole queue
+
+A calendar that refuses Margince refuses every invite of that host, so trying each one five times
+spends the attempts for nothing. `calendarAuthFailure` decides it, whichever provider call failed.
+The first refusal parks the finishing invite. It also parks every queued invite of the same host and
+calendar that no worker holds under lease. A held invite parks itself when its own attempt ends.
+All of them share one `attention_episode`, and the host gets one notice for it, keyed on that id.
+
+Parking and resuming write the domain row, the audit row and the outbox event together. Each
+delivery pass first resumes a parked queue under the host's lock. The host must have granted the
+calendar again since the disconnect, and the `blocker` the booking page reads must be `none`. The
+latest disconnect of each host and calendar stays in `meeting_calendar_episode` after its invites
+resume. So a refusal that was in flight during the resume parks nothing, and a later one is a new
+disconnect. A trigger clears the reason each time the status moves on,
+so no writer has to do it.
 
 ## Video links come with the create
 

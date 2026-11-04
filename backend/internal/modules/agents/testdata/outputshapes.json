@@ -6484,6 +6484,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "attention_reason": {
+            "type": "string"
+          },
           "calendar_url": {
             "type": "string"
           },

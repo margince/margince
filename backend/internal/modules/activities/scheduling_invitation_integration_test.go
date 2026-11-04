@@ -36,6 +36,10 @@ type invitationCalendar struct {
 	contacts map[string]ids.UUID
 	// invitees are the address each linked contact or lead is invited at.
 	invitees map[ids.UUID]string
+	// reconnectedAt is when the host last granted the calendar.
+	reconnectedAt time.Time
+	// judging runs while Blocker judges the calendar.
+	judging func()
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
@@ -280,8 +284,15 @@ func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kin
 	return c.invitees[id], id, nil
 }
 
+func (c *invitationCalendar) ReconnectedSince(_ context.Context, _ ids.UserID, _ string, since time.Time) (bool, error) {
+	return c.reconnectedAt.After(since), nil
+}
+
 // Blocker reads a refused Check as an unusable calendar, as the seam does.
 func (c *invitationCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	if c.judging != nil {
+		c.judging()
+	}
 	blocker := crmcontracts.SchedulingProfileBlockerNone
 	if c.checkErr != nil {
 		blocker = crmcontracts.SchedulingProfileBlockerCalendarUnavailable

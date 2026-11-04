@@ -1903,6 +1903,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Hủy cuộc họp",
   "scheduling.cancelConfirm":
     "Hủy cuộc họp này và thông báo cho người tham dự?",
+  "scheduling.calendarDisconnectedTitle": "Lịch của bạn đã từ chối Margince",
+  "scheduling.calendarDisconnectedHelp":
+    "Mọi lời mời đang chờ lịch này đều tạm dừng. Hãy kết nối lại lịch với quyền thêm sự kiện, chúng sẽ tự được gửi đi.",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
   "scheduling.pausedUnavailable":
@@ -2119,6 +2122,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kết nối lịch",
   "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Deal bị gắn cờ",
+  "brief.coverage.source.deal_review": "Rà soát sự ủng hộ",
   "brief.coverage.source.lead_response": "Lead đã giao",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
   "brief.coverage.source.conversation_claim": "Cam kết của khách hàng",
@@ -17668,6 +17672,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lead này đang chờ phản hồi đầu tiên. Liên hệ trước khi hết thời hạn phản hồi.",
   "worklist.ask.deal_at_risk":
     "Deal này có dấu hiệu chững lại. Mở deal và lên bước tiếp theo.",
+  "worklist.ask.deal_review":
+    "Khách hàng có thể không còn ủng hộ deal này. Mở deal và trả lời phần rà soát.",
   "worklist.ask.meeting": "Cuộc họp này sắp diễn ra. Mở để chuẩn bị.",
   "worklist.ask.relationship_decay":
     "Đã lâu không có liên hệ nào với liên hệ này. Liên hệ lại, hoặc tạm gác trong một tháng.",
@@ -18062,6 +18068,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",
   "worklist.untitled.deal_at_risk": "Deal đang chững lại",
+  "worklist.untitled.deal_review": "Rà soát sự ủng hộ",
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
   "worklist.untitled.relationship_decay": "Liên lạc đang thưa dần",
@@ -18863,7 +18870,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.consequence.capture_history_incomplete": "Nhập lịch sử chưa hoàn tất.",
   "scheduling.linksTitle": "Liên kết đặt lịch",
   "scheduling.status.paused": "Đã tạm dừng",
-  "scheduling.status.attention": "Cần xử lý",
   "scheduling.acceptBookings": "Nhận đặt lịch",
   "scheduling.acceptBookingsHelp":
     "Ai có liên kết của bạn đều có thể chọn một giờ trống. Tắt để tạm dừng đặt lịch; liên kết vẫn giữ nguyên.",
@@ -18878,8 +18884,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Trạng thái",
   "scheduling.col.actions": "Thao tác",
   "scheduling.videoCall": "Cuộc gọi video",
-  "scheduling.row.live": "Đang hoạt động",
-  "scheduling.row.noInvitations": "Không gửi lời mời",
   "scheduling.videoNotSet": "Chưa thiết lập",
   "scheduling.video.ownShort": "Liên kết riêng",
   "scheduling.mainLink": "(liên kết chính)",
