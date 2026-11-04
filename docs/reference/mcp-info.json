@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195077,
+    "tool_catalog_bytes": 195871,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50084,
+    "approx_wire_tokens_total": 50282,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 42527,
-      "input_schema_bytes": 93490,
+      "description_bytes": 42851,
+      "input_schema_bytes": 93960,
       "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 136017
+      "description_plus_input_schema_bytes": 136811
     }
   },
   "tools": {
@@ -1097,6 +1097,16 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "meeting_status": {
+              "description": "log only: Meeting only. held when the user says the meeting took place; no_show when the other side did not come; booked for one still to come; canceled for one called off. Leave it out when nobody said whether it happened: a past start is not attendance, and the meeting then asks for its outcome. held and no_show are refused on a meeting whose start has not passed.",
+              "enum": [
+                "booked",
+                "held",
+                "no_show",
+                "canceled"
+              ],
+              "type": "string"
             },
             "occurred_at": {
               "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
@@ -2933,7 +2943,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now; a past day with no time: its date, occurred_precision \"day\". Record a signed contract with change_offers action record_contract, never as a deal. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate. When the search finds a contact with the same name at the same employer, ask the human whether it is the same contact before you link anything to it; two colleagues can share a name. Giving a contact its employer by creating an employment relationship files any same-name contact at that employer for review: the result carries it as duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now; a past day with no time: its date, occurred_precision \"day\". Send meeting_status held only when the user says the meeting took place; a past start alone is not attendance, and a meeting with no status asks for its outcome. Record a signed contract with change_offers action record_contract, never as a deal. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate. When the search finds a contact with the same name at the same employer, ask the human whether it is the same contact before you link anything to it; two colleagues can share a name. Giving a contact its employer by creating an employment relationship files any same-name contact at that employer for review: the result carries it as duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -3615,7 +3625,12 @@
             },
             "filters": {
               "additionalProperties": false,
-              "description": "list only: Narrow the list. Every operand is a string. Which filters each record_type takes, and the values each takes, is in read_workspace with topic=list_filters. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "description": "list only: String operands. read_workspace with topic=list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "patternProperties": {
+                "^cf_[a-z0-9_]+$": {
+                  "type": "string"
+                }
+              },
               "properties": {
                 "acquisition_source": {
                   "type": "string"
@@ -10265,7 +10280,7 @@
           "readOnlyHint": false,
           "title": "Update a record"
         },
-        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). The whole patch applies in this call, and the result names each change so a human can Undo it. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. An activity moved to another day keeps its time of day unless the user names one; moving a date-only one, send occurred_precision \"day\" again, or it reads as a time. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read. If the call comes back staged, keep its approval id to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). The whole patch applies in this call, and the result names each change so a human can Undo it. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. An activity moved to another day keeps its time of day unless the user names one; moving a date-only one, send occurred_precision \"day\" again, or it reads as a time. Send meeting_status held only when the user says the meeting took place; a past start alone is not attendance, and a meeting with no status asks for its outcome. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read. If the call comes back staged, keep its approval id to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

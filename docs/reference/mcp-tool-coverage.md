@@ -360,8 +360,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
-| `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -371,10 +371,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
+| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `schedule_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
@@ -390,8 +390,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
-| `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_activities` | 1.00 | 16 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -399,9 +399,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
+| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
@@ -436,8 +436,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `change_state` | 0.89 | 8/9 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
-| `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `commit_import` | 0.67 | 2/3 | - | `case10_finish_the_import` |
