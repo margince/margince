@@ -294,8 +294,9 @@ func teamFixture(t *testing.T, e *apptest.AppEnv) string {
 // seededRole is one system role as the database holds it: the key the
 // matrix reports, and the grant document the expectation is read from.
 type seededRole struct {
-	key     string
-	objects map[string]map[string]bool
+	key      string
+	objects  map[string]map[string]bool
+	rowScope string
 }
 
 func (r seededRole) grants(object, verb string) bool { return r.objects[object][verb] }
@@ -319,12 +320,13 @@ func seededRoles(t *testing.T, e *apptest.AppEnv) []seededRole {
 			t.Fatal(err)
 		}
 		var doc struct {
-			Objects map[string]map[string]bool `json:"objects"`
+			Objects  map[string]map[string]bool `json:"objects"`
+			RowScope string                     `json:"row_scope"`
 		}
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			t.Fatalf("role %q carries an unreadable permission document: %v", key, err)
 		}
-		out = append(out, seededRole{key: key, objects: doc.Objects})
+		out = append(out, seededRole{key: key, objects: doc.Objects, rowScope: doc.RowScope})
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)

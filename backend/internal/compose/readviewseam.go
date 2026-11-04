@@ -243,7 +243,7 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 		return nil, refusal
 	}
 	switch {
-	case res.StatusCode >= http.StatusInternalServerError:
+	case res.StatusCode >= http.StatusInternalServerError && res.StatusCode != http.StatusNotImplemented:
 		return nil, fmt.Errorf("read_view: the route failed with %d", res.StatusCode)
 	case res.StatusCode >= http.StatusBadRequest:
 		var problem struct {
@@ -252,6 +252,9 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 		}
 		if err := json.Unmarshal(body, &problem); err != nil || problem.Detail == "" {
 			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
+		}
+		if res.StatusCode == http.StatusNotImplemented {
+			return nil, notOfferedHere(problem.Code, problem.Detail)
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}

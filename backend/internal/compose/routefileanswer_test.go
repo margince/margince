@@ -122,3 +122,27 @@ func TestAFileTypeDeclaredWithNoBodyIsStillAFile(t *testing.T) {
 		t.Fatalf("answer = %s, want an empty file", raw)
 	}
 }
+
+// A route this installation does not serve answers 501, which no retry changes,
+// so the caller is told that rather than that the server failed.
+func TestARouteThatIsNotOfferedHereSaysSoAndAServerFaultDoesNot(t *testing.T) {
+	answered := func(status int) *cappedRecorder {
+		rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: agents.MaxInlineFileBytes}
+		rec.Header().Set("Content-Type", "application/problem+json")
+		rec.WriteHeader(status)
+		if _, err := rec.Write([]byte(`{"code":"not_implemented","detail":"no connector is configured"}`)); err != nil {
+			t.Fatal(err)
+		}
+		return rec
+	}
+	verb := agents.RouteVerb{Verb: "list_connectors", Method: http.MethodGet}
+	_, err := routeAnswer(verb, answered(http.StatusNotImplemented))
+	fault, classified := httperr.Classify(err)
+	if !classified || fault.Status != http.StatusNotImplemented || fault.Detail != "no connector is configured" {
+		t.Fatalf("a 501 answered %v (classified %v, %+v), want the route's own 501", err, classified, fault)
+	}
+	_, err = routeAnswer(verb, answered(http.StatusInternalServerError))
+	if _, classified := httperr.Classify(err); classified {
+		t.Fatalf("a 500 answered %v as a classified refusal, want a fault of the server", err)
+	}
+}

@@ -8,7 +8,6 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"slices"
 	"strings"
@@ -16,17 +15,18 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 const (
 	toolRolesFile = "../../../../docs/reference/mcp-tool-roles.json"
-	// The ids a sweep names exist nowhere, so a call reaches its gate and changes nothing.
-	placeholderUUID = "00000000-0000-4000-8000-000000000001"
-	toolRoleUser    = "tool-role-matrix@fable.test"
+	toolRoleUser  = "tool-role-matrix@fable.test"
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
+	// adminUnprovenCeiling is how many calls the admin control may fail and the
+	// sweep still pass. It only goes down: a filler or seed that proves more
+	// calls lowers it in the same change.
+	adminUnprovenCeiling = 171
 )
 
 // TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
@@ -41,6 +41,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	if len(calls) == 0 {
 		t.Fatal("the registry serves no tool, so this measured nothing")
 	}
+	holdEveryFixtureNamesACall(t, calls)
 	roles := seededRoles(t, d.e)
 	if len(roles) == 0 {
 		t.Fatal("the database seeds no role, so this measured nothing")
@@ -50,31 +51,28 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	for _, role := range roles {
 		assignRoleTo(t, d.e, toolRoleUser, "admin")
 		clients := passportClients(t, d.e, role.key, 1+len(calls)/toolRoleCallsPerPassport)
-		pool := seedToolRoleRecords(t, d.e, calls)
+		pool := seedToolRoleRecords(t, d.e, calls, "")
 		assignRoleTo(t, d.e, toolRoleUser, role.key)
 		for n, call := range calls {
 			got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, call.args(pool))
-			row := verdicts[call.row]
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
 			}
-			switch {
-			case got.IsError && isBudgetRefusal(got.Text):
+			if got.IsError && isBudgetRefusal(got.Text) {
 				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.key, got.Text)
-			case !got.IsError:
-				row.Allowed = append(row.Allowed, role.key)
-			case strings.Contains(got.Text, "permission denied"):
-				row.Refused = append(row.Refused, role.key)
-			default:
-				row.Unproven = append(row.Unproven, role.key)
 			}
+			row := verdicts[call.row]
+			row.record(role.key, got)
 			verdicts[call.row] = row
 		}
 	}
+	colleague := crossOwnerPass(t, d.e, roles, calls)
 	assignRoleTo(t, d.e, toolRoleUser, "admin")
 
 	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
-	rendered, err := json.MarshalIndent(toolRolesDocument(roles, calls, verdicts), "", "  ")
+	doc := toolRolesDocument(roles, calls, verdicts, colleague)
+	holdTheAdminControlRatchet(t, doc)
+	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,6 +106,35 @@ func holdTheMeasurementHasTeeth(t *testing.T, roles []seededRole, calls int, ver
 		if role.key != "admin" && perRole[role.key] == 0 {
 			t.Errorf("role %s is refused none of %d calls, so the sweep did not reach the gates", role.key, calls)
 		}
+	}
+}
+
+// holdEveryFixtureNamesACall fails a fixture whose verb the sweep no longer
+// calls, which would otherwise stay in the table and fill nothing.
+func holdEveryFixtureNamesACall(t *testing.T, calls []toolRoleCall) {
+	t.Helper()
+	for verb := range toolRoleFixtures {
+		if !slices.ContainsFunc(calls, func(call toolRoleCall) bool { return call.verb == verb }) {
+			t.Errorf("toolRoleFixtures has %s, which no swept call names; remove it or rename it to the verb it was for", verb)
+		}
+	}
+}
+
+// holdTheAdminControlRatchet fails a sweep whose admin control proves fewer
+// calls than the ceiling allows, and one that proves more without lowering it.
+func holdTheAdminControlRatchet(t *testing.T, doc toolRolesFileShape) {
+	t.Helper()
+	unproven := 0
+	for _, row := range doc.Rows {
+		if slices.Contains(row.Unproven, "admin") {
+			unproven++
+		}
+	}
+	switch {
+	case unproven > adminUnprovenCeiling:
+		t.Errorf("the admin control fails %d calls, above its ceiling of %d; the calls that stopped name why in unproven_reasons", unproven, adminUnprovenCeiling)
+	case unproven < adminUnprovenCeiling:
+		t.Errorf("the admin control fails %d calls, below its ceiling of %d; lower adminUnprovenCeiling to %d", unproven, adminUnprovenCeiling, unproven)
 	}
 }
 
@@ -159,7 +186,7 @@ func toolRoleCalls(specs []mcp.ToolSpec, shapes map[string]toolRoleRoute) []tool
 			continue
 		}
 		if len(spec.Actions) == 0 {
-			calls = append(calls, toolRoleCall{row: spec.Name, tool: spec.Name, verb: spec.Name, input: spec.InputSchema})
+			calls = append(calls, toolRoleCall{row: spec.Name, tool: spec.Name, verb: spec.Name, input: spec.InputSchema, route: shapes[spec.Name]})
 			continue
 		}
 		for _, action := range spec.Actions {
@@ -173,170 +200,73 @@ func toolRoleCalls(specs []mcp.ToolSpec, shapes map[string]toolRoleRoute) []tool
 	return calls
 }
 
-// recordPool hands each call a fresh record the sweep's user owns. So a gate
-// behind a lookup is met, and one call's archive never reads as the next call's
-// refusal. Counting mode answers placeholders, to learn how many to seed.
-type recordPool struct {
-	fresh  map[string][]string
-	wanted map[string]int
-}
-
-func (p *recordPool) take(kind string) string {
-	if p.wanted != nil {
-		p.wanted[kind]++
-		return placeholderUUID
-	}
-	ids := p.fresh[kind]
-	p.fresh[kind] = ids[1:]
-	return ids[0]
-}
-
-// recordKindOf names the record a sweep can seed for an id argument, or for the
-// path segment before a route's {id}.
-func recordKindOf(name string) string {
-	switch name {
-	case "company_id", "entity_id", "record_id", "companies":
-		return "company"
-	case "contact_id", "contacts":
-		return "contact"
-	case "deal_id", "deals":
-		return "deal"
-	case "lead_id", "leads":
-		return "lead"
-	case "activity_id", "activities":
-		return "activity"
-	case "attachment_id", "attachments":
-		return "attachment"
-	}
-	return ""
-}
-
-func pathRecordKind(pattern string) string {
-	before, _, found := strings.Cut(pattern, "/{")
-	if !found {
-		return ""
-	}
-	return recordKindOf(before[strings.LastIndex(before, "/")+1:])
-}
-
-func (c toolRoleCall) args(pool *recordPool) map[string]any {
-	args := fillSchema(c.input, c.route.Pattern, pool)
-	if _, takesBody := args["request_body"]; takesBody && len(c.route.Body) > 0 {
-		args["request_body"] = fillSchema(c.route.Body, "", pool)
-	}
-	return args
-}
-
-// fillSchema fills a schema's required arguments, so the call passes the schema
-// and meets the gate behind it.
-//
-//craft:ignore naked-any a JSON schema is walked as decoded JSON, whatever its shape
-func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[string]any {
-	var shape struct {
-		Required   []string                   `json:"required"`
-		Properties map[string]json.RawMessage `json:"properties"`
-	}
-	args := map[string]any{}
-	if err := json.Unmarshal(raw, &shape); err != nil {
-		return args
-	}
-	for _, name := range shape.Required {
-		args[name] = fillValue(name, shape.Properties[name], pattern, pool)
-	}
-	if _, takesBody := shape.Properties["request_body"]; takesBody {
-		args["request_body"] = map[string]any{}
-	}
-	return args
-}
-
-//craft:ignore naked-any a JSON schema's value takes whichever type the schema names
-func fillValue(name string, raw json.RawMessage, pattern string, pool *recordPool) any {
-	if name == "id" {
-		if kind := pathRecordKind(pattern); kind != "" {
-			return pool.take(kind)
-		}
-	}
-	if kind := recordKindOf(name); kind != "" {
-		return pool.take(kind)
-	}
-	if name == "entity_type" || name == "record_type" {
-		return "company"
-	}
-	var prop struct {
-		Type any   `json:"type"`
-		Enum []any `json:"enum"`
-	}
-	if err := json.Unmarshal(raw, &prop); err != nil {
-		return placeholderUUID
-	}
-	if len(prop.Enum) > 0 {
-		return prop.Enum[0]
-	}
-	switch prop.Type {
-	case "integer", "number":
-		return 1
-	case "boolean":
-		return false
-	case "array":
-		return []any{}
-	case "object":
-		return fillSchema(raw, "", pool)
-	}
-	return placeholderUUID
-}
-
-// seedToolRoleRecords creates what these calls will take, as the admin they all
-// belong to, through the app's own routes.
-func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall) *recordPool {
-	t.Helper()
-	counting := &recordPool{wanted: map[string]int{}}
-	for _, call := range calls {
-		call.args(counting)
-	}
-	seeded := apptest.DiscoverSeededPipeline(t, e)
-	company := func() string {
-		return createdID(t, e, "/v1/companies", AnyMap{"display_name": "Role Sweep " + ids.NewV7().String(), "source": "manual"})
-	}
-	create := map[string]func() string{
-		"company": company,
-		"deal": func() string {
-			return createdID(t, e, "/v1/deals", AnyMap{
-				"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": seeded.PipelineID,
-				"stage_id": seeded.Open, "company_id": company(), "source": "manual",
-			})
-		},
-		"contact": func() string {
-			return createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual"})
-		},
-		"lead": func() string {
-			return createdID(t, e, "/v1/leads", AnyMap{"full_name": "Role Sweep", "email": ids.NewV7().String() + "@lead.test", "source": "manual"})
-		},
-		"activity": func() string {
-			return createdID(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Role sweep"})
-		},
-	}
-	create["attachment"] = func() string {
-		status, raw := uploadAs(t, e, nil, "company", company(), []byte("PDF"))
-		if status != http.StatusCreated {
-			t.Fatalf("seeding an attachment → %d %s", status, raw)
-		}
-		return attachmentIDOf(t, raw)
-	}
-	pool := &recordPool{fresh: map[string][]string{}}
-	for kind, n := range counting.wanted {
-		for range n {
-			pool.fresh[kind] = append(pool.fresh[kind], create[kind]())
-		}
-	}
-	return pool
-}
-
 // toolRoleVerdicts sorts the roles by what one call answered them. Unproven is
-// a refusal for some other reason, such as an invalid body, before any role gate.
+// a refusal for some other reason, such as an invalid body, before any role
+// gate, and UnprovenReasons says which.
 type toolRoleVerdicts struct {
-	Allowed  []string `json:"allowed_for"`
-	Refused  []string `json:"refused_for"`
-	Unproven []string `json:"unproven_for"`
+	Allowed         []string          `json:"allowed_for"`
+	Refused         []string          `json:"refused_for"`
+	Unproven        []string          `json:"unproven_for"`
+	UnprovenReasons map[string]string `json:"unproven_reasons,omitempty"`
+}
+
+func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult) {
+	switch {
+	case !got.IsError:
+		v.Allowed = append(v.Allowed, role)
+	case strings.Contains(got.Text, "permission denied"):
+		v.Refused = append(v.Refused, role)
+	default:
+		v.Unproven = append(v.Unproven, role)
+		if v.UnprovenReasons == nil {
+			v.UnprovenReasons = map[string]string{}
+		}
+		v.UnprovenReasons[role] = stopReason(got.Text)
+	}
+}
+
+// Why a call stopped before a role gate, read from the answer the agent is
+// given. Each reason is a kind of work left: a value the filler cannot make, a
+// record the sweep does not seed, a service the test stack does not start.
+const (
+	stopValidation  = "validation"
+	stopNotFound    = "not_found"
+	stopConflict    = "conflict"
+	stopUnsupported = "unsupported"
+	stopInternal    = "internal"
+	// stopRefused is a refusal the admin meets too: about the call's record,
+	// such as a relation the sweep's user lacks, and never about a role.
+	stopRefused = "refused"
+	stopOther   = "other"
+)
+
+// stopReasonMeanings is what each reason says, which the page prints.
+var stopReasonMeanings = map[string]string{
+	stopValidation:  "An argument was refused: a value the filler cannot make.",
+	stopNotFound:    "No such record: a kind the sweep does not seed, or a record it does not relate.",
+	stopConflict:    "The record is not in the state the call needs.",
+	stopUnsupported: "The installation does not offer the service the call needs.",
+	stopInternal:    "The server failed, or answered 503 for a service the test stack does not start.",
+	stopRefused:     "The admin was refused too, so the refusal is about the record, not the role.",
+	stopOther:       "Any other answer.",
+}
+
+func stopReason(text string) string {
+	switch {
+	case strings.Contains(text, "No such record"):
+		return stopNotFound
+	case strings.Contains(text, "permission denied"):
+		return stopRefused
+	case strings.Contains(text, "does not offer what this call needs"), strings.Contains(text, "cannot serve this tool"):
+		return stopUnsupported
+	case strings.Contains(text, "failed for an internal reason"):
+		return stopInternal
+	case strings.Contains(text, "(conflict"):
+		return stopConflict
+	case strings.Contains(text, "arguments were rejected"), strings.Contains(text, "refused as issued"):
+		return stopValidation
+	}
+	return stopOther
 }
 
 type toolRoleRow struct {
@@ -344,30 +274,45 @@ type toolRoleRow struct {
 	Action string `json:"action,omitempty"`
 	Verb   string `json:"verb"`
 	toolRoleVerdicts
+	// ColleagueRecord is what each scoped role was answered on a record a
+	// colleague owns, for a call that takes one.
+	ColleagueRecord map[string]string `json:"colleague_record,omitempty"`
 }
 
 type toolRolesFileShape struct {
-	Note  string        `json:"note"`
-	Roles []string      `json:"roles"`
-	Rows  []toolRoleRow `json:"rows"`
+	Note    string            `json:"note"`
+	Reasons map[string]string `json:"reasons"`
+	Roles   []string          `json:"roles"`
+	Rows    []toolRoleRow     `json:"rows"`
 }
 
-func toolRolesDocument(roles []seededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts) toolRolesFileShape {
-	doc := toolRolesFileShape{
-		Note: "Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration): a passport on each seeded role calls every tool on records that do not exist. Do not edit by hand.",
-	}
+// toolRolesNote is what the JSON says the sweep does, and the page prints it.
+const toolRolesNote = "Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration). " +
+	"A passport on each seeded role calls every tool and action once. Each record a call names is a new one the " +
+	"role's user owns, made through the app's own routes; a kind the sweep cannot make is a placeholder id that " +
+	"names no record. A refusal counts only where the admin passes the same call. Each role whose row scope is " +
+	"narrower than all then calls every tool that takes a company, contact, deal, lead or project on one a " +
+	"colleague owns. Do not edit by hand."
+
+func toolRolesDocument(roles []seededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts, colleague map[string]map[string]string) toolRolesFileShape {
+	doc := toolRolesFileShape{Note: toolRolesNote, Reasons: stopReasonMeanings}
 	for _, role := range roles {
 		doc.Roles = append(doc.Roles, role.key)
 	}
 	for _, call := range calls {
 		row := verdicts[call.row]
-		// A refusal the admin meets too is about this call's record, such as a
-		// relation the sweep's user lacks. It says nothing of any role.
 		if slices.Contains(row.Refused, "admin") {
+			if row.UnprovenReasons == nil {
+				row.UnprovenReasons = map[string]string{}
+			}
+			for _, key := range row.Refused {
+				row.UnprovenReasons[key] = stopRefused
+			}
 			row.Unproven, row.Refused = append(row.Unproven, row.Refused...), nil
 		}
-		published := toolRoleRow{Tool: call.tool, Action: call.action, Verb: call.verb}
+		published := toolRoleRow{Tool: call.tool, Action: call.action, Verb: call.verb, ColleagueRecord: colleague[call.row]}
 		published.Allowed, published.Refused, published.Unproven = sortedRoles(row.Allowed), sortedRoles(row.Refused), sortedRoles(row.Unproven)
+		published.UnprovenReasons = row.UnprovenReasons
 		doc.Rows = append(doc.Rows, published)
 	}
 	return doc
