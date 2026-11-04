@@ -39,7 +39,7 @@ const dealVerdictBatch = 50
 
 // dealVerdictRulesVersion moves when the rules in dealverdict change what
 // they let through, so every deal is read again under the new rules.
-const dealVerdictRulesVersion = "1"
+const dealVerdictRulesVersion = "2"
 
 // verdictCorrections are the corrections a verdict may make, in a fixed order.
 var verdictCorrections = []string{
@@ -133,10 +133,14 @@ func installationToday(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time
 func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verdictCandidate, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, d.owner_id, `+dealVerdictChecksumSQL("d")+`, r.verdict_input_checksum,
-		       r.verdict_basis_digest, r.verdict_next_due_at <= $1, r.verdict_actions
+		       r.verdict_basis_digest,
+		       r.verdict_next_due_at <= $1
+		         OR (r.verdict_actions @> $2::jsonb
+		             AND `+deals.RateStoredSinceSQL("r.verdict_assessed_at")+`),
+		       r.verdict_actions
 		  FROM deal d LEFT JOIN assurance_deal_receipt r ON r.deal_id = d.id
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND NOT d.legal_hold AND d.owner_id IS NOT NULL
-		 ORDER BY r.verdict_assessed_at NULLS FIRST, d.id`, now)
+		 ORDER BY r.verdict_assessed_at NULLS FIRST, d.id`, now, `[{"outcome":"`+dealverdict.DroppedNoRate+`"}]`)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals a verdict may read: %w", err)
 	}
@@ -155,6 +159,12 @@ func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verd
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals a verdict may read: %w", err)
 	}
+	// The base currency joins the basis: a price in another currency converts
+	// through it. A rate stored after a no-rate drop makes the deal due above.
+	base, err := identity.BaseCurrencyOf(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	modes := map[ids.UUID]map[string]bool{}
 	var due []verdictCandidate
 	for _, r := range scanned {
@@ -165,7 +175,7 @@ func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verd
 			}
 			modes[r.candidate.owner] = switched
 		}
-		r.candidate.switched, r.candidate.digest = switched, verdictBasisDigest(switched)
+		r.candidate.switched, r.candidate.digest = switched, verdictBasisDigest(switched, base)
 		moved := r.storedChecksum == nil || *r.storedChecksum != r.checksum ||
 			r.storedBy == nil || *r.storedBy != r.candidate.digest || (r.clockDue != nil && *r.clockDue)
 		if moved {
@@ -193,9 +203,9 @@ func ownerVerdictSwitches(ctx context.Context, tx pgx.Tx, owner ids.UUID) (map[s
 }
 
 // verdictBasisDigest names what can change a verdict without changing the
-// deal: the prompt, the rules and the owner's switches.
-func verdictBasisDigest(switched map[string]bool) string {
-	parts := []string{dealverdict.PromptVersion, dealVerdictRulesVersion}
+// deal: the prompt, the rules, the base currency and the owner's switches.
+func verdictBasisDigest(switched map[string]bool, base string) string {
+	parts := []string{dealverdict.PromptVersion, dealVerdictRulesVersion, base}
 	for _, correction := range verdictCorrections {
 		parts = append(parts, fmt.Sprintf("%s=%t", correction, switched[correction]))
 	}

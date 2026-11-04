@@ -56,7 +56,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today ti
 	}
 	read.state.SwitchedOn = c.switched
 	if !anySwitchOn(c.switched) || len(read.in.Activities) == 0 {
-		return p.record(ctx, c, read, nil)
+		return p.record(ctx, c, read, nil, read.checksum)
 	}
 	about := ai.WithSubject(ctx, ids.From[ids.DealKind](c.deal).Ref(), "")
 	resp, err := ai.Ask(about, p.brain, dealverdict.Request(read.in, lang), dealverdict.Validator(read.in))
@@ -71,10 +71,11 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today ti
 	if err != nil {
 		return err
 	}
-	if err := p.apply(ctx, c, read, decisions); err != nil {
+	assessed, err := p.apply(ctx, c, read, decisions)
+	if err != nil {
 		return err
 	}
-	return p.record(ctx, c, read, decisions)
+	return p.record(ctx, c, read, decisions, assessed)
 }
 
 func anySwitchOn(switched map[string]bool) bool {
@@ -113,11 +114,13 @@ func (p dealVerdictPass) decide(
 	return decisions, err
 }
 
-// apply writes the changes the rules let through, as the owner's agent. The
-// deals store asks again under the row lock whether each still holds.
+// apply writes the changes the rules let through, as the owner's agent, and
+// answers the checksum the verdict counts as assessed. After a write that is
+// the checksum the write left. Otherwise it is the one read before the model
+// call, so evidence that moved since the read leaves the deal due.
 func (p dealVerdictPass) apply(
 	ctx context.Context, c verdictCandidate, read dealVerdictRead, decisions []dealverdict.Decision,
-) error {
+) (string, error) {
 	var changes []deals.VerdictChange
 	var at []int
 	for i, decision := range decisions {
@@ -127,42 +130,62 @@ func (p dealVerdictPass) apply(
 		}
 	}
 	if len(changes) == 0 {
-		return nil
+		return read.checksum, nil
 	}
-	outcomes, err := p.applyAsOwner(ctx, c, read, changes)
+	outcomes, written, err := p.applyAsOwner(ctx, c, read, changes)
 	if err != nil {
-		return err
+		return "", err
 	}
 	for i, outcome := range outcomes {
 		decisions[at[i]].Outcome = outcome
 	}
-	return nil
+	if written == "" {
+		return read.checksum, nil
+	}
+	return written, nil
 }
 
 func (p dealVerdictPass) applyAsOwner(
 	ctx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
-) ([]string, error) {
+) ([]string, string, error) {
 	ownerCtx, err := ownersAgent(ctx, p.users, c.owner, marginceActorID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		outcomes := make([]string, len(changes))
 		for i := range outcomes {
 			outcomes[i] = droppedNoOwner
 		}
-		return outcomes, nil
+		return outcomes, "", nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return p.deals.ApplyVerdict(ownerCtx, deals.VerdictInput{
+	return p.applyAs(ownerCtx, c, read, changes)
+}
+
+// applyAs writes as an owner's agent bound before the write. The owner may
+// leave in between, so the evidence check asks again under the lock.
+func (p dealVerdictPass) applyAs(
+	ownerCtx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
+) ([]string, string, error) {
+	var written string
+	result, err := p.deals.ApplyVerdict(ownerCtx, deals.VerdictInput{
 		DealID: ids.From[ids.DealKind](c.deal), Owner: c.owner, Seen: read.state.Seen, Changes: changes,
 		Allowed: func(ctx context.Context, tx pgx.Tx, correction string) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, c.owner, deals.VerdictSwitch(correction))
 			return mode == approvals.ModeAuto, err
 		},
+		EvidenceHolds: func(ctx context.Context, tx pgx.Tx) (bool, error) {
+			return verdictEvidenceHolds(ctx, tx, c, read, changes)
+		},
 		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) error {
-			return p.recordOnTimeline(ctx, tx, c, read, applied)
+			if err := p.recordOnTimeline(ctx, tx, c, read, applied); err != nil {
+				return err
+			}
+			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL("d")+` FROM deal d WHERE d.id = $1`, c.deal).
+				Scan(&written)
 		},
 	})
+	return result.Outcomes, written, err
 }
 
 // recordOnTimeline writes one note for the night's changes on the deal. Its
@@ -202,10 +225,10 @@ func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) str
 	}
 }
 
-// record stores the verdict on the deal's receipt, with the checksum as the
-// deal stands after the verdict's own writes.
+// record stores the verdict on the deal's receipt, with the checksum apply
+// counted as assessed.
 func (p dealVerdictPass) record(
-	ctx context.Context, c verdictCandidate, read dealVerdictRead, decisions []dealverdict.Decision,
+	ctx context.Context, c verdictCandidate, read dealVerdictRead, decisions []dealverdict.Decision, assessed string,
 ) error {
 	actions := make([]recordedAction, 0, len(decisions))
 	for _, d := range decisions {
@@ -223,10 +246,11 @@ func (p dealVerdictPass) record(
 			DealID: c.deal, BasisDigest: c.digest, PromptVersion: dealverdict.PromptVersion,
 			AssessedAt: p.now(), Actions: encoded,
 		}
+		verdict.InputChecksum = assessed
 		var closeDate *time.Time
-		if err := tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL("d")+`, `+viabilityFingerprintSQL("d")+
+		if err := tx.QueryRow(ctx, `SELECT `+viabilityFingerprintSQL("d")+
 			`, d.expected_close_date FROM deal d WHERE d.id = $1`, c.deal).
-			Scan(&verdict.InputChecksum, &verdict.Fingerprint, &closeDate); err != nil {
+			Scan(&verdict.Fingerprint, &closeDate); err != nil {
 			return fmt.Errorf("compose: reading the deal's checksum: %w", err)
 		}
 		if closeDate != nil && !closeDate.Before(read.in.Today) {

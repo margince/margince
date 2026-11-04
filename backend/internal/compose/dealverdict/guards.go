@@ -30,6 +30,8 @@ const (
 	DroppedUnchanged      = "dropped:unchanged"
 	DroppedFutureCitation = "dropped:future_citation"
 	DroppedAmountMismatch = "dropped:amount_not_quoted"
+	DroppedDateNotStated  = "dropped:date_not_in_evidence"
+	DroppedAboveStage     = "dropped:above_stage"
 )
 
 // ConfidenceFloor is the least confidence an action needs. Below it nothing
@@ -106,7 +108,11 @@ func decideCloseDate(in Input, state State, action Action, change *deals.Verdict
 	if err != nil || !date.After(in.Today) || date.After(in.Today.AddDate(0, maxMonthsAhead, 0)) {
 		return DroppedDateOutOfRange
 	}
-	if state.Seen.CloseDate != nil && state.Seen.CloseDate.Format(time.DateOnly) == action.Date {
+	if !dateInEvidence(in, action.Cited, date) {
+		return DroppedDateNotStated
+	}
+	if state.Seen.CloseDate != nil && state.Seen.CloseDate.Format(time.DateOnly) == action.Date &&
+		!state.Seen.Provisional {
 		return DroppedUnchanged
 	}
 	change.CloseDate = date
@@ -120,6 +126,11 @@ func decideProbability(in Input, state State, action Action, change *deals.Verdi
 	}
 	if in.Probability == action.Probability {
 		return DroppedUnchanged
+	}
+	// Lowering is free. A raise stops at the stage's own probability, so no
+	// mail can talk a deal above what its stage says.
+	if action.Probability > in.Probability && action.Probability > in.StageProbability {
+		return DroppedAboveStage
 	}
 	change.Probability = action.Probability
 	return ""

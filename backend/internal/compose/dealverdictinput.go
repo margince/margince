@@ -42,9 +42,14 @@ func dealVerdictChecksumSQL(deal string) string {
 
 // dealVerdictRead is one deal's input and the state the rules check.
 type dealVerdictRead struct {
-	in     dealverdict.Input
-	state  dealverdict.State
-	undone map[string]time.Time
+	in dealverdict.Input
+	// checksum is the deal's input checksum when it was read, before the
+	// model call. The write compares it under the row lock.
+	checksum string
+	// acceptedOffers counts the offers accepted when the deal was read.
+	acceptedOffers int
+	state          dealverdict.State
+	undone         map[string]time.Time
 	// newestEvidenceAt is when the newest activity, offer or stage move
 	// arrived. An Undo holds until something arrives after it.
 	newestEvidenceAt time.Time
@@ -80,16 +85,18 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 	err := tx.QueryRow(ctx, `
 		SELECT d.name, st.name, d.amount_minor, d.currency::text, d.expected_close_date, d.close_date_provisional,
 		       d.win_probability_override, d.win_probability_set_by,
-		       `+deals.WinProbabilitySQL("d")+`, `+deals.WinProbabilitySourceSQL("d")+`
+		       `+deals.WinProbabilitySQL("d")+`, `+deals.WinProbabilitySourceSQL("d")+`,
+		       `+deals.StageWinProbabilitySQL("d")+`, `+dealVerdictChecksumSQL("d")+`
 		  FROM deal d JOIN stage st ON st.id = d.stage_id
 		 WHERE d.id = $1`, deal).
 		Scan(&read.in.DealName, &read.in.Stage, &seen.AmountMinor, &seen.Currency, &seen.CloseDate,
-			&read.in.Provisional, &seen.Probability, &seen.ProbabilitySource,
-			&read.in.Probability, &read.in.ProbabilitySource)
+			&seen.Provisional, &seen.Probability, &seen.ProbabilitySource,
+			&read.in.Probability, &read.in.ProbabilitySource, &read.in.StageProbability, &read.checksum)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal a verdict judges: %w", err)
 	}
 	read.in.AmountMinor, read.in.Currency, read.in.CloseDate = seen.AmountMinor, seen.Currency, seen.CloseDate
+	read.in.Provisional = seen.Provisional
 	return nil
 }
 
@@ -137,6 +144,7 @@ func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *deal
 		read.in.Offers = append(read.in.Offers, offer)
 		read.newestEvidenceAt = laterOf(read.newestEvidenceAt, updated)
 		if offer.Accepted {
+			read.acceptedOffers++
 			accepted := offer
 			read.state.AcceptedOffer = &accepted
 		}

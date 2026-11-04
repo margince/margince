@@ -8,10 +8,10 @@ package dealverdict
 // A mail can carry harmless words while asking the model for any figure.
 
 import (
-	"math"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // maxQuotedAmount bounds a price in whole units. Larger figures are refused
@@ -27,7 +27,7 @@ var (
 	currencySymbol = map[string]string{"€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY"}
 )
 
-// quotedPrice is the one price a quote states, in whole units, and its
+// quotedPrice is the one price a quote states, in exact minor units, and its
 // currency. It reports false when the quote holds no number, more than one,
 // or no currency.
 func quotedPrice(quote string) (int64, string, bool) {
@@ -36,26 +36,27 @@ func quotedPrice(quote string) (int64, string, bool) {
 		return 0, "", false
 	}
 	start, end := numbers[0][0], numbers[0][1]
-	value, ok := parseQuotedNumber(quote[start:end])
-	if !ok {
-		return 0, "", false
-	}
+	decimal := plainDecimal(quote[start:end])
 	rest := quote[end:]
 	if strings.HasPrefix(strings.ToLower(rest), "k") {
-		value *= 1000
+		decimal = thousands(decimal)
 		rest = rest[1:]
 	}
 	currency, ok := quotedCurrency(quote[:start] + " " + rest)
-	if !ok || value > maxQuotedAmount {
+	if !ok {
 		return 0, "", false
 	}
-	return int64(math.Round(value)), currency, true
+	minor, ok := values.MinorUnits(decimal, currency)
+	if !ok || minor > maxQuotedAmount*values.MinorUnitScale(currency) || minor > jsSafeMax {
+		return 0, "", false
+	}
+	return minor, currency, true
 }
 
-// parseQuotedNumber reads 50,000 / 50.000 / 50 000 / 49,999.50 / 49.999,50.
-// A separator followed by three digits groups thousands; one followed
-// by one or two digits at the end marks the decimals.
-func parseQuotedNumber(text string) (float64, bool) {
+// plainDecimal turns 50,000 / 50.000 / 50 000 / 49,999.50 / 49.999,50 into a
+// plain decimal. A separator followed by three digits groups thousands; one
+// followed by one or two digits at the end marks the decimals.
+func plainDecimal(text string) string {
 	text = strings.ReplaceAll(text, " ", " ")
 	decimals := ""
 	if i := strings.LastIndexAny(text, ".,"); i >= 0 && len(text)-i-1 <= 2 {
@@ -65,8 +66,14 @@ func parseQuotedNumber(text string) (float64, bool) {
 	if decimals != "" {
 		digits += "." + decimals
 	}
-	value, err := strconv.ParseFloat(digits, 64)
-	return value, err == nil
+	return digits
+}
+
+// thousands is a plain decimal times a thousand, written by moving the point.
+func thousands(decimal string) string {
+	whole, frac, _ := strings.Cut(decimal, ".")
+	frac += "000"
+	return strings.TrimLeft(whole+frac[:3], "0") + strings.TrimRight("."+frac[3:], ".0")
 }
 
 // quotedCurrency is the one currency the words around the number name.

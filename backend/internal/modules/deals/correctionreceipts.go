@@ -52,8 +52,8 @@ type CorrectionReceipt struct {
 	// Correction is which correction this was: a close-date tier, a close as
 	// lost, or a change from the nightly verdict.
 	Correction string
-	// Before and after values of an amount or probability change, and the
-	// deal's currency, so the receipt names both.
+	// Before and after values of an amount or probability change. Currency
+	// is the one the change was written in, not the deal's currency today.
 	BeforeAmount, AfterAmount           *int64
 	BeforeProbability, AfterProbability *int
 	Currency                            *string
@@ -134,7 +134,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
 			       (a.before->>'amount_minor')::bigint, (a.after->>'amount_minor')::bigint,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
-			       d.currency::text
+			       coalesce(a.evidence->>'amount_currency', d.currency::text)
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id

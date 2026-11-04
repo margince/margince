@@ -31,10 +31,13 @@ type Input struct {
 	Provisional       bool
 	Probability       int
 	ProbabilitySource string
-	Offers            []Offer
-	StageMoves        []StageMove
-	Prior             []PriorAction
-	Activities        []Activity
+	// StageProbability is the deal's stage's own probability, the most
+	// Margince may raise the deal's to.
+	StageProbability int
+	Offers           []Offer
+	StageMoves       []StageMove
+	Prior            []PriorAction
+	Activities       []Activity
 }
 
 // Activity is one logged mail, meeting, call or note, newest last.

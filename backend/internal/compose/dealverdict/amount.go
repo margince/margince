@@ -7,49 +7,56 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // decideAmount checks a proposed amount against the quote, the accepted offer
-// and the rates, and sets the change in the deal's own currency.
+// and the rates, and sets the change in the deal's own currency. The amount
+// written is the one the quote states, to the minor unit.
 func decideAmount(in Input, state State, action Action, rates Rates, change *deals.VerdictChange) (string, error) {
 	if !quoteFound(in, action.Cited, action.QuotedWords) {
 		return DroppedQuoteNotFound, nil
 	}
-	whole, currency, ok := quotedPrice(action.QuotedWords)
-	if !ok || whole != action.Amount || currency != action.Currency {
-		return DroppedAmountMismatch, nil
-	}
-	quotedMinor, ok := toMinor(action.Amount, values.MinorUnitScale(action.Currency))
-	if !ok {
+	quotedMinor, currency, ok := quotedPrice(action.QuotedWords)
+	if !ok || currency != action.Currency || !nearQuote(action.Amount, quotedMinor, currency) {
 		return DroppedAmountMismatch, nil
 	}
 	change.Evidence["quoted_words"] = action.QuotedWords
-	change.Evidence["quoted_amount"] = values.MajorUnits(quotedMinor, action.Currency)
-	change.Evidence["quoted_currency"] = action.Currency
-	target := action.Currency
+	change.Evidence["quoted_amount"] = values.MajorUnits(quotedMinor, currency)
+	change.Evidence["quoted_currency"] = currency
+	target := currency
 	if state.Seen.Currency != nil {
 		target = *state.Seen.Currency
 	} else {
-		change.Currency = action.Currency
+		change.Currency = currency
 	}
+	change.Evidence["amount_currency"] = target
 	if offer := state.AcceptedOffer; offer != nil {
-		if action.Currency != offer.Currency || quotedMinor != offer.GrossMinor || target != offer.Currency {
+		if currency != offer.Currency || quotedMinor != offer.GrossMinor || target != offer.Currency {
 			return DroppedOfferFixes, nil
 		}
 		return setAmount(state, change, offer.GrossMinor), nil
 	}
-	if target == action.Currency {
+	if target == currency {
 		return setAmount(state, change, quotedMinor), nil
 	}
-	converted, ok, err := convert(action.Amount, action.Currency, target, rates, change.Evidence)
+	converted, ok, err := convert(quotedMinor, currency, target, rates, change.Evidence)
 	if err != nil || !ok {
 		return DroppedNoRate, err
 	}
 	return setAmount(state, change, converted), nil
+}
+
+// nearQuote reports whether the model's whole-unit amount is the quoted one,
+// within the one unit a whole number cannot state.
+func nearQuote(whole, quotedMinor int64, currency string) bool {
+	minor, ok := toMinor(whole, values.MinorUnitScale(currency))
+	if !ok {
+		return false
+	}
+	gap := minor - quotedMinor
+	return gap > -values.MinorUnitScale(currency) && gap < values.MinorUnitScale(currency)
 }
 
 func setAmount(state State, change *deals.VerdictChange, amountMinor int64) string {
@@ -60,28 +67,25 @@ func setAmount(state State, change *deals.VerdictChange, amountMinor int64) stri
 	return ""
 }
 
-// convert takes whole units of one currency into the deal's currency through
-// the base currency, as amount × rate(from→base) ÷ rate(to→base). It rounds
-// half away from zero to whole units. The rates and their dates go in
-// evidence.
-func convert(amount int64, from, to string, rates Rates, evidence map[string]any) (int64, bool, error) {
+// convert takes a quoted amount into the deal's currency through the deals
+// FX engine, then rounds half away from zero to whole units. The rates and
+// their dates go in evidence.
+func convert(amountMinor int64, from, to string, rates Rates, evidence map[string]any) (int64, bool, error) {
 	fromRate, ok, err := rates.For(from)
 	if err != nil || !ok {
 		return 0, false, err
 	}
 	toRate, ok, err := rates.For(to)
-	if err != nil || !ok || !finite(fromRate.Rate) || !finite(toRate.Rate) || toRate.Rate.Int.Sign() <= 0 {
+	if err != nil || !ok {
 		return 0, false, err
 	}
-	numerator := new(big.Int).Mul(big.NewInt(amount), fromRate.Rate.Int)
-	denominator := new(big.Int).Set(toRate.Rate.Int)
-	scale(numerator, denominator, fromRate.Rate.Exp)
-	scale(denominator, numerator, toRate.Rate.Exp)
-	whole := deals.DivRoundHalfAwayFromZero(numerator, denominator)
-	if !whole.IsInt64() {
-		return 0, false, nil
+	converted, err := deals.ConvertBetween(amountMinor, fromRate.Rate, toRate.Rate, from, to)
+	if err != nil {
+		return 0, false, err
 	}
-	minor, ok := toMinor(whole.Int64(), values.MinorUnitScale(to))
+	scale := values.MinorUnitScale(to)
+	whole := deals.DivRoundHalfAwayFromZero(big.NewInt(converted), big.NewInt(scale))
+	minor, ok := toMinor(whole.Int64(), scale)
 	if !ok {
 		return 0, false, nil
 	}
@@ -89,20 +93,6 @@ func convert(amount int64, from, to string, rates Rates, evidence map[string]any
 	evidence["rate_to"] = rateText(toRate)
 	evidence["rate_date"] = rateDate(fromRate, toRate).Format(time.DateOnly)
 	return minor, true, nil
-}
-
-// scale multiplies by 10^exp: into side when exp is positive, into other when
-// it is negative, so the fraction stays exact.
-func scale(side, other *big.Int, exp int32) {
-	if exp >= 0 {
-		side.Mul(side, deals.Pow10(int64(exp)))
-		return
-	}
-	other.Mul(other, deals.Pow10(int64(-exp)))
-}
-
-func finite(rate pgtype.Numeric) bool {
-	return rate.Valid && !rate.NaN && rate.InfinityModifier == pgtype.Finite
 }
 
 func rateText(rate deals.FXRate) string {
