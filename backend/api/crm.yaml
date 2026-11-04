@@ -18550,8 +18550,26 @@ paths:
         Your own mailbox and nobody else's. What a contact is holding is the most private thing this
         module knows — the list names threads judged legal, personnel or personal — so there is no
         id here that reaches a colleague's list and no admin view of one.
+
+        A page at a time, pending first and then newest. `q` matches the opening message's subject
+        and a party's address or name; a thread whose message was erased is still found by the
+        addresses its hold kept. `counts` counts the whole list whatever a page narrows to.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 200 }
+          description: Matches the subject, and a party's address or name.
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, unsure, held, held_by_owner] }
+        - name: contact_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Only the threads with this contact. A contact you may not read answers 404.
       responses:
         '200':
           description: The caller's held threads, pending first.
@@ -18559,6 +18577,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/HeldThreadListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /capture/senders:
@@ -38475,17 +38495,33 @@ components:
         created_at: { type: string, format: date-time }
     HeldThreadListResponse:
       type: object
-      required: [data]
+      required: [data, page, counts]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/HeldThread' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+        counts: { $ref: '#/components/schemas/HeldThreadCounts' }
         thread_verdict:
           $ref: '#/components/schemas/CaptureVerdictClock'
           description: >-
             When the thread verdict next runs — what a `pending` row above is waiting for. A held
             thread with no time beside it leaves its owner two readings, broken and slow, and both
             are wrong. Absent where the deployment composed no queue to ask.
+
+    HeldThreadCounts:
+      type: object
+      description: >-
+        The caller's whole held list by status, whatever a page narrows to. `stalled` is the
+        pending threads asked about as often as the verdict ever will be: a lane that stopped
+        answering, not one that is slow.
+      required: [pending, unsure, held, held_by_owner, stalled]
+      properties:
+        pending: { type: integer, minimum: 0 }
+        unsure: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+        held_by_owner: { type: integer, minimum: 0 }
+        stalled: { type: integer, minimum: 0 }
 
     HeldThread:
       type: object

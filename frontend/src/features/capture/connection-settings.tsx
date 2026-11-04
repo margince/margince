@@ -22,6 +22,7 @@ import { settingsHref } from "../../lib/settingsrouting";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 import { useHeldThreads } from "./held-threads";
+import { heldTotal } from "./held-threads.counts";
 
 // The standing decisions about one connected mailbox, drawn under its account
 // on Connections. They cover who may read what it brings in, where its held
@@ -106,7 +107,8 @@ function HeldPointerRow() {
   const plural = usePlural();
   const { locale } = useLocale();
   const held = useHeldThreads();
-  const count = held.data?.data.length ?? null;
+  const first = held.data?.pages[0];
+  const count = first ? heldTotal(first) : null;
   let description = t("connectors.heldPointer.unknown");
   if (count === 0) {
     description = t("connectors.heldPointer.none");

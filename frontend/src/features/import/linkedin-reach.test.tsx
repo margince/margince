@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
@@ -56,7 +57,7 @@ async function renderReach(
     "GET /me/linkedin-reach": () => jsonResponse(body),
     "GET /capture/senders": () => jsonResponse({ data: [] }),
     "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
-    "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+    "GET /capture/held-threads": () => jsonResponse(heldThreadList()),
   });
   render(
     <QueryClientProvider

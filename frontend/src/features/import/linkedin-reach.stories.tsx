@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -22,7 +23,7 @@ function reachStory(body: unknown, status = 200) {
       "GET /capture/senders": () => jsonResponse({ data: [] }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: [] }),
-      "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList()),
     });
     return (
       <StoryProviders>

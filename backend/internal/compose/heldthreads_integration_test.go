@@ -240,11 +240,11 @@ func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
 
 func heldThreads(t *testing.T, e *integration.Env, user ids.UUID) []capture.HeldThread {
 	t.Helper()
-	got, err := capture.HeldThreadsFor(purgeCtx(e, user), InstallationDB(e.Pool))
+	got, err := capture.HeldThreadsFor(purgeCtx(e, user), InstallationDB(e.Pool), capture.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
-	return got
+	return got.Threads
 }
 
 // seedVerdict writes one ledger row and the message it was raised about. The
@@ -353,7 +353,7 @@ func listHeldThreads(t *testing.T, e *integration.Env, user ids.UUID,
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/v1/capture/held-threads", nil).
 		WithContext(purgeCtx(e, user))
-	handlers.ListHeldThreads(w, r)
+	handlers.ListHeldThreads(w, r, crmcontracts.ListHeldThreadsParams{})
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", w.Code, w.Body.String())
 	}

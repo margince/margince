@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,13 +91,13 @@ func (t HeldThread) Pending() bool { return t.Status == "pending" }
 // classifier opened is visible. Every other status withholds, including
 // `unsure`: a thread the model could not judge is held exactly like one it
 // judged legal, and an owner who is not shown it cannot release it.
-func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) {
+func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery) (HeldThreadPage, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
-		return nil, err
+		return HeldThreadPage{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
-		return nil, apperrors.ErrPermissionDenied
+		return HeldThreadPage{}, apperrors.ErrPermissionDenied
 	}
 	// The arguments the clause and the query share, numbered together: the
 	// content clause mints its own placeholders and they must not collide with
@@ -114,10 +115,16 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 	// may not read the content of still appears, with no subject.
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return nil, err
+		return HeldThreadPage{}, err
 	}
-	var out []HeldThread
+	var out HeldThreadPage
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
+		filters, err := query.filters(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		limit := query.limit()
+		limitAt := arg(limit + 1)
 		// The activity join is a LEFT one and the ledger is the driving table:
 		// a verdict outlives the message it was raised about (first_activity_id
 		// is ON DELETE SET NULL, so an erasure inside the window nulls it
@@ -147,7 +154,10 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			       a.occurred_at,
 			       a.occurred_precision,
 			       v.attempts,
-			       present.id IS NOT NULL  AS has_activity
+			       present.id IS NOT NULL  AS has_activity,
+			       v.status = 'pending'    AS pending,
+			       coalesce(a.occurred_at, v.created_at) AS sort_at,
+			       v.id
 			  FROM capture_thread_verdict v
 			  LEFT JOIN activity a
 			    ON a.id = v.first_activity_id
@@ -157,38 +167,62 @@ func HeldThreadsFor(ctx context.Context, db *database.DB) ([]HeldThread, error) 
 			    ON present.id = v.first_activity_id
 			   AND present.archived_at IS NULL
 			 WHERE v.user_id = $1
-			   AND v.status NOT IN ('cleared', 'shared_by_owner')
-			 ORDER BY (v.status = 'pending') DESC,
-			          a.occurred_at DESC NULLS LAST,
-			          v.created_at DESC`, args...)
+			   AND v.status NOT IN ('cleared', 'shared_by_owner')`+filters+`
+			 ORDER BY `+heldOrderDescending+`
+			 LIMIT `+fmt.Sprintf("$%d", limitAt), args...)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's held threads: %w", err)
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var t HeldThread
-			var subject *string
-			if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind, &t.ActivityID,
-				&subject, &t.OccurredAt, &t.Precision, &t.Attempts, &t.HasActivity); err != nil {
-				return fmt.Errorf("capture: listing a seat's held threads: %w", err)
-			}
-			// The subject stays gated, and its own NULL still means only "no
-			// subject reached this reader" — erased or withheld, the row does
-			// not say which and does not need to. Which of the two it is comes
-			// from HasActivity, off the ungated join.
-			if subject != nil {
-				t.Subject = *subject
-			}
-			out = append(out, t)
-		}
-		if err := rows.Err(); err != nil {
+		if out.Threads, out.Next, err = scanHeldPage(rows, limit); err != nil {
 			return err
 		}
-		rows.Close()
-		return heldThreadPartiesTx(ctx, tx, out)
+		if out.Counts, err = heldThreadCountsTx(ctx, tx, actor.UserID); err != nil {
+			return err
+		}
+		return heldThreadPartiesTx(ctx, tx, out.Threads)
 	})
 	if err != nil {
-		return nil, err
+		return HeldThreadPage{}, err
 	}
 	return out, nil
+}
+
+// scanHeldPage reads one page of held threads, and the cursor past it when the
+// query found one row more than the page holds.
+func scanHeldPage(rows pgx.Rows, limit int) ([]HeldThread, string, error) {
+	defer rows.Close()
+	var threads []HeldThread
+	next := ""
+	var last heldCursor
+	for rows.Next() {
+		var t HeldThread
+		var subject *string
+		var at heldCursor
+		if err := rows.Scan(&t.ThreadKey, &t.Status, &t.Kind, &t.ActivityID,
+			&subject, &t.OccurredAt, &t.Precision, &t.Attempts, &t.HasActivity,
+			&at.Pending, &at.At, &at.ID); err != nil {
+			return nil, "", fmt.Errorf("capture: listing a seat's held threads: %w", err)
+		}
+		if len(threads) == limit {
+			encoded, err := storekit.EncodeOpaque(last)
+			if err != nil {
+				return nil, "", err
+			}
+			next = encoded
+			break
+		}
+		last = at
+		// The subject stays gated, and its own NULL still means only "no
+		// subject reached this reader" — erased or withheld, the row does
+		// not say which and does not need to. Which of the two it is comes
+		// from HasActivity, off the ungated join.
+		if subject != nil {
+			t.Subject = *subject
+		}
+		threads = append(threads, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", err
+	}
+	return threads, next, nil
 }

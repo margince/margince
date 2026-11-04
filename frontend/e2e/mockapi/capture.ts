@@ -41,7 +41,11 @@ export const senders: Handler = ({ json }, { captureSenders }) =>
 // contract's own shape, so the outcomes card reads three empty lists.
 const noneAwaiting: components["schemas"]["CaptureAwaitingContactListResponse"] =
   { data: [] };
-const noneHeld: components["schemas"]["HeldThreadListResponse"] = { data: [] };
+const noneHeld: components["schemas"]["HeldThreadListResponse"] = {
+  data: [],
+  page: { next_cursor: null, has_more: false },
+  counts: { pending: 0, unsure: 0, held: 0, held_by_owner: 0, stalled: 0 },
+};
 
 export const awaitingDecision: Handler = ({ json }) => json(noneAwaiting);
 

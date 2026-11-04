@@ -177,10 +177,11 @@ func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
 		t.Fatalf("holding the thread as its owner: %v", err)
 	}
 
-	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	heldPage, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB(), capturemod.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
+	held := heldPage.Threads
 	if len(held) != 1 {
 		t.Fatalf("want exactly one held thread, got %d", len(held))
 	}

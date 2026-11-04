@@ -11955,6 +11955,10 @@ export interface paths {
          *     Your own mailbox and nobody else's. What a contact is holding is the most private thing this
          *     module knows — the list names threads judged legal, personnel or personal — so there is no
          *     id here that reaches a colleague's list and no admin view of one.
+         *
+         *     A page at a time, pending first and then newest. `q` matches the opening message's subject
+         *     and a party's address or name; a thread whose message was erased is still found by the
+         *     addresses its hold kept. `counts` counts the whole list whatever a page narrows to.
          */
         get: operations["listHeldThreads"];
         put?: never;
@@ -26199,8 +26203,18 @@ export interface components {
         };
         HeldThreadListResponse: {
             data: components["schemas"]["HeldThread"][];
+            page: components["schemas"]["PageInfo"];
+            counts: components["schemas"]["HeldThreadCounts"];
             /** @description When the thread verdict next runs — what a `pending` row above is waiting for. A held thread with no time beside it leaves its owner two readings, broken and slow, and both are wrong. Absent where the deployment composed no queue to ask. */
             thread_verdict?: components["schemas"]["CaptureVerdictClock"];
+        };
+        /** @description The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow. */
+        HeldThreadCounts: {
+            pending: number;
+            unsure: number;
+            held: number;
+            held_by_owner: number;
+            stalled: number;
         };
         /** @description One thread your mailbox is withholding, and what is known about why. */
         HeldThread: {
@@ -75834,7 +75848,26 @@ export interface operations {
     };
     listHeldThreads: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Matches the subject, and a party's address or name. */
+                q?: string;
+                status?: "pending" | "unsure" | "held" | "held_by_owner";
+                /** @description Only the threads with this contact. A contact you may not read answers 404. */
+                contact_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -75852,6 +75885,8 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCaptureSenders: {

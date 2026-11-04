@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -168,8 +169,10 @@ function renderTab(
         return jsonResponse({ data: exclusions });
       }
       // The held threads and senders cards share the page, quiet when empty.
+      if (key === "GET /capture/held-threads") {
+        return jsonResponse(heldThreadList());
+      }
       if (
-        key === "GET /capture/held-threads" ||
         key === "GET /capture/senders" ||
         key === "GET /capture/contacts-awaiting-decision"
       ) {

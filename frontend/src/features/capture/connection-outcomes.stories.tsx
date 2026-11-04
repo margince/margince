@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -62,16 +63,18 @@ function story(
         }),
       ),
       "GET /capture/held-threads": answer(reads.held, () =>
-        jsonResponse({
-          data: ids(lists.held, (i) => ({
-            thread_key: `t-${i}`,
-            status: "held",
-            pending: false,
-            attempts: 1,
-            has_message: true,
-            kind: "legal",
-          })),
-        }),
+        jsonResponse(
+          heldThreadList(
+            ids(lists.held, (i) => ({
+              thread_key: `t-${i}`,
+              status: "held",
+              pending: false,
+              attempts: 1,
+              has_message: true,
+              kind: "legal",
+            })),
+          ),
+        ),
       ),
       "GET /me/linkedin-reach": () =>
         jsonResponse(

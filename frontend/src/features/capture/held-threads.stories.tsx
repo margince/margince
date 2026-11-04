@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -19,6 +20,7 @@ import { ConnectionOutcomesCard } from "./connection-outcomes";
 // row on the page.
 
 type HeldThread = components["schemas"]["HeldThread"];
+type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
 
 const HELD_LEGAL: HeldThread = {
   thread_key: "t-2",
@@ -111,11 +113,12 @@ const MIXED: HeldThread[] = [
   },
 ];
 
-function story(rows: HeldThread[]) {
+function story(rows: HeldThread[], over: Partial<HeldThreadList> = {}) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /capture/held-threads": () => jsonResponse({ data: rows }),
+      "GET /capture/held-threads": () =>
+        jsonResponse(heldThreadList(rows, over)),
       "GET /capture/senders": () => jsonResponse({ data: [] }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: [] }),
@@ -164,6 +167,25 @@ export const Mixed: Story = {
       const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
       expect(cell?.getBoundingClientRect().height).toBeGreaterThan(0);
     });
+  },
+};
+
+// A mailbox holding more than a page: the counts are the whole list's, and
+// the rest arrives behind "Show more".
+export const ALongList: Story = {
+  render: story(MIXED, {
+    page: { next_cursor: "page-2", has_more: true },
+    counts: {
+      pending: 212,
+      unsure: 18,
+      held: 940,
+      held_by_owner: 3,
+      stalled: 0,
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const drawer = await openHeld(canvasElement);
+    await within(drawer).findByRole("button", { name: "Show more" });
   },
 };
 

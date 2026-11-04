@@ -48,3 +48,15 @@
     display: none;
   }
 }
+
+/* The search takes the room it can; the status filter keeps its own width and
+   wraps under it on a narrow drawer. */
+.held-threads-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.held-threads-filters > :first-child {
+  flex: 1 1 16rem;
+}

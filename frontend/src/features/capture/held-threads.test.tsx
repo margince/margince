@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -96,7 +97,9 @@ async function renderCard(
       }
       if (key === "GET /capture/held-threads") {
         return new Response(
-          JSON.stringify({ data: rows, thread_verdict: threadVerdict }),
+          JSON.stringify(
+            heldThreadList(rows, { thread_verdict: threadVerdict }),
+          ),
           {
             status: 200,
             headers: { "Content-Type": "application/json" },

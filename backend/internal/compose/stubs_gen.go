@@ -955,7 +955,7 @@ func (stubs) PurgeCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "PurgeCaptureExclusion")
 }
 
-func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListHeldThreadsParams) {
 	httperr.NotImplemented(w, r, "ListHeldThreads")
 }
 

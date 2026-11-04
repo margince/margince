@@ -25987,6 +25987,30 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	}
 }
 
+// Defines values for ListHeldThreadsParamsStatus.
+const (
+	ListHeldThreadsParamsStatusHeld        ListHeldThreadsParamsStatus = "held"
+	ListHeldThreadsParamsStatusHeldByOwner ListHeldThreadsParamsStatus = "held_by_owner"
+	ListHeldThreadsParamsStatusPending     ListHeldThreadsParamsStatus = "pending"
+	ListHeldThreadsParamsStatusUnsure      ListHeldThreadsParamsStatus = "unsure"
+)
+
+// Valid indicates whether the value is a known member of the ListHeldThreadsParamsStatus enum.
+func (e ListHeldThreadsParamsStatus) Valid() bool {
+	switch e {
+	case ListHeldThreadsParamsStatusHeld:
+		return true
+	case ListHeldThreadsParamsStatusHeldByOwner:
+		return true
+	case ListHeldThreadsParamsStatusPending:
+		return true
+	case ListHeldThreadsParamsStatusUnsure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SetCaptureSenderDecisionJSONBodyDecision.
 const (
 	SetCaptureSenderDecisionJSONBodyDecisionBusiness SetCaptureSenderDecisionJSONBodyDecision = "business"
@@ -45339,9 +45363,21 @@ type HeldThread struct {
 	ThreadKey string `json:"thread_key"`
 }
 
+// HeldThreadCounts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+type HeldThreadCounts struct {
+	Held        int `json:"held"`
+	HeldByOwner int `json:"held_by_owner"`
+	Pending     int `json:"pending"`
+	Stalled     int `json:"stalled"`
+	Unsure      int `json:"unsure"`
+}
+
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
-	Data []HeldThread `json:"data"`
+	// Counts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+	Counts HeldThreadCounts `json:"counts"`
+	Data   []HeldThread     `json:"data"`
+	Page   PageInfo         `json:"page"`
 
 	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
@@ -65558,6 +65594,32 @@ type PurgeCaptureExclusionParams struct {
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
 }
 
+// ListHeldThreadsParams defines parameters for ListHeldThreads.
+type ListHeldThreadsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Q Matches the subject, and a party's address or name.
+	Q      *string                      `form:"q,omitempty" json:"q,omitempty"`
+	Status *ListHeldThreadsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// ContactId Only the threads with this contact. A contact you may not read answers 404.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+}
+
+// ListHeldThreadsParamsStatus defines parameters for ListHeldThreads.
+type ListHeldThreadsParamsStatus string
+
 // SetCaptureSenderDecisionJSONBody defines parameters for SetCaptureSenderDecision.
 type SetCaptureSenderDecisionJSONBody struct {
 	Decision SetCaptureSenderDecisionJSONBodyDecision `json:"decision"`
@@ -85401,7 +85463,7 @@ type ServerInterface interface {
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// What your mailbox is holding right now.
 	// (GET /capture/held-threads)
-	ListHeldThreads(w http.ResponseWriter, r *http.Request)
+	ListHeldThreads(w http.ResponseWriter, r *http.Request, params ListHeldThreadsParams)
 	// The caller's own other email addresses.
 	// (GET /capture/owner-identities)
 	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
@@ -89130,7 +89192,7 @@ func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Requ
 
 // What your mailbox is holding right now.
 // (GET /capture/held-threads)
-func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request, params ListHeldThreadsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103506,14 +103568,85 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 // ListHeldThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListHeldThreadsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListHeldThreads(w, r)
+		siw.Handler.ListHeldThreads(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
