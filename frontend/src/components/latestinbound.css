@@ -74,7 +74,7 @@
   align-items: center;
   justify-content: space-between;
   border-color: var(--borderSubtle);
-  background: var(--bgElevated);
+  background: var(--ground);
 }
 .latest-history .latest-line-kind {
   color: var(--textSecondary);
