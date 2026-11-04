@@ -4141,7 +4141,7 @@ export const en = {
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
   "deal.products.emptyTakesOffer":
-    "Saving an empty list takes the products from the accepted offer again.",
+    "Saving an empty list takes the products from an accepted offer, if there is one.",
   "deal.products.title": "Products",
   "deal.products.denied": "You may not see the products on this deal.",
   "deal.products.empty":

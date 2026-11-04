@@ -4171,7 +4171,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.next.empty": "Keine offenen Aufgaben zu diesem Unternehmen.",
   "co.next.overdue": "\u00dcberfällig",
   "deal.products.emptyTakesOffer":
-    "Speicherst du eine leere Liste, gelten wieder die Produkte des angenommenen Angebots.",
+    "Speicherst du eine leere Liste, gelten die Produkte eines angenommenen Angebots, falls es eines gibt.",
   "deal.products.title": "Produkte",
   "deal.products.denied": "Du darfst die Produkte dieses Deals nicht sehen.",
   "deal.products.empty":

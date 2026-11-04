@@ -4063,7 +4063,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.next.empty": "Công ty này không có việc cần làm nào đang mở.",
   "co.next.overdue": "Quá hạn",
   "deal.products.emptyTakesOffer":
-    "Nếu bạn lưu danh sách trống, deal sẽ lấy lại sản phẩm từ báo giá đã chấp nhận.",
+    "Nếu bạn lưu danh sách trống, deal sẽ lấy sản phẩm từ báo giá đã chấp nhận, nếu có.",
   "deal.products.title": "Sản phẩm",
   "deal.products.denied": "Bạn không được xem các sản phẩm của deal này.",
   "deal.products.empty":
