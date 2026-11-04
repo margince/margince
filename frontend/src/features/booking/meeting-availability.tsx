@@ -270,7 +270,7 @@ function HoursFields({
           )}
         </Field>
       </div>
-      {/* The hours are read on the person's own time zone, which is set once
+      {/* The hours are read on the user's own time zone, which is set once
           under Settings → Account and not here. */}
       <div className="form-row">
         <p className="t-caption">

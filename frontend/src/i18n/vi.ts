@@ -902,6 +902,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có mục tiêu nào. Trưởng nhóm, quản lý hoặc quản trị viên đặt mục tiêu.",
   "reporting.periodYear": "Năm",
   "reporting.periodMonth": "Tháng bắt đầu",
+  "reporting.expectedCloseOn": "Ngày chốt dự kiến",
+  "reporting.qualifiedOn": "Ngày đủ điều kiện",
+  "reporting.owner": "Phụ trách",
   "reporting.closedOn": "Ngày chốt",
   "reporting.meetingOn": "Ngày họp",
   "reporting.acceptedOn": "Ngày chấp nhận",
@@ -1005,6 +1008,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.pausedSchedules_other": "Lịch đã tạm dừng: {count}",
   "reporting.moreMetrics": "Tất cả chỉ số",
   "reporting.selectedValue": "Tổng cộng",
+  "reporting.pageRecordsOf_one": "Hiện {count} trong {total} bản ghi",
+  "reporting.pageRecordsOf_other": "Hiện {count} trong {total} bản ghi",
   "reporting.pageRecords_one": "Đang hiển thị {count} hồ sơ",
   "reporting.pageRecords_other": "Đang hiển thị {count} hồ sơ",
   "reporting.currentState": "Trạng thái hiện tại",
@@ -2281,6 +2286,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.assign_owner_release": "Gỡ phân công người chịu trách nhiệm",
   "systemJob.assurance": "Kiểm tra dự báo",
   "systemJob.audience_rescope": "Cập nhật phạm vi đọc",
+  "systemJob.voice_copy_recheck": "Dọn văn mẫu giọng văn",
   "systemJob.authz_disagreement": "Xem lại quyền gửi",
   "systemJob.auto_apply": "Duyệt tự động",
   "systemJob.automation": "Tự động hóa",
@@ -3532,6 +3538,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Bằng chứng",
   "stat.evidence.rests": "Cơ sở của số liệu này",
   "stat.open": "Mở",
+  "stat.forecast": "Dự báo",
   "stat.records": "Xem hồ sơ",
   "co.strip.fin.neverInvoiced": "Chưa xuất hóa đơn",
   "co.strip.fin.noConnection": "Chưa kết nối kế toán",
@@ -7440,9 +7447,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Pipeline có thể đã được lưu trữ hoặc không được chia sẻ với bạn. Hãy chọn một pipeline để xem số liệu.",
   "analytics.overview.pipelineDefault": "Dùng pipeline mặc định",
   "analytics.overview.pipelineAll": "Dùng tất cả pipeline",
-  "analytics.overview.quarterOnlyTitle": "Kết quả dự kiến tính cho quý này",
-  "analytics.overview.quarterOnlyBody":
-    "Kết quả dự kiến và khoảng cách đến mục tiêu được tính cho quý tài chính hiện tại. Chọn quý này để xem.",
   "analytics.overview.setTarget": "Đặt mục tiêu",
   "analytics.overview.targetWho":
     "Một đồng nghiệp quản lý mục tiêu, thường là quản trị viên hoặc quản lý bán hàng, có thể đặt mục tiêu.",
@@ -7485,7 +7489,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lead chưa được trả lời bị ẩn với bạn",
   "analytics.prospect.unansweredFailed":
     "Không đếm được lead chưa được trả lời",
-  "analytics.prospect.tooFew": "Quá ít",
   "analytics.prospect.tooFewResponses":
     "Quá ít lead được trả lời để đưa ra thời gian điển hình.",
   "analytics.prospect.upcoming": "Cuộc họp đã đặt",
@@ -7554,6 +7557,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.team.count": "Số lượng",
   "analytics.team.membersWithheld":
     "Hiệu suất cá nhân đang tắt, nên không hiển thị số liệu của từng thành viên.",
+  "analytics.team.viewMeetings": "Xem cuộc họp đã đặt",
+  "analytics.team.memberRecords": "{name}: xem bản ghi {metric}",
   "analytics.team.members": "Thành viên",
   "analytics.team.member": "Thành viên",
   "analytics.team.meetings": "Cuộc họp đã diễn ra",
@@ -7584,6 +7589,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.team.unansweredRow_one": "{count} lead vẫn chờ phản hồi đầu tiên",
   "analytics.team.unansweredRow_other":
     "{count} lead vẫn chờ phản hồi đầu tiên",
+  "analytics.team.currentUnansweredBasis":
+    "Lead đang mở chưa được phản hồi, bất kể ngày đến",
   "analytics.team.unansweredBasis":
     "Đã viết đến trong kỳ này, chưa có phản hồi",
   "analytics.team.unansweredHidden":
@@ -7610,7 +7617,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.team.waitingListBasis":
     "Đang chờ lúc này, cũ nhất trước. Mỗi dòng nêu lead hoặc liên hệ và ai đang được chờ.",
   "analytics.team.qualified": "Đủ điều kiện",
-  "analytics.team.unanswered": "Chưa phản hồi",
+  "analytics.team.unanswered": "Lead đến trong kỳ chưa phản hồi",
   "analytics.team.target": "Mục tiêu tháng",
   "analytics.team.targetOf": "{actual} trên {target}",
   "analytics.team.noTarget": "Không có mục tiêu",
@@ -8031,12 +8038,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.source.contracts": "hợp đồng",
   "review.source.incumbent": "hệ thống cũ",
   "analytics.coverageNeverRun":
-    "Chưa có lần kiểm tra nào chạy. Bản cài đặt chưa kiểm tra không có nghĩa là đang ổn.",
+    "Bắt đầu kiểm tra đầu vào trong Dự báo để xem phạm vi dữ liệu nguồn.",
   "review.source.offers": "báo giá",
   "review.sourcesUnread":
     "Chưa kiểm tra: {sources}. Phát hiện bên dưới chỉ gồm những gì đã kiểm tra.",
-  "review.notCheckedYet":
-    "Chưa kiểm tra gì: lần kiểm tra đầu tiên chưa chạy. Số liệu ở trên phản ánh các hồ sơ hiện tại.",
   "review.firstCheck.title": "Bắt đầu kiểm tra đầu vào",
   "review.firstCheck.body":
     "Bắt đầu kiểm tra hằng đêm và tạo việc cần làm cho từng deal bị ảnh hưởng.",
@@ -13163,6 +13168,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.exclusion.ownerExcluded": "Đã loại khỏi giọng văn",
   "settings.voice.exclusion.ownerRemoved": "Đã gỡ",
   "settings.voice.exclusion.corpusCleared": "Đã gỡ khi xóa toàn bộ mẫu",
+  "settings.voice.sentMailLabel": "Học từ thư đã gửi",
+  "settings.voice.sentMailConsent":
+    "Margince đọc tối đa 200 thư bạn gửi gần nhất, chỉ từ hộp thư của chính bạn, chỉ lúc này và chỉ vì bạn bấm nút. Phần trả lời được trích dẫn, thư chuyển tiếp và chữ ký bị bỏ qua, cũng như thư chỉ dành cho các bên tham gia hoặc được đánh dấu bảo mật. Lời văn của chính bạn được lưu làm văn mẫu và được gửi đến mô hình AI khi bạn dựng Voice DNA. Bạn có thể gỡ từng thư hoặc xóa toàn bộ mẫu bất cứ lúc nào.",
+  "settings.voice.sentMailButton": "Học từ thư đã gửi",
+  "settings.voice.sentMailReading": "Đang đọc thư đã gửi…",
+  "settings.voice.sentMailLearned_one":
+    "Đã học từ {count} thư bạn đã gửi. Hãy dựng Voice DNA để dùng.",
+  "settings.voice.sentMailLearned_other":
+    "Đã học từ {count} thư bạn đã gửi. Hãy dựng Voice DNA để dùng.",
+  "settings.voice.sentMailNothingNew":
+    "Không có gì mới để học. Mỗi thư tìm thấy đã là văn mẫu hoặc đã được bạn gỡ.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} thư bị bỏ qua: thư chỉ có phần trích dẫn, chữ ký hoặc quá ít lời văn của bạn.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} thư bị bỏ qua: thư chỉ có phần trích dẫn, chữ ký hoặc quá ít lời văn của bạn.",
+  "settings.voice.sentMailNone":
+    "Không có thư đã gửi nào để học. Chỉ thư gửi từ hộp thư đã kết nối của bạn được tính; thư riêng tư hoặc bảo mật bị bỏ qua.",
+  "settings.voice.sentMailFailed": "Không đọc được thư đã gửi. {detail}",
   "settings.voice.addSource": "Thêm văn mẫu",
   "settings.voice.addFirstLabel": "Văn mẫu đầu tiên",
   "settings.voice.dropHint":
@@ -18012,6 +18035,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} quyết định đang chờ",
   "worklist.view.total.system_one": "{count} sự cố chưa xử lý",
   "worklist.view.total.system_other": "{count} sự cố chưa xử lý",
+  "worklist.filter.linked.prospecting":
+    "Đang hiển thị việc theo dõi lead và cuộc họp.",
   "worklist.filter.linked.urgent": "Chỉ hiển thị việc khẩn cấp.",
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi việc trừ các phê duyệt đã có trong Bản tin sáng.",
@@ -19742,6 +19767,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.more": "Thêm",
   "analytics.outlook.valuedCount": "Định giá {included}/{eligible}",
   "analytics.outlook.periodPipeline": "Pipeline dự kiến chốt trong quý",
+  "analytics.outlook.selectedSales": "Triển vọng bán hàng",
   "analytics.outlook.sales": "Triển vọng quý",
   "analytics.outlook.team": "Triển vọng tìm khách hàng của nhóm",
   "analytics.outlook.prospecting": "Triển vọng tìm khách hàng",

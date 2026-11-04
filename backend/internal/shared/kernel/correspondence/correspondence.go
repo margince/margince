@@ -51,9 +51,19 @@ func LocalPartBase(local string) string {
 	return local
 }
 
+// gmailDomain and googlemailDomain name one mailbox namespace. Google issues
+// both spellings for one account and ignores the dots of the local part. No
+// other host is known to ignore dots, so no other host folds.
+const (
+	gmailDomain      = "gmail.com"
+	googlemailDomain = "googlemail.com"
+)
+
 // BaseAddress is the folded address with its local part cut to LocalPartBase,
-// and reports whether a tag was removed. The local part ends at the first `@`,
-// which is where the duplicate check's SQL expression ends it too.
+// and reports whether that changed the address. A Gmail address also loses the
+// dots of its local part and is spelled at gmailDomain. The local part ends at
+// the first `@`, which is where the duplicate check's SQL expression ends it
+// too. The base pairs records for review only and never routes mail.
 func BaseAddress(address string) (string, bool) {
 	folded := Fold(address)
 	local, domain, found := strings.Cut(folded, "@")
@@ -61,5 +71,9 @@ func BaseAddress(address string) (string, bool) {
 		return folded, false
 	}
 	base := LocalPartBase(local)
-	return base + "@" + domain, base != local
+	if domain == gmailDomain || domain == googlemailDomain {
+		base, domain = strings.ReplaceAll(base, ".", ""), gmailDomain
+	}
+	base += "@" + domain
+	return base, base != folded
 }

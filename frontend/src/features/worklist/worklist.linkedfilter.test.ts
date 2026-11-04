@@ -19,7 +19,11 @@ describe("the filters that arrive by link", () => {
   // read the PILL list; a link-only value checked against that list is not
   // found, falls through to `all`, and the door opens everything.
   it("reads a link-only value off the address instead of falling back", () => {
-    for (const filter of ["except_decisions", "changed_since_brief"] as const) {
+    for (const filter of [
+      "except_decisions",
+      "changed_since_brief",
+      "prospecting",
+    ] as const) {
       const params = new Map([[WORKLIST_FILTER_PARAM, filter]]);
       expect(worklistFilterFrom(params)).toBe(filter);
     }
@@ -41,7 +45,11 @@ describe("the filters that arrive by link", () => {
   // screen must read back. Asserting the string alone would pass against a
   // builder that spelled a value the reader then discards.
   it("writes an address its own reader resolves to the same filter", () => {
-    for (const filter of ["except_decisions", "changed_since_brief"] as const) {
+    for (const filter of [
+      "except_decisions",
+      "changed_since_brief",
+      "prospecting",
+    ] as const) {
       const href = worklistLaneHref(filter);
       const query = new URLSearchParams(href.slice(href.indexOf("?") + 1));
       const params = new Map(query.entries());

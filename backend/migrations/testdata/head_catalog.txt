@@ -5146,11 +5146,15 @@ public.idx_contact_channel_identity_contact CREATE INDEX idx_contact_channel_ide
 public.idx_contact_confirm_submission_token CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id)
 public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_dedupe_scan CREATE INDEX idx_contact_dedupe_scan ON public.contact USING btree (updated_at, id) WHERE (archived_at IS NULL)
-public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.contact_email USING btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
 public.idx_contact_email_dedupe_scan CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id)
 public.idx_contact_email_domain_reversed CREATE INDEX idx_contact_email_domain_reversed ON public.contact_email USING btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)
+public.idx_contact_email_mailbox_base CREATE INDEX idx_contact_email_mailbox_base ON public.contact_email USING btree ((
+CASE
+    WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text) ~ '^[^@]*@(gmail|googlemail)\.com$'::text) THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text), '@(gmail|googlemail)\.com$'::text, ''::text), '.'::text, ''::text) || '@gmail.com'::text)
+    ELSE regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)
+END)) WHERE (archived_at IS NULL)
 public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)

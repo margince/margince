@@ -328,7 +328,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "features/settings/account-settings.test.tsx",
-    why: "The case picks a zone in the account row and asserts the exact IANA name the write carries; the name the person picked is the subject, so it has to be spelled.",
+    why: "The case picks a zone in the account row and asserts the exact IANA name the write carries; the name the user picked is the subject, so it has to be spelled.",
   },
   {
     file: "testing/settings.testkit.tsx",

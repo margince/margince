@@ -18655,6 +18655,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/voice-profiles/{id}/sources/sent-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn the owner's voice from their own most recent sent mail, once, on request.
+         * @description Reads up to the caller's 200 most recent sent mails and files the words they wrote
+         *     in each as an email source of their own voice profile. It reads only mail sent from
+         *     the caller's own connected mailbox: never a colleague's mail, a colleague's copy, or
+         *     a shared mailbox. Mail limited to its participants or to selected readers, and mail
+         *     whose subject marks it confidential, is left out.
+         *
+         *     Quoted replies, forwards, signatures and legal footers are cut before a mail is
+         *     stored. A mail that is already a source is left as it is, so a mail the owner removed
+         *     or excluded stays out. The call reads mail only when it is made; nothing reads sent
+         *     mail on a schedule. It makes no model call: the stored text reaches a model only in
+         *     the next build the owner starts.
+         *
+         *     Human-only for security: reading a mailbox into a voice profile is the owner's own
+         *     decision, made by pressing the button.
+         */
+        post: operations["learnVoiceFromSentMail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/voice-profiles/{id}/sources/{sourceId}": {
         parameters: {
             query?: never;
@@ -22550,16 +22586,16 @@ export interface paths {
          * @description Always the CALLER's own, never anybody else's. An admin does not set a
          *     colleague's time zone through this API.
          *
-         *     One zone per person. Booking reads your working hours on it, and mail
+         *     One zone per user. Booking reads your working hours on it, and mail
          *     sent to you is timed by it.
          *
          *     `source` says who picked the zone. `browser` is the app's first guess
          *     from the browser, and is stored only while no zone is stored. `chosen`
-         *     is the person's own pick: it is always stored and marks the zone as
+         *     is the user's own pick: it is always stored and marks the zone as
          *     chosen. Saving the zone already stored writes nothing.
          *
-         *     Not open to agents: an agent acting for a person must not change the
-         *     clock that person's times, bookings and mail are read on.
+         *     Not open to agents: an agent acting for a user must not change the
+         *     clock that user's times, bookings and mail are read on.
          */
         put: operations["saveMyTimezone"];
         post?: never;
@@ -35010,7 +35046,7 @@ export interface components {
             timezone: string;
             /**
              * @description `browser` is the app's guess from the browser, stored only while no
-             *     zone is stored. `chosen` is the person's own pick, always stored.
+             *     zone is stored. `chosen` is the user's own pick, always stored.
              * @enum {string}
              */
             source: "browser" | "chosen";
@@ -35754,7 +35790,10 @@ export interface components {
             /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
             id: string;
             label: string;
+            /** @description Raw source quantity with its unit. */
             value: string;
+            /** @description Locale-formatted quantity for reader text. */
+            display?: string;
         };
         ReportSetupRequest: {
             /**
@@ -42493,7 +42532,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -43188,6 +43227,12 @@ export interface components {
         ReportingForecastBasis: {
             /**
              * Format: int64
+             * @description Open deals eligible for this forecast period.
+             */
+            open_count?: number;
+            open_evidence?: components["schemas"]["ReportingEvidenceRef"];
+            /**
+             * Format: int64
              * @description Open deal value eligible for the forecast period, in base minor units.
              */
             open_pipeline_minor?: number;
@@ -43524,6 +43569,8 @@ export interface components {
             occurred_at?: string;
             /** @description How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
+            owner_label?: string;
+            stage_label?: string;
             /** Format: uuid */
             owner_id?: string;
             source_type?: string;
@@ -43709,9 +43756,9 @@ export interface components {
             display_name: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
-            /** @description The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
+            /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
-            /** @description Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
+            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
             timezone_chosen?: boolean;
             /**
              * @description The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
@@ -50337,6 +50384,18 @@ export interface components {
             included?: boolean;
             weight?: number;
         };
+        /**
+         * @description The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+         *     each of them is `added`, `already_present` (a source already, left as it is), or
+         *     `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+         */
+        VoiceSentMailLearned: {
+            read: number;
+            added: number;
+            already_present: number;
+            no_own_words: number;
+            summary: components["schemas"]["VoiceCorpusSummary"];
+        };
         /** @description What the speaker filter did to one ingested source; kept words are the only words that count. */
         VoiceIngestStats: {
             input_words: number;
@@ -53829,7 +53888,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
             /**
              * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
              * @enum {string}
@@ -77580,7 +77639,7 @@ export interface operations {
                  *     A filter sent with a view it does not belong to returns
                  *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
                 /**
                  * @description Which work view to answer. `today` is work a seller executes: every category
                  *     except `decisions` and `system`. `decisions` is judgements somebody owes, and
@@ -85073,6 +85132,55 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    learnVoiceFromSentMail: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What this call learned, and the meter after it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSentMailLearned"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteVoiceCorpusSource: {

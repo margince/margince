@@ -155,7 +155,7 @@ export const DrillDown: Story = {
       }),
     );
     await screen.findByRole("dialog");
-    await screen.findByText("€42,000.00");
+    await screen.findByText("42,000 EUR");
   },
 };
 

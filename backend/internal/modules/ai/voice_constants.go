@@ -57,6 +57,13 @@ const (
 	voiceOutcomeWireSentEdited   = "sent_edited"
 )
 
+// Where a corpus source came from: handed over by its owner, or read from the
+// owner's own captured mail at their request.
+const (
+	voiceOriginManual  = "manual"
+	voiceOriginCapture = "capture"
+)
+
 // Voice source kinds and registers are the closed ADR-0066 vocabulary.
 const (
 	voiceSourceKindEmail      = "email"

@@ -70,7 +70,7 @@ function unsetFor(id: string): Me {
   return { ...me, user: { ...me.user, id, timezone: undefined } };
 }
 
-it("asks again for a different person signing in on the same tab", async () => {
+it("asks again for a different user signing in on the same tab", async () => {
   const writes = stubWrites();
   const view = render(wrap(<Probe me={unsetFor("u-1")} />));
   await vi.waitFor(() => expect(writes).toHaveLength(1));
