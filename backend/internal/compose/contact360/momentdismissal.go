@@ -76,11 +76,11 @@ func (h Handlers) RestoreContactMoment(w http.ResponseWriter, r *http.Request, i
 // DismissMoment records that this viewer has put this moment away while its
 // evidence stands.
 //
-// Human-only, for the reason Acknowledge is: an agent principal carries the
-// granting human's id, so resolving "the acting user" would let a passport read
-// silence a card on a human's screen that the human never saw.
+// The user, or their agent at their word, sets the moment aside. Acknowledge
+// stays human-only: a read is not a word, and it would mark a card seen that
+// the human never saw.
 func (s *Service) DismissMoment(ctx context.Context, contactID ids.ContactID, in crmcontracts.DismissContactMomentRequest) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
@@ -117,7 +117,7 @@ func (s *Service) DismissMoment(ctx context.Context, contactID ids.ContactID, in
 // set a moment aside are the ones who may undo it. It clears only the
 // dismissal of this evidence, so an old toast's Undo leaves a newer one alone.
 func (s *Service) RestoreMoment(ctx context.Context, contactID ids.ContactID, dismissed crmcontracts.DismissContactMomentRequest) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {

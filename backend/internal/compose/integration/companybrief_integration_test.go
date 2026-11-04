@@ -14,7 +14,7 @@ package integration
 //     company's row version;
 //   - two readers of the same account get their own brief, because a brief
 //     written from one reader's row scope is not true for another's;
-//   - an agent is refused, and an account the caller cannot read has no
+//   - passportless work is refused, and an account the caller cannot read has no
 //     brief rather than a refusal that confirms it exists.
 
 import (
@@ -355,8 +355,7 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 	}
 }
 
-// A brief is a reading aid for a contact. An agent reading records through a
-// passport has the records themselves.
+// Passportless work acts for nobody, so it has no reader to write a brief for.
 func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -365,8 +364,7 @@ func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		// The shape a passport really mints: the granting human's id rides
-		// along, so refusing on "no user" would prove nothing.
+		// A user id rides along, so refusing on "no user" would prove nothing.
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: briefReaderPerms,
 	})
 

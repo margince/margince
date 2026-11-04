@@ -9,6 +9,7 @@ package compose
 // put away gives the card to the next promise. The undo hands it back.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -105,5 +106,42 @@ func TestAnOldUndoLeavesANewerSetAsideStanding(t *testing.T) {
 	if count := e.WsCount(t, `SELECT count(*) FROM contact_moment_dismissal
 		WHERE claim_key = 'moment:gone_quiet' AND evidence_fingerprint = 'fp-after'`); count != 1 {
 		t.Errorf("the newer set-aside rows = %d after the old undo, want 1 still standing", count)
+	}
+}
+
+// An agent reads the contact card as its user left it, and what it sets aside
+// its user finds set aside.
+func TestAnAgentSharesItsUsersSetAsideOnTheContactCard(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedLinkedContact(t, e, "agentcard@kunde.example")
+	contactID := ids.From[ids.ContactKind](contact)
+	now := clocktest.Now(t)
+	clock := func() time.Time { return now }
+	logTaskFor(t, e, contact, "Send the signed contract", new(now.Add(24*time.Hour)))
+	logTaskFor(t, e, contact, "Send the invoice", new(now.Add(72*time.Hour)))
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(e.Pool)),
+		comms.NewStore(InstallationDB(e.Pool), clock, activities.NewStore(InstallationDB(e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(e.Pool)), clock)
+	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
+	moment := func(ctx context.Context) crmcontracts.ContactMoment {
+		t.Helper()
+		page, err := svc.Assemble(ctx, contactID)
+		if err != nil || page.Moment == nil {
+			t.Fatalf("assembling contact360: moment %+v, err %v", page.Moment, err)
+		}
+		return *page.Moment
+	}
+
+	first := moment(agent)
+	if err := svc.DismissMoment(agent, contactID, crmcontracts.DismissContactMomentRequest{
+		ClaimKey: first.ClaimKey, EvidenceFingerprint: first.EvidenceFingerprint,
+	}); err != nil {
+		t.Fatalf("the agent setting the moment aside: %v", err)
+	}
+	for name, ctx := range map[string]context.Context{"the agent": agent, "its user": e.Admin()} {
+		if got := moment(ctx); got.ClaimKey == first.ClaimKey {
+			t.Errorf("%s still reads the moment the agent set aside: %q", name, got.Headline)
+		}
 	}
 }

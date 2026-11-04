@@ -179,10 +179,10 @@ func (s *Service) refuseMalformedGrant(ctx context.Context, in CreateGrantInput)
 // createRecordGrantInTx is the share itself: who may grant it, who may hold
 // it, and the audited upsert.
 func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return grantRow{}, errors.New("crmauth: only a human shares records directly; agents stage through the approval gate")
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return grantRow{}, err
 	}
+	actor, _ := principal.Actor(ctx)
 	// Scope-intersection: you can only share what you can see (H1
 	// probe on the client-supplied record reference).
 	if err := auth.EnsureLinkTarget(ctx, tx, in.RecordType, in.RecordID); err != nil {
@@ -427,10 +427,10 @@ func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant 
 // RevokeRecordGrant deletes one share. A nil ifVersion revokes whatever the
 // grant now says; a stale one refuses, since a re-assert may have changed it.
 func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID, ifVersion *int64) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return errors.New("crmauth: only a human revokes shares directly; agents stage through the approval gate")
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return err
 	}
+	actor, _ := principal.Actor(ctx)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// FOR UPDATE for the reason the assertion path takes it: this row is
 		// both the thing being deleted and the audit's before image, and a

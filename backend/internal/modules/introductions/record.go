@@ -112,8 +112,9 @@ func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
 	return id, nil
 }
 
-// recorderOf answers the human recording, refusing a caller without the grants
-// to name a contact and create an introduction, and any agent.
+// recorderOf answers the human recording, or the agent recording for them,
+// refusing a caller without the grants to name a contact and create an
+// introduction.
 func recorderOf(ctx context.Context) (principal.Principal, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionCreate); err != nil {
 		return principal.Principal{}, err
@@ -121,7 +122,7 @@ func recorderOf(ctx context.Context) (principal.Principal, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return principal.Principal{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return principal.Principal{}, err
 	}
 	actor, ok := principal.Actor(ctx)

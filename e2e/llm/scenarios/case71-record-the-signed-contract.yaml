@@ -1,0 +1,30 @@
+# CASE 71 — A contract is recorded through change_offers. It is a write the user asked for by name.
+name: case71_record_the_signed_contract
+criteria: [1]
+writes: true
+
+prompt: |
+  Aachener Metallwerke signed. Record a contract for them called Wartungsvertrag 2027.
+
+must_call:
+  - change_offers
+
+must_call_with:
+  - change_offers.action=record_contract
+
+must_end_with:
+  - company "Aachener Metallwerke GmbH" contract=Wartungsvertrag 2027
+
+may_call:
+  - find_records
+  - search_records
+  - list_records
+  - read_record
+  - read_workspace
+  - whoami
+
+must_mention:
+  - "Wartungsvertrag 2027"
+
+runs: 3
+pass_at: 2
