@@ -138,6 +138,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.clearSearch": "Xóa tìm kiếm",
   "users.resultCount": "{matching} trên {total} thành viên",
   "users.noSearchResults": "Không có thành viên phù hợp.",
+  "teams.searchMembers": "Tìm thành viên nhóm",
   "users.edit": "Sửa thành viên",
   "users.editTitle": "Sửa {name}",
   "users.saved": "Đã lưu thành viên.",

@@ -115,6 +115,7 @@ export const en = {
   "users.clearSearch": "Clear search",
   "users.resultCount": "{matching} of {total} members",
   "users.noSearchResults": "No members match this search.",
+  "teams.searchMembers": "Search team members",
   "users.edit": "Edit member",
   "users.editTitle": "Edit {name}",
   "users.saved": "Member saved.",
