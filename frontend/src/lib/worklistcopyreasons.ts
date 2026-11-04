@@ -115,7 +115,13 @@ const SAID_BY_THE_WHEN_LINE = new Set<string>([
   "meeting_soon",
 ]);
 
-/** The reasons a row says in its phrase line: all but those said elsewhere. */
+/**
+ * The reasons a row says in its phrase line: all but those said elsewhere.
+ *
+ * `pinned` stays in. The order is the only other sign of a pin, and a new pin
+ * or a change in the ranking moves it. The pin is always the reader's own, so
+ * the phrase is "pinned by you".
+ */
 export function phrasedReasons(
   item: WorklistItem,
   whenDrawn: boolean,
@@ -123,9 +129,7 @@ export function phrasedReasons(
   return item.because.filter(
     (reason) =>
       reason.kind !== BADGED &&
-      !["material", "below_material", "routine", "pinned"].includes(
-        reason.kind,
-      ) &&
+      !["material", "below_material", "routine"].includes(reason.kind) &&
       !(
         reason.kind === "expected_revenue" &&
         item.deal?.amount_minor != null &&

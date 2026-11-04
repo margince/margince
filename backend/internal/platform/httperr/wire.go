@@ -160,7 +160,7 @@ func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string
 	if dec.More() {
 		return Validation("body", "malformed_json", "trailing content after the JSON value")
 	}
-	if refused := decodedValueRefusal(into); refused != nil {
+	if refused := DecodedValueRefusal(into, raw, owned); refused != nil {
 		return refused
 	}
 	stashPresentFields(r, raw)

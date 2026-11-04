@@ -8263,6 +8263,90 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/margince-changes:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: listDealMarginceChanges
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Every change Margince made to this deal, newest first.
+      description: |
+        The deal's own list of what Margince changed on it: closed as lost, a new close date,
+        amount or probability, and the close-date checks. Accepted and undone changes stay in
+        the list and say so; a change still open carries its `undo`. Dismissing a change on
+        Home does not remove it here. Paged newest first; `next_cursor` continues the list.
+        A deal the caller may not see answers 404.
+      x-mcp-tool: { verb: list_deal_margince_changes, router: read_details, action: deal_margince_changes, tier: auto_execute, scope: read, served_by: route }
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+          description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+      responses:
+        '200':
+          description: One page of the deal's changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealMarginceChanges' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /deal-corrections/pending:
+    get:
+      tags: [Deals]
+      operationId: getPendingMarginceChanges
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The changes Margince made to your deals that you have not accepted or undone.
+      description: |
+        One bundle per deal: every open change Margince made to one of the caller's own deals,
+        newest first inside the bundle. The counts are deals, counted in SQL over every open
+        change, so a deal changed twice counts once and a cut list never shrinks a count.
+        Bundles are ordered by the deal's value in the base currency, the largest first. At
+        most 500 bundles; `truncated` says when more exist.
+      x-mcp-tool: { verb: get_pending_margince_changes, router: read_details, action: pending_margince_changes, tier: auto_execute, scope: read, served_by: route }
+      responses:
+        '200':
+          description: The open changes, one bundle per deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarginceChangeSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /deal-corrections/undo:
+    post:
+      tags: [Deals]
+      operationId: undoMarginceChanges
+      security: [ { cookieAuth: [] } ]   # human session only, as the single Undo
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Undo several changes Margince made, one deal at a time.
+      description: |
+        Each item names one deal and the changes on it to take back. The changes of one item
+        are undone newest first through the same reversal the single Undo uses; the first is
+        checked against `version`, the version the caller read. Like the single Undo, it is
+        for a signed-in human only. Items are independent: one
+        refused deal does not stop the next. The answer reports each deal as `undone`,
+        `partly_undone` (some changes kept, each with its reason) or `refused`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UndoMarginceChangesRequest' }
+      responses:
+        '200':
+          description: One result per item, in the order asked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UndoMarginceChangesResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/stage-progressions/{approvalId}/revert:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -20312,6 +20396,37 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/team/changes:
+    get:
+      tags: [Brief]
+      operationId: getTeamMarginceChanges
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: What Margince changed on your team's deals.
+      description: |
+        Per teammate and kind of change: how many deals Margince changed since `since`, their
+        value in the base currency, and how many of those deals had the change undone. The
+        rows follow, newest first, at most 200; `truncated` says when more exist. The counts
+        are read over every change, so a cut list never shrinks them.
+
+        The teammates are the ones `/worklist/team` lists, and every deal is read under the
+        caller's own row scope. Requires a row scope of `team` or `all`; an own-scoped reader
+        is refused with 403.
+      x-mcp-tool: { verb: get_team_margince_changes, router: read_details, action: team_margince_changes, tier: auto_execute, scope: read, served_by: route }
+      parameters:
+        - in: query
+          name: since
+          schema: { type: string, format: date-time }
+          description: Where the window starts. Seven days before now when absent.
+      responses:
+        '200':
+          description: The team's changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamMarginceChanges' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /worklist/handled:
     get:
       tags: [Brief]
@@ -24057,6 +24172,10 @@ paths:
       x-agent-access: human-only
       x-human-only-reason: pending
       summary: Update a data-subject request's status / assignee / resolution.
+      description: |
+        Fulfilling an erasure runs the erasure and records its own answer, `erased` or
+        `nothing_held`. Text sent as `resolution` with it is refused with 422 before anything
+        is erased.
       requestBody:
         required: true
         content:
@@ -43245,6 +43364,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the
+            `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named
+            themselves owner (an edit or a claim) needs the delete grant. Server-computed per row,
+            per caller. A UX signal, never the enforcement, exactly like `writable`; absent means
+            NOT archivable.
         social:
           type: object
           additionalProperties: true
@@ -43975,6 +44103,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the
+            `company:delete` grant or being the company's owner with `company:update`. An owner who named
+            themselves owner (an edit or a claim) needs the delete grant. Server-computed per row,
+            per caller. A UX signal, never the enforcement, exactly like `writable`; absent means
+            NOT archivable.
         parent_company_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
         assess_against_entity_id:
           type: [string, 'null']
@@ -68156,7 +68293,15 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.' }
         resolution:
           type: [string, 'null']
-          description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+          description: |
+            A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+            the stored answer, is refused with 422. An open request takes any draft.
+
+            Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+            from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+            when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+            with 422 on `resolution`, before anything is erased, because typed prose could name the
+            subject the erasure removes. Rejecting an erasure still needs a written answer.
         identity_check:
           type: string
           enum: [confirm_link, address_on_file, id_document, in_person, not_verified]
@@ -74392,6 +74537,159 @@ components:
           description: >-
             Somebody already put this back. The row stays and says so rather than
             vanishing, which would leave a reader unsure their Undo landed.
+
+    MarginceChangeSummary:
+      type: object
+      description: |
+        The changes Margince made to the caller's deals that are neither accepted nor undone.
+        Every count is a number of deals; a deal with two kinds of change counts once in
+        `deals` and once under each kind.
+      required: [as_of, deals, closed, redated, revalued, probabilities, base_currency, bundles, truncated]
+      properties:
+        as_of: { type: string, format: date-time }
+        deals: { type: integer, description: Deals with at least one open change. }
+        closed: { type: integer, description: Deals Margince closed as lost. }
+        redated: { type: integer, description: Deals given a new close date. }
+        revalued: { type: integer, description: Deals given a new amount. }
+        probabilities: { type: integer, description: Deals given a new probability. }
+        base_currency: { type: string, description: The currency of every `value_base_minor`. }
+        bundles:
+          type: array
+          items: { $ref: '#/components/schemas/MarginceChangeBundle' }
+          description: One per deal, the largest value first.
+        truncated: { type: boolean, description: True when more bundles exist than were returned. The counts are never cut. }
+
+    MarginceChangeBundle:
+      type: object
+      description: Every open change Margince made to one deal. Its Undo takes them all back.
+      required: [deal_id, deal_name, version, audit_log_ids, kinds, latest_at]
+      properties:
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        version:
+          type: integer
+          format: int64
+          description: The deal's version as read, for the first undo of the bundle.
+        audit_log_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: The changes, newest first.
+        kinds:
+          type: array
+          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability] }
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
+        latest_at: { type: string, format: date-time }
+
+    UndoMarginceChangesRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: { $ref: '#/components/schemas/UndoMarginceChangeItem' }
+
+    UndoMarginceChangesResult:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/UndoMarginceChangeResult' }
+
+    UndoMarginceChangeResult:
+      type: object
+      description: |
+        What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
+        change left in place and why.
+      required: [deal_id, outcome, undone, kept]
+      properties:
+        deal_id: { type: string, format: uuid }
+        outcome: { type: string, enum: [undone, partly_undone, refused] }
+        undone:
+          type: array
+          items: { type: string }
+          description: The kinds of change taken back.
+        kept:
+          type: array
+          items: { $ref: '#/components/schemas/UndoMarginceChangeKept' }
+
+    DealMarginceChanges:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/Receipt' }
+          description: The deal's changes, newest first.
+        next_cursor: { type: string, description: Where the next page starts; absent on the last page. }
+
+    TeamMarginceChanges:
+      type: object
+      required: [as_of, since, base_currency, groups, rows, truncated]
+      properties:
+        as_of: { type: string, format: date-time }
+        since: { type: string, format: date-time }
+        base_currency: { type: string }
+        groups:
+          type: array
+          items: { $ref: '#/components/schemas/TeamMarginceChangeGroup' }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/TeamMarginceChangeRow' }
+        truncated: { type: boolean, description: True when more rows exist than were returned. The groups are never cut. }
+
+    UndoMarginceChangeItem:
+      type: object
+      required: [deal_id, version, audit_log_ids]
+      properties:
+        deal_id: { type: string, format: uuid }
+        version:
+          type: integer
+          format: int64
+          description: The deal's version as the caller read it. A deal changed since is refused, as the single Undo's If-Match is.
+        audit_log_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
+          description: The changes to take back, all on this deal.
+
+    UndoMarginceChangeKept:
+      type: object
+      description: One change an undo left in place, and why.
+      required: [audit_log_id, reason]
+      properties:
+        audit_log_id: { type: string, format: uuid }
+        kind: { type: string, description: The kind of change; absent when the change could not be read. }
+        reason:
+          type: string
+          enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew]
+
+    TeamMarginceChangeGroup:
+      type: object
+      required: [owner_id, owner_name, kind, deals, undone, value_base_minor]
+      properties:
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        kind: { type: string }
+        deals: { type: integer, description: Deals changed in this kind. }
+        undone: { type: integer, description: 'Of those deals, how many had the change undone.' }
+        value_base_minor:
+          type: integer
+          format: int64
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+
+    TeamMarginceChangeRow:
+      type: object
+      required: [owner_id, change]
+      properties:
+        owner_id: { type: string, format: uuid }
+        change: { $ref: '#/components/schemas/Receipt' }
 
     MagicUndo:
       type: object

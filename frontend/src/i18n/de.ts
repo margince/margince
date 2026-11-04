@@ -6038,6 +6038,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
+  "contact.archiveRefused":
+    "Nur der Verantwortliche des Kontakts oder eine Führungskraft kann diesen Kontakt archivieren.",
+  "company.archiveRefused":
+    "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
@@ -10282,6 +10286,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
   "privacy.erasureConfirm": "Löschen und sperren",
+  "privacy.resolutionErasureHint":
+    "Nur für eine Ablehnung. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureDraftReplaced":
+    "Deine eingegebene Antwort wird nicht gespeichert. Beim Erfüllen wird festgehalten, was die Löschung vorfand: Gelöscht oder Nichts vorhanden.",
+  "privacy.erasureAnswer.erased": "Gelöscht",
+  "privacy.erasureAnswer.nothing_held": "Nichts vorhanden (bereits gelöscht)",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",
@@ -18393,7 +18403,52 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.handled.closeLostUndone":
     "Rückgängig gemacht. Füge eine Notiz hinzu, warum dieser Deal noch lebt, sonst schließt Margince ihn bei der nächsten Prüfung wieder.",
   "worklist.handled.verdictUndone":
-    "Rückgängig gemacht. Margince ändert das nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+    "Rückgängig gemacht. Margince ändert {field} nicht wieder, bis auf diesem Deal etwas Neues passiert.",
+  "changes.field.closeDate": "das Abschlussdatum",
+  "changes.field.amount": "den Betrag",
+  "changes.field.probability": "die Wahrscheinlichkeit",
+  "changes.field.status": "den Status",
+  "changes.fieldJoin": "{first} und {second}",
+  "changes.kind.close_lost": "Als verloren geschlossen",
+  "changes.kind.deal_close_date": "Neues Abschlussdatum",
+  "changes.kind.deal_amount": "Neuer Betrag",
+  "changes.kind.deal_probability": "Neue Wahrscheinlichkeit",
+  "changes.summary_one":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.summary_other":
+    "Margince hat {count} deiner Deals aktualisiert: {parts}",
+  "changes.part.closed_one": "{count} geschlossen",
+  "changes.part.closed_other": "{count} geschlossen",
+  "changes.part.redated_one": "{count} neu datiert",
+  "changes.part.redated_other": "{count} neu datiert",
+  "changes.part.revalued_one": "{count} neu bewertet",
+  "changes.part.revalued_other": "{count} neu bewertet",
+  "changes.part.probabilities_one": "{count} Wahrscheinlichkeit",
+  "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
+  "changes.viewAll": "Alle ansehen",
+  "changes.undoAll": "Alle rückgängig machen",
+  "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",
+  "changes.undoAllDone_other": "Auf {count} Deals rückgängig gemacht.",
+  "changes.undoAllPartly":
+    "Auf {undone} Deals rückgängig gemacht. Bei {kept} blieb eine Änderung, die seitdem bearbeitet wurde.",
+  "changes.partly":
+    "Rückgängig gemacht, außer {field}, das seitdem geändert wurde.",
+  "changes.refused":
+    "Nicht rückgängig gemacht. Der Deal hat sich geändert, seit du die Seite geöffnet hast. Lade neu und versuche es noch einmal.",
+  "changes.alreadyAccepted":
+    "Du hast diese Änderung schon übernommen, sie bleibt.",
+  "changes.deal.title": "Änderungen durch Margince",
+  "changes.deal.loading": "Änderungen werden geladen…",
+  "changes.team.title": "Änderungen durch Margince in deinem Team",
+  "changes.team.empty":
+    "Margince hat diese Woche keine Deals deines Teams geändert.",
+  "changes.team.loading": "Teamänderungen werden geladen…",
+  "changes.team.owner": "Zuständig",
+  "changes.team.kind": "Änderung",
+  "changes.team.deals": "Deals",
+  "changes.team.value": "Wert",
+  "changes.team.undone": "Rückgängig",
+  "changes.team.truncated": "Liste gekürzt. Es gibt weitere Änderungen.",
   "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
