@@ -258,9 +258,9 @@ func (s *Store) RecordQualifyingEvent(
 			RETURNING id::text`,
 			contactID, in.Kind, note, in.OccurredAt, by).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				// Already on file. The caller's claim stands, and nothing was
-				// written twice — so there is nothing to audit either. The id
-				// is the standing row's, so the caller can still retract it.
+				// Already on file. The caller's claim stands and nothing was
+				// written twice, so there is nothing to audit. The id is the
+				// standing row's, so the caller can still retract it.
 				return standingExchangeID(ctx, tx, contactID, in.Kind, note, in.OccurredAt, &out.ID)
 			}
 			return fmt.Errorf("consent: recording the exchange: %w", err)

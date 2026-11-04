@@ -146,7 +146,7 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	}
 }
 
-// NOBODY DIRECTS A SEND PAST A SUBJECT'S OWN STOP, an admin included. The door
+// Nobody directs a send past a subject's own stop, an admin included. The door
 // refuses, nothing is queued, and the stop stays where the subject put it.
 //
 // Mutation: give subject_request its admin exception back in
@@ -181,7 +181,7 @@ func TestNobodyDirectsASendPastASubjectsStop(t *testing.T) {
 	}
 }
 
-// A STOP RECORDED AFTER THE DECISION STILL STOPS THE MESSAGE. The admin directs
+// A stop recorded after the decision still stops the message. The admin directs
 // a send past missing marketing consent, and the subject objects before it
 // goes. Staging refuses it and the decision stays unspent.
 //

@@ -44,11 +44,10 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
-		// The correspondence arm asks who wrote to us through subjectAskedUs,
-		// whose readers answer about a lead on their own: wroteToUsWithin shares
-		// the authorIsTheSubject spelling, which matches a lead through its bare
-		// address, and requestOnRecord returns false for a non-contact rather
-		// than querying a contact-keyed table.
+		// The correspondence arm asks who wrote to us through subjectAskedUs.
+		// wroteToUsWithin matches a lead through its bare address, and
+		// requestOnRecord answers false for a lead without reading a
+		// contact-keyed table.
 		//
 		// The privacy notice is the one link a lead can hold. A website lead
 		// is told by it before anything else is sent.
@@ -117,10 +116,9 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	}
 }
 
-// validateRequestedFollowup answers an unprompted follow-up: is there something
-// on file that says this contact asked to hear from us (subjectAskedUs). A rep
-// who logged "they asked me for a quote at the trade fair" has recorded the
-// request, and is not asked to restate it on every later message.
+// validateRequestedFollowup answers an unprompted follow-up through
+// subjectAskedUs. A request a rep logged once is not asked for again on every
+// later message.
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	found, err := subjectAskedUs(ctx, tx, subject, w)
 	if err != nil {
@@ -140,9 +138,8 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 }
 
 // subjectAskedUs answers whether the record shows the subject asking to hear
-// from us: they wrote or met with us inside the window, or a request of theirs
-// is on record at any age. The follow-up and the quote arms share it, so a
-// request supports both.
+// from us. Either they wrote or met with us inside the window, or a request of
+// theirs is on record at any age.
 func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules) (bool, error) {
 	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
 	if err != nil || found {
@@ -270,10 +267,9 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 	}, nil
 }
 
-// quoteOnDeal answers a quote on a named deal. The offer hangs off the deal,
-// and the contact is reached as a stakeholder on it — the same edge the
-// follow-up arm reads, because being on the opportunity is what makes somebody
-// the contact a quote goes to.
+// quoteOnDeal answers a quote on a named deal: a sent offer on a live deal
+// whose stakeholder is this contact. Being on the opportunity is what makes
+// somebody the contact a quote goes to.
 func quoteOnDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `

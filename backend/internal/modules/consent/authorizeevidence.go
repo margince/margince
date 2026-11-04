@@ -333,23 +333,13 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 	return found, nil
 }
 
-// requestOnRecord reports whether the record holds this contact ASKING to hear
-// from us: a request a rep recorded, an enquiry they sent through a form, or
-// acquisition evidence of a request.
+// requestOnRecord reports whether the record holds this contact asking to hear
+// from us. That is a request a rep recorded, an enquiry from a form, or
+// acquisition evidence of one of acquisitionKinds.
 //
-// NO AGE LIMIT. A request covers the follow-up it asked for, at the timing that
-// was agreed, so an agreed follow-up a year out is still requested. What ends a
-// request is a stop, which the suppression check answers.
-//
-// NARROW KINDS, and the narrowness is the rule. Where a contact came from is
-// provenance; a purchased list and a public source say nothing about what the
-// contact wanted.
-//
-// BOUNDED ABOVE. occurred_at is caller-stated, so a future date is not a memory
-// of anything and must not authorize a send now, with the same small allowance
-// RecordQualifyingEvent gives a client clock that runs fast.
-//
-// A request the rep retracted no longer counts (RetractRequest).
+// No age limit: a request covers the follow-up at the agreed timing. A stop or
+// a retraction (RetractQualifyingEvent) ends it. Where a contact came from is
+// not a request. occurred_at is caller-stated, so a future date does not count.
 func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, acquisitionKinds []string) (bool, error) {
 	if subject.Kind != entityContact {
 		// Both tables are keyed on contact_id; a lead holds neither.

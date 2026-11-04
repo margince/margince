@@ -371,4 +371,25 @@ func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)
 	}
+	if byAdmin := givenByAdmin(ctx, t, e, review); byAdmin {
+		t.Error("a rep's direction is recorded as an admin's, so it would answer refusals only an admin may")
+	}
+	adminReview := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
+	if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
+		t.Fatalf("an admin directing past missing marketing consent: %v", err)
+	}
+	if byAdmin := givenByAdmin(ctx, t, e, adminReview); !byAdmin {
+		t.Error("an admin's direction is not recorded as an admin's")
+	}
+}
+
+// givenByAdmin reads who the direction on this review was recorded as given by.
+func givenByAdmin(ctx context.Context, t *testing.T, e *channelConsentEnv, review ids.UUID) bool {
+	t.Helper()
+	var byAdmin bool
+	if err := e.owner.QueryRow(ctx,
+		`SELECT given_by_admin FROM communication_instruction WHERE review_id = $1`, review).Scan(&byAdmin); err != nil {
+		t.Fatalf("reading the direction: %v", err)
+	}
+	return byAdmin
 }

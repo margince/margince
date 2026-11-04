@@ -52,10 +52,10 @@ func (e *resolveEnv) recordRequest(t *testing.T, when time.Time) {
 	}
 }
 
-// A request on record supports the follow-up it asked for at any age: the rep
+// A request on record supports the follow-up it asked for at any age. The rep
 // is not asked again because the agreed date is far out.
 //
-// Mutation: bound requestOnRecord by the reply window again and both cases fail.
+// Mutation: drop the requestOnRecord arm from subjectAskedUs and both fail.
 func TestARequestOnRecordSupportsAFollowUpAtAnyAge(t *testing.T) {
 	t.Run("recorded by the rep", func(t *testing.T) {
 		e := setupResolve(t)
@@ -76,7 +76,7 @@ func TestARequestOnRecordSupportsAFollowUpAtAnyAge(t *testing.T) {
 }
 
 // A message the subject wrote two years ago that asked for nothing is not a
-// request, so the reply window still bounds an unprompted follow-up on it.
+// request. The reply window still bounds an unprompted follow-up on it.
 func TestAnOldMessageThatAskedNothingDoesNotSupportAFollowUp(t *testing.T) {
 	e := setupResolve(t)
 	e.inboundFrom(t, "an-old-thread", e.address, clocktest.Now(t).Add(-twoYears))
@@ -88,8 +88,8 @@ func TestAnOldMessageThatAskedNothingDoesNotSupportAFollowUp(t *testing.T) {
 	}
 }
 
-// A quote the contact asked for goes before anyone made a deal or an offer, with
-// no newsletter consent: from the rep's recorded request, or from the request
+// A quote the contact asked for goes before anyone made a deal or an offer. It
+// needs no newsletter consent. The request is the rep's record, or the one
 // recorded when the contact was acquired.
 //
 // Mutation: drop the requestOnRecord arm from validateQuote and both cases are
@@ -298,9 +298,9 @@ func (e *resolveEnv) putUnderException(t *testing.T, delivery ids.UUID, givenByA
 	}
 }
 
-// An exception standing over missing marketing consent does not reach a stop
-// the subject records after the message was queued: the transmit ticket stops
-// offering the refusal to the exception, so the dispatcher parks it.
+// An exception over missing marketing consent does not reach a stop recorded
+// after the message was queued. The transmit ticket stops offering the refusal
+// to the exception, so the dispatcher parks it.
 //
 // Mutation: drop set.ExceptionMayAnswer from AuthorizeTransmit and the second
 // ticket still offers the refusal to the exception.

@@ -289,14 +289,12 @@ type sendEmailTool struct {
 // advertising a check the system does not perform teaches a model something
 // false. That was the honest answer while nothing read the field.
 //
-// It is no longer. validateInvoice and validateContract resolve a category FROM
-// the named record (authorizevalidators.go), and two of the categories this
-// tool may claim — invoice_or_payment, contract_notice — cannot be borne out
-// without one. A quote can: the subject's request bears it out before any deal
-// exists, and a named deal's sent offer is a second way. An agent claiming one
-// with no evidence to offer resolved to `review` and parked, which reads to a
-// rep as the tool being broken rather than as the model having named a
-// category it could not support.
+// It is no longer. validateInvoice and validateContract resolve a category from
+// the named record (authorizevalidators.go). Two categories this tool may claim
+// (invoice_or_payment, contract_notice) cannot be borne out without one. A quote
+// can: a recorded request bears it out before any deal exists. An agent that
+// claimed one with no evidence was parked for review. A rep reads that as a
+// broken tool, when the model named a category it could not support.
 //
 // NOT active_deal_followup, though a deal id is offered. That category has no
 // validator: it is supported by arm 2 of resolveCategory, which reads a live
