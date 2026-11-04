@@ -212,6 +212,8 @@ func (v *viabilityEnv) moveDeal(t *testing.T, to ids.UUID) {
 
 func TestTheReviewTaskFollowsTheDealToItsNewOwner(t *testing.T) {
 	v := setupViability(t)
+	v.mailboxReadOnTime(t, v.Rep2)
+	v.mailboxReadOnTime(t, v.Rep3)
 	v.check(t)
 	task := v.reviewTask(t)
 	if got := v.assigneeOf(t, task); got != v.Rep1.String() {

@@ -66,10 +66,17 @@ func setupViability(t *testing.T) *viabilityEnv {
 // check may observe silence. Without it the deal would read unknown.
 func (v *viabilityEnv) readMailboxOnTime(t *testing.T) {
 	t.Helper()
+	v.mailboxReadOnTime(t, v.Rep1)
+}
+
+// mailboxReadOnTime gives user a mail connector that synced three hours ago. A
+// deal is judged on its owner's mailboxes, so a new owner needs one too.
+func (v *viabilityEnv) mailboxReadOnTime(t *testing.T, user ids.UUID) {
+	t.Helper()
 	owner := integration.OwnerConn(t)
 	conn := integration.SeedIDRow(t, owner, `
 		INSERT INTO capture_connection (id, provider, user_id, status)
-		VALUES ($1, 'gmail', $2, 'connected')`, v.Rep1)
+		VALUES ($1, 'gmail', $2, 'connected')`, user)
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO capture_sync_state (connection_id, last_success_at)
 		VALUES ($1, now() - interval '3 hours')`, conn); err != nil {
@@ -432,5 +439,116 @@ func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
 	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
 		FROM assurance_deal_receipt WHERE deal_id = $1`, v.silent); got != "unknown:coverage_unknown" {
 		t.Fatalf("the silent deal reads %q, want unknown:coverage_unknown", got)
+	}
+}
+
+// reassign gives a deal to another owner.
+func (v *viabilityEnv) reassign(t *testing.T, deal, owner ids.UUID) {
+	t.Helper()
+	to := ids.From[ids.UserKind](owner)
+	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{OwnerID: &to}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ourMailOnDeal links a message we sent long ago to the deal, delivered to
+// Margince by the named connections of a colleague's mailbox. Ours, so it is no
+// customer progress and the deal stays silent.
+func (v *viabilityEnv) ourMailOnDeal(t *testing.T, deal, importer ids.UUID, deliveredBy ...string) {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	mail := integration.SeedIDRow(t, owner, `
+		INSERT INTO activity (id, kind, direction, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'outbound', $2, 'imap', 'connector:imap:' || $3::text)`,
+		v.now.AddDate(0, 0, -200), importer)
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, mail, deal); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO capture_import (activity_id, user_id, delivered_by) VALUES ($1, $2, $3)`,
+		mail, importer, deliveredBy); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A healthy run does not cover a deal whose owner has no mailbox: nothing
+// shows the owner's mail was read at all.
+//
+// Mutation: let a checked run grade cover every deal again in dealMailCovered
+// and the deal gets a review.
+func TestAHealthyRunDoesNotCoverADealWhoseOwnerHasNoMailbox(t *testing.T) {
+	v := setupViability(t)
+	v.reassign(t, v.silent, v.Rep2)
+
+	v.check(t)
+
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
+		t.Fatalf("a deal whose owner has no mailbox got %d viability reviews, want none", got)
+	}
+	if outcome, reasons := v.receiptOf(t, v.silent); outcome != "unknown" || reasons != "coverage_unknown" {
+		t.Fatalf("the deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
+	}
+}
+
+// The deal's mail came through a colleague's Gmail connection, which is gone.
+// The colleague's new, healthy Outlook connection never held that mail, so it
+// does not cover the deal.
+//
+// Mutation: judge an import on its user's connections and ignore delivered_by,
+// and the deal gets a review.
+func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
+	v := setupViability(t)
+	owner := integration.OwnerConn(t)
+	graph := integration.SeedIDRow(t, owner, `
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, 'graph', $2, 'connected')`, v.Rep2)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO capture_sync_state (connection_id, last_success_at)
+		VALUES ($1, now() - interval '1 hour')`, graph); err != nil {
+		t.Fatal(err)
+	}
+	v.ourMailOnDeal(t, v.silent, v.Rep2, "gmail:0")
+
+	v.check(t)
+
+	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
+		t.Fatalf("a deal whose mail came through a gone connection got %d viability reviews, want none", got)
+	}
+	if outcome, reasons := v.receiptOf(t, v.silent); outcome != "unknown" || reasons != "coverage_unknown" {
+		t.Fatalf("the deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
+	}
+}
+
+// A mailbox that delivers the deal's mail after the check changes what the
+// deal's coverage rests on, so the receipt no longer counts. Nothing else about
+// the deal changed: the message was already on it.
+//
+// Mutation: drop the mailboxes from viabilityFingerprintSQL and the supported
+// deal still counts.
+func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
+	v := setupViability(t)
+	v.ourMailOnDeal(t, v.supported, v.Rep1, "gmail:0")
+	v.check(t)
+	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
+		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		t.Fatal(err)
+	}
+	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 0 || q.EvidenceMinor != 100_000 {
+		t.Fatalf("qualified readings %+v after the check, want the supported deal counted", q)
+	}
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO capture_import (activity_id, user_id, delivered_by)
+		SELECT ci.activity_id, $2, '{imap:0}' FROM capture_import ci
+		  JOIN activity_link l ON l.activity_id = ci.activity_id
+		 WHERE l.deal_id = $1`, v.supported, v.Rep2); err != nil {
+		t.Fatal(err)
+	}
+
+	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 || q.UnknownMinor != 100_000 {
+		t.Fatalf("qualified readings %+v, want the deal unknown until the next check", q)
 	}
 }

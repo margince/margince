@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -121,14 +122,7 @@ const assuranceSubjectsSQL = `
 		               AND e.met
 		               AND e.refuted_at IS NULL
 		               AND %[5]s)) AS unmet_exit_criteria,
-		       ARRAY(SELECT DISTINCT ci.user_id::text
-		          FROM capture_import ci
-		          JOIN activity a ON a.id = ci.activity_id
-		          JOIN activity_link al ON al.activity_id = a.id
-		         WHERE al.deal_id = d.id
-		           AND a.kind = 'email'
-		           AND a.archived_at IS NULL
-		         ORDER BY 1) AS mail_users
+		       %[11]s AS mail_boxes
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
@@ -190,7 +184,11 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	mailCovered := dealMailCovered(sourceChecked(coverage, sourceMail), byOwner)
+	byConnection, err := mailCoverageByConnection(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	mailCovered := dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection)
 	query := assuranceSubjectsQuery(now, identities, only, arg)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
@@ -204,7 +202,7 @@ func assuranceSubjects(
 }
 
 func scanAssuranceSubject(
-	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID, mailUsers []string) bool,
+	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID, mailboxes []string) bool,
 ) (assurance.Subject, error) {
 	var out assurance.Subject
 	var dealID ids.UUID
@@ -213,14 +211,14 @@ func scanAssuranceSubject(
 	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
-	var mailUsers []string
+	var mailboxes []string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailUsers)
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailboxes)
 	if err != nil {
 		return out, err
 	}
@@ -241,7 +239,7 @@ func scanAssuranceSubject(
 		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
-	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailUsers)
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailboxes)
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
@@ -306,7 +304,7 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"))
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is
@@ -475,42 +473,113 @@ func mailCoverageByOwner(ctx context.Context, tx pgx.Tx, now time.Time) (map[ids
 	return out, rows.Err()
 }
 
+// dealMailboxesSQL is the mail connections that delivered a deal's mail, as
+// text: "<user>:<provider>:<generation>" for each connection a capture_import
+// row names in delivered_by, and "<user>" alone for an import that names none.
+// Only mail every member may read counts, as for customer progress, so every
+// reader computes the same list. The viability fingerprint carries it, so a
+// mailbox that delivers the deal's mail later makes the receipt stale.
+func dealMailboxesSQL(deal string) string {
+	return `ARRAY(SELECT DISTINCT ci.user_id::text || coalesce(':' || dm.mailbox, '')
+		          FROM capture_import ci
+		          JOIN activity ma ON ma.id = ci.activity_id
+		          JOIN activity_link mal ON mal.activity_id = ma.id
+		          LEFT JOIN LATERAL unnest(ci.delivered_by) AS dm(mailbox) ON true
+		         WHERE mal.deal_id = ` + deal + `.id
+		           AND ma.kind = 'email'
+		           AND ma.archived_at IS NULL
+		           AND ` + visibleToAllSQL("ma") + `
+		         ORDER BY 1)`
+}
+
+// mailConnection names one mail connection: the user and the provider. A user
+// holds one connection per provider.
+type mailConnection struct {
+	user     ids.UUID
+	provider string
+}
+
+// connectionCoverage is one connection's grade and the generation of the
+// account it is bound to now.
+type connectionCoverage struct {
+	generation string
+	coverage   assurance.SourceCoverage
+}
+
+// mailCoverageByConnection grades each mail connection on its own, with the
+// same grade the run uses.
+func mailCoverageByConnection(ctx context.Context, tx pgx.Tx, now time.Time) (map[mailConnection]connectionCoverage, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT c.user_id, c.provider, c.generation::text, `+mailCountsSQL+`
+		FROM capture_connection c
+		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+		WHERE c.provider = ANY($1) AND c.archived_at IS NULL
+		GROUP BY c.id, c.user_id, c.provider, c.generation`, mailProviders)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading each mail connection: %w", err)
+	}
+	defer rows.Close()
+	out := map[mailConnection]connectionCoverage{}
+	for rows.Next() {
+		var key mailConnection
+		var generation string
+		var counts mailCounts
+		if err := rows.Scan(&key.user, &key.provider, &generation,
+			&counts.live, &counts.reauth, &counts.unsynced, &counts.oldestSuccess); err != nil {
+			return nil, fmt.Errorf("compose: reading each mail connection: %w", err)
+		}
+		out[key] = connectionCoverage{generation: generation, coverage: counts.grade(now)}
+	}
+	return out, rows.Err()
+}
+
 // dealMailCovered answers, for one deal, whether the mail a silence would be
 // read from was read on time.
 //
-// The run's own grade covers every mailbox, so when it is checked every deal
-// is. Otherwise the deal is covered only when every user its mail could reach
-// has mailboxes that were read on time: the owner, and each user whose mailbox
-// captured an email linked to the deal. A customer may answer any of them, so
-// one broken mailbox among them leaves the deal unknown. A relevant user with
-// no live mailbox fails it too. A deal with no owner and no captured mail has
-// no narrower set of mailboxes and keeps the run's grade.
+// The deal's own mailboxes decide, whatever the run's grade says: a run grade
+// of checked proves only that the connected mailboxes are healthy, not that
+// the deal's mail reaches one of them. They are the owner's live connections,
+// and each connection that delivered mail linked to the deal. A delivering
+// connection that is gone, now bound to another account, or not read on time
+// leaves the deal unknown, and so does an owner with no live mailbox. An
+// import that names no connection is judged on that user's live connections.
+// A deal with no owner and no captured mail has no mailboxes of its own and
+// keeps the run's grade.
 //
-// mailUsers are user ids as text, the way the subjects query returns them. An
-// id that does not parse fails closed.
+// mailboxes are dealMailboxesSQL's entries. One that does not parse fails
+// closed.
 func dealMailCovered(
-	runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage,
-) func(owner *ids.UUID, mailUsers []string) bool {
-	return func(owner *ids.UUID, mailUsers []string) bool {
-		if runCovered {
-			return true
+	runCovered bool, byOwner map[ids.UUID]assurance.SourceCoverage, byConnection map[mailConnection]connectionCoverage,
+) func(owner *ids.UUID, mailboxes []string) bool {
+	userChecked := func(user ids.UUID) bool {
+		own, ok := byOwner[user]
+		return ok && own.State == assurance.CoverageChecked
+	}
+	return func(owner *ids.UUID, mailboxes []string) bool {
+		if owner == nil && len(mailboxes) == 0 {
+			return runCovered
 		}
-		users := make([]ids.UUID, 0, len(mailUsers)+1)
-		if owner != nil {
-			users = append(users, *owner)
+		if owner != nil && !userChecked(*owner) {
+			return false
 		}
-		for _, raw := range mailUsers {
-			user, err := ids.Parse(raw)
+		for _, entry := range mailboxes {
+			rawUser, mailbox, named := strings.Cut(entry, ":")
+			user, err := ids.Parse(rawUser)
 			if err != nil {
 				return false
 			}
-			users = append(users, user)
-		}
-		if len(users) == 0 {
-			return false
-		}
-		for _, user := range users {
-			if own, ok := byOwner[user]; !ok || own.State != assurance.CoverageChecked {
+			if !named {
+				if !userChecked(user) {
+					return false
+				}
+				continue
+			}
+			provider, generation, ok := strings.Cut(mailbox, ":")
+			if !ok {
+				return false
+			}
+			conn, live := byConnection[mailConnection{user: user, provider: provider}]
+			if !live || conn.generation != generation || conn.coverage.State != assurance.CoverageChecked {
 				return false
 			}
 		}

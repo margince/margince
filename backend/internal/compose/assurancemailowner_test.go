@@ -12,39 +12,47 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A deal's silence is judged on the mailboxes its mail could reach once the
-// run's own grade fails: the owner's, and those of every user whose mailbox
-// captured mail on the deal. One of them not read leaves the deal unknown. A
-// deal with no owner and no captured mail keeps the run's grade.
-func TestADealsMailIsJudgedOnEveryMailboxItsMailReached(t *testing.T) {
+// A deal's silence is judged on its own mailboxes, whatever the run's grade
+// says: the owner's live connections and each connection that delivered mail
+// linked to the deal. A delivering connection that is gone, rebound to another
+// account, or not read on time leaves the deal unknown. A deal with no owner and
+// no captured mail keeps the run's grade.
+func TestADealsMailIsJudgedOnTheConnectionsThatDeliveredIt(t *testing.T) {
 	t.Parallel()
 	healthy, colleague, broken, bare := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
-	byOwner := map[ids.UUID]assurance.SourceCoverage{
-		healthy:   {Source: sourceMail, State: assurance.CoverageChecked},
-		colleague: {Source: sourceMail, State: assurance.CoverageChecked},
-		broken:    {Source: sourceMail, State: assurance.CoveragePermissionLimited},
+	checked := assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageChecked}
+	limited := assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
+	byOwner := map[ids.UUID]assurance.SourceCoverage{healthy: checked, colleague: checked, broken: limited}
+	byConnection := map[mailConnection]connectionCoverage{
+		{user: healthy, provider: "gmail"}:   {generation: "1", coverage: checked},
+		{user: colleague, provider: "graph"}: {generation: "2", coverage: checked},
+		{user: broken, provider: "imap"}:     {generation: "0", coverage: limited},
 	}
+	via := func(user ids.UUID, mailbox string) string { return user.String() + ":" + mailbox }
 	cases := []struct {
 		name       string
 		runCovered bool
 		owner      *ids.UUID
-		mailUsers  []string
+		mailboxes  []string
 		want       bool
 	}{
-		{"every mailbox read, any owner", true, &broken, nil, true},
-		{"run not read, owner's mailbox read", false, &healthy, nil, true},
-		{"run not read, owner and colleague read", false, &healthy, []string{colleague.String(), healthy.String()}, true},
-		{"run not read, a colleague on the deal is broken", false, &healthy, []string{broken.String()}, false},
-		{"run not read, owner's mailbox broken", false, &broken, nil, false},
-		{"run not read, owner has no mailbox", false, &bare, nil, false},
-		{"run not read, a mail user has no mailbox", false, &healthy, []string{bare.String()}, false},
-		{"run not read, no owner, colleague read", false, nil, []string{colleague.String()}, true},
-		{"run not read, no owner, no mail", false, nil, nil, false},
-		{"run not read, an id that does not parse", false, &healthy, []string{"not-a-uuid"}, false},
-		{"every mailbox read, no owner", true, nil, nil, true},
+		{"owner read, no captured mail", false, &healthy, nil, true},
+		{"owner read, delivered through a read connection", false, &healthy, []string{via(colleague, "graph:2")}, true},
+		{"run checked does not cover an owner with no mailbox", true, &bare, nil, false},
+		{"run checked does not cover a gone delivering connection", true, &healthy, []string{via(colleague, "gmail:2")}, false},
+		{"a delivering connection rebound to another account", false, &healthy, []string{via(colleague, "graph:1")}, false},
+		{"a delivering connection not read on time", false, &healthy, []string{via(broken, "imap:0")}, false},
+		{"owner's mailbox broken", false, &broken, nil, false},
+		{"an import naming no connection, user read", false, &healthy, []string{colleague.String()}, true},
+		{"an import naming no connection, user without mailbox", false, &healthy, []string{bare.String()}, false},
+		{"no owner, delivered through a read connection", false, nil, []string{via(healthy, "gmail:1")}, true},
+		{"no owner, no mail, run checked", true, nil, nil, true},
+		{"no owner, no mail, run not checked", false, nil, nil, false},
+		{"an entry that does not parse", false, &healthy, []string{"not-a-uuid:gmail:1"}, false},
+		{"a mailbox entry without a generation", false, &healthy, []string{via(healthy, "gmail")}, false},
 	}
 	for _, c := range cases {
-		if got := dealMailCovered(c.runCovered, byOwner)(c.owner, c.mailUsers); got != c.want {
+		if got := dealMailCovered(c.runCovered, byOwner, byConnection)(c.owner, c.mailboxes); got != c.want {
 			t.Errorf("%s: covered = %v, want %v", c.name, got, c.want)
 		}
 	}
