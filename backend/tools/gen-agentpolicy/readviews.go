@@ -17,17 +17,26 @@ const readViewVerb = "read_view"
 // queryParameter is one parameter of an operation, decoded for its name, where
 // it sits and the JSON type its schema gives it.
 type queryParameter struct {
-	Ref    string `yaml:"$ref"`
-	Name   string `yaml:"name"`
-	In     string `yaml:"in"`
-	Schema struct {
-		Ref  string `yaml:"$ref"`
-		Type any    `yaml:"type"`
+	Ref      string `yaml:"$ref"`
+	Name     string `yaml:"name"`
+	In       string `yaml:"in"`
+	Required bool   `yaml:"required"`
+	Schema   struct {
+		Ref    string   `yaml:"$ref"`
+		Type   any      `yaml:"type"`
+		Enum   []string `yaml:"enum"`
+		Format string   `yaml:"format"`
 	} `yaml:"schema"`
 }
 
-// viewQuery is one query parameter of a view's route and its JSON type.
-type viewQuery struct{ name, jsonType string }
+// viewQuery is one query parameter of a view's route: its JSON type, whether
+// the route requires it, and the words or format its schema admits.
+type viewQuery struct {
+	name, jsonType string
+	required       bool
+	enum           []string
+	format         string
+}
 
 // routeShape is what a route-backed verb passes on to its route. It holds the
 // query parameters, whether the route takes If-Match and a JSON body, and the
@@ -112,16 +121,30 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 			if param.In != "query" {
 				continue
 			}
-			jsonType, err := parameterType(param, schemas)
+			query, err := queryOf(param, schemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
 			}
-			shape.queries = append(shape.queries, viewQuery{name: param.Name, jsonType: jsonType})
+			shape.queries = append(shape.queries, query)
 		}
 		sort.Slice(shape.queries, func(i, j int) bool { return shape.queries[i].name < shape.queries[j].name })
 		out[p.Route] = shape
 	}
 	return out, nil
+}
+
+// queryOf reads a query parameter as a verb passes it on, through a component
+// $ref for its type and words.
+func queryOf(param queryParameter, schemas map[string]schemaNode) (viewQuery, error) {
+	jsonType, err := parameterType(param, schemas)
+	if err != nil {
+		return viewQuery{}, err
+	}
+	query := viewQuery{name: param.Name, jsonType: jsonType, required: param.Required, enum: param.Schema.Enum, format: param.Schema.Format}
+	if component, ok := schemas[strings.TrimPrefix(param.Schema.Ref, "#/components/schemas/")]; ok && param.Schema.Ref != "" {
+		query.enum, query.format = component.Enum, component.Format
+	}
+	return query, nil
 }
 
 // parameterType reads a parameter's JSON type, through a component $ref, with
@@ -168,12 +191,27 @@ var readViewQueries = map[string][]viewQuery{
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "{Name: %q, Type: %q}", q.name, q.jsonType)
+			b.WriteString(q.literal())
 		}
 		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
 	return b.String()
+}
+
+// literal is the query parameter as Go source, naming only what it declares.
+func (q viewQuery) literal() string {
+	fields := []string{fmt.Sprintf("Name: %q", q.name), fmt.Sprintf("Type: %q", q.jsonType)}
+	if q.required {
+		fields = append(fields, "Required: true")
+	}
+	if len(q.enum) > 0 {
+		fields = append(fields, fmt.Sprintf("Enum: %#v", q.enum))
+	}
+	if q.format != "" {
+		fields = append(fields, fmt.Sprintf("Format: %q", q.format))
+	}
+	return "{" + strings.Join(fields, ", ") + "}"
 }
 
 func renderRouteShapes(shapes map[string]routeShape) string {
@@ -197,7 +235,7 @@ var routeVerbShapes = map[string]routeVerbShape{
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			fmt.Fprintf(&b, "{Name: %q, Type: %q}", q.name, q.jsonType)
+			b.WriteString(q.literal())
 		}
 		b.WriteString("}},\n")
 	}

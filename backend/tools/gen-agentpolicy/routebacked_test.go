@@ -249,3 +249,79 @@ func TestAFieldNamedLikeProseKeepsItsPlaceInABodySchema(t *testing.T) {
 		t.Fatalf("schema = %s, want %s", encoded, want)
 	}
 }
+
+func TestAQueryParameterKeepsWhatTheRouteRequiresOfIt(t *testing.T) {
+	var param queryParameter
+	if err := yaml.Unmarshal([]byte(`
+name: entity_type
+in: query
+required: true
+schema: { $ref: '#/components/schemas/Kind' }
+`), &param); err != nil {
+		t.Fatal(err)
+	}
+	schemas := map[string]schemaNode{"Kind": {Type: "string", Enum: []string{"company", "deal"}}}
+	got, err := queryOf(param, schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{Name: "entity_type", Type: "string", Required: true, Enum: []string{"company", "deal"}}`; got.literal() != want {
+		t.Errorf("the query parameter renders as %s, want %s", got.literal(), want)
+	}
+	param.Required, param.Schema.Ref, param.Schema.Type, param.Schema.Format = false, "", "string", "uuid"
+	if got, _ := queryOf(param, schemas); got.literal() != `{Name: "entity_type", Type: "string", Format: "uuid"}` {
+		t.Errorf("an optional uuid renders as %s", got.literal())
+	}
+}
+
+func TestAnAnswerAdmitsTheNullItsContractAdmits(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/schema+json:
+      schema:
+        type: object
+        required: [budget, version, tier, months]
+        properties:
+          budget: { type: [integer, 'null'] }
+          version: { type: integer, enum: [1] }
+          tier: { type: [string, 'null'], enum: [gold, null] }
+          months: { type: integer }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"required":["version","months"]`, `"tier":{"enum":["gold"],"type":"string"}`, `"version":{"type":"integer"}`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("answer schema %s lacks %s", got, want)
+		}
+	}
+	if strings.Contains(got, nullableMarker) || strings.Contains(got, "size_bytes") {
+		t.Errorf("answer schema %s carries a marker or reads a JSON document as a file", got)
+	}
+}
+
+func TestAClosedAnswerAdmitsTheReadableFigureBesideAnAmount(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/json:
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          currency: { type: string }
+          total_minor: { type: integer }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], nil)
+	if err != nil || !strings.Contains(got, `"total_display":{"type":"string"}`) {
+		t.Errorf("answer schema %s (%v) does not admit total_display", got, err)
+	}
+}

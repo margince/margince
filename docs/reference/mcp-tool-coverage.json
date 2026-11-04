@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 11,
     "permitted_but_never_required": 2,
-    "tokens_served_but_never_driven": 5647,
+    "tokens_served_but_never_driven": 5651,
     "use_case_cases": 45,
     "acceptance_criteria_named": 84,
     "tools_added_by_shipped_units": 0,
@@ -2230,7 +2230,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 312,
+      "tokens": 316,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -2353,7 +2353,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 2310,
+      "tokens": 2381,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us",
@@ -2457,8 +2457,57 @@
       }
     },
     {
+      "name": "read_workspace",
+      "tokens": 1835,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company",
+        "case42_can_i_answer_on_whatsapp"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case75_sofia_is_leaving"
+      ],
+      "permitted_in_cases": [
+        "case1_log_it",
+        "case20_put_it_in_the_board_pack",
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing",
+        "case43_the_fair_leads_are_prospects",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list",
+        "case49_who_can_introduce_us",
+        "case4_use_the_moment",
+        "case62_held_meetings_to_opportunities",
+        "case68_let_sofia_read_the_account",
+        "case69_set_up_the_fleet_team",
+        "case70_clear_my_notices",
+        "case71_record_the_signed_contract",
+        "case72_read_the_dossier",
+        "case73_read_my_weekly_plan",
+        "case74_read_the_file_back"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 5,
+          "passed": 5,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 5,
+          "passed": 5,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "change_activities",
-      "tokens": 1790,
+      "tokens": 1796,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2522,57 +2571,8 @@
       }
     },
     {
-      "name": "read_workspace",
-      "tokens": 1681,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case42_can_i_answer_on_whatsapp"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case75_sofia_is_leaving"
-      ],
-      "permitted_in_cases": [
-        "case1_log_it",
-        "case20_put_it_in_the_board_pack",
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing",
-        "case43_the_fair_leads_are_prospects",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list",
-        "case49_who_can_introduce_us",
-        "case4_use_the_moment",
-        "case62_held_meetings_to_opportunities",
-        "case68_let_sofia_read_the_account",
-        "case69_set_up_the_fleet_team",
-        "case70_clear_my_notices",
-        "case71_record_the_signed_contract",
-        "case72_read_the_dossier",
-        "case73_read_my_weekly_plan",
-        "case74_read_the_file_back"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 5,
-          "passed": 5,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 5,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_details",
-      "tokens": 1461,
+      "tokens": 1604,
       "agents": [],
       "required_by_cases": [
         "case72_read_the_dossier",

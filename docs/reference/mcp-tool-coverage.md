@@ -106,7 +106,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 11 |
 | … of those, permitted somewhere but never required | 2 |
-| Prompt tokens spent on tools no case requires | 5647 |
+| Prompt tokens spent on tools no case requires | 5651 |
 | Use cases | 45 |
 | Acceptance criteria the cases declare, each with a statement | 84 |
 
@@ -361,8 +361,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
+| `change_activities` | 1.00 | 15 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
@@ -391,8 +391,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_activities` | 1.00 | 16 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
+| `change_activities` | 1.00 | 16 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `read_details` | 1.00 | 4 | `case72_read_the_dossier`, `case73_read_my_weekly_plan` |
 | `send_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
@@ -498,6 +498,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `list_approvals` | 401 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `enrich` | 395 | `enrich` | - | - |
-| `run_research` | 312 | - | - | - |
+| `run_research` | 316 | - | - | - |
 | `read_approval` | 154 | - | `case32_two_words_for_one_thing` | - |
 

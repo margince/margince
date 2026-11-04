@@ -79,7 +79,13 @@ func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
 	if err := json.Unmarshal(shape["properties"], &properties); err != nil || properties == nil {
 		properties = map[string]json.RawMessage{}
 	}
-	properties["status"] = json.RawMessage(`{"type":"integer"}`)
+	const httpStatus = `{"type":"integer"}`
+	if own, declared := properties["status"]; declared && string(own) != httpStatus {
+		// A cut answer's status is the HTTP code, beside the route's own word.
+		properties["status"] = json.RawMessage(`{"description":"The record's status, or the HTTP status of a cut answer"}`)
+	} else {
+		properties["status"] = json.RawMessage(httpStatus)
+	}
 	properties[RouteAnswerTruncated] = json.RawMessage(`{"type":"boolean"}`)
 	shape["properties"] = mustMarshal(properties)
 	delete(shape, "required")
@@ -120,10 +126,11 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	}
 	// A router refuses to unite two actions that give one name two shapes. A list
 	// published here fails at boot if another action takes that name as one value.
+	required := append([]string{}, v.PathParams...)
 	for _, q := range v.Query {
-		properties[q.Name] = `{"type":` + strconv.Quote(q.Type) + `}`
-		if q.Type == schemaArray {
-			properties[q.Name] = `{"type":"array","items":{"type":"string"}}`
+		properties[q.Name] = string(q.schema())
+		if q.Required {
+			required = append(required, q.Name)
 		}
 	}
 	if v.IfMatch {
@@ -138,10 +145,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	required := `[]`
-	if len(v.PathParams) > 0 {
-		required = mustJSON(v.PathParams)
-	}
 	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
 	if v.Method != http.MethodGet {
@@ -154,10 +157,28 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Unlisted:         true,
 		OpenAPIOp:        v.Op,
 		UnkeyedArguments: unkeyed,
-		InputSchema: schema(`{"type":"object","required":` + required + `,"properties":{` +
+		InputSchema: schema(`{"type":"object","required":` + string(mustMarshal(required)) + `,"properties":{` +
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
 	}
+}
+
+// querySchema is a query parameter's JSON schema. A list takes strings, and
+// its words and format, where it has any, are its items'.
+type querySchema struct {
+	Type   string       `json:"type"`
+	Items  *querySchema `json:"items,omitempty"`
+	Enum   []string     `json:"enum,omitempty"`
+	Format string       `json:"format,omitempty"`
+}
+
+func (q ViewQuery) schema() json.RawMessage {
+	words := querySchema{Type: q.Type, Enum: q.Enum, Format: q.Format}
+	if q.Type == schemaArray {
+		words.Type = "string"
+		return mustMarshal(querySchema{Type: schemaArray, Items: &words})
+	}
+	return mustMarshal(words)
 }
 
 func (t routeVerbTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

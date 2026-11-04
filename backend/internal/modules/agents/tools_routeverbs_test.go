@@ -79,6 +79,24 @@ func TestARouteVerbsSchemaIsItsRoutesParameters(t *testing.T) {
 	}
 }
 
+func TestARouteVerbRequiresTheQueryItsRouteRequires(t *testing.T) {
+	verb := revertStageVerb
+	verb.Query = []ViewQuery{
+		{Name: "entity_type", Type: "string", Required: true, Enum: []string{"company", "deal"}},
+		{Name: "since", Type: "string", Format: "date-time"},
+		{Name: "kinds", Type: schemaArray, Enum: []string{"a"}},
+	}
+	got := string(routeVerbTool{verb: verb}.Spec().InputSchema)
+	for _, want := range []string{
+		`"required":["id","entity_type"]`, `"entity_type":{"type":"string","enum":["company","deal"]}`,
+		`"since":{"type":"string","format":"date-time"}`, `"kinds":{"type":"array","items":{"type":"string","enum":["a"]}}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the input schema %s lacks %s", got, want)
+		}
+	}
+}
+
 func TestAContractRouterListsTheContractsActions(t *testing.T) {
 	r := NewRegistry(nil, nil)
 	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb}, nil)
@@ -162,6 +180,12 @@ func TestAWritesAnswerSchemaAdmitsTheCutAnswer(t *testing.T) {
 	}
 	if defect := ResultDefect(routeVerbTool{verb: write}.Spec().OutputSchema, json.RawMessage(`{"id":"d1"}`)); defect != "" {
 		t.Errorf("a whole write answer breaks its own schema: %s", defect)
+	}
+	write.AnswerSchema = json.RawMessage(`{"type":"object","properties":{"status":{"type":"string"}}}`)
+	for _, whole := range []string{`{"status":"draft"}`, string(cut)} {
+		if defect := ResultDefect(routeVerbTool{verb: write}.Spec().OutputSchema, json.RawMessage(whole)); defect != "" {
+			t.Errorf("a write whose record has a status answered %s against its own schema: %s", whole, defect)
+		}
 	}
 	read := RouteVerb{Verb: "r", Method: "GET", Pattern: "/v1/r", Scope: principal.ScopeRead, AnswerSchema: answer}
 	if defect := ResultDefect(routeVerbTool{verb: read}.Spec().OutputSchema, json.RawMessage(`{}`)); defect == "" {
