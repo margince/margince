@@ -2780,7 +2780,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 781,
+      "tokens": 793,
       "agents": [],
       "required_by_cases": [
         "case70_clear_my_notices"

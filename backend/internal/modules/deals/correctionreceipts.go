@@ -158,11 +158,18 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 // scanCorrectionReceipt scans it.
 func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
 	readable := basisReadable(arg(readerOf(ctx)))
-	before, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d", "(a.before->>'amount_minor')::bigint", arg)
+	amountShown, masked, err := auth.MaskExcludedClause(ctx, maskObject, "amount_minor", "d", arg)
 	if err != nil {
 		return "", err
 	}
-	after, err := auth.MaskedExpressionSQL(ctx, dealTable, "amount_minor", "d", "(a.after->>'amount_minor')::bigint", arg)
+	if !masked {
+		amountShown = "TRUE"
+	}
+	before, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d", "(a.before->>'amount_minor')::bigint", arg)
+	if err != nil {
+		return "", err
+	}
+	after, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d", "(a.after->>'amount_minor')::bigint", arg)
 	if err != nil {
 		return "", err
 	}
@@ -183,13 +190,17 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       -- against NULL is NULL — so that test would withhold the reason on
 			       -- every unowned deal, whose sentence names nobody and was
 			       -- composed under no seat's grants at all.
-			       CASE WHEN %[1]s
+			       CASE WHEN %[1]s AND (%[4]s OR c.correction <> $%[5]d)
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
 			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
-			       CASE WHEN %[1]s
-			            THEN a.evidence ELSE '{}'::jsonb END,
+			       -- A masked amount takes every key that states it out of the
+			       -- evidence: the customer's words, the figure and the rate.
+			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
+			            WHEN %[4]s THEN a.evidence
+			            ELSE a.evidence - ARRAY['quoted_words', 'quoted_amount', 'quoted_currency',
+			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date'] END,
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
 			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
@@ -198,7 +209,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`, readable, before, after), nil
+`, readable, before, after, amountShown, arg(VerdictAmountCorrection)), nil
 }
 
 // basisReadable is when the reader may read a correction's reason: the deal

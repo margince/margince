@@ -193,6 +193,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
 | `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
 | `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
+| `POST /deal-corrections/undo` | undoMarginceChanges | Undo several changes Margince made, one deal at a time. | Change records | at once |
 | `POST /deals/{id}/stage-progressions/{approvalId}/revert` | revertStageProgression | Take back a stage move the product made by itself. | Change records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /deals/{id}/win-evidence` | getDealWinEvidence | Whether the deal has the signed agreement a win rests on. | Read records | at once |

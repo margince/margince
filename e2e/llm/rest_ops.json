@@ -478,6 +478,7 @@
     "POST /v1/contracts/{id}/cancellation": "cancel_contract",
     "POST /v1/contracts/{id}/renewal": "renew_contract",
     "POST /v1/contracts/{id}/status": "change_contract_status",
+    "POST /v1/deal-corrections/undo": "undo_margince_changes",
     "POST /v1/deal-rooms": "create_record",
     "POST /v1/deal-rooms/{id}/close": "close_deal_room",
     "POST /v1/deal-rooms/{id}/documents": "add_deal_room_document",

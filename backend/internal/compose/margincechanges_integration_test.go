@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -183,5 +184,37 @@ func TestTheMorningEmailListsTheChangedDealAndAnUndoBeforeTheSendStopsIt(t *test
 	})
 	if !errors.Is(err, errSendBasisChanged) {
 		t.Fatalf("holding a morning after an Undo of what it lists = %v, want the morning read again", err)
+	}
+}
+
+func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	masked := v.As(v.Rep1, []ids.UUID{v.Team1}, principal.Permissions{
+		Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}},
+		RowScope:   principal.RowScopeTeam,
+		FieldMasks: []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}},
+	})
+	rows, _, err := newMarginceChangeHandlers(v.Pool).deals.DealChanges(masked, ids.From[ids.DealKind](v.deal), nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var amount *deals.CorrectionReceipt
+	for i := range rows {
+		if rows[i].Correction == deals.VerdictAmountCorrection {
+			amount = &rows[i]
+		}
+	}
+	if amount == nil {
+		t.Fatalf("changes = %+v, want the amount change listed", rows)
+	}
+	shown := attention.WireReceipt(correctionReceipt(*amount))
+	wire, err := json.Marshal(shown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if amount.BeforeAmount != nil || amount.AfterAmount != nil ||
+		strings.Contains(string(amount.Evidence), "45") || strings.Contains(string(wire), "45,000") || strings.Contains(string(wire), "45000") {
+		t.Fatalf("masked owner's amount change = %s (evidence %s), want no amount anywhere", wire, amount.Evidence)
 	}
 }

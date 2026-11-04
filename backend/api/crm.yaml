@@ -8321,9 +8321,8 @@ paths:
     post:
       tags: [Deals]
       operationId: undoMarginceChanges
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
-      x-human-only-reason: pending
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: undo_margince_changes, router: change_attention, action: undo_margince_changes, tier: auto_execute, scope: write, served_by: route }
       summary: Undo several changes Margince made, one deal at a time.
       description: |
         Each item names one deal and the changes on it to take back. The changes of one item
