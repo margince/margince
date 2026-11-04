@@ -3,84 +3,80 @@
 
 package consent
 
-// The rest of what a privacy page owes its reader beside the source, the
-// purposes and the rights. That is who is responsible, why each purpose is
-// allowed, which kinds of data are held, who sees them and how long they stay.
-// Each one is read from what the installation holds or has set, never typed
-// in as a number or a name.
+// The rest of what a privacy page owes its reader beside the source and the
+// rights. That is who is responsible, what is held and why, who sees it, and
+// how long it stays. Each part is read
+// from what the installation holds about this reader, never from the catalog.
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RetentionRule is one retention setting that acts today: its scope in the
-// retention settings' own spelling, its window in days, and its action.
+// NoticeSubject is the contact or website lead a notice link names.
+type NoticeSubject struct {
+	ContactID ids.ContactID
+	LeadID    ids.LeadID
+}
+
+// NoticeUse is one use of the reader's data on record, with its recorded basis.
+type NoticeUse struct {
+	PurposeKey string
+	Basis      string
+}
+
+// LawFloor is a statutory period that keeps some data past a rule's window.
+type LawFloor struct {
+	Name        string
+	Keep        string
+	FromYearEnd bool
+}
+
+// RetentionRule is one retention rule that acts on the reader's data.
 type RetentionRule struct {
 	Scope      string
 	RetainDays int
 	Action     string
+	KeptByLaw  *LawFloor
 }
 
-// RetentionReader lists the retention rules that act today: switched on and
-// not held back by the retain-only setting. Compose supplies it, because the
-// rules and that setting belong to the privacy module.
-type RetentionReader interface {
-	ActingRetention(ctx context.Context) ([]RetentionRule, error)
+// NoticeHeld is what the privacy module reads about one subject for the page.
+type NoticeHeld struct {
+	Categories []string
+	Uses       []NoticeUse
+	Retention  []RetentionRule
 }
 
-// WithRetentionReader wires what the privacy page reads its retention from.
-func (s *Store) WithRetentionReader(r RetentionReader) *Store {
-	s.retention = r
+// NoticeHeldReader reads the held kinds, the uses on record and the retention
+// that reaches one subject. Compose supplies it from the privacy module, which
+// owns the subject-access export these come from.
+type NoticeHeldReader interface {
+	NoticeHeld(ctx context.Context, subject NoticeSubject) (NoticeHeld, error)
+}
+
+// WithNoticeHeldReader wires what the privacy page reads the subject's data from.
+func (s *Store) WithNoticeHeldReader(r NoticeHeldReader) *Store {
+	s.held = r
 	return s
 }
 
-// WithRetentionReader wires what the privacy page reads its retention from.
-func (h Handlers) WithRetentionReader(r RetentionReader) Handlers {
-	h.store = h.store.WithRetentionReader(r)
+// WithNoticeHeldReader wires what the privacy page reads the subject's data from.
+func (h Handlers) WithNoticeHeldReader(r NoticeHeldReader) Handlers {
+	h.store = h.store.WithNoticeHeldReader(r)
 	return h
 }
-
-// Retention scopes that hold data about the reader. Every other scope (deals,
-// report editions, daily risk records) holds the installation's own figures.
-var (
-	subjectRetentionScopes = []string{
-		"activity", "activity/transcript", "raw_capture", "ai_call_payload/content",
-	}
-	contactRetentionScopes = append(slices.Clone(subjectRetentionScopes), "contact/no_consent_no_deal")
-	leadRetentionScopes    = append(slices.Clone(subjectRetentionScopes), "lead/unconverted")
-)
 
 // disclosureRecipients is who sees the reader's data: the controller's own
 // staff, and the providers who host the CRM and deliver its mail for it.
 // Both are true of every installation, so the list is fixed like the rights.
 func disclosureRecipients() []string {
 	return []string{"colleagues", "service_providers"}
-}
-
-// disclosedBasis is why a purpose of this class may use somebody's data.
-//
-// Not basisForClass, which answers what lets one MESSAGE go: there business
-// correspondence rests on the subject having written first. A privacy notice
-// goes to somebody whose data came from elsewhere, so for them that purpose
-// rests on the installation's weighed interest instead.
-func disclosedBasis(class Class) string {
-	switch class {
-	case ClassBusinessCorrespondence:
-		return "legitimate_interests"
-	case ClassTransactional:
-		return "contract"
-	default:
-		return "consent"
-	}
 }
 
 // readControllerTx is who answers for the data: the installation's own
@@ -95,82 +91,33 @@ func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) e
 	return nil
 }
 
-// readContactCategoriesTx names the kinds of data a contact's record holds.
-// Presence only: the page names a kind and never shows a value. Unlike the
-// confirm card it also answers for an archived record, which is still held.
-func readContactCategoriesTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *PrivacyInformation) error {
-	var held [6]bool
-	err := tx.QueryRow(ctx, `
-		SELECT btrim(coalesce(p.full_name, '')) <> '',
-		       btrim(coalesce(p.title, '')) <> '',
-		       EXISTS (SELECT 1 FROM relationship r
-		                WHERE r.contact_id = p.id AND r.kind = 'employment'
-		                  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL),
-		       EXISTS (SELECT 1 FROM contact_email e WHERE e.contact_id = p.id AND e.archived_at IS NULL),
-		       EXISTS (SELECT 1 FROM contact_phone f WHERE f.contact_id = p.id AND f.archived_at IS NULL),
-		       EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		                WHERE l.contact_id = p.id AND `+correspondenceSQL+`)
-		  FROM contact p WHERE p.id = $1`, contactID).
-		Scan(&held[0], &held[1], &held[2], &held[3], &held[4], &held[5])
-	if err != nil {
-		return fmt.Errorf("consent: reading which kinds of data this contact's record holds: %w", err)
-	}
-	out.DataCategories = heldCategories(held)
-	return nil
-}
-
-// readLeadCategoriesTx is readContactCategoriesTx for a lead's own columns.
-func readLeadCategoriesTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, out *PrivacyInformation) error {
-	var held [6]bool
-	err := tx.QueryRow(ctx, `
-		SELECT btrim(coalesce(d.full_name, '')) <> '',
-		       btrim(coalesce(d.title, '')) <> '',
-		       btrim(coalesce(d.company_name, '')) <> '' OR d.company_id IS NOT NULL,
-		       btrim(coalesce(d.email, '')) <> '',
-		       btrim(coalesce(d.phone, '')) <> '',
-		       EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		                WHERE l.lead_id = d.id AND `+correspondenceSQL+`)
-		  FROM lead d WHERE d.id = $1`, leadID).
-		Scan(&held[0], &held[1], &held[2], &held[3], &held[4], &held[5])
-	if err != nil {
-		return fmt.Errorf("consent: reading which kinds of data this lead holds: %w", err)
-	}
-	out.DataCategories = heldCategories(held)
-	return nil
-}
-
-// correspondenceSQL is an exchange with the reader. What the product wrote
-// itself is left out: the notice that led here is not why data is held.
-var correspondenceSQL = `a.kind IN ('email', 'meeting', 'call', 'message') AND a.archived_at IS NULL` +
-	auth.OriginIsEngagement("a")
-
-// heldCategories turns the presence flags, in the order both reads select
-// them, into the codes the page names.
-func heldCategories(held [6]bool) []string {
-	codes := [6]string{"name", "job_title", "employer", "email", "phone", "correspondence"}
-	out := []string{}
-	for i, present := range held {
-		if present {
-			out = append(out, codes[i])
-		}
-	}
-	return out
-}
-
-// readRetention lists the acting rules that reach a reader of this kind.
-func (s *Store) readRetention(ctx context.Context, scopes []string, out *PrivacyInformation) error {
-	out.Retention = []RetentionRule{}
-	if s.retention == nil {
+// readHeld fills the parts read about this subject. Unwired, the page says
+// nothing about them rather than something it cannot back.
+func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *PrivacyInformation) error {
+	if s.held == nil {
 		return nil
 	}
-	rules, err := s.retention.ActingRetention(ctx)
+	held, err := s.held.NoticeHeld(ctx, subject)
 	if err != nil {
-		return fmt.Errorf("consent: reading how long data is kept: %w", err)
+		return fmt.Errorf("consent: reading what is held about this reader: %w", err)
 	}
-	for _, rule := range rules {
-		if slices.Contains(scopes, rule.Scope) {
-			out.Retention = append(out.Retention, rule)
+	out.DataCategories = append(out.DataCategories, held.Categories...)
+	out.Retention = append(out.Retention, held.Retention...)
+	return s.db.Tx(ctx, func(tx pgx.Tx) error { return namePurposesTx(ctx, tx, held.Uses, out) })
+}
+
+// namePurposesTx names each use by its purpose's published label. The key
+// stays beside it, so a page can name a seeded purpose in its reader's language.
+func namePurposesTx(ctx context.Context, tx pgx.Tx, uses []NoticeUse, out *PrivacyInformation) error {
+	for _, use := range uses {
+		label := use.PurposeKey
+		err := tx.QueryRow(ctx, `SELECT label FROM consent_purpose WHERE key = $1`, use.PurposeKey).Scan(&label)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("consent: naming what this reader's data is used for: %w", err)
 		}
+		out.Purposes = append(out.Purposes, label)
+		out.PurposeKeys = append(out.PurposeKeys, use.PurposeKey)
+		out.PurposeBases = append(out.PurposeBases, use.Basis)
 	}
 	return nil
 }

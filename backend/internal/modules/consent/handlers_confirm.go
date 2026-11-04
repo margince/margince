@@ -10,12 +10,12 @@ package consent
 
 import (
 	"net/http"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // GetConfirmDetails implements (GET /public/confirm/{token}): one contact's own
@@ -189,11 +189,17 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 		Retention:      make([]crmcontracts.PrivacyInformationRetention, 0, len(info.Retention)),
 	}
 	for _, rule := range info.Retention {
-		out.Retention = append(out.Retention, crmcontracts.PrivacyInformationRetention{
+		wire := crmcontracts.PrivacyInformationRetention{
 			Scope:      crmcontracts.RetentionScope(rule.Scope),
 			RetainDays: rule.RetainDays,
 			Action:     crmcontracts.RetentionAction(rule.Action),
-		})
+		}
+		if floor := rule.KeptByLaw; floor != nil {
+			wire.KeptByLaw = &crmcontracts.JurisdictionRetentionClass{
+				Name: floor.Name, Keep: floor.Keep, FromYearEnd: floor.FromYearEnd,
+			}
+		}
+		out.Retention = append(out.Retention, wire)
 	}
 	if info.AcquiredAt != nil {
 		at := *info.AcquiredAt
@@ -212,25 +218,25 @@ func wireCodes[T ~string](codes []string) []T {
 	return out
 }
 
-// wireController names only the particulars the installation filled in, and
-// nothing when it filled in none.
+// wireController names the particulars by the rule a message's disclosure
+// lines use, so the page and the mail agree on what counts as stated.
 func wireController(p ControllerParticulars) *crmcontracts.PrivacyInformationController {
-	if p.IsZero() {
-		return nil
-	}
-	stated := func(value string) *string {
-		trimmed := strings.TrimSpace(value)
-		if trimmed == "" {
+	stated := func(kind messagingrules.DisclosureKind) *string {
+		text := particularFor(kind, p)
+		if text == "" {
 			return nil
 		}
-		return &trimmed
+		return &text
 	}
-	return &crmcontracts.PrivacyInformationController{
-		LegalName:      stated(p.LegalName),
-		PostalAddress:  stated(p.PostalAddress),
-		PrivacyContact: stated(p.PrivacyContact),
-		ObjectionRoute: stated(p.ObjectionRoute),
+	out := crmcontracts.PrivacyInformationController{
+		Identity:       stated(messagingrules.ControllerIdentity),
+		PrivacyContact: stated(messagingrules.PrivacyContact),
+		ObjectionRoute: stated(messagingrules.ObjectionRoute),
 	}
+	if out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil {
+		return nil
+	}
+	return &out
 }
 
 // wireConfirmCard renders the card. marketing_state is spelled 'unknown' rather

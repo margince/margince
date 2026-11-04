@@ -55,9 +55,9 @@ type Store struct {
 	// on the Store rather than on Handlers because the Store is what builds the
 	// link now: issueLink seals it into the vault inside its own transaction.
 	publicBaseURL string
-	// retention answers which retention rules act today, for the privacy
-	// page. Nil lists none (privacyinfoparts.go).
-	retention RetentionReader
+	// held reads what is held about a notice link's subject, for the privacy
+	// page. Nil discloses none of it (privacyinfoparts.go).
+	held NoticeHeldReader
 }
 
 // NewStore binds the store to the pool every read and write runs through.

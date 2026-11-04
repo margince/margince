@@ -9950,6 +9950,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lợi ích chính đáng của chúng tôi trong việc liên hệ công việc với quý khách và công ty nơi quý khách làm việc, đã cân nhắc với lợi ích của quý khách.",
   "privacynotice.basis.contract":
     "Cần cho hợp đồng với quý khách hoặc công ty nơi quý khách làm việc.",
+  "privacynotice.basis.precontractRequest":
+    "Quý khách đã yêu cầu báo giá hoặc cuộc hẹn.",
+  "privacynotice.basis.subjectInitiated":
+    "Quý khách đã liên hệ với chúng tôi trước.",
+  "privacynotice.basis.legalObligation":
+    "Pháp luật yêu cầu chúng tôi làm việc này.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Cần để bảo vệ quý khách hoặc tài khoản của quý khách.",
+  "privacynotice.basis.existingCustomer":
+    "Quý khách là khách hàng của chúng tôi, và chúng tôi giới thiệu sản phẩm tương tự sản phẩm đã mua. Quý khách có thể phản đối bất cứ lúc nào.",
+  "privacynotice.basis.vnAgreement":
+    "Quý khách đã đồng ý nhận quảng cáo của chúng tôi.",
+  "privacynotice.category.postalAddress": "Địa chỉ bưu chính",
+  "privacynotice.category.socialProfile":
+    "Hồ sơ và tài khoản của quý khách trên mạng xã hội và dịch vụ trò chuyện",
+  "privacynotice.category.customFields":
+    "Các thông tin khác chúng tôi ghi nhận về quý khách",
+  "privacynotice.category.deals": "Các deal quý khách tham gia",
+  "privacynotice.category.preferences":
+    "Lựa chọn của quý khách về thư của chúng tôi",
+  "privacynotice.retention.keptByLaw":
+    "Thư về đơn hàng hoặc hợp đồng được lưu ít nhất {period} theo luật, kể cả khi thời hạn ở đây ngắn hơn.",
   "privacynotice.recipients.title": "Ai được xem thông tin",
   "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
   "privacynotice.recipient.serviceProviders":
@@ -9960,14 +9982,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
   "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
   "privacynotice.retention.rest":
-    "Các thông tin khác được lưu khi còn dùng cho các mục đích trên, hoặc đến khi quý khách yêu cầu xóa.",
+    "Các thông tin khác được lưu khi còn dùng cho các mục đích trên. Khi quý khách yêu cầu xóa, chúng tôi xóa những gì pháp luật cho phép.",
   "privacynotice.retention.scope.activity":
     "Email, cuộc họp và cuộc gọi với quý khách",
   "privacynotice.retention.scope.activityTranscript":
     "Bản chép lời cuộc gọi với quý khách",
   "privacynotice.retention.scope.rawCapture": "Bản sao email như khi nhận được",
-  "privacynotice.retention.scope.aiCallPayload":
-    "Văn bản gửi đến dịch vụ AI để xử lý",
   "privacynotice.retention.scope.contactNoConsentNoDeal":
     "Hồ sơ của quý khách, nếu quý khách chưa đăng ký nhận tin và không tham gia deal nào",
   "privacynotice.retention.scope.leadUnconverted":

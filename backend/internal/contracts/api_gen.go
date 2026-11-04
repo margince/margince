@@ -17209,17 +17209,26 @@ func (e PrincipalAttributionActorType) Valid() bool {
 // Defines values for PrivacyInformationPageDataCategories.
 const (
 	PrivacyInformationPageDataCategoriesCorrespondence PrivacyInformationPageDataCategories = "correspondence"
+	PrivacyInformationPageDataCategoriesCustomFields   PrivacyInformationPageDataCategories = "custom_fields"
+	PrivacyInformationPageDataCategoriesDeals          PrivacyInformationPageDataCategories = "deals"
 	PrivacyInformationPageDataCategoriesEmail          PrivacyInformationPageDataCategories = "email"
 	PrivacyInformationPageDataCategoriesEmployer       PrivacyInformationPageDataCategories = "employer"
 	PrivacyInformationPageDataCategoriesJobTitle       PrivacyInformationPageDataCategories = "job_title"
 	PrivacyInformationPageDataCategoriesName           PrivacyInformationPageDataCategories = "name"
 	PrivacyInformationPageDataCategoriesPhone          PrivacyInformationPageDataCategories = "phone"
+	PrivacyInformationPageDataCategoriesPostalAddress  PrivacyInformationPageDataCategories = "postal_address"
+	PrivacyInformationPageDataCategoriesPreferences    PrivacyInformationPageDataCategories = "preferences"
+	PrivacyInformationPageDataCategoriesSocialProfile  PrivacyInformationPageDataCategories = "social_profile"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPageDataCategories enum.
 func (e PrivacyInformationPageDataCategories) Valid() bool {
 	switch e {
 	case PrivacyInformationPageDataCategoriesCorrespondence:
+		return true
+	case PrivacyInformationPageDataCategoriesCustomFields:
+		return true
+	case PrivacyInformationPageDataCategoriesDeals:
 		return true
 	case PrivacyInformationPageDataCategoriesEmail:
 		return true
@@ -17230,6 +17239,12 @@ func (e PrivacyInformationPageDataCategories) Valid() bool {
 	case PrivacyInformationPageDataCategoriesName:
 		return true
 	case PrivacyInformationPageDataCategoriesPhone:
+		return true
+	case PrivacyInformationPageDataCategoriesPostalAddress:
+		return true
+	case PrivacyInformationPageDataCategoriesPreferences:
+		return true
+	case PrivacyInformationPageDataCategoriesSocialProfile:
 		return true
 	default:
 		return false
@@ -17253,9 +17268,15 @@ func (e PrivacyInformationPageKind) Valid() bool {
 
 // Defines values for PrivacyInformationPagePurposeBases.
 const (
-	PrivacyInformationPagePurposeBasesConsent             PrivacyInformationPagePurposeBases = "consent"
-	PrivacyInformationPagePurposeBasesContract            PrivacyInformationPagePurposeBases = "contract"
-	PrivacyInformationPagePurposeBasesLegitimateInterests PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesConsent                        PrivacyInformationPagePurposeBases = "consent"
+	PrivacyInformationPagePurposeBasesContract                       PrivacyInformationPagePurposeBases = "contract"
+	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
+	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
+	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
+	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
+	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
+	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
@@ -17265,7 +17286,19 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 		return true
 	case PrivacyInformationPagePurposeBasesContract:
 		return true
+	case PrivacyInformationPagePurposeBasesExistingCustomerException:
+		return true
+	case PrivacyInformationPagePurposeBasesLegalObligation:
+		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesPrecontractRequest:
+		return true
+	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
+		return true
+	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
+		return true
+	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
 		return true
 	default:
 		return false
@@ -53355,14 +53388,14 @@ type PrincipalAttribution struct {
 // PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
 type PrincipalAttributionActorType string
 
-// PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars. A field
-// the installation has not filled in is absent, never invented.
+// PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
+// rule the mail's disclosure lines use. A part the installation has not stated is absent.
 type PrivacyInformationController struct {
-	LegalName *string `json:"legal_name,omitempty"`
+	// Identity The legal name and postal address, as lines. Absent unless both are stated.
+	Identity *string `json:"identity,omitempty"`
 
 	// ObjectionRoute How to object, where the installation states a way of its own.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
-	PostalAddress  *string `json:"postal_address,omitempty"`
 
 	// PrivacyContact How to reach whoever answers questions about the data.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
@@ -53391,21 +53424,20 @@ type PrivacyInformationPage struct {
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
 	AcquiredAt *time.Time `json:"acquired_at,omitempty"`
 
-	// Controller Who is responsible for the data, from the installation's own controller particulars. A field
-	// the installation has not filled in is absent, never invented.
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
 	Controller *PrivacyInformationController `json:"controller,omitempty"`
 
-	// DataCategories The kinds of data held about the reader, read from what the record holds today. Codes
-	// only: the page names each kind and never shows a value.
+	// DataCategories The kinds of data held about the reader, read from the subject-access export's own
+	// sections. Codes only: the page names each kind and never shows a value.
 	DataCategories []PrivacyInformationPageDataCategories `json:"data_categories"`
 	Kind           PrivacyInformationPageKind             `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
 
-	// PurposeBases Why the installation may use the data for each entry in `purposes`, at the same index, as
-	// a code the page names in its reader's language: the reader's own agreement, an interest
-	// the installation weighed against theirs, or a contract with them or their company.
+	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
+	// purpose the reader agreed to, else the kind of a live communication basis.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
@@ -53420,8 +53452,8 @@ type PrivacyInformationPage struct {
 	Recipients []PrivacyInformationPageRecipients `json:"recipients"`
 
 	// Retention The retention rules that act on the reader's data today, from the installation's own
-	// retention settings. A rule switched off, or held back by the retain-only setting, is not
-	// listed. Empty means no rule removes the data by age.
+	// retention settings, for the kinds of data the reader has. A rule switched off, or held
+	// back by the retain-only setting, is not listed.
 	Retention []PrivacyInformationRetention `json:"retention"`
 
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
@@ -53449,8 +53481,9 @@ type PrivacyInformationRetention struct {
 	// Action What happens to a record past its window. One action per policy row — a ladder is separate
 	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
-	Action     RetentionAction `json:"action"`
-	RetainDays int             `json:"retain_days"`
+	Action     RetentionAction             `json:"action"`
+	KeptByLaw  *JurisdictionRetentionClass `json:"kept_by_law,omitempty"`
+	RetainDays int                         `json:"retain_days" minimum:"1"`
 
 	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a

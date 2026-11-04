@@ -50,7 +50,7 @@ const SUBSCRIPTION = {
 
 // The lists every privacy notice carries, empty where a record holds nothing.
 const NOTICE_LISTS = {
-  purpose_bases: ["legitimate_interests", "consent"],
+  purpose_bases: ["subject_initiated_correspondence", "consent"],
   data_categories: [],
   recipients: ["colleagues", "service_providers"],
   retention: [],
@@ -335,15 +335,26 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     kind: "privacy_notice",
     acquired_as: "public_or_business_source",
     controller: {
-      legal_name: "Beispiel GmbH",
-      postal_address: "Hauptstr. 1\n10115 Berlin",
+      identity: "Beispiel GmbH\nHauptstr. 1\n10115 Berlin",
       privacy_contact: "privacy@beispiel.test",
       objection_route: "Reply STOP",
     },
     purposes: ["Talks", "News"],
     purpose_keys: ["talks", "news"],
     data_categories: ["name", "email", "correspondence"],
-    retention: [{ scope: "activity", retain_days: 1095, action: "archive" }],
+    retention: [
+      { scope: "activity", retain_days: 1095, action: "archive" },
+      {
+        scope: "raw_capture",
+        retain_days: 90,
+        action: "erase",
+        kept_by_law: {
+          name: "commercial_correspondence",
+          keep: "P6Y",
+          from_year_end: true,
+        },
+      },
+    ],
     rights: ["access", "objection"],
   };
 
@@ -352,13 +363,11 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
 
     render(<ConfirmDetailsScreen token="tok-full" />);
 
-    expect(await screen.findByText("Beispiel GmbH")).toBeInTheDocument();
+    expect(await screen.findByText(/^Beispiel GmbH/)).toBeInTheDocument();
     expect(
       screen.getByText("Questions about your data: privacy@beispiel.test"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/^Our legitimate interest in business contact/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("You wrote to us first.")).toBeInTheDocument();
     expect(screen.getByText(/^Only with your agreement/)).toBeInTheDocument();
     expect(screen.getByText("Your email address")).toBeInTheDocument();
     expect(
@@ -368,6 +377,11 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     ).toBeInTheDocument();
     expect(
       screen.getByText("Staff who work with our CRM."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "By law, mail about an order or a contract is kept for at least 6 years from the end of the calendar year, even where this says sooner.",
+      ),
     ).toBeInTheDocument();
   });
 

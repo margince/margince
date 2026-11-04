@@ -50069,22 +50069,21 @@ export interface components {
             kind: "privacy_notice";
             controller?: components["schemas"]["PrivacyInformationController"];
             /**
-             * @description Why the installation may use the data for each entry in `purposes`, at the same index, as
-             *     a code the page names in its reader's language: the reader's own agreement, an interest
-             *     the installation weighed against theirs, or a contract with them or their company.
+             * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
+             *     purpose the reader agreed to, else the kind of a live communication basis.
              */
-            purpose_bases: ("consent" | "legitimate_interests" | "contract")[];
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
             /**
-             * @description The kinds of data held about the reader, read from what the record holds today. Codes
-             *     only: the page names each kind and never shows a value.
+             * @description The kinds of data held about the reader, read from the subject-access export's own
+             *     sections. Codes only: the page names each kind and never shows a value.
              */
-            data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "correspondence")[];
+            data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "postal_address" | "social_profile" | "custom_fields" | "correspondence" | "deals" | "preferences")[];
             /** @description Who the data is shared with, as codes the page names in its reader's language. */
             recipients: ("colleagues" | "service_providers")[];
             /**
              * @description The retention rules that act on the reader's data today, from the installation's own
-             *     retention settings. A rule switched off, or held back by the retain-only setting, is not
-             *     listed. Empty means no rule removes the data by age.
+             *     retention settings, for the kinds of data the reader has. A rule switched off, or held
+             *     back by the retain-only setting, is not listed.
              */
             retention: components["schemas"]["PrivacyInformationRetention"][];
             /**
@@ -50115,12 +50114,12 @@ export interface components {
             language?: components["schemas"]["MailLanguage"];
         };
         /**
-         * @description Who is responsible for the data, from the installation's own controller particulars. A field
-         *     the installation has not filled in is absent, never invented.
+         * @description Who is responsible for the data, from the installation's own controller particulars, by the
+         *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
          */
         PrivacyInformationController: {
-            legal_name?: string;
-            postal_address?: string;
+            /** @description The legal name and postal address, as lines. Absent unless both are stated. */
+            identity?: string;
             /** @description How to reach whoever answers questions about the data. */
             privacy_contact?: string;
             /** @description How to object, where the installation states a way of its own. */
@@ -50131,6 +50130,12 @@ export interface components {
             scope: components["schemas"]["RetentionScope"];
             retain_days: number;
             action: components["schemas"]["RetentionAction"];
+            /**
+             * @description The statutory floor that keeps some of this data past `retain_days`: business
+             *     correspondence the law requires to be kept. Absent when the rule keeps the data or no
+             *     floor binds the scope.
+             */
+            kept_by_law?: components["schemas"]["JurisdictionRetentionClass"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.

@@ -9,15 +9,19 @@ import (
 	"context"
 	"slices"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// fixedRetention answers the rules one test states, standing in for the
-// retention settings compose reads them from.
-type fixedRetention []RetentionRule
+// fixedHeld answers what one test states, standing in for the privacy module
+// compose reads it from.
+type fixedHeld struct {
+	held NoticeHeld
+	seen NoticeSubject
+}
 
-func (f fixedRetention) ActingRetention(context.Context) ([]RetentionRule, error) { return f, nil }
+func (f *fixedHeld) NoticeHeld(_ context.Context, subject NoticeSubject) (NoticeHeld, error) {
+	f.seen = subject
+	return f.held, nil
+}
 
 func noticeFor(t *testing.T, e *channelConsentEnv, ref ConfirmRef) PrivacyInformation {
 	t.Helper()
@@ -43,96 +47,39 @@ func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
 	}
 }
 
-func TestEachPurposeIsDisclosedWithTheBasisOfItsClass(t *testing.T) {
+func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
 	e := setupChannelConsent(t)
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO consent_purpose (key, label, class) VALUES
-		  ('talks', 'Talks', 'business_correspondence'),
-		  ('service', 'Service', 'transactional'),
-		  ('news', 'News', 'marketing')`); err != nil {
-		t.Fatal(err)
-	}
+	reader := &fixedHeld{held: NoticeHeld{
+		Categories: []string{"name", "postal_address"},
+		Uses: []NoticeUse{
+			{PurposeKey: "newsletter", Basis: "consent"},
+			{PurposeKey: "business_correspondence", Basis: "subject_initiated_correspondence"},
+		},
+	}}
+	e.store = e.store.WithNoticeHeldReader(reader)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if len(info.PurposeBases) != len(info.PurposeKeys) {
-		t.Fatalf("%d bases for %d purposes", len(info.PurposeBases), len(info.PurposeKeys))
+	if reader.seen.ContactID != e.contact {
+		t.Fatalf("the reader was asked about %+v, want the link's own contact", reader.seen)
 	}
-	want := map[string]string{"talks": "legitimate_interests", "service": "contract", "news": "consent"}
-	for i, key := range info.PurposeKeys {
-		if basis, stated := want[key]; stated && info.PurposeBases[i] != basis {
-			t.Errorf("purpose %q is disclosed on %q, want %q", key, info.PurposeBases[i], basis)
-		}
+	if !slices.Equal(info.PurposeKeys, []string{"newsletter", "business_correspondence"}) ||
+		!slices.Equal(info.PurposeBases, []string{"consent", "subject_initiated_correspondence"}) {
+		t.Errorf("the page discloses %v on %v, want only the two uses on record", info.PurposeKeys, info.PurposeBases)
+	}
+	if info.Purposes[0] != "Newsletter" || info.Purposes[1] != "business_correspondence" {
+		t.Errorf("purposes are named %v, want the published label, or the key where none is published", info.Purposes)
+	}
+	if !slices.Equal(info.DataCategories, []string{"name", "postal_address"}) {
+		t.Errorf("categories %v, want the reader's", info.DataCategories)
 	}
 }
 
-func TestTheDataCategoriesAreWhatTheRecordHolds(t *testing.T) {
+func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 	e := setupChannelConsent(t)
-	seedSubjectAddress(t, e)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if want := []string{"name", "email"}; !slices.Equal(info.DataCategories, want) {
-		t.Fatalf("categories %v, want %v: the fixture holds a name and an address and nothing else", info.DataCategories, want)
+	if len(info.Purposes)+len(info.DataCategories)+len(info.Retention) != 0 {
+		t.Errorf("an unwired page claims purposes %v, categories %v, retention %v",
+			info.Purposes, info.DataCategories, info.Retention)
 	}
-
-	// The installation's own notice is not correspondence with the reader.
-	linkActivity(t, e, "system_notice")
-	if info := noticeFor(t, e, ConfirmRef{ContactID: e.contact}); slices.Contains(info.DataCategories, "correspondence") {
-		t.Error("the notice mail itself was disclosed as correspondence")
-	}
-	linkActivity(t, e, "human")
-	if info := noticeFor(t, e, ConfirmRef{ContactID: e.contact}); !slices.Contains(info.DataCategories, "correspondence") {
-		t.Errorf("categories %v leave out the mail exchanged with the reader", info.DataCategories)
-	}
-}
-
-func linkActivity(t *testing.T, e *channelConsentEnv, origin string) {
-	t.Helper()
-	activity := ids.NewV7()
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by, origin)
-		VALUES ($1, 'email', 'outbound', 'gmail', now(), 'human:x', $2)`, activity, origin); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
-		activity, e.contact); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestTheRetentionShownIsTheActingRulesThatReachTheReader(t *testing.T) {
-	e := setupChannelConsent(t)
-	e.store = e.store.WithRetentionReader(fixedRetention{
-		{Scope: "activity", RetainDays: 1095, Action: "archive"},
-		{Scope: "deal/lost", RetainDays: 1825, Action: "archive"},
-		{Scope: "lead/unconverted", RetainDays: 365, Action: "archive"},
-		{Scope: "contact/no_consent_no_deal", RetainDays: 730, Action: "anonymize"},
-	})
-
-	contact := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if got := scopesOf(contact.Retention); !slices.Equal(got, []string{"activity", "contact/no_consent_no_deal"}) {
-		t.Errorf("a contact is told of %v, want only the rules that reach a contact", got)
-	}
-
-	lead := ids.New[ids.LeadKind]()
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO lead (id, full_name, email, phone, source, captured_by)
-		VALUES ($1, 'Lena Lead', 'lena@lead.test', '+49 30 1', 'website', 'human:x')`, lead); err != nil {
-		t.Fatal(err)
-	}
-	info := noticeFor(t, e, ConfirmRef{LeadID: lead})
-	if got := scopesOf(info.Retention); !slices.Equal(got, []string{"activity", "lead/unconverted"}) {
-		t.Errorf("a lead is told of %v, want only the rules that reach a lead", got)
-	}
-	if want := []string{"name", "email", "phone"}; !slices.Equal(info.DataCategories, want) {
-		t.Errorf("a lead's categories are %v, want %v", info.DataCategories, want)
-	}
-}
-
-func scopesOf(rules []RetentionRule) []string {
-	out := []string{}
-	for _, rule := range rules {
-		out = append(out, rule.Scope)
-	}
-	return out
 }

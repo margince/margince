@@ -636,8 +636,8 @@ const (
 	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
 	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
 	//
-	// 154: consent's privacy page names the kinds of data a notice link's own
-	// contact or lead holds (privacyinfoparts.go). It reads presence flags only,
-	// for the record the link resolved, and returns no reference.
+	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
+	// website lead holds, for the privacy page. It reads presence flags only,
+	// for the lead the link resolved, and returns no reference.
 	modulesTierUnscopedCeiling = 154
 )

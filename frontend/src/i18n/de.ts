@@ -10227,6 +10227,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Unser berechtigtes Interesse an geschäftlichem Kontakt mit Ihnen und dem Unternehmen, für das Sie arbeiten, abgewogen gegen Ihre Interessen.",
   "privacynotice.basis.contract":
     "Nötig für einen Vertrag mit Ihnen oder dem Unternehmen, für das Sie arbeiten.",
+  "privacynotice.basis.precontractRequest":
+    "Sie haben uns um ein Angebot oder einen Termin gebeten.",
+  "privacynotice.basis.subjectInitiated": "Sie haben uns zuerst geschrieben.",
+  "privacynotice.basis.legalObligation": "Ein Gesetz verpflichtet uns dazu.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Nötig, um Sie oder Ihr Konto zu schützen.",
+  "privacynotice.basis.existingCustomer":
+    "Sie sind unser Kunde, und wir informieren Sie über Produkte wie die, die Sie gekauft haben. Sie können jederzeit widersprechen.",
+  "privacynotice.basis.vnAgreement":
+    "Sie haben zugestimmt, unsere Werbung zu erhalten.",
+  "privacynotice.category.postalAddress": "Ihre Postanschrift",
+  "privacynotice.category.socialProfile":
+    "Ihre Profile und Konten in sozialen Netzwerken und Chat-Diensten",
+  "privacynotice.category.customFields":
+    "Weitere Angaben, die wir über Sie erfassen",
+  "privacynotice.category.deals": "Geschäfte, an denen Sie beteiligt sind",
+  "privacynotice.category.preferences":
+    "Ihre Entscheidungen zu unseren Nachrichten",
+  "privacynotice.retention.keptByLaw":
+    "Laut Gesetz bewahren wir Nachrichten zu einer Bestellung oder einem Vertrag mindestens {period} auf, auch wo hier eine kürzere Frist steht.",
   "privacynotice.recipients.title": "Wer die Daten sieht",
   "privacynotice.recipient.colleagues":
     "Mitarbeitende, die mit unserem CRM arbeiten.",
@@ -10238,15 +10258,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
   "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
   "privacynotice.retention.rest":
-    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen, oder bis Sie uns bitten, es zu löschen.",
+    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
   "privacynotice.retention.scope.activity":
     "E-Mails, Termine und Anrufe mit Ihnen",
   "privacynotice.retention.scope.activityTranscript":
     "Abschriften von Anrufen mit Ihnen",
   "privacynotice.retention.scope.rawCapture":
     "Kopien von E-Mails, wie sie eingegangen sind",
-  "privacynotice.retention.scope.aiCallPayload":
-    "Text, der zur Verarbeitung an KI-Dienste ging",
   "privacynotice.retention.scope.contactNoConsentNoDeal":
     "Ihr Datensatz, wenn Sie keine Neuigkeiten wünschen und an keinem Geschäft beteiligt sind",
   "privacynotice.retention.scope.leadUnconverted":

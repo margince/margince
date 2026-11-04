@@ -112,15 +112,12 @@ func (s *Store) assembleDisclosure(
 		} else if err != nil {
 			return fmt.Errorf("consent: reading how this contact was obtained: %w", err)
 		}
-		if err := readContactCategoriesTx(ctx, tx, contactID, &out); err != nil {
-			return err
-		}
-		return readDisclosedTx(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out)
 	})
 	if err != nil {
 		return out, err
 	}
-	return out, s.readRetention(ctx, contactRetentionScopes, &out)
+	return out, s.readHeld(ctx, NoticeSubject{ContactID: contactID}, &out)
 }
 
 // assembleLeadDisclosure is assembleDisclosure for a website lead. Only a lead
@@ -136,24 +133,12 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
 		}
 		out.AcquiredAt = &capturedAt
-		if err := readLeadCategoriesTx(ctx, tx, leadID, &out); err != nil {
-			return err
-		}
-		return readDisclosedTx(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out)
 	})
 	if err != nil {
 		return out, err
 	}
-	return out, s.readRetention(ctx, leadRetentionScopes, &out)
-}
-
-// readDisclosedTx reads what a contact's and a lead's disclosure state alike:
-// who answers for the data and what it is used for.
-func readDisclosedTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
-	if err := readControllerTx(ctx, tx, out); err != nil {
-		return err
-	}
-	return readDisclosedPurposes(ctx, tx, out)
+	return out, s.readHeld(ctx, NoticeSubject{LeadID: leadID}, &out)
 }
 
 // acquiredFromAPublicSource mirrors contacts.AcquiredPublicOrBusinessSource:
@@ -162,29 +147,6 @@ func readDisclosedTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) er
 // Held by: TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides
 // (backend/gates/acquisitionvocabulary_test.go)
 const acquiredFromAPublicSource = "public_or_business_source"
-
-// readDisclosedPurposes fills in what the installation uses data for, and why
-// each use is allowed.
-func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
-	rows, err := tx.Query(ctx, `
-		SELECT key, label, class FROM consent_purpose
-		 WHERE archived_at IS NULL
-		 ORDER BY label`)
-	if err != nil {
-		return fmt.Errorf("consent: reading what this installation uses data for: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var key, label, class string
-		if err := rows.Scan(&key, &label, &class); err != nil {
-			return err
-		}
-		out.Purposes = append(out.Purposes, label)
-		out.PurposeKeys = append(out.PurposeKeys, key)
-		out.PurposeBases = append(out.PurposeBases, disclosedBasis(Class(class)))
-	}
-	return rows.Err()
-}
 
 // acquiredUnknownLegacy mirrors contacts.AcquiredUnknownLegacy, which this
 // module may not import — consent and contacts are siblings.

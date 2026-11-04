@@ -7,28 +7,40 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
-// privacyNoticeRetention hands the privacy page the retention rules the
-// retention settings screen shows, so the two never name different windows.
-type privacyNoticeRetention struct{ store *privacy.PolicyStore }
+// privacyNoticeHeld hands the privacy page what the privacy module reads about
+// a subject. The floor it applies is the installation's own.
+type privacyNoticeHeld struct{ db *database.DB }
 
-// ActingRetention lists the rules that act today. A rule switched off, or held
-// back by the retain-only setting, removes nothing and is not disclosed.
-func (r privacyNoticeRetention) ActingRetention(ctx context.Context) ([]consent.RetentionRule, error) {
-	policies, err := r.store.List(ctx)
+func (r privacyNoticeHeld) NoticeHeld(ctx context.Context, subject consent.NoticeSubject) (consent.NoticeHeld, error) {
+	read, err := privacy.AssembleNoticeDisclosure(ctx, r.db, identity.CountryForDecision,
+		privacy.NoticeSubject{ContactID: subject.ContactID, LeadID: subject.LeadID})
 	if err != nil {
-		return nil, err
+		return consent.NoticeHeld{}, err
 	}
-	out := make([]consent.RetentionRule, 0, len(policies))
-	for _, policy := range policies {
-		if !policy.Enabled || policy.SuppressedByPosture {
-			continue
-		}
-		out = append(out, consent.RetentionRule{
-			Scope: policy.Scope.String(), RetainDays: policy.RetainDays, Action: policy.Action,
+	out := consent.NoticeHeld{Categories: read.Categories}
+	for _, use := range read.Uses {
+		out.Uses = append(out.Uses, consent.NoticeUse{PurposeKey: use.PurposeKey, Basis: use.Basis})
+	}
+	for _, rule := range read.Retention {
+		out.Retention = append(out.Retention, consent.RetentionRule{
+			Scope: rule.Scope, RetainDays: rule.RetainDays, Action: rule.Action, KeptByLaw: lawFloor(rule.KeptByLaw),
 		})
 	}
 	return out, nil
+}
+
+func lawFloor(class *jurisdiction.RetentionClass) *consent.LawFloor {
+	if class == nil {
+		return nil
+	}
+	return &consent.LawFloor{
+		Name: string(class.Name), Keep: class.Keep.String(),
+		FromYearEnd: class.Anchor == jurisdiction.AnchorCalendarYearEnd,
+	}
 }

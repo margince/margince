@@ -7,6 +7,7 @@ import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { periodText } from "../settings/settings.jurisdiction.text";
 import { keepFor } from "./retention.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
@@ -20,8 +21,14 @@ export const BASIS_LABEL: Readonly<
   Record<PrivacyInformationPage["purpose_bases"][number], MessageKey>
 > = {
   consent: "privacynotice.basis.consent",
-  legitimate_interests: "privacynotice.basis.legitimateInterests",
   contract: "privacynotice.basis.contract",
+  precontract_request: "privacynotice.basis.precontractRequest",
+  subject_initiated_correspondence: "privacynotice.basis.subjectInitiated",
+  legitimate_interests: "privacynotice.basis.legitimateInterests",
+  legal_obligation: "privacynotice.basis.legalObligation",
+  vital_or_security_interest: "privacynotice.basis.vitalOrSecurity",
+  existing_customer_exception: "privacynotice.basis.existingCustomer",
+  vn_subject_agreement: "privacynotice.basis.vnAgreement",
 };
 
 const CATEGORY_LABEL: Readonly<
@@ -32,7 +39,12 @@ const CATEGORY_LABEL: Readonly<
   employer: "privacynotice.category.employer",
   email: "privacynotice.category.email",
   phone: "privacynotice.category.phone",
+  postal_address: "privacynotice.category.postalAddress",
+  social_profile: "privacynotice.category.socialProfile",
+  custom_fields: "privacynotice.category.customFields",
   correspondence: "privacynotice.category.correspondence",
+  deals: "privacynotice.category.deals",
+  preferences: "privacynotice.category.preferences",
 };
 
 const RECIPIENT_LABEL: Readonly<
@@ -48,7 +60,6 @@ const SCOPE_LABEL: Partial<Record<Retention["scope"], MessageKey>> = {
   activity: "privacynotice.retention.scope.activity",
   "activity/transcript": "privacynotice.retention.scope.activityTranscript",
   raw_capture: "privacynotice.retention.scope.rawCapture",
-  "ai_call_payload/content": "privacynotice.retention.scope.aiCallPayload",
   "contact/no_consent_no_deal":
     "privacynotice.retention.scope.contactNoConsentNoDeal",
   "lead/unconverted": "privacynotice.retention.scope.leadUnconverted",
@@ -73,11 +84,8 @@ export function ControllerCard({
       <Heading size="large" className="t-h3">
         {t("privacynotice.controller.title")}
       </Heading>
-      {controller.legal_name ? (
-        <p className="t-body">{controller.legal_name}</p>
-      ) : null}
-      {controller.postal_address ? (
-        <p className="t-body confirm-lines">{controller.postal_address}</p>
+      {controller.identity ? (
+        <p className="t-body confirm-lines">{controller.identity}</p>
       ) : null}
       {controller.privacy_contact ? (
         <p className="t-body">
@@ -143,6 +151,9 @@ export function RetentionCard({
     const scope = SCOPE_LABEL[rule.scope];
     return scope ? [{ rule, scope }] : [];
   });
+  // One floor binds all correspondence, so it is said once under the list.
+  const floor = retention.find((rule) => rule.kept_by_law)?.kept_by_law;
+  const floorPeriod = floor ? periodText(floor.keep, locale) : "";
   return (
     <Card>
       <Heading size="large" className="t-h3">
@@ -159,6 +170,15 @@ export function RetentionCard({
             </li>
           ))}
         </ul>
+      ) : null}
+      {floor ? (
+        <p className="t-body">
+          {t("privacynotice.retention.keptByLaw", {
+            period: floor.from_year_end
+              ? t("jurisdiction.floor.fromYearEnd", { period: floorPeriod })
+              : floorPeriod,
+          })}
+        </p>
       ) : null}
       <p className="t-body">{t("privacynotice.retention.rest")}</p>
     </Card>

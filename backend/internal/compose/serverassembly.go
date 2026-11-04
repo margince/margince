@@ -482,7 +482,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
 		WithInstallationZone(identity.ZoneAppliedTx).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
-		WithRetentionReader(privacyNoticeRetention{store: privacy.NewPolicyStore(InstallationDB(pool))}).
+		WithNoticeHeldReader(privacyNoticeHeld{db: InstallationDB(pool)}).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.
 		WithSettings(StoredConfig(pool)).

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -17,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// TestThePrivacyPageShowsTheRetentionSettingsThatAct opens a notice link through
-// the public edge and the handlers the server assembles. The page must show the
-// retention rules the settings screen shows.
-func TestThePrivacyPageShowsTheRetentionSettingsThatAct(t *testing.T) {
+// TestThePrivacyPageShowsWhatThePrivacyModuleHoldsForTheReader opens a notice
+// link through the public edge and the handlers the server assembles. The page
+// must show the reader's own kinds and the retention rules that reach them.
+func TestThePrivacyPageShowsWhatThePrivacyModuleHoldsForTheReader(t *testing.T) {
 	l := setupConfirmLane(t)
 	rules := privacy.NewPolicyStore(InstallationDB(l.e.Pool))
 	author := l.e.As(l.e.AdminUser, nil, principal.Permissions{
@@ -29,7 +30,7 @@ func TestThePrivacyPageShowsTheRetentionSettingsThatAct(t *testing.T) {
 	})
 	for _, policy := range []privacy.PolicyInput{
 		{Scope: privacy.RetentionScope{ObjectType: "activity", Category: "transcript"}, RetainDays: 45, Action: "archive", Enabled: true},
-		{Scope: privacy.RetentionScope{ObjectType: "contact", Category: "no_consent_no_deal"}, RetainDays: 700, Action: "anonymize", Enabled: false},
+		{Scope: privacy.RetentionScope{ObjectType: "contact", Category: "no_consent_no_deal"}, RetainDays: 700, Action: "anonymize", Enabled: true},
 	} {
 		if _, err := rules.Create(author, policy); err != nil {
 			t.Fatalf("authoring %s: %v", policy.Scope, err)
@@ -53,16 +54,11 @@ func TestThePrivacyPageShowsTheRetentionSettingsThatAct(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &notice); err != nil {
 		t.Fatal(err)
 	}
-	var transcript *crmcontracts.PrivacyInformationRetention
-	for i, rule := range notice.Retention {
-		if rule.Scope == "contact/no_consent_no_deal" {
-			t.Error("a rule switched off in the retention settings is shown as acting")
-		}
-		if rule.Scope == "activity/transcript" {
-			transcript = &notice.Retention[i]
-		}
+	if len(notice.Retention) != 1 || notice.Retention[0].Scope != "contact/no_consent_no_deal" ||
+		notice.Retention[0].RetainDays != 700 {
+		t.Errorf("the page shows retention %+v, want the record rule alone: the reader has no transcript", notice.Retention)
 	}
-	if transcript == nil || transcript.RetainDays != 45 || transcript.Action != "archive" {
-		t.Errorf("the page shows retention %+v, want the 45-day transcript rule the settings hold", notice.Retention)
+	if !slices.Contains(notice.DataCategories, "email") {
+		t.Errorf("the page names kinds %v, want the reader's address among them", notice.DataCategories)
 	}
 }
