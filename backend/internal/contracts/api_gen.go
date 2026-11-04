@@ -48477,7 +48477,7 @@ type InviteEmailHandoff struct {
 	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
 	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
 	// refuses the address is reported a moment later as the member's
-	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	// `invite_email_state` on the roster.
 	Queued bool `json:"queued"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
@@ -60772,22 +60772,44 @@ type TotpEnrolment struct {
 	Secret string `json:"secret"`
 }
 
+// TranscriptReadAskedOf The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read.
+type TranscriptReadAskedOf struct {
+	IsYou bool `json:"is_you"`
+
+	// Name The colleague as the roster names them; null for a seat with no name to show.
+	Name   *string            `json:"name,omitempty"`
+	SeatId openapi_types.UUID `json:"seat_id"`
+}
+
+// TranscriptReadProposal One approval a transcript reading staged, and who it waits on.
+type TranscriptReadProposal struct {
+	// AskedOf The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read.
+	AskedOf TranscriptReadAskedOf `json:"asked_of"`
+	Id      openapi_types.UUID    `json:"id"`
+}
+
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
 type TranscriptReadReport struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	CreatedAt  time.Time          `json:"created_at"`
-	FinishedAt *time.Time         `json:"finished_at,omitempty"`
+
+	// Detail What the reading did, phrased for the caller in their display language: tasks it added "for you" or for a named colleague, proposals waiting on the caller, proposals "sent to" a named colleague to confirm, commitments it withheld and why, or why it could not be used. Null while the reading runs, and on a reading finished before the outcome was kept as facts, where `status_detail` is the account.
+	Detail     *string    `json:"detail,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
 
 	// LineCount How many lines the reading addressed, so a cited line can be shown against the size of what was read. It is the count at READ time; a later body edit re-normalizes and can change it, and each proposal's own evidence stays authoritative about what it saw.
 	LineCount int `json:"line_count"`
 
 	// ProposalIds The approvals this reading staged. Empty on a reading that found nothing to propose.
-	ProposalIds []openapi_types.UUID       `json:"proposal_ids"`
-	ReadId      openapi_types.UUID         `json:"read_id"`
-	StartedAt   *time.Time                 `json:"started_at,omitempty"`
-	Status      TranscriptReadReportStatus `json:"status"`
+	ProposalIds []openapi_types.UUID `json:"proposal_ids"`
 
-	// StatusDetail Why it ended as it did, in words a rep can act on. Set on failure, and on a done reading that produced nothing so an empty result explains itself.
+	// Proposals The approvals this reading staged, each with the colleague it waits on. Empty on a reading finished before the outcome was kept as facts; `proposal_ids` still lists those.
+	Proposals []TranscriptReadProposal   `json:"proposals"`
+	ReadId    openapi_types.UUID         `json:"read_id"`
+	StartedAt *time.Time                 `json:"started_at,omitempty"`
+	Status    TranscriptReadReportStatus `json:"status"`
+
+	// StatusDetail The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set.
 	StatusDetail *string `json:"status_detail,omitempty"`
 }
 
@@ -62309,7 +62331,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -62332,7 +62354,7 @@ type User struct {
 	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
 	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
 
-	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
@@ -62373,7 +62395,7 @@ type User struct {
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
 
-// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.

@@ -389,6 +389,16 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 			defer done()
 		}
 		defer recoverDetached("invite send")
+		current, live, err := h.svc.InviteMailRecipient(workCtx, inviter, rawToken)
+		if err != nil {
+			slog.Error("reading an invitation before mailing it failed", "err", err)
+			return
+		}
+		if !live {
+			slog.Info("invitation not mailed: its link or its member changed before the send")
+			return
+		}
+		email = current
 		link := passwordLink(h.passwordLinkBaseURL, rawToken)
 		words := h.mailCopy(workCtx, email)
 		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)

@@ -146,6 +146,9 @@ func (s *Sink) settleMeetingReplay(
 	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
 		return err
 	}
+	if err := s.recordMeetingDocuments(ctx, tx, id, rec, true); err != nil {
+		return err
+	}
 	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)
 }
 
