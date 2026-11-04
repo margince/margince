@@ -17,6 +17,7 @@ import {
   type RefusedRecipient,
   refusalOf,
   refusedStatus,
+  remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
 
@@ -227,7 +228,7 @@ export function SendPermission({
           sendPermissionReasonKey(
             deciding?.reasonCode,
             surface,
-            deciding?.category,
+            deciding && remedyCategoryOf(deciding),
           ),
         )}
       </p>

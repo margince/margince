@@ -29,6 +29,13 @@ const NOTHING_ON_RECORD = {
   resolved_category: "requested_followup",
 } as const;
 
+// The rep claimed an active deal and no deal backs it. The engine records the
+// claim and resolves to its own reading, which differs.
+const DEAL_CLAIM_UNBACKED = {
+  ...NOTHING_ON_RECORD,
+  requested_category: "active_deal_followup",
+} as const;
+
 const settled = (preview: ReturnType<typeof refusedPreview>) => ({
   preview,
   refusal: null,
@@ -75,6 +82,32 @@ describe("who a reason to write is recorded on", () => {
     ).toBeUndefined();
   });
 
+  // The remedy for an unbacked deal claim is the deal. A vouch in the
+  // category the engine resolved instead would pass on a reason never given.
+  it("is nobody where the rep's claim did not resolve", () => {
+    expect(
+      reasonTargetOf(
+        settled(refusedPreview("anna@example.test", DEAL_CLAIM_UNBACKED)),
+        contactOf,
+      ),
+    ).toBeUndefined();
+    expect(
+      reasonTargetOf(
+        settled(
+          refusedPreview("anna@example.test", {
+            ...NOTHING_ON_RECORD,
+            requested_category: "requested_followup",
+          }),
+        ),
+        contactOf,
+      ),
+    ).toEqual({
+      contactId: "c-1",
+      address: "anna@example.test",
+      category: "requested_followup",
+    });
+  });
+
   // A vouch resting on an answer the engine is replacing would be recorded
   // for the wrong message.
   it("is nobody while the answer is still out or failed", () => {
@@ -90,7 +123,9 @@ describe("who a reason to write is recorded on", () => {
 
 // The backend a vouch is recorded against: the preview door answers from the
 // vouch, as the engine would.
-function vouchBackend() {
+function vouchBackend(
+  refused: Parameters<typeof refusedPreview>[1] = NOTHING_ON_RECORD,
+) {
   let vouched = false;
   const sent = stubRoutes({
     "GET /activities/act-1": () =>
@@ -119,7 +154,7 @@ function vouchBackend() {
       return jsonResponse(
         vouched
           ? allowedPreview(["anna@example.test"])
-          : refusedPreview("anna@example.test", NOTHING_ON_RECORD),
+          : refusedPreview("anna@example.test", refused),
       );
     }
     return stubbed(input, init);
@@ -216,5 +251,43 @@ describe("recording a reason to write where the refusal is read", () => {
         reason: "Follow-up they requested",
       }),
     );
+  });
+
+  // The refusal names the missing deal, so the band offers no vouch: one in
+  // another category would let the next check pass with no deal chosen.
+  it("offers no vouch for an active-deal claim no deal backs", async () => {
+    const user = userEvent.setup();
+    const sent = vouchBackend(DEAL_CLAIM_UNBACKED);
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
+    await user.tab();
+
+    const checks = within(screen.getAllByRole("dialog")[0]);
+    await pickOption(
+      user,
+      await checks.findByRole("combobox", { name: "Reason for contact" }),
+      "Active deal",
+    );
+
+    await checks.findByText("Choose the deal for this follow-up.");
+    expect(
+      checks.queryByRole("button", { name: /^Record this reason/ }),
+    ).toBeNull();
+    expect(
+      checks.queryByRole("combobox", {
+        name: "Why you may write to anna@example.test",
+      }),
+    ).toBeNull();
+    expect(
+      sent.some((call) => call.key === "POST /contacts/c-1/consent/allow"),
+    ).toBe(false);
   });
 });
