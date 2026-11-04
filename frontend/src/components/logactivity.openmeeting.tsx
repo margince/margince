@@ -406,6 +406,7 @@ export async function recordOnMeeting(
       ...draft.followUp,
       kind: "task",
       asTranscript: false,
+      callOutcome: "",
       sourceActivityId: meeting.id,
     });
     record.followUp = true;
