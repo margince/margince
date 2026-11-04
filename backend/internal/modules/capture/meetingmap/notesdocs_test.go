@@ -10,7 +10,16 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
-const docType = "application/vnd.google-apps.document"
+const (
+	docType    = "application/vnd.google-apps.document"
+	notesOwner = "rep@myco.example"
+)
+
+// inHouse is ev organized by a colleague on the owner's own domain.
+func inHouse(ev Event) Event {
+	ev.Organizer = Actor{Email: "lead@myco.example"}
+	return ev
+}
 
 // Only the notes and transcripts Google writes for a Meet call count: a Google
 // Doc whose title ends the way Google titles them, on a meeting held on Meet.
@@ -24,7 +33,7 @@ func TestOnlyGooglesNotesAndTranscriptsOnAMeetCallCount(t *testing.T) {
 	pdf := Document{FileID: "1pdfFileId012345", Title: "Review - Transcript", MimeType: "application/pdf"}
 	badID := Document{FileID: "../escape/0123456", Title: "Review - Transcript", MimeType: docType}
 
-	got := NotesDocuments(Event{GoogleMeet: true, Documents: []Document{notes, agenda, transcript, pdf, badID, notes, german, germanTranscript}})
+	got := NotesDocuments(inHouse(Event{GoogleMeet: true, Documents: []Document{notes, agenda, transcript, pdf, badID, notes, german, germanTranscript}}), notesOwner)
 	want := []capture.MeetingDocument{
 		{FileID: notes.FileID, Title: "Review - 2026/10/30 10:00 CET -  Notes by Gemini", Kind: capture.MeetingDocumentNotes},
 		{FileID: transcript.FileID, Title: transcript.Title, Kind: capture.MeetingDocumentTranscript},
@@ -34,7 +43,7 @@ func TestOnlyGooglesNotesAndTranscriptsOnAMeetCallCount(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("documents = %+v, want %+v", got, want)
 	}
-	if got := NotesDocuments(Event{Documents: []Document{notes, transcript}}); len(got) != 0 {
+	if got := NotesDocuments(inHouse(Event{Documents: []Document{notes, transcript}}), notesOwner); len(got) != 0 {
 		t.Errorf("a meeting off Google Meet gave %+v, want none", got)
 	}
 }
@@ -46,7 +55,28 @@ func TestAMeetingRecordsABoundedNumberOfDocuments(t *testing.T) {
 	for _, id := range []string{"1aaaaaaaaaaa", "1bbbbbbbbbbb", "1cccccccccccc", "1dddddddddddd", "1eeeeeeeeeeee"} {
 		docs = append(docs, Document{FileID: id, Title: "x - Transcript", MimeType: docType})
 	}
-	if got := NotesDocuments(Event{GoogleMeet: true, Documents: docs}); len(got) != maxMeetingDocuments {
+	if got := NotesDocuments(inHouse(Event{GoogleMeet: true, Documents: docs}), notesOwner); len(got) != maxMeetingDocuments {
 		t.Errorf("%d documents, want the bound %d", len(got), maxMeetingDocuments)
+	}
+}
+
+// A title proves nothing on its own. An outside organizer can attach a Doc
+// titled like a transcript, so an event organized off the owner's domain, or by
+// nobody, has no notes documents at all.
+func TestADocFromAnOutsideOrganizerIsNeverTheMeetingsTranscript(t *testing.T) {
+	t.Parallel()
+	fake := Document{FileID: "1fakeTranscript01", Title: "Our call - Transcript", MimeType: docType}
+	for name, organizer := range map[string]string{
+		"outside organizer":    "sales@vendor.example",
+		"no organizer":         "",
+		"organizer, no domain": "lead",
+	} {
+		ev := Event{GoogleMeet: true, Organizer: Actor{Email: organizer}, Documents: []Document{fake}}
+		if got := NotesDocuments(ev, notesOwner); len(got) != 0 {
+			t.Errorf("%s: documents = %+v, want none", name, got)
+		}
+	}
+	if got := NotesDocuments(inHouse(Event{GoogleMeet: true, Documents: []Document{fake}}), "rep"); len(got) != 0 {
+		t.Errorf("an owner with no domain proves nothing, got %+v", got)
 	}
 }

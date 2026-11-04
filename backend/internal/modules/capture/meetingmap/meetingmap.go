@@ -169,7 +169,7 @@ func Classify(ev Event, owner string) Meeting {
 		ownerDomain:   ownerDom,
 		addresses:     eventAddresses(ev, owner),
 		participants:  meetingParties(ev),
-		notes:         NotesDocuments(ev),
+		notes:         NotesDocuments(ev, owner),
 	}
 }
 

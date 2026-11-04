@@ -135,3 +135,20 @@ func TestNotesPresentAtFirstSyncAreRecordedWithTheMeeting(t *testing.T) {
 		t.Errorf("%d activity.updated events on a new meeting, want none: activity.captured covers it", got)
 	}
 }
+
+// An outside organizer's Doc titled like a transcript is not the meeting's
+// transcript: a title proves nothing without an organizer of our own.
+func TestAnOutsideOrganizersTranscriptTitledDocIsNotRecorded(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	ensureGuestContact(t, e, guestKnown)
+	feed := &calendarFeed{}
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestKnown, guestList()...),
+		driveFile(transcriptFileID, "Our call - Transcript")))
+	sync := connectFeed(t, env, feed)
+	sync()
+
+	if got := notesRows(t, e, gcalMeeting(t, e).String()); got != 0 {
+		t.Errorf("%d document links from an outside organizer's event, want 0", got)
+	}
+}

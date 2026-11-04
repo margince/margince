@@ -51,11 +51,19 @@ var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{10,200}$`)
 const maxMeetingDocuments = 4
 
 // NotesDocuments picks the notes and transcripts Google wrote for this
-// meeting. All three must hold: the meeting ran on Google Meet, the file is a
-// Google Doc, and its title ends the way Google titles them. A repeated file
-// counts once.
-func NotesDocuments(ev Event) []capture.MeetingDocument {
-	if !ev.GoogleMeet {
+// meeting, read from owner's calendar. All four must hold:
+//   - the meeting ran on Google Meet;
+//   - its organizer is on owner's own domain;
+//   - the file is a Google Doc;
+//   - its title ends the way Google titles them.
+//
+// The organizer matters because a title proves nothing on its own: anybody who
+// sends an invitation can attach a Doc titled "... Transcript". Google writes
+// the notes into the organizer's Drive, so an organizer of our own is the
+// author the documents claim. The event states no file owner, so the
+// organizer's domain is the proof. A repeated file counts once.
+func NotesDocuments(ev Event, owner string) []capture.MeetingDocument {
+	if !ev.GoogleMeet || !organizedInHouse(ev.Organizer.Email, owner) {
 		return nil
 	}
 	var out []capture.MeetingDocument
@@ -76,6 +84,13 @@ func NotesDocuments(ev Event) []capture.MeetingDocument {
 		}
 	}
 	return out
+}
+
+// organizedInHouse reports whether the organizer is on the owner's own domain.
+// An address with no domain on either side proves nothing, so it answers no.
+func organizedInHouse(organizer, owner string) bool {
+	organizerDom, ownerDom := domainOf(organizer), domainOf(owner)
+	return organizerDom != "" && ownerDom != "" && organizerDom == ownerDom
 }
 
 // notesKindOf is the kind a title names, or "" when it is not one Google writes.
