@@ -2,11 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowLeft, Lock } from "lucide-react";
-import { type MouseEvent, useState } from "react";
+import type { MouseEvent } from "react";
 import { SetupSteps } from "../../components/setup-steps";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, EmptyState } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Badge, EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
@@ -190,42 +189,26 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
 }
 
 /**
- * The reader's own setup steps, the ones the top bar reminds them of. Hiding
- * that reminder leaves this card alone: here the steps are always one look away.
+ * The open setup steps the top bar reminds of; hiding that reminder leaves this
+ * card alone. Once all are done it goes: each step's page is still a row below,
+ * and a step that comes undone, such as an expired connection, brings it back.
  */
 function YourSetup({ reach }: Readonly<{ reach: SettingsReach }>) {
   const t = useT();
   const setup = useSetupChecklist(reach);
-  const [showDone, setShowDone] = useState(false);
-  if (!setup.settled || setup.total === 0) {
+  if (!setup.settled || setup.total === 0 || setup.done === setup.total) {
     return null;
   }
-  const complete = setup.done === setup.total;
   return (
     <Panel
       title={t("settings.home.setup.title")}
       titleAction={<Badge>{t("settings.scope.self")}</Badge>}
     >
       <PanelBody>
-        {complete && (
-          <Callout
-            tone="success"
-            title={t("settings.home.setup.complete")}
-            actions={
-              showDone ? undefined : (
-                <Button onClick={() => setShowDone(true)}>
-                  {t("settings.home.setup.show")}
-                </Button>
-              )
-            }
-          />
-        )}
-        {(!complete || showDone) && (
-          <SetupSteps
-            steps={setup.steps}
-            count={{ done: setup.done, total: setup.total }}
-          />
-        )}
+        <SetupSteps
+          steps={setup.steps}
+          count={{ done: setup.done, total: setup.total }}
+        />
       </PanelBody>
     </Panel>
   );

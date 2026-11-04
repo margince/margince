@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { settingsReach } from "../../lib/settingscatalog";
 import { STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -13,7 +12,7 @@ import { SettingsHome } from "./settingshome";
 
 // The "Your setup" card at the top of the settings home. It holds the same
 // steps the top bar reminds a reader of, still here after the reminder is
-// hidden.
+// hidden, and gone once every step is done.
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 
@@ -79,6 +78,7 @@ function mountHome() {
   const client = newClient();
   client.setQueryData(["me"], snapshot);
   renderWith(client, <SettingsHome reach={settingsReach(snapshot)} />);
+  return client;
 }
 
 async function card(): Promise<HTMLElement> {
@@ -120,20 +120,18 @@ describe("Your setup card", () => {
     expect(within(await card()).getAllByRole("listitem")).toHaveLength(4);
   });
 
-  it("folds to a success note once everything is done, with the steps a press away", async () => {
+  it("is gone once every step is done, and the steps' pages stay listed", async () => {
     serve({ finished: true });
-    mountHome();
+    const client = mountHome();
 
-    const setup = await card();
-    expect(within(setup).getByText("Setup is complete")).not.toBeNull();
-    expect(within(setup).queryByRole("listitem")).toBeNull();
-
-    await userEvent
-      .setup()
-      .click(within(setup).getByRole("button", { name: "Show steps" }));
-    expect(within(setup).getAllByRole("listitem")).toHaveLength(4);
-    expect(
-      within(setup).queryByRole("button", { name: "Show steps" }),
-    ).toBeNull();
+    // Every setup read answered, so an absent card is the decision, not a wait.
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(client.isFetching()).toBe(0);
+    });
+    const directory = screen.getByRole("link", { name: /Connections/ });
+    expect(directory.getAttribute("href")).toBe("/#/settings/connections");
+    expect(screen.queryByRole("heading", { name: "Your setup" })).toBeNull();
+    expect(screen.queryByText("Setup is complete")).toBeNull();
   });
 });

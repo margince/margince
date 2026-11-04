@@ -14521,8 +14521,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.action.voice": "Thêm mẫu",
   "setup.action.booking": "Bật",
   "settings.home.setup.title": "Thiết lập của bạn",
-  "settings.home.setup.complete": "Đã thiết lập xong",
-  "settings.home.setup.show": "Xem các bước",
   "connectors.tile.notSetUp": "Chưa thiết lập",
   "connectors.tile.askAdmin": "Quản trị viên bật {vendor} trong {page}.",
   "connectors.tile.registerApp":

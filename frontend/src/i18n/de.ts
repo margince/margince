@@ -14907,8 +14907,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.voice": "Beispiele hinzufügen",
   "setup.action.booking": "Einschalten",
   "settings.home.setup.title": "Deine Einrichtung",
-  "settings.home.setup.complete": "Die Einrichtung ist abgeschlossen",
-  "settings.home.setup.show": "Schritte anzeigen",
   "connectors.tile.notSetUp": "Nicht eingerichtet",
   "connectors.tile.askAdmin": "Ein Admin schaltet {vendor} unter {page} frei.",
   "connectors.tile.registerApp":
