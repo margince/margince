@@ -56,7 +56,7 @@ func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg *config.Config, lo
 	if err := compose.RemoveDeclaredAbsentCredentials(sealCtx(), e.Pool, vault, cfg, log); err != nil {
 		t.Fatalf("removing the credentials the deployment declares absent: %v", err)
 	}
-	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, cfg, log)
+	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, nil, cfg, log)
 	if err != nil {
 		t.Fatalf("building the relay: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestAnAbsentPasswordKeyStillAuthenticatesWithTheSealedCopy(t *testing.T) {
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
 	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-relay-password")
-	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, mailConfig(t, ""), log)
+	relay, err := compose.OperatorMailer(sealCtx(), e.Pool, vault, nil, mailConfig(t, ""), log)
 	if err != nil {
 		t.Fatalf("booting with no password key: %v", err)
 	}
