@@ -1697,6 +1697,7 @@ public.booking_page.booking_page_host_user_id_retirement_guard CREATE TRIGGER bo
 public.booking_page.booking_page_pkey PRIMARY KEY (id)
 public.booking_page.booking_page_slug_key UNIQUE (slug)
 public.booking_page.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.booking_page.first_used_at timestamp with time zone gen=- def=-
 public.booking_page.host_user_id uuid NOT NULL gen=- def=-
 public.booking_page.id uuid NOT NULL gen=- def=uuidv7()
 public.booking_page.revoked_at timestamp with time zone gen=- def=-

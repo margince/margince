@@ -2106,6 +2106,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.undelivered": "Email chưa gửi",
   "brief.coverage.source.bounce": "Email bị trả về",
   "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
+  "brief.coverage.source.booking_health": "Trang đặt lịch",
   "brief.coverage.source.capture_health": "Kết nối hộp thư",
   "brief.coverage.source.failed_approval": "Hành động đã duyệt bị lỗi",
   "brief.coverage.source.relationship_decay": "Quan hệ im lặng",
@@ -17766,6 +17767,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một yêu cầu về quyền riêng tư có thời hạn pháp lý. Mở và trả lời kịp hạn.",
   "worklist.ask.notice_case":
     "Liên hệ này cần nhận thông báo về quyền riêng tư. Gửi thông báo, đề nghị xác nhận thông tin, hoặc kết thúc nghĩa vụ.",
+  "worklist.ask.booking_health":
+    "Trang đặt lịch của bạn đang tạm dừng nên khách không đặt được. Mở cài đặt đặt lịch và kết nối một lịch mà Margince được thêm cuộc họp vào.",
   "worklist.ask.capture_health":
     "Một hộp thư đã ngừng thu thập thư. Kết nối lại để thư được thu thập trở lại.",
   "worklist.ask.domain_question":
@@ -18183,6 +18186,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.recorded": "Ngày ghi nhận",
   "noticeDuty.rule": "Quy định",
   "worklist.untitled.notice_case": "Thông báo quyền riêng tư cần gửi",
+  "worklist.untitled.booking_health": "Trang đặt lịch của bạn đang tạm dừng",
+  "worklist.untitled.booking_health_no_calendar":
+    "Trang đặt lịch của bạn đang tạm dừng: chưa có lịch để thêm cuộc họp",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Trang đặt lịch của bạn đang tạm dừng: Margince chỉ được đọc lịch, không được thêm cuộc họp",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Trang đặt lịch của bạn đang tạm dừng: Margince không truy cập được lịch của bạn",
   "worklist.untitled.capture_health": "Kết nối hộp thư cần chú ý",
   "worklist.untitled.ai_work_health": "Tác vụ AI cần xem lại",
   "worklist.untitled.bounce": "Email bị trả lại",

@@ -924,11 +924,12 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+7 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `first_used_at` | `timestamp with time zone` |  |  |
 | `host_user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scheduling_policy` | `jsonb` |  |  |

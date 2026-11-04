@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 194543,
+    "tool_catalog_bytes": 194570,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 49950,
+    "approx_wire_tokens_total": 49957,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93396,
+      "input_schema_bytes": 93423,
       "output_schema_bytes": 47182,
-      "description_plus_input_schema_bytes": 136067
+      "description_plus_input_schema_bytes": 136094
     }
   },
   "tools": {
@@ -2198,6 +2198,7 @@
                 "delete_disqualify_reason",
                 "delete_lead_origin",
                 "delete_lead_source",
+                "mark_booking_page_shared",
                 "remove_legal_entity_logo",
                 "remove_own_logo",
                 "remove_own_logo_icon",

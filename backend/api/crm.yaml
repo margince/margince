@@ -10735,6 +10735,26 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SchedulingProfile' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/profile/shared:
+    post:
+      tags: [Activities]
+      operationId: markBookingPageShared
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Record that the caller shared their booking link.
+      description: |
+        The app calls this after the caller copies their booking link. The first call marks the
+        caller's booking page as used; later calls change nothing. Home warns a host about a
+        paused booking page only once the page was used: somebody booked through it, or its host
+        shared its link. Answers 404 when the caller has no booking page.
+      x-mcp-tool: { verb: mark_booking_page_shared, router: change_settings, action: mark_booking_page_shared, tier: auto_execute, scope: write, served_by: route }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The booking page is marked as used. }
+        '404': { $ref: '#/components/responses/NotFound' }
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -71544,6 +71564,18 @@ components:
             else's. Withheld — named in `lanes_omitted` — for a caller with no human
             behind it. Absent — not empty — on an installation whose feed does not read
             capture connections.
+        booking_health:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The reader's OWN booking page when it takes no bookings: at most one card. A page
+            counts only when it is switched on and was used, meaning somebody booked through it
+            or its host copied its link. `kind` is the page's `blocker` (`no_calendar`,
+            `calendar_read_only` or `calendar_unavailable`). Fixing it lives on the booking
+            settings screen, so the card offers no verbs.
+
+            Withheld — named in `lanes_omitted` — for a caller with no human behind it. Absent —
+            not empty — on an installation whose feed does not read booking pages.
         domain_questions:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -71708,11 +71740,11 @@ components:
             not read introductions.
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, capture_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, capture_health, booking_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         lanes_failed:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, capture_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay, did_not_run, dsr, notice_case, capture_health, booking_health, domain_questions, ai_work_health, bounces, undelivered, automation_health, notices, introductions, meetings_unreported] }
           description: >-
             Lanes that could not be read. Separate from `lanes_omitted` because withheld and
             broken are different answers: one is this caller's access, the other is this
@@ -71818,6 +71850,11 @@ components:
           description: >-
             How many capture connections need the reader's hand — one per connection,
             the full count rather than a bounded page.
+        booking_health:
+          type: integer
+          minimum: 0
+          description: >-
+            How many paused booking pages need the reader's hand: zero or one.
         domain_questions:
           type: integer
           minimum: 0
@@ -71953,7 +71990,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         preparation:
@@ -72652,7 +72689,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -73693,7 +73730,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 

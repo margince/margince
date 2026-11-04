@@ -320,6 +320,11 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		if err != nil {
 			return err
 		}
+		if row.PublicIntent != nil {
+			if err := markBookingPageBookedTx(ctx, tx, host, s.now()); err != nil {
+				return err
+			}
+		}
 		if proposalID != ids.Nil {
 			if err := consumeProposal(ctx, tx, proposalID, row.ID); err != nil {
 				return err

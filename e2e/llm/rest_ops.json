@@ -557,6 +557,7 @@
     "POST /v1/reports/{report}": "run_report",
     "POST /v1/scheduled-sends/{id}/cancel": "cancel_scheduled_send",
     "POST /v1/scheduling/invitations": "invite_meeting",
+    "POST /v1/scheduling/profile/shared": "mark_booking_page_shared",
     "POST /v1/scheduling/proposals": "create_meeting_proposal",
     "POST /v1/tag-suggestions/{id}/accept": "accept_tag_suggestion",
     "POST /v1/tag-suggestions/{id}/dismiss": "dismiss_tag_suggestion",
