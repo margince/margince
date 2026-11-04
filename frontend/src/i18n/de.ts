@@ -2695,7 +2695,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
   "history.field.extension_relationship_types":
-    "Unternehmenstypen aus Erweiterungen",
+    "Erweiterungs-Beziehungstypen",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
