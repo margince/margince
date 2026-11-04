@@ -72,8 +72,8 @@ func markAttention(row *invitationRow, reason string, episode ids.UUID) {
 
 // parkInvitationAndQueue parks the finishing row and every queued row of the
 // same host and calendar that no worker holds under lease. It parks nothing
-// for a refusal whose attempt began before the host's last episode resumed:
-// that refusal is news about the calendar the host has since reconnected.
+// for a refusal whose attempt began before the host's last episode resumed.
+// That refusal is news about a calendar the host has since reconnected.
 func (s *Store) parkInvitationAndQueue(ctx context.Context, tx pgx.Tx, row *invitationRow, attemptedAt time.Time) (bool, error) {
 	episode, current, err := s.disconnectEpisode(ctx, tx, row.Host, row.Provider, attemptedAt)
 	if err != nil || !current {
@@ -113,8 +113,8 @@ func (s *Store) parkQueued(ctx context.Context, tx pgx.Tx, id, episode ids.UUID)
 }
 
 // disconnectEpisode is the episode a refusal belongs to. An open episode is
-// joined. A resumed one is joined by nothing: a refusal whose attempt began
-// before it resumed is stale (current false), and a later one starts a new
+// joined. A resumed one is joined by nothing. A refusal whose attempt began
+// before the resume is stale (current false); a later one starts a new
 // episode. The row outlives the invitations it parked for that reason.
 func (s *Store) disconnectEpisode(ctx context.Context, tx pgx.Tx, host ids.UserID, provider string, attemptedAt time.Time) (ids.UUID, bool, error) {
 	args := schedulingArgs{}
