@@ -4674,6 +4674,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachmentWithheld":
     "Nicht gespeichert, da die E-Mail privat ist.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
+  "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
+  "readerRendering.show": "In meiner Sprache zeigen",
+  "readerRendering.pending": "Wird in deiner Sprache geschrieben",
+  "readerRendering.showOriginal": "Original zeigen",
+  "readerRendering.label": "In deiner Sprache",
+  "readerRendering.disclaimer":
+    "Von KI aus dem Original geschrieben, nur für dich. Nichts wird gespeichert.",
+  "readerRendering.alreadyYours": "Das ist schon in deiner Sprache.",
+  "readerRendering.noModel":
+    "Dafür braucht es ein KI-Modell. Ein Admin kann es unter Einstellungen → KI verbinden.",
+  "readerRendering.tooLong":
+    "Der Text ist zu lang, um ihn auf einmal in deiner Sprache zu zeigen. Lies das Original.",
   "email.detail.withheldReason":
     "Diese Nachricht ist nicht für dich freigegeben",
   "email.detail.from": "Von",

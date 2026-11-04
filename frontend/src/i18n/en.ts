@@ -4648,6 +4648,18 @@ export const en = {
   "email.detail.attachmentWithheld":
     "Not kept, because the message is private.",
   "email.detail.showQuoted": "Show quoted history",
+  "aiTask.name.reader_rendering": "Showing a message in your language",
+  "readerRendering.show": "Show in my language",
+  "readerRendering.pending": "Writing it in your language",
+  "readerRendering.showOriginal": "Show original",
+  "readerRendering.label": "In your language",
+  "readerRendering.disclaimer":
+    "Written by AI from the original, for you only. Nothing is saved.",
+  "readerRendering.alreadyYours": "This is already in your language.",
+  "readerRendering.noModel":
+    "Showing this in your language needs an AI model. An administrator can connect one under Settings → AI.",
+  "readerRendering.tooLong":
+    "This text is too long to show in your language in one go. Read the original.",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
   "email.detail.to": "To",

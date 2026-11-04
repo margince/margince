@@ -80,8 +80,8 @@ Write one claim per sentence, and cite the ONE record that sentence is about. Th
 If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
 If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.`
 
-// The answer is filed against the account and read by whoever asks the same
-// question next, so it takes the installation's language like the brief above.
+// The answer goes to the reader who asked and is stored nowhere, so it is
+// written in that reader's language (Service.answerLanguage), not the base one.
 func askSystemFor(question crmcontracts.CompanyQuestion, fence promptfence.Fence, lang string) string {
 	return askSystem + "\n" + openWorkRule + "\n" + askInstruction[question] + "\n" +
 		promptlang.Rule(lang) + "\n" + fence.Rule("account summary")

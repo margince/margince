@@ -40,6 +40,18 @@ func TestReaderLanguageIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) 
 	}
 }
 
+func TestTheReaderLanguageForAPromptIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) {
+	svc, ctx, _ := seatChoosingALanguage(t)
+	if got := ReaderLanguageForPrompt(ctx, svc.db.Pool()); got != "en" {
+		t.Fatalf("a member who never chose reads the base language en, got %q", got)
+	}
+	chosen, _ := principal.Actor(ctx)
+	chosen.Locale = "de"
+	if got := ReaderLanguageForPrompt(principal.WithActor(ctx, chosen), svc.db.Pool()); got != "de" {
+		t.Fatalf("a member who chose de reads de, got %q", got)
+	}
+}
+
 func TestASignedInMembersChosenLanguageRidesTheirPrincipal(t *testing.T) {
 	ctx := withHumanPrincipal(context.Background(), Identity{Locale: "vi"})
 	actor, ok := principal.Actor(ctx)
