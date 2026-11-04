@@ -132,7 +132,7 @@ func RecordDocumentLinksTx(
 	if len(links) == 0 {
 		return over, nil
 	}
-	if err := keeper.RecordLinks(ctx, tx, activityID, from, links); err != nil {
+	if _, err := keeper.RecordLinks(ctx, tx, activityID, from, links); err != nil {
 		return over, fmt.Errorf("capture: recording the document links a message carried: %w", err)
 	}
 	return over, nil

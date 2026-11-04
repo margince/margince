@@ -2584,6 +2584,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.filled": "Các trường được điền thêm",
   "history.field.guests_added": "Khách được thêm từ lịch",
   "history.field.guest_links_added": "Khách được liên kết từ lịch",
+  "history.field.meeting_documents_added":
+    "Ghi chú cuộc họp được liên kết từ lịch",
   "history.field.guests_retired": "Khách bị lịch xóa",
   "history.field.guest_answers_changed":
     "Phản hồi của khách được cập nhật từ lịch",

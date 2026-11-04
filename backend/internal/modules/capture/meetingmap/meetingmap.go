@@ -85,6 +85,10 @@ type Event struct {
 	Attendees []Actor
 	// PartiesHidden: the provider withheld guests from this copy of the event.
 	PartiesHidden bool
+	// GoogleMeet says the event's conference is a Google Meet call.
+	GoogleMeet bool
+	// Documents are the files the provider lists as attached to the event.
+	Documents []Document
 }
 
 // Actor is one organizer or attendee. The address resolves the counterparty
@@ -128,6 +132,7 @@ type Meeting struct {
 	ownerDomain     string
 	addresses       []string
 	participants    connector.Parties
+	notes           []capture.MeetingDocument
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -164,6 +169,7 @@ func Classify(ev Event, owner string) Meeting {
 		ownerDomain:   ownerDom,
 		addresses:     eventAddresses(ev, owner),
 		participants:  meetingParties(ev),
+		notes:         NotesDocuments(ev),
 	}
 }
 
@@ -248,7 +254,8 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
-			Direction: "",
+			Direction:        "",
+			MeetingDocuments: m.notes,
 		},
 		Source:     connectorName + ":" + m.id,
 		CapturedBy: "connector:" + connectorName,
