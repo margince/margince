@@ -28,7 +28,18 @@ import (
 
 type privateCalendar struct{ activities.SchedulingCalendar }
 
+// withConnectedCalendar serves the HTTP doors through privateCalendar: a
+// connected calendar that can take bookings, so a switched-on page is open.
+func withConnectedCalendar() Option {
+	return WithSchedulingCalendarForTest(func(activities.SchedulingCalendar) activities.SchedulingCalendar { return privateCalendar{} })
+}
+
 func (privateCalendar) Check(context.Context, ids.UserID, string) error { return nil }
+
+func (privateCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
+
 func (privateCalendar) CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error {
 	return nil
 }

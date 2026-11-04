@@ -423,6 +423,22 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.getAllByText("unpriced, excluded from total").length).toBe(2);
     expect(screen.queryByText("€0.00")).toBeNull();
   });
+
+  it("names the tax category a line takes its rate from, and nothing for a typed rate", async () => {
+    const standard = { ...existingLine, tax_category: "standard" };
+    const typed = {
+      ...existingLine,
+      id: "li-2",
+      position: 2,
+      tax_category: null,
+    };
+    stubOffer({ ...baseOffer, line_items: [standard, typed] });
+    render(<OfferScreen id="o-1" />);
+    expect(
+      (await screen.findByTestId("line-tax-category-li-1")).textContent,
+    ).toBe("Standard");
+    expect(screen.queryByTestId("line-tax-category-li-2")).toBeNull();
+  });
 });
 
 // A method-aware backend for the regenerate action (Task 4.1, OP-11): GETs

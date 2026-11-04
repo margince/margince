@@ -19,29 +19,22 @@ import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { DecisionsPanel } from "./analytics.decisions";
-import {
-  SalesHero,
-  StockCharts,
-  useSalesCharts,
-} from "./analytics.overview.board";
+import { StockCharts, useSalesCharts } from "./analytics.overview.board";
 import {
   type OverviewDials,
   outboundDials,
   scopeDials,
 } from "./analytics.overview.context";
-import { DecisionSummary } from "./analytics.overview.decision";
 import { HeroAside } from "./analytics.overview.hero";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import {
   InterventionPanel,
   useInterventions,
 } from "./analytics.overview.interventions";
+import { SalesOverviewMetrics } from "./analytics.overview.metrics";
 import { metricOf, OverviewLinks } from "./analytics.overview.readings";
 import { SalesHeader } from "./analytics.overview.salesheader";
-import {
-  OpenPipelineLine,
-  SalesReadings,
-} from "./analytics.overview.salesreadings";
+import { OpenPipelineLine } from "./analytics.overview.salesreadings";
 import { SinceLastReview } from "./analytics.overview.since";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -207,61 +200,35 @@ function SalesReviewBody({
                 )}
                 onApply={apply}
               />
-              {/* The lead and its three readings share one row, so the
-                  decision and the first action still fit the first screen. */}
-              <div className="analytics-lead">
-                <SalesHero
-                  evaluation={evaluation}
-                  charts={charts}
-                  onEvidence={openEvidence}
-                  aside={
-                    <>
-                      <AssessmentPanel
-                        selection={selection}
-                        evaluation={evaluation}
-                        onEvidence={openEvidence}
-                      />
-                      <HeroAside
-                        evaluation={evaluation}
-                        charts={charts?.data}
-                        onApply={apply}
-                        targetSetup={targetSetup}
-                      />
-                    </>
-                  }
-                />
-                <SalesReadings
-                  evaluation={evaluation}
-                  onEvidence={openEvidence}
-                  forecastHref={forecastHref}
-                />
-              </div>
+              <SalesOverviewMetrics
+                evaluation={evaluation}
+                forecastHref={forecastHref}
+                onEvidence={openEvidence}
+                aside={
+                  <HeroAside
+                    evaluation={evaluation}
+                    charts={charts?.isError ? undefined : charts?.data}
+                    onApply={apply}
+                    targetSetup={targetSetup}
+                  />
+                }
+              />
             </>
           )}
         </QueryGate>
       )}
-      {/* One place for the action list, so it never moves while the figures
-          load; its sources are its own, so a failed evaluation leaves it. */}
-      <div className="analytics-pair">
-        {answered && (
-          <DecisionSummary
-            evaluation={answered}
-            checks={{
-              state: checks.state,
-              findings: checks.list?.totals?.findings,
-              deals: checks.list?.totals?.deals,
-            }}
-            forecastHref={forecastHref}
-            onEvidence={openEvidence}
-          />
-        )}
-        <InterventionPanel
-          interventions={checks}
-          dials={findingDials(doors)}
-          emptyLabel={t("analytics.overview.salesNothing")}
+      {answered && (
+        <AssessmentPanel
+          selection={selection}
+          evaluation={answered}
+          onEvidence={openEvidence}
         />
-      </div>
-      {/* Past the first screen, so the decision and the first action stay on it. */}
+      )}
+      <InterventionPanel
+        interventions={checks}
+        dials={findingDials(doors)}
+        emptyLabel=""
+      />
       <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}

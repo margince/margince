@@ -101,6 +101,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/outcome-reviews` | listDealOutcomeReviews | The reviews written about this deal's closings. | Read records | at once |
 | `GET /deals/{id}/status` | getDealStatus | Where the deal stands, what could lose it, and the one thing to do next. | Read records | at once |
 | `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | Read records | at once |
+| `GET /deals/{id}/viability` | getDealViability | Whether the customer still supports this deal, and the review behind the answer. | Read records | at once |
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
 
 ## Pipelines
@@ -162,7 +163,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /scheduling/invitations` | createMeetingInvitation | Reserve a meeting and request a calendar-native invitation. | Send messages | waits for approval |
 | `GET /scheduling/invitations/{id}` | getMeetingInvitation | Read invitation delivery and calendar state. | Read records | at once |
 | `GET /availability` | getAvailability | Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb). | Read records | at once |
-| `POST /bookings` | bookMeeting | Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb). | Send messages | at once |
 | `GET /activities/follow-up-settings` | getFollowUpSettings | How long a sent message may go unanswered before the worklist reminds its sender. | Read records | at once |
 | `GET /commitments` | listOpenCommitments | The promises still open, overdue first. | Read records | at once |
 | `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | Read records | at once |

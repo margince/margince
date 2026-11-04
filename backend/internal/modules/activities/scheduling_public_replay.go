@@ -9,12 +9,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -116,4 +118,37 @@ func (*publicBookingKeyError) Error() string {
 
 func (e *publicBookingKeyError) MessageFault() (string, string) {
 	return "invalid_idempotency_key", e.Error()
+}
+
+// pausedBookingBodyLimit bounds what a paused page reads before it refuses.
+const pausedBookingBodyLimit = 1 << 16
+
+// answerPausedBooking answers a booking on a paused page as an unknown slug
+// is answered. The one exception is a retry of a booking the page already
+// took: that caller holds its own key and already knows the page.
+func (h Handlers) answerPausedBooking(w http.ResponseWriter, r *http.Request, page BookingPage, slug string) {
+	if retried, intent := h.pausedRetry(r, w, page, slug); retried != nil {
+		writePublicInvitation(w, *retried, intent.Marketing)
+		return
+	}
+	httperr.Write(w, r, apperrors.ErrNotFound)
+}
+
+// pausedRetry is the booking a paused page already took for this request's
+// key, or nil. Nothing it finds wrong is answered: a paused page says nothing.
+func (h Handlers) pausedRetry(r *http.Request, w http.ResponseWriter, page BookingPage, slug string) (*crmcontracts.MeetingInvitation, *publicBookingIntent) {
+	var req crmcontracts.BookPublicMeetingJSONRequestBody
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, pausedBookingBodyLimit)).Decode(&req) != nil {
+		return nil, nil
+	}
+	intent, err := publicBookingRequestIntent(r, slug, req)
+	if err != nil {
+		return nil, nil
+	}
+	recovered, err := h.store.recoverPublicBooking(r.Context(), page.HostUserID, intent)
+	if err != nil {
+		slog.WarnContext(r.Context(), "booking: a retry on a paused page could not be recovered", "err", err)
+		return nil, nil
+	}
+	return recovered, intent
 }

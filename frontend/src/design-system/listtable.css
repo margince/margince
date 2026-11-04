@@ -215,7 +215,7 @@
 }
 
 /* EVERY CARET ON THIS SURFACE, at one size: the product's other carets are
- * drawn at 12 (`.lt-arrow`, `.inline-editable-caret`), because a caret
+ * drawn at 12 (`.lt-arrow`), because a caret
  * qualifies the text beside it rather than naming it and so sits under the
  * control's own leading glyph. One rule and not a `size=` per call site,
  * because inside a button `.btn svg` would override the attribute anyway —

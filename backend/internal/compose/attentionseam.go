@@ -52,7 +52,7 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 }
 
 func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
-	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
+	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, Actionable: true, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
 }
 
 // CountPending is the engine's exact count, under the scope the lane reads.
@@ -336,7 +336,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
-		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithDealReviews(attentionDealReviews{pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
 		// How many promises each teammate has already missed, for the team
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep
@@ -388,6 +388,7 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 			AskedAt:    row.AskedAt,
 			EvidenceAt: row.EvidenceAt,
 			Note:       row.Note,
+			Context:    row.Context,
 		})
 	}
 	return out, nil

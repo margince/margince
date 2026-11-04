@@ -238,6 +238,25 @@ function AttentionNotice({
   if (meeting.status !== "needs_attention") return null;
   if (!host)
     return <Callout tone="warning" title={t("scheduling.guestRecovery")} />;
+  // A refused calendar parked every queued invitation of the host. Retrying
+  // one would fail the same way; reconnecting sends them all on.
+  if (meeting.attention_reason === "calendar_disconnected")
+    return (
+      <Callout
+        tone="warning"
+        title={t("scheduling.calendarDisconnectedTitle")}
+        actions={
+          <Button
+            variant="primary"
+            onClick={() => navigate({ screen: "settings", id: "connections" })}
+          >
+            {t("scheduling.reconnectCalendar")}
+          </Button>
+        }
+      >
+        <p>{t("scheduling.calendarDisconnectedHelp")}</p>
+      </Callout>
+    );
   return (
     <Callout
       tone="warning"

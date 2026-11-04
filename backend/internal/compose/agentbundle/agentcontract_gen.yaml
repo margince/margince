@@ -3223,7 +3223,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3274,7 +3278,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3315,7 +3323,11 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3434,77 +3446,6 @@ paths:
                     enum: [calendar, none, unknown]
                     description: |-
                       What these slots were computed FROM, which decides what an empty window means.
-        '422': {$ref: '#/components/responses/ValidationError'}
-        '502': {$ref: '#/components/responses/CalendarUnavailable'}
-  /bookings:
-    post:
-      tags: [Activities, AI]
-      operationId: bookMeeting
-      summary: Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-      description: |-
-        Records the meeting on the timeline. No invite is sent. Use the explicit
-        scheduling invitation command to create an event and notify the attendee.
-
-        Needs the passport permission Send messages.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [start, end, links]
-              properties:
-                host_user_id: {type: string, format: uuid}
-                start: {type: string, format: date-time}
-                end: {type: string, format: date-time}
-                subject: {type: string}
-                attendee_emails:
-                  type: array
-                  items: {type: string, format: email}
-                  description: |-
-                    Who the meeting is with. **Accepted and not delivered to**: nothing in this
-                    build emails these addresses or adds them to a calendar event, and the
-                    created activity does not carry them either. Supply them for the caller's
-                    own record of intent, and tell the attendee yourself.
-                links:
-                  type: array
-                  minItems: 1
-                  maxItems: 25
-                  description: |-
-                    Entities to associate the resulting meeting activity with. At least one is
-                    required: a meeting belonging to no record appears on no timeline and is one
-                    nobody will find again, which is the same reason `SendCompanyEmailRequest`
-                    carries the bound. Each one is row-scope probed and written as its own row,
-                    so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-                    before it stages.
-                  items:
-                    type: object
-                    required: [entity_type, entity_id]
-                    properties:
-                      entity_type: {type: string, enum: [contact, company, deal, lead, project]}
-                      entity_id: {type: string, format: uuid}
-                consent: {$ref: '#/components/schemas/CaptureConsent'}
-      responses:
-        '201':
-          description: Meeting booked; the logged meeting activity.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/Activity'}
-        '403':
-          description: Approval token missing for the booking, or RBAC denied.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: 'Slot no longer available (`code: slot_taken`).'
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /automations/catalog:
@@ -3770,8 +3711,10 @@ paths:
       summary: The workspace's signature template.
       description: |-
         The layout every member's mail signs with when it is set, filled in with each member's
-        own name, title and phone. Read by a seat that may read installation settings; changed
-        by admin/ops. Governed by the `installation_settings` RBAC object.
+        own name, title and phone. A member assigned to a legal entity that has its own
+        `signature_template` signs with that one instead. Read by a seat that may read
+        installation settings; changed by admin/ops. Governed by the `installation_settings`
+        RBAC object.
       responses:
         '200':
           description: The template.
@@ -6984,6 +6927,10 @@ paths:
           in: query
           schema: {type: string}
           description: Case-insensitive name/SKU substring match.
+        - name: tax_category
+          in: query
+          schema: {type: string, enum: [standard, reduced, exempt, unclassified]}
+          description: Only products in this tax category; `unclassified` lists those nobody has classified yet.
       responses:
         '200':
           description: A page of products.
@@ -7976,9 +7923,9 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: {type: string, enum: [open, weighted, evidence, best_case], default: open}
+          schema: {type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted], default: open}
           description: >-
-            Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+            Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
       responses:
         '200':
           description: The classified difference.
@@ -8382,6 +8329,29 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DealCoverage'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /deals/{id}/viability:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealViability
+      security: [{bearerAuth: []}]
+      summary: Whether the customer still supports this deal, and the review behind the answer.
+      description: |-
+        The deal's treatment in the qualified forecast and what it rests on: the input check's
+        last receipt and its reasons, the close date's standing, the stage chance, and the open
+        `deal_viability` review with its task. The review is shown while it is open, even when
+        its task is done: completing the task does not answer the review.
+      responses:
+        '200':
+          description: The deal's viability.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DealViability'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -14420,8 +14390,10 @@ components:
           maxLength: 4000
           description: |-
             The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+            sender works for, sized for mail, in the message itself; the default entity's logo is
+            the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     CompanyGraphEdge:
@@ -14700,6 +14672,19 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
+    SalesAssessmentView:
+      type: string
+      enum: [sales, prospecting, team]
+    ReportingOverviewAction:
+      description: An application-supplied action over the exact records named by its evidence reference.
+      type: object
+      additionalProperties: false
+      required: [id, label, evidence, count]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        count: {type: integer, minimum: 1}
+        evidence: {$ref: '#/components/schemas/ReportingEvidenceRef'}
     Relationship:
       type: object
       description: |-
@@ -16271,6 +16256,15 @@ components:
         replace_link: {type: boolean, writeOnly: true}
         email_reminder: {type: boolean, description: Send one operational email reminder one hour before future meetings.}
         video_call: {type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.}
+        blocker:
+          type: string
+          readOnly: true
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable]
+          description: |-
+            Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+            the page names no calendar (a page saved before the profile existed reads this way).
+            `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+            the connection is gone or refused. Answered on the host's own profile read only.
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]
@@ -16283,6 +16277,26 @@ components:
         location: {type: string, maxLength: 1000}
         description: {type: string, maxLength: 5000}
         video_call: {type: boolean, description: Add a video call link from the connected calendar. Absent follows the host's profile setting.}
+        attendee_emails:
+          type: array
+          maxItems: 24
+          items: {type: string, format: email}
+          description: |-
+            Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+            Each address is resolved to a contact, a colleague or a lead the host can see; an
+            address matching nobody is invited as named by the host. Contacts and leads must hold
+            transactional consent; colleagues and host-named addresses are not asked.
+        links:
+          type: array
+          maxItems: 25
+          description: Further records to file the meeting on, beside the invitee.
+          items: {$ref: '#/components/schemas/MeetingRecordLink'}
+    MeetingRecordLink:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_id: {type: string, format: uuid}
     MeetingInvitation:
       type: object
       required: [id, status, start, end, subject, location, version]
@@ -16300,6 +16314,14 @@ components:
         provider: {type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads.}
         video_call: {type: boolean, description: A video call link was requested for this meeting.}
         video_url: {type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one."}
+        attention_reason:
+          type: string
+          enum: [delivery_failed, calendar_disconnected]
+          description: |-
+            Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+            Margince, so every queued invitation of that host and calendar was paused; they go out again on
+            their own once the calendar is reconnected with write access. `delivery_failed`: this one
+            invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
     CommitmentMeaning:
       type: object
       description: The source-supported state and deadline precision of a possible promise.
@@ -18944,6 +18966,7 @@ components:
         - leads_created
         - lead_status_moves
         - leads_promoted
+        - leads_qualified
         - lead_first_response
         - leads_awaiting_response
         - partner_pipeline
@@ -19600,7 +19623,7 @@ components:
           format: double
         basis:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing:
           type: number
@@ -19633,6 +19656,14 @@ components:
         the field existed; a reader then says the basis is unknown and never guesses one.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_pipeline_minor:
+          type: integer
+          format: int64
+          description: Open deal value eligible for the forecast period, in base minor units.
+        call_at:
+          type: string
+          format: date-time
+          description: Submission time of the compatible manager call.
         landing:
           $ref: '#/components/schemas/ForecastLanding'
         period:
@@ -19709,6 +19740,10 @@ components:
         - metrics
         - charts
       properties:
+        overview_actions:
+          type: array
+          maxItems: 3
+          items: {$ref: '#/components/schemas/ReportingOverviewAction'}
         evaluation_key: {type: string}
         context:
           $ref: '#/components/schemas/ReportingContext'
@@ -19772,6 +19807,9 @@ components:
         - metrics
         - presets
       properties:
+        assessment_views:
+          type: array
+          items: {$ref: '#/components/schemas/SalesAssessmentView'}
         schedule_ready:
           type: boolean
           description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
@@ -20015,7 +20053,7 @@ components:
       additionalProperties: false
       description: "What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
-        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1."}
+        max_engaged_seats: {type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1."}
         untouched_days: {type: integer, minimum: 1, maximum: 365, description: "An account with an open deal and no exchange within this many days is untouched. Default 21."}
         silent_days: {type: integer, minimum: 1, maximum: 365, description: "A won account with no exchange within this many days is silent. Default 30."}
         won_within_days: {type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes an account a won account. Default 180."}
@@ -20390,6 +20428,26 @@ components:
       properties:
         to_user_id: {type: string, format: uuid}
         preview_token: {type: string, minLength: 1}
+    InviteEmailHandoff:
+      type: object
+      description: |-
+        What became of an invitation email at the time of the answer, as on the Deal Room invite.
+      required: [sendable, queued]
+      properties:
+        sendable:
+          type: boolean
+          description: |-
+            Whether this installation has an outbound relay and a link origin configured, so the
+            set-password link can be mailed at all. False means the admin passes the link on by
+            hand (`issueUserPasswordLink`).
+        queued:
+          type: boolean
+          description: |-
+            Whether the invitation email was handed to the sender. The send runs after the answer,
+            so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+            refuses the address is reported a moment later as the member's
+            `invite_email_state` on the roster, where `resend_invite` is offered.
+      additionalProperties: false
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -20437,6 +20495,14 @@ components:
         email_editable:
           type: boolean
           description: Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
+        invite_email_state:
+          type: [string, 'null']
+          enum: [sending, sent, failed, null]
+          description: >-
+            What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+        invite_email:
+          allOf: [{$ref: '#/components/schemas/InviteEmailHandoff'}]
+          description: Present only on the answers of `inviteUser` and `resendUserInvite`.
         merged_from:
           type: array
           items: {$ref: '#/components/schemas/SeatName'}
@@ -20445,9 +20511,9 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
+            enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
-            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:
           type: [string, 'null']
           format: date-time
@@ -20502,6 +20568,7 @@ components:
         - priced_count
         - confirmed_date_count
         - fx_missing_count
+        - qualification_mode
         - as_of
         - timezone
         - base_currency
@@ -20568,6 +20635,11 @@ components:
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
         qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: >-
+            Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
         self_correcting:
           type: boolean
           description: >-
@@ -20665,6 +20737,88 @@ components:
         close_passed: {type: boolean}
         closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
+    DealViability:
+      type: object
+      additionalProperties: false
+      required: [deal_id, qualification_mode, qualification, stage_probability, close_date_provisional, close_date_overdue]
+      properties:
+        deal_id: {type: string, format: uuid}
+        qualification_mode:
+          type: string
+          enum: ['off', enforcing]
+          description: Whether the installation's qualified forecast applies `qualification`.
+        qualification:
+          type: string
+          enum: [eligible, excluded, unsupported, unknown, closed]
+          description: >-
+            The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+        assessed_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the input check last assessed the deal; null when it never did.
+        disposition:
+          type: string
+          enum: [none, open_review, override, unsupported]
+          description: The review standing the qualification rests on.
+        complete:
+          type: boolean
+          description: Whether the deal was judged on its current evidence under the current policy.
+        policy_version: {type: string}
+        receipt:
+          $ref: '#/components/schemas/DealViabilityReceipt'
+        expected_close_date: {type: [string, 'null'], format: date}
+        close_date_provisional: {type: boolean}
+        close_date_overdue:
+          type: boolean
+          description: True when the expected close date is before today in the installation's zone.
+        stage_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The baseline chance, the deal's stage probability.
+        review:
+          $ref: '#/components/schemas/DealViabilityReview'
+    DealViabilityReceipt:
+      type: object
+      additionalProperties: false
+      description: The input check's last answer about the deal. Absent when it never assessed it.
+      required: [outcome, reasons, valid_until, policy_version, current]
+      properties:
+        outcome: {type: string, description: 'The check''s outcome, such as `eligible` or `unsupported`.'}
+        policy_version: {type: string, description: The viability policy the check applied.}
+        current:
+          type: boolean
+          description: >-
+            Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
+        reasons:
+          type: array
+          items: {type: string}
+          description: The reason codes the check recorded.
+        valid_until: {type: string, format: date-time}
+    DealViabilityReview:
+      type: object
+      additionalProperties: false
+      description: >-
+        The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+      required: [id, opened_at, episode]
+      properties:
+        id: {type: string, format: uuid}
+        opened_at: {type: string, format: date-time}
+        episode: {type: integer, minimum: 1}
+        delivery_state:
+          type: [string, 'null']
+          enum: [pending, failed, delivered, null]
+          description: How far handing the review to a task got; null before a pass queued it.
+        task:
+          $ref: '#/components/schemas/DealViabilityTask'
+    DealViabilityTask:
+      type: object
+      additionalProperties: false
+      description: The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+      required: [id, done]
+      properties:
+        id: {type: string, format: uuid}
+        done: {type: boolean}
     ForecastQualifiedReadings:
       type: object
       description: >-
@@ -20729,9 +20883,9 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [commit_evidence, weighted, manager_call]
+          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
           description: >-
-            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+            Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
         won_minor:
           type: integer
           format: int64
@@ -20748,9 +20902,9 @@ components:
             Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
+          enum: [call_absent, call_below_actual, qualified_unavailable]
           description: >-
-            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+            Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
       additionalProperties: false
     ForecastSufficiency:
       type: object
@@ -20908,7 +21062,7 @@ components:
       type: object
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources, freshness]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness, review_deliveries]
       properties:
         run_id: {type: string, format: uuid}
         as_of: {type: string, format: date-time}
@@ -20931,6 +21085,27 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
+        review_deliveries: {$ref: '#/components/schemas/AssuranceReviewDeliveries'}
+      additionalProperties: false
+    AssuranceReviewDeliveries:
+      type: object
+      description: >-
+        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+      required: [pending, failed, delivered]
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          description: Reviews whose task is queued or retrying.
+        failed:
+          type: integer
+          minimum: 0
+          description: Reviews whose task could not be delivered after every retry.
+        delivered:
+          type: integer
+          minimum: 0
+          description: >-
+            Reviews that have their task, including a task somebody already completed while the review stays open.
       additionalProperties: false
     AssuranceFreshness:
       type: object
@@ -20984,7 +21159,7 @@ components:
         The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: {type: string, enum: [open, weighted, evidence, best_case]}
+        reading: {type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted]}
         opening_minor: {type: integer, format: int64}
         closing_minor: {type: integer, format: int64}
         buckets:
@@ -21003,9 +21178,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, excluded, reinstated, not_checked, won, lost, reopened_or_archived, fx, definition, model]
           description: >-
-            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -22391,44 +22566,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Team'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    CaptureConsent:
-      type: object
-      description: |-
-        The consent passthrough every capture surface (booking, public forms, imports) must carry. Names the purpose and the exact
-        wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
-      required: [policy_version]
-      properties:
-        purpose_id:
-          type: string
-          format: uuid
-          description: |-
-            The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
-            — the booking doors are, to the `transactional` lane — and the server resolves that
-            lane's own id for this installation.
-        policy_version: {type: string, maxLength: 200, description: Version id of the consent wording shown to the subject.}
-        wording:
-          type: [string, 'null']
-          maxLength: 2000
-          description: |-
-            The exact wording shown, stored with the consent event for demonstrability.
-        marketing:
-          type: object
-          description: |-
-            An affirmative marketing tick the subject made on the same form. It does NOT record a
-            grant: the surface mails a single-use confirmation link to the address on the booking
-            and the grant exists only once the subject spends it. That is what lets an anonymous
-            form carry the question at all — a stranger who knows an address can cause one
-            confirmation mail to be sent to its owner, never a subscription in their name.
-          required: [purpose_id, policy_version, wording]
-          properties:
-            purpose_id:
-              type: string
-              format: uuid
-              description: |-
-                The marketing purpose being asked about. It must require double opt-in; a purpose
-                that does not is refused, because there would be nothing for the mailed link to ask.
-            policy_version: {type: string, maxLength: 200, description: Version id of the marketing wording shown to the subject.}
-            wording: {type: string, maxLength: 2000, description: 'The exact marketing wording shown, carried onto the grant the confirmation records.'}
     AutomationCatalogEntry:
       type: object
       description: An automation *type* in the closed starter library.
@@ -22493,6 +22630,7 @@ components:
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.'}
         active: {type: boolean}
@@ -22521,6 +22659,7 @@ components:
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit or send null to leave it unclassified.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
@@ -22538,6 +22677,7 @@ components:
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}
@@ -22868,9 +23008,10 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: number, format: double, description: '0–100, up to 2 decimal places.'}
-        tax_rate: {type: number, format: double, description: 'Percent, up to 2 decimal places.'}
+        tax_rate: {type: number, format: double, description: 'Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer''s legal entity: today''s on a draft, the send day''s once sent.'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.'}
         line_net_minor: {type: integer, format: int64, readOnly: true, description: 'round(qty × unit_price × (1 − discount_pct/100)) — server-computed.'}
-        line_tax_minor: {type: integer, format: int64, readOnly: true, description: 'round(line_net × tax_rate/100) — server-computed.'}
+        line_tax_minor: {type: integer, format: int64, readOnly: true, description: 'round — server-computed.'}
         line_total_minor: {type: integer, format: int64, readOnly: true, description: line_net + line_tax — server-computed.}
         evidence: {type: [object, 'null'], additionalProperties: true, description: '{snippet, source_id} when AI-drafted; an AI-drafted line without evidence is omitted.'}
         price_grounded: {type: boolean, readOnly: true, default: true, description: 'false only for an AI-proposed line whose price could not be grounded in conversation evidence or the rate card (unit_price_minor is 0 in that case: a sentinel, never a guessed value); true for every human-entered or grounded line.'}
@@ -22890,7 +23031,33 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         buyer_company_id: {type: [string, 'null'], format: uuid}
         buyer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Buyer legal block captured at send time.}
-        issuer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Seller legal block captured at send time.}
+        issuer_snapshot:
+          type: [object, 'null']
+          additionalProperties: true
+          readOnly: true
+          description: |-
+            Seller legal block captured at send time, so a later change to the legal entity
+            leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+            document prints), `base_currency`, and, on an offer sent since offers name their
+            legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+            `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+            `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+            the entity has no value for is absent.
+        language:
+          type: [string, 'null']
+          description: |-
+            The language the offer's new lines take product names in (ISO 639-1). It defaults to
+            the issuing legal entity's `default_language`, else the language of the offer's
+            template. Null on an offer created before offers had one: its lines take
+            `Product.name`. The template's own fixed labels follow the template, not this.
+        legal_entity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |-
+            The legal entity that issues the offer: its name, address, VAT ID, bank details and
+            logo are printed on the PDF. Null on an offer created before offers named one, which
+            is issued by the default entity.
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
@@ -22940,9 +23107,7 @@ components:
     OfferLineItemInput:
       type: object
       description: |-
-        One line to add. With `product_id`, description/unit/unit_price_minor/tax_rate default
-        from the product (a SNAPSHOT — later product edits never touch the line); without it,
-        description and unit_price_minor are required. Totals are never accepted here (422).
+        One line to add. Totals are never accepted here (422).
       required: [quantity]
       properties:
         position: {type: [integer, 'null'], minimum: 1, description: Defaults to the next free position.}
@@ -22955,7 +23120,8 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: [number, 'null'], format: double, minimum: 0, maximum: 100}
-        tax_rate: {type: [number, 'null'], format: double, minimum: 0}
+        tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: 'A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).'}
+        tax_category: {type: [string, 'null'], enum: [standard, reduced, exempt, null], description: 'Take the rate from the tax rate sheet, for the country of the offer''s legal entity, else the installation''s. A category with no rate on the sheet is refused (422 `tax_rate_missing`).'}
     UpdateOfferLineItemRequest:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
@@ -22969,7 +23135,8 @@ components:
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
         interval_count: {type: [integer, 'null'], minimum: 1, description: 'How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.'}
         discount_pct: {type: number, format: double, minimum: 0, maximum: 100}
-        tax_rate: {type: number, format: double, minimum: 0}
+        tax_rate: {type: number, format: double, minimum: 0, description: 'A typed rate. It drops the line''s tax category, so the send leaves the rate alone.'}
+        tax_category: {type: string, enum: [standard, reduced, exempt], description: 'Take the rate from the tax rate sheet for the draft today.'}
     CreateOfferRequest:
       type: object
       required: [currency, source]
@@ -22980,6 +23147,16 @@ components:
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
         template_id: {type: [string, 'null'], format: uuid}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: |-
+            The legal entity that issues the offer. Defaults to the entity the author works for;
+            for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language new lines take product names in. Unset is the entity's, else the template's.
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
@@ -23004,6 +23181,14 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language lines added from now on take product names in. Lines already on the offer keep theirs.
       additionalProperties: false
     MorningBrief:
       type: object

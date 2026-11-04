@@ -204,7 +204,7 @@ func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
 		t.Run(semantic, func(t *testing.T) {
 			e := Setup(t)
 			now := clocktest.Now(t)
-			e.Deals.WithClock(func() time.Time { return now })
+			e.Deals.SetClock(func() time.Time { return now })
 			dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, now.AddDate(0, 0, -30))
 			if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE stage SET semantic = $1, win_probability = $3 WHERE id = (SELECT stage_id FROM deal WHERE id = $2)`, semantic, dealID, probability); err != nil {
 				t.Fatalf("closing the deal's stage: %v", err)
@@ -234,7 +234,7 @@ func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
 func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 	e := Setup(t)
 	now := time.Now().UTC()
-	e.Deals.WithClock(func() time.Time { return now })
+	e.Deals.SetClock(func() time.Time { return now })
 	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, now)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 

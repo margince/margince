@@ -128,8 +128,8 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 // own arm, bound to the account the branch started from.
 func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
 	set := CompanyReachedActivities(1)
-	if got := strings.Count(set, companyArms); got != 3 {
-		t.Errorf("the reached set carries the shared arms %d times, want one per link branch:\n%s", got, set)
+	if got := strings.Count(set, companyArms); got != 2 {
+		t.Errorf("the reached set carries the shared arms %d times, want one per joined link branch:\n%s", got, set)
 	}
 	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
 		if !strings.Contains(set, column+" = ANY($1)") {

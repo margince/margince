@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import { Badge, Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Panel, PanelBody } from "./panel";
@@ -190,5 +190,47 @@ export const Phone: Story = {
       await expect(getComputedStyle(box).paddingLeft, part).toBe(phoneInset);
       await expect(getComputedStyle(box).paddingRight, part).toBe(phoneInset);
     }
+  },
+};
+
+// The name is an edit pill like any details value: a press opens the rename
+// dialog, titled by the field.
+export const Renamable: Story = {
+  args: {
+    ...Default.args,
+    rename: {
+      label: "Company name",
+      value: "Brandt Automotive GmbH",
+      canEdit: true,
+      onSave: async () => undefined,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const heading = within(canvasElement).getByRole("heading", { level: 1 });
+    await user.click(
+      within(heading).getByRole("button", { name: /^Change Company name/ }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Company name" });
+    await expect(within(dialog).getByRole("textbox")).toHaveValue(
+      "Brandt Automotive GmbH",
+    );
+  },
+};
+
+const LONG_NAME =
+  "Brandt Automobilzulieferer, Sondermaschinenbau und Industrieautomation Gesellschaft mit beschränkter Haftung und Compagnie Kommanditgesellschaft für Antriebstechnik, Robotik und Wartung";
+
+// A renamable name past three lines is cut at the third, as a plain one is.
+export const RenamableLongName: Story = {
+  args: {
+    ...Default.args,
+    name: LONG_NAME,
+    rename: {
+      label: "Company name",
+      value: LONG_NAME,
+      canEdit: true,
+      onSave: async () => undefined,
+    },
   },
 };

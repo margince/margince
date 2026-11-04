@@ -11,7 +11,7 @@ import { useState } from "react";
  * it because that is what the reader is working on.
  *
  * It needs no reset when the record changes. `identityOfAddress` keys the
- * routed subtree by the record id (lib/router.tsx's IDENTITY_DEPTH, depth 2 for
+ * routed subtree by the record id (lib/routeidentity.ts's IDENTITY_DEPTH, depth 2 for
  * a contact, an account, a deal). Moving from one record to the next throws the
  * page away and this state with it. App.tabkey.test.tsx's "still throws the
  * page away when the record itself changes" is the proof. A tab change does

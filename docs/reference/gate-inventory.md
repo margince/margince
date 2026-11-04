@@ -38,7 +38,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `authzcategories_test.go` | H2 | The outbound category vocabulary is spelled twice (once in Go, once as a CHECK constraint on communication\_decision), and the two must agree. |
 | `backfillwindow_test.go` | H3 | The capture backfill window set is the same in the contract's four enums, the Go validator and the capture\_backfill CHECK, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
-| `bookinginvite_test.go` | H2 | Address use is a conservative signal of invitation delivery. |
+| `bookinginvite_test.go` | H2 | A booking's attendee addresses reach the calendar invitation, and the contract says the booking queues one. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
@@ -65,7 +65,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docscodeofconduct_test.go` | H3 | CODE\_OF\_CONDUCT.md is the Contributor Covenant 2.1 as adopted, plus the project's enforcement contact. |
 | `dsrerasedsentinel_test.go` | H3 | The word an erasure leaves in place of a request's answer has two writers in two modules, and a module cannot import its sibling. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
-| `emaildesign_test.go` | H1 | _(no doc comment)_ |
+| `emaildesign_test.go` | H1 | Mail cannot read CSS variables, so emailview writes each design token in as its value. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
 | `enumsync_test.go` | H3 | Where domain logic branches on a typed Go enum, its constant set equals the schema's CHECK (col IN (...)) set for the column it mirrors. |
@@ -194,6 +194,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seedemploymentpredicate_test.go` | H2 | The dev seeder and the boot proof ask "is this contact currently employed?" the way the product asks it, and they ask it in the same words. |
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap is the same number in the contract, the send's Go bound and each sending connector's carriage. |
+| `serverroutes_test.go` | H2 | The server bundle's front nginx sends every path the api mounts to the api. |
 | `servertrimparity_test.go` | H3 | The browser and the server must agree on which values are empty, or a form refuses what the save would have taken. |
 | `settingbounds_test.go` | H3 | A bounded setting's range is one fact stated in three places: the entry's validator, which refuses past it; api/crm.yaml's minimum and maximum, which a caller reads; and the screen that refuses an out-of-range value in the box before the request. |
 | `shippingloopreachesthelane_test.go` | H2 | A backend change cannot land without the integration lane. |
@@ -317,6 +318,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
+| `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
@@ -424,7 +426,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
-| `seatemploymentwriters_test.go` | H2 | Every function in a module that inserts an employment edge asks whether the contact is a workspace seat first. |
+| `seatemploymentwriters_test.go` | H2 | Every function in a module that infers an employment edge asks whether the contact is a workspace seat first. |
 | `seatfanout_test.go` | H2 | A nightly agent acts for a seat, and the identity of one night's work has to say which seat. |
 | `sendcontext_test.go` | H2 | Every send says why it is being sent. |
 | `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
@@ -626,6 +628,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `uploadauthorder_test.go` | H1 | An upload route refuses an unauthorized caller before it reads the body. |
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
+| `withclockresult_test.go` | H2 | A WithClock method returns a copy, and no caller discards what it returns. |
 | `workflowhandler_test.go` | H2 | A workflow.Handler's Match is a pure predicate and its Plan computes the typed Effect without applying it, which is what makes dry-run and diff preview possible. |
 
 ## Claim

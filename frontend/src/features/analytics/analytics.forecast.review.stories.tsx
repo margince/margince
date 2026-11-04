@@ -40,6 +40,7 @@ const RUN: Assurance = {
     changed_signals: 0,
     workspace_changed: false,
   },
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
 };
 
 function check(over: Partial<InputCheck>): InputCheck {

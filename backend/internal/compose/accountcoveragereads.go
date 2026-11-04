@@ -17,7 +17,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -59,6 +61,14 @@ func scopedPopulation(ctx context.Context, pop *coveragePopulation) (*coverageSc
 	return scope, nil
 }
 
+// baseValue renders the deal's value in the installation currency under alias
+// d, NULL where the reader's field mask withholds the amount.
+func (scope *coverageScope) baseValue(ctx context.Context, pop *coveragePopulation) (string, error) {
+	asOf := fmt.Sprintf("$%d::date", scope.arg(storekit.WorkspaceDay(pop.now, pop.zone)))
+	return auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d",
+		deals.BaseValueSQL(asOf, installationBaseCurrencySQL, "d"), scope.arg)
+}
+
 // openDealsOf lists the population's open deals, largest first, with the
 // account each belongs to.
 func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
@@ -66,15 +76,28 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 	if err != nil {
 		return nil, err
 	}
+	amount, err := auth.MaskedColumnSQL(ctx, tableDeal, "amount_minor", "d", "amount_minor", scope.arg)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
+	if err != nil {
+		return nil, err
+	}
+	value, err := scope.baseValue(ctx, pop)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, d.amount_minor, d.currency, s.name, d.owner_id, d.expected_close_date,
+		SELECT d.id, d.name, %s, %s, s.name, d.owner_id, d.expected_close_date,
 		       c.id, c.display_name, c.owner_id
 		  FROM deal d
 		  JOIN stage s ON s.id = d.stage_id
 		  JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
+		 CROSS JOIN LATERAL (SELECT %s AS base_minor) v
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND %s
-		 ORDER BY d.amount_minor_base DESC NULLS LAST, d.id
-		 LIMIT %d`, scope.where, coverageCandidates), scope.args...)
+		 ORDER BY v.base_minor DESC NULLS LAST, d.id
+		 LIMIT %d`, amount, currency, value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the population's open deals: %w", err)
 	}
@@ -101,21 +124,26 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 
 // accountsInPipeline lists the accounts with an open deal in the population,
 // with how many and how much, largest first. The sum is in the installation
-// currency and absent when a deal carries no rate.
+// currency, and absent when a deal carries no rate or a masked amount.
 func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
 		return nil, err
 	}
+	value, err := scope.baseValue(ctx, pop)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.display_name, c.owner_id, count(d.id),
-		       CASE WHEN bool_and(d.amount_minor_base IS NOT NULL) THEN sum(d.amount_minor_base) END
+		       CASE WHEN bool_and(v.base_minor IS NOT NULL) THEN sum(v.base_minor) END
 		  FROM deal d
 		  JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
+		 CROSS JOIN LATERAL (SELECT %s AS base_minor) v
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND %s
 		 GROUP BY c.id, c.display_name, c.owner_id
-		 ORDER BY sum(d.amount_minor_base) DESC NULLS LAST, c.id
-		 LIMIT %d`, scope.where, coverageCandidates), scope.args...)
+		 ORDER BY sum(v.base_minor) DESC NULLS LAST, c.id
+		 LIMIT %d`, value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the accounts in pipeline: %w", err)
 	}
@@ -144,10 +172,20 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		return nil, err
 	}
 	since := scope.arg(pop.now.AddDate(0, 0, -*pop.thresholds.WonWithinDays))
+	amount, err := auth.MaskedColumnSQL(ctx, tableDeal, "amount_minor", "d", "amount_minor", scope.arg)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT * FROM (
-		  SELECT DISTINCT ON (c.id) c.id, c.display_name, c.owner_id,
-		         d.id, d.name, d.amount_minor, d.currency, d.owner_id, d.closed_at
+		SELECT won.company_id, won.company_name, won.company_owner_id,
+		       won.deal_id, won.deal_name, won.amount_minor, won.currency, won.deal_owner_id, won.closed_at
+		  FROM (
+		  SELECT DISTINCT ON (c.id) c.id AS company_id, c.display_name AS company_name, c.owner_id AS company_owner_id,
+		         d.id AS deal_id, d.name AS deal_name, %s AS amount_minor, %s AS currency, d.owner_id AS deal_owner_id, d.closed_at
 		    FROM deal d
 		    JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
 		   WHERE d.status = 'won' AND d.archived_at IS NULL AND d.closed_at >= $%d AND %s
@@ -155,7 +193,7 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		   ORDER BY c.id, d.closed_at DESC, d.id
 		) won
 		 ORDER BY won.closed_at DESC
-		 LIMIT %d`, since, scope.where, coverageCandidates), scope.args...)
+		 LIMIT %d`, amount, currency, since, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the won accounts: %w", err)
 	}

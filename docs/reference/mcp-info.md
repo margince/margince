@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 158.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41918 |
+| Approx. wire tokens | 41909 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -68,17 +68,17 @@ descriptions and input schemas are what each step pays for.
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 821 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 710 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1846 |
+| [`find_records`](#find_records) | Find records | yes |  | 1854 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 875 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 908 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -94,10 +94,10 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1958 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1008 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -1814,7 +1814,17 @@ record's own fields, and create_record with record_type offer to make an offer w
         "quantity": {
           "type": "number"
         },
+        "tax_category": {
+          "description": "Take the rate from the tax rate sheet instead; not together with tax_rate",
+          "enum": [
+            "standard",
+            "reduced",
+            "exempt"
+          ],
+          "type": "string"
+        },
         "tax_rate": {
+          "description": "A typed rate; the line then keeps it",
           "type": "number"
         },
         "unit": {
@@ -2539,10 +2549,10 @@ Find candidate times for a host without booking or sending anything. Set reliabl
 acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
 meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
 occupancy was checked. This never checks invitees' availability. Use schedule_meeting with
-action=invite to request an approved calendar invitation after a time is agreed. schedule_meeting
-with action=book only records a meeting. read_context with about=meeting prepares for an existing
-meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag.
-Availability is checked again when reserving the time.
+action=invite to request an approved calendar invitation after a time is agreed. change_activities
+with action=log records a meeting without inviting anyone. read_context with about=meeting prepares
+for an existing meeting. Keep the exact start and end, the calendar_backing value, and the truncated
+flag. Availability is checked again when reserving the time.
 ```
 
 <details><summary>Input schema</summary>
@@ -3849,6 +3859,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "tag_mode": {
+          "type": "string"
+        },
+        "tax_category": {
           "type": "string"
         },
         "thread_key": {
@@ -7456,12 +7469,15 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "type": "string"
     },
     "reading": {
-      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.",
+      "description": "movement only: Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports.",
       "enum": [
         "open",
         "weighted",
         "evidence",
-        "best_case"
+        "best_case",
+        "qualified_evidence",
+        "qualified_best_case",
+        "qualified_weighted"
       ],
       "type": "string"
     },
@@ -7907,6 +7923,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "priced_count": {
           "type": "integer"
+        },
+        "qualification_mode": {
+          "type": "string"
         },
         "qualified": {
           "properties": {
@@ -9441,6 +9460,7 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
         "deal_outcome_reviews",
         "deal_stakeholders",
         "deal_status",
+        "deal_viability",
         "dedupe_candidate",
         "dedupe_candidates",
         "email_presentation",
@@ -9796,17 +9816,16 @@ before calling, unless they asked for this call themselves; requires passport sc
 
 ### schedule_meeting
 
-**Book or invite to a meeting**
+**Invite to a meeting**
 
 ```text
-Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for and
-tells nobody else. invite sends the invitation to its attendees. invite reaches attendees outside
-the workspace, so name them and the time and get the user's yes first. Read check_availability
-before booking a time. Use change_activities with log to record a meeting that already happened.
-Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human
-approves first for invite; the action book cannot be undone, so tell the user what the call will
-change and get their yes before calling, unless they asked for this call themselves; requires
-passport scope "send".)
+Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
+invitation to every attendee: the contact, and any further addresses. invite reaches attendees
+outside the workspace, so name them and the time and get the user's yes first; the call stages for
+approval. Read check_availability before choosing a time. Use change_activities with log to record a
+meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
+its status before claiming it was delivered. (Governance: a human approves every call before it
+runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -9815,39 +9834,31 @@ passport scope "send".)
 {
   "properties": {
     "action": {
-      "description": "book: put a meeting on the calendar; invite: send the invitation to the attendees",
+      "description": "invite: put the meeting on the host's calendar and send the invitation to every attendee",
       "enum": [
-        "book",
         "invite"
       ],
       "type": "string"
     },
-    "approval_id": {
-      "description": "book only: Set on approved retry",
-      "format": "uuid",
+    "attendee_email": {
       "type": "string"
     },
-    "attendee_email": {
-      "description": "invite only",
-      "type": "string"
+    "attendee_emails": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "contact_id": {
-      "description": "invite only",
       "format": "uuid",
       "type": "string"
     },
     "description": {
-      "description": "invite only",
       "type": "string"
     },
     "end": {
       "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
-      "type": "string"
-    },
-    "host_user_id": {
-      "description": "book only",
-      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
@@ -9856,37 +9867,25 @@ passport scope "send".)
       "type": "string"
     },
     "links": {
-      "description": "book only: Who and what the meeting is about; at least one. The booking is refused without it.",
       "items": {
-        "additionalProperties": false,
         "properties": {
           "entity_id": {
             "format": "uuid",
             "type": "string"
           },
           "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
             "type": "string"
           }
         },
         "required": [
-          "entity_type",
-          "entity_id"
+          "entity_id",
+          "entity_type"
         ],
         "type": "object"
       },
-      "maxItems": 25,
-      "minItems": 1,
       "type": "array"
     },
     "location": {
-      "description": "invite only",
       "type": "string"
     },
     "start": {
@@ -9898,14 +9897,18 @@ passport scope "send".)
       "type": "string"
     },
     "video_call": {
-      "description": "invite only",
       "type": "boolean"
     }
   },
   "required": [
     "action",
+    "attendee_email",
+    "contact_id",
+    "description",
+    "end",
+    "location",
     "start",
-    "end"
+    "subject"
   ],
   "type": "object"
 }

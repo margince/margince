@@ -13,7 +13,10 @@ import {
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
 } from "../../lib/auditactor";
-import { domainReasonLabels } from "./worklist.domainreason";
+import {
+  domainQuestionHeading,
+  domainQuestionReason,
+} from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
 
 type Viewer = Readonly<{ id: string; display_name: string }>;
@@ -64,10 +67,21 @@ export function noticeDetail(
     );
   }
   if (item.source === "domain_question" && item.domain_reason_code) {
-    const label = domainReasonLabels[item.domain_reason_code];
-    if (!label) return item.detail;
-    // A vendor question also carries the site triage's own sentence.
-    return [t(label), item.domain_note].filter(Boolean).join(" ");
+    const reason = domainQuestionReason(
+      t,
+      item.domain_reason_code,
+      item.domain_context,
+    );
+    if (!reason) return item.detail;
+    // The question names the contact; a vendor question also carries the
+    // site triage's own sentence.
+    return [
+      domainQuestionHeading(t, item.id, item.domain_context),
+      reason,
+      item.domain_note,
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
   if (item.source !== "notice") return item.detail;
   const origin = item.notice_origin;

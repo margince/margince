@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
@@ -43,6 +49,13 @@ import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  watchStored,
+  writeStored,
+} from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
 
@@ -141,6 +154,48 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// Watched, so a sign-out here or in another tab ends Home's early reads at once.
+const watchSessionSeen = (changed: () => void) =>
+  watchStored(STORAGE_KEYS.sessionSeen, changed);
+const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
+
+// Marks whether this browser has a session, and answers whether the probe was
+// refused. A refused refetch keeps the last data beside its error.
+function noteSessionSeen(data: unknown, error: unknown): boolean {
+  const refused =
+    error instanceof AuthProbeError && error.kind === "unauthorized";
+  if (refused) {
+    removeStored(STORAGE_KEYS.sessionSeen);
+  } else if (data && !error) {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+  }
+  return refused;
+}
+
+// On a browser that had a session, Home's reads start with the session probe.
+// Waiting for the gates it opens costs two round trips. An answer that sends the
+// reader elsewhere stops them, and the cleanup aborts them.
+function homeMayRead(
+  state: Readonly<{
+    screen: Screen;
+    signedIn: boolean;
+    sessionSeen: boolean;
+    refused: boolean;
+    confined: boolean;
+    described: boolean | undefined;
+    unfinished: boolean;
+  }>,
+): boolean {
+  return (
+    state.screen === "home" &&
+    (state.signedIn || state.sessionSeen) &&
+    !state.refused &&
+    !state.confined &&
+    state.described !== false &&
+    !state.unfinished
+  );
+}
+
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -169,16 +224,14 @@ function AuthedApp({
     }
   }, [me.data, adoptLocale]);
   useEffect(() => {
+    const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {
       hadSession.current = true;
       setNotice(null);
       markJourney("session");
       return;
     }
-    if (
-      me.error instanceof AuthProbeError &&
-      me.error.kind === "unauthorized"
-    ) {
+    if (refused) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -228,16 +281,23 @@ function AuthedApp({
   }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
+  const sessionSeen = useSyncExternalStore(
+    watchSessionSeen,
+    sessionSeenNow,
+    sessionSeenNow,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
-  // Home's reads start here rather than when its lazy screen commits, and only
-  // once nothing will send the reader to onboarding instead.
-  const opensHome =
-    shellReady &&
-    described === true &&
-    !progress.unfinished &&
-    route.screen === "home";
+  const opensHome = homeMayRead({
+    screen: route.screen,
+    signedIn: me.data !== undefined,
+    sessionSeen,
+    refused: me.isError,
+    confined: confinement !== null,
+    described,
+    unfinished: progress.unfinished,
+  });
   const queryClient = useQueryClient();
   useEffect(() => {
     if (shellReady) {

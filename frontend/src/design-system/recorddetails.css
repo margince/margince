@@ -33,23 +33,19 @@
 .recorddetails-toggle[aria-expanded="true"] > svg {
   transform: rotate(180deg);
 }
-/* A value's glyph (copy, or the pencil beside a link that edits it) is quiet
-   like the chat glyph (callaction.css), and takes no room until the pointer
-   or focus is on its row, so at rest the value has the whole column. */
-.recorddetails :is(.copy-action, .recorddetails-glyph) {
+/* A value's copy glyph is quiet like the chat glyph (callaction.css), and
+   takes no room until the pointer or focus is on its row, so at rest the
+   value has the whole column. */
+.recorddetails .copy-action {
   display: inline-flex;
 }
-.recorddetails
-  :is(.copy-action, .recorddetails-glyph)
-  .btn-icon:not(:hover, :focus-visible) {
+.recorddetails .copy-action .btn-icon:not(:hover, :focus-visible) {
   border-color: transparent;
   background: transparent;
   color: var(--textSecondary);
 }
 @media (hover: hover) {
-  .recorddetails
-    .factlist-row:not(:hover, :focus-within)
-    :is(.copy-action, .recorddetails-glyph) {
+  .recorddetails .factlist-row:not(:hover, :focus-within) .copy-action {
     max-inline-size: 0;
     overflow: hidden;
   }

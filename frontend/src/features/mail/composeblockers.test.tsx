@@ -31,6 +31,7 @@ const NOTHING_ON_RECORD = {
 
 const settled = (preview: ReturnType<typeof refusedPreview>) => ({
   preview,
+  refusal: null,
   asking: false,
   unanswered: false,
 });

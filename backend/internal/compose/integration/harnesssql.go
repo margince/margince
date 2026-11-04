@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -78,4 +79,16 @@ func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
 		t.Fatalf("scalar query: %v", err)
 	}
 	return out
+}
+
+// LabelCapture writes a classify verdict about the activity as it stands now.
+// It is for suites about what a label does, not the read-to-write window.
+func (e *Env) LabelCapture(ctx context.Context, id ids.UUID, label string) (bool, error) {
+	var version int64
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
+	}); err != nil {
+		return false, err
+	}
+	return e.Activities.SetCaptureLabel(ctx, id, label, version)
 }

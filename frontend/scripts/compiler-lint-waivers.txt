@@ -15,7 +15,6 @@
 1 react-hooks/set-state-in-effect src/components/create.dialog.ts
 1 react-hooks/refs src/components/create.fields.ts
 1 react-hooks/refs src/components/listquery.tsx
-2 react-hooks/refs src/components/recordfields.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
 2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
