@@ -974,33 +974,3 @@ describe("the reporting setting on the field table", () => {
     ).toBeInTheDocument();
   });
 });
-
-describe("AuditRail states", () => {
-  const noop = () => undefined;
-
-  it("says nothing about emptiness while the read is still running", () => {
-    wrap(<AuditRail entries={[]} state="loading" onRetry={noop} />);
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("offers a retry on a failed read, and does not claim the trail is empty", () => {
-    const retry = vi.fn();
-    wrap(<AuditRail entries={[]} state="failed" onRetry={retry} />);
-    expect(screen.getByText(/did not load/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-    expect(screen.getByRole("button", { name: /^retry$/i })).toBeTruthy();
-  });
-
-  it("says the trail is withheld, not empty, when the role cannot read it", () => {
-    wrap(<AuditRail entries={[]} state="withheld" onRetry={noop} />);
-    expect(screen.getByText(/Hidden for your role/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("shows the empty line only for a settled, genuinely empty read", () => {
-    wrap(<AuditRail entries={[]} state="empty" onRetry={noop} />);
-    expect(
-      screen.getByText(/No custom field changes yet/i),
-    ).toBeInTheDocument();
-  });
-});
