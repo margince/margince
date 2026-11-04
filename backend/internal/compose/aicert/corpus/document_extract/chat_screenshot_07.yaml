@@ -20,7 +20,7 @@ expect:
       - see you Thursday
   rubric: >
     A screenshot of a messaging conversation. The header prints the other
-    person's name and number. Four messages follow, two from each side. Every
+    party's name and number. Four messages follow, two from each side. Every
     message must be copied as printed, in order, with nothing translated,
     summarized or added. Score any invented message or invented header value
     hardest.

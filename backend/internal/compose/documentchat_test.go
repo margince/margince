@@ -32,7 +32,7 @@ func chatSource(t *testing.T) documentSource {
 	return documentSource{Part: model.Attachment{MIME: "image/png", Bytes: cardPNG(t)}}
 }
 
-func TestAChatScreenshotIsReadForItsMessagesAndTheOtherPerson(t *testing.T) {
+func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
 	store := &fakeReadStore{meta: pngAttachment(), body: string(cardPNG(t)),
 		question: activities.ExtractionQuestionChatCapture}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(chatReply()), carriage: carriesImagesOnly}
