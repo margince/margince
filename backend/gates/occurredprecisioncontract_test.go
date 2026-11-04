@@ -181,7 +181,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 
 	"generated_at": runStamp, "computed_at": runStamp, "evaluated_at": runStamp, "checked_at": runStamp,
 	"retrieved_at": runStamp, "estimated_at": runStamp, "assessed_at": runStamp, "narrated_at": runStamp,
-	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
+	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp, "opened_at": rowStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
 	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,

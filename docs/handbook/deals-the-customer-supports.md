@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance frontend/src/features/analytics/analytics.forecast.enforcement.tsx -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance frontend/src/features/analytics/analytics.forecast.enforcement.tsx frontend/src/features/deals/deal360/dealviabilitycard.tsx backend/internal/compose/dealviabilityread.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -46,6 +46,10 @@ A review takes four answers:
 An answer to the older check, **Buyer has gone quiet**, still
 holds. Until it ends, the deal gets no review. A reminder from that check holds
 for at most 90 days from the day it was given.
+
+## See it on the deal
+
+The deal's **Overview** has a **Customer support** card. It says whether the forecast of supported deals counts the deal: **Counted**, **Left out for review**, **Left out: no support** or **Not checked**. It also says when the deal was last checked. An open review shows on the card until someone answers it. Its task being done does not close it: the card then says **Task done, still open**. You need to see the forecast to see the card.
 
 ## Count only deals the customer supports
 
