@@ -114,7 +114,8 @@ func (s *Store) RevertStageProgression(
 		if err != nil {
 			return err
 		}
-		out, err = s.advanceOnTx(ctx, tx, dealID, AdvanceDealInput{
+		var advanced AdvancedDeal
+		advanced, err = s.advanceOnTx(ctx, tx, dealID, AdvanceDealInput{
 			ToStageID:                move.FromStageID,
 			WonWithoutContractReason: wonReason,
 			WonWithoutContractDetail: wonDetail,
@@ -135,6 +136,7 @@ func (s *Store) RevertStageProgression(
 		if err != nil {
 			return err
 		}
+		out = advanced.Deal
 		return markMoveReversed(ctx, tx, move, s.clock())
 	})
 	return out, err

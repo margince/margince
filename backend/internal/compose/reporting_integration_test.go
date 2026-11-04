@@ -50,7 +50,7 @@ func reportingWrittenClose(t *testing.T, e *forecastEnv) (crmcontracts.Deal, *de
 	if err != nil {
 		t.Fatal(err)
 	}
-	return closed, store, ctx
+	return closed.Deal, store, ctx
 }
 
 func TestReportingBookingsFollowCurrentOwnerAfterTransfer(t *testing.T) {

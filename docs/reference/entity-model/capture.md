@@ -604,6 +604,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_pending_counterparty_backfill_idx`: `btree (backfill_id) WHERE (backfill_id IS NOT NULL)`
+- `capture_pending_counterparty_email_ix`: `btree (email)`
 - `capture_pending_counterparty_pkey`: `unique, btree (id)`
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
@@ -685,7 +686,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `consecutive_failures` | `integer`, default `0` | yes |  |
 | `failing_since` | `timestamp with time zone` |  |  |
 | `last_delivery_at` | `timestamp with time zone` |  |  |
-| `last_error_class` | `text` |  | One of `rate_limited`, `unreachable`, `auth`, `history_gone`, `internal`. |
+| `last_error_class` | `text` |  | One of `rate_limited`, `unreachable`, `auth`, `history_gone`, `forbidden`, `internal`. |
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `last_synced_at` | `timestamp with time zone` |  |  |
 | `next_sync_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -700,7 +701,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `capture_sync_state_last_error_class_check`: `CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited', 'unreachable', 'auth', 'history_gone', 'internal']))))`
+- `capture_sync_state_last_error_class_check`: `CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited', 'unreachable', 'auth', 'history_gone', 'forbidden', 'internal']))))`
 
 **Indexes**
 

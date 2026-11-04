@@ -217,7 +217,6 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
   moneyFor: (column: BoardColumn<Record>) => BoardMoneyColumn | undefined;
-  zone?: string;
 };
 
 function BoardLayout<Record extends BoardRecord>({
@@ -228,7 +227,6 @@ function BoardLayout<Record extends BoardRecord>({
   columnDropHandlers,
   onToggleColumn,
   moneyFor,
-  zone,
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
@@ -356,11 +354,7 @@ function BoardLayout<Record extends BoardRecord>({
                   a screen reader gets it here with its unit, as "12 deals". */}
               <div className="board-col-sub">
                 {money && !column.sumHidden && (
-                  <ColumnTotals
-                    money={money}
-                    scaleMinor={scaleMinor}
-                    zone={zone}
-                  />
+                  <ColumnTotals money={money} scaleMinor={scaleMinor} />
                 )}
                 <span className="sr-only">
                   {countLabel

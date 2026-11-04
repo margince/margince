@@ -27,7 +27,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -108,7 +107,13 @@ const (
 // QualifyingEvent is the deterministic thing on the record that makes business
 // correspondence lawful.
 type QualifyingEvent struct {
-	Kind             string
+	// ID is set on an exchange recorded by hand, which is the one kind a
+	// caller may later retract.
+	ID   string
+	Kind string
+	// AsksForQuote and Retracted are read on a hand-recorded exchange only.
+	AsksForQuote     bool
+	Retracted        bool
 	OccurredAt       time.Time
 	SourceEntityType string
 	SourceEntityID   string
@@ -175,19 +180,12 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	if err != nil {
 		return Verdict{}, err
 	}
-	category := categoryForClass(purpose.Class)
-	// This verdict is FOR one named purpose (the argument above), never for
-	// "marketing in general" — the same purpose a narrow suppression row
-	// compares itself against, so it is always known here, unlike the evidence
-	// arms on the transmit path that ask about no purpose at all.
-	askedPurpose, err := ids.Parse(purpose.ID)
+	stop, binds, err := stopBindingPurpose(stops, purpose)
 	if err != nil {
-		return Verdict{}, fmt.Errorf("consent: the asked purpose is not an id: %w", err)
+		return Verdict{}, err
 	}
-	for _, s := range stops {
-		if suppressionBinds(s.Kind, category, s.PurposeID, &askedPurpose) {
-			return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}), nil
-		}
+	if binds {
+		return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(stop.Kind), Code: BlockSuppressed, Suppression: stop.Kind}), nil
 	}
 
 	switch purpose.Class {

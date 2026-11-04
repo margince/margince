@@ -18,6 +18,8 @@ import (
 
 // Fact retains contribution provenance so frozen values can be safely projected later.
 type Fact struct {
+	// EvidenceAt is a display date, independent of period and privacy buckets.
+	EvidenceAt    *time.Time                     `json:"evidence_at,omitempty"`
 	StagePosition int                            `json:"stage_position,omitempty"`
 	Scope         *crmcontracts.ReportingScope   `json:"scope,omitempty"`
 	StageID       string                         `json:"stage_id,omitempty"`
@@ -46,6 +48,12 @@ type Fact struct {
 	// Reopened marks an entry made straight from a won or lost close.
 	Entry    string `json:"entry,omitempty"`
 	Reopened bool   `json:"reopened,omitempty"`
+}
+
+// SetEvidenceDate keeps a display date out of event and privacy buckets.
+func (f *Fact) SetEvidenceDate(at *time.Time) {
+	f.EvidenceAt = at
+	f.Row.OccurredAt = nil
 }
 
 // At is the moment that places the fact in a period or bucket.
@@ -95,7 +103,10 @@ type Authority interface {
 	// published about its population, so it needs the strict tier rule that a
 	// read of the totals does not.
 	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
-	Visible(context.Context, pgx.Tx, []Fact) ([]Fact, bool, error)
+	// Visible narrows frozen facts to what the reader may see today. The
+	// context is the one they were captured under; a population the
+	// small-group floor holds back today shows none of them.
+	Visible(context.Context, pgx.Tx, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
 }
 
 // MeasurableOwners is whose figures a reader may see one by one.

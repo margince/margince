@@ -104,7 +104,11 @@ var sendOutboundCopy = toolCopy{
 		"nothing. email_reply: a mail answering a thread recorded here, by activity_id. email_new: " +
 		"a first mail starting a new conversation, filed on `links` naming the records it is about. " +
 		"chat_reply: an answer on a captured chat conversation, by activity_id, on the channel it " +
-		"came from.",
+		"came from. The other actions act for the app: deal_room_invite and deal_room_resend mail " +
+		"a buyer their room link, meeting_proposal makes an expiring scheduling link and mails nothing, " +
+		"change_invitation changes an invitation already sent, invite_member adds a member and mails " +
+		"their sign-in link where the installation can send mail, and signature_template and " +
+		"my_signature set the sign-off every later mail carries.",
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +

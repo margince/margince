@@ -23,14 +23,16 @@ import { Markdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
-import { calendarDay, dueInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
-import { formatDate } from "../format/format";
+import { formatDue } from "../format/format";
+import { dueTimeOf } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { EntityRef } from "./entityref";
+import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
@@ -38,6 +40,7 @@ import { useActivity } from "../lib/activityread";
 import { CallStartProvider } from "../lib/callstart";
 import type { SourceOpenerFor } from "../lib/opensource";
 import { useTaskContact } from "../lib/taskcontact";
+import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
@@ -107,8 +110,10 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
 }
 
 /**
- * The next due date one snooze away, or null for a task that has no date to
- * move.
+ * The due fields one snooze away, or null for a task that has no date to
+ * move. A task with a time of day keeps that time on the next day, so one
+ * snooze does not drop the hour the rep agreed; a task due by a day stays a
+ * day.
  *
  * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
  * adding twenty-four hours. A local day is not always that long: on Europe's
@@ -122,8 +127,9 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
  */
 export function snoozedDueAt(
   dueAt: string | null | undefined,
+  hasTime: boolean | undefined,
   zone: string,
-): string | null {
+): { due_at: string; due_has_time: boolean } | null {
   if (!dueAt) {
     return null;
   }
@@ -136,7 +142,7 @@ export function snoozedDueAt(
   const next = new Date(Date.UTC(year, month - 1, day + 1))
     .toISOString()
     .slice(0, "yyyy-mm-dd".length);
-  return dueInstant(next, zone);
+  return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
 }
 
 /**
@@ -182,6 +188,7 @@ export function TaskQuickActions({
   activityId,
   version,
   dueAt,
+  dueHasTime,
   update,
   showComplete = true,
   showDuePicker = false,
@@ -189,6 +196,8 @@ export function TaskQuickActions({
   activityId: string;
   version: number | undefined;
   dueAt?: string | null;
+  /** The task's `due_has_time`: whether `dueAt` is a time of day. */
+  dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
   // Whether the reader may name a day, rather than only step the due date on.
@@ -197,8 +206,8 @@ export function TaskQuickActions({
   showDuePicker?: boolean;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
-  const nextDue = snoozedDueAt(dueAt, recordZone);
+  const readerZone = useViewerZone();
+  const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
   const pending = update.isPending && update.variables?.id === activityId;
   const complete = useCompleteTask(update);
   return (
@@ -219,7 +228,7 @@ export function TaskQuickActions({
             update.mutate({
               id: activityId,
               version,
-              body: { due_at: nextDue },
+              body: nextDue,
             })
           }
         >
@@ -231,6 +240,7 @@ export function TaskQuickActions({
           activityId={activityId}
           version={version}
           dueAt={dueAt}
+          dueHasTime={dueHasTime}
           update={update}
         />
       )}
@@ -251,44 +261,60 @@ function TaskDueDatePick({
   activityId,
   version,
   dueAt,
+  dueHasTime,
   update,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
   dueAt?: string | null;
+  dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
   const pending = update.isPending && update.variables?.id === activityId;
-  const recordZone = useRecordZone();
-  // Seeded from the task's own day in the INSTALLATION's zone, matching what
-  // the meta line above reads it in: a picker opening on a different day than
-  // the one displayed beside it would be two answers to "when is this due".
+  const readerZone = useViewerZone();
+  // Seeded from the task's own day and time in the INSTALLATION's zone,
+  // matching what the meta line above reads it in: a picker opening on a
+  // different day than the one displayed beside it would be two answers to
+  // "when is this due".
   const current = isoOrBlank(
-    dueAt ? calendarDay(new Date(dueAt), recordZone) : "",
+    dueAt ? calendarDay(new Date(dueAt), readerZone) : "",
   );
+  const time = dueAt ? dueTimeOf(dueAt, dueHasTime, readerZone) : "";
+  const move = (day: string, nextTime: string) =>
+    update.mutate({
+      id: activityId,
+      version,
+      body: taskDueFields(day, nextTime, readerZone),
+    });
   return (
-    <Field label={t("tasks.moveTo")}>
-      {(field) => (
-        <DateInput
-          {...field}
-          value={current}
-          disabled={pending}
-          onChange={(event) => {
-            const day = event.target.value;
-            // A cleared box is not a request to undate the task.
-            if (day === "") {
-              return;
-            }
-            update.mutate({
-              id: activityId,
-              version,
-              body: { due_at: dueInstant(day, recordZone) },
-            });
-          }}
-        />
-      )}
-    </Field>
+    <>
+      <Field label={t("tasks.moveTo")}>
+        {(field) => (
+          <DateInput
+            {...field}
+            value={current}
+            disabled={pending}
+            onChange={(event) => {
+              const day = event.target.value;
+              // A cleared box is not a request to undate the task.
+              if (day === "") {
+                return;
+              }
+              move(day, time);
+            }}
+          />
+        )}
+      </Field>
+      {/* Clearing the time puts the task back to the end of its day. */}
+      <TaskTimeField
+        day={pending ? "" : current}
+        value={time}
+        onChange={(nextTime) => {
+          if (current !== "") move(current, nextTime);
+        }}
+      />
+    </>
   );
 }
 
@@ -321,7 +347,7 @@ export function TaskDetailDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
@@ -381,7 +407,12 @@ export function TaskDetailDialog({
                       // day cannot depend on where the reader sits. `dueInstant`
                       // mints the picked day's end in this zone; the browser's
                       // zone would show an approved 9 September as due the 10th.
-                      when: formatDate(task.due_at, locale, recordZone),
+                      when: formatDue(
+                        task.due_at,
+                        task.due_has_time,
+                        locale,
+                        readerZone,
+                      ),
                     })}
                   </span>
                 ) : (
@@ -393,7 +424,7 @@ export function TaskDetailDialog({
                     task.occurred_at,
                     task.occurred_precision,
                     locale,
-                    recordZone,
+                    readerZone,
                   )}
                 </span>
                 {task.is_done && (
@@ -419,6 +450,7 @@ export function TaskDetailDialog({
                     activityId={task.id}
                     version={task.version}
                     dueAt={task.due_at}
+                    dueHasTime={task.due_has_time}
                     update={update}
                     showDuePicker
                   />

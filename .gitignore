@@ -93,6 +93,8 @@ coverage-extensions.out
 # Storybook static build + fe-uat capture artifacts
 frontend/storybook-static/
 .tmp/
+# Release bundles and assets the release lane packs
+/dist/
 
 # Generated SBOMs + cosign signatures (build artifacts — `make sbom`, published by CI)
 /sboms/

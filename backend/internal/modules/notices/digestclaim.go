@@ -238,7 +238,7 @@ func (s *Store) ClaimDigestRunTx(ctx context.Context, tx pgx.Tx, user ids.UserID
 		return false, apperrors.ErrPermissionDenied
 	}
 	if actor.Type != principal.PrincipalSystem {
-		seat, err := actingSeat(ctx, "claiming a digest")
+		seat, err := deliverySeat(ctx, "claiming a digest")
 		if err != nil {
 			return false, err
 		}
@@ -317,7 +317,7 @@ func (s *Store) DigestFailed(ctx context.Context, user ids.UserID, day time.Time
 // scope, at the moment the message is rendered — the stored reference is a fact
 // about the day the notice was written, never a permission.
 func (s *Store) DigestBody(ctx context.Context, user ids.UserID, w Window) ([]Notice, error) {
-	seat, err := actingSeat(ctx, "reading your morning digest")
+	seat, err := deliverySeat(ctx, "reading your morning digest")
 	if err != nil {
 		return nil, err
 	}

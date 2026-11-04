@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -253,7 +254,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 
 	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
 	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
-	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
+	"updateDeal":         updateDoors("deals", "deal", `{"win_probability":95}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
@@ -799,6 +800,11 @@ func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args
 
 func invitationDoorBody(contact ids.UUID) string {
 	return `{"contact_id":"` + contact.String() + `","attendee_email":"buyer@example.test","start":"2026-10-05T09:00:00Z","end":"2026-10-05T09:30:00Z","subject":"Discovery","description":"Project scope","location":"Video call"}`
+}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (bothDoorsComms) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
 }
 
 func (bothDoorsComms) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {

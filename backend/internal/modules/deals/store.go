@@ -93,6 +93,12 @@ type Installation struct {
 	IssuerLegalName InstallationValue
 	// BaseCurrency is the currency amounts are reported in and frozen against.
 	BaseCurrency InstallationValue
+	// Country is the installation's own country, lower case, empty when unset.
+	// The first tax rate recorded for it classifies the rate card.
+	Country InstallationValue
+	// KnownCountry answers whether a code is an assigned ISO 3166-1 alpha-2
+	// country. `contacts` owns the list.
+	KnownCountry KnownCountry
 	// Timezone is the IANA zone a "today" is computed in.
 	Timezone InstallationValue
 	// BaseCurrencyApplied and TimezoneApplied answer the same two values
@@ -156,7 +162,7 @@ func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
 		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
 		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
-		"TimezoneApplied": &i.TimezoneApplied,
+		"TimezoneApplied": &i.TimezoneApplied, "Country": &i.Country,
 	} {
 		if *f == nil {
 			*f = refusing(name)
@@ -179,6 +185,11 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
+	}
+	if i.KnownCountry == nil {
+		i.KnownCountry = func(string) (bool, error) {
+			return false, errEntitySeamUnwired("KnownCountry")
+		}
 	}
 	if i.AuthorEntity == nil {
 		i.AuthorEntity = func(context.Context, pgx.Tx, ids.UserID) (ids.LegalEntityID, error) {

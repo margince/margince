@@ -107,7 +107,7 @@ func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
 	if !strings.Contains(message.Text, mailcopy.TeamFragment(b.Team1.String(), "")) {
 		t.Fatal("team mail opens the personal overview")
 	}
-	exportRecipientMail(t, "team-priority-de", message.Title, message.Text, emailview.Render(message))
+	exportRecipientMail(t, "team-priority-de", message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 }
 
 // seedRecipientOutcomes records a won deal and two due tasks on the Thursday of week.
@@ -208,7 +208,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 			"meeting":       words.MeetingMessage("Angebot besprechen", "Zweijahresvertrag", "Videoanruf", "https://example.test/manage", expiry, expiry.Add(45*time.Minute)),
 		}
 		for key, message := range messages {
-			exportRecipientMail(t, key+"-"+language, message.Title, message.Text, emailview.Render(message))
+			exportRecipientMail(t, key+"-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 		}
 		for _, key := range consent.ControllerTemplateKeys() {
 			rendered, _, err := consent.RenderControllerTemplate(key, expiry, language)
@@ -311,13 +311,13 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 			t.Fatalf("actual request missing: %s %v", help.String(), err)
 		}
 		message := help.Message(words.MailHelp, language, words.MailHelp)
-		exportRecipientMail(t, "team-help-"+language, message.Title, message.Text, emailview.Render(message))
+		exportRecipientMail(t, "team-help-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 		message = weekly.MailMessage(partial, "https://example.test", words)
 		boundary := partial.NumericSummary.FigureCoverage.Meetings.RecordedSince
 		if boundary == nil || !strings.Contains(message.Text, words.Date(boundary.In(zone))) {
 			t.Fatalf("partial coverage lost its boundary: counts=%+v body=%s", partial.Counts, message.Text)
 		}
-		exportRecipientMail(t, "weekly-partial-"+language, message.Title, message.Text, emailview.Render(message))
+		exportRecipientMail(t, "weekly-partial-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 	}
 }
 

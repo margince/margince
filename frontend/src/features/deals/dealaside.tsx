@@ -31,16 +31,16 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
-import { forecastLabel } from "./deal360/dealheaderfacts";
 import { useDealEdit } from "./dealedit";
+import { probabilityWords } from "./dealprobability";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 
@@ -84,7 +84,7 @@ function DealAsideBody({
     deal,
     t,
     locale,
-    zone: useRecordZone(),
+    zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
   };
   const owner = useMemberName(deal.owner_id).data;
@@ -210,6 +210,17 @@ function money(
     : formatMoneyWhole(amountMinor, currency, locale);
 }
 
+function probabilityReading(
+  deal: Deal,
+  t: Translator,
+  locale: Locale,
+): string | null {
+  const words = probabilityWords(deal, t, locale);
+  return words
+    ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
+    : null;
+}
+
 function day(value: string | null | undefined, facts: Facts) {
   return value ? formatDateAbbrev(value, facts.locale, facts.zone) : null;
 }
@@ -264,11 +275,14 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
         : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
-      "forecast",
-      "deals.filterForecast",
-      deal.forecast_category && forecastLabel(deal.forecast_category, t),
-      "forecast_category",
-      { keys: ["forecast_category"] },
+      "probability",
+      "deal.winProbability",
+      probabilityReading(deal, t, locale),
+      "win_probability",
+      // A closed deal's stage fixes its probability.
+      deal.status === "won" || deal.status === "lost"
+        ? undefined
+        : { keys: ["win_probability"] },
     ),
     row(
       "wait_until",

@@ -107,7 +107,9 @@ func (e *closeDateEnv) sweep() error {
 // seedSweepDeal plants one deal through the owner connection — exactly
 // the aged/migrated rows the write layer never saw and the nightly run
 // must still clean.
-func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, category *string, closeInDays *int, lastActivityDaysAgo int) ids.UUID {
+// probability, when set, is a probability Margince set on the deal, which the
+// sweep may lower; nil leaves the deal following its stage.
+func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, probability *int, closeInDays *int, lastActivityDaysAgo int) ids.UUID {
 	t.Helper()
 	var expectedClose *time.Time
 	if closeInDays != nil {
@@ -119,10 +121,10 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 		// The deal carries an owner because the gone-quiet review reads its
 		// correspondence under that contact's authority — an unowned deal is
 		// reviewed unnamed, which is a case its own test covers.
-		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
-		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5, $6,
+		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, win_probability_override, win_probability_set_by, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
+		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5::smallint, CASE WHEN $5::smallint IS NULL THEN NULL ELSE 'margince' END, $6,
 		         now() - make_interval(days => $7), now() - interval '120 days', 'manual', 'human:x', $8)`,
-		id, name, e.pipeline, stage, category, expectedClose, lastActivityDaysAgo, e.Rep1); err != nil {
+		id, name, e.pipeline, stage, probability, expectedClose, lastActivityDaysAgo, e.Rep1); err != nil {
 		t.Fatalf("seeding deal %q: %v", name, err)
 	}
 	return id
@@ -131,15 +133,15 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 type sweptDeal struct {
 	expectedClose *time.Time
 	provisional   bool
-	forecastCat   *string
+	probability   *int
 }
 
 func (e *closeDateEnv) readSwept(t *testing.T, id ids.UUID) sweptDeal {
 	t.Helper()
 	var d sweptDeal
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT expected_close_date, close_date_provisional, forecast_category FROM deal WHERE id = $1`,
-		id).Scan(&d.expectedClose, &d.provisional, &d.forecastCat); err != nil {
+		`SELECT expected_close_date, close_date_provisional, win_probability_override FROM deal WHERE id = $1`,
+		id).Scan(&d.expectedClose, &d.provisional, &d.probability); err != nil {
 		t.Fatal(err)
 	}
 	return d
@@ -242,44 +244,31 @@ func TestCloseDatePastRejectedOnOpenDealWrites(t *testing.T) {
 	}
 }
 
-// --- B-E09.19(b): flagged deals drop out of Commit/Best-case (AC-F9) ---
-
-func TestForecastExcludesFlaggedDealsFromCommitAndBestCase(t *testing.T) {
+// The forecast report groups deals by the probability band their own
+// probability falls in, and its filter reads the same expression.
+func TestTheForecastReportGroupsDealsByTheirOwnProbability(t *testing.T) {
 	e := setupCloseDate(t)
 
-	e.seedSweepDeal(t, "Healthy commit", e.late, new("commit"), new(30), 3)
-	e.seedSweepDeal(t, "Overdue commit", e.late, new("commit"), new(-10), 3)
-	e.seedSweepDeal(t, "Dateless commit", e.late, new("commit"), nil, 3)
-	provisional := e.seedSweepDeal(t, "Provisional best case", e.late, new("best_case"), new(30), 3)
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE deal SET close_date_provisional = true WHERE id = $1`, provisional); err != nil {
-		t.Fatal(err)
-	}
+	e.seedSweepDeal(t, "Healthy", e.late, new(95), new(30), 3)
+	e.seedSweepDeal(t, "Overdue", e.late, new(95), new(-10), 3)
+	e.seedSweepDeal(t, "Dateless", e.late, new(95), nil, 3)
+	e.seedSweepDeal(t, "Set lower", e.late, new(60), new(30), 3)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	result := e.runForecastReport(t, ctx, `{"group_by":["forecast_category","currency"]}`)
+	result := e.runForecastReport(t, ctx, `{"group_by":["win_probability_band","currency"]}`)
 
 	counts := map[string]int64{}
 	for _, row := range result.Rows {
-		key, _ := row["forecast_category"].(string)
+		key, _ := row["win_probability_band"].(string)
 		counts[key] = wireInt(t, row, "deals")
 	}
-	if counts["commit"] != 1 {
-		t.Errorf("commit deals = %d, want only the healthy one", counts["commit"])
-	}
-	if counts["best_case"] != 0 {
-		t.Errorf("best_case deals = %d, want 0 — the provisional date must stay excluded", counts["best_case"])
-	}
-	if counts["slipped"] != 3 {
-		t.Errorf("slipped deals = %d, want the overdue + dateless + provisional trio", counts["slipped"])
+	if counts["90_plus"] != 3 || counts["60_89"] != 1 {
+		t.Errorf("bands = %v, want three deals at 90 or more and one at 60 to 89", counts)
 	}
 
-	// The filter rides the same expression: asking for commit returns the
-	// healthy deal alone, so a drill-through can never resurrect a
-	// flagged deal into the number it was excluded from.
-	filtered := e.runForecastReport(t, ctx, `{"filters":{"forecast_category":"commit"},"group_by":["forecast_category","currency"]}`)
-	if len(filtered.Rows) != 1 || wireInt(t, filtered.Rows[0], "deals") != 1 {
-		t.Fatalf("filter commit → %+v, want exactly the one healthy deal", filtered.Rows)
+	filtered := e.runForecastReport(t, ctx, `{"filters":{"win_probability_band":"90_plus"},"group_by":["win_probability_band","currency"]}`)
+	if len(filtered.Rows) != 1 || wireInt(t, filtered.Rows[0], "deals") != 3 {
+		t.Fatalf("filter 90_plus → %+v, want the three deals at 95%%", filtered.Rows)
 	}
 }
 
@@ -380,7 +369,7 @@ func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 	e := setupCloseDate(t)
 	// Explicit commit + late stage: overdue, active — never auto-final.
-	id := e.seedSweepDeal(t, "Commit slipped", e.late, new("commit"), new(-10), 3)
+	id := e.seedSweepDeal(t, "Commit slipped", e.late, new(95), new(-10), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -393,20 +382,12 @@ func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 	if !swept.provisional {
 		t.Error("🟡 replacement must be provisional until a human confirms")
 	}
-	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		t.Errorf("forecast_category = %v, want the untouched commit override (the number moves by exclusion, not by edit)", swept.forecastCat)
+	if swept.probability == nil || *swept.probability != 95 {
+		t.Errorf("probability = %v, want the untouched 95%% (the number moves by exclusion, not by edit)", swept.probability)
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the sweep raised %d cards; the correction is applied and reported "+
 			"on the morning receipt, so there is nothing to confirm", got)
-	}
-
-	// Excluded from Commit while provisional (AC-F9): the commit filter
-	// matches nothing, so the aggregate has no group row at all.
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	result := e.runForecastReport(t, ctx, `{"filters":{"forecast_category":"commit"}}`)
-	if len(result.Rows) != 0 {
-		t.Errorf("commit rows while provisional = %+v, want none", result.Rows)
 	}
 
 	// A second nightly run leaves a corrected deal alone: its date is no longer
@@ -433,7 +414,7 @@ func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 // Staged directly here, because the pass that used to make one does not.
 func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Confirm me", e.late, new("commit"), new(-10), 3)
+	id := e.seedSweepDeal(t, "Confirm me", e.late, new(95), new(-10), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
@@ -455,12 +436,6 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {
 		t.Errorf("confirmed date = %v, want the proposed future date", swept.expectedClose)
 	}
-
-	// Confirmed: the deal counts in Commit again.
-	result := e.runForecastReport(t, human, `{"filters":{"forecast_category":"commit"}}`)
-	if len(result.Rows) != 1 || wireInt(t, result.Rows[0], "deals") != 1 {
-		t.Errorf("commit total after confirm = %+v, want the deal back", result.Rows)
-	}
 }
 
 // Quietness lowers confidence while a recorded future date stays intact.
@@ -472,7 +447,7 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
 	// the date untouched — the zombie guard.
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, new("commit"), new(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
 
 	if err := e.sweep(); err != nil {
@@ -480,8 +455,8 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.forecastCat == nil || *swept.forecastCat != "best_case" {
-		t.Errorf("forecast_category = %v, want best_case (one notch down from commit)", swept.forecastCat)
+	if swept.probability == nil || *swept.probability != 45 {
+		t.Errorf("probability = %v, want 45 (one notch down from 95)", swept.probability)
 	}
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
 		t.Errorf("date = %v, want retained %s", swept.expectedClose, originalDate)
@@ -506,15 +481,15 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 	e := setupCloseDate(t)
 	// Quiet AND overdue: the invariant forces a replacement date, but it
 	// lands provisional and the category still notches down.
-	id := e.seedSweepDeal(t, "Quiet and overdue", e.late, new("best_case"), new(-20), 90)
+	id := e.seedSweepDeal(t, "Quiet and overdue", e.late, new(60), new(-20), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.forecastCat == nil || *swept.forecastCat != "pipeline" {
-		t.Errorf("forecast_category = %v, want pipeline (one notch down from best_case)", swept.forecastCat)
+	if swept.probability == nil || *swept.probability != 30 {
+		t.Errorf("probability = %v, want 30 (one notch down from 60)", swept.probability)
 	}
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {
 		t.Errorf("date = %v — the invariant still demands a non-past date", swept.expectedClose)
@@ -530,9 +505,9 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 func TestCloseDateSweepLeavesNoOpenDealWithPastCloseDate(t *testing.T) {
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Auto tier", e.early, nil, new(-12), 3)
-	e.seedSweepDeal(t, "Provisional tier", e.late, new("commit"), new(-10), 3)
-	e.seedSweepDeal(t, "Downgrade tier", e.late, new("commit"), new(-20), 90)
-	e.seedSweepDeal(t, "Dateless", e.late, new("commit"), nil, 3)
+	e.seedSweepDeal(t, "Provisional tier", e.late, new(95), new(-10), 3)
+	e.seedSweepDeal(t, "Downgrade tier", e.late, new(95), new(-20), 90)
+	e.seedSweepDeal(t, "Dateless", e.late, new(95), nil, 3)
 	won := e.seedSweepDeal(t, "Won long ago", e.late, nil, new(-100), 3)
 	// Amountless close: the deal_closed_fx CHECK only demands a frozen
 	// rate when a closed deal carries money, which is beside this point.
@@ -585,8 +560,8 @@ func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.forecastCat != nil {
-		t.Errorf("forecast_category = %v, want untouched NULL — the wait suppresses the downgrade", swept.forecastCat)
+	if swept.probability != nil {
+		t.Errorf("probability = %v, want untouched NULL — the wait suppresses the downgrade", swept.probability)
 	}
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) || !swept.provisional {
 		t.Errorf("(date, provisional) = (%v, %v) — the past date must be replaced provisionally", swept.expectedClose, swept.provisional)
@@ -913,7 +888,7 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 // when the owner has moved, so the sweep never writes for the rep who declined.
 func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Not to be touched", e.late, new("commit"), new(30), 90)
+	id := e.seedSweepDeal(t, "Not to be touched", e.late, new(95), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
 	e.optOutOfCorrections(t, e.Rep1)
 

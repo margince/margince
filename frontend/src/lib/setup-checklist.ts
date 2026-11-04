@@ -228,8 +228,12 @@ function bookingStep(
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
   const { acts, connectors, voice, scheduling } = reads;
+  // A role or seat that cannot capture is never asked to connect anything.
   const connections =
-    acts.has("connections") && connectors !== null && !connectors.notConfigured
+    acts.has("connections") &&
+    connectors !== null &&
+    !connectors.notConfigured &&
+    connectors.captureAllowed
       ? connectors
       : null;
   const calendar = connections && calendarStep(connections);

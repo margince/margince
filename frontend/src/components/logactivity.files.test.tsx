@@ -4,8 +4,8 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { viewerZone } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { browserZone } from "../format/timezone";
+import { CompanyZoneProvider } from "../lib/companyzone";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { jsonResponse } from "../testing/story-utils";
@@ -118,9 +118,9 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
 function renderForm() {
   return renderWithQueryClient(
     <ToastProvider>
-      <RecordZoneProvider zone={viewerZone()}>
+      <CompanyZoneProvider zone={browserZone()}>
         <LogActivityForm entityType="contact" entityId="contact-one" />
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
       <ToastRegion />
     </ToastProvider>,
   );

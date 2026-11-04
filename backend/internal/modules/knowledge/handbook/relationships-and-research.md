@@ -36,6 +36,8 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 
 **You cannot change it by hand.** It shows what happened in captured interactions.
 
+Mail that nobody wrote by hand does not count: calendar invitations, notices from sending systems, newsletters and mail Margince sent itself. It stays on the timeline with a label such as "Sent to a mailing list".
+
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
 
 A recent contact can still score **Weak**. The contact page then names what holds the score down:
@@ -258,7 +260,7 @@ You can **Withdraw** your own ask; your colleague turns it down with Decline and
 ### Who can see an ask
 An introduction request is open to the two colleagues in it, and nobody else. Any other colleague sees an empty list, so they cannot tell if anyone was asked about a contact.
 
-An agent **may not ask, answer, complete or withdraw** an introduction. Asking a colleague for help is a human's choice. An agent may read who knows whom.
+An agent you connected can ask, answer, complete or withdraw an introduction for you, and sees the asks you are in. It sees no ask a colleague is in without you. The record names the agent as the one who acted.
 
 ### How do I research a company's website?
 To have Margince read a customer company's website, open the company's page. Press **Start company research**, or **Read website again** once it has been read.
@@ -342,7 +344,7 @@ An address Margince cannot split stays whole under **Registered address** in the
   **Weighted deal value today** is always the open deals as they stand now,
   whatever period you pick.
 
-The dossier, the scan and the growth fit are yours alone. An agent cannot read any of them, because each is made from one reader's own view.
+The dossier, the scan and the growth fit are yours alone, because each is made from one reader's own view. An agent you connected reads yours, and no colleague's.
 
 ### When it is not available
 

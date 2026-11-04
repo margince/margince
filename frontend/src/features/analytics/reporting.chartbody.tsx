@@ -8,9 +8,9 @@ import {
 } from "../../design-system/report-charts";
 import { Waterfall } from "../../design-system/waterfall";
 import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
   formatDateTime,
-  formatMoneyCompact,
-  formatNumber,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
@@ -55,7 +55,7 @@ export function ChartBody({
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
   const compact = (value: number) =>
     reportingMoneyUnit(chart.unit, evaluation.context.currency)
-      ? formatMoneyCompact(value, evaluation.context.currency, locale)
+      ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
       : format(value);
   const readings = chart.points.map((point) => ({
     ...point,
@@ -103,7 +103,7 @@ export function ChartBody({
           }
           axisLabel={(value) =>
             reportingMoneyUnit(chart.unit, evaluation.context.currency)
-              ? formatMoneyCompact(value, evaluation.context.currency, locale)
+              ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
               : format(value)
           }
           reference={
@@ -435,7 +435,7 @@ function GroupedBars({
                     render: (point: ChartPoint) =>
                       point.observations == null
                         ? MONEY_ABSENT
-                        : formatNumber(point.observations, locale),
+                        : formatAnalyticsNumber(point.observations, locale),
                   },
                 ]),
           ]}

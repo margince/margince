@@ -21,7 +21,7 @@ import { type Represented, represented } from "./worklistunits";
 
 type WorklistCount = Worklist["counts"][number];
 
-export { pillCount } from "../../lib/worklistcounts";
+export { pillCount, pillFigure } from "../../lib/worklistcounts";
 
 /**
  * What the cut on screen is not showing, or null when it shows all of it.

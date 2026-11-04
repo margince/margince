@@ -41,9 +41,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
-// Server satisfies crmcontracts.ServerInterface by embedding: every
-// module transport handler set together covers the full contract
-// surface.
+// Server satisfies crmcontracts.ServerInterface by embedding: every module
+// transport handler set together covers the full contract surface.
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
@@ -133,7 +132,6 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
-	reviewAnswerHandlers
 	companyOfferedHandlers
 	receiptHandlers
 	recordAccessHandlers
@@ -162,6 +160,7 @@ type Server struct {
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
+	readerRenderingHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -481,7 +480,6 @@ type Server struct {
 	// the job queue, the event bus, the cache-flush announcement — injected by
 	// WithResetRuntime. Zero value = a Postgres-only reset, which is the honest
 	// posture for a role that wired no queue and no bus.
-	//
 	// dataResetHandlers holds a POINTER to this field rather than a copy:
 	// options run in the order the caller passed them, so a copy taken by
 	// WithDataReset would be the zero value whenever WithResetRuntime is listed

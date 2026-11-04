@@ -74,7 +74,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
-		WithGroupRoleMap(authPolicy.GroupRoleMap)
+		WithGroupRoleMap(authPolicy.GroupRoleMap).
+		WithMailCapture(mailCaptureSeam{})
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
@@ -196,7 +197,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			rankedSearchDB(pool),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			collections.CountTagReachBatch, searchEmailSummaries, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
@@ -254,7 +255,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
-			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
+			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.
@@ -279,16 +280,16 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// ForecastDeals, where the caller's authority already sits.
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
-		assuranceHandlers: assurance.NewHandlers(answeringAssuranceStore(pool), AssuranceExceptionsIn,
+		assuranceHandlers: assurance.NewHandlers(
+			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview(pool)),
+		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
 		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
 		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
-		reviewAnswerHandlers:   newReviewAnswerHandlers(pool),
 		companyOfferedHandlers: companyOfferedHandlers{store: newContactsStore(InstallationDB(pool))},
 		receiptHandlers: receiptHandlers{
 			contacts: newContactsStore(InstallationDB(pool)), pool: pool, now: time.Now,

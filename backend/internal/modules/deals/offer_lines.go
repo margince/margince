@@ -53,6 +53,9 @@ type OfferLineInputRow struct {
 	UnitPriceMinor *int64
 	DiscountPct    *string
 	TaxRate        *string
+	// TaxCategory takes the line's rate from the tax rate sheet. Left nil the
+	// line takes its product's category, or the typed or product rate.
+	TaxCategory *string
 	// The billing classification. Left nil the line takes the product's, and
 	// with no product it stays unclassified.
 	BillingModel          *string
@@ -62,8 +65,8 @@ type OfferLineInputRow struct {
 
 // insertOfferLines inserts each input line in order, numbering the 422
 // error by the caller's 1-based line position.
-func insertOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, currency string, lines []OfferLineInputRow) error {
-	planned, _, err := planNewOfferLines(ctx, tx, currency, lines)
+func insertOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, currency, language string, basis lazyTaxBasis, lines []OfferLineInputRow) error {
+	planned, _, err := planNewOfferLines(ctx, tx, currency, language, basis, lines)
 	if err != nil {
 		return err
 	}
@@ -87,6 +90,7 @@ type lineSnapshotDefaults struct {
 	Unit        *string
 	Price       *int64
 	TaxRate     *string
+	TaxCategory *string
 	// The billing classification, snapshotted like the price. An offer that
 	// has been sent is a document: reclassifying the product afterwards must
 	// not change what the paper said it was.
@@ -102,6 +106,7 @@ type resolvedOfferLine struct {
 	Price       int64
 	Discount    string
 	Tax         string
+	TaxCategory *string
 	// Nil where nobody has classified the line — which is what a line copied
 	// from an unclassified product carries, and what every line written before
 	// this field existed carries.
@@ -110,8 +115,8 @@ type resolvedOfferLine struct {
 	IntervalCount  *int
 }
 
-func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency string, in OfferLineInputRow) error {
-	line, err := resolveOfferLine(ctx, tx, offerCurrency, in)
+func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency, language string, basis lazyTaxBasis, in OfferLineInputRow) error {
+	line, err := resolveOfferLine(ctx, tx, offerCurrency, language, basis, in)
 	if err != nil {
 		return err
 	}
@@ -134,11 +139,11 @@ func insertOfferLineRow(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, in 
 	_, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
 		                              unit, quantity, unit_price_minor, discount_pct, tax_rate,
-		                              billing_model, billing_interval_months, interval_count)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		                              billing_model, billing_interval_months, interval_count, tax_category)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		ids.NewV7(), offerID, *position, in.ProductID, line.Description,
 		line.Unit, in.Quantity, line.Price, line.Discount, line.Tax,
-		line.BillingModel, line.IntervalMonths, line.IntervalCount)
+		line.BillingModel, line.IntervalMonths, line.IntervalCount, line.TaxCategory)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return fmt.Errorf("position %d is already taken on this offer: %w", *position, apperrors.ErrConflict)
@@ -179,7 +184,8 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
-		if err := insertOfferLine(ctx, tx, offerID, current.Currency, in); err != nil {
+		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
+		if err := insertOfferLine(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, in); err != nil {
 			return err
 		}
 		totals, err := recomputeOfferTotals(ctx, tx, offerID)
@@ -210,6 +216,9 @@ type UpdateOfferLineInput struct {
 	UnitPriceMinor *int64
 	DiscountPct    *string
 	TaxRate        *string
+	// TaxCategory takes the rate from the tax rate sheet; a TaxRate alone
+	// types one and drops the category.
+	TaxCategory *string
 	// The billing classification and the committed term. Both editable while
 	// the offer is a draft, which is what lets somebody correct a line that
 	// snapshotted a classification from its product and settle the term send
@@ -248,12 +257,15 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 
-		curPosition, curDescription, curUnit, line, err := readOfferLineForUpdate(ctx, tx, offerID, lineID)
+		cur, err := readOfferLineForUpdate(ctx, tx, offerID, lineID)
 		if err != nil {
 			return err
 		}
+		if in, err = s.patchedCategoryRate(ctx, tx, current, in); err != nil {
+			return err
+		}
 
-		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
+		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, cur)
 		// Validate the resulting line's figures and math up front (422, not a CHECK 500).
 		if err := checkLineFigures(line); err != nil {
 			return err
@@ -303,20 +315,31 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 	return out, err
 }
 
+// currentOfferLine is what a line patch reads before it writes: the fields
+// the audit's before-image records, and the figures it validates against.
+type currentOfferLine struct {
+	Position          int
+	Description, Unit string
+	TaxCategory       *string
+	Figures           OfferLineInput
+}
+
 // readOfferLineForUpdate loads the line's current snapshot for a patch;
 // a missing line (or one on another offer) is 404, not a fault.
-func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, lineID ids.UUID) (curPosition int, curDescription, curUnit string, line OfferLineInput, err error) {
-	err = tx.QueryRow(ctx,
-		`SELECT position, description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text
+func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, lineID ids.UUID) (currentOfferLine, error) {
+	var cur currentOfferLine
+	err := tx.QueryRow(ctx,
+		`SELECT position, description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text, tax_category
 		 FROM offer_line_item WHERE id = $1 AND offer_id = $2`, lineID, offerID).
-		Scan(&curPosition, &curDescription, &curUnit, &line.Quantity, &line.UnitPriceMinor, &line.DiscountPct, &line.TaxRate)
+		Scan(&cur.Position, &cur.Description, &cur.Unit, &cur.Figures.Quantity, &cur.Figures.UnitPriceMinor,
+			&cur.Figures.DiscountPct, &cur.Figures.TaxRate, &cur.TaxCategory)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, "", "", OfferLineInput{}, apperrors.ErrNotFound
+		return currentOfferLine{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return 0, "", "", OfferLineInput{}, fmt.Errorf("read offer line: %w", err)
+		return currentOfferLine{}, fmt.Errorf("read offer line: %w", err)
 	}
-	return curPosition, curDescription, curUnit, line, nil
+	return cur, nil
 }
 
 // buildOfferLinePatch folds the caller's sparse line edit into a
@@ -325,7 +348,8 @@ func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID,
 // instead — the draft gate is the mutability rule here. It returns the
 // SET fragments and args ($1 is the line id), the before/after audit
 // maps, and the resulting line with the edits applied for validation.
-func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition int, curDescription, curUnit string, line OfferLineInput) (sets []string, args []any, before, after map[string]any, validated OfferLineInput) {
+func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, cur currentOfferLine) (sets []string, args []any, before, after map[string]any, validated OfferLineInput) {
+	line := cur.Figures
 	before, after = map[string]any{}, map[string]any{}
 	sets, args = []string{}, []any{lineID}
 	set := func(column string, oldVal, newVal any) {
@@ -334,13 +358,13 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 		before[column], after[column] = oldVal, newVal
 	}
 	if in.Position != nil {
-		set("position", curPosition, *in.Position)
+		set("position", cur.Position, *in.Position)
 	}
 	if in.Description != nil {
-		set("description", curDescription, *in.Description)
+		set("description", cur.Description, *in.Description)
 	}
 	if in.Unit != nil {
-		set("unit", curUnit, *in.Unit)
+		set("unit", cur.Unit, *in.Unit)
 	}
 	if in.Quantity != nil {
 		set("quantity", line.Quantity, *in.Quantity)
@@ -366,6 +390,7 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 	}
 	if in.TaxRate != nil {
 		set("tax_rate", line.TaxRate, *in.TaxRate)
+		set(taxCategoryField, cur.TaxCategory, in.TaxCategory)
 		line.TaxRate = *in.TaxRate
 	}
 	return sets, args, before, after, line
@@ -459,7 +484,7 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		// the offer is the three money columns.
 		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			map[string]any{"line_id": lineID, "line_removed": true}); err != nil {
+			map[string]any{lineIDKey: lineID, "line_removed": true}); err != nil {
 			return fmt.Errorf("audit line remove: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {

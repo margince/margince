@@ -232,7 +232,7 @@ func slippingCandidate(d crmcontracts.Deal, now time.Time, zone *time.Location) 
 		LastActivityAt:       d.LastActivityAt,
 		CreatedAt:            d.CreatedAt,
 		CloseDateProvisional: d.CloseDateProvisional,
-		ForecastCategory:     forecastCategoryName(d.ForecastCategory),
+		WinProbability:       d.WinProbability,
 	}
 	if d.StageId != nil {
 		stage := ids.UUID(*d.StageId)
@@ -291,14 +291,6 @@ func followUpDrafter(provider datasource.SystemOfRecordProvider) agents.FollowUp
 		}
 		return ref.ID, subject, nil
 	}
-}
-
-func forecastCategoryName(category *crmcontracts.DealForecastCategory) *string {
-	if category == nil {
-		return nil
-	}
-	name := string(*category)
-	return &name
 }
 
 // atRiskList is the list read of the whole at-risk candidate set, by expected close.

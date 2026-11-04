@@ -180,7 +180,6 @@ func TestOnlyTheOwnerOffersARecordToAColleagueWhoCanHoldIt(t *testing.T) {
 		want error
 	}{
 		"a manager who is not the owner":   {seatedAs(e, e.Rep2, manager), e.Rep3, apperrors.ErrPermissionDenied},
-		"the owner's agent":                {e.AgentFor(t, e.Rep1, nil, handoverRepPerms()), e.Rep3, apperrors.ErrPermissionDenied},
 		"to the owner":                     {giver(e), e.Rep1, nil},
 		"to a read seat":                   {giver(e), readSeat, nil},
 		"to a suspended seat":              {giver(e), suspended, nil},

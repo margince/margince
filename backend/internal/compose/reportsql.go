@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -106,7 +107,7 @@ type fetchedRows struct {
 
 func (e *reportEngine) fetchRows(ctx context.Context, report string, spec reportSpec, req reportRequest, groupBy, selects, columns []string) (fetchedRows, error) {
 	var out fetchedRows
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
@@ -143,6 +144,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		if err := requireNoLoneColleagueIn(ctx, tx, out.frame, contributorsSQL(spec, where, dimensionExprs(spec, groupBy)), args); err != nil {
 			return err
 		}
+		if err := requireSpecPopulationFloor(ctx, tx, spec, requestedReportScope(req.Scope)); err != nil {
+			return err
+		}
 		// Bound separately from `args`, which stays the unbound slice the count
 		// below binds its own statement from. Binding appends a value per token
 		// the statement names, so a second bind over an already-bound slice
@@ -169,21 +173,34 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 }
 
 // reportScopeHoldsDeals asks the population question for a deal report with the
-// population buildReportWhere applied. A spec that measures every readable row
-// and was given no scope covers the whole company. Nil for a report that is not
-// about deals.
+// population buildReportWhere applied. Nil for a report that is not about deals.
 func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) (*bool, error) {
 	if spec.entity != datasource.EntityDeal {
 		return nil, nil //nolint:nilnil // nil says the report is not about deals, which has no population to hold any
 	}
-	if spec.population == measureEveryReadableRow && requested.Kind == "" {
-		requested = RequestedScope{Kind: ScopeKindWorkspace}
-	}
-	holds, err := scopeHoldsDeals(ctx, tx, requested, unownedIsPartOfDefault)
+	holds, err := scopeHoldsDeals(ctx, tx, reportPopulationScope(spec, requested), unownedIsPartOfDefault)
 	if err != nil {
 		return nil, err
 	}
 	return &holds, nil
+}
+
+// withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so
+// the small-group floor and the figures it guards read the same instant.
+func withReportSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
+	return database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, pool, fn)
+	})
+}
+
+// reportPopulationScope is the population a report's answer covers. A spec
+// that measures every readable row and was given no scope covers the whole
+// company.
+func reportPopulationScope(spec reportSpec, requested RequestedScope) RequestedScope {
+	if spec.population == measureEveryReadableRow && requested.Kind == "" {
+		return RequestedScope{Kind: ScopeKindWorkspace}
+	}
+	return requested
 }
 
 // reportSQL renders the aggregate query: the validated SELECT list over the
