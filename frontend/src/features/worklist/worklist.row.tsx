@@ -18,6 +18,7 @@ import {
   readerTask,
   reasonText,
   rowHref,
+  sentenceTitled,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
@@ -36,11 +37,7 @@ import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
-import {
-  noticeDetail,
-  sentenceTitled,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
 import {
   aboutRecord,

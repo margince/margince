@@ -1,5 +1,6 @@
 import {
   type QueryKey,
+  useIsMutating,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -72,10 +73,14 @@ type TaskPatch = {
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
 
+// Every task write carries this key, so any control can see a write in flight.
+const TASK_WRITE = ["task-write"] as const;
+
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: TASK_WRITE,
     mutationFn: async (input: TaskPatch) => {
       const data = unwrap(
         await api.PATCH("/activities/{id}", {
@@ -118,10 +123,26 @@ export function useTaskDone(id: string, version: number | undefined) {
   const complete = useCompleteTask(update, (error) =>
     toast.show(t(completeFailureKey(error)), { tone: "danger" }),
   );
+  // Two Done controls on one card send one write: the second press would
+  // re-send the version the first one has just spent.
+  const writing =
+    useIsMutating({
+      mutationKey: TASK_WRITE,
+      predicate: (mutation) => writes(mutation.state.variables, id),
+    }) > 0;
   return {
-    pending: update.isPending,
-    complete: () => complete(id, version),
+    pending: writing,
+    complete: () => (writing ? Promise.resolve() : complete(id, version)),
   };
+}
+
+function writes(variables: unknown, id: string): boolean {
+  return (
+    typeof variables === "object" &&
+    variables !== null &&
+    "id" in variables &&
+    variables.id === id
+  );
 }
 
 /**

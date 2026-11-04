@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  summaryFieldsLine,
-  summarySentence,
-} from "../../design-system/approvalsummary";
+import { summaryFieldsLine } from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import { summaryWords } from "../../lib/approvalpreviewfields";
@@ -19,14 +16,6 @@ import {
   domainQuestionReason,
 } from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
-
-export function sentenceTitled(item: WorklistItem): WorklistItem {
-  const sentence = summarySentence({
-    summary: item.title,
-    summary_parts: item.summary_parts,
-  });
-  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
-}
 
 export function noticeDetail(
   item: WorklistItem,

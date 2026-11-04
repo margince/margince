@@ -106,7 +106,7 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("attention: naming where the meetings' contacts work: %w", err)
+		return fmt.Errorf("attention: naming where the contacts work: %w", err)
 	}
 	for i := range rows {
 		if rows[i].Contact == nil {

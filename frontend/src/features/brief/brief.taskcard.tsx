@@ -51,6 +51,7 @@ import {
   phrasedReasons,
   readerTask,
   reasonText,
+  sentenceTitled,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
@@ -65,13 +66,23 @@ export function taskName(
   locale: Locale,
 ): string {
   const mail = item.email_summary;
-  const sender = item.contact?.label ?? mail?.counterparty;
+  // The row's contact may be another party filed under the message, so
+  // it names the reply only when it is the sender.
+  const sender =
+    item.contact && mail?.counterparty_contact_id === item.contact.id
+      ? item.contact.label
+      : (mail?.counterparty ?? item.contact?.label);
   // A message waiting on the reader is named by the move it asks for.
   if (mail?.move === "needs_reply" && sender && mail.subject)
     return t("brief.task.reply", { name: sender, subject: mail.subject });
   return (
     briefSubjectLabel(item) ??
-    itemTitle(readerTask(item, viewer, t), t, locale, subjectChipped(item))
+    itemTitle(
+      readerTask(sentenceTitled(item), viewer, t),
+      t,
+      locale,
+      subjectChipped(item),
+    )
   );
 }
 

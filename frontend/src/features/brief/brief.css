@@ -724,9 +724,14 @@
   grid-column: 3;
   grid-row: 1;
 }
+/* The detail and the verbs each take a row of their own, in the
+   order they are written, so a change without detail leaves no gap. */
+.brief-main .brief-agent-section .magic-line > .disclosure,
 .brief-main .brief-agent-section .magic-line-controls {
-  grid-row: 2;
+  grid-row: auto;
   grid-column: 2 / -1;
+}
+.brief-main .brief-agent-section .magic-line-controls {
   justify-content: flex-end;
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--borderSubtle);

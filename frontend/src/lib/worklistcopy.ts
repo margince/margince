@@ -2,6 +2,7 @@ import { sourceName } from "./worklistsources";
 
 export { sourceName } from "./worklistsources";
 
+import { summarySentence } from "../design-system/approvalsummary";
 import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
 import type { Locale, Translator, useT } from "../i18n";
@@ -434,6 +435,15 @@ function knownSource(
 }
 
 export type Viewer = Readonly<{ id: string; display_name: string }>;
+
+/** An approval goes by its summary sentence, without the field list. */
+export function sentenceTitled(item: WorklistItem): WorklistItem {
+  const sentence = summarySentence({
+    summary: item.title,
+    summary_parts: item.summary_parts,
+  });
+  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
+}
 
 /** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
 export function readerTask(
