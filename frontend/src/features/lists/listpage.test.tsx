@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import type { List } from "../../lib/lists.queries";
 import {
@@ -686,7 +686,7 @@ describe("an opened list", () => {
     expect(
       await screen.findByText(en["lists.fact.exported"]),
     ).toBeInTheDocument();
-    const when = formatDateTime("2026-09-20T14:30:00Z", "en", viewerZone());
+    const when = formatDateTime("2026-09-20T14:30:00Z", "en", browserZone());
     expect(
       within(facts()).getByText(
         en["lists.head.exported_other"]

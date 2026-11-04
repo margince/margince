@@ -23,6 +23,9 @@ type assignableRole struct {
 	Key      string
 	Name     string
 	IsSystem bool
+	// CapturesMail is whether a holder may have a mailbox captured; nil when
+	// no capture seam is wired.
+	CapturesMail *bool
 }
 
 // ListAssignableRoles returns the live roles this caller may assign, ordered
@@ -44,7 +47,11 @@ func (s *Service) ListAssignableRoles(ctx context.Context, actor Identity) ([]as
 			// write checks the teams it is given.
 			switch err := refuseUnlessCallerMayAssign(ctx, tx, actor, candidate.Key, candidate.raw, nil); {
 			case err == nil:
-				out = append(out, candidate.assignableRole)
+				role := candidate.assignableRole
+				if role.CapturesMail, err = s.roleCapturesMail(role.Key, candidate.raw); err != nil {
+					return err
+				}
+				out = append(out, role)
 			case !errors.Is(err, apperrors.ErrPermissionDenied):
 				return err
 			}

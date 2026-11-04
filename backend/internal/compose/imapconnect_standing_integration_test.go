@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -93,6 +94,8 @@ func startPlainIMAPServer(t *testing.T) (host string, port int) {
 
 func TestStandingIMAPConnectTransport(t *testing.T) {
 	e := integration.Setup(t)
+	// The registry resolves the member's live role, which must let capture write.
+	e.GrantRole(t, e.Rep1, "rep")
 	host, port := startPlainIMAPServer(t)
 
 	key := make([]byte, 32)
@@ -138,6 +141,10 @@ func TestStandingIMAPConnectTransport(t *testing.T) {
 	// connector's read scope from the human's authority; hand-setting it here
 	// would mask a regression where a real session is refused for lack of it.
 	authed := e.As(e.Rep1, nil, integration.AdminPerms)
+	// A session also carries the member's seat; a full one may capture.
+	seated, _ := principal.Actor(authed)
+	seated.SeatType = principal.SeatFull
+	authed = principal.WithActor(authed, seated)
 
 	t.Run("signed out is 401", func(t *testing.T) {
 		if rec := post(t, context.Background(), imapBody(standingIMAPPass)); rec.Code != http.StatusUnauthorized {

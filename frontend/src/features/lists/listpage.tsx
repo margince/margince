@@ -15,7 +15,6 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { customColumnLabel, useFilterVocabulary } from "../../lib/filterdata";
@@ -46,6 +45,7 @@ import { ListSettingsAction } from "./listsettings";
 import { useListAudienceLabel } from "./listsharing";
 import "./lists.css";
 import { decode } from "../../lib/segmentpredicate";
+import { useViewerZone } from "../../lib/viewerzone";
 
 export function ListScreen({ listID }: Readonly<{ listID: string }>) {
   const t = useT();
@@ -200,6 +200,7 @@ function ListHeadActions({
  * ownerless notice says nobody looks after the list, it names no steward here.
  */
 function ListFacts({ list }: Readonly<{ list: List }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -230,7 +231,7 @@ function ListFacts({ list }: Readonly<{ list: List }>) {
         <Fact label={t("lists.fact.exported")}>
           {plural("lists.head.exported", exports.length, {
             count: formatNumber(exports.length, locale),
-            when: formatDateTime(latest.occurred_at, locale, viewerZone()),
+            when: formatDateTime(latest.occurred_at, locale, readerZone),
           })}
         </Fact>
       )}

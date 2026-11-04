@@ -118,6 +118,7 @@ When emails stop coming into Margince, open **Settings → Connections** and rea
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect to resume." Press **Reconnect** and approve access again.
 - **Needs attention**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays, choose **Disconnect** in the account's menu, then connect again.
 - **Not connected**: connect again with **Connect** on the row, or **Add account**.
+- **Your role cannot record activities**: your role cannot capture mail. Ask them to change it. Capture starts again by itself.
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 
 ### How do I reconnect a mailbox?

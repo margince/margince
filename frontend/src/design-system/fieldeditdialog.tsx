@@ -41,7 +41,8 @@ export type FieldEditDialogProps = Readonly<{
   label: string;
   /** The stored value. Each opening starts the draft from it. */
   value: string;
-  hint?: ReactNode;
+  /** A function hint speaks for the draft, so it can follow the pick. */
+  hint?: ReactNode | ((draft: string) => ReactNode);
   onClose: () => void;
   /** Resolves once stored; a throw is the refusal, shown on the field. */
   onSave: (next: string) => Promise<void>;
@@ -164,7 +165,8 @@ export function FieldEditDialog({
           <Field
             label={label}
             labelHidden
-            hint={hint}
+            hint={typeof hint === "function" ? hint(draft) : hint}
+            hintLive={typeof hint === "function"}
             error={failure ?? undefined}
           >
             {(control) => children({ control, draft, setDraft, saving })}

@@ -31,7 +31,6 @@ import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { EntityRef } from "./entityref";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
@@ -41,6 +40,7 @@ import { useActivity } from "../lib/activityread";
 import { CallStartProvider } from "../lib/callstart";
 import type { SourceOpenerFor } from "../lib/opensource";
 import { useTaskContact } from "../lib/taskcontact";
+import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
@@ -206,8 +206,8 @@ export function TaskQuickActions({
   showDuePicker?: boolean;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
-  const nextDue = snoozedDueAt(dueAt, dueHasTime, recordZone);
+  const readerZone = useViewerZone();
+  const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
   const pending = update.isPending && update.variables?.id === activityId;
   const complete = useCompleteTask(update);
   return (
@@ -272,20 +272,20 @@ function TaskDueDatePick({
 }>) {
   const t = useT();
   const pending = update.isPending && update.variables?.id === activityId;
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // Seeded from the task's own day and time in the INSTALLATION's zone,
   // matching what the meta line above reads it in: a picker opening on a
   // different day than the one displayed beside it would be two answers to
   // "when is this due".
   const current = isoOrBlank(
-    dueAt ? calendarDay(new Date(dueAt), recordZone) : "",
+    dueAt ? calendarDay(new Date(dueAt), readerZone) : "",
   );
-  const time = dueAt ? dueTimeOf(dueAt, dueHasTime, recordZone) : "";
+  const time = dueAt ? dueTimeOf(dueAt, dueHasTime, readerZone) : "";
   const move = (day: string, nextTime: string) =>
     update.mutate({
       id: activityId,
       version,
-      body: taskDueFields(day, nextTime, recordZone),
+      body: taskDueFields(day, nextTime, readerZone),
     });
   return (
     <>
@@ -347,7 +347,7 @@ export function TaskDetailDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
@@ -411,7 +411,7 @@ export function TaskDetailDialog({
                         task.due_at,
                         task.due_has_time,
                         locale,
-                        recordZone,
+                        readerZone,
                       ),
                     })}
                   </span>
@@ -424,7 +424,7 @@ export function TaskDetailDialog({
                     task.occurred_at,
                     task.occurred_precision,
                     locale,
-                    recordZone,
+                    readerZone,
                   )}
                 </span>
                 {task.is_done && (

@@ -13,8 +13,8 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360 } from "./company360";
 import "./company360.css";
 
@@ -42,7 +42,7 @@ export function DealsCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const deals = view?.deals;
   const won = deals?.won_lifetime;
   const state = sectionState(

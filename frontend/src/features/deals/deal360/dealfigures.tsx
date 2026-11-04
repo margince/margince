@@ -33,8 +33,8 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
-import { useRecordZone } from "../../../lib/recordzone";
 import { activityMarks } from "../../../lib/standingmarks";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
@@ -51,7 +51,7 @@ type Words = Readonly<{
 
 function useWords(): Words {
   const { locale } = useLocale();
-  return { t: useT(), plural: usePlural(), locale, zone: useRecordZone() };
+  return { t: useT(), plural: usePlural(), locale, zone: useViewerZone() };
 }
 
 // The calls and meetings that already happened, newest kept: the axis has room

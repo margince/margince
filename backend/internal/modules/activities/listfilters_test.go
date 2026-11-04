@@ -99,7 +99,7 @@ func TestAnActivityFilterOperandOfTheWrongShapeIsRefused(t *testing.T) {
 func TestOnlyTheActivityTypeOffersTheTimelineFilters(t *testing.T) {
 	p := &Provider{}
 	want := []string{
-		"assignee_id", "channel_provider", "entity_id", "entity_type", "include_archived", "kind",
+		"assignee_id", "call_outcome", "channel_provider", "entity_id", "entity_type", "include_archived", "kind",
 		"occurred_after", "occurred_before", "project_id", "reminder_due", "sort", "source_activity_id", "thread_key", "waiting_reply",
 	}
 	if got := p.ListFilters(datasource.EntityActivity); !slices.Equal(got, want) {

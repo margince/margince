@@ -14,11 +14,11 @@ import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { correspondenceSide } from "../../lib/messagevoice";
 import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn, useCompany360 } from "../companies/company360";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import { keptTag } from "./composedraftcall";
@@ -120,6 +120,7 @@ function answeringLineOf(
   replying: boolean,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  zone: string,
 ): { line: string; when?: string } {
   if (!answering) {
     return { line: t("compose.newEmail") };
@@ -138,7 +139,7 @@ function answeringLineOf(
       anchor.occurred_at,
       anchor.occurred_precision,
       locale,
-      viewerZone(),
+      zone,
     ),
   };
   // Apart, so a narrow bar cuts the subject and still shows when it happened.
@@ -257,6 +258,7 @@ export function useComposeThread({
   nameOf: (linkType: string, linkId: string) => string | undefined;
   setSubject: Dispatch<SetStateAction<string>>;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const anchorRead = useThreadProject(answering, open);
@@ -291,7 +293,14 @@ export function useComposeThread({
     searched,
   );
   useReplySubject(answering, anchorActivity, setSubject);
-  const answered = answeringLineOf(answering, anchorRead, replying, t, locale);
+  const answered = answeringLineOf(
+    answering,
+    anchorRead,
+    replying,
+    t,
+    locale,
+    readerZone,
+  );
   const showConversation = conversationShown({
     isChannelReply,
     answering,

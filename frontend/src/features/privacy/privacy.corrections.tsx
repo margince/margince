@@ -24,10 +24,10 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { correctableFieldLabel } from "./confirmfields";
 
 type ConfirmSubmission = components["schemas"]["ConfirmSubmission"];
@@ -148,7 +148,7 @@ function CorrectionTable({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const columns: DataTableColumn<ConfirmSubmission>[] = [
     {
       key: "contact",

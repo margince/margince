@@ -33,6 +33,10 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.Kind = &k
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if params.CallOutcome != nil {
+		outcome := string(*params.CallOutcome)
+		in.CallOutcome = &outcome
+	}
 	if err := httperr.RequirePair("entity_type", params.EntityType,
 		"entity_id", params.EntityId); err != nil {
 		httperr.Write(w, r, err)

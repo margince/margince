@@ -67,6 +67,9 @@ func imapConnectCtx(t *testing.T, scopes ...principal.Scope) context.Context {
 		Type:   principal.PrincipalHuman,
 		UserID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(scopes...),
+		// The RBAC a cookie session carries, here a member whose role captures.
+		SeatType:    principal.SeatFull,
+		Permissions: capturingPermissions(),
 	})
 }
 

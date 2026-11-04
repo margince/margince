@@ -10,7 +10,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { RecordHistoryTab } from "../records/history";
 import { RecordAccess } from "../records/recordaccess";
 import { WorklistReturnLink } from "../worklist/worklist.return";
@@ -37,7 +37,7 @@ export function ArchivedContactPage({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <div className="wrap">
       <RecordView
@@ -62,7 +62,7 @@ export function ArchivedContactPage({
             refusedReasonId={refusedReasonId}
           />
         }
-        zone={recordZone}
+        zone={readerZone}
         band={band}
       >
         <Panel title={t("record.fullHistory")}>
