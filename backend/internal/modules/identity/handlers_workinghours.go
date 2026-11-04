@@ -43,7 +43,7 @@ func (h Handlers) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	saved, err := h.svc.SaveMyWorkingHours(r.Context(), WorkingHours{
-		StartMinute: start, EndMinute: end, Days: body.Days,
+		StartMinute: start, EndMinute: end, Days: body.Days, Timezone: optionalValue(body.Timezone),
 	})
 	if err != nil {
 		// No branch for WorkingHoursError: it implements apperrors.FieldFault,

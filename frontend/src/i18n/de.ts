@@ -16353,6 +16353,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.user_greeting_name.changed.label": "Rufname geändert",
   "webhooks.event.user_greeting_name.changed.when":
     "Der Rufname eines Mitglieds wird gespeichert oder bei der ersten Anmeldung über einen Anbieter ausgefüllt.",
+  "webhooks.event.user_timezone.changed.label": "Zeitzone geändert",
+  "webhooks.event.user_timezone.changed.when":
+    "Die eigene Zeitzone eines Mitglieds wird gespeichert oder geändert.",
   "webhooks.event.user_locale.changed.label": "Sprache der Oberfläche geändert",
   "webhooks.event.user_locale.changed.when":
     "Ein Mitglied wählt die Sprache der eigenen Oberfläche.",

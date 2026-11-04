@@ -57094,8 +57094,7 @@ type SaveMyTimezoneRequest struct {
 type SaveMyTimezoneRequestSource string
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
-// own time zone, set through `saveMyTimezone`. A `timezone` sent by an
-// older client is ignored, not refused.
+// own time zone, set through `saveMyTimezone`.
 type SaveWorkingHoursRequest struct {
 	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
 	Days []int `json:"days"`
@@ -57105,6 +57104,12 @@ type SaveWorkingHoursRequest struct {
 
 	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
 	StartTime string `json:"start_time"`
+
+	// Timezone An older client's way to set the caller's time zone with the hours. When
+	// present it is stored as the caller's own chosen zone, in the same
+	// transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Timezone *string `json:"timezone,omitempty"`
 }
 
 // SavedView A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow.

@@ -34988,10 +34988,16 @@ export interface components {
         };
         /**
          * @description The hours and days to store. The zone they are read on is the caller's
-         *     own time zone, set through `saveMyTimezone`. A `timezone` sent by an
-         *     older client is ignored, not refused.
+         *     own time zone, set through `saveMyTimezone`.
          */
         SaveWorkingHoursRequest: {
+            /**
+             * @deprecated
+             * @description An older client's way to set the caller's time zone with the hours. When
+             *     present it is stored as the caller's own chosen zone, in the same
+             *     transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+             */
+            timezone?: string;
             /** @description The first minute of the working day, `HH:MM` on the contact's own clock. */
             start_time: string;
             /** @description The minute the working day ends, exclusive. `24:00` means until midnight. */

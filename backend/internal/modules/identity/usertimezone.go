@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -101,10 +102,13 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 		user, zone, chosen); err != nil {
 		return Seat{}, fmt.Errorf("identity: writing the time zone: %w", err)
 	}
-	// Audit-only, like the working hours: the closed event catalog has no verb
-	// for it, and every reader reads the row on its next question.
-	if _, err := storekit.Audit(ctx, tx, "update", "user", user.UUID,
-		timezoneImage(before, chosenBefore), timezoneImage(&zone, chosen)); err != nil {
+	auditID, err := storekit.Audit(ctx, tx, "update", "user", user.UUID,
+		timezoneImage(before, chosenBefore), timezoneImage(&zone, chosen))
+	if err != nil {
+		return Seat{}, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, user.UUID,
+		crmcontracts.PublicEventUserTimezoneChanged{Timezone: zone, Chosen: chosen}); err != nil {
 		return Seat{}, err
 	}
 	seat.Timezone, seat.TimezoneChosen = zone, chosen

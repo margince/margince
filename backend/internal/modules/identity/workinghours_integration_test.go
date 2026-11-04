@@ -46,8 +46,8 @@ func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing
 func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	svc, ctx, userID := seatChoosingALanguage(t)
 
-	// The zone is the person's own time zone, set on its own. A zone sent
-	// with the hours is not stored.
+	// The zone is the person's own time zone. An older client still sends it
+	// with the hours, and it lands there as the person's chosen zone.
 	if _, err := svc.SaveMyTimezone(ctx, "Asia/Ho_Chi_Minh", TimezoneChosen); err != nil {
 		t.Fatalf("saving the time zone: %v", err)
 	}
@@ -65,8 +65,11 @@ func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	if got := saved.Days; len(got) != 4 || got[0] != 1 || got[3] != 4 {
 		t.Errorf("the days were stored as %v, want them ascending", got)
 	}
-	if saved.Timezone != "Asia/Ho_Chi_Minh" {
-		t.Errorf("the answer carries zone %q, want the person's own", saved.Timezone)
+	if saved.Timezone != "America/New_York" {
+		t.Errorf("the answer carries zone %q, want the one sent with the hours", saved.Timezone)
+	}
+	if zone, chosen, _ := timezoneRow(t, svc, userID); zone == nil || *zone != "America/New_York" || !chosen {
+		t.Errorf("the row holds %v chosen=%v, want the zone sent with the hours, chosen", zone, chosen)
 	}
 
 	read, chosen, err := svc.MyWorkingHours(ctx)
@@ -76,7 +79,7 @@ func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	if !chosen {
 		t.Error("a contact who chose their hours is reported as having chosen nothing")
 	}
-	if read.StartMinute != 8*60 || read.EndMinute != 13*60 || read.Timezone != "Asia/Ho_Chi_Minh" {
+	if read.StartMinute != 8*60 || read.EndMinute != 13*60 || read.Timezone != "America/New_York" {
 		t.Errorf("read back %+v, want what was saved", read)
 	}
 
@@ -132,6 +135,9 @@ func TestARefusalNamesTheControlTheReaderUsed(t *testing.T) {
 		{"a week with no days in it", WorkingHours{
 			StartMinute: 9 * 60, EndMinute: 17 * 60, Days: nil, Timezone: "Europe/Berlin",
 		}, "days"},
+		{"a zone the database does not carry", WorkingHours{
+			StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{1}, Timezone: "Mars/Olympus",
+		}, "timezone"},
 	} {
 		t.Run(refused.name, func(t *testing.T) {
 			_, err := svc.SaveMyWorkingHours(ctx, refused.in)

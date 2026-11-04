@@ -15932,6 +15932,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.user_greeting_name.changed.label": "Đã đổi tên gọi",
   "webhooks.event.user_greeting_name.changed.when":
     "Tên gọi của thành viên được lưu, hoặc được điền ở lần đầu đăng nhập qua nhà cung cấp.",
+  "webhooks.event.user_timezone.changed.label": "Đã đổi múi giờ",
+  "webhooks.event.user_timezone.changed.when":
+    "Múi giờ riêng của một thành viên được lưu hoặc thay đổi.",
   "webhooks.event.user_locale.changed.label": "Đã đổi ngôn ngữ giao diện",
   "webhooks.event.user_locale.changed.when":
     "Thành viên chọn ngôn ngữ cho giao diện của chính mình.",

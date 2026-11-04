@@ -49532,9 +49532,15 @@ components:
       required: [start_time, end_time, days]
       description: |
         The hours and days to store. The zone they are read on is the caller's
-        own time zone, set through `saveMyTimezone`. A `timezone` sent by an
-        older client is ignored, not refused.
+        own time zone, set through `saveMyTimezone`.
       properties:
+        timezone:
+          type: string
+          deprecated: true
+          description: |
+            An older client's way to set the caller's time zone with the hours. When
+            present it is stored as the caller's own chosen zone, in the same
+            transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
         start_time:
           type: string
           pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'

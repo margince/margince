@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The default a contact who has chosen nothing is bookable in. Named, because it
@@ -163,8 +164,9 @@ func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error
 }
 
 // SaveMyWorkingHours records the CALLER's own hours and days. They are read on
-// the caller's own time zone, which SaveMyTimezone writes; in.Timezone is
-// ignored and the answer carries the zone they are read on.
+// the caller's own time zone. A non-empty in.Timezone, which an older client
+// still sends, is stored as the caller's chosen zone through writeTimezoneTx
+// in the same transaction. The answer carries the zone the hours are read on.
 //
 // Self-scoped from the authenticated principal, never from a body field: an id
 // on the request would be an admin's way to set a colleague's working hours,
@@ -177,6 +179,12 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 	normalized, err := validWorkingHours(in)
 	if err != nil {
 		return WorkingHours{}, err
+	}
+	if in.Timezone != "" && values.ZoneName(in.Timezone) != nil {
+		return WorkingHours{}, &WorkingHoursError{
+			Field:   fieldWorkTimezone,
+			Message: "a timezone is an IANA name, such as Europe/Berlin",
+		}
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, _, err := WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](human))
@@ -206,7 +214,12 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 			workingHoursImage(before), workingHoursImage(normalized)); err != nil {
 			return err
 		}
-		return nil
+		if in.Timezone == "" {
+			return nil
+		}
+		seat, err := writeTimezoneTx(ctx, tx, ids.From[ids.UserKind](human), in.Timezone, TimezoneChosen)
+		normalized.Timezone = seat.Timezone
+		return err
 	})
 	if err != nil {
 		return WorkingHours{}, err

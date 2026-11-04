@@ -134,3 +134,33 @@ func TestTheTimezoneWriterRefusesWhatItMayNotStore(t *testing.T) {
 		t.Errorf("an archived seat: err = %v, want not found", err)
 	}
 }
+
+// A stored zone is announced like any other write: one outbox row per change,
+// carrying the zone and whether it was chosen. An unchanged save announces
+// nothing.
+func TestAStoredTimezoneIsAnnouncedOnce(t *testing.T) {
+	svc, ctx, user := seatChoosingALanguage(t)
+	events := func() (n int, zone string, chosen bool) {
+		t.Helper()
+		if err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `
+				SELECT count(*), coalesce(max(envelope -> 'payload' ->> 'timezone'), ''),
+				       coalesce(bool_or((envelope -> 'payload' ->> 'chosen')::boolean), false)
+				  FROM event_outbox
+				 WHERE envelope ->> 'type' = 'user_timezone.changed'
+				   AND envelope -> 'entity' ->> 'id' = $1`, user.String()).Scan(&n, &zone, &chosen)
+		}); err != nil {
+			t.Fatalf("reading the outbox: %v", err)
+		}
+		return n, zone, chosen
+	}
+	if _, err := svc.SaveMyTimezone(ctx, "America/New_York", TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SaveMyTimezone(ctx, "America/New_York", TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	if n, zone, chosen := events(); n != 1 || zone != "America/New_York" || !chosen {
+		t.Errorf("outbox holds %d user_timezone.changed rows (%q, chosen=%v), want one for the chosen zone", n, zone, chosen)
+	}
+}
