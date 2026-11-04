@@ -12,6 +12,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "probability_note": {
+            "type": "string"
+          },
           "record_type": {
             "type": "string"
           },
@@ -4103,6 +4106,9 @@
                   "operand": {
                     "type": "string"
                   },
+                  "pattern": {
+                    "type": "string"
+                  },
                   "values": {
                     "type": "array",
                     "items": {
@@ -5946,9 +5952,6 @@
           "base_currency": {
             "type": "string"
           },
-          "best_case_minor": {
-            "type": "integer"
-          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -5962,9 +5965,6 @@
                 },
                 "base_minor": {
                   "type": "integer"
-                },
-                "category": {
-                  "type": "string"
                 },
                 "chance_in_use": {
                   "type": "integer"
@@ -5984,9 +5984,6 @@
                 "exclusion_reason": {
                   "type": "string"
                 },
-                "in_best_case": {
-                  "type": "boolean"
-                },
                 "in_evidence": {
                   "type": "boolean"
                 },
@@ -5997,6 +5994,9 @@
                   "type": "boolean"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "probability_source": {
                   "type": "string"
                 },
                 "signals": {
@@ -6043,7 +6043,6 @@
                 "chance_in_use",
                 "deal_id",
                 "deal_name",
-                "in_best_case",
                 "in_evidence",
                 "in_open",
                 "in_won",
@@ -6099,6 +6098,9 @@
               "won_minor"
             ]
           },
+          "likely_threshold": {
+            "type": "integer"
+          },
           "open_minor": {
             "type": "integer"
           },
@@ -6110,56 +6112,6 @@
           },
           "priced_count": {
             "type": "integer"
-          },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "type": "object",
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "best_case_minor": {
-                "type": "integer"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "best_case_minor",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ]
           },
           "range_high_minor": {
             "type": "integer"
@@ -6214,16 +6166,15 @@
         "required": [
           "as_of",
           "base_currency",
-          "best_case_minor",
           "confirmed_date_count",
           "eligible_count",
           "evidence_minor",
           "fx_missing_count",
+          "likely_threshold",
           "open_minor",
           "period_end",
           "period_start",
           "priced_count",
-          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -10640,6 +10591,9 @@
           "note_activity_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "probability_note": {
+            "type": "string"
           }
         },
         "required": [
@@ -13131,9 +13085,6 @@
           "base_currency": {
             "type": "string"
           },
-          "best_case_minor": {
-            "type": "integer"
-          },
           "buckets": {
             "items": {
               "properties": {
@@ -13171,9 +13122,6 @@
                 "base_minor": {
                   "type": "integer"
                 },
-                "category": {
-                  "type": "string"
-                },
                 "chance_in_use": {
                   "type": "integer"
                 },
@@ -13192,9 +13140,6 @@
                 "exclusion_reason": {
                   "type": "string"
                 },
-                "in_best_case": {
-                  "type": "boolean"
-                },
                 "in_evidence": {
                   "type": "boolean"
                 },
@@ -13205,6 +13150,9 @@
                   "type": "boolean"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "probability_source": {
                   "type": "string"
                 },
                 "signals": {
@@ -13251,7 +13199,6 @@
                 "chance_in_use",
                 "deal_id",
                 "deal_name",
-                "in_best_case",
                 "in_evidence",
                 "in_open",
                 "in_won",
@@ -13506,6 +13453,9 @@
             ],
             "type": "object"
           },
+          "likely_threshold": {
+            "type": "integer"
+          },
           "open_minor": {
             "type": "integer"
           },
@@ -13520,56 +13470,6 @@
           },
           "priced_count": {
             "type": "integer"
-          },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "best_case_minor": {
-                "type": "integer"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "best_case_minor",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ],
-            "type": "object"
           },
           "range_high_minor": {
             "type": "integer"

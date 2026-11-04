@@ -128,7 +128,7 @@ func TestTheTeamOutlookTravelsOnTheWire(t *testing.T) {
 			PeriodEnd:      time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
 			BaseCurrency:   "EUR",
 			WonMinor:       180_000_00,
-			ForwardMeasure: "commit_evidence",
+			ForwardMeasure: "likely",
 		}},
 	}
 	wire := teamReviewToWire(review)

@@ -1238,7 +1238,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## transcript_read
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1248,6 +1248,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `attempt_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `line_count` | `integer`, default `0` | yes |  |
+| `outcome` | `jsonb` |  |  |
 | `proposal_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `requested_by` | `text` | yes |  |
 | `started_at` | `timestamp with time zone` |  |  |

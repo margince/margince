@@ -72,6 +72,10 @@ type ActivityFields struct {
 	ProviderPrivate bool
 	Envelope        *MailEnvelope
 
+	// MeetingDocuments are the notes and transcripts the provider attached to a
+	// meeting (meetingmap.NotesDocuments); empty for anything else.
+	MeetingDocuments []MeetingDocument
+
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.
 	judged envelopeFacts

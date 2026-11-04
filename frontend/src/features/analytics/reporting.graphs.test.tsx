@@ -590,3 +590,29 @@ it("credits a saved edition's sales to the owner it captured", () => {
     screen.queryByText("Credited to each deal’s current owner"),
   ).toBeNull();
 });
+
+// With individual performance off, a reader sees only their own bar on the
+// owner chart. The chart says why above its bars, or one bar reads as a team
+// of one.
+it("says why an owner chart drawn from the reader's own figures has one bar", () => {
+  installFetchStub(reportingStoryRoutes());
+  const reason =
+    "An administrator switched off individual performance, so this shows your own figures only. Team totals stay complete.";
+  const base = ownerChartEvaluation(false);
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts
+        evaluation={{
+          ...base,
+          charts: base.charts.map((chart) => ({
+            ...chart,
+            points: chart.points.slice(0, 1),
+            coverage: { status: "partial", withheld: true, reason },
+          })),
+        }}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(reason)).toBeInTheDocument();
+});

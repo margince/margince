@@ -54,7 +54,7 @@ Regenerate from the repository root, then from `backend/`:
 | `read_approval` | ? | ? | ? | ? | ? | ? |  |
 | `read_attention` | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
 | `read_context` | 3? | 1✓ 2? | 1✓ 2? | 1✓ 2? | 1✓ 2? | 1✓ 2? |  |
-| `read_details` | 34✓ 36? | 33✓ 4✗ 33? | 33✓ 4✗ 33? | 34✓ 2✗ 34? | 32✓ 5✗ 33? | 28✓ 10✗ 32? | <details><summary>10</summary>`forecast_shares` (read_only, rep) `hidden_backlog` (rep) `hidden_backlog_rows` (rep) `import_problems` (management, manager, read_only, rep) `import_template` (management, manager, read_only, rep) `legal_review` (management, manager, ops, read_only, rep) `legal_reviews` (management, manager, ops, read_only, rep) `response_metrics` (rep) `team_board` (rep) `team_exceptions` (rep)</details> |
+| `read_details` | 33✓ 36? | 32✓ 4✗ 33? | 32✓ 4✗ 33? | 33✓ 2✗ 34? | 31✓ 5✗ 33? | 27✓ 10✗ 32? | <details><summary>10</summary>`forecast_shares` (read_only, rep) `hidden_backlog` (rep) `hidden_backlog_rows` (rep) `import_problems` (management, manager, read_only, rep) `import_template` (management, manager, read_only, rep) `legal_review` (management, manager, ops, read_only, rep) `legal_reviews` (management, manager, ops, read_only, rep) `response_metrics` (rep) `team_board` (rep) `team_exceptions` (rep)</details> |
 | `read_forecast` | 2✓ 3? | 2✓ 1✗ 2? | 2✓ 1✗ 2? | 2✓ 3? | 2✓ 1✗ 2? | 2✓ 1✗ 2? | <details><summary>1</summary>`input_sources` (management, manager, read_only, rep)</details> |
 | `read_import` | 1✓ 1? | 2✗ | 2✗ | 1✓ 1? | 2✗ | 2✗ | <details><summary>2</summary>`format` (management, manager, read_only, rep) `report` (management, manager, read_only, rep)</details> |
 | `read_lists` | ? | ? | ? | ? | ? | ? |  |

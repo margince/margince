@@ -17,6 +17,19 @@ func (e *PastCloseDateError) FieldFault() (field, code, message string) {
 	return closeDateField, "close_date_past", e.Error()
 }
 
+// ProbabilityFixedWhenClosedError maps to 422 probability_fixed_when_closed: a
+// won or lost deal's probability is its stage's.
+type ProbabilityFixedWhenClosedError struct{}
+
+func (e *ProbabilityFixedWhenClosedError) Error() string {
+	return "a won or lost deal takes its stage's probability; reopen it to set its own"
+}
+
+// FieldFault refuses a probability on a closed deal.
+func (e *ProbabilityFixedWhenClosedError) FieldFault() (field, code, message string) {
+	return "win_probability", "probability_fixed_when_closed", e.Error()
+}
+
 // The deal's money and forecast fields, whose wire name and column name are the
 // SAME word — deliberately, because the contract was written from the schema, and
 // a refusal that named a different field from the column it guards would send a

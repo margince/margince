@@ -18,14 +18,14 @@ func TestForecastContributionsKeepWonSupportedAndUpsideDisjoint(t *testing.T) {
 	owner := ids.NewV7().String()
 	contributions := []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InWon: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true, InBestCase: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InBestCase: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InOpen: true},
 	}
-	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureCommitEvidence}, &call)
+	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureLikely}, &call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_landing": 20000, "forecast_call": 45000}
+	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_period_deals": 10000, "forecast_landing": 20000, "forecast_call": 45000}
 	if len(facts) != len(want) {
 		t.Fatalf("double-counted support: %+v", facts)
 	}
@@ -100,7 +100,7 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 	readings := forecasting.Readings{Contributions: []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: ids.NewV7().String(), BaseMinor: &amount, InWon: true},
 	}}
-	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureCommitEvidence}
+	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureLikely}
 	var original []reporting.Fact
 	var originalChart crmcontracts.ReportingChart
 	for _, lang := range []string{"en", "de", "vi"} {
@@ -143,23 +143,22 @@ func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := forecastOperands(forecasting.Period{}, readings, landing, nil, false)
+	got := forecastOperands(forecasting.Period{}, readings, landing, false)
 	if got.LandingMinor != 76_000_000 || got.WonMinor != 42_000_000 || got.Measure != "manager_call" {
 		t.Fatalf("operands %+v, want the 760k call beside the 420k won, never their sum", got)
 	}
 }
 
-func TestAMissingRateLeavesTheOpenTotalsUnknown(t *testing.T) {
-	qualified := int64(0)
+func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
 	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1}
-	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings, &qualified)
+	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(facts) != 2 || facts[0].Money != nil || facts[0].Row.Value != nil || facts[1].Row.Value != nil {
-		t.Fatalf("open totals %+v, want both present and neither a number: a short total reads as the whole", facts)
+	if len(facts) != 1 || facts[0].Money != nil || facts[0].Row.Value != nil {
+		t.Fatalf("open total %+v, want it present and not a number: a short total reads as the whole", facts)
 	}
-	if !forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, &qualified, false).FxMissing {
+	if !forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, false).FxMissing {
 		t.Fatal("the comparison was not told a rate is missing")
 	}
 }
@@ -171,7 +170,7 @@ func TestACallBelowWhatIsWonIsMarkedForTheComparison(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !forecastOperands(forecasting.Period{}, readings, landing, nil, false).CallBelowWon {
+	if !forecastOperands(forecasting.Period{}, readings, landing, false).CallBelowWon {
 		t.Fatal("a 700k call beside 900k won reached the comparison unmarked: it would read both reached and short")
 	}
 }

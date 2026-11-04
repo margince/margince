@@ -35,9 +35,13 @@ import {
 // asked about. Yes writes the notes and the outcome on that meeting. No logs a
 // separate one.
 
+// The workspace's activity custom fields the stub answers; none by default.
+let activityFields: unknown[] = [];
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  activityFields = [];
 });
 
 const ZONE = UTC_ZONE;
@@ -126,6 +130,12 @@ function stubApi(
       }
       if (key === "GET /installation/settings") {
         return jsonResponse({ max_upload_bytes: 10_000_000 });
+      }
+      if (key === "GET /custom-fields") {
+        return jsonResponse({
+          data: activityFields,
+          page: { has_more: false },
+        });
       }
       if (key === "POST /attachments") {
         return jsonResponse({ id: "att-1" }, 201);
@@ -222,6 +232,45 @@ describe("logging a meeting where one owes its outcome", () => {
     expect(patch?.body).toEqual({
       meeting_status: "held",
       body: "Agenda: pricing\n\nThey agreed to the renewal.",
+    });
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
+  it("Yes puts the typed custom-field values on the open meeting", async () => {
+    activityFields = [
+      {
+        id: "cf-visit-report",
+        object: "activity",
+        label: "Visit report",
+        slug: "visit_report",
+        type: "text",
+        status: "active",
+        column_name: "cf_visit_report",
+        show_in_create: true,
+        reportable: false,
+        activity_kinds: ["meeting"],
+        created_by: "human:u-1",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const captured: Captured[] = [];
+    stubApi([booked()], captured);
+    render();
+    const user = await logMeeting();
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: "Visit report" }),
+      { target: { value: "Saw the new line" } },
+    );
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      cf_visit_report: "Saw the new line",
     });
     expect(sent(captured, "POST /activities")).toHaveLength(0);
   });

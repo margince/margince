@@ -15,7 +15,10 @@ type PreviewRecipient = Preview["recipients"][number];
 export type RefusedRecipient = Readonly<{
   address: string;
   reasonCode: string;
+  /** What the engine worked out this message is. */
   category?: string;
+  /** The reason for contact the sender picked, which a failed claim never resolves to. */
+  requestedCategory?: string;
   /** The server's answer to whether a recorded reason may lift it. */
   canBeOverruled: boolean;
 }>;
@@ -46,9 +49,20 @@ const SEVERITY: readonly RefusalKind[] = [
   "missingEvidence",
 ];
 
+/**
+ * The category a refusal's remedy is named for. The sender's own pick comes
+ * first: a failed "Active deal" claim resolves to some other category, and its
+ * remedy is still the deal, never a missing reason or consent.
+ */
+export function remedyCategoryOf(
+  refusal: Pick<RefusedRecipient, "category" | "requestedCategory">,
+): string | undefined {
+  return refusal.requestedCategory ?? refusal.category;
+}
+
 function rankOf(refusal: RefusedRecipient): number {
   const severity = SEVERITY.indexOf(
-    refusalKindOf(refusal.reasonCode, refusal.category),
+    refusalKindOf(refusal.reasonCode, remedyCategoryOf(refusal)),
   );
   return (refusal.canBeOverruled ? SEVERITY.length : 0) + severity;
 }
@@ -76,6 +90,7 @@ export function refusalOf(recipient: PreviewRecipient): RefusedRecipient {
     address: recipient.address,
     reasonCode: recipient.reason_code,
     category: recipient.resolved_category,
+    requestedCategory: recipient.requested_category,
     canBeOverruled: recipient.can_be_overruled === true,
   };
 }
@@ -87,7 +102,7 @@ function statusOf(
   const deciding = decidingRefusal(refusals);
   return {
     kind: deciding
-      ? refusalKindOf(deciding.reasonCode, deciding.category)
+      ? refusalKindOf(deciding.reasonCode, remedyCategoryOf(deciding))
       : "restricted",
     deciding,
     refusing: refusals.length,

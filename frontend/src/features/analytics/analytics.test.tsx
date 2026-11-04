@@ -313,7 +313,7 @@ describe("AnalyticsScreen", () => {
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
   });
 
-  it("switching to Forecast groups by forecast_category and renders category tiles", async () => {
+  it("switching to Forecast groups by probability band and renders band tiles", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -321,7 +321,7 @@ describe("AnalyticsScreen", () => {
         onRun: (key, body) => bodies.push({ key, body }),
         forecastRows: [
           {
-            forecast_category: "commit",
+            win_probability_band: "60_89",
             raw_minor: 500000,
             weighted_minor: 300000,
             deal_count: 3,
@@ -334,13 +334,13 @@ describe("AnalyticsScreen", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Pipeline" }),
     );
-    await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("60 to 89%")).toBeTruthy());
     expect(
       bodies.some(
         (b) =>
           b.key === "forecast" &&
           Array.isArray(b.body.group_by) &&
-          b.body.group_by.includes("forecast_category"),
+          b.body.group_by.includes("win_probability_band"),
       ),
     ).toBe(true);
     // AC-F1: the weighted forecast is the server's own figure —
@@ -362,15 +362,15 @@ describe("AnalyticsScreen", () => {
     ).toBe(true);
   });
 
-  it("renders the slipped bucket in the Forecast tiles", async () => {
+  it("renders the deals at no probability in their own tile", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         forecastRows: [
           {
-            forecast_category: "slipped",
+            win_probability_band: "zero",
             raw_minor: 90000,
-            weighted_minor: 45000,
+            weighted_minor: 0,
             deal_count: 1,
             currency: "EUR",
           },
@@ -381,7 +381,7 @@ describe("AnalyticsScreen", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Pipeline" }),
     );
-    await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("0%")).toBeTruthy());
   });
 
   it("renders the server's weighted figure, never a client re-derivation", async () => {

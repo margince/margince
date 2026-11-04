@@ -193,6 +193,9 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		if denied {
 			return d, nil, nil
 		}
+		if objectionBindsResolution(res, stops) {
+			return denyByObjection(d, res), nil, nil
+		}
 		// The same question the contact arm asks: the evidence arms never read
 		// contact_consent, so a lead who withdrew would be sent the very message
 		// they stopped.
