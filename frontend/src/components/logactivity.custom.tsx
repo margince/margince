@@ -13,12 +13,25 @@ export type ActivityCustomFields = Readonly<{
 }>;
 
 /**
- * The fields an admin added to activities and keeps on create forms. They apply
- * to every kind, so the form offers them whatever is being logged.
+ * The activity fields an admin keeps on create forms and applies to `kind`.
+ * A kind change drops the value of a field the new kind does not take. It is
+ * not sent, and a switch back does not restore it.
  */
-export function useActivityCustomFields(): ActivityCustomFields {
-  const catalog = useObjectCustomFields("activity", "create");
+export function useActivityCustomFields(kind: string): ActivityCustomFields {
+  const catalog = useObjectCustomFields("activity", "create", { kind });
   const [values, setValues] = useState<Record<string, string>>({});
+  const [valuesKind, setValuesKind] = useState(kind);
+  if (kind !== valuesKind) {
+    setValuesKind(kind);
+    setValues((current) => {
+      const kept: Record<string, string> = {};
+      for (const field of catalog.fields) {
+        const typed = current[field.column_name];
+        if (typed !== undefined) kept[field.column_name] = typed;
+      }
+      return kept;
+    });
+  }
   return {
     controls: (
       <CustomFieldControls

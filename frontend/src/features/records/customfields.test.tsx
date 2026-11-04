@@ -222,6 +222,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -240,6 +241,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -261,6 +263,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -279,6 +282,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -842,6 +846,7 @@ describe("the create-form setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
@@ -927,6 +932,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -944,6 +950,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
@@ -959,6 +966,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(

@@ -81,10 +81,11 @@ func instantFilter(set func(*ListActivitiesInput, *time.Time)) storekit.FilterBi
 	}
 }
 
-// ListFilters names what the timeline can be narrowed by on the seam.
+// ListFilters names what the timeline can be narrowed by on the seam. The cf_
+// prefix says SearchEntity binds custom-field keys too, as the route does.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	if t != datasource.EntityActivity {
 		return nil
 	}
-	return activityListFilters.Names()
+	return append(activityListFilters.Names(), datasource.CustomFieldPrefix)
 }

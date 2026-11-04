@@ -4103,6 +4103,9 @@
                   "operand": {
                     "type": "string"
                   },
+                  "pattern": {
+                    "type": "string"
+                  },
                   "values": {
                     "type": "array",
                     "items": {

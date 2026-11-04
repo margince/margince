@@ -12296,6 +12296,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.showInCreate": "Trong biểu mẫu tạo mới",
   "cf.showInCreateHint":
     "Khi tắt, trường chỉ hiện trên trang bản ghi và vẫn chỉnh sửa được ở đó.",
+  "cf.activityKinds": "Hiện ở",
+  "cf.activityKindsHint": "Để trống để hiện trường này ở mọi loại.",
+  "cf.activityKindsEvery": "Mọi loại",
+  "cf.activityKindsFor": "Các loại hiện “{label}”",
+  "cf.activityKindsSaved": "“{label}” giờ hiện ở các loại bạn đã chọn",
   "cf.col.inCreate": "Trong biểu mẫu tạo mới",
   "cf.showInCreateFor": "Hiện “{label}” trong biểu mẫu tạo mới",
   "cf.shownInCreate": "Đã hiện “{label}” trong biểu mẫu tạo mới",

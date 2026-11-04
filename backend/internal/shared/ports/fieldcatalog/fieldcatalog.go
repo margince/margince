@@ -75,6 +75,15 @@ type Column struct {
 	// Currency is a currency column's ISO code, the unit its minor-unit values
 	// count; empty for every other type.
 	Currency string
+	// ActivityKinds are the activity kinds an activity column applies to, and
+	// empty means every kind. It is schema, like Name and Type.
+	ActivityKinds []string
+}
+
+// AppliesToKind reports whether a value of this column may be written on an
+// activity of kind.
+func (c Column) AppliesToKind(kind string) bool {
+	return len(c.ActivityKinds) == 0 || slices.Contains(c.ActivityKinds, kind)
 }
 
 // Reader answers the active custom-field columns for one core object,

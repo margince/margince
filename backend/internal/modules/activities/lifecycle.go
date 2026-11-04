@@ -106,7 +106,7 @@ func updateActivityInTx(
 ) (crmcontracts.Activity, error) {
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err == nil {
-		err = storekit.CheckCustomValues(in.customColumns, in.CustomFields)
+		err = checkCustomValues(string(current.Kind), in.customColumns, in.CustomFields)
 	}
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &current)

@@ -87,13 +87,17 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	if err := finishActivityList(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
+	if err := FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	return activities, page, nil
 }
 
-func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
+// FinishActivityRows fills rows read through ActivityProjection and
+// ScanActivityRow with the rest a row off /activities carries. That is mail
+// facts, links, creators, affordances and custom-field values. A reader outside
+// this module that scans rows itself calls it, so its rows answer the same.
+func FinishActivityRows(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
 	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
 		return err
 	}

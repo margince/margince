@@ -315,17 +315,37 @@ const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
 // that exists must stay readable and editable where the record is.
 export type CustomFieldSurface = "create" | "record";
 
+// Which activity a form's fields are for. A field narrowed to other kinds stays
+// out. The exception is a value in `held`, the row the form opened on: the form
+// shows that field so the reader can clear it.
+export type ActivityNarrowing = Readonly<{
+  kind: string;
+  held?: Record<string, unknown>;
+}>;
+
+/** Whether a field applies to an activity of `kind`; no kinds is every kind. */
+export function appliesToKind(field: CustomField, kind: string): boolean {
+  return (
+    !field.activity_kinds ||
+    field.activity_kinds.some((applies) => applies === kind)
+  );
+}
+
 // The active fields one surface offers. `!== false` rather than a truthy check:
 // a server older than the setting sends no `show_in_create`, and every field
 // showed in create dialogs then.
 export function fieldsForSurface(
   fields: CustomField[],
   surface: CustomFieldSurface,
+  activity?: ActivityNarrowing,
 ): CustomField[] {
   return fields.filter(
     (field) =>
       field.status === "active" &&
-      (surface === "record" || field.show_in_create !== false),
+      (surface === "record" || field.show_in_create !== false) &&
+      (activity === undefined ||
+        appliesToKind(field, activity.kind) ||
+        (activity.held?.[field.column_name] ?? null) !== null),
   );
 }
 
@@ -335,6 +355,7 @@ export function fieldsForSurface(
 export function useObjectCustomFields(
   object: CfObject,
   surface: CustomFieldSurface = "record",
+  activity?: ActivityNarrowing,
 ): ObjectCustomFields {
   const t = useT();
   const query = useQuery({
@@ -353,6 +374,7 @@ export function useObjectCustomFields(
   const fields = fieldsForSurface(
     query.data?.data ?? EMPTY_CUSTOM_FIELDS,
     surface,
+    activity,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 

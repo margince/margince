@@ -153,7 +153,7 @@ func (e *ColumnTakenError) Is(target error) bool { return target == apperrors.Er
 // catalogColumns is the ONE spelling of the custom_field row selection,
 // in scanCustomField's scan order.
 const catalogColumns = `id, object, slug, label, type, status, archived_at,
-	column_name, currency, options, show_in_create, reportable, created_by, created_at, updated_at, version`
+	column_name, currency, options, show_in_create, reportable, activity_kinds, created_by, created_at, updated_at, version`
 
 // scanCustomFieldPage scans one row of a sorted page: the catalog columns, and
 // the sort's cursor key where the sort appends one.
@@ -190,10 +190,11 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 		object, typ, status, colName string
 		currency                     *string
 		optionsRaw                   []byte
+		activityKinds                []string
 		version                      int64
 	)
 	err := row.Scan(&id, &object, &out.Slug, &out.Label, &typ, &status, &out.ArchivedAt,
-		&colName, &currency, &optionsRaw, &out.ShowInCreate, &out.Reportable, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
+		&colName, &currency, &optionsRaw, &out.ShowInCreate, &out.Reportable, &activityKinds, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -211,6 +212,13 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 	}
 	if options != nil {
 		out.Options = &options
+	}
+	if activityKinds != nil {
+		kinds := make([]crmcontracts.CustomFieldActivityKinds, len(activityKinds))
+		for i, kind := range activityKinds {
+			kinds[i] = crmcontracts.CustomFieldActivityKinds(kind)
+		}
+		out.ActivityKinds = &kinds
 	}
 	return out, nil
 }

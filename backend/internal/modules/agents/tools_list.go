@@ -47,7 +47,17 @@ type listFilter struct {
 	Name string
 	Type string
 	Enum []string
+	// Pattern, when set, makes the filter a family of keys: any key it matches.
+	Pattern string
 }
+
+// customFieldKeyPattern is how a custom field's filter key is spelt, the pattern
+// log_activity declares for its cf_ values.
+const customFieldKeyPattern = "^cf_[a-z0-9_]+$"
+
+// customFieldFilter is the family of cf_ keys a store that binds custom-field
+// filters takes. A store opts in by naming the cf_ prefix among its filters.
+var customFieldFilter = listFilter{Name: datasource.CustomFieldPrefix, Type: schemaString, Pattern: customFieldKeyPattern}
 
 // FilterVocabulary answers which filters an enumeration of one record type can
 // be narrowed by — the store's half of the vocabulary.
@@ -95,6 +105,9 @@ func bindableFilters(vocabulary FilterVocabulary) map[string][]listFilter {
 				out[recordType] = append(out[recordType], declared)
 			}
 		}
+		if slices.Contains(bindable, datasource.CustomFieldPrefix) {
+			out[recordType] = append(out[recordType], customFieldFilter)
+		}
 	}
 	return out
 }
@@ -140,34 +153,46 @@ func (t listRecords) Spec() mcp.ToolSpec {
 // would publish one of those two for both — advertising a vocabulary the handler
 // then refuses, which is the specific dishonesty A139 objects to.
 func (t listRecords) filtersProperty() string {
-	names := t.publishedFilterNames()
-	if len(names) == 0 {
+	names, patterns := t.publishedFilterNames()
+	if len(names) == 0 && len(patterns) == 0 {
 		return ""
 	}
 	keys := make([]string, 0, len(names))
 	for _, name := range names {
 		keys = append(keys, strconv.Quote(name)+`:{"type":"string"}`)
 	}
-	return `"filters":{"type":"object","properties":{` + strings.Join(keys, ",") +
-		`},"additionalProperties":false,"description":` + strconv.Quote(t.describeFilters()) + `},`
+	families := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		families = append(families, strconv.Quote(pattern)+`:{"type":"string"}`)
+	}
+	patternProperties := ""
+	if len(families) > 0 {
+		patternProperties = `"patternProperties":{` + strings.Join(families, ",") + `},`
+	}
+	return `"filters":{"type":"object","properties":{` + strings.Join(keys, ",") + `},` + patternProperties +
+		`"additionalProperties":false,"description":` + strconv.Quote(t.describeFilters()) + `},`
 }
 
-// publishedFilterNames returns the filter names any record type publishes, sorted.
-func (t listRecords) publishedFilterNames() []string {
-	seen := map[string]bool{}
+// publishedFilterNames returns the filter names and the key patterns any record
+// type publishes, each sorted.
+func (t listRecords) publishedFilterNames() (names, patterns []string) {
+	seen, seenPatterns := map[string]bool{}, map[string]bool{}
 	for _, filters := range t.filters {
 		for _, filter := range filters {
+			if filter.Pattern != "" {
+				seenPatterns[filter.Pattern] = true
+				continue
+			}
 			seen[filter.Name] = true
 		}
 	}
-	return slices.Sorted(maps.Keys(seen))
+	return slices.Sorted(maps.Keys(seen)), slices.Sorted(maps.Keys(seenPatterns))
 }
 
 // describeFilters points at the per-type vocabulary rather than reciting it:
 // recited, it rode in every prompt and grew with each type a list serves.
 func (t listRecords) describeFilters() string {
-	lines := []string{"Narrow the list. Every operand is a string. Which filters each record_type takes, " +
-		"and the values each takes, is in describe_list_filters."}
+	lines := []string{"String operands. describe_list_filters lists each record_type's filters and values."}
 	return strings.Join(append(lines, t.sourceOfStageIDs()...), " ")
 }
 
@@ -260,7 +285,11 @@ func pageLimit(raw json.RawMessage) (int, error) {
 func (t listRecords) refuseUnaskableFilters(recordType string, filters map[string]string) error {
 	published := t.filters[recordType]
 	for _, name := range slices.Sorted(maps.Keys(filters)) {
-		index := slices.IndexFunc(published, func(f listFilter) bool { return f.Name == name })
+		index := slices.IndexFunc(published, func(f listFilter) bool { return f.Name == name && f.Pattern == "" })
+		takesCustom := slices.ContainsFunc(published, func(f listFilter) bool { return f.Pattern == customFieldKeyPattern })
+		if index < 0 && datasource.IsCustomFieldKey(name) && takesCustom {
+			continue
+		}
 		if index < 0 {
 			return &BadArgsError{Cause: fmt.Errorf("a %s cannot be listed by %q; this deployment lists it by %s",
 				recordType, name, describeNames(published))}
@@ -298,6 +327,10 @@ func describeNames(filters []listFilter) string {
 	}
 	names := make([]string, 0, len(filters))
 	for _, filter := range filters {
+		if filter.Pattern != "" {
+			names = append(names, "a custom field by its cf_ key")
+			continue
+		}
 		names = append(names, filter.Name)
 	}
 	return strings.Join(names, ", ")

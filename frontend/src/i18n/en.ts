@@ -12630,6 +12630,11 @@ export const en = {
   "cf.showInCreate": "In create forms",
   "cf.showInCreateHint":
     "Off keeps the field on the record page only, where it stays editable.",
+  "cf.activityKinds": "Shows on",
+  "cf.activityKindsHint": "Leave it empty to show the field on every type.",
+  "cf.activityKindsEvery": "Every type",
+  "cf.activityKindsFor": "Types “{label}” shows on",
+  "cf.activityKindsSaved": "“{label}” now shows on the types you chose",
   "cf.col.inCreate": "In create forms",
   "cf.showInCreateFor": "Show “{label}” in create forms",
   "cf.shownInCreate": "“{label}” shown in create forms",

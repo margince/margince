@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195125,
+    "tool_catalog_bytes": 195129,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50096,
+    "approx_wire_tokens_total": 50097,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42493,
-      "input_schema_bytes": 93479,
+      "input_schema_bytes": 93483,
       "output_schema_bytes": 47859,
-      "description_plus_input_schema_bytes": 135972
+      "description_plus_input_schema_bytes": 135976
     }
   },
   "tools": {
@@ -3615,7 +3615,12 @@
             },
             "filters": {
               "additionalProperties": false,
-              "description": "list only: Narrow the list. Every operand is a string. Which filters each record_type takes, and the values each takes, is in read_workspace with topic=list_filters. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "description": "list only: String operands. read_workspace with topic=list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "patternProperties": {
+                "^cf_[a-z0-9_]+$": {
+                  "type": "string"
+                }
+              },
               "properties": {
                 "acquisition_source": {
                   "type": "string"

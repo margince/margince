@@ -61,6 +61,43 @@ describe("fieldsForSurface", () => {
     Reflect.deleteProperty(older, "show_in_create");
     expect(fieldsForSurface([older], "create")).toEqual([older]);
   });
+
+  const visitReport = cf({
+    id: "visit",
+    object: "activity",
+    column_name: "cf_visit_report",
+    activity_kinds: ["meeting"],
+  });
+  const region = cf({
+    id: "region",
+    object: "activity",
+    column_name: "cf_region",
+    activity_kinds: null,
+  });
+
+  it("offers a meeting-only field on a meeting and not on a call", () => {
+    expect(
+      fieldsForSurface([visitReport, region], "create", { kind: "meeting" }),
+    ).toEqual([visitReport, region]);
+    expect(
+      fieldsForSurface([visitReport, region], "create", { kind: "call" }),
+    ).toEqual([region]);
+  });
+
+  it("shows a field that no longer applies only where the row holds a value", () => {
+    expect(
+      fieldsForSurface([visitReport], "record", {
+        kind: "call",
+        held: { cf_visit_report: "logged before" },
+      }),
+    ).toEqual([visitReport]);
+    expect(
+      fieldsForSurface([visitReport], "record", {
+        kind: "call",
+        held: { cf_visit_report: null },
+      }),
+    ).toEqual([]);
+  });
 });
 
 describe("customFieldToFormField", () => {
