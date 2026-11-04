@@ -152,10 +152,9 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 }
 
 // correctionReceiptSelect reads one correction the way every reader shows it.
-// It binds the reader through arg: the reason and evidence reach only the
-// deal's owner whose grants composed them, and the amounts follow the reader's
-// field mask. Each reader adds its own WHERE and ORDER BY;
-// scanCorrectionReceipt scans it.
+// It binds the reader through arg. The reason and evidence reach only the
+// deal's owner whose grants composed them. The amounts follow the reader's
+// field mask. Each reader adds its own `WHERE` and `ORDER BY`.
 func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
 	readable := basisReadable(arg(readerOf(ctx)))
 	amountShown, masked, err := auth.MaskExcludedClause(ctx, maskObject, "amount_minor", "d", arg)
@@ -212,9 +211,9 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 `, readable, before, after, amountShown, arg(VerdictAmountCorrection)), nil
 }
 
-// basisReadable is when the reader may read a correction's reason: the deal
-// is unowned, or the reader owns it and the reason was composed under their
-// grants. A colleague with row scope still sees what changed, never why.
+// basisReadable is when the reader may read a correction's reason. The deal
+// is unowned, or the reader owns it and the reason was composed for them. A
+// colleague with row scope still sees what changed, never why.
 func basisReadable(readerPos int) string {
 	return storekit.SQLf(`(nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
 			                 AND (d.owner_id IS NULL OR d.owner_id = $%d))`, readerPos)

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The words for what an Undo of a Margince change did. A close keeps its own
-// sentence, because Margince closes the deal again unless somebody writes why
-// it is alive; every other kind names the field it will now leave alone.
+// sentence: Margince closes the deal again unless somebody writes why it is
+// alive. Every other kind names the field it will now leave alone.
 
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";

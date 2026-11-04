@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-// morningChangeSource marks a changed deal among the items a morning shows,
-// so the send holds the deal and an Undo before the send re-reads the mail.
+// morningChangeSource marks a changed deal among the items a morning shows.
+// The send holds the deal, so an Undo before the send re-reads the mail.
 const morningChangeSource = "margince_change"
 
 // morningChangeLines is how many changed deals the email names; the rest are

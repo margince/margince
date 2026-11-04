@@ -633,7 +633,7 @@ const (
 	// The contacts move between two rows of one meeting, and nothing is returned.
 	//
 	// 153: deals.correctionReceiptSelect is the SELECT list every change report
-	// shares, with no WHERE of its own. Each caller (RecentCorrectionsOwnedBy,
+	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
 	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
 	modulesTierUnscopedCeiling = 153
 )

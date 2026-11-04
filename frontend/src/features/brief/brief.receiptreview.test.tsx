@@ -68,9 +68,8 @@ it("draws no group at all when no change waits for a word", async () => {
       }),
   });
   const { container, client } = render(<BriefChanges />);
-  // It draws nothing while loading too, so both empty answers (the receipts
-  // and Margince's changes) have to have come back before "nothing" says
-  // anything about them.
+  // It draws nothing while loading too. So both empty answers, the receipts
+  // and Margince's changes, have to come back before "nothing" means anything.
   await waitFor(() =>
     expect(
       client

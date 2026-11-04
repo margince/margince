@@ -6,8 +6,8 @@
 package compose
 
 // The report of what Margince changed, over changes the real nightly pass
-// wrote: the owner's open bundle, the Undo of many, and what a colleague may
-// read of somebody else's deal.
+// wrote. It covers the owner's open bundle, the Undo of many, and what a
+// colleague may read of somebody else's deal.
 
 import (
 	"context"
