@@ -68,11 +68,22 @@ func askHandbook(t *testing.T, shipped bool, lane corpusAskLane, passage knowled
 
 func timeZoneLane(t *testing.T, passage knowledge.Passage) *fixedLane {
 	t.Helper()
+	lines := strings.Split(passage.Text, "\n")
 	return &fixedLane{text: corpusReply(askedClaim{
-		Text:  "Pick your time zone on the Meetings page.",
+		Text:  "Pick your time zone in your own settings.",
 		ID:    passage.ChunkID.String(),
-		Quote: "choose a place in the **Timezone** list",
+		Quote: lines[len(lines)-1],
 	})}
+}
+
+func timeZoneSettingsPage(t *testing.T) string {
+	t.Helper()
+	heading := handbookLineOf(t, timeZoneHeading)
+	section, ok := handbook.SectionFor(settingsPage, heading, heading)
+	if !ok || section.Opens == "" {
+		t.Fatalf("the shipped time zone section names no settings page: %+v", section)
+	}
+	return section.Opens
 }
 
 func TestAWrittenClaimFromTheShippedHandbookNamesItsSectionAndSettingsPage(t *testing.T) {
@@ -81,8 +92,8 @@ func TestAWrittenClaimFromTheShippedHandbookNamesItsSectionAndSettingsPage(t *te
 	if claim.Section == nil || claim.Section.Title != "How do I change my time zone?" || claim.Section.Line != passage.StartLine {
 		t.Fatalf("section = %+v, want the time zone heading at line %d", claim.Section, passage.StartLine)
 	}
-	if claim.Opens == nil || claim.Opens.SettingsPage != "meetings" {
-		t.Fatalf("opens = %+v, want settings page meetings", claim.Opens)
+	if want := timeZoneSettingsPage(t); claim.Opens == nil || claim.Opens.SettingsPage != want {
+		t.Fatalf("opens = %+v, want settings page %s", claim.Opens, want)
 	}
 }
 
@@ -99,8 +110,8 @@ func TestAnUnreviewedPassageNamesTheSectionItRunsInto(t *testing.T) {
 	if claim.Section == nil || claim.Section.Line != heading {
 		t.Fatalf("section = %+v, want the time zone heading at line %d", claim.Section, heading)
 	}
-	if claim.Opens == nil || claim.Opens.SettingsPage != "meetings" {
-		t.Fatalf("opens = %+v, want settings page meetings on the bare passage", claim.Opens)
+	if want := timeZoneSettingsPage(t); claim.Opens == nil || claim.Opens.SettingsPage != want {
+		t.Fatalf("opens = %+v, want settings page %s on the bare passage", claim.Opens, want)
 	}
 }
 
