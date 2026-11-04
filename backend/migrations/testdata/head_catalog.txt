@@ -6179,6 +6179,16 @@ public.maskable_field.field text NOT NULL gen=- def=-
 public.maskable_field.maskable_field_pkey PRIMARY KEY (object, field)
 public.maskable_field.object text NOT NULL gen=- def=-
 public.maskable_field_pkey CREATE UNIQUE INDEX maskable_field_pkey ON public.maskable_field USING btree (object, field)
+public.meeting_calendar_episode acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.meeting_calendar_episode.episode uuid NOT NULL gen=- def=-
+public.meeting_calendar_episode.host_user_id uuid NOT NULL gen=- def=-
+public.meeting_calendar_episode.meeting_calendar_episode_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.meeting_calendar_episode.meeting_calendar_episode_pkey PRIMARY KEY (host_user_id, provider)
+public.meeting_calendar_episode.meeting_calendar_episode_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
+public.meeting_calendar_episode.provider text NOT NULL gen=- def=-
+public.meeting_calendar_episode.resumed_at timestamp with time zone gen=- def=-
+public.meeting_calendar_episode.started_at timestamp with time zone NOT NULL gen=- def=-
+public.meeting_calendar_episode_pkey CREATE UNIQUE INDEX meeting_calendar_episode_pkey ON public.meeting_calendar_episode USING btree (host_user_id, provider)
 public.meeting_invitation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.meeting_invitation.activity_id uuid NOT NULL gen=- def=-
 public.meeting_invitation.appointment jsonb NOT NULL gen=- def=-

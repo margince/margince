@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -238,4 +239,12 @@ func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provid
 		return "", err
 	}
 	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
+
+// ReconnectedSince reads the connection's grant time; no provider call.
+func (c schedulingCalendar) ReconnectedSince(ctx context.Context, host ids.UserID, provider string, since time.Time) (bool, error) {
+	if c.registry == nil {
+		return false, nil
+	}
+	return c.registry.ReconnectedSince(ctx, host, provider, since)
 }

@@ -64,6 +64,8 @@ type invitationRow struct {
 	// waits, and which disconnect parked it; both are NULL otherwise.
 	AttentionReason  *string
 	AttentionEpisode *ids.UUID
+	// ClaimedAt is when this delivery attempt began, in memory only.
+	ClaimedAt time.Time
 }
 
 type schedulingArgs []any

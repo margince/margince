@@ -18866,7 +18866,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.consequence.capture_history_incomplete": "Nhập lịch sử chưa hoàn tất.",
   "scheduling.linksTitle": "Liên kết đặt lịch",
   "scheduling.status.paused": "Đã tạm dừng",
-  "scheduling.status.attention": "Cần xử lý",
   "scheduling.acceptBookings": "Nhận đặt lịch",
   "scheduling.acceptBookingsHelp":
     "Ai có liên kết của bạn đều có thể chọn một giờ trống. Tắt để tạm dừng đặt lịch; liên kết vẫn giữ nguyên.",
@@ -18881,8 +18880,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Trạng thái",
   "scheduling.col.actions": "Thao tác",
   "scheduling.videoCall": "Cuộc gọi video",
-  "scheduling.row.live": "Đang hoạt động",
-  "scheduling.row.noInvitations": "Không gửi lời mời",
   "scheduling.videoNotSet": "Chưa thiết lập",
   "scheduling.video.ownShort": "Liên kết riêng",
   "scheduling.mainLink": "(liên kết chính)",

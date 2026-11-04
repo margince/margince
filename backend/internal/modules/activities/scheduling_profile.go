@@ -38,6 +38,9 @@ type SchedulingCalendar interface {
 	// Blocker says why the host's connected calendar cannot take bookings,
 	// without a provider call.
 	Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error)
+	// ReconnectedSince says whether the host granted the calendar again after
+	// since: the evidence a parked queue waits for.
+	ReconnectedSince(context.Context, ids.UserID, string, time.Time) (bool, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)

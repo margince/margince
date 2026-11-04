@@ -80,8 +80,10 @@ func (s *Store) applyInvitationChange(ctx context.Context, host ids.UserID, id i
 		if err := auditInvitation(ctx, tx, &before, row); err != nil {
 			return err
 		}
-		result = row
-		return nil
+		// Read back as stored: the status trigger clears the reason a row
+		// that stops waiting no longer has.
+		result, err = readInvitation(ctx, tx, id, false)
+		return err
 	})
 	return invitationView(result), err
 }
@@ -143,6 +145,7 @@ func (s *Store) claimInvitation(ctx context.Context) (invitationRow, bool, error
 		before := row
 		row.Attempts++
 		row.Version++
+		row.ClaimedAt = s.now()
 		args = schedulingArgs{}
 		query := `UPDATE meeting_invitation SET attempts=` + args.add(row.Attempts) + `,version=` + args.add(row.Version) + `,lease_until=` + args.add(s.now().Add(3*time.Minute)) + ` WHERE activity_id=` + args.add(id)
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
@@ -169,11 +172,15 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 			return s.finishSupersededInvitation(ctx, tx, row, claimed, receipt)
 		}
 		before := row
-		switch {
-		case deliveryErr != nil && calendarAuthFailure(deliveryErr):
-			if err := s.parkInvitationAndQueue(ctx, tx, &row); err != nil {
+		parked := false
+		if deliveryErr != nil && calendarAuthFailure(deliveryErr) {
+			if parked, err = s.parkInvitationAndQueue(ctx, tx, &row, claimed.ClaimedAt); err != nil {
 				return err
 			}
+		}
+		switch {
+		case parked:
+			// The whole queue waits for the host; no back-off applies.
 		case deliveryErr != nil && row.Attempts >= 5:
 			markAttention(&row, attentionDeliveryFailed, row.ID)
 		case deliveryErr != nil:

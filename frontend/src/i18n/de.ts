@@ -19381,7 +19381,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiFigures.window.30d": "30 T",
   "scheduling.linksTitle": "Buchungslinks",
   "scheduling.status.paused": "Pausiert",
-  "scheduling.status.attention": "Braucht Aufmerksamkeit",
   "scheduling.acceptBookings": "Buchungen annehmen",
   "scheduling.acceptBookingsHelp":
     "Alle mit deinem Link können eine freie Zeit wählen. Schalte es aus, um Buchungen zu pausieren; der Link bleibt gleich.",
@@ -19396,8 +19395,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Aktionen",
   "scheduling.videoCall": "Videoanruf",
-  "scheduling.row.live": "Aktiv",
-  "scheduling.row.noInvitations": "Keine Einladungen",
   "scheduling.videoNotSet": "Nicht festgelegt",
   "scheduling.video.ownShort": "Eigener Link",
   "scheduling.mainLink": "(Hauptlink)",
