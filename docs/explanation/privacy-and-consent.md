@@ -251,10 +251,14 @@ since rotated.
   authority level that decided it. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
 
   The two kinds are not the same there. A passed-on **marketing objection** is marked
-  `decided_by_level='subject'`, because Article 21 is the subject's own act and no seat should undo
-  it. A passed-on **subject request** keeps the seat's level. It is a user's report of a call with no
-  article behind it. So an admin who fixes a wrong "stop everything" note does not need the subject
-  back on the phone.
+  `decided_by_level='subject'`, because Article 21 is the subject's own act and no user should undo
+  it. One exception: an admin may correct an objection a user typed by mistake, with a reason that
+  the audit row keeps. An objection the subject pressed on a mailed link stays theirs.
+  `stopcorrection.go` holds this rule, and `GET /contacts/{id}/consent/stops` shows each user what
+  it allows. No user lifts a processing restriction, because lifting one owes the subject notice
+  first and Margince sends no such notice yet. A passed-on **subject request** keeps the seat's
+  level. It is a user's report of a call with no article behind it. So an admin who fixes a wrong
+  "stop everything" note does not need the subject back on the phone.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.

@@ -75,3 +75,67 @@ export function RetractRecordedRequest({
     </>
   );
 }
+
+type AcquisitionRequest = components["schemas"]["ContactAcquisitionRequest"];
+
+/**
+ * Takes back the request the contact's acquisition records: they asked for a
+ * quote or a meeting, or gave permission in person. It asks first, as the
+ * recorded exchange above does, and for the same reason.
+ */
+export function RetractAcquisitionRequest({
+  contactId,
+  request,
+  mayWrite,
+}: Readonly<{
+  contactId: string;
+  request: AcquisitionRequest | undefined;
+  mayWrite: boolean;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [asking, setAsking] = useState(false);
+  const retract = useMutation({
+    mutationFn: async () => {
+      unwrap(
+        await api.POST("/contacts/{id}/acquisition-request/retract", {
+          params: { path: { id: contactId } },
+        }),
+      );
+    },
+    onSuccess: () => {
+      setAsking(false);
+      for (const key of ["contact360", "contactConsentGuard"]) {
+        queryClient.invalidateQueries({ queryKey: [key, contactId] });
+      }
+    },
+  });
+  if (!mayWrite || !request) {
+    return null;
+  }
+  return (
+    <div>
+      <p className="pe-colleague-proof t-caption">
+        {t("consent.acquisitionRequest")}
+      </p>
+      <Button variant="link" onClick={() => setAsking(true)}>
+        {t("consent.retractRequest")}
+      </Button>
+      <ConfirmModal
+        open={asking}
+        onClose={() => {
+          setAsking(false);
+          retract.reset();
+        }}
+        title={t("consent.retractRequestTitle")}
+        confirmLabel={t("consent.retractRequest")}
+        confirmVariant="danger"
+        onConfirm={() => retract.mutate()}
+        pending={retract.isPending}
+        error={retract.isError ? problemMessageOf(retract.error, t) : null}
+      >
+        <p className="t-body">{t("consent.retractRequestBody")}</p>
+      </ConfirmModal>
+    </div>
+  );
+}

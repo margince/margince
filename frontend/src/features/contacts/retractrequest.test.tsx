@@ -12,7 +12,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { installFetchStub } from "../../testing/story-utils";
-import { RetractRecordedRequest } from "./retractrequest";
+import {
+  RetractAcquisitionRequest,
+  RetractRecordedRequest,
+} from "./retractrequest";
 
 // Taking back a request a colleague recorded by hand. The button shows only
 // where the guard names the exchange by id. It asks once, then retracts.
@@ -85,6 +88,54 @@ describe("taking back a recorded request", () => {
         <RetractRecordedRequest
           contactId="p-1"
           event={RECORDED}
+          mayWrite={false}
+        />
+      </>,
+    );
+    expect(screen.queryByRole("button", { name: /Take back/ })).toBeNull();
+  });
+});
+
+describe("taking back the request the acquisition records", () => {
+  it("asks first, then retracts it", async () => {
+    const user = userEvent.setup();
+    const retracted = vi.fn(() => new Response(null, { status: 204 }));
+    installFetchStub({
+      "POST /contacts/p-1/acquisition-request/retract": retracted,
+    });
+    render(
+      <RetractAcquisitionRequest
+        contactId="p-1"
+        request={{ kinds: ["requested_quote_or_meeting"] }}
+        mayWrite
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Take back this request" }),
+    );
+    expect(retracted).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog");
+    const confirm = Array.from(dialog.querySelectorAll("button")).find(
+      (button) => button.textContent === "Take back this request",
+    );
+    if (!confirm) throw new Error("the dialog has no confirm button");
+    await user.click(confirm);
+
+    await waitFor(() => expect(retracted).toHaveBeenCalledTimes(1));
+  });
+
+  it("offers nothing when no request stands or the reader may not edit", () => {
+    render(
+      <>
+        <RetractAcquisitionRequest
+          contactId="p-1"
+          request={undefined}
+          mayWrite
+        />
+        <RetractAcquisitionRequest
+          contactId="p-1"
+          request={{ kinds: ["in_person_permission"] }}
           mayWrite={false}
         />
       </>,

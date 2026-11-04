@@ -21851,6 +21851,11 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        acquisition_request:
+          readOnly: true
+          allOf: [{$ref: '#/components/schemas/ContactAcquisitionRequest'}]
+          description: >-
+            The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -39534,6 +39539,20 @@ components:
       type: object
       properties:
         reason: {type: [string, 'null'], description: Optional buyer-given decline reason (rides offer.rejected).}
+    ContactAcquisitionRequest:
+      type: object
+      description: A request to hear from us that the contact's acquisition records.
+      required: [kinds]
+      properties:
+        kinds:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [requested_quote_or_meeting, in_person_permission]}
+          description: Which requests stand. Taking the request back withdraws all of them.
+        occurred_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the earliest of them happened. Null when nobody recorded the time.
     MorningBrief:
       type: object
       description: |-

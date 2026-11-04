@@ -1543,6 +1543,10 @@ func (stubs) RetractQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "RetractQualifyingEvent")
 }
 
+func (stubs) ListContactStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListContactStops")
+}
+
 func (stubs) SuppressContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SuppressContact")
 }

@@ -396,44 +396,39 @@ func TestARepRecordsAnObjectionAtTheSubjectsOwnLevel(t *testing.T) {
 	}
 }
 
-// TestNoSeatLiftsAnObjectionItRecorded is the consequence of that level, proved
+// TestNoRepLiftsAnObjectionItRecorded is the consequence of that level, proved
 // through the real lift door rather than by reasoning about CanOverrule.
 //
-// The admin here holds every grant the lift door asks for. What refuses them is
-// the authority ON THE ROW, which is the subject's.
-func TestNoSeatLiftsAnObjectionItRecorded(t *testing.T) {
+// The rep records the objection on a contact they own, so every grant the lift
+// door asks for holds. What refuses them is the authority ON THE ROW, which is
+// the subject's. Only an admin correcting a mistake gets past it
+// (TestAnAdminCorrectsAnObjectionAColleagueTyped).
+func TestNoRepLiftsAnObjectionItRecorded(t *testing.T) {
 	e := setupChannelConsent(t)
+	contact := repOwnedContact(t, e)
+	rep := boundedRepCtx(e.ws, e.user)
 
-	if err := e.store.Suppress(e.ctx, SuppressInput{
-		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "stop the newsletter",
+	if err := e.store.Suppress(rep, SuppressInput{
+		ContactID: contact, Kind: commsauthz.ReasonObjection, Reason: "stop the newsletter",
 	}); err != nil {
 		t.Fatalf("recording an objection: %v", err)
 	}
 
-	// THE ROW MUST BE NAMED, or this proves nothing.
-	//
-	// admitLift refuses a zero SuppressionID as a validation error before it
-	// ever compares authority, so a LiftInput without one passes this test with
-	// the subject-level stamp deleted — asserting the shape of the request
-	// rather than who may lift. Found by mutation, which is the only reason
-	// this line exists.
+	// THE ROW MUST BE NAMED, or this proves nothing: admitLift refuses a zero
+	// SuppressionID as a validation error before it compares authority.
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT id FROM communication_suppression
-		 WHERE contact_id = $1 AND revoked_at IS NULL`, e.contact).Scan(&id); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, contact).Scan(&id); err != nil {
 		t.Fatalf("reading back the objection: %v", err)
 	}
 
-	// e.ctx binds an ADMIN seat — TestARepRecordsTheSubjectsOwnRequest asserts
-	// its rows land at admin level — so this is the strongest seat the product
-	// has, holding every grant the lift door asks for. What refuses it is the
-	// authority ON THE ROW, which belongs to the subject.
-	err := e.store.Lift(e.ctx, LiftInput{
-		ContactID: e.contact, SuppressionID: id,
+	err := e.store.Lift(rep, LiftInput{
+		ContactID: contact, SuppressionID: id,
 		Reason: "the rep says it was a misunderstanding",
 	})
 	if err == nil {
-		t.Fatal("an admin lifted the subject's own Art. 21 objection")
+		t.Fatal("a rep lifted the subject's own Art. 21 objection")
 	}
 	// And refused for the RIGHT reason: a validation error here would mean the
 	// request was malformed, not that the authority held.
@@ -444,21 +439,14 @@ func TestNoSeatLiftsAnObjectionItRecorded(t *testing.T) {
 		t.Fatalf("the lift was refused with %v, want a permission denial naming the level", err)
 	}
 
-	// WHAT MAKES THIS SUBJECT-LEVEL AND NOT MERELY ADMIN-LEVEL. CanOverrule is
-	// strictly greater, so an admin cannot lift an admin row either and the
-	// refusal above reads the same for both. The difference is who COULD: an
-	// admin-level row is liftable by anything ranking above admin, and a
-	// subject-level row is liftable by nothing at all, which is the whole
-	// reason Art. 21 rows are stamped that way.
-	//
-	// So the level itself is the assertion. Without it this test passes with
-	// the subject-level stamp deleted — found by mutation.
-	if _, level, _ := liveSuppressionRow(t, e, e.contact); level != string(commsauthz.LevelSubject) {
-		t.Errorf("the surviving row is at %q, not %q: an admin-level objection is one a higher "+
-			"rank could still lift", level, commsauthz.LevelSubject)
+	// The level itself is the assertion: a rep cannot lift a user-level row
+	// either, so without it this test passes with the subject-level stamp
+	// deleted.
+	kind, level, _ := liveSuppressionRow(t, e, contact)
+	if level != string(commsauthz.LevelSubject) {
+		t.Errorf("the surviving row is at %q, not %q", level, commsauthz.LevelSubject)
 	}
-
-	if kind, _, _ := liveSuppressionRow(t, e, e.contact); kind != commsauthz.ReasonObjection {
+	if kind != commsauthz.ReasonObjection {
 		t.Errorf("the objection is no longer the live row (kind = %q) after a refused lift", kind)
 	}
 }
