@@ -26,10 +26,16 @@ const (
 // only when raw holds its key. An omitted field decodes to the same zero, and
 // the handler refuses a required field the caller left out.
 //
+// owned names the paths a later layer judges. That layer reports every
+// problem of the body in one answer, which a refusal here would cut short.
+//
 //craft:ignore naked-any mirror of StrictDecode's seam target
-func RejectOutOfBoundsNumbers(decoded any, raw json.RawMessage) *FieldShapeError {
+func RejectOutOfBoundsNumbers(decoded any, raw json.RawMessage, owned func(path string) bool) *FieldShapeError {
 	sent := sentKeys{raw: raw}
 	return taggedFieldRefusal(reflect.ValueOf(decoded), "", func(field reflect.StructField, value reflect.Value, name string) *FieldShapeError {
+		if owned != nil && owned(name) {
+			return nil
+		}
 		return outOfBounds(field, value, name, &sent)
 	})
 }

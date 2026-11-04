@@ -58,7 +58,7 @@ func commandBody[T any](body []byte) (T, error) {
 	if err := json.Unmarshal(body, &into); err != nil {
 		return into, httperr.Validation("body", "malformed_json", "the request body is not readable JSON")
 	}
-	return into, httperr.DecodedValueRefusal(&into, body)
+	return into, httperr.DecodedValueRefusal(&into, body, nil)
 }
 
 // sendEmailCommand decodes POST /v1/activities/{id}/send-email. The routed

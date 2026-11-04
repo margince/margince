@@ -47,7 +47,7 @@ func TestRejectOutOfBoundsNumbersNamesTheNumberOutsideItsRange(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			got := RejectOutOfBoundsNumbers(&tc.body, json.RawMessage(tc.raw))
+			got := RejectOutOfBoundsNumbers(&tc.body, json.RawMessage(tc.raw), nil)
 			switch {
 			case tc.want == "" && got != nil:
 				t.Fatalf("refused %q, want accepted", got.Field)
@@ -67,9 +67,19 @@ func TestAnOutOfBoundsRefusalNamesTheRangeAndTheValue(t *testing.T) {
 		"a floor only": {boundedBody{Days: -2}, "`days` must be a number of at least 0, not -2"},
 		"a cap only":   {boundedBody{Ceiling: 12}, "`ceiling` must be a number of at most 10, not 12"},
 	} {
-		got := RejectOutOfBoundsNumbers(&tc.body, nil)
+		got := RejectOutOfBoundsNumbers(&tc.body, nil, nil)
 		if got == nil || got.Error() != tc.want {
 			t.Errorf("%s: refusal %v, want %q", name, got, tc.want)
 		}
+	}
+}
+
+// A path a later layer judges is left to it, and only that path.
+func TestABoundAtAnOwnedPathIsLeftToItsOwner(t *testing.T) {
+	body := boundedBody{Limit: new(pageSize(0)), Ceiling: 11}
+	owned := func(path string) bool { return path == "limit" }
+	got := RejectOutOfBoundsNumbers(&body, nil, owned)
+	if got == nil || got.Field != "ceiling" {
+		t.Fatalf("refusal %+v, want the unowned ceiling and not the owned limit", got)
 	}
 }
