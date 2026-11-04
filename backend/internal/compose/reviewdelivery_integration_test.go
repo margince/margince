@@ -351,6 +351,8 @@ func TestADeliveryFilesTheFindingsOfTheNewestCheck(t *testing.T) {
 
 func TestAMoveWhoseRecordWasLostIsRecordedOnTheNextPass(t *testing.T) {
 	v := setupViability(t)
+	v.mailboxReadOnTime(t, v.Rep2)
+	v.mailboxReadOnTime(t, v.Rep3)
 	v.check(t)
 	task := v.reviewTask(t)
 	review := v.reviewOf(t, v.silent)
