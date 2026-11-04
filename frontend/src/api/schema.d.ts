@@ -23963,6 +23963,19 @@ export interface components {
              * @enum {string}
              */
             source: "manual" | "catalogue" | "seed";
+            long_context?: components["schemas"]["AiModelRateLongContext"];
+        };
+        /**
+         * @description The second price band of a model that charges more for a call whose prompt is longer than
+         *     `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+         *     model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+         */
+        AiModelRateLongContext: {
+            above_tokens: number;
+            input_per_mtok: string;
+            output_per_mtok: string;
+            cache_read_per_mtok: string;
+            cache_write_per_mtok: string;
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
@@ -23997,6 +24010,11 @@ export interface components {
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+            /**
+             * @description Model ids whose price carries a long-context band the catalogue does not publish, and
+             *     whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+             */
+            review?: string[];
         };
         AiPriceSync: {
             locks?: components["schemas"]["SettingLocks"];
@@ -24041,6 +24059,11 @@ export interface components {
              * @description A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
              */
             effective_date?: string;
+            /**
+             * @description True drops the model's long-context band, so every call pays the prices above. Omitted
+             *     or false keeps the band the model already carries.
+             */
+            clear_long_context?: boolean;
         };
         /**
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an

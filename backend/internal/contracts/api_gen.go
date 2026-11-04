@@ -30484,10 +30484,15 @@ type AiModelRate struct {
 	// where the embeddings lane binds and a `decisions` one where the decision lane
 	// binds, and a zero output price cannot tell them apart — every local chat row
 	// carries one too.
-	Lane          AiModelRateLane `json:"lane"`
-	ModelId       string          `json:"model_id"`
-	OutputPerMtok string          `json:"output_per_mtok"`
-	Provider      string          `json:"provider"`
+	Lane AiModelRateLane `json:"lane"`
+
+	// LongContext The second price band of a model that charges more for a call whose prompt is longer than
+	// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+	// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+	LongContext   *AiModelRateLongContext `json:"long_context,omitempty"`
+	ModelId       string                  `json:"model_id"`
+	OutputPerMtok string                  `json:"output_per_mtok"`
+	Provider      string                  `json:"provider"`
 
 	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
 	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
@@ -30514,6 +30519,17 @@ type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
 }
 
+// AiModelRateLongContext The second price band of a model that charges more for a call whose prompt is longer than
+// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+type AiModelRateLongContext struct {
+	AboveTokens       int    `json:"above_tokens"`
+	CacheReadPerMtok  string `json:"cache_read_per_mtok"`
+	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+	InputPerMtok      string `json:"input_per_mtok"`
+	OutputPerMtok     string `json:"output_per_mtok"`
+}
+
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
 	// Added Models priced for the first time today.
@@ -30536,6 +30552,10 @@ type AiModelRateProviderRefresh struct {
 
 	// Provider The provider as the routing document spells it.
 	Provider string `json:"provider"`
+
+	// Review Model ids whose price carries a long-context band the catalogue does not publish, and
+	// whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+	Review *[]string `json:"review,omitempty"`
 
 	// Unchanged Models already at the catalogue price.
 	Unchanged int `json:"unchanged"`
@@ -58114,6 +58134,10 @@ type SetAiModelRateRequest struct {
 
 	// CacheWritePerMtok USD per 1M cache-write tokens.
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+
+	// ClearLongContext True drops the model's long-context band, so every call pays the prices above. Omitted
+	// or false keeps the band the model already carries.
+	ClearLongContext *bool `json:"clear_long_context,omitempty"`
 
 	// EffectiveDate A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
