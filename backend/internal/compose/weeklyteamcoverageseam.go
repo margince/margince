@@ -63,15 +63,16 @@ func (w *WeeklyForecast) teamCoverage(
 ) (weekly.Coverage, error) {
 	kind := string(horizon.kind)
 	var called *int64
-	needsReview := false
+	var needsReview *bool
 	call, err := w.store.CurrentCallTx(ctx, tx, horizon.period, scope)
 	switch {
 	case err == nil:
 		called = &call.AmountMinor
-		needsReview, err = callNeedsReview(ctx, tx, call)
+		moved, err := callNeedsReview(ctx, tx, call)
 		if err != nil {
 			return weekly.Coverage{}, err
 		}
+		needsReview = &moved
 	case forecasting.IsNoStandingCall(err):
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return weekly.CoverageRefused(kind, horizon.baseCurrency), nil
@@ -87,19 +88,24 @@ func (w *WeeklyForecast) teamCoverage(
 		return weekly.Coverage{}, err
 	}
 	coverage := weekly.CoverageFrom(kind, horizon.baseCurrency, sufficiency)
-	coverage.CallNeedsReview = needsReview && coverage.Basis == string(forecasting.BasisManagerCall)
+	if coverage.Basis == string(forecasting.BasisManagerCall) {
+		coverage.CallNeedsReview = needsReview
+	}
 	return coverage, nil
 }
 
 // callNeedsReview reads the call's open finding through the list the web
-// reads. A closer who may not see findings about the call gets false, since
-// the same seat sees no finding on any screen either.
+// reads. Only a finding that the pipeline moved counts: a limited comparison
+// says the call could not be compared, not that anything moved. A closer who
+// may not see findings about the call gets false, as on any screen.
 func callNeedsReview(ctx context.Context, tx pgx.Tx, call forecasting.Call) (bool, error) {
 	found, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: call.Scope.Kind, ID: call.Scope.ID})
 	if err != nil {
 		return false, err
 	}
-	return slices.ContainsFunc(found, func(f assurance.Exception) bool { return f.SubjectID == call.ID }), nil
+	return slices.ContainsFunc(found, func(f assurance.Exception) bool {
+		return f.SubjectID == call.ID && decodeObserved(f.Observed)["comparison"] == "moved"
+	}), nil
 }
 
 // closedHorizons are the windows frozen over one book, with the readings each

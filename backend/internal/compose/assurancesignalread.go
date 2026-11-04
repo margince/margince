@@ -45,8 +45,12 @@ func assuranceExceptionsWith(
 	if err != nil {
 		return nil, err
 	}
-	found = append(found, calls...)
-	found = append(found, extra...)
+	return rankedWithin(ctx, tx, append(append(found, calls...), extra...), limit)
+}
+
+// rankedWithin is the end of every findings read: rank, cut to the cap, then
+// mark which of the kept ones have out-of-date inputs.
+func rankedWithin(ctx context.Context, tx pgx.Tx, found []assurance.Exception, limit int) ([]assurance.Exception, error) {
 	if err := rankFindings(ctx, tx, found); err != nil {
 		return nil, err
 	}

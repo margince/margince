@@ -118,25 +118,32 @@ func TestTheSummaryNamesACallThatNeedsReview(t *testing.T) {
 	for language, want := range map[string]string{
 		"en": "needs review", "de": "geprüft werden", "vi": "xem lại",
 	} {
-		review := TeamReview{Language: language, Counts: TeamCounts{RepsCounted: 1}}
-		review.Coverage = []Coverage{{PeriodKind: "month", Basis: "manager_call", CoverageBp: 9000}}
-		if got := summarise(review); strings.Contains(got, want) {
-			t.Errorf("%s: a current call reads %q", language, got)
-		}
-		review.Coverage[0].CallNeedsReview = true
-		if got := summarise(review); !strings.Contains(got, want) {
-			t.Errorf("%s: a call that needs review reads %q, want %q in it", language, got, want)
+		for _, replan := range []bool{false, true} {
+			review := TeamReview{Language: language, Counts: TeamCounts{RepsCounted: 1}}
+			review.Coverage = []Coverage{{PeriodKind: "month", Basis: "manager_call", CoverageBp: 9000, ReplanRecommended: replan}}
+			for _, unchecked := range []*bool{nil, new(false)} {
+				review.Coverage[0].CallNeedsReview = unchecked
+				if got := summarise(review); strings.Contains(got, want) {
+					t.Errorf("%s: a call not flagged reads %q", language, got)
+				}
+			}
+			review.Coverage[0].CallNeedsReview = new(true)
+			got := summarise(review)
+			if strings.Count(got, want) != 1 || strings.Count(got, "(90%)") != 1 {
+				t.Errorf("%s replan=%v: a call that needs review reads %q, want %q once", language, replan, got, want)
+			}
 		}
 	}
 }
 
 func TestCoverageWireCarriesTheCallReviewOnlyBesideAManagerCall(t *testing.T) {
-	call := coverageToWire(Coverage{PeriodKind: "month", Basis: "manager_call", CallNeedsReview: true})
+	call := coverageToWire(Coverage{PeriodKind: "month", Basis: "manager_call", CallNeedsReview: new(true)})
 	if call.CallNeedsReview == nil || !*call.CallNeedsReview {
 		t.Errorf("a manager_call coverage sends %v, want true", call.CallNeedsReview)
 	}
 	for _, c := range []Coverage{
-		{PeriodKind: "month", Basis: "historical_median", CallNeedsReview: true},
+		{PeriodKind: "month", Basis: "manager_call"},
+		{PeriodKind: "month", Basis: "historical_median", CallNeedsReview: new(true)},
 		CoverageRefused("month", "EUR"),
 	} {
 		if got := coverageToWire(c); got.CallNeedsReview != nil {

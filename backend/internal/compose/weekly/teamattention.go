@@ -64,16 +64,12 @@ func (e *Engine) readTeamAttention(ctx context.Context, tx pgx.Tx, review *TeamR
 	if err != nil {
 		return fmt.Errorf("weekly: reading the team's live members: %w", err)
 	}
-	if len(members) == 0 {
-		review.Attention = TeamAttentionItems{Read: true}
-		return nil
-	}
 	exceptions, err := e.attention.TeamExceptions(ctx, tx, review.TeamID, members, teamExceptionsCap)
 	if err != nil {
 		return err
 	}
 	review.Attention = TeamAttentionItems{Read: true, Exceptions: exceptions}
-	if room := teamExceptionsCap - len(exceptions); room > 0 {
+	if room := teamExceptionsCap - len(exceptions); room > 0 && len(members) > 0 {
 		stale, err := e.attention.StalledDealsOf(ctx, tx, members, room)
 		if err != nil {
 			return err

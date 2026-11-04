@@ -953,7 +953,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `absent` | `text` |  | One of `insufficient_basis`, `insufficient_history`, `not_authorized`. |
 | `base_currency` | `currency_code` | yes |  |
 | `basis` | `text` |  | One of `manager_call`, `historical_median`. |
-| `call_needs_review` | `boolean`, default `false` | yes |  |
+| `call_needs_review` | `boolean` |  |  |
 | `coverage_bp` | `bigint` |  |  |
 | `current_open_minor` | `bigint` |  |  |
 | `needed_open_minor` | `bigint` |  |  |

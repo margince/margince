@@ -14,31 +14,33 @@ type teamCopy struct{ langcopy.Spoken }
 func teamCopyFor(language string) teamCopy { return teamCopy{langcopy.For(language)} }
 
 var teamWords = struct {
-	Counted     langcopy.Phrase
-	CountedOne  langcopy.Phrase
-	Help        langcopy.Phrase
-	Strong      langcopy.Phrase
-	AtRisk      langcopy.Phrase
-	Holds       langcopy.Phrase
-	Common      langcopy.Phrase
-	CallReview  langcopy.Phrase
-	Month       langcopy.Phrase
-	Quarter     langcopy.Phrase
-	ManagerCall langcopy.Phrase
-	Median      langcopy.Phrase
+	Counted      langcopy.Phrase
+	CountedOne   langcopy.Phrase
+	Help         langcopy.Phrase
+	Strong       langcopy.Phrase
+	AtRisk       langcopy.Phrase
+	Holds        langcopy.Phrase
+	Common       langcopy.Phrase
+	HoldsReview  langcopy.Phrase
+	AtRiskReview langcopy.Phrase
+	Month        langcopy.Phrase
+	Quarter      langcopy.Phrase
+	ManagerCall  langcopy.Phrase
+	Median       langcopy.Phrase
 }{
-	Counted:     langcopy.Phrase{En: "%d of %d members counted; %d deals won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; %d Deals gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt %d deal và thua %d."},
-	CountedOne:  langcopy.Phrase{En: "%d of %d members counted; 1 deal won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; ein Deal gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt một deal và thua %d."},
-	Help:        langcopy.Phrase{En: "Asked for help: %s.", De: "Um Hilfe gebeten: %s.", Vi: "Đã yêu cầu hỗ trợ: %s."},
-	Strong:      langcopy.Phrase{En: "Strong week: %s.", De: "Starke Woche: %s.", Vi: "Tuần làm việc tốt: %s."},
-	AtRisk:      langcopy.Phrase{En: "%s: coverage at risk against %s (%d%%); a replan is recommended.", De: "%s: Deckung gegenüber %s gefährdet (%d%%); eine neue Planung wird empfohlen.", Vi: "%s: mức bao phủ có rủi ro so với %s (%d%%); nên lập lại kế hoạch."},
-	Holds:       langcopy.Phrase{En: "%s: coverage holds against %s (%d%%).", De: "%s: Deckung gegenüber %s ausreichend (%d%%).", Vi: "%s: mức bao phủ đáp ứng %s (%d%%)."},
-	Common:      langcopy.Phrase{En: "Most common pattern: %s (%d members).", De: "Häufigstes Muster: %s (%d Teammitglieder).", Vi: "Mẫu phổ biến nhất: %s (%d thành viên)."},
-	CallReview:  langcopy.Phrase{En: "%s: the manager's call needs review; the pipeline moved since it was made.", De: "%s: Die Einschätzung der Führungskraft muss geprüft werden; die Pipeline hat sich seitdem verändert.", Vi: "%s: dự báo của người quản lý cần được xem lại; pipeline đã thay đổi kể từ khi lập."},
-	Month:       langcopy.Phrase{En: "Month", De: "Monat", Vi: "Tháng"},
-	Quarter:     langcopy.Phrase{En: "Quarter", De: "Quartal", Vi: "Quý"},
-	ManagerCall: langcopy.Phrase{En: "the manager's call", De: "der Einschätzung der Führungskraft", Vi: "dự báo của người quản lý"},
-	Median:      langcopy.Phrase{En: "the historical median", De: "dem historischen Median", Vi: "trung vị lịch sử"},
+	Counted:      langcopy.Phrase{En: "%d of %d members counted; %d deals won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; %d Deals gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt %d deal và thua %d."},
+	CountedOne:   langcopy.Phrase{En: "%d of %d members counted; 1 deal won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; ein Deal gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt một deal và thua %d."},
+	Help:         langcopy.Phrase{En: "Asked for help: %s.", De: "Um Hilfe gebeten: %s.", Vi: "Đã yêu cầu hỗ trợ: %s."},
+	Strong:       langcopy.Phrase{En: "Strong week: %s.", De: "Starke Woche: %s.", Vi: "Tuần làm việc tốt: %s."},
+	AtRisk:       langcopy.Phrase{En: "%s: coverage at risk against %s (%d%%); a replan is recommended.", De: "%s: Deckung gegenüber %s gefährdet (%d%%); eine neue Planung wird empfohlen.", Vi: "%s: mức bao phủ có rủi ro so với %s (%d%%); nên lập lại kế hoạch."},
+	Holds:        langcopy.Phrase{En: "%s: coverage holds against %s (%d%%).", De: "%s: Deckung gegenüber %s ausreichend (%d%%).", Vi: "%s: mức bao phủ đáp ứng %s (%d%%)."},
+	Common:       langcopy.Phrase{En: "Most common pattern: %s (%d members).", De: "Häufigstes Muster: %s (%d Teammitglieder).", Vi: "Mẫu phổ biến nhất: %s (%d thành viên)."},
+	HoldsReview:  langcopy.Phrase{En: "%s: coverage holds against %s (%d%%), but the call needs review; the pipeline moved since it was made.", De: "%s: Deckung gegenüber %s ausreichend (%d%%), doch die Einschätzung muss geprüft werden; die Pipeline hat sich seitdem verändert.", Vi: "%s: mức bao phủ đáp ứng %s (%d%%), nhưng dự báo cần được xem lại; pipeline đã thay đổi kể từ khi lập."},
+	AtRiskReview: langcopy.Phrase{En: "%s: coverage at risk against %s (%d%%); a replan is recommended, and the call needs review because the pipeline moved since it was made.", De: "%s: Deckung gegenüber %s gefährdet (%d%%); eine neue Planung wird empfohlen, und die Einschätzung muss geprüft werden, da sich die Pipeline seitdem verändert hat.", Vi: "%s: mức bao phủ có rủi ro so với %s (%d%%); nên lập lại kế hoạch, và dự báo cần được xem lại vì pipeline đã thay đổi kể từ khi lập."},
+	Month:        langcopy.Phrase{En: "Month", De: "Monat", Vi: "Tháng"},
+	Quarter:      langcopy.Phrase{En: "Quarter", De: "Quartal", Vi: "Quý"},
+	ManagerCall:  langcopy.Phrase{En: "the manager's call", De: "der Einschätzung der Führungskraft", Vi: "dự báo của người quản lý"},
+	Median:       langcopy.Phrase{En: "the historical median", De: "dem historischen Median", Vi: "trung vị lịch sử"},
 }
 
 var focusWords = map[string]langcopy.Phrase{

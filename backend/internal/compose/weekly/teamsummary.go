@@ -59,14 +59,17 @@ func (said teamCopy) coverageSentence(coverage []Coverage, kind string) string {
 	c := coverage[i]
 	horizon := said.horizonWord(kind)
 	percent := c.CoverageBp / 100
-	sentence := fmt.Sprintf(said.Say(teamWords.Holds), horizon, said.basisWord(c.Basis), percent)
-	if c.ReplanRecommended {
-		sentence = fmt.Sprintf(said.Say(teamWords.AtRisk), horizon, said.basisWord(c.Basis), percent)
+	review := c.CallNeedsReview != nil && *c.CallNeedsReview
+	phrase := teamWords.Holds
+	switch {
+	case c.ReplanRecommended && review:
+		phrase = teamWords.AtRiskReview
+	case c.ReplanRecommended:
+		phrase = teamWords.AtRisk
+	case review:
+		phrase = teamWords.HoldsReview
 	}
-	if c.CallNeedsReview {
-		return sentence + " " + fmt.Sprintf(said.Say(teamWords.CallReview), horizon)
-	}
-	return sentence
+	return fmt.Sprintf(said.Say(phrase), horizon, said.basisWord(c.Basis), percent)
 }
 
 // commonPatternSentence names the pattern the most reps share. Ties go to the

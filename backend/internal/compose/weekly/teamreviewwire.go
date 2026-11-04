@@ -75,7 +75,7 @@ func coverageToWire(c Coverage) crmcontracts.TeamWeeklyCoverage {
 	out.CurrentOpenMinor, out.RemainingToSupportMinor = &c.CurrentOpenMinor, &c.RemainingToSupportMinor
 	out.CoverageBp = &c.CoverageBp
 	if basis == crmcontracts.TeamWeeklyCoverageBasisManagerCall {
-		out.CallNeedsReview = &c.CallNeedsReview
+		out.CallNeedsReview = c.CallNeedsReview
 	}
 	return out
 }

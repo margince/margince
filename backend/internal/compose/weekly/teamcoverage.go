@@ -37,10 +37,10 @@ type Coverage struct {
 	CoverageBp              int64
 	BaseCurrency            string
 	ReplanRecommended       bool
-	// CallNeedsReview is frozen with the coverage: the call it reads had an
-	// open input-check finding when the week closed. Only a manager_call
-	// basis can carry it.
-	CallNeedsReview bool
+	// CallNeedsReview is frozen with the coverage: whether the call it reads
+	// had an open input-check finding when the week closed. Nil when no call
+	// was checked, so an older week never reads as current.
+	CallNeedsReview *bool
 }
 
 // TeamClose is what freezing the team's forecast hands back: the landing per

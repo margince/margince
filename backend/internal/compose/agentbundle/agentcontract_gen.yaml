@@ -39685,6 +39685,12 @@ components:
           description: |-
             True when coverage is at risk against a named basis: under 8000 basis points of what
             the basis needs. Never true without a basis.
+        call_needs_review:
+          type: boolean
+          description: |-
+            True when the standing call this coverage reads has an open input-check finding
+            because the pipeline moved since it was made. Present only beside the `manager_call`
+            basis.
     TeamWeeklyStaleDeal:
       type: object
       additionalProperties: false

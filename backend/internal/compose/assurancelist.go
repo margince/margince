@@ -68,14 +68,15 @@ func AssuranceExceptionsIn(
 func TeamAssuranceExceptions(
 	ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
 ) ([]assurance.Exception, error) {
-	if len(members) == 0 {
-		return nil, nil
-	}
 	// A read for named owners skips call findings, so the team's are read by
 	// the team's scope and merged into the one ranking.
 	calls, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: forecasting.ScopeTeam, ID: &teamID})
 	if err != nil {
 		return nil, err
+	}
+	// Nil owners read every deal, so a team with nobody left keeps only its calls.
+	if len(members) == 0 {
+		return rankedWithin(ctx, tx, calls, limit)
 	}
 	return assuranceExceptionsWith(ctx, tx, members, nil, limit, calls)
 }
