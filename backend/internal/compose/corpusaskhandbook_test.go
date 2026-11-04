@@ -68,12 +68,26 @@ func askHandbook(t *testing.T, shipped bool, lane corpusAskLane, passage knowled
 
 func timeZoneLane(t *testing.T, passage knowledge.Passage) *fixedLane {
 	t.Helper()
-	lines := strings.Split(passage.Text, "\n")
 	return &fixedLane{text: corpusReply(askedClaim{
 		Text:  "Pick your time zone in your own settings.",
 		ID:    passage.ChunkID.String(),
-		Quote: lines[len(lines)-1],
+		Quote: firstLineUnderHeading(t, passage.Text),
 	})}
+}
+
+func firstLineUnderHeading(t *testing.T, section string) string {
+	t.Helper()
+	lines := strings.Split(section, "\n")
+	for _, under := range lines[1:] {
+		if strings.HasPrefix(under, "#") {
+			break
+		}
+		if under != "" && !strings.HasPrefix(under, "<!--") {
+			return under
+		}
+	}
+	t.Fatalf("no text under the heading %q", lines[0])
+	return ""
 }
 
 func timeZoneSettingsPage(t *testing.T) string {
@@ -122,6 +136,19 @@ func TestAClaimFromAnUploadedSetNamesNoSection(t *testing.T) {
 	claim := onlyClaim(t, askHandbook(t, false, timeZoneLane(t, passage), passage))
 	if claim.Section != nil || claim.Opens != nil {
 		t.Fatalf("an uploaded set's claim carries section %+v and opens %+v", claim.Section, claim.Opens)
+	}
+}
+
+func TestNeighbouringSectionsOpenTheirOwnSettingsPages(t *testing.T) {
+	personal := handbookLineOf(t, timeZoneHeading)
+	company := handbookLineOf(t, "### How do I change the company's reporting time zone?")
+	claims := []crmcontracts.KnowledgeClaim{
+		{DocumentName: settingsPage, Line: &personal},
+		{DocumentName: settingsPage, Line: &company},
+	}
+	stampHandbookSections(claims)
+	if claims[0].Opens == nil || claims[1].Opens == nil || claims[0].Opens.SettingsPage == claims[1].Opens.SettingsPage {
+		t.Fatalf("personal opens %+v, company opens %+v; want two different settings pages", claims[0].Opens, claims[1].Opens)
 	}
 }
 

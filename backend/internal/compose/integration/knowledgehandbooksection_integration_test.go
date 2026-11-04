@@ -100,32 +100,38 @@ func TestTheShippedHandbookAnswersATimeZoneQuestionWithItsSettingsPage(t *testin
 	}
 }
 
-const timeZoneHeading = "### How do I change my time zone?"
+const (
+	ownSettingsPage = "your-own-settings.md"
+	timeZoneHeading = "### How do I change my time zone?"
+)
 
 // timeZoneSection reads the shipped time zone section: its first line a reader
 // sees, and the settings page it names.
 func timeZoneSection(t *testing.T) (quote, opens string) {
 	t.Helper()
-	content, ok := handbook.Open("your-own-settings.md")
+	content, ok := handbook.Open(ownSettingsPage)
 	if !ok {
-		t.Fatal("this build ships no your-own-settings.md")
+		t.Fatalf("this build ships no %s", ownSettingsPage)
 	}
 	lines := strings.Split(string(content), "\n")
 	for i, line := range lines {
 		if line != timeZoneHeading {
 			continue
 		}
-		section, ok := handbook.SectionFor("your-own-settings.md", i+1, i+1)
+		section, ok := handbook.SectionFor(ownSettingsPage, i+1, i+1)
 		if !ok || section.Opens == "" {
 			t.Fatalf("the shipped time zone section names no settings page: %+v", section)
 		}
 		for _, under := range lines[i+1:] {
+			if strings.HasPrefix(under, "#") {
+				break
+			}
 			if under != "" && !strings.HasPrefix(under, "<!--") {
 				return under, section.Opens
 			}
 		}
 	}
-	t.Fatalf("no %q with text under it in your-own-settings.md", timeZoneHeading)
+	t.Fatalf("no %q with text under it in %s", timeZoneHeading, ownSettingsPage)
 	return "", ""
 }
 
