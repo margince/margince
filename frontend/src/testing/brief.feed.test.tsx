@@ -36,9 +36,9 @@ function queued(container: HTMLElement): HTMLElement[] {
 
 /** The waiting card whose press names `name`; it fails when none does. */
 function queuedCard(container: HTMLElement, name: RegExp): HTMLElement {
-  const card = queued(container).find((open) =>
-    name.test(open.textContent ?? ""),
-  );
+  const card = within(container)
+    .queryAllByRole("button", { name })
+    .find((press) => press.classList.contains("brief-task-open"));
   if (!card) throw new Error(`no waiting card is named ${name}`);
   return card;
 }

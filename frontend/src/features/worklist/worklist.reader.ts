@@ -13,41 +13,13 @@ import {
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
 } from "../../lib/auditactor";
+import type { Viewer } from "../../lib/worklistcopy";
 import {
   domainQuestionHeading,
   domainQuestionReason,
 } from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
 
-type Viewer = Readonly<{ id: string; display_name: string }>;
-
-/** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
-export function readerTask(
-  item: WorklistItem,
-  viewer: Viewer | undefined,
-  t: Translator,
-): WorklistItem {
-  if (
-    item.source !== "task" ||
-    !viewer ||
-    item.owner?.kind !== "user" ||
-    item.owner.id !== viewer.id ||
-    !item.title
-  )
-    return item;
-  const prefix = `${viewer.display_name.trim()} will `;
-  if (!viewer.display_name.trim() || !item.title.startsWith(prefix))
-    return item;
-  return {
-    ...item,
-    title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
-  };
-}
-
-/**
- * The row's own reading of an approval: the sentence as the title, because
- * noticeDetail draws the values under it. Other surfaces keep the whole title.
- */
 export function sentenceTitled(item: WorklistItem): WorklistItem {
   const sentence = summarySentence({
     summary: item.title,

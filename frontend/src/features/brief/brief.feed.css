@@ -218,9 +218,15 @@
 /* The open card reads top to bottom as the design does: the name, what to do,
    its chips and figures, the source as a quote with why it matters, then the
    verbs. The row inside is laid open so its parts take these places. */
+.brief-triage-lead .swipe-row,
 .brief-triage-lead .worklist-row,
 .brief-triage-lead .worklist-row-text {
   display: contents;
+}
+/* A phone's swipe box draws nothing, and its pointer events still bubble from
+   the parts laid open, so a staged verb lands with the card's verbs. */
+.brief-triage-lead .swipe-row-staged {
+  order: 8;
 }
 .brief-triage-lead .worklist-row::before {
   content: none;
@@ -313,10 +319,10 @@
 /* THE NAME OF THE ROW IN HAND, one rung over the cards behind it. */
 .brief-triage-lead p.worklist-row-title {
   margin: 0;
+  font: var(--fontHeadingSmall);
 }
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead-head > .heading {
-  font: var(--fontHeadingSmall);
   white-space: normal;
   overflow-wrap: anywhere;
   text-wrap: balance;
@@ -330,7 +336,9 @@
 }
 .brief-triage-lead .worklist-row-title > .heading {
   min-width: 0;
-  font: var(--fontHeadingSmall);
+  font: var(
+    --fontHeadingSmall
+  ); /* ds:ignore the row's large headline steps down to the card's title rung */
   overflow-wrap: anywhere;
   text-wrap: balance;
 }
@@ -344,8 +352,10 @@
 .brief-triage-lead .emailentry {
   align-self: stretch;
   display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
+  gap: var(
+    --space-1
+  ); /* ds:ignore the lines of one quote sit tight, as one block */
+  padding: var(--padCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background-image: linear-gradient(var(--bgChip), var(--bgChip));

@@ -16,8 +16,10 @@ import { useActivity } from "../../lib/activityread";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { briefContextTitle } from "../../lib/worklistcopy";
+import { useWriteTo } from "../../lib/writeto";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
+import { useListed } from "../worklist/worklist.row.captions";
 import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
@@ -45,6 +47,8 @@ export function Triage({
   const t = useT();
   const { locale } = useLocale();
   const viewer = useMe(false).data?.user;
+  const listed = useListed();
+  const writeTo = useWriteTo();
   // A press removes the pressed button from the list. Focus follows it onto
   // the card it brought in hand; a first render takes no focus.
   const pressed = useRef(false);
@@ -59,6 +63,8 @@ export function Triage({
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
   const taskPending = isTask && taskRead.isPending;
+  // The drafted mail is the card's one filled verb, so Done steps back.
+  const drafts = Boolean(task?.email_target && writeTo);
   const cardVerbs =
     onContext || task || taskPending ? (
       <>
@@ -109,7 +115,7 @@ export function Triage({
                         {taskName(lead, viewer, t, locale)}
                       </Heading>
                     )}
-                    <TaskMeta item={lead} linked />
+                    <TaskMeta item={lead} link={listed} />
                     {inbox && (
                       <p className="t-caption brief-triage-facts">
                         {t(`visibility.${inbox}`)}
@@ -130,6 +136,7 @@ export function Triage({
                       )
                     }
                     context={cardVerbs}
+                    quiet={drafts}
                     // The card around this row says whose it is, why it is
                     // here and where it stands in the day, each once.
                     framed

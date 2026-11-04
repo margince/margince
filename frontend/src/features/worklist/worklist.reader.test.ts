@@ -1,10 +1,9 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
-import { whenText } from "../../lib/worklistcopy";
+import { readerTask, whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
   noticeDetail,
-  readerTask,
   sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";

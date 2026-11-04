@@ -254,7 +254,9 @@
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-value {
-  font: var(--fontHeadingSmall);
+  font: var(
+    --fontHeadingSmall
+  ); /* ds:ignore the rail's one-line rows read the figure a rung down */
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
@@ -729,7 +731,15 @@
   padding-block-start: var(--space-3);
   border-block-start: 1px solid var(--borderSubtle);
 }
-/* The name's line breaks evenly when a long name wraps. */
+/* A phone keeps the words their width: a narrower mark column and inset. */
+@media (max-width: 600px) {
+  .brief-main .brief-agent-section .magic-line {
+    grid-template-columns: var(--space-6) minmax(0, 1fr) auto;
+    padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+  }
+}
+/* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {
+  display: inline-block;
   text-wrap: balance;
 }

@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import type { WorklistItem } from "../../lib/worklisttypes";
 import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { BriefFeed } from "./brief.feed";
@@ -52,7 +53,7 @@ it("marks a waiting task done from its tick, without opening it", async () => {
 
 it("offers no tick on a row the reader may not complete", () => {
   stubApi({});
-  const readOnly = {
+  const readOnly: WorklistItem = {
     ...taskRow("task-1", "Send the sheet"),
     actions: ["open"],
   };

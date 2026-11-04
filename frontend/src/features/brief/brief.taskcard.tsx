@@ -20,6 +20,7 @@ import {
   TrendingDown,
   UserPlus,
 } from "lucide-react";
+import { useTaskDone } from "../../components/taskactions";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
@@ -44,18 +45,17 @@ import { useMe } from "../../lib/session";
 import {
   briefContextTitle,
   briefSubjectLabel,
+  contactHref,
+  employerOf,
   itemTitle,
   phrasedReasons,
+  readerTask,
   reasonText,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
-import { employerOf } from "../worklist/worklist.meetingparties";
-import type { WorklistItem } from "../worklist/worklist.queries";
-import { readerTask } from "../worklist/worklist.reader";
-import { useTaskDone } from "../worklist/worklist.row.answer";
-import { contactHref, useListed } from "../worklist/worklist.row.captions";
+import type { WorklistItem } from "../../lib/worklisttypes";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(
@@ -152,14 +152,14 @@ export function TaskCard({
 }
 
 /**
- * One line of chips under a card's text: when it is due, what kind of work it
- * is, who and what it is with, and its state at the far end. `linked` makes
- * each record a link, for the open card, which is no button of its own.
+ * One line of chips under a card's text. It says when the work is due, what
+ * kind it is, and who and what it is with; its state sits at the far end.
+ * `link` makes each record a link on the open card, which is no button.
  */
 export function TaskMeta({
   item,
-  linked = false,
-}: Readonly<{ item: WorklistItem; linked?: boolean }>) {
+  link,
+}: Readonly<{ item: WorklistItem; link?: (href: string) => string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -172,7 +172,7 @@ export function TaskMeta({
     new Date(),
   );
   // The open card's title already carries the late badge.
-  const status = statusOf(item, linked);
+  const status = statusOf(item, link !== undefined);
   return (
     <span className="brief-task-meta">
       {when && (
@@ -183,7 +183,7 @@ export function TaskMeta({
       <Chip dense icon={kindIcon(item)}>
         {t(kindKey(item))}
       </Chip>
-      <TaskPeople item={item} linked={linked} />
+      <TaskRecords item={item} link={link} />
       {status && (
         <span className="brief-task-status">
           <Badge tone={status.tone} dot>
@@ -273,23 +273,22 @@ const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = {
 };
 
 /**
- * Who the work is with and what it is about: the contact, the account they
- * work for, and the record the row is about where it is neither.
+ * Who the work is with and what it is about. That is the contact, then their
+ * account, then the row's record where it is neither.
  */
-export function TaskPeople({
+function TaskRecords({
   item,
-  linked = false,
-}: Readonly<{ item: WorklistItem; linked?: boolean }>) {
-  const listed = useListed();
+  link,
+}: Readonly<{ item: WorklistItem; link?: (href: string) => string }>) {
   // A brief item's open card is headed by its record, so no chip repeats it.
-  const headed = linked && briefSubjectLabel(item) !== undefined;
+  const headed = link !== undefined && briefSubjectLabel(item) !== undefined;
   const named = namedOn(item).filter(
     (who, index, all) =>
       all.findIndex((other) => other.id === who.id) === index &&
       !(headed && who.id === item.subject?.id),
   );
   return named.map((who) => {
-    const appHref = linked && who.href ? listed(who.href) : undefined;
+    const appHref = link && who.href ? link(who.href) : undefined;
     return who.mark === "avatar" ? (
       <Chip
         key={who.id}

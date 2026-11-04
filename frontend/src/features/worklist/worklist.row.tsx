@@ -15,6 +15,7 @@ import {
   dealFactsText,
   itemTitle,
   phrasedReasons,
+  readerTask,
   reasonText,
   rowHref,
   subjectHref,
@@ -37,7 +38,6 @@ import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import {
   noticeDetail,
-  readerTask,
   sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
@@ -98,6 +98,7 @@ export function WorklistRow({
   onOpenEmail,
   context,
   framed = false,
+  quiet = false,
   pick,
 }: Readonly<{
   item: WorklistItem;
@@ -107,6 +108,8 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** The card already holds a filled verb, so the row's own is outlined. */
+  quiet?: boolean;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -204,7 +207,7 @@ export function WorklistRow({
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
+  const answer = withFoldedBrief(rowAnswer(item, brief, quiet), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
     ...name,

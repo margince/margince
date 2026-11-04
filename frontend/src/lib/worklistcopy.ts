@@ -4,7 +4,7 @@ export { sourceName } from "./worklistsources";
 
 import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
-import type { Locale, useT } from "../i18n";
+import type { Locale, Translator, useT } from "../i18n";
 import { isMessageKey, translatePlural } from "../i18n";
 import { aiTaskLabel } from "./ai-task-label";
 import {
@@ -431,4 +431,52 @@ function knownSource(
   source: WorklistItem["source"],
 ): source is keyof typeof KNOWN_SOURCES {
   return source in KNOWN_SOURCES;
+}
+
+export type Viewer = Readonly<{ id: string; display_name: string }>;
+
+/** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
+export function readerTask(
+  item: WorklistItem,
+  viewer: Viewer | undefined,
+  t: Translator,
+): WorklistItem {
+  if (
+    item.source !== "task" ||
+    !viewer ||
+    item.owner?.kind !== "user" ||
+    item.owner.id !== viewer.id ||
+    !item.title
+  )
+    return item;
+  const prefix = `${viewer.display_name.trim()} will `;
+  if (!viewer.display_name.trim() || !item.title.startsWith(prefix))
+    return item;
+  return {
+    ...item,
+    title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
+  };
+}
+
+/**
+ * The row's own reading of an approval: the sentence as the title, because
+ * noticeDetail draws the values under it. Other surfaces keep the whole title.
+ */
+
+// The contact behind a row, as an address: a thread's sender, a meeting's
+// attendee. It goes through the entity registry, so the page is spelled once.
+export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
+  return routeHash(ENTITY.contact.route(contact.id));
+}
+
+/** The account the row's contact works for, linked, where the server sent one. */
+export function employerOf(
+  contact: NonNullable<WorklistItem["contact"]>,
+): { href: string; label: string } | undefined {
+  const employer = contact.employer;
+  if (!employer) return undefined;
+  return {
+    href: routeHash(ENTITY.company.route(employer.company_id)),
+    label: employer.company_name,
+  };
 }

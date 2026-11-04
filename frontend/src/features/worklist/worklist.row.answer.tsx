@@ -6,10 +6,8 @@ import { MeetingOutcome } from "../../components/meetingoutcome";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useTaskUpdate,
+  useTaskDone,
 } from "../../components/taskactions";
-import { useCompleteTask } from "../../components/taskcomplete";
-import { completeFailureKey } from "../../components/taskwritefollowup";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
@@ -84,7 +82,7 @@ const ANSWER_BY_SOURCE: Partial<
     WorklistItem["source"],
     {
       verbs: readonly WorklistItem["actions"][number][];
-      draw: (item: WorklistItem) => RowPlacement;
+      draw: (item: WorklistItem, quiet: boolean) => RowPlacement;
     }
   >
 > = {
@@ -133,8 +131,10 @@ const ANSWER_BY_SOURCE: Partial<
   },
   task: {
     verbs: ["complete"],
-    draw: (item) => ({
-      primary: <TaskComplete id={item.id} version={item.version} />,
+    draw: (item, quiet) => ({
+      primary: (
+        <TaskComplete id={item.id} version={item.version} quiet={quiet} />
+      ),
     }),
   },
   // The row's id is the contact's here, which is what the dismissal endpoint
@@ -149,9 +149,12 @@ const ANSWER_BY_SOURCE: Partial<
   },
 };
 
+// `quiet` outlines the row's own verb where its card already holds a filled
+// one, since a card carries one filled button.
 export function rowAnswer(
   item: WorklistItem,
   brief: BriefAnswer,
+  quiet = false,
 ): RowPlacement {
   if (item.source === "weekly_commitment")
     return { primary: <PlanWorkActions item={item} /> };
@@ -170,7 +173,7 @@ export function rowAnswer(
     !item.batch &&
     keyed.verbs.some((verb) => item.actions.includes(verb))
   ) {
-    return keyed.draw(item);
+    return keyed.draw(item, quiet);
   }
   // Its own branch: this answer needs more than the row's id. The composer
   // files the sent message against a record, so the subject travels with it.
@@ -322,30 +325,19 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
 function TaskComplete({
   id,
   version,
-}: Readonly<{ id: string; version: number | undefined }>) {
+  quiet,
+}: Readonly<{ id: string; version: number | undefined; quiet: boolean }>) {
   const t = useT();
   const done = useTaskDone(id, version);
   return (
-    <Button variant="primary" pending={done.pending} onClick={done.complete}>
+    <Button
+      variant={quiet ? "ghost" : "primary"}
+      pending={done.pending}
+      onClick={done.complete}
+    >
       {t("tasks.complete")}
     </Button>
   );
-}
-
-/** A task's Done write, shared by every control that offers it. */
-export function useTaskDone(id: string, version: number | undefined) {
-  const t = useT();
-  const toast = useToast();
-  const update = useTaskUpdate([worklistKey]);
-  // A rejected PATCH otherwise leaves the control idle with nothing on screen
-  // to say so, and the reader has no reason to try again.
-  const complete = useCompleteTask(update, (error) =>
-    toast.show(t(completeFailureKey(error)), { tone: "danger" }),
-  );
-  return {
-    pending: update.isPending,
-    complete: () => complete(id, version),
-  };
 }
 
 // Running a failed rule again, from the row that reported it.

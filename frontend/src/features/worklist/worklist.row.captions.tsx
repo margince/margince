@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { AppLink } from "../../design-system/applink";
-import { ENTITY } from "../../lib/entity";
-import { routeHash } from "../../lib/router";
-import { briefSubjectLabel, subjectHref } from "../../lib/worklistcopy";
-import { employerOf } from "./worklist.meetingparties";
+import {
+  briefSubjectLabel,
+  contactHref,
+  employerOf,
+  subjectHref,
+} from "../../lib/worklistcopy";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
@@ -22,13 +24,6 @@ export function shapedReadings(
     when: null,
     facts: briefSubjectLabel(readings.item) ? readings.facts : null,
   };
-}
-
-// The human behind a row, as an address — the sender of a thread filed under a
-// deal, the attendee a meeting is read with — through the same registry, so
-// the contact's page is spelled once.
-export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
-  return routeHash(ENTITY.contact.route(contact.id));
 }
 
 /** How a row links an address inside a Worklist: carrying that list's way back. */

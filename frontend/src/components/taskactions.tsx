@@ -22,6 +22,7 @@ import { Heading } from "../design-system/heading";
 import { Markdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
+import { useToast } from "../design-system/toast";
 import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
@@ -30,6 +31,7 @@ import { useLocale, useT } from "../i18n";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
+import { worklistKey } from "../lib/workkeys";
 import { EntityRef } from "./entityref";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
@@ -42,7 +44,7 @@ import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
-import { refetchAfterWrite } from "./taskwritefollowup";
+import { completeFailureKey, refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -104,6 +106,22 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       }
     },
   });
+}
+
+/** A task's Done write, shared by every control that offers it. */
+export function useTaskDone(id: string, version: number | undefined) {
+  const t = useT();
+  const toast = useToast();
+  const update = useTaskUpdate([worklistKey]);
+  // A rejected PATCH otherwise leaves the control idle with nothing on screen
+  // to say so, and the reader has no reason to try again.
+  const complete = useCompleteTask(update, (error) =>
+    toast.show(t(completeFailureKey(error)), { tone: "danger" }),
+  );
+  return {
+    pending: update.isPending,
+    complete: () => complete(id, version),
+  };
 }
 
 /**

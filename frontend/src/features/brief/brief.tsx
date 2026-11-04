@@ -19,6 +19,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { readerTask } from "../../lib/worklistcopy";
 import { pillCount } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
@@ -35,7 +36,6 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";

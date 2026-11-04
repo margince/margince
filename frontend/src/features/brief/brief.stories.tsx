@@ -240,7 +240,7 @@ export const DecisionApproved: Story = {
     // in hand on the card, and the one after it listed under it.
     await waitFor(() =>
       expect(
-        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
+        canvasElement.querySelectorAll("#brief-today .brief-triage > li"),
       ).toHaveLength(1),
     );
   },

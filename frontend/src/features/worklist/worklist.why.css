@@ -43,6 +43,8 @@
   border-radius: var(--r-md);
   background: var(--bgChip);
   border: 1px solid var(--borderSubtle);
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-weight: var(--fontWeightMedium);
 }
 

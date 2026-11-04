@@ -88,7 +88,6 @@ reach features/brief/brief.tsx features/worklist/taskdetailmodal.tsx
 reach features/brief/brief.tsx features/worklist/worklist.address.ts
 reach features/brief/brief.tsx features/worklist/worklist.pane.tsx
 reach features/brief/brief.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.tsx features/worklist/worklist.reader.ts
 reach features/brief/briefcoverage.tsx features/worklist/worklist.queries.ts
 reach features/brief/meetingbrief/header.tsx features/records/record360/index.ts
 reach features/brief/meetingbrief/plan.tsx features/records/record360/index.ts

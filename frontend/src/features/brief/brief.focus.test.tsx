@@ -85,6 +85,18 @@ it("a task lead from a call offers Call and Email, and links the contact once", 
   expect(toContact).toHaveLength(1);
 });
 
+it("a task lead with no draft to offer keeps Done filled", async () => {
+  showLead(LEAD);
+
+  const card = within(await screen.findByRole("article"));
+  await card.findByRole("link", { name: en["record.verb.email"] });
+  expect(
+    card
+      .getByRole("button", { name: en["tasks.complete"] })
+      .classList.contains("btn-primary"),
+  ).toBe(true);
+});
+
 it("a task lead whose row names no contact still offers the task's contact verbs", async () => {
   showLead({ ...LEAD, contact: undefined });
 
@@ -105,7 +117,9 @@ it("a task owed to a contact keeps Done and offers the drafted mail before the d
     name: en["task.next.draftEmail"],
   });
   expect(draft.classList.contains("btn-ai")).toBe(true);
-  expect(card.getByRole("button", { name: en["tasks.complete"] })).toBeTruthy();
+  // One filled button to a card: beside the draft, Done is outlined.
+  const done = card.getByRole("button", { name: en["tasks.complete"] });
+  expect(done.classList.contains("btn-primary")).toBe(false);
   const details = card.getByRole("button", { name: en["brief.focus.context"] });
   expect(
     draft.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,

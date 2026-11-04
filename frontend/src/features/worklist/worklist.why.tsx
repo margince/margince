@@ -39,8 +39,8 @@ export function WorklistWhy({
               className="worklist-why-reasons"
               aria-label={t("worklist.why.reasons")}
             >
-              {reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
+              {reasons.map((reason, index) => (
+                <li key={`${index}:${reason}`}>{reason}</li>
               ))}
             </ol>
           )}
@@ -54,7 +54,7 @@ export function WorklistWhy({
           )}
           {item.consequence !== "none" && (
             <p className="worklist-why-if">
-              <span className="t-caption">{t("worklist.why.consequence")}</span>
+              <span className="t-caption">{t("worklist.why.consequence")}</span>{" "}
               {t(`worklist.consequence.${item.consequence}`)}
             </p>
           )}

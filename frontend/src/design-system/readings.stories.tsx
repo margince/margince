@@ -133,7 +133,7 @@ export const Chips: Story = {
   ),
 };
 
-// The people and accounts a piece of work is with, each led by its own mark.
+// The contacts and accounts a piece of work is with, each led by its own mark.
 export const RecordChips: Story = {
   render: () => (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
