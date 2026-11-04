@@ -357,7 +357,7 @@ var (
 )
 
 // requestOnRecord reports whether the record holds this contact asking to hear
-// from us, within scope: a request a rep recorded, an enquiry from a form, or
+// from us, within scope. That is a request a rep recorded, a form enquiry, or
 // acquisition evidence of a request.
 //
 // No age limit: a request covers the follow-up at the agreed timing. A stop or

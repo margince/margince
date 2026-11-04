@@ -105,7 +105,7 @@ type RecordQualifyingEventInput struct {
 	Note       string
 	OccurredAt time.Time
 	// AsksForQuote says the contact asked for a quote or an offer. Only a
-	// request the subject made may say so, and only such a request bears out a
+	// request the subject made may say so. Only such a request bears out a
 	// quote; a request to be called back does not.
 	AsksForQuote bool
 }

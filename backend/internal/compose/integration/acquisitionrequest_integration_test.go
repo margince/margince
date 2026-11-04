@@ -73,7 +73,7 @@ func queuedFollowUp(t *testing.T, e *Env, gate *consent.Gate, address string) fu
 
 // A contact acquired because they asked for a quote may be followed up with no
 // age limit. Once the request is withdrawn, a follow-up already queued on it is
-// refused at transmit, and the acquisition row stays as the record of how the
+// refused at transmit. The acquisition row stays as the record of how the
 // contact was obtained. Both request kinds are covered.
 //
 // Mutation: drop "e.request_retracted_at IS NULL" from requestOnRecord and the
