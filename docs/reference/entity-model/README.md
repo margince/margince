@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4217 |
+| Columns | 4223 |
 | Foreign keys | 584 |
 | Owning areas | 38 |
 
@@ -228,7 +228,7 @@ erDiagram
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
-| [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
+| [`communication_instruction`](consent.md#communication_instruction) | consent | 18 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
@@ -253,10 +253,10 @@ erDiagram
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
 | [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
-| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
+| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 13 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 35 | 49 |
-| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
+| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 12 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |

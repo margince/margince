@@ -201,8 +201,9 @@ describe("what a rep is shown", () => {
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/only an administrator can still send past this/i),
+      screen.getByText(/a reply or a message they asked for can still go/i),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
   });
 
   // The rule that matters most: a control nobody may press teaches a rep the
@@ -611,7 +612,7 @@ describe("one status for the message", () => {
     [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
-      "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     ],
   ] as const)("explains %o in its own words", (over, title, sentence) => {
     render(

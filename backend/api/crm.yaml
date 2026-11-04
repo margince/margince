@@ -25941,6 +25941,75 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/qualifying-events/{event_id}/retract:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: event_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Compliance]
+      operationId: retractQualifyingEvent
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take back an exchange a colleague recorded by hand.
+      description: |
+        Withdraws an `in_person` or `requested_by_subject` exchange that was recorded by mistake, or
+        that the contact took back. The row stays on the record with the moment and the seat that
+        withdrew it, and no send rests on it any more, including a message already queued on it.
+        A request has no age limit, so this is one of the two ways one stops counting. The other is
+        POST /contacts/{id}/acquisition-request/retract, for the request the contact's acquisition
+        records. Recording the same exchange again returns the withdrawn row and does not revive it.
+
+        Human-only for the reason recording is: the exchange is a human's own statement about what
+        a contact said, and only a human withdraws it.
+      responses:
+        '204':
+          description: Withdrawn. Sends no longer rest on this exchange.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: |
+            No live hand-recorded exchange with this id is on this contact: none exists, it is
+            derived rather than recorded by hand, or it was already withdrawn.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/acquisition-request/retract:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: retractAcquisitionRequest
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take back the request the contact's acquisition records.
+      description: |
+        A contact acquired as `requested_quote_or_meeting` or `in_person_permission` counts as having
+        asked to hear from us, with no age limit. This withdraws that request, for one recorded by
+        mistake or one the contact took back. The acquisition rows stay as the record of how the
+        contact was obtained, with the moment and the seat that withdrew the request. No send rests
+        on them any more, including a message already queued on them.
+
+        Human-only for the reason a hand-recorded request is: a request is a human's statement about
+        what a contact said, and only a human withdraws it.
+      responses:
+        '204':
+          description: Withdrawn. Sends no longer rest on the acquisition request.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: The contact holds no live acquisition request, or it was already withdrawn.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/claim:
     parameters:
       - name: record_type
@@ -57137,13 +57206,28 @@ components:
           type: string
           format: date-time
           description: When the exchange happened, not when it was typed in.
+        asks_for_quote:
+          type: boolean
+          default: false
+          description: |
+            The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
+            and only such a request bears out a quote sent before any deal exists. A request to be
+            called back supports a follow-up and not a quote.
 
     QualifyingEventRecord:
       type: object
-      required: [kind, occurred_at, note]
+      required: [id, kind, occurred_at, note, asks_for_quote, retracted]
       description: A recorded exchange, as it now stands on the contact.
       properties:
-        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person, meeting] }
+        id:
+          type: string
+          format: uuid
+          description: The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject] }
+        asks_for_quote: { type: boolean, description: The contact asked for a quote or an offer. }
+        retracted:
+          type: boolean
+          description: The exchange was withdrawn. Recording it again returns it withdrawn; no send rests on it.
         note: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
 

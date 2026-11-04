@@ -2498,6 +2498,7 @@ public.communication_instruction.directed_at timestamp with time zone NOT NULL g
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
 public.communication_instruction.explanation text NOT NULL gen=- def=-
 public.communication_instruction.facts_as_of timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.given_by_admin boolean NOT NULL gen=- def=false
 public.communication_instruction.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_instruction.reason_code text NOT NULL gen=- def=-
 public.communication_instruction.review_id uuid NOT NULL gen=- def=-
@@ -2531,7 +2532,8 @@ BEGIN
      AND NEW.id IS NOT DISTINCT FROM OLD.id
      AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
      AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
-     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code
+     AND NEW.given_by_admin IS NOT DISTINCT FROM OLD.given_by_admin THEN
     RETURN NEW;
   END IF;
   IF NEW.id IS DISTINCT FROM OLD.id
@@ -2543,7 +2545,8 @@ BEGIN
      OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
      OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
      OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
-     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at
+     OR NEW.given_by_admin IS DISTINCT FROM OLD.given_by_admin THEN
     RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'communication_instruction_immutable';
@@ -3235,6 +3238,7 @@ public.consent_purpose.requires_double_opt_in boolean NOT NULL gen=- def=false
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.consent_qualifying_event.asks_for_quote boolean NOT NULL gen=- def=false
 public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = ANY (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (note IS NOT NULL)) OR ((kind <> ALL (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
@@ -3247,6 +3251,8 @@ public.consent_qualifying_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_qualifying_event.kind text NOT NULL gen=- def=-
 public.consent_qualifying_event.note text gen=- def=-
 public.consent_qualifying_event.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.consent_qualifying_event.retracted_at timestamp with time zone gen=- def=-
+public.consent_qualifying_event.retracted_by text gen=- def=-
 public.consent_qualifying_event.source text NOT NULL gen=- def=-
 public.consent_qualifying_event.source_entity_id uuid gen=- def=-
 public.consent_qualifying_event.source_entity_type text gen=- def=-
@@ -3373,6 +3379,8 @@ public.contact_acquisition_evidence.kind text NOT NULL gen=- def=-
 public.contact_acquisition_evidence.note text gen=- def=-
 public.contact_acquisition_evidence.occurred_at timestamp with time zone gen=- def=-
 public.contact_acquisition_evidence.purpose_claimed text gen=- def=-
+public.contact_acquisition_evidence.request_retracted_at timestamp with time zone gen=- def=-
+public.contact_acquisition_evidence.request_retracted_by text gen=- def=-
 public.contact_acquisition_evidence.source_entity_id uuid gen=- def=-
 public.contact_acquisition_evidence.source_entity_type text gen=- def=-
 public.contact_acquisition_evidence_by_contact CREATE INDEX contact_acquisition_evidence_by_contact ON public.contact_acquisition_evidence USING btree (contact_id, captured_at DESC)
