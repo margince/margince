@@ -2753,6 +2753,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
+  "history.field.due_has_time": "Fällig zu einer Uhrzeit",
   "history.field.remind_at": "Erinnerung",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
@@ -7077,6 +7078,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
+  "log.dueTime": "Uhrzeit (optional)",
+  "log.dueTimeSkipped":
+    "An diesem Tag wird die Uhr vorgestellt, {time} gibt es nicht. Die Aufgabe ist um {actual} fällig.",
   "log.date": "Datum",
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",

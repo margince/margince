@@ -22,7 +22,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
@@ -192,7 +192,12 @@ function ActivityBody({
               {" "}
               ·{" "}
               {t("co.next.due", {
-                when: formatDate(activity.due_at, locale, zone),
+                when: formatDue(
+                  activity.due_at,
+                  activity.due_has_time,
+                  locale,
+                  zone,
+                ),
               })}
             </>
           )}{" "}

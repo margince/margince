@@ -288,3 +288,32 @@ export function hourInZone(instant: Date, zone: string): number {
   }).format(instant);
   return Number.parseInt(hour, 10);
 }
+
+/**
+ * A task's due date, with its time of day when the task has one
+ * (`due_has_time`). A read that does not carry the flag passes nothing and
+ * gets the date alone.
+ */
+export function formatDue(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  locale: Locale,
+  zone: string,
+): string {
+  return hasTime === true
+    ? formatDateTime(dueAt, locale, zone)
+    : formatDate(dueAt, locale, zone);
+}
+
+/** formatDue in the day-and-month form a row or a chip has room for. */
+export function formatDueCompact(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  locale: Locale,
+  zone: string,
+): string {
+  const day = formatDayMonth(dueAt, locale, zone);
+  return hasTime === true
+    ? `${day}, ${formatTimeOfDay(dueAt, locale, zone)}`
+    : day;
+}

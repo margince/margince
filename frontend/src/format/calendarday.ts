@@ -152,7 +152,10 @@ export function calendarMonth(at: Date, zone: string): string {
 // offset, DST included, and privacy files its deadlines with it. Reuse rather
 // than a second algorithm: it returns the day's last millisecond, so this floors
 // to the whole second the task writer has always sent.
-export function dueInstant(day: string, zone: string): string {
+//
+// With a callback time (`HH:MM`), the task is due at that wall-clock time in
+// `zone`, by instantAtWallClock's DST rule, to the whole second.
+export function dueInstant(day: string, zone: string, time = ""): string {
   // Refused explicitly, because the arithmetic below no longer refuses it on
   // its own. `new Date("10000-09-15T23:59:59")` threw a RangeError, and that
   // throw was the only thing standing between a year typo and a due date ten
@@ -173,6 +176,14 @@ export function dueInstant(day: string, zone: string): string {
   // FLOORED, not truncated toward zero. `% 1000` on a negative instant rounds
   // the wrong way — a day before 1970 would land on the next day's midnight,
   // which is the very off-by-one-day this signature exists to end.
+  if (time !== "") {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+    if (!match) {
+      throw new RangeError(`not a time of day: ${time}`);
+    }
+    const ms = (Number(match[1]) * 60 + Number(match[2])) * 60_000;
+    return new Date(instantAtWallClock(day, ms, zone)).toISOString();
+  }
   const lastMs = new Date(endOfDayInZone(day, zone)).getTime();
   return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }

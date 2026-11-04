@@ -7,6 +7,8 @@
 // calls no tool itself, so it declares no actions.
 
 import { monogramOf } from "../../design-system/avatarmesh";
+import { formatDueCompact, isRenderableZone } from "../../format/format.dates";
+import { UTC_ZONE } from "../../format/timezone";
 import { askAssistant } from "../actions";
 import { badge } from "../badge";
 import { el } from "../bridge";
@@ -281,16 +283,24 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
     }),
   );
   const list = el("ol", "attention-list");
-  for (const promise of promises) list.appendChild(promiseRow(promise));
+  // The installation's zone, where a due date is a day. An answer from a
+  // server older than the field names none, and UTC is what it judged in.
+  const zone = isRenderableZone(asText(answer.time_zone))
+    ? asText(answer.time_zone)
+    : UTC_ZONE;
+  for (const promise of promises) list.appendChild(promiseRow(promise, zone));
   card.appendChild(list);
   return card;
 }
 
-function promiseRow(promise: Record<string, unknown>): HTMLElement {
+function promiseRow(
+  promise: Record<string, unknown>,
+  zone: string,
+): HTMLElement {
   const subject = asText(promise.subject) || "A promise";
   const owner = asText(promise.assignee_name);
   const status = el("span", "meta attention-status");
-  status.append(dueBadge(promise), " ");
+  status.append(dueBadge(promise, zone), " ");
   status.append(owner === "" ? badge("Nobody owns this", "warning") : owner);
   const reasons = [status];
   const about = asList(promise.about)
@@ -319,8 +329,14 @@ function promiseRef(promise: Record<string, unknown>): string {
     : `claim_id ${asText(promise.claim_id)}`;
 }
 
-function dueBadge(promise: Record<string, unknown>): HTMLElement {
-  const due = asText(promise.due_at).slice(0, 10);
+// The due date as every task screen prints it: the day in the installation's
+// zone, with the time of day only for a promise that has one.
+function dueBadge(promise: Record<string, unknown>, zone: string): HTMLElement {
+  const at = asText(promise.due_at);
+  const due =
+    at === "" || Number.isNaN(Date.parse(at))
+      ? ""
+      : formatDueCompact(at, promise.due_has_time === true, "en", zone);
   switch (asText(promise.state)) {
     case "overdue": {
       const days = asFiniteNumber(promise.days_overdue) ?? 0;

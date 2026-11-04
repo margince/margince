@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { RecordZoneProvider } from "../lib/recordzone";
@@ -935,6 +935,42 @@ describe("assigning a task at create time", () => {
     render(<LogActivity entityType="contact" entityId="p1" />);
     await screen.findByLabelText("Subject *");
     expect(screen.queryByLabelText("Assignee")).toBeNull();
+  });
+
+  it("posts a task's callback time as its due time, flagged as a time", async () => {
+    const captured: Captured[] = [];
+    renderTaskComposer(captured);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Subject *"), "Call back");
+    const time = screen.getByRole("textbox", { name: "Time (optional)" });
+    await user.tripleClick(screen.getByRole("textbox", { name: "Due date" }));
+    await user.keyboard("27/10/2027");
+    await user.tab();
+    await user.type(time, "15:00");
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
+    );
+    const post = captured.find((e) => e.key === "POST /activities");
+    const due = dueInstant("2027-10-27", INSTALLATION_ZONE, "15:00");
+    expect(post?.body).toMatchObject({
+      kind: "task",
+      due_at: due,
+      due_has_time: true,
+    });
+    expect(post?.body).not.toHaveProperty("remind_at");
+  });
+
+  it("offers no callback time on a note", async () => {
+    stubApi({
+      "GET /contacts/p1": () => jsonResponse(contact),
+      "GET /users": () => jsonResponse(rosterUsers),
+    });
+    render(<LogActivity entityType="contact" entityId="p1" />);
+    await screen.findByLabelText("Subject *");
+    expect(screen.queryByLabelText("Time (optional)")).toBeNull();
   });
 
   it("does not offer an agent seat as an assignee", async () => {

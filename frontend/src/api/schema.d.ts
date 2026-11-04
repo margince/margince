@@ -31991,6 +31991,8 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
+            /** @description True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time. */
+            due_has_time?: boolean;
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
@@ -34337,6 +34339,8 @@ export interface components {
             claim_id?: string;
             days_overdue?: number;
             due_at?: string;
+            /** @description True when due_at is an agreed time of day. */
+            due_has_time?: boolean;
             quote?: string;
             source: string;
             /** Format: uuid */
@@ -34510,6 +34514,8 @@ export interface components {
         /** @description What `review_commitments` answers: the open promises, overdue first, as of one instant. */
         OpenCommitments: {
             as_of: string;
+            /** @description The installation zone, where a due date is a day. */
+            time_zone?: string;
             commitments: components["schemas"]["AgentCommitment"][];
         };
         /** @description What `intro_path_to` answers: the colleagues who know someone at the company, warmest first. */
@@ -38382,6 +38388,8 @@ export interface components {
              * @description Task only.
              */
             due_at?: string | null;
+            /** @description Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false. */
+            readonly due_has_time?: boolean;
             /**
              * Format: date-time
              * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -38639,6 +38647,7 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
+            due_has_time?: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
         };
@@ -38664,6 +38673,8 @@ export interface components {
              * @description When it is due. Optional — a task without a date is still a task.
              */
             due_at?: string | null;
+            /** @description True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`. */
+            due_has_time?: boolean;
             /**
              * Format: uuid
              * @description Who owes it. Defaults to the caller.
@@ -38710,6 +38721,8 @@ export interface components {
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
+            /** @description Task only. True: `due_at` is a time of day; `remind_at` defaults to it. */
+            due_has_time?: boolean;
             /**
              * Format: date-time
              * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -38921,6 +38934,8 @@ export interface components {
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
+            /** @description Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`. */
+            due_has_time?: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
             /**
@@ -53379,6 +53394,8 @@ export interface components {
              * @description When this is due (tasks), or when it lapses (approvals).
              */
             due_at?: string;
+            /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
+            due_has_time?: boolean;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -55019,6 +55036,8 @@ export interface components {
              * @description When this is due, or when the meeting starts.
              */
             due_at?: string;
+            /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
+            due_has_time?: boolean;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**

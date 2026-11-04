@@ -69,7 +69,7 @@ afterEach(() => {
 // The version the row was drawn at, which every write on it is pinned to.
 const TASK_VERSION = 3;
 
-function renderVerbs(dueAt?: string | null) {
+function renderVerbs(dueAt?: string | null, dueHasTime = false) {
   function Harness() {
     const update = useTaskUpdate([["tasks"]]);
     return (
@@ -77,6 +77,7 @@ function renderVerbs(dueAt?: string | null) {
         activityId={TASK}
         version={TASK_VERSION}
         dueAt={dueAt}
+        dueHasTime={dueHasTime}
         update={update}
         showDuePicker
       />
@@ -188,5 +189,65 @@ describe("moving a task to a named day", () => {
       screen.queryByRole("textbox", { name: "Move to" }),
       "a caller that did not ask for the picker was given one",
     ).toBeNull();
+  });
+});
+
+describe("moving a task to a callback time", () => {
+  const timeBox = () =>
+    screen.getByRole<HTMLInputElement>("textbox", { name: "Time (optional)" });
+
+  it("sends the picked hour as the due time, flagged as a time of day", async () => {
+    const user = userEvent.setup();
+    renderVerbs(DUE_AT);
+    expect(timeBox().value).toBe("");
+    await user.type(timeBox(), "15:00{Enter}");
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    // 15:00 on 1 September on the record's clock, summer time in Berlin.
+    // No remind_at: the server sets the reminder to a task's time, for every
+    // writer, so the form sends none of its own.
+    expect(sent[0]).toEqual({
+      due_at: "2026-09-01T13:00:00.000Z",
+      due_has_time: true,
+    });
+  });
+
+  it("keeps the hour when the task moves to another day", async () => {
+    const user = userEvent.setup();
+    renderVerbs("2026-09-01T13:00:00.000Z", true);
+    expect(timeBox().value).toBe("15:00");
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Tuesday, 15 September 2026" }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      due_at: "2026-09-15T13:00:00.000Z",
+      due_has_time: true,
+    });
+  });
+
+  it("puts the task back to the end of its day when the time is cleared", async () => {
+    const user = userEvent.setup();
+    renderVerbs("2026-09-01T13:00:00.000Z", true);
+    await user.clear(timeBox());
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    // The server ends a reminder that sat on the old hour.
+    expect(sent[0]).toEqual({ due_at: DUE_AT, due_has_time: false });
+  });
+
+  it("waits for a day on an undated task", () => {
+    renderVerbs(null);
+    expect(timeBox().hasAttribute("disabled")).toBe(true);
+  });
+
+  // A stored hour on a task due by its day is not a time of day: the server's
+  // flag says so, and the box opens empty.
+  it("opens empty on a task due by its day, whatever its stored hour", () => {
+    renderVerbs("2026-09-01T13:00:00.000Z", false);
+    expect(timeBox().value).toBe("");
   });
 });
