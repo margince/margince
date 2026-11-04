@@ -169,6 +169,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.targetBasis",
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
     "contactCase.pair.notSame",
@@ -292,6 +295,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.arrivalCredit",
+    "analytics.team.qualificationUnattributed_one",
+    "analytics.team.qualificationUnattributed_other",
     // Operators and mailbox owners are human roles, not contact record types.
     "health.stoppedNext",
     "health.readFailedNext",

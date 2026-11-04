@@ -210,15 +210,15 @@ const SIGNATURES: Readonly<
   Record<string, Partial<Record<OverviewView, Signature>>>
 > = {
   populated: {
-    sales: shows("3.6×"),
+    sales: shows("Won + confirmed commit"),
     prospecting: shows("All 5 items in your Worklist"),
     team: shows(/Most often: Wrong territory/),
   },
   trueZero: {
-    sales: shows(/^0(\.0)?×$/),
+    sales: shows("€0"),
     prospecting: async () => {
       await shows("No meetings recorded as held this week")();
-      await shows("Nothing needs you right now")();
+      expect(screen.queryByText("Nothing needs you right now")).toBeNull();
     },
     team: shows(/Of the 0 rounds/),
   },
@@ -241,7 +241,7 @@ const SIGNATURES: Readonly<
   sourceUnavailable: {
     sales: async () => {
       await shows("Could not be calculated")();
-      await shows("Connection maintenance")();
+      expect(await screen.findByText("Connection maintenance")).toBeVisible();
     },
     prospecting: shows(
       "Some of your work could not be read, so this list may be missing items.",
@@ -249,7 +249,7 @@ const SIGNATURES: Readonly<
     team: shows("Retry"),
   },
   tooFewObservations: {
-    sales: shows("Too few observations"),
+    sales: shows("Pipeline due this quarter"),
     prospecting: async () => {
       await shows("Too few")();
       await shows("2 leads still waiting for a reply")();
@@ -271,8 +271,8 @@ const SIGNATURES: Readonly<
     },
   },
   noActionableWork: {
-    sales: shows("No forecast check is open for this scope."),
-    prospecting: shows("Nothing needs you right now"),
+    sales: lacks("No forecast check is open for this scope."),
+    prospecting: lacks("Nothing needs you right now"),
   },
   largeBacklog: {
     sales: shows("All open checks: 24 findings · 7 deals"),
@@ -290,7 +290,7 @@ const SIGNATURES: Readonly<
     },
   },
   modelCommitDivergence: { sales: shows("Modelled quarter finish") },
-  coverageNumerator: { sales: shows("38.8×") },
+  coverageNumerator: { sales: shows("Pipeline due this quarter") },
   cutoffVersusHorizon: { sales: shows("1 October – 31 December") },
   fiscalQuarter: { sales: shows("1 August – 31 October") },
   weekAcrossMonths: {
@@ -328,7 +328,7 @@ const SIGNATURES: Readonly<
   },
   targetReached: { sales: shows("Target reached") },
   landingBases: { sales: shows("Won + confirmed commit") },
-  legacyLanding: { sales: shows("Basis not recorded") },
+  legacyLanding: { sales: shows("Landing") },
   noForecast: { sales: shows("Unavailable") },
   unknownWorkflow: {
     prospecting: async () => {

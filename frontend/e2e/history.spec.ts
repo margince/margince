@@ -194,9 +194,7 @@ function scrolledBy(element: Locator): Promise<number> {
 test("Back from Forecast returns to Sales review's question, place and focused card", async ({
   page,
 }) => {
-  // Short enough that the readings sit below the fold, so a place to return
-  // to exists at all.
-  await page.setViewportSize({ width: 1280, height: 520 });
+  await page.setViewportSize({ width: 1280, height: 360 });
   await page.route(/\/v1\/analytics\/evaluate/, (route) =>
     route.fulfill({
       json: {
@@ -220,7 +218,7 @@ test("Back from Forecast returns to Sales review's question, place and focused c
   });
   const door = page
     .locator("section.stat-card", {
-      hasText: de["analytics.overview.expectedFinish"],
+      hasText: de["forecast.landing"],
     })
     .locator("a.stat-card-open");
   await door.scrollIntoViewIfNeeded();

@@ -39,7 +39,7 @@ func (e *scoutEnv) rep(user ids.UUID, team ids.UUID) context.Context {
 
 // decider is the deals store with the acceptance effects the server wires.
 func (e *scoutEnv) decider() *deals.Store {
-	return e.Deals.WithClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
+	return e.Deals.SetClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
 }
 
 // onlySuggestion answers the company's one suggestion as the reader sees it.

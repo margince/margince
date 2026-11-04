@@ -29,6 +29,13 @@ To fix a Margince invitation that shows **Invitation needs attention**, open the
 Retry sends the same invitation again, so the guest does not get a second one. The time stays held for you while Margince is not sure the invitation went out.
 Also called: resend invite, invitation failed, calendar refused.
 
+### What happens when my calendar refuses Margince?
+When your calendar refuses Margince, for example because its connection ran out or it lost permission to add events, Margince stops trying. Every invitation still waiting on that calendar is paused, and each shows **Your calendar refused Margince**. You get one notification about it, not one per meeting.
+1. Choose **Reconnect calendar** on any paused meeting, or go to **Settings → Connections**.
+2. Reconnect the calendar with permission to add events.
+The paused invitations then go out on their own. You do not need to retry each one.
+Also called: calendar disconnected, invitations paused, reconnect calendar.
+
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
@@ -110,6 +117,8 @@ When you paste the link into chat or email, the preview card shows your name and
 A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
+
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

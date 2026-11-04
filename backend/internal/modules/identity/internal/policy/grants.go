@@ -185,6 +185,9 @@ const (
 	// Append-forward like ai_model_rate, and for the same reason: a past-dated
 	// row prices a historical rollup.
 	objFxRate = "fx_rate"
+	// The tax rate sheet: rows are added and never changed or removed. So the
+	// seats that keep it hold create and read, and none holds update or delete.
+	objTaxRate = "tax_rate"
 	// Admin/ops-only on EVERY verb, read included: a migration run is a
 	// workspace-wide bulk mutation of the estate, and unlike custom_field there
 	// is no per-rep read surface — the migrate-in screen is an admin surface.

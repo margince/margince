@@ -31,9 +31,9 @@ func NewRateStore(db *database.DB) *RateStore {
 	return &RateStore{db: db, clock: time.Now}
 }
 
-// WithClock overrides the "today" source (tests only). Returns the store
+// SetClock overrides the "today" source (tests only). Returns the store
 // for chaining.
-func (s *RateStore) WithClock(clock func() time.Time) *RateStore {
+func (s *RateStore) SetClock(clock func() time.Time) *RateStore {
 	s.clock = clock
 	return s
 }

@@ -336,7 +336,9 @@ function OverviewBody({
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
-      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
+      {view === "sales" && (!validPeriod || query.isError) && (
+        <AnalyticsAttention scope={scope} />
+      )}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
@@ -344,7 +346,11 @@ function OverviewBody({
               {emptyNotice?.(evaluation.context.scope_holds_deals)}
               <ReportingCharts
                 evaluation={evaluation}
-                afterSummary={<AnalyticsAttention scope={scope} />}
+                afterSummary={
+                  view === "sales" ? (
+                    <AnalyticsAttention scope={scope} />
+                  ) : undefined
+                }
                 onEvidence={openEvidence}
                 onApplySelection={(next) => {
                   // The server named the selection; the page only moves its

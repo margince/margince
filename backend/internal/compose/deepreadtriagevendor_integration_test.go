@@ -88,7 +88,7 @@ func captureStaffMail(t *testing.T, e *integration.Env, mail staffMail) {
 func pinClock(t *testing.T, e *integration.Env) time.Time {
 	t.Helper()
 	now := clocktest.Now(t)
-	e.Contacts.WithClock(func() time.Time { return now })
+	e.Contacts.SetClock(func() time.Time { return now })
 	return now
 }
 

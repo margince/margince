@@ -123,6 +123,7 @@ changes none.
 | `signal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `system_reset` | ---D | ---- | ---- | ---- | ---- | ---- |
 | `tag` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `tax_rate` | CR-- | ---- | ---- | ---- | ---- | CR-- |
 | `team_admin` | CRU- | ---- | ---- | ---- | ---- | ---- |
 | `team_lead` | CR-- | CR-- | CR-- | ---- | ---- | ---- |
 | `team_oversight` | -R-- | -R-- | ---- | ---- | ---- | ---- |

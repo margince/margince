@@ -29,9 +29,10 @@ func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]func(context.Con
 	return map[storedobjects.Kind]func(context.Context, []string) ([]string, error){
 		storedobjects.KindAttachment: activities.NewStore(db).UnreferencedAttachmentKeys,
 		storedobjects.KindKnowledge:  knowledge.NewStore(db).UnreferencedDocumentKeys,
-		storedobjects.KindLogo:       contacts.NewStore(db).UnreferencedLogoKeys,
-		storedobjects.KindOffer:      deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
-		storedobjects.KindImport:     migration.NewRunStore(db).UnreferencedImportKeys,
+		storedobjects.KindLogo: unreferencedByAll(contacts.NewStore(db).UnreferencedLogoKeys,
+			deals.NewStore(db, DealsInstallation()).UnreferencedIssuerLogoKeys),
+		storedobjects.KindOffer:  deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
+		storedobjects.KindImport: migration.NewRunStore(db).UnreferencedImportKeys,
 	}
 }
 
@@ -94,4 +95,23 @@ func keysExcept(keys, unreferenced []string) []string {
 		}
 	}
 	return kept
+}
+
+// unreferencedByAll is a key every owner calls unreferenced. A logo is owned
+// by the company or entity wearing it and by every sent offer that printed it.
+// Its bytes stay while any of them names it.
+func unreferencedByAll(owners ...func(context.Context, []string) ([]string, error)) func(context.Context, []string) ([]string, error) {
+	return func(ctx context.Context, keys []string) ([]string, error) {
+		left := keys
+		for _, owner := range owners {
+			var err error
+			if left, err = owner(ctx, left); err != nil {
+				return nil, err
+			}
+			if len(left) == 0 {
+				return nil, nil
+			}
+		}
+		return left, nil
+	}
 }

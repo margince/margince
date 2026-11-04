@@ -140,6 +140,10 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 	}
 	wire.LastActiveAt = u.LastActiveAt
 	wire.ServiceExtension = u.ServiceExtension
+	if u.InviteMailState != nil {
+		state := crmcontracts.UserInviteEmailState(*u.InviteMailState)
+		wire.InviteEmailState = &state
+	}
 	if u.MergedFrom != nil {
 		wire.MergedFrom = &u.MergedFrom
 	}
@@ -166,6 +170,9 @@ func (h Handlers) wireMemberActions(actions []memberAction) []crmcontracts.UserA
 	out := make([]crmcontracts.UserAllowedActions, 0, len(actions))
 	for _, action := range actions {
 		if action == actionIssuePasswordLink && h.passwordLinkRefusal() != nil {
+			continue
+		}
+		if action == actionResendInvite && !h.canSendPasswordLink() {
 			continue
 		}
 		out = append(out, crmcontracts.UserAllowedActions(action))
