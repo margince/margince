@@ -79,13 +79,13 @@ func (e *CorrectionReversalError) Error() string { return e.Reason }
 func (s *Store) RevertCorrection(
 	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any,
 ) (crmcontracts.Deal, error) {
-	return s.RevertCorrectionConfirmed(ctx, correctionID, ifVersion, evidence, false)
+	return s.RevertCorrectionConfirmed(ctx, correctionID, ifVersion, evidence, "")
 }
 
-// RevertCorrectionConfirmed is RevertCorrection where the owner has confirmed
-// archiving an opened deal the team has worked on since.
+// RevertCorrectionConfirmed is RevertCorrection where the owner confirmed
+// archiving an opened deal over the team's work named by archiveConfirmedFor.
 func (s *Store) RevertCorrectionConfirmed(
-	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any, archiveConfirmed bool,
+	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any, archiveConfirmedFor string,
 ) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
@@ -131,7 +131,7 @@ func (s *Store) RevertCorrectionConfirmed(
 		case VerdictStageMoveCorrection:
 			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
 		case DealOpenCorrection:
-			if err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmed); err == nil {
+			if err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmedFor); err == nil {
 				out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.IncludeArchived, active)
 			}
 			return err

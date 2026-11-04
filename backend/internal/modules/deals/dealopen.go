@@ -10,6 +10,8 @@ package deals
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -44,6 +46,12 @@ type OpenSuggestedDealInput struct {
 	// SwitchOn asks again, under the company lock, whether the owner lets
 	// Margince open deals. The switch is not this module's.
 	SwitchOn func(ctx context.Context, tx pgx.Tx) (bool, error)
+	// EvidenceHolds locks every cited item and asks whether the whole workspace
+	// may still read it. The visibility rule is Deal Scout's, not this module's.
+	EvidenceHolds func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (bool, error)
+	// Amount answers the amount a cited document states in its own words, read
+	// at write time, or nil to open the deal with none.
+	Amount func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (*int64, *string, error)
 	// Record writes the entry on the deal's timeline, in the same transaction.
 	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID) error
 }
@@ -65,7 +73,15 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		owner := in.Owner
-		birth, err := s.acceptedDealInput(ctx, tx, current, AcceptSuggestionInput{OwnerID: &owner})
+		pick := AcceptSuggestionInput{OwnerID: &owner, NoAmount: true}
+		amount, currency, err := in.Amount(ctx, tx, citedEvidence(current))
+		if err != nil {
+			return err
+		}
+		if amount != nil && currency != nil {
+			pick.NoAmount, pick.AmountMinor, pick.Currency = false, amount, currency
+		}
+		birth, err := s.acceptedDealInput(ctx, tx, current, pick)
 		if err != nil {
 			return err
 		}
@@ -112,6 +128,9 @@ func (s *Store) openableSuggestion(ctx context.Context, tx pgx.Tx, in OpenSugges
 			return Suggestion{}, false, err
 		}
 	}
+	if held, err := in.EvidenceHolds(ctx, tx, citedEvidence(current)); err != nil || !held {
+		return Suggestion{}, false, err
+	}
 	var owner *ids.UUID
 	if err := tx.QueryRow(ctx, `SELECT owner_id FROM company WHERE id = $1`, current.CompanyID).Scan(&owner); err != nil {
 		return Suggestion{}, false, fmt.Errorf("deals: reading the suggestion company's owner: %w", err)
@@ -121,6 +140,15 @@ func (s *Store) openableSuggestion(ctx context.Context, tx pgx.Tx, in OpenSugges
 	}
 	on, err := in.SwitchOn(ctx, tx)
 	return current, on, err
+}
+
+// citedEvidence is the suggestion's evidence without the reader's titles.
+func citedEvidence(s Suggestion) []SuggestionEvidence {
+	out := make([]SuggestionEvidence, 0, len(s.Evidence))
+	for _, item := range s.Evidence {
+		out = append(out, item.SuggestionEvidence)
+	}
+	return out
 }
 
 // recordDealOpen writes the correction row for an opened deal, naming the
@@ -142,6 +170,9 @@ func recordDealOpen(ctx context.Context, tx pgx.Tx, deal ids.DealID) (ids.UUID, 
 // team has worked on since, until the owner confirms.
 type DealOpenUndoNeedsConfirmError struct {
 	Notes, Tasks, Edits int
+	// Work names the notes, tasks and edits counted. A confirmation
+	// sends it back, and holds only while the team's work is still that.
+	Work string
 }
 
 func (e *DealOpenUndoNeedsConfirmError) Error() string {
@@ -154,19 +185,17 @@ func (e *DealOpenUndoNeedsConfirmError) Unwrap() error { return apperrors.ErrCon
 
 // revertDealOpen archives the deal Margince opened and dismisses the
 // suggestion it came from, in the caller's transaction. Work a human added
-// since needs confirmed.
-func (s *Store) revertDealOpen(ctx context.Context, tx pgx.Tx, c DealCorrection, ifVersion *int64, confirmed bool) error {
+// since needs a confirmation naming that work.
+func (s *Store) revertDealOpen(ctx context.Context, tx pgx.Tx, c DealCorrection, ifVersion *int64, confirmedFor string) error {
 	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, c.DealID.UUID, ifVersion); err != nil {
 		return err
 	}
-	if !confirmed {
-		work, err := teamWorkSince(ctx, tx, c)
-		if err != nil {
-			return err
-		}
-		if work.Notes+work.Tasks+work.Edits > 0 {
-			return &work
-		}
+	work, err := teamWorkSince(ctx, tx, c)
+	if err != nil {
+		return err
+	}
+	if work.Notes+work.Tasks+work.Edits > 0 && work.Work != confirmedFor {
+		return &work
 	}
 	if err := s.ArchiveDealTx(ctx, tx, c.DealID, nil); err != nil {
 		return err
@@ -194,25 +223,62 @@ func (s *Store) revertDealOpen(ctx context.Context, tx pgx.Tx, c DealCorrection,
 	return nil
 }
 
-// teamWorkSince counts what humans added to the deal after Margince opened it:
-// notes and tasks on it, and edits to the deal itself.
+// teamWorkSince counts what humans added to the deal after Margince opened it.
+// That is notes and tasks filed on it since, however old, and edits to the deal.
+// The link rows are held, so nothing is filed between the count and the archive.
 func teamWorkSince(ctx context.Context, tx pgx.Tx, c DealCorrection) (DealOpenUndoNeedsConfirmError, error) {
 	var out DealOpenUndoNeedsConfirmError
-	err := tx.QueryRow(ctx, `
-		SELECT count(DISTINCT a.id) FILTER (WHERE a.kind <> 'task'),
-		       count(DISTINCT a.id) FILTER (WHERE a.kind = 'task')
+	rows, err := tx.Query(ctx, `
+		SELECT a.id, a.kind = 'task'
 		  FROM activity a JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		 WHERE a.archived_at IS NULL AND a.created_at > $2 AND starts_with(a.captured_by, $3)`, c.DealID, c.AppliedAt, principal.HumanIDPrefix).Scan(&out.Notes, &out.Tasks)
+		 WHERE a.archived_at IS NULL AND starts_with(a.captured_by, $3)
+		   AND (a.created_at > $2 OR l.created_at > $2)
+		 ORDER BY a.id
+		   FOR SHARE OF l`, c.DealID, c.AppliedAt, principal.HumanIDPrefix)
 	if err != nil {
 		return out, fmt.Errorf("deals: counting the team's work on the opened deal: %w", err)
 	}
-	err = tx.QueryRow(ctx, `
-		SELECT count(*) FROM audit_log
-		 WHERE entity_type = 'deal' AND entity_id = $1 AND occurred_at > $2 AND actor_type = $3`,
-		c.DealID, c.AppliedAt, string(principal.PrincipalHuman)).Scan(&out.Edits)
+	type filed struct {
+		id   ids.UUID
+		task bool
+	}
+	work, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (filed, error) {
+		var f filed
+		return f, row.Scan(&f.id, &f.task)
+	})
+	if err != nil {
+		return out, fmt.Errorf("deals: counting the team's work on the opened deal: %w", err)
+	}
+	sum := sha256.New()
+	seen := map[ids.UUID]bool{}
+	for _, f := range work {
+		if seen[f.id] {
+			continue
+		}
+		seen[f.id] = true
+		if f.task {
+			out.Tasks++
+		} else {
+			out.Notes++
+		}
+		sum.Write([]byte("a:" + f.id.String() + "|"))
+	}
+	edits, err := tx.Query(ctx, `
+		SELECT id FROM audit_log
+		 WHERE entity_type = 'deal' AND entity_id = $1 AND occurred_at > $2 AND actor_type = $3
+		 ORDER BY id`, c.DealID, c.AppliedAt, string(principal.PrincipalHuman))
 	if err != nil {
 		return out, fmt.Errorf("deals: counting the team's edits to the opened deal: %w", err)
 	}
+	audits, err := pgx.CollectRows(edits, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return out, fmt.Errorf("deals: counting the team's edits to the opened deal: %w", err)
+	}
+	for _, id := range audits {
+		sum.Write([]byte("e:" + id.String() + "|"))
+	}
+	out.Edits = len(audits)
+	out.Work = hex.EncodeToString(sum.Sum(nil))
 	return out, nil
 }
 

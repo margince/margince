@@ -47,6 +47,9 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The close-date kinds are named, so a kind with no review shape reads as none.
+	closeDatePos := arg([]string{string(CloseDateActionAutoApply), string(CloseDateActionProvisionalConfirm),
+		string(CloseDateActionDowngradeAndReview), VerdictCloseDateCorrection})
 	dealsPos, changesPos := arg(dealIDs), arg(changeIDs)
 	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
@@ -65,11 +68,12 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	query := storekit.SQLf(`
  WITH requested AS (SELECT * FROM unnest($%d::uuid[], $%d::uuid[]) AS r(deal_id, change_id)),
  visible AS (SELECT d.id, d.version, d.stage_id, to_jsonb(d) AS fields, (%s) AS writable FROM deal d WHERE (%s) AND d.id = ANY($%d::uuid[]))
- SELECT c.deal_id, c.audit_log_id, CASE c.correction WHEN 'close_lost' THEN 'close_lost' WHEN 'deal_amount' THEN 'amount' WHEN 'deal_probability' THEN 'probability' WHEN 'stage_move' THEN 'stage' ELSE 'close_date' END, c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
+ SELECT c.deal_id, c.audit_log_id, CASE WHEN c.correction = ANY($%d::text[]) THEN 'close_date' WHEN c.correction = 'close_lost' THEN 'close_lost' WHEN c.correction = 'deal_amount' THEN 'amount' WHEN c.correction = 'deal_probability' THEN 'probability' WHEN c.correction = 'stage_move' THEN 'stage' WHEN c.correction = 'deal_open' THEN 'deal_open' END, c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
         d.version, c.reversed_at IS NULL,
         c.reversed_at IS NULL AND NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND d.fields->f.key IS DISTINCT FROM f.value), d.writable
  FROM deal_correction c JOIN visible d ON d.id = c.deal_id JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
- JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id`, dealsPos, changesPos, writable, scope, dealsPos)
+ JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id
+ WHERE c.correction = ANY($%d::text[]) OR c.correction IN ('close_lost', 'deal_amount', 'deal_probability', 'stage_move', 'deal_open')`, dealsPos, changesPos, writable, scope, dealsPos, closeDatePos, closeDatePos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

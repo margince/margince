@@ -8245,8 +8245,8 @@ paths:
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Accept a recorded automatic deal change.
       description: |
-        Records the human's acceptance of a close-date correction (audit id) or
-        automatic stage progression (approval id). It keeps the applied values;
+        Records the human's acceptance of a change Margince made to a deal (its
+        audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
       x-mcp-tool: { verb: accept_applied_deal_change, router: change_attention, action: accept_applied_change, tier: auto_execute, scope: write, served_by: route }
@@ -72706,7 +72706,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: { type: string, enum: [close_date, close_lost, amount, probability, stage] }
+        kind: { type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive] }
         accepted: { type: boolean }
         reversed: { type: boolean }
         version: { type: integer, format: int64 }
@@ -74377,12 +74377,13 @@ components:
           maxItems: 50
           items: { type: string, format: uuid }
           description: The changes to take back, all on this deal.
-        archive_confirmed:
-          type: boolean
+        archive_confirmed_for:
+          type: string
           description: |
-            The owner confirmed archiving a deal Margince opened that the team has added notes,
-            tasks or edits to since. Without it such a deal is kept, with the reason
-            `needs_confirmation` and the counts.
+            The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
+            a deal Margince opened over exactly that work. Without it, or when the team's
+            work changed since, such a deal is kept with `needs_confirmation`, the new counts
+            and the new `team_work`.
 
     UndoMarginceChangeKept:
       type: object
@@ -74400,6 +74401,9 @@ components:
         team_tasks:
           type: integer
           description: With `needs_confirmation`, the tasks the team added to the opened deal.
+        team_work:
+          type: string
+          description: With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.
 
     TeamMarginceChangeGroup:
       type: object

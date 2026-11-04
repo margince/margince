@@ -5488,8 +5488,8 @@ export interface paths {
         put?: never;
         /**
          * Accept a recorded automatic deal change.
-         * @description Records the human's acceptance of a close-date correction (audit id) or
-         *     automatic stage progression (approval id). It keeps the applied values;
+         * @description Records the human's acceptance of a change Margince made to a deal (its
+         *     audit id). It keeps the applied values;
          *     acceptance is an audited review decision, not another application of the change.
          *     Requires the displayed deal version. A reversed or superseded change is refused.
          */
@@ -54065,7 +54065,7 @@ export interface components {
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
             /** @enum {string} */
-            kind: "close_date" | "close_lost" | "amount" | "probability" | "stage";
+            kind: "close_date" | "close_lost" | "amount" | "probability" | "stage" | "deal_open" | "deal_revive";
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */
@@ -55489,11 +55489,12 @@ export interface components {
             /** @description The changes to take back, all on this deal. */
             audit_log_ids: string[];
             /**
-             * @description The owner confirmed archiving a deal Margince opened that the team has added notes,
-             *     tasks or edits to since. Without it such a deal is kept, with the reason
-             *     `needs_confirmation` and the counts.
+             * @description The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
+             *     a deal Margince opened over exactly that work. Without it, or when the team's
+             *     work changed since, such a deal is kept with `needs_confirmation`, the new counts
+             *     and the new `team_work`.
              */
-            archive_confirmed?: boolean;
+            archive_confirmed_for?: string;
         };
         /** @description One change an undo left in place, and why. */
         UndoMarginceChangeKept: {
@@ -55507,6 +55508,8 @@ export interface components {
             team_notes?: number;
             /** @description With `needs_confirmation`, the tasks the team added to the opened deal. */
             team_tasks?: number;
+            /** @description With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`. */
+            team_work?: string;
         };
         TeamMarginceChangeGroup: {
             /** Format: uuid */

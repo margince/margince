@@ -152,3 +152,83 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Keep date" })).toBeNull();
 });
+
+it("asks before an opened deal's receipt archives the team's work, as the change list does", async () => {
+  const opened = {
+    ...automaticStageReceipt,
+    kind: "deal_open",
+    review: automaticStageReceipt.review && {
+      ...automaticStageReceipt.review,
+      kind: "deal_open" as const,
+    },
+  };
+  let asked = 0;
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "POST /deal-corrections/undo": () => {
+      asked += 1;
+      return jsonResponse({
+        results: [
+          asked === 1
+            ? {
+                deal_id: opened.subject?.id,
+                outcome: "refused",
+                undone: [],
+                kept: [
+                  {
+                    audit_log_id: opened.undo?.audit_log_id,
+                    kind: "deal_open",
+                    reason: "needs_confirmation",
+                    team_notes: 1,
+                    team_tasks: 0,
+                    team_work: "w1",
+                  },
+                ],
+              }
+            : {
+                deal_id: opened.subject?.id,
+                outcome: "undone",
+                undone: ["deal_open"],
+                kept: [],
+              },
+        ],
+      });
+    },
+  });
+  const user = userEvent.setup();
+  render(<ReceiptReview receipt={opened} />);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(
+    await screen.findByText(
+      "This deal now has 1 notes and 0 tasks from your team. Archive it anyway?",
+    ),
+  ).toBeTruthy();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(await screen.findByText(en["changes.undo.archived"])).toBeTruthy();
+  expect(
+    writes(calls)
+      .filter((call) => call.path === "/deal-corrections/undo")
+      .map((call) => call.body),
+  ).toEqual([
+    {
+      items: [
+        {
+          deal_id: opened.subject?.id,
+          version: 7,
+          audit_log_ids: [opened.undo?.audit_log_id],
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          deal_id: opened.subject?.id,
+          version: 7,
+          audit_log_ids: [opened.undo?.audit_log_id],
+          archive_confirmed_for: "w1",
+        },
+      ],
+    },
+  ]);
+});

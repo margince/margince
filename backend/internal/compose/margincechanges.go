@@ -233,10 +233,10 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 		}
 		deal, err := h.deals.RevertCorrectionConfirmed(ctx, correction.ID, version,
 			map[string]any{undidAuditLogID: correction.AuditLogID.String()},
-			item.ArchiveConfirmed != nil && *item.ArchiveConfirmed)
+			derefString(item.ArchiveConfirmedFor))
 		if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](err); ok {
 			kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
-			kept.TeamNotes, kept.TeamTasks = &work.Notes, &work.Tasks
+			kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
 			result.Kept = append(result.Kept, kept)
 			continue
 		}

@@ -122,22 +122,24 @@ export function BundleUndo({
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
   const [answer, setAnswer] = useState<string | null>(null);
-  const [asking, setAsking] = useState<{ notes: number; tasks: number } | null>(
-    null,
-  );
+  const [asking, setAsking] = useState<{
+    notes: number;
+    tasks: number;
+    work: string;
+  } | null>(null);
   if (answer) {
     return <span role="status">{answer}</span>;
   }
   if (!writable || bundles.length === 0) {
     return null;
   }
-  const press = (archiveConfirmed: boolean) =>
+  const press = (archiveConfirmedFor?: string) =>
     undo.mutate(
-      { bundles, archiveConfirmed },
+      { bundles, archiveConfirmedFor },
       {
         onSuccess: (results) => {
           const only = results.length === 1 ? results[0] : undefined;
-          const question = only && !archiveConfirmed && archiveQuestion(only);
+          const question = only && archiveQuestion(only);
           if (question) {
             setAsking(question);
             return;
@@ -175,7 +177,7 @@ export function BundleUndo({
             variant="ghost"
             pending={undo.isPending}
             busyLabel={t("history.undo.busy")}
-            onClick={() => press(true)}
+            onClick={() => press(asking.work)}
           >
             {label}
           </Button>
@@ -185,7 +187,7 @@ export function BundleUndo({
           variant="ghost"
           pending={undo.isPending}
           busyLabel={t("history.undo.busy")}
-          onClick={() => press(false)}
+          onClick={() => press()}
         >
           {label}
         </Button>

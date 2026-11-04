@@ -8,7 +8,9 @@ package compose
 import (
 	"errors"
 	"log/slog"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -16,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
 // openScouted runs the pass and the opener, and answers how many deals opened.
@@ -77,6 +80,10 @@ func TestMarginceOpensADealForTheCompanyOwnerAndUndoArchivesIt(t *testing.T) {
 		t.Errorf("%d accepted suggestions, want the one the deal came from", n)
 	}
 
+	review, err := e.Deals.AppliedChangeReview(e.Admin(), deal, correction.AuditLogID)
+	if err != nil || review.Kind != "deal_open" {
+		t.Fatalf("the opened deal reviews as %q (%v), want deal_open", review.Kind, err)
+	}
 	if _, err := e.Deals.RevertCorrection(e.Admin(), correction.ID, nil, nil); err != nil {
 		t.Fatalf("Undo: %v", err)
 	}
@@ -147,10 +154,121 @@ func TestUndoOfAnOpenedDealTheTeamWorkedOnNeedsConfirming(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND archived_at IS NULL`, deal); n != 1 {
 		t.Fatal("the unconfirmed Undo archived the deal")
 	}
-	if _, err := e.Deals.RevertCorrectionConfirmed(e.Admin(), correction.ID, nil, nil, true); err != nil {
+	// A colleague adds a task after the warning: the confirmation named less.
+	task := "Send the offer"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &task, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal.UUID}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.Deals.RevertCorrectionConfirmed(e.Admin(), correction.ID, nil, nil, asks.Work)
+	var again *deals.DealOpenUndoNeedsConfirmError
+	if !errors.As(err, &again) || again.Notes != 1 || again.Tasks != 1 || again.Work == asks.Work {
+		t.Fatalf("a confirmation over stale work answered %v, want the question with the new task", err)
+	}
+	if _, err := e.Deals.RevertCorrectionConfirmed(e.Admin(), correction.ID, nil, nil, again.Work); err != nil {
 		t.Fatalf("the confirmed Undo: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND archived_at IS NOT NULL`, deal); n != 1 {
 		t.Error("the confirmed Undo left the deal live")
+	}
+}
+
+// A note written before Margince opened the deal but filed on it afterwards
+// is the team's work too.
+func TestAnOlderNoteFiledOnTheOpenedDealNeedsConfirming(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
+	subject := "Earlier call notes"
+	note, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Subject: &subject, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.buyerPair(t, acme, e.daysAgo(10))
+	e.openScouted(t)
+	correction, deal := e.openedCorrection(t, acme)
+	e.WsExec(t, `UPDATE activity SET created_at = $2 WHERE id = $1`, note.Id, correction.AppliedAt.Add(-time.Hour))
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, note.Id, deal)
+
+	_, err = e.Deals.RevertCorrection(e.Admin(), correction.ID, nil, nil)
+	var asks *deals.DealOpenUndoNeedsConfirmError
+	if !errors.As(err, &asks) || asks.Notes != 1 {
+		t.Fatalf("Undo over an older note filed since answered %v, want the question naming it", err)
+	}
+}
+
+// Evidence the workspace can no longer read by the time the deal would open
+// opens no deal.
+func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
+	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(10))
+	e.signal(t, "new_opportunity", acme, mail, e.now, ids.Nil, buyer)
+	e.signal(t, "commitment_made", acme, mail, e.now, ids.Nil)
+	e.pass(t)
+	suggestion := e.suggestions(e.signalReader(), t, acme)
+	if len(suggestion) != 1 {
+		t.Fatalf("the pass raised %d suggestions, want one", len(suggestion))
+	}
+	evidence := []deals.SuggestionEvidence{}
+	for _, item := range suggestion[0].Evidence {
+		evidence = append(evidence, item.SuggestionEvidence)
+	}
+	holds := func() bool {
+		var held bool
+		if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+			var err error
+			held, err = scoutEvidenceHolds(e.system(), tx, evidence)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return held
+	}
+	if !holds() {
+		t.Fatal("the evidence does not hold before anything changed")
+	}
+	e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, mail)
+	if holds() {
+		t.Error("evidence citing mail only its participants may read still holds")
+	}
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	if err != nil || opened != 0 {
+		t.Fatalf("opened %d deals (%v) on mail only its participants may read, want none", opened, err)
+	}
+}
+
+// An amount reaches the opened deal only when the document's own words state
+// it; a reading with no quote opens the deal with no amount.
+func TestAnAmountNeedsTheDocumentsOwnWords(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	for _, c := range []struct {
+		name, quote string
+		want        *int64
+	}{
+		{"Quoted GmbH", "Total: 12.500,00 EUR", new(int64(1250000))},
+		{"Unquoted GmbH", "", nil},
+		{"Other GmbH", "Total: 9.900,00 EUR", nil},
+	} {
+		company := e.SeedCompany(t, c.name, &e.AdminUser)
+		doc := e.document(t, e.email(t, "Angebot", "outbound", company, e.daysAgo(2)), "Angebot.pdf", "application/pdf")
+		e.reading(t, doc,
+			extraction.ExtractedField{Field: "amount_minor", Value: "1250000", Confidence: "high", SourceQuote: c.quote},
+			extraction.ExtractedField{Field: "currency", Value: "EUR", Confidence: "high"})
+		e.buyerPair(t, company, e.daysAgo(6))
+		e.openScouted(t)
+		_, deal := e.openedCorrection(t, company)
+		got := e.WsScalar(t, `SELECT coalesce(amount_minor::text, '') FROM deal WHERE id = $1`, deal)
+		want := ""
+		if c.want != nil {
+			want = strconv.FormatInt(*c.want, 10)
+		}
+		if got != want {
+			t.Errorf("%s: the opened deal's amount is %q, want %q", c.name, got, want)
+		}
 	}
 }

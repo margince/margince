@@ -1917,6 +1917,8 @@ const (
 	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
 	AppliedDealChangeReviewKindCloseDate   AppliedDealChangeReviewKind = "close_date"
 	AppliedDealChangeReviewKindCloseLost   AppliedDealChangeReviewKind = "close_lost"
+	AppliedDealChangeReviewKindDealOpen    AppliedDealChangeReviewKind = "deal_open"
+	AppliedDealChangeReviewKindDealRevive  AppliedDealChangeReviewKind = "deal_revive"
 	AppliedDealChangeReviewKindProbability AppliedDealChangeReviewKind = "probability"
 	AppliedDealChangeReviewKindStage       AppliedDealChangeReviewKind = "stage"
 )
@@ -1929,6 +1931,10 @@ func (e AppliedDealChangeReviewKind) Valid() bool {
 	case AppliedDealChangeReviewKindCloseDate:
 		return true
 	case AppliedDealChangeReviewKindCloseLost:
+		return true
+	case AppliedDealChangeReviewKindDealOpen:
+		return true
+	case AppliedDealChangeReviewKindDealRevive:
 		return true
 	case AppliedDealChangeReviewKindProbability:
 		return true
@@ -60832,10 +60838,11 @@ type TransferProjectOwnershipResult struct {
 
 // UndoMarginceChangeItem defines model for UndoMarginceChangeItem.
 type UndoMarginceChangeItem struct {
-	// ArchiveConfirmed The owner confirmed archiving a deal Margince opened that the team has added notes,
-	// tasks or edits to since. Without it such a deal is kept, with the reason
-	// `needs_confirmation` and the counts.
-	ArchiveConfirmed *bool `json:"archive_confirmed,omitempty"`
+	// ArchiveConfirmedFor The `team_work` a `needs_confirmation` answer named: the owner confirmed archiving
+	// a deal Margince opened over exactly that work. Without it, or when the team's
+	// work changed since, such a deal is kept with `needs_confirmation`, the new counts
+	// and the new `team_work`.
+	ArchiveConfirmedFor *string `json:"archive_confirmed_for,omitempty"`
 
 	// AuditLogIds The changes to take back, all on this deal.
 	AuditLogIds []openapi_types.UUID `json:"audit_log_ids"`
@@ -60858,6 +60865,9 @@ type UndoMarginceChangeKept struct {
 
 	// TeamTasks With `needs_confirmation`, the tasks the team added to the opened deal.
 	TeamTasks *int `json:"team_tasks,omitempty"`
+
+	// TeamWork With `needs_confirmation`, names the counted work. Send it back as `archive_confirmed_for`.
+	TeamWork *string `json:"team_work,omitempty"`
 }
 
 // UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.

@@ -4517,8 +4517,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Accept a recorded automatic deal change.
       description: |-
-        Records the human's acceptance of a close-date correction (audit id) or
-        automatic stage progression (approval id). It keeps the applied values;
+        Records the human's acceptance of a change Margince made to a deal (its
+        audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
 
@@ -40533,7 +40533,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: {type: string, enum: [close_date, close_lost, amount, probability, stage]}
+        kind: {type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive]}
         accepted: {type: boolean}
         reversed: {type: boolean}
         version: {type: integer, format: int64}

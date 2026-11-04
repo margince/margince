@@ -108,6 +108,7 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 	basis := scoutBasis(suggestion)
 	return o.deals.OpenSuggestedDeal(ownerCtx, deals.OpenSuggestedDealInput{
 		SuggestionID: s.id, Owner: s.owner, Basis: basis,
+		EvidenceHolds: scoutEvidenceHolds, Amount: scoutStatedAmount,
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err

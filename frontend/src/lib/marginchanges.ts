@@ -66,25 +66,31 @@ export function useTeamMarginceChanges(enabled: boolean) {
 /** The Undo of whole deals; each bundle is one deal. */
 export function bundleItem(
   bundle: MarginceChangeBundle,
-  archiveConfirmed = false,
+  archiveConfirmedFor?: string,
 ) {
   return {
     deal_id: bundle.deal_id,
     version: bundle.version,
     audit_log_ids: bundle.audit_log_ids,
-    ...(archiveConfirmed ? { archive_confirmed: true } : {}),
+    ...(archiveConfirmedFor
+      ? { archive_confirmed_for: archiveConfirmedFor }
+      : {}),
   };
 }
 
 /** The team's work an Undo of an opened deal asks about first, if any. */
 export function archiveQuestion(
   result: UndoMarginceChangeResult,
-): { notes: number; tasks: number } | null {
+): { notes: number; tasks: number; work: string } | null {
   const asked = result.kept.find(
     (kept) => kept.reason === "needs_confirmation",
   );
   return asked
-    ? { notes: asked.team_notes ?? 0, tasks: asked.team_tasks ?? 0 }
+    ? {
+        notes: asked.team_notes ?? 0,
+        tasks: asked.team_tasks ?? 0,
+        work: asked.team_work ?? "",
+      }
     : null;
 }
 
@@ -97,10 +103,10 @@ export function useUndoMarginceChanges() {
   return useMutation({
     mutationFn: async ({
       bundles,
-      archiveConfirmed = false,
+      archiveConfirmedFor,
     }: {
       bundles: readonly MarginceChangeBundle[];
-      archiveConfirmed?: boolean;
+      archiveConfirmedFor?: string;
     }): Promise<UndoMarginceChangeResult[]> => {
       const results: UndoMarginceChangeResult[] = [];
       for (let at = 0; at < bundles.length; at += UNDO_BATCH) {
@@ -109,7 +115,7 @@ export function useUndoMarginceChanges() {
             body: {
               items: bundles
                 .slice(at, at + UNDO_BATCH)
-                .map((bundle) => bundleItem(bundle, archiveConfirmed)),
+                .map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
             },
           }),
         );
