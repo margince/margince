@@ -23503,6 +23503,7 @@ components:
             listed here, so a task read out of a message the reader may not open never reaches
             this field.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.'}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
         assignee_name:
@@ -25849,6 +25850,7 @@ components:
         claim_id: {type: string, format: uuid}
         days_overdue: {type: integer}
         due_at: {type: string}
+        due_has_time: {type: boolean, description: True when due_at is an agreed time of day.}
         quote: {type: string}
         source: {type: string}
         source_activity_id: {type: string, format: uuid}
@@ -26081,6 +26083,7 @@ components:
       required: [as_of, commitments]
       properties:
         as_of: {type: string}
+        time_zone: {type: string, description: 'The installation zone, where a due date is a day.'}
         commitments: {type: array, items: {$ref: '#/components/schemas/AgentCommitment'}}
     IntroPaths:
       description: 'What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.'
@@ -29069,6 +29072,7 @@ components:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
+        due_has_time: {type: boolean, readOnly: true, description: 'Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.'}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
@@ -29343,6 +29347,7 @@ components:
         subject: {type: string, minLength: 1}
         body: {type: [string, 'null']}
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
     CreateTaskRequest:
       type: object
@@ -29363,6 +29368,7 @@ components:
         subject: {type: string, minLength: 1, description: 'What has to be done, as one line.'}
         body: {type: [string, 'null'], description: 'Detail, if one line is not enough.'}
         due_at: {type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.'}
+        due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.'}
         links:
           type: array
@@ -29413,6 +29419,7 @@ components:
           description: >-
             `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'Task only. True: `due_at` is a time of day; `remind_at` defaults to it.'}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         host_user_id:
@@ -29671,6 +29678,7 @@ components:
           description: >-
             How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
@@ -41427,6 +41435,7 @@ components:
             organizer. Otherwise it is the seat whose calendar the meeting came off.
             `kind` is always `user`.
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
+        due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string

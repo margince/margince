@@ -25,9 +25,7 @@ func (c Copy) AccountMessage(invitation bool, inviter, company, link string) ema
 	}
 	content.Action(action, link)
 	content.Footnote(closing)
-	message := content.Message(title, string(c.Language), c.Preview(title))
-	message.Brand = company
-	return message
+	return content.Message(title, string(c.Language), c.Preview(title))
 }
 
 // RoomMessage identifies the shared material and discloses personal access and activity recording.
@@ -44,7 +42,5 @@ func (c Copy) RoomMessage(title, inviter, company, link string, expires time.Tim
 	content.Note(fmt.Sprintf(c.RoomPersonal, c.Instant(expires)), emailview.Info)
 	content.Note(c.RoomDisclosure, emailview.Neutral)
 	content.Footnote(c.RoomIgnore)
-	message := content.Message(c.RoomSubject+" · "+OneLine(title), string(c.Language), c.RoomPreview)
-	message.Brand = company
-	return message
+	return content.Message(c.RoomSubject+" · "+OneLine(title), string(c.Language), c.RoomPreview)
 }

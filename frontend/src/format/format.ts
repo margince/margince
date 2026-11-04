@@ -19,6 +19,8 @@ export {
   formatDayMonth,
   formatDayMonthNearYear,
   formatDayRange,
+  formatDue,
+  formatDueCompact,
   formatTimeOfDay,
   fullDayName,
   hourInZone,

@@ -73,20 +73,21 @@ export function useRecordTags(
  * rather than this list's.
  */
 export function useTagVocabulary(enabled = true) {
-  return useQuery({
-    queryKey: ["tags", "vocabulary"],
-    enabled,
-    // The catalog is capped and has no cursor, so a workspace past the cap gets
-    // a CUT list. Carrying `has_more` through is what lets the picker say the
-    // list is short — without it a word beyond the cap is indistinguishable
-    // from a word that does not exist, and the reader coins a near-duplicate.
-    queryFn: async (): Promise<{ tags: Tag[]; truncated: boolean }> => {
-      const data = unwrap(await api.GET("/tags", {}));
-      return { tags: data.data, truncated: data.page.has_more };
-    },
-    staleTime: 5 * 60_000,
-  });
+  return useQuery({ ...tagVocabularyQuery, enabled });
 }
+
+const tagVocabularyQuery = {
+  queryKey: ["tags", "vocabulary"],
+  // The catalog is capped and has no cursor, so a workspace past the cap gets
+  // a CUT list. Carrying `has_more` through is what lets the picker say the
+  // list is short — without it a word beyond the cap is indistinguishable
+  // from a word that does not exist, and the reader coins a near-duplicate.
+  queryFn: async (): Promise<{ tags: Tag[]; truncated: boolean }> => {
+    const data = unwrap(await api.GET("/tags", {}));
+    return { tags: data.data, truncated: data.page.has_more };
+  },
+  staleTime: 5 * 60_000,
+};
 
 /** Apply one existing tag to one record. */
 export function useApplyTag(entityType: TaggableType, entityID: string) {
@@ -159,5 +160,79 @@ export function useRestoreTag(
       await invalidateTagged(queryClient, entityType, entityID);
       outcome.onSuccess(input);
     },
+  });
+}
+
+/**
+ * Every write to the vocabulary refreshes the same three reads.
+ *
+ * The catalog is what the Tags card draws. The vocabulary is what the pickers and
+ * the filter dials offer, and a word coined here has to reach them or an admin
+ * adds a tag and then cannot find it. The record reads carry the words
+ * themselves, so a rename that did not reach them would leave the old spelling
+ * on every open record page.
+ */
+export function useTagVocabularyInvalidation() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ["tags"] });
+    void queryClient.invalidateQueries({ queryKey: ["tag"] });
+    void queryClient.invalidateQueries({ queryKey: ["record-tags"] });
+    // The three record LISTS carry their rows' tags inline, keyed under their
+    // own prefixes rather than under any tag key. Without these a rename or a
+    // merge leaves the old spelling on every row a reader has already loaded,
+    // for as long as that page stays fresh — and this client disables refetch
+    // on focus, so coming back to the tab does not repair it.
+    for (const list of TAGGED_LISTS) {
+      void queryClient.invalidateQueries({ queryKey: [list] });
+    }
+  };
+}
+
+/** The list reads whose rows carry tags inline. */
+const TAGGED_LISTS = ["contacts", "companies", "deals"] as const;
+
+export function useCreateTag() {
+  const invalidate = useTagVocabularyInvalidation();
+  return useMutation({
+    mutationFn: async (body: components["schemas"]["CreateTagRequest"]) => {
+      return unwrap(await api.POST("/tags", { body }));
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** One spelling of "the same tag name" for a lookup after a conflict. */
+function sameTagName(a: string, b: string) {
+  return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+}
+
+/**
+ * Create a tag, or find it when the workspace already has the name.
+ *
+ * The picker offers "Create" from a cached list, which can be older than a
+ * word a colleague just added. The server then answers 409. The list is
+ * fetched again and the existing tag is returned, so the reader still gets the
+ * tag they asked for rather than a refusal.
+ */
+export function useCreateOrFindTag() {
+  const queryClient = useQueryClient();
+  const invalidate = useTagVocabularyInvalidation();
+  return useMutation({
+    mutationFn: async (name: string): Promise<Tag> => {
+      const created = await api.POST("/tags", { body: { name } });
+      if (created.response.status !== 409) {
+        return unwrap(created);
+      }
+      await queryClient.invalidateQueries({
+        queryKey: tagVocabularyQuery.queryKey,
+      });
+      const vocabulary = await queryClient.fetchQuery(tagVocabularyQuery);
+      const existing = vocabulary.tags.find((tag) =>
+        sameTagName(tag.name, name),
+      );
+      return existing ?? unwrap(created);
+    },
+    onSuccess: invalidate,
   });
 }

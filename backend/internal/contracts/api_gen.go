@@ -29191,6 +29191,9 @@ type Activity struct {
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
@@ -29352,6 +29355,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
+	DueHasTime *bool               `json:"due_has_time,omitempty"`
 	Subject    string              `json:"subject"`
 }
 
@@ -29732,18 +29736,21 @@ type AgentClientSecret struct {
 
 // AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
 type AgentCommitment struct {
-	About            []AgentCommitmentSubject `json:"about"`
-	AssigneeId       *openapi_types.UUID      `json:"assignee_id,omitempty"`
-	AssigneeName     *string                  `json:"assignee_name,omitempty"`
-	ClaimId          *openapi_types.UUID      `json:"claim_id,omitempty"`
-	DaysOverdue      *int                     `json:"days_overdue,omitempty"`
-	DueAt            *string                  `json:"due_at,omitempty"`
-	Quote            *string                  `json:"quote,omitempty"`
-	Source           string                   `json:"source"`
-	SourceActivityId *openapi_types.UUID      `json:"source_activity_id,omitempty"`
-	State            string                   `json:"state"`
-	Subject          string                   `json:"subject"`
-	TaskId           *openapi_types.UUID      `json:"task_id,omitempty"`
+	About        []AgentCommitmentSubject `json:"about"`
+	AssigneeId   *openapi_types.UUID      `json:"assignee_id,omitempty"`
+	AssigneeName *string                  `json:"assignee_name,omitempty"`
+	ClaimId      *openapi_types.UUID      `json:"claim_id,omitempty"`
+	DaysOverdue  *int                     `json:"days_overdue,omitempty"`
+	DueAt        *string                  `json:"due_at,omitempty"`
+
+	// DueHasTime True when due_at is an agreed time of day.
+	DueHasTime       *bool               `json:"due_has_time,omitempty"`
+	Quote            *string             `json:"quote,omitempty"`
+	Source           string              `json:"source"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	State            string              `json:"state"`
+	Subject          string              `json:"subject"`
+	TaskId           *openapi_types.UUID `json:"task_id,omitempty"`
 }
 
 // AgentCommitmentSubject A record a commitment is about.
@@ -33120,6 +33127,9 @@ type AttentionItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`.
@@ -36693,8 +36703,11 @@ type Company360NextStep struct {
 	// Body The task's own words, as written. Only a task whose content this reader may read is
 	// listed here, so a task read out of a message the reader may not open never reaches
 	// this field.
-	Body            *string             `json:"body,omitempty"`
-	DueAt           *time.Time          `json:"due_at,omitempty"`
+	Body  *string    `json:"body,omitempty"`
+	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time.
+	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	Overdue         bool                `json:"overdue"`
@@ -41216,8 +41229,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -42260,6 +42276,9 @@ type CreateTaskRequest struct {
 
 	// DueAt When it is due. Optional — a task without a date is still a task.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// Links The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
 	Links *[]struct {
@@ -52205,6 +52224,9 @@ type OnboardingStateStep string
 type OpenCommitments struct {
 	AsOf        string            `json:"as_of"`
 	Commitments []AgentCommitment `json:"commitments"`
+
+	// TimeZone The installation zone, where a due date is a day.
+	TimeZone *string `json:"time_zone,omitempty"`
 }
 
 // OpenDealRoomThreadRequest defines model for OpenDealRoomThreadRequest.
@@ -60251,6 +60273,9 @@ type UpdateActivityRequest struct {
 	Body       *string             `json:"body,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
 
@@ -64052,6 +64077,9 @@ type WorklistItem struct {
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
 	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
+
+	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -74333,6 +74361,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -74768,6 +74804,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -76934,6 +76977,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["duration_seconds"]; found {
 		err = json.Unmarshal(raw, &a.DurationSeconds)
 		if err != nil {
@@ -77184,6 +77235,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -83270,6 +83328,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_at")
 	}
 
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
@@ -83355,6 +83421,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
