@@ -80,11 +80,7 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// match, so nil is the purpose it will still have when applySuppression
 	// asks — the same answer, not a guess standing in for one.
 	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return resolution{}, err
-		}
-		if err := recordBasis(ctx, tx, subject, res, req, w); err != nil {
+		if err := recordBasis(ctx, tx, subject, res, req, packRulesFor(subject.Country)); err != nil {
 			return resolution{}, err
 		}
 	}
@@ -248,7 +244,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, stops)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -264,7 +260,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // caller's suppression re-check needs it to tell a narrow row that binds this
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
 	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
@@ -328,10 +324,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		return denyContradiction(d, fromPurpose), &purposeID, nil
 	}
 
-	w, err := g.store.packRulesFor(ctx, tx)
-	if err != nil {
-		return commsauthz.Decision{}, nil, err
-	}
+	w := packRulesFor(country)
 	// NO Advertises. Nothing on a send names the GOODS it advertises, so the
 	// §7(3) exception, whose similarity condition needs exactly that, is not
 	// offered: VerdictForContact refuses it here as it does for the guard.

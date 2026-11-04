@@ -8,7 +8,7 @@ import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { allowance, status } from "../../testing/ai-admin.testkit";
 import { bookingProfile } from "../../testing/book.testkit";
 import { formatFixture } from "../../testing/import.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE, type GrantSpec } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { jsonResponse, type RouteMap } from "../../testing/story-utils";
@@ -69,7 +69,7 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
   forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   date_format: "dmy",
   time_format: "24h",

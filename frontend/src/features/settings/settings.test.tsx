@@ -196,8 +196,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(
       within(signIn).getByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
+    const language = card("Language and time zone");
     expect(
-      within(card("Language")).getByRole("combobox", { name: "Language" }),
+      within(language).getByRole("combobox", { name: "Language" }),
+    ).toBeTruthy();
+    expect(
+      await within(language).findByRole("combobox", { name: "Time zone" }),
     ).toBeTruthy();
     expect(
       within(card("This browser")).getByRole("group", { name: "Appearance" }),

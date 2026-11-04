@@ -258,7 +258,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The audience-change corrector: an activity.updated carrying an
 		// audience narrows the derived signals citing the message and drops
 		// the thread's scan watermark.
-		"cg:audience-rescope": {"gw:events:crm:activity"},
+		"cg:audience-rescope":   {"gw:events:crm:activity"},
+		"cg:voice-copy-recheck": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
@@ -347,7 +348,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

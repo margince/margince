@@ -388,6 +388,7 @@ internal/modules/consent/privacyinfo_integration_test.go 2
 internal/modules/consent/qualifyingevent_integration_test.go 8
 internal/modules/consent/reviewcontextids_test.go 1
 internal/modules/consent/rightscase_integration_test.go 2
+internal/modules/consent/rulesonce_integration_test.go 1
 internal/modules/consent/submissionreview_integration_test.go 1
 internal/modules/consent/suppressionverdict_integration_test.go 5
 internal/modules/consent/textversion_integration_test.go 3

@@ -3,6 +3,10 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../../api/schema";
+import {
+  ContractTerms,
+  hasContractTerms,
+} from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import {
@@ -327,18 +331,26 @@ function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   const ends = contract.ends_on
     ? formatDateAbbrev(contract.ends_on, locale, zone)
     : undefined;
-  let sub: string | undefined;
+  let dates: string | undefined;
   if (signed && ends) {
-    sub = t("project.contracts.signedRuns", { signed, ends });
+    dates = t("project.contracts.signedRuns", { signed, ends });
   } else if (signed) {
-    sub = t("project.contracts.signed", { date: signed });
+    dates = t("project.contracts.signed", { date: signed });
   } else if (ends) {
-    sub = t("project.contracts.runsTo", { date: ends });
+    dates = t("project.contracts.runsTo", { date: ends });
   }
+  const terms = hasContractTerms(contract);
   return (
     <OverviewRow
       title={contract.title || contract.contract_number}
-      sub={sub}
+      sub={
+        dates || terms ? (
+          <span className="project-contract-sub">
+            {dates && <span>{dates}</span>}
+            {terms && <ContractTerms contract={contract} />}
+          </span>
+        ) : undefined
+      }
       right={
         <Badge tone={contract.status === "active" ? "success" : undefined}>
           {t(CONTRACT_STATUS_LABEL[contract.status])}

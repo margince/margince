@@ -11,7 +11,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatAnalyticsNumber, INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
@@ -126,7 +126,7 @@ export function ReportingScheduleDialog({
         {ready && retentionDays !== undefined && (
           <p className="t-caption">
             {plural("reporting.editionRetention", retentionDays, {
-              count: formatNumber(retentionDays, locale),
+              count: formatAnalyticsNumber(retentionDays, locale),
             })}
           </p>
         )}

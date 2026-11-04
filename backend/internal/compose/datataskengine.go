@@ -65,5 +65,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		retiredThreadSplitDataTask(),
 		mergeDroppedPrimaryDataTask(),
 		heldContactsDataTask(pool),
+		technicalAddressDataTask(pool),
+		gmailDedupeScanDataTask(),
 	}
 }

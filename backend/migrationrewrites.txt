@@ -65,3 +65,4 @@
 1793747477_an_admin_keeps_tax_rates_per_country.down.sql | role | removes that one grant from the same fixed set of system roles
 1793769685_gemini_pro_is_priced_in_two_bands.up.sql | *, ai_model_rate, audit_log | one model on two providers: at most two inserted rows, and the few dated rows of that model still at its old flat price
 1793769685_gemini_pro_is_priced_in_two_bands.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793774861_a_person_says_whether_they_chose_their_time_zone.up.sql | app_user | one row per seat, and a workspace holds at most its licensed seats plus a few agents; only seats that saved working hours are touched

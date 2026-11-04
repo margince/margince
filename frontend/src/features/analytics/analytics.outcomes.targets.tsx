@@ -4,7 +4,7 @@ import { EmptyState, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
@@ -180,7 +180,7 @@ export function targetCard(
     metric.attainment == null
       ? null
       : t("reporting.attainment", {
-          percent: formatNumber(Math.round(metric.attainment), locale),
+          percent: formatAnalyticsNumber(Math.round(metric.attainment), locale),
         });
   return {
     key: metric.id,

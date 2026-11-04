@@ -13,7 +13,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatMoneyOrAbsent } from "../../format/format";
+import { formatAnalyticsMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   openAnalyticsSection,
@@ -412,7 +412,7 @@ function QuestionSummary({
   const filterValueText = (filter: (typeof filters)[number]) => {
     const currency = filterAmountCurrency(filter.field, filters, baseCurrency);
     return currency && typeof filter.value === "number"
-      ? formatMoneyOrAbsent(filter.value, currency, locale)
+      ? formatAnalyticsMoneyOrAbsent(filter.value, currency, locale)
       : namer(filter.field, filter.value);
   };
   const facts = [
