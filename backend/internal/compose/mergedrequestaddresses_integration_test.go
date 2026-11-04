@@ -142,3 +142,43 @@ func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) 
 		t.Errorf("correspondence to the other record's address = %v, want refused: it rests on a request that address never made", err)
 	}
 }
+
+// Both records hold the same enquiry, one message filed on each. The merge keeps
+// one event, and that event covers the addresses of both records.
+func TestASharedEnquiryKeepsTheAddressesOfBothRecords(t *testing.T) {
+	e := integration.Setup(t)
+	store := consent.NewStore(InstallationDB(e.Pool))
+	asker := seedMergeContact(t, e, "Asker", askerAddress, contacts.Acquisition{})
+	other := seedMergeContact(t, e, "Other", otherAddress, contacts.Acquisition{})
+	var booking ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
+			VALUES ('meeting', 'Booked a call', 'inbound', now(), 'manual', 'human:test')
+			RETURNING id`).Scan(&booking)
+	}); err != nil {
+		t.Fatalf("seeding the booking: %v", err)
+	}
+	for _, contact := range []ids.UUID{asker, other} {
+		if err := store.RecordInquiry(e.Admin(), ids.From[ids.ContactKind](contact), booking); err != nil {
+			t.Fatalf("recording the enquiry: %v", err)
+		}
+	}
+	merging := withContactMergeCarriers(InstallationDB(e.Pool), e.Contacts)
+	if _, err := merging.MergeContact(e.Admin(), ids.From[ids.ContactKind](other), ids.From[ids.ContactKind](asker), nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	gate := consent.NewGate(store)
+	for _, address := range []string{askerAddress, otherAddress} {
+		set, err := gate.Preview(e.Admin(), commsauthz.Request{
+			Recipients: []connector.Recipient{{Email: address}}, Context: commsauthz.CategoryRequestedFollowup,
+		})
+		if err != nil {
+			t.Fatalf("asking the gate about %s: %v", address, err)
+		}
+		if len(set.Decisions) != 1 || set.Decisions[0].Verdict != commsauthz.VerdictAllow {
+			t.Errorf("a follow-up to %s on the enquiry both records held = %+v, want allowed", address, set.Decisions)
+		}
+	}
+}

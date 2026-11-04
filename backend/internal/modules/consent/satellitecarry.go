@@ -170,7 +170,21 @@ func carryPreferenceTokens(ctx context.Context, tx pgx.Tx, from, to ids.ContactI
 // both halves recorded the same message or deal, the survivor's stands and the
 // source's copy is dropped, because it states nothing the survivor's does not.
 // Hand-recorded events name no source and always travel.
+//
+// The dropped copy's addresses join the kept row first: both records saw the
+// same message, so the request covers the addresses of each. NULL on either
+// side covers every address and stays NULL.
 func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
+	if _, err := tx.Exec(ctx, `
+ UPDATE consent_qualifying_event b SET recorded_for_addresses = CASE
+   WHEN b.recorded_for_addresses IS NULL OR a.recorded_for_addresses IS NULL THEN NULL
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END
+   FROM consent_qualifying_event a
+  WHERE b.contact_id = @target AND a.contact_id = @source AND a.source_entity_id IS NOT NULL
+    AND b.source_entity_type = a.source_entity_type AND b.source_entity_id = a.source_entity_id`,
+		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to}); err != nil {
+		return fmt.Errorf("consent: joining the addresses of a qualifying event both records hold: %w", err)
+	}
 	dropped, err := collectIDs(ctx, tx, `
  DELETE FROM consent_qualifying_event a WHERE a.contact_id=@source AND `+qualifyingCarryDuplicate+` RETURNING id`,
 		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
