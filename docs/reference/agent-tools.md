@@ -24,6 +24,7 @@ A waiting call changes nothing until a human approves it in the CRM. The agent t
 | How do the transport, sessions, limits and client sign-in work? | [mcp-protocol.md](mcp-protocol.md) |
 | Can a given assistant do the everyday jobs? | [mcp-tool-coverage.md](mcp-tool-coverage.md) |
 | Which role can use which tool? | [mcp-tool-roles.md](mcp-tool-roles.md) |
+| How much of the web app can an agent do? | [mcp-parity.md](mcp-parity.md) |
 
 The reasons behind the rules are in [authorization.md](../explanation/authorization.md) and
 [agent-surface.md](../explanation/agent-surface.md).

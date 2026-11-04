@@ -30,7 +30,7 @@ func TestTheVouchEntityBackfillFollowsTheRecorderAndRevokesTheUnnamed(t *testing
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1793823200")
+	through := namespaceThroughVersion(t, core, "1793829963")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
