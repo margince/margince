@@ -23,6 +23,7 @@ const base = {
   status: "done",
   line_count: 48,
   proposal_ids: [],
+  proposals: [],
   created_at: "2026-08-01T09:00:00Z",
 };
 
@@ -30,6 +31,9 @@ function stubbed(report: Record<string, unknown>) {
   installFetchStub({
     [LATEST]: () => jsonResponse(report),
     [READ]: () => jsonResponse(report),
+    // The suggestion the reader decides, still waiting.
+    "GET /approvals/ap-1": () =>
+      jsonResponse({ id: "ap-1", status: "pending" }),
   });
 }
 
@@ -103,6 +107,54 @@ export const CouldNotRead: Story = {
     });
     return (
       <StoryProviders>
+        <TranscriptReadCard activityId="a-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// One reading that gave the reader a task, gave a colleague one, put a promise
+// to the reader and sent another to the colleague who made it. The colleague's
+// suggestion is named, not counted as a status the reader cannot read.
+const mixed = {
+  ...base,
+  detail:
+    "added 1 task for you; added 1 task for Anna Example; 1 proposal awaits your decision; sent 1 suggestion to Anna Example to confirm",
+  proposal_ids: ["ap-1", "ap-2"],
+  proposals: [
+    { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
+    {
+      id: "ap-2",
+      asked_of: { seat_id: "u-anna", name: "Anna Example", is_you: false },
+    },
+  ],
+};
+
+export const MixedOutcome: Story = {
+  render: () => {
+    stubbed(mixed);
+    return (
+      <StoryProviders>
+        <TranscriptReadCard activityId="a-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+export const MixedOutcomeDark: Story = {
+  ...MixedOutcome,
+  globals: { theme: "dark" },
+};
+
+export const MixedOutcomeGerman: Story = {
+  render: () => {
+    stubbed({
+      ...mixed,
+      detail:
+        "1 Aufgabe für dich erstellt; 1 Aufgabe für Anna Example erstellt; 1 Vorschlag wartet auf deine Entscheidung; 1 Vorschlag an Anna Example zur Bestätigung gesendet",
+    });
+    return (
+      <StoryProviders locale="de">
         <TranscriptReadCard activityId="a-1" />
       </StoryProviders>
     );

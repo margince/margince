@@ -48024,8 +48024,12 @@ export interface components {
             activity_id: string;
             /** @enum {string} */
             status: "queued" | "running" | "done" | "failed";
-            /** @description Why it ended as it did, in words a rep can act on. Set on failure, and on a done reading that produced nothing so an empty result explains itself. */
+            /** @description The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set. */
             status_detail?: string | null;
+            /** @description What the reading did, phrased for the caller in their display language: tasks it added "for you" or for a named colleague, proposals waiting on the caller, proposals "sent to" a named colleague to confirm, commitments it withheld and why, or why it could not be used. Null while the reading runs, and on a reading finished before the outcome was kept as facts, where `status_detail` is the account. */
+            detail?: string | null;
+            /** @description The approvals this reading staged, each with the colleague it waits on. Empty on a reading finished before the outcome was kept as facts; `proposal_ids` still lists those. */
+            proposals: components["schemas"]["TranscriptReadProposal"][];
             /** @description How many lines the reading addressed, so a cited line can be shown against the size of what was read. It is the count at READ time; a later body edit re-normalizes and can change it, and each proposal's own evidence stays authoritative about what it saw. */
             line_count: number;
             /** @description The approvals this reading staged. Empty on a reading that found nothing to propose. */
@@ -48036,6 +48040,20 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description One approval a transcript reading staged, and who it waits on. */
+        TranscriptReadProposal: {
+            /** Format: uuid */
+            id: string;
+            asked_of: components["schemas"]["TranscriptReadAskedOf"];
+        };
+        /** @description The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read. */
+        TranscriptReadAskedOf: {
+            /** Format: uuid */
+            seat_id: string;
+            /** @description The colleague as the roster names them; null for a seat with no name to show. */
+            name?: string | null;
+            is_you: boolean;
         };
         /** @description The 202 handle for a queued deep read. */
         SiteReadStarted: {

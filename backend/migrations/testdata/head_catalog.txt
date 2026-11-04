@@ -8598,6 +8598,7 @@ public.transcript_read.created_at timestamp with time zone NOT NULL gen=- def=no
 public.transcript_read.finished_at timestamp with time zone gen=- def=-
 public.transcript_read.id uuid NOT NULL gen=- def=uuidv7()
 public.transcript_read.line_count integer NOT NULL gen=- def=0
+public.transcript_read.outcome jsonb gen=- def=-
 public.transcript_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.transcript_read.requested_by text NOT NULL gen=- def=-
 public.transcript_read.started_at timestamp with time zone gen=- def=-

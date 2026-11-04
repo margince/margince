@@ -50,8 +50,13 @@ type Report = {
   activity_id: string;
   status: "queued" | "running" | "done" | "failed";
   status_detail?: string | null;
+  detail?: string | null;
   line_count: number;
   proposal_ids: string[];
+  proposals: {
+    id: string;
+    asked_of: { seat_id: string; name?: string | null; is_you: boolean };
+  }[];
   created_at: string;
 };
 
@@ -62,6 +67,7 @@ function report(overrides: Partial<Report>): Report {
     status: "done",
     line_count: 48,
     proposal_ids: [],
+    proposals: [],
     created_at: "2026-08-01T09:00:00Z",
     ...overrides,
   };
@@ -350,7 +356,12 @@ describe("reading a transcript for its next steps", () => {
   // direction.
   it("says a status it could not read is unavailable", async () => {
     stubReads({
-      stored: report({ proposal_ids: ["ap-1"] }),
+      stored: report({
+        proposal_ids: ["ap-1"],
+        proposals: [
+          { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
+        ],
+      }),
       approvalStatus: 403,
     });
     render(<TranscriptReadCard activityId="a-1" />);
@@ -360,6 +371,60 @@ describe("reading a transcript for its next steps", () => {
     ).toBeTruthy();
     // A status nobody could read is not a decision somebody made.
     expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
+  });
+
+  // A suggestion put to the colleague who made the promise is theirs to
+  // decide. The card says who it was sent to and never asks for a status it
+  // may not read, so nothing reads as a failure.
+  it("says a colleague's suggestion was sent to them, and reads no status for it", async () => {
+    const { calls } = stubReads({
+      stored: report({
+        detail:
+          "added 1 task for you; sent 1 suggestion to Anna Example to confirm",
+        proposal_ids: ["ap-1"],
+        proposals: [
+          {
+            id: "ap-1",
+            asked_of: {
+              seat_id: "u-anna",
+              name: "Anna Example",
+              is_you: false,
+            },
+          },
+        ],
+      }),
+      approvalStatus: 403,
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText(
+        "added 1 task for you; sent 1 suggestion to Anna Example to confirm",
+      ),
+    ).toBeTruthy();
+    expect(calls.some((call) => call.includes("/approvals/"))).toBe(false);
+    expect(screen.queryByText(/Status unavailable/)).toBeNull();
+  });
+
+  it("shows what the reading did beside the suggestions waiting on the reader", async () => {
+    stubReads({
+      stored: report({
+        detail:
+          "added 1 task for Anna Example; 1 proposal awaits your decision",
+        proposal_ids: ["ap-1"],
+        proposals: [
+          { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
+        ],
+      }),
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText(
+        "added 1 task for Anna Example; 1 proposal awaits your decision",
+      ),
+    ).toBeTruthy();
+    expect(await screen.findByText("1 next step awaiting review")).toBeTruthy();
   });
 
   it("refreshes timelines, tasks, worklist and the activity when a running reading turns done", async () => {
