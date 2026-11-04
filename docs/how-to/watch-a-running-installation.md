@@ -37,16 +37,29 @@ consequence for alerting:
 > A series that is absent says the target could not measure that part of
 > itself.
 
-So alert on absence as well as on value. `absent(margince_outbox_unpublished)`
-is a different fault from that series being high, and a rule that only
-thresholds the value stays quiet through the first one.
+So alert on absence as well as on value. A series being absent is a different
+fault from it being high, and a rule that only thresholds the value stays
+quiet through the first one.
 
-## The scrape has two seconds
+Write the rule per target, and only over the targets that serve the series.
+The worker serves no `margince_outbox_unpublished`, so `absent()` over every
+target fires for every worker for ever.
 
-The handler bounds the whole response at two seconds. A section that would take
-longer is cut, which shows up as that section's series going absent rather than
-as a failed scrape. Keep the scrape interval well above two seconds so a slow
-section cannot overlap the next request.
+The exposition carries no labels of its own, so the selector has to come from
+whatever your scrape configuration attaches to its targets. Narrow to the
+api's targets with that, and keep the rule per instance, so one silent target
+is not hidden by a noisy neighbour.
+
+## Two sections have two seconds
+
+The handler gives a two-second deadline to the sections that query the
+database: the outbox backlog and the job statistics. The rest, the runtime
+counters and the pool gauges, are read from memory and are not bounded by it.
+
+A query that passes the deadline writes nothing, which shows up as that
+section's series going absent rather than as a failed scrape. So the whole
+response is not bounded at two seconds, and a scrape interval has to leave
+room for everything the exposition does, not only those two.
 
 ## The format is pinned, not negotiated
 
@@ -58,14 +71,19 @@ neither.
 ## What to watch first
 
 - `margince_outbox_unpublished`: domain writes that have not reached the bus.
-  Every mutation writes one, so a number that climbs and stays means the relay
-  is behind, and events are the trail that audit and search read.
+  A number that climbs and stays means the relay is behind, and events are the
+  trail that audit and search read. It does not cover every mutation: a write
+  that only audits emits no event, so an absent backlog is not proof that
+  every write landed.
 - `margince_relay_published_total`: the other half of that pair. A flat
   counter beside a climbing backlog says the relay stopped rather than slowed.
 - `margince_pgxpool_acquire_empty_total`: acquisitions that found no free
-  connection. It rises before latency does.
-- `margince_process_goroutines`: a count that only grows is a leak, and it
-  grows for a while before anything else notices.
+  connection, waited, and then got one. It rises before latency does, which is
+  what makes it an early reading rather than a fault count.
+  `margince_pgxpool_acquire_canceled_total` is the one whose callers gave up.
+- `go_goroutines`: a count that only grows is a leak, and it grows for a while
+  before anything else notices. The runtime section writes it under the
+  standard name rather than a `margince_` one.
 
 The full set is whatever the writers register, so read those rather than a list
 here: `backend/internal/platform/httpserver/metrics.go` names the sections in
