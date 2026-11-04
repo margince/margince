@@ -208,14 +208,9 @@ func (s *Store) advanceOnTx(
 			}
 		}
 
-		p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+		p, status, err := s.applyStageAdvance(ctx, tx, id, current, in, semantic)
 		if err != nil {
 			return err
-		}
-		stored, storedBy := storedWinProbability(current)
-		setWinProbability(p, stored, storedBy, nil, SourceStage)
-		if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-			return fmt.Errorf("apply stage advance: %w", err)
 		}
 
 		// win_probability_at_change freezes the target stage's probability
@@ -392,6 +387,23 @@ func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
 		return nil
 	}
 	return &frozen
+}
+
+// applyStageAdvance writes the stage move's row changes and the probability
+// the target stage sets. A preview builds the same patch and writes neither.
+func (s *Store) applyStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
+	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
+) (*storekit.Patch, string, error) {
+	p, status, err := s.stageTransitionPatch(ctx, tx, current, in, semantic)
+	if err != nil {
+		return nil, "", err
+	}
+	stored, storedBy := storedWinProbability(current)
+	setWinProbability(p, stored, storedBy, nil, SourceStage)
+	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
+		return nil, "", fmt.Errorf("apply stage advance: %w", err)
+	}
+	return p, status, nil
 }
 
 // stageTransitionPatch derives the row changes one stage move implies

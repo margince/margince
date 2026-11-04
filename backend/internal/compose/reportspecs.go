@@ -384,10 +384,10 @@ var prebuiltReports = map[string]reportSpec{
 		// because its default grouping does not, and offering it there would
 		// let a caller sum minor units across currencies.
 		//
-		// The BASE pair is what lets the forecast be read as ONE answer instead
-		// of one answer per currency. A screen drawing the probability bands
-		// would otherwise band by currency — a slot carries a single figure,
-		// and euros added to dong is a total with no unit — so bands could be
+		// The BASE pair lets the forecast be read as one answer instead of one
+		// answer per currency. Without it a screen drawing the probability
+		// bands would band by currency. A slot carries a single figure, and
+		// euros added to dong is a total with no unit. Bands could then be
 		// compared only inside each currency.
 		//
 		// Priced through the SAME expressions pipeline-current uses, so the two

@@ -194,7 +194,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
 
-// downgradeAndReview is the 🔻 tier: a deal nobody has touched has its win
+// downgradeAndReview is the 🔻 tier. A deal nobody has touched has its win
 // probability lowered one notch, and its owner is asked whether it is still
 // real. A probability a colleague set is theirs and is never lowered.
 func (c *CloseDateCorrector) downgradeAndReview(

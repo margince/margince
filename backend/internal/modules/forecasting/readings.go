@@ -46,9 +46,9 @@ type Deal struct {
 	// stage's typed one, in percent. It decides Likely; Source says which.
 	WinProbability int
 	Source         ProbabilitySource
-	// StageProbability is the chance in use, an integer percent: the deal's
-	// own probability where set, else the typed stage chance moved by the
-	// stage's recorded outcomes when there are any.
+	// StageProbability is the chance in use, an integer percent. It is the
+	// deal's own probability where set, else the typed stage chance moved by
+	// the stage's recorded outcomes when there are any.
 	StageProbability int
 	// The typed chance, the count of outcomes that moved it, the risk signals
 	// and the strongest one's odds ratio. Nil where the reader set none.

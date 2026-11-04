@@ -165,7 +165,7 @@ func TestFilteredExportOpenFormatsAndAudit(t *testing.T) {
 		t.Fatalf("json export shape wrong: %+v", doc)
 	}
 	// A real column rides along: the probability set on the deal is present
-	// and is exactly the value the predicate selected on.
+	// and is the value the predicate selected on.
 	for _, row := range doc.Rows {
 		if row["win_probability_override"] != float64(95) {
 			t.Fatalf("exported a row outside the predicate: %v", row["win_probability_override"])

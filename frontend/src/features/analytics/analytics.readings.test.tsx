@@ -265,7 +265,7 @@ describe("a forecast tile's door", () => {
       .getAllByRole("link", { name: en["stat.open"] })
       .map((door) => door.getAttribute("href"));
 
-    // A slot per known band whether a row came back for it or not, and the
+    // A slot per known band whether a row came back for it or not. The
     // unknown band keeps its money on screen with no door.
     expect(doors).toEqual([
       "/#/deals?win_probability=90..100",

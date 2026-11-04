@@ -30,10 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// dressedDeal seeds one open deal carrying a value in every Subject field: a
-// deal at 95% with a provisional close date, an inbound email, a
-// same-currency sent offer and active contract, two close-date pushes plus one
-// pull-in that must not count, an open task, and an economic buyer.
+// dressedDeal seeds one open deal carrying a value in every Subject field. It
+// is at 95% with a provisional close date and has an inbound email, a
+// same-currency sent offer and active contract. It has two close-date pushes
+// plus one pull-in that must not count, an open task, and an economic buyer.
 func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)

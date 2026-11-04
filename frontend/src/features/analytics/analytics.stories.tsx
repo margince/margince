@@ -568,12 +568,12 @@ export const ForecastDoors: Story = {
   ),
 };
 
-// The four absences a slot has to tell apart, side by side, because they are
-// four different facts and one of them used to be drawn as €0.00. A band
-// the report returned no row for was measured in no currency at all; a band of
-// deals nobody priced has a currency but no figure; a band whose deals ARE
-// counted answers with the count and says the amount is what is missing; a
-// stored zero IS a figure.
+// The four absences a slot has to tell apart, side by side. They are four
+// different facts, and none of them but a stored zero may be drawn as €0.00. A band
+// the report returned no row for was measured in no currency at all. A band of
+// deals nobody priced has a currency but no figure. A band whose deals are
+// counted answers with the count and says the amount is what is missing. A
+// stored zero is a figure.
 export const ForecastAbsences: Story = {
   render: () => (
     <StoryProviders>

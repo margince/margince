@@ -15,12 +15,12 @@ import { routeHash } from "./router";
  * lost-deal figures. A second spelling is how one of them comes to point
  * somewhere that answers a different question.
  *
- * The dials this can name are the ones the deals endpoint actually reads:
- * `stage_id`, `company_id` and `status` are query parameters on `/deals`, and
- * `win_probability` is sent as its two bounds, while a confirmed-close-date
+ * The dials this can name are the ones the deals endpoint reads. `stage_id`,
+ * `company_id` and `status` are query parameters on `/deals`, and
+ * `win_probability` is sent as its two bounds. A confirmed-close-date
  * bound is not. A figure grouped by something the endpoint cannot filter on has no
- * address, and the caller draws the number plainly rather than being handed one
- * that opens a wider set — a link that narrows less than the figure promised is
+ * address. The caller draws the number plainly rather than being handed one
+ * that opens a wider set. A link that narrows less than the figure promised is
  * worse than a figure that admits it is a dead end.
  *
  * `extra` rather than a single record of dials, so that widening this never

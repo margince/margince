@@ -199,10 +199,10 @@ func customerField(
 // directions when the two part company.
 //
 // Written out here rather than assembled from the generated constants because of
-// how the generator spells a NULLABLE enum: it emits a `<nil>` member, so a set
+// how the generator spells a nullable enum. It emits a `<nil>` member, so a set
 // built from CompanySizeBand's constants would
 // offer "<nil>" as something a human could pick. One nullable enum is
-// enough — a set is either derived or it is not.
+// enough, because a set is either derived or it is not.
 //
 // A null in a contract enum is the COLUMN's nullability, never a value worth
 // offering — `exists: false` is how a filter asks for empty — so the sets below

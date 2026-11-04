@@ -212,8 +212,8 @@ func closePast() Rule {
 }
 
 // A Likely deal whose date nobody confirmed. It is in the forecast on a
-// guess, which is exactly what the evidence reading excludes and what a manager
-// asking "are we sure" is asking about.
+// guess, which the evidence reading excludes. A manager asking "are we sure"
+// is asking about such a deal.
 func closeUnconfirmed() Rule {
 	return Rule{Type: TypeCloseUnconfirmed, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if !s.Likely || !s.CloseProvisional {
@@ -357,7 +357,7 @@ func dealViability() Rule {
 }
 
 // A Likely deal with no price on it. It is counted as eligible pipeline and
-// contributes nothing to the money, which is honest — and a deal rated that
+// contributes nothing to the money, which is correct. A deal rated that
 // high that nobody has priced is worth asking about.
 func commitUnpriced() Rule {
 	return Rule{Type: TypeCommitUnpriced, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {

@@ -164,9 +164,9 @@ func (w *WeeklyForecast) closeHorizon(
 //
 // The landing's forward half IS one of them, so the bars explain that one and
 // the waterfall reconciles to the figure printed above it. A manager call has
-// no reading behind it — it is an authored total — so its bridge explains the
-// Likely the fallback landing would have used, which is the closest
-// honest account of what the pipeline did.
+// no reading behind it, since it is an authored total. Its bridge explains the
+// Likely the fallback landing would have used, the closest
+// account of what the pipeline did.
 func movementReadingFor(measure forecasting.ForwardMeasure) forecasting.Reading {
 	switch measure {
 	case forecasting.MeasureWeighted:
@@ -372,10 +372,10 @@ func (w *WeeklyForecast) freezeClosing(
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}
-	// landing.Measure and NOT the requested one. A manager-call installation
-	// with no call falls back to Likely, and freezing the request
-	// would label a Likely figure as somebody's authored call — the
-	// wrong number under a right word, in a record nobody can correct later.
+	// landing.Measure and not the requested one. A manager-call installation
+	// with no call falls back to Likely. Freezing the request would label a
+	// Likely figure as somebody's authored call. That is the wrong number under
+	// a right word, in a record nobody can correct later.
 	return id, closingReadings{
 		landing:  landing.AmountMinor,
 		won:      readings.WonMinor,

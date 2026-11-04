@@ -62,8 +62,8 @@ var legacyForwardMeasures = map[string]ForwardMeasure{
 
 // ParseForwardMeasure turns a stored or wire value into a measure.
 //
-// The default is deliberate: an ABSENT measure is Likely, the strictest
-// reading, so an installation that never touches the setting sees no change.
+// An absent measure is Likely, the strictest reading, so an installation
+// that never touches the setting sees no change.
 func ParseForwardMeasure(raw *string, field string) (ForwardMeasure, error) {
 	if raw == nil || *raw == "" {
 		return MeasureLikely, nil

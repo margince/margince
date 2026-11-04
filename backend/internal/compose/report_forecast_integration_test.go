@@ -78,8 +78,8 @@ func setupForecast(t *testing.T) *forecastEnv {
 		Rep1: ids.NewV7(), Rep3: ids.NewV7(), Team1: ids.NewV7(), Team2: ids.NewV7(),
 		stages: map[int]ids.UUID{},
 	}
-	// The installation's identity as settings rows: the report periods resolve
-	// their zone from the SETTING, and this env builds its workspace by raw
+	// The installation's identity as settings rows. The report periods resolve
+	// their zone from the setting, and this env builds its workspace by raw
 	// SQL, so bootstrap never seeded them.
 	if _, err := owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Forecast"'::jsonb),
@@ -142,9 +142,9 @@ func (e *forecastEnv) seedID(t *testing.T, sql string, args ...any) ids.UUID {
 }
 
 // seedOpenDeal plants one live open deal following its stage; amountMinor and
-// owner may be nil (the honest NULL cases every roll-up must survive). The close
+// owner may be nil (the NULL cases every roll-up must survive). The close
 // date is comfortably future so the §11 hygiene exclusion stays out of
-// these roll-up suites — the exclusion has its own suite.
+// these roll-up suites. The exclusion has its own suite.
 func (e *forecastEnv) seedOpenDeal(t *testing.T, name string, probability int, owner *ids.UUID, amountMinor *int64) ids.UUID {
 	t.Helper()
 	return e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, expected_close_date, source, captured_by)
@@ -326,8 +326,8 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 		wantByCategory[key] = want
 	}
 	// Folded back to bands before comparing. The currency rows of one band
-	// are that band, and summing them is safe HERE for the reason
-	// the engine cannot rely on in general: every priced deal seeded is EUR.
+	// are that band. Summing them is safe here for a reason the engine
+	// cannot rely on in general: every priced deal seeded is EUR.
 	gotByCategory := map[string]struct{ deals, unweighted, weighted int64 }{}
 	var gotDeals, gotUnweighted, gotWeighted int64
 	for _, row := range result.Rows {
@@ -686,8 +686,8 @@ func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
 // Summing money in each row's own currency across a grouping that does not
 // split by currency is REFUSED.
 //
-// Two open deals — 2,500,000 EUR and 1,000,000 USD — grouped by band
-// alone answered 3,500,000: euros added to dollars and returned as a plain
+// Two open deals (2,500,000 EUR and 1,000,000 USD) grouped by band alone
+// answered 3,500,000. That was euros added to dollars and returned as a plain
 // integer, where the honest converted total is 3,420,000 EUR. The default
 // plans append currency, so the invariant was held by a default rather than by
 // a rule, and a caller naming its own group_by walked straight past it — which

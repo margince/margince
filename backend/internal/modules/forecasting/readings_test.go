@@ -506,7 +506,7 @@ func TestTheContributionsDoNotDependOnTheOrderTheDealsArrive(t *testing.T) {
 }
 
 // Likely holds an open deal at or above the threshold with a confirmed close
-// date, counted in full; a provisional date or one point under keeps it out.
+// date, counted in full. A provisional date or one point under keeps it out.
 func TestLikelyHoldsDealsAtTheThresholdWithAConfirmedDate(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {

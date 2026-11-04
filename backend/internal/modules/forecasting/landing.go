@@ -5,9 +5,9 @@ package forecasting
 
 // Where the period lands if nothing changes.
 //
-// The readings beside this one answer what is IN the pipeline. None of them
-// answers the question a manager actually asks — "what will we finish on?" —
-// and a reader left to add two of them together will pick the wrong two: Won
+// The readings beside this one answer what is in the pipeline. None of them
+// answers the question a manager asks: "what will we finish on?" A reader left
+// to add two of them together will pick the wrong two. Won
 // plus Open overstates, Weighted alone forgets
 // the money already in the bank.
 //
@@ -75,12 +75,12 @@ type LandingCaveat string
 const (
 	// CaveatCallAbsent means a manager-call installation has no current call,
 	// so the figure is the Likely measure instead. Named rather than silently
-	// substituted: a manager who set this expects their own number, and a
+	// substituted, because a manager who set this expects their own number. A
 	// Likely total wearing that label is the wrong number under a right word.
 	CaveatCallAbsent LandingCaveat = "call_absent"
 	// CaveatCallBelowActual means the authored call is less than the money
-	// already won. It is reported rather than corrected: the call is somebody's
-	// stated belief and this code does not get to overrule it, but a landing
+	// already won. It is reported rather than corrected, because the call is
+	// somebody's stated belief and this code does not overrule it. A landing
 	// below what is already banked is a number nobody should read past.
 	CaveatCallBelowActual LandingCaveat = "call_below_actual"
 	// CaveatQualifiedUnavailable means a qualified measure was asked of a read
@@ -92,7 +92,7 @@ const (
 // ProjectLanding answers where the period finishes.
 //
 // call is the current manager call for this period and scope, or nil. It is
-// only consulted for MeasureManagerCall — a Likely or weighted installation has
+// only consulted for MeasureManagerCall. A Likely or weighted installation has
 // made a different choice, and quietly preferring an authored number would make
 // the setting a lie.
 func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Landing, error) {

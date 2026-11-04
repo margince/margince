@@ -36,7 +36,7 @@ export function bandOfKey(key: string): WinProbabilityBand | undefined {
   return WIN_PROBABILITY_BANDS.find((band) => band.key === key);
 }
 
-/** The band a probability dial covers exactly, or undefined for any other range. */
+/** The band whose bounds a probability dial matches, or undefined for any other range. */
 export function bandOfDial(
   value: string | undefined,
 ): WinProbabilityBand | undefined {

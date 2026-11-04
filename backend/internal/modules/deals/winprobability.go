@@ -104,7 +104,7 @@ func sameString(a, b *string) bool {
 
 // AdvancedDeal is a deal after a stage move, with the probability the move
 // set. Probability is nil when the move changed no stage. The deal is
-// embedded, so a caller reads its fields as on any deal read; Wire is how it
+// embedded, so a caller reads its fields as on any deal read. Wire is how it
 // reaches the contract, since Deal's own JSON would drop Probability.
 type AdvancedDeal struct {
 	crmcontracts.Deal

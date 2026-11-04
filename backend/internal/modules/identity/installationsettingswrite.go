@@ -26,10 +26,10 @@ type pendingWrite struct {
 // encodePatchField reduces one patch field to a pendingWrite, encoding it here
 // where its type is still known rather than handing the loop an `any`.
 //
-// Generic over the field's own type, which is what keeps the write typed: the
-// installation's fields are strings except the fiscal start month, and a loop
-// carrying `any` would accept a value of any type at all — including, silently,
-// a nil typed pointer, which is NOT equal to nil once it is inside an
+// Generic over the field's own type, which keeps the write typed. The
+// installation's fields are strings except the fiscal start month. A loop
+// carrying `any` would accept a value of any type at all. That includes, silently,
+// a nil typed pointer, which is not equal to nil once it is inside an
 // interface.
 func encodePatchField[T any](entry settings.Definition, value *T) (pendingWrite, error) {
 	if value == nil {

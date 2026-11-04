@@ -285,7 +285,7 @@ func TestAQuietDealsProbabilityDropsOneNotchANight(t *testing.T) {
 }
 
 // A write that sets the probability the deal already holds leaves the patch
-// empty, so a quiet deal sitting at zero writes no audit row night after night.
+// empty. So a quiet deal sitting at zero writes no audit row night after night.
 func TestAnUnchangedWinProbabilityIsNotWritten(t *testing.T) {
 	t.Parallel()
 	zero, twenty := 0, 20
