@@ -2,10 +2,10 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../api/schema";
-import { type Locale, LocaleProvider, translate } from "../../i18n";
-import { renderWithQueryClient } from "../../testing/queryrender";
-import { jsonResponse, stubWithSession } from "../../testing/story-utils";
+import type { components } from "../api/schema";
+import { type Locale, LocaleProvider, translate } from "../i18n";
+import { renderWithQueryClient } from "../testing/queryrender";
+import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import {
   AddRelationshipAction,
   counterpartyRef,
