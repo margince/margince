@@ -50182,6 +50182,25 @@ export interface components {
              * @enum {string}
              */
             kind: "privacy_notice";
+            controller?: components["schemas"]["PrivacyInformationController"];
+            /**
+             * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
+             *     purpose the reader agreed to, else the kind of a live communication basis.
+             */
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
+            /**
+             * @description The kinds of data held about the reader, read from the subject-access export's own
+             *     sections. Codes only: the page names each kind and never shows a value.
+             */
+            data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "postal_address" | "social_profile" | "custom_fields" | "correspondence" | "deals" | "preferences")[];
+            /** @description Who the data is shared with, as codes the page names in its reader's language. */
+            recipients: ("colleagues" | "service_providers")[];
+            /**
+             * @description The retention rules that act on the reader's data today, from the installation's own
+             *     retention settings, for the kinds of data the reader has. A rule switched off, or held
+             *     back by the retain-only setting, is not listed.
+             */
+            retention: components["schemas"]["PrivacyInformationRetention"][];
             /**
              * @description How this contact was obtained, in the closed vocabulary
              *     `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
@@ -50208,6 +50227,30 @@ export interface components {
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+        };
+        /**
+         * @description Who is responsible for the data, from the installation's own controller particulars, by the
+         *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
+         */
+        PrivacyInformationController: {
+            /** @description The legal name and postal address, as lines. Absent unless both are stated. */
+            identity?: string;
+            /** @description How to reach whoever answers questions about the data. */
+            privacy_contact?: string;
+            /** @description How to object, where the installation states a way of its own. */
+            objection_route?: string;
+        };
+        /** @description One retention rule that acts on the reader's data. */
+        PrivacyInformationRetention: {
+            scope: components["schemas"]["RetentionScope"];
+            retain_days: number;
+            action: components["schemas"]["RetentionAction"];
+            /**
+             * @description The statutory floor that keeps some of this data past `retain_days`: business
+             *     correspondence the law requires to be kept. Absent when the rule keeps the data or no
+             *     floor binds the scope.
+             */
+            kept_by_law?: components["schemas"]["JurisdictionRetentionClass"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.

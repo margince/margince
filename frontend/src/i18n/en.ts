@@ -10257,6 +10257,64 @@ export const en = {
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
   "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.controller.title": "Who is responsible",
+  "privacynotice.controller.contact": "Questions about your data: {contact}",
+  "privacynotice.categories.title": "What we hold",
+  "privacynotice.category.name": "Your name",
+  "privacynotice.category.jobTitle": "Your job title",
+  "privacynotice.category.employer": "The company you work for",
+  "privacynotice.category.email": "Your email address",
+  "privacynotice.category.phone": "Your phone number",
+  "privacynotice.category.correspondence":
+    "Emails, meetings and calls with you",
+  "privacynotice.basis.consent":
+    "Only with your agreement. You can withdraw it at any time.",
+  "privacynotice.basis.legitimateInterests":
+    "Our legitimate interest in business contact with you and the company you work for, weighed against your interests.",
+  "privacynotice.basis.contract":
+    "Needed for a contract with you or the company you work for.",
+  "privacynotice.basis.precontractRequest":
+    "You asked us for an offer or a meeting.",
+  "privacynotice.basis.subjectInitiated": "You wrote to us first.",
+  "privacynotice.basis.legalObligation": "A law requires it of us.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Needed to keep you or your account safe.",
+  "privacynotice.basis.existingCustomer":
+    "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
+  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
+  "privacynotice.category.postalAddress": "Your postal address",
+  "privacynotice.category.socialProfile":
+    "Your profiles and accounts on social networks and chat services",
+  "privacynotice.category.customFields": "Other details we record about you",
+  "privacynotice.category.deals": "Deals you take part in",
+  "privacynotice.category.preferences": "Your choices about our messages",
+  "privacynotice.retention.keptByLaw":
+    "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
+  "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
+  "privacynotice.recipient.serviceProviders":
+    "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.title": "How long we keep it",
+  "privacynotice.retention.archive":
+    "{scope}: taken out of daily use after {days}.",
+  "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
+  "privacynotice.retention.erase": "{scope}: deleted after {days}.",
+  "privacynotice.retention.rest":
+    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+  "privacynotice.retention.scope.activity":
+    "Emails, meetings and calls with you",
+  "privacynotice.retention.scope.activityTranscript":
+    "Transcripts of calls with you",
+  "privacynotice.retention.scope.rawCapture":
+    "Copies of emails as they arrived",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Your record, if you have not asked for news and are part of no deal",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Your details, if no further contact followed",
+  "privacynotice.objection.title": "Your right to object",
+  "privacynotice.objection.body":
+    "You can object at any time to our use of your data that rests on our legitimate interest. We then stop, unless we have compelling reasons to go on. If you object to advertising, we stop sending it, and you need not give a reason.",
+  "privacynotice.objection.how": "To object: {route}",
   "notice.ownerOf": "Owner of {duty}",
   "notice.excuse": "End without sending",
   "notice.excuseTitle": "End duty without sending disclosure",

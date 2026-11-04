@@ -9986,6 +9986,68 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.right.objection": "Phản đối cách sử dụng thông tin.",
   "privacynotice.right.complain":
     "Khiếu nại với cơ quan bảo vệ dữ liệu cá nhân của quý khách.",
+  "privacynotice.controller.title": "Đơn vị chịu trách nhiệm",
+  "privacynotice.controller.contact": "Câu hỏi về dữ liệu: {contact}",
+  "privacynotice.categories.title": "Thông tin đang lưu",
+  "privacynotice.category.name": "Họ tên",
+  "privacynotice.category.jobTitle": "Chức danh",
+  "privacynotice.category.employer": "Công ty nơi quý khách làm việc",
+  "privacynotice.category.email": "Địa chỉ email",
+  "privacynotice.category.phone": "Số điện thoại",
+  "privacynotice.category.correspondence":
+    "Email, cuộc họp và cuộc gọi với quý khách",
+  "privacynotice.basis.consent":
+    "Chỉ khi quý khách đồng ý. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào.",
+  "privacynotice.basis.legitimateInterests":
+    "Lợi ích chính đáng của chúng tôi trong việc liên hệ công việc với quý khách và công ty nơi quý khách làm việc, đã cân nhắc với lợi ích của quý khách.",
+  "privacynotice.basis.contract":
+    "Cần cho hợp đồng với quý khách hoặc công ty nơi quý khách làm việc.",
+  "privacynotice.basis.precontractRequest":
+    "Quý khách đã yêu cầu báo giá hoặc cuộc hẹn.",
+  "privacynotice.basis.subjectInitiated":
+    "Quý khách đã liên hệ với chúng tôi trước.",
+  "privacynotice.basis.legalObligation":
+    "Pháp luật yêu cầu chúng tôi làm việc này.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Cần để bảo vệ quý khách hoặc tài khoản của quý khách.",
+  "privacynotice.basis.existingCustomer":
+    "Quý khách là khách hàng của chúng tôi, và chúng tôi giới thiệu sản phẩm tương tự sản phẩm đã mua. Quý khách có thể phản đối bất cứ lúc nào.",
+  "privacynotice.basis.vnAgreement":
+    "Quý khách đã đồng ý nhận quảng cáo của chúng tôi.",
+  "privacynotice.category.postalAddress": "Địa chỉ bưu chính",
+  "privacynotice.category.socialProfile":
+    "Hồ sơ và tài khoản của quý khách trên mạng xã hội và dịch vụ trò chuyện",
+  "privacynotice.category.customFields":
+    "Các thông tin khác chúng tôi ghi nhận về quý khách",
+  "privacynotice.category.deals": "Các deal quý khách tham gia",
+  "privacynotice.category.preferences":
+    "Lựa chọn của quý khách về thư của chúng tôi",
+  "privacynotice.retention.keptByLaw":
+    "Thư về đơn hàng hoặc hợp đồng được lưu ít nhất {period} theo luật, kể cả khi thời hạn ở đây ngắn hơn.",
+  "privacynotice.recipients.title": "Ai được xem thông tin",
+  "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
+  "privacynotice.recipient.serviceProviders":
+    "Các công ty vận hành CRM và gửi email thay mặt chúng tôi. Hợp đồng buộc họ chỉ dùng dữ liệu theo chỉ dẫn của chúng tôi.",
+  "privacynotice.retention.title": "Thời gian lưu",
+  "privacynotice.retention.archive":
+    "{scope}: ngừng dùng hằng ngày sau {days}.",
+  "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
+  "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
+  "privacynotice.retention.rest":
+    "Các thông tin khác được lưu khi còn dùng cho các mục đích trên. Khi quý khách yêu cầu xóa, chúng tôi xóa những gì pháp luật cho phép.",
+  "privacynotice.retention.scope.activity":
+    "Email, cuộc họp và cuộc gọi với quý khách",
+  "privacynotice.retention.scope.activityTranscript":
+    "Bản chép lời cuộc gọi với quý khách",
+  "privacynotice.retention.scope.rawCapture": "Bản sao email như khi nhận được",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Hồ sơ của quý khách, nếu quý khách chưa đăng ký nhận tin và không tham gia deal nào",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Thông tin của quý khách, nếu sau đó không có liên hệ thêm",
+  "privacynotice.objection.title": "Quyền phản đối",
+  "privacynotice.objection.body":
+    "Quý khách có thể phản đối bất cứ lúc nào việc dùng dữ liệu dựa trên lợi ích chính đáng của chúng tôi. Khi đó việc dùng dữ liệu sẽ dừng, trừ khi có lý do bắt buộc. Nếu quý khách phản đối quảng cáo, quảng cáo sẽ dừng mà không cần nêu lý do.",
+  "privacynotice.objection.how": "Cách phản đối: {route}",
   "notice.ownerOf": "Phụ trách {duty}",
   "notice.excuse": "Kết thúc mà không gửi",
   "notice.excuseTitle": "Kết thúc nghĩa vụ mà không gửi thông báo",
