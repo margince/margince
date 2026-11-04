@@ -14,7 +14,7 @@ import (
 )
 
 func (h Handlers) CreateTeam(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -31,7 +31,7 @@ func (h Handlers) CreateTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handlers) UpdateTeam(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -56,7 +56,7 @@ func (h Handlers) RemoveTeamMember(w http.ResponseWriter, r *http.Request, id cr
 }
 
 func (h Handlers) setTeamMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, userID openapi_types.UUID, on bool) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}

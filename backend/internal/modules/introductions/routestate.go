@@ -76,18 +76,12 @@ func (s *Store) RouteStates(
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// A caller with no contact behind it has no tab to render, and this read
-	// reports on asks the caller is not party to — so it answers only a
-	// principal that IS somebody, and only a human.
+	// This read reports on asks the caller is not party to, so it answers only a
+	// user or their agent. A caller with no user behind it has no tab to render.
 	//
-	// The human arm is load-bearing and belongs HERE rather than on the route.
-	// A passport-backed agent carries its granting human's UserID, so an
-	// id-presence check admits one. The REFUSAL arm below is per-requester —
-	// a declined route is reported only to the rep who was declined — so an
-	// agent admitted here reads its human being turned down. This gate used to
-	// be the route's annotation, which made the answer depend on which door the
-	// read came through rather than on what it discloses.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// The refusal arm below is per-requester, so this belongs in the store and
+	// not on a route. A user's agent reads what its user reads.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {

@@ -307,7 +307,8 @@ func TestCompanyContextScopesAreBoundedOverHTTP(t *testing.T) {
 // human-only is the point: an agent may PROPOSE the company (/coldstart/preview)
 // but never make it true, exactly as it may stage an approval and never approve
 // it. A write-scoped passport is still refused.
-func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
+// Renaming the installation stays an administrator's, so a human names it first.
+func TestAnAgentSavesTheCompanyAsAgentNotAsAHuman(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -322,13 +323,20 @@ func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
 	var problem companyProblem
-	status := e.Call(t, "PUT", "/v1/company", wellFormedCompany(), bearer, &problem)
-	if status != http.StatusForbidden || problem.Code != "permission_denied" {
-		t.Fatalf("agent PUT /company → %d %q, want 403 permission_denied", status, problem.Code)
+	if status := e.Call(t, "PUT", "/v1/company", wellFormedCompany(), nil, nil); status != http.StatusOK {
+		t.Fatalf("the admin's first save → %d, want 200", status)
 	}
-	// Refused means refused: the agent's submission did not become the company.
-	if getStatus := e.Call(t, "GET", "/v1/company", nil, nil, nil); getStatus != http.StatusNotFound {
-		t.Fatalf("the agent's refused PUT still saved a company (GET → %d, want 404)", getStatus)
+	edit := wellFormedCompany()
+	edit["offer_summary"] = "Forecasting software"
+	if status := e.Call(t, "PUT", "/v1/company", edit, bearer, &problem); status != http.StatusOK {
+		t.Fatalf("agent PUT /company → %d %+v, want 200", status, problem)
+	}
+	var source string
+	if err := e.Owner.QueryRow(t.Context(), `SELECT source FROM company_profile_field WHERE field = 'offer_summary'`).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if source != "agent" {
+		t.Errorf("the agent's value is stamped source=%q, want agent", source)
 	}
 }
 

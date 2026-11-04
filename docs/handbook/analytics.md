@@ -67,7 +67,7 @@ A link also stops on its own after 30 days, or when you lose forecast access. Al
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
-To get deal rows out, open **Filters and views** → **New filter** → **Deals** and make a filter. Then choose **⋯** (**More for this filter**) → **Export CSV** or **Export JSON**. Also called: conversion rate, download report, export to Excel.
+To get deal rows out, open **Filters and views** → **New filter** → **Deals** and make a filter. Then press **Export CSV** or **Export JSON** beside the count of **Matching records**. Also called: conversion rate, download report, export to Excel.
 
 ## The reporting sections
 

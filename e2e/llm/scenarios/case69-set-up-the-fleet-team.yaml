@@ -1,0 +1,30 @@
+# CASE 69 — Setting up a team is two kinds of action on one router: create it, then add each member.
+name: case69_set_up_the_fleet_team
+criteria: [1]
+writes: true
+
+prompt: |
+  Set up a new team called Fleet Accounts, with Sofia Meier and Lena Fischer in it.
+
+must_call:
+  - change_access
+
+must_call_with:
+  - change_access.action=create_team
+  - change_access.action=add_team_member
+
+may_call:
+  - read_workspace
+  - whoami
+  - list_colleagues
+  - search_records
+
+must_call_matching:
+  - create_team~Fleet Accounts
+
+must_end_with:
+  - team "Fleet Accounts" member=Sofia Meier
+  - team "Fleet Accounts" member=Lena Fischer
+
+runs: 3
+pass_at: 2

@@ -282,6 +282,11 @@ func TestAFilterPreviewRefusalNamesTheOffendingInput(t *testing.T) {
 			"filter":   integration.AnyMap{"field": "full_name", "op": "contains", "value": "a"},
 			"limit":    limitTooLarge,
 		}, "limit"},
+		{"a cursor no page answered", integration.AnyMap{
+			"resource": "contact",
+			"filter":   integration.AnyMap{"field": "full_name", "op": "contains", "value": "a"},
+			"cursor":   "not-a-page-token",
+		}, "cursor"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			// The per-field breakdown rides details.errors (httperr's fieldDetails),

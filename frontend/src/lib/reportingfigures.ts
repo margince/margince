@@ -1,7 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-const EVALUATED_FIGURES = [
-  "reporting-evaluation",
+/**
+ * The prefix every reporting evaluation is cached under. A write to a figure a
+ * report reads, such as a deal's product allocations, invalidates it.
+ */
+export const REPORTING_EVALUATION_KEY = ["reporting-evaluation"] as const;
+
+const EVALUATED_FIGURES: readonly string[] = [
+  ...REPORTING_EVALUATION_KEY,
   "reporting-live",
   "reporting-forecast",
 ];

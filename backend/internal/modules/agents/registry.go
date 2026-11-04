@@ -63,6 +63,13 @@ type Registry struct {
 	// must not diverge: what the schema advertises (withRetryKey) and what a
 	// call carrying `idempotency_key` is answered with (refuseUnkeyableCall).
 	unitOwned map[string]bool
+	// routeServed names the verbs that run a REST route's own handler. Their
+	// answers carry no replay evidence, so withRetryKey and
+	// refuseUnkeyableCall both read this one set.
+	routeServed map[string]bool
+	// routeActions are the contract's route-backed actions per router name,
+	// added to that router's own targets when it registers.
+	routeActions map[string]map[string]string
 	// approvals closes the 🟡 loop (stage on refusal, redeem on retry).
 	// Nil is a legal composition — the gate still refuses; refused calls
 	// just have nowhere to land.
@@ -117,6 +124,8 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		requiredArgs: map[string][]string{},
 		typedArgs:    map[string][]typedArg{},
 		unitOwned:    map[string]bool{},
+		routeServed:  map[string]bool{},
+		routeActions: map[string]map[string]string{},
 		approvals:    approvals,
 		gate:         gate,
 		importWait:   defaultImportWait(),

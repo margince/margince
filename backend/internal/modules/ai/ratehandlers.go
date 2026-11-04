@@ -27,6 +27,20 @@ func toContractModelRate(r ModelRateRow) crmcontracts.AiModelRate {
 		EffectiveDate:     openapi_types.Date{Time: r.EffectiveDate},
 		Lane:              crmcontracts.AiModelRateLane(r.Lane),
 		Source:            crmcontracts.AiModelRateSource(r.Source),
+		LongContext:       toContractBand(r.LongContext),
+	}
+}
+
+func toContractBand(b *ModelRateBand) *crmcontracts.AiModelRateLongContext {
+	if b == nil {
+		return nil
+	}
+	return &crmcontracts.AiModelRateLongContext{
+		AboveTokens:       b.AboveTokens,
+		InputPerMtok:      b.InputUsd,
+		OutputPerMtok:     b.OutputUsd,
+		CacheReadPerMtok:  b.CacheReadUsd,
+		CacheWritePerMtok: b.CacheWriteUsd,
 	}
 }
 
@@ -129,6 +143,9 @@ func (h Handlers) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
 		Source:        RateSourceManual,
 		Lane:          lane,
 		EffectiveDate: effective,
+		// Omitted keeps the band the model carries: an edit of the base
+		// price is not a decision about the band.
+		ClearLongContext: req.ClearLongContext != nil && *req.ClearLongContext,
 	})
 	if err != nil {
 		writeRateErr(w, r, err)

@@ -2374,6 +2374,7 @@ export const en = {
   "agentJob.lifecycle_change": "Lifecycle update",
   "agentJob.offer_drafting": "Offer drafting",
   "agentJob.overnight": "Overnight agent",
+  "agentJob.project_health": "Project health check",
   "agentJob.propose_roles": "Buying team reader",
   "agentJob.rate_refresh": "Exchange rate update",
   "agentJob.scrape": "Website capture",
@@ -3351,6 +3352,8 @@ export const en = {
   "table.display": "Display",
   "table.density": "Density",
   "table.compact": "Compact",
+  "table.columnHandle": "Move {name}, {position} of {total}",
+  "table.columnMoved": "{name} moved to {position} of {total}",
   "table.sort": "Sort",
   "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
@@ -4152,6 +4155,25 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.products.emptyTakesOffer":
+    "Saving an empty list takes the products from an accepted offer, if there is one.",
+  "deal.products.title": "Products",
+  "deal.products.denied": "You may not see the products on this deal.",
+  "deal.products.empty":
+    "No products yet. The accepted offer sets them, or you can set them by hand.",
+  "deal.products.edit": "Set products",
+  "deal.products.editTitle": "Set the products this deal sells",
+  "deal.products.save": "Save products",
+  "deal.products.intro":
+    "Product reports count this deal under the products listed here.",
+  "deal.products.replacesOffer":
+    "The accepted offer set these products. Saving replaces them, and a later accepted offer leaves your list as it is.",
+  "deal.products.amount": "Amount for {name}",
+  "deal.products.remove": "Remove {name}",
+  "deal.products.add": "Add a product",
+  "deal.products.alreadyListed": "Already listed",
+  "deal.products.fromOffer": "From the offer",
+  "deal.products.setByHand": "Set by hand",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",
@@ -9703,6 +9725,7 @@ export const en = {
   "jobs.kind.list_evaluate": "Live list check",
   "jobs.kind.notification_email": "Notification email",
   "jobs.kind.privacy_retention": "Retention policy run",
+  "jobs.kind.project_health_scan": "Project health check",
   "jobs.kind.provider_lookup_sweep": "Enrichment of existing contacts",
   "jobs.kind.provider_run_poll_sweep": "Enrichment result check",
   "jobs.kind.provider_run_submit": "Enrichment provider request",
@@ -10152,6 +10175,9 @@ export const en = {
   "notifications.class.approval_pending.label": "Approvals waiting on you",
   "notifications.class.approval_pending.help":
     "Somebody needs your decision before their work can go on.",
+  "notifications.class.project_health.label": "Project health set by the AI",
+  "notifications.class.project_health.help":
+    "The AI marked a project of yours at risk, off track or back on track, with its reason and a way to undo it.",
   "notifications.class.automation.label": "Automations that ran",
   "notifications.class.automation.help":
     "A rule this company set fired, or could not.",
@@ -15978,6 +16004,9 @@ export const en = {
     "Project moved to another phase",
   "webhooks.event.project.phase_changed.when":
     "A project moves to a new phase.",
+  "webhooks.event.project.health_assessed.label": "Project health recorded",
+  "webhooks.event.project.health_assessed.when":
+    "A user or the AI records how a project is going, corrects a reading or undoes the AI’s.",
   "webhooks.event.project.archived.label": "Project archived",
   "webhooks.event.project.archived.when": "A project is archived.",
   "webhooks.eventGroup.contracts": "Contracts",
@@ -17146,10 +17175,8 @@ export const en = {
   "filters.switch.body.leads":
     "The conditions are cleared, because they name lead fields.",
   "filters.switch.confirm": "Switch and clear",
-  "filters.showMore": "Show up to 100",
   "filters.save": "Save",
   "filters.unsavedFilter": "Unsaved filter",
-  "filters.footMore": "More for this filter",
   "filters.exporting": "Exporting…",
   "filters.saveAsNew": "Save as new view",
   "filters.saveTitle": "Save this filter",
@@ -17730,6 +17757,7 @@ export const en = {
   "projectHealth.state.offTrack": "Off track",
   "projectHealth.record": "Record reading",
   "projectHealth.correct": "Correct reading",
+  "projectHealth.undoAI": "Undo the AI reading",
   "projectHealth.recordTitle": "Record delivery health",
   "projectHealth.correctTitle": "Correct this reading",
   "projectHealth.stateLabel": "Health",

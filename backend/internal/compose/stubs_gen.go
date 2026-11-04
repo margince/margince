@@ -3119,6 +3119,10 @@ func (stubs) CorrectProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp
 	httperr.NotImplemented(w, r, "CorrectProjectHealthAssessment")
 }
 
+func (stubs) UndoProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.UndoProjectHealthAssessmentParams) {
+	httperr.NotImplemented(w, r, "UndoProjectHealthAssessment")
+}
+
 func (stubs) ListProjectStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListProjectStakeholders")
 }
@@ -3453,6 +3457,10 @@ func (stubs) SetRoleObjectGrant(w nethttp.ResponseWriter, r *nethttp.Request, ke
 
 func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key string) {
 	httperr.NotImplemented(w, r, "RestoreRole")
+}
+
+func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {
+	httperr.NotImplemented(w, r, "DescribeRouterActions")
 }
 
 func (stubs) ListScheduledSends(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListScheduledSendsParams) {

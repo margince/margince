@@ -39,7 +39,7 @@ import (
 // contact must not be distinguishable from one that does not exist.
 func (s *Store) PromoteOwnCapturedContact(ctx context.Context, id ids.ContactID) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		// The mailbox owner is a contact. A connector or the verdict engine
 		// reaches the workspace through their own path, which is judged rather
 		// than asserted.

@@ -22,7 +22,7 @@ func (h aiRoutingHandlers) GetAiTaskOverrides(w http.ResponseWriter, r *http.Req
 		httperr.NotImplemented(w, r, "GetAiTaskOverrides")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

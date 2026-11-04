@@ -110,7 +110,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			"disqualify_lead",
 			oneRecord(datasource.EntityLead, id, `{"full_name":"Ada"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewDisqualifyLeadCall(p, nil, DisqualifyLeadCommand{LeadID: id})
+				return NewDisqualifyLeadCall(p, nil, nil, DisqualifyLeadCommand{LeadID: id})
 			},
 		},
 		{
