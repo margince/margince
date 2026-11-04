@@ -56,6 +56,20 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 	if audits != 1 || events != 1 {
 		t.Fatalf("acceptance must record one audit and linked event: %d, %d", audits, events)
 	}
+	var refusal *deals.CorrectionReversalError
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); !errors.As(err, &refusal) || refusal.Reason != deals.AlreadyAccepted {
+		t.Fatalf("undid an accepted change: %v", err)
+	}
+}
+
+func TestAReversedCorrectionCannotBeAccepted(t *testing.T) {
+	e := setupCloseDate(t)
+	deal := e.seedSweepDeal(t, "Undo this correction", e.early, nil, new(-12), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	change := e.correctionAuditIDFor(t, deal)
+	dealID := ids.From[ids.DealKind](deal)
 	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
 		t.Fatal(err)
 	}
