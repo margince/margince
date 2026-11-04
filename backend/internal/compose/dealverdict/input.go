@@ -19,7 +19,10 @@ const (
 // Input is what one deal's verdict reads. Activities are only those every
 // member may read: the reason and its citations reach Home and the deal.
 type Input struct {
-	Today             time.Time
+	Today time.Time
+	// ReadAt is when the pass read the deal. A citation dated after it is a
+	// date the sender wrote, not one that happened.
+	ReadAt            time.Time
 	DealName          string
 	Stage             string
 	AmountMinor       *int64
@@ -40,8 +43,11 @@ type Activity struct {
 	Kind       string
 	Direction  string
 	OccurredAt time.Time
-	Subject    string
-	Body       string
+	// ArrivedAt is when the activity reached the deal on this server. The
+	// sender cannot set it, so it orders evidence against a colleague's edit.
+	ArrivedAt time.Time
+	Subject   string
+	Body      string
 }
 
 // Offer is one offer on the deal.

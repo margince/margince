@@ -51,8 +51,10 @@ type dealVerdictRead struct {
 }
 
 // readDealVerdict reads one deal's input in the caller's transaction.
-func readDealVerdict(ctx context.Context, tx pgx.Tx, deal ids.UUID, prior json.RawMessage, today time.Time) (dealVerdictRead, error) {
-	read := dealVerdictRead{in: dealverdict.Input{Today: today}}
+func readDealVerdict(
+	ctx context.Context, tx pgx.Tx, deal ids.UUID, prior json.RawMessage, today, now time.Time,
+) (dealVerdictRead, error) {
+	read := dealVerdictRead{in: dealverdict.Input{Today: today, ReadAt: now}}
 	if err := readVerdictDeal(ctx, tx, deal, &read); err != nil {
 		return read, err
 	}
@@ -94,7 +96,7 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id::text, a.kind, coalesce(a.direction, ''), a.occurred_at, coalesce(a.subject, ''),
-		       left(coalesce(a.body, ''), $2), greatest(a.updated_at, l.created_at)
+		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at)
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind IN ('email', 'meeting', 'call', 'note')
 		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
@@ -107,7 +109,7 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 		var activity dealverdict.Activity
 		var arrived time.Time
 		if err := rows.Scan(&activity.ID, &activity.Kind, &activity.Direction, &activity.OccurredAt,
-			&activity.Subject, &activity.Body, &arrived); err != nil {
+			&activity.Subject, &activity.Body, &activity.ArrivedAt, &arrived); err != nil {
 			return err
 		}
 		read.in.Activities = append(read.in.Activities, activity)

@@ -19,7 +19,14 @@ func decideAmount(in Input, state State, action Action, rates Rates, change *dea
 	if !quoteFound(in, action.Cited, action.QuotedWords) {
 		return DroppedQuoteNotFound, nil
 	}
-	quotedMinor := action.Amount * values.MinorUnitScale(action.Currency)
+	whole, currency, ok := quotedPrice(action.QuotedWords)
+	if !ok || whole != action.Amount || currency != action.Currency {
+		return DroppedAmountMismatch, nil
+	}
+	quotedMinor, ok := toMinor(action.Amount, values.MinorUnitScale(action.Currency))
+	if !ok {
+		return DroppedAmountMismatch, nil
+	}
 	change.Evidence["quoted_words"] = action.QuotedWords
 	change.Evidence["quoted_amount"] = values.MajorUnits(quotedMinor, action.Currency)
 	change.Evidence["quoted_currency"] = action.Currency
@@ -70,14 +77,17 @@ func convert(amount int64, from, to string, rates Rates, evidence map[string]any
 	scale(numerator, denominator, fromRate.Rate.Exp)
 	scale(denominator, numerator, toRate.Rate.Exp)
 	whole := deals.DivRoundHalfAwayFromZero(numerator, denominator)
-	minor := new(big.Int).Mul(whole, big.NewInt(values.MinorUnitScale(to)))
-	if !minor.IsInt64() {
+	if !whole.IsInt64() {
+		return 0, false, nil
+	}
+	minor, ok := toMinor(whole.Int64(), values.MinorUnitScale(to))
+	if !ok {
 		return 0, false, nil
 	}
 	evidence["rate_from"] = rateText(fromRate)
 	evidence["rate_to"] = rateText(toRate)
 	evidence["rate_date"] = rateDate(fromRate, toRate).Format(time.DateOnly)
-	return minor.Int64(), true, nil
+	return minor, true, nil
 }
 
 // scale multiplies by 10^exp: into side when exp is positive, into other when

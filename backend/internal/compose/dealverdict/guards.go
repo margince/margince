@@ -28,6 +28,8 @@ const (
 	DroppedSwitchOff      = "dropped:switch_off"
 	DroppedUndoHold       = "dropped:undo_hold"
 	DroppedUnchanged      = "dropped:unchanged"
+	DroppedFutureCitation = "dropped:future_citation"
+	DroppedAmountMismatch = "dropped:amount_not_quoted"
 )
 
 // ConfidenceFloor is the least confidence an action needs. Below it nothing
@@ -74,6 +76,8 @@ func decideOne(in Input, state State, action Action, rates Rates) (Decision, err
 	switch {
 	case float64(action.Confidence) < ConfidenceFloor:
 		return drop(DroppedLowConfidence)
+	case citesTheFuture(in, action.Cited):
+		return drop(DroppedFutureCitation)
 	case !state.SwitchedOn[correction]:
 		return drop(DroppedSwitchOff)
 	case state.Held[correction]:
@@ -128,16 +132,27 @@ func editedAfter(edited map[string]time.Time, correction string, newest time.Tim
 	return ok && at.After(newest)
 }
 
-// newestCited is when the newest cited activity happened.
+// newestCited is when the newest cited activity arrived on the server.
 func newestCited(in Input, cited []string) time.Time {
 	known := in.activityByID()
 	var newest time.Time
 	for _, id := range cited {
-		if activity, ok := known[id]; ok && activity.OccurredAt.After(newest) {
-			newest = activity.OccurredAt
+		if activity, ok := known[id]; ok && activity.ArrivedAt.After(newest) {
+			newest = activity.ArrivedAt
 		}
 	}
 	return newest
+}
+
+// citesTheFuture reports whether a cited activity is dated after the read.
+func citesTheFuture(in Input, cited []string) bool {
+	known := in.activityByID()
+	for _, id := range cited {
+		if activity, ok := known[id]; ok && activity.OccurredAt.After(in.ReadAt) {
+			return true
+		}
+	}
+	return false
 }
 
 // quoteFound reports whether the quoted words appear in one cited activity,

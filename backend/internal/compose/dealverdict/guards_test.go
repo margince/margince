@@ -28,9 +28,9 @@ func rate(units int64, exp int32) deals.FXRate {
 }
 
 func guardInput() Input {
-	return Input{Today: today, Probability: 40, Activities: []Activity{
-		{ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3),
-			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March."},
+	return Input{Today: today, ReadAt: today.Add(time.Hour), Probability: 40, Activities: []Activity{
+		{ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3), ArrivedAt: today.AddDate(0, 0, -3),
+			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March. In pounds 40,000 GBP. The pilot is 1,000 EUR."},
 	}}
 }
 
@@ -83,7 +83,7 @@ func TestEachGuardDropsWhatItGuards(t *testing.T) {
 		{"the probability it already has", probabilityAction(40), nil, DroppedUnchanged},
 		{"an amount whose words are in the mail", amountAction(50_000, "USD", "50,000 USD for the first year"), nil, OutcomeApply},
 		{"an amount whose words are not", amountAction(50_000, "USD", "60,000 USD"), nil, DroppedQuoteNotFound},
-		{"an amount in a currency with no rate", amountAction(50_000, "GBP", "for the first year"), nil, DroppedNoRate},
+		{"an amount in a currency with no rate", amountAction(40_000, "GBP", "40,000 GBP"), nil, DroppedNoRate},
 		{"an accepted offer fixes the amount", amountAction(50_000, "USD", "50,000 USD"), func(s *State) { s.AcceptedOffer = acceptedEUR }, DroppedOfferFixes},
 	}
 	for _, tc := range cases {
@@ -130,7 +130,7 @@ func TestAConversionRoundsToWholeUnits(t *testing.T) {
 	state := guardState()
 	state.Seen.Currency = &usd
 	got, err := Decide(guardInput(), state,
-		Payload{Actions: []Action{amountAction(1_000, "EUR", "first year")}},
+		Payload{Actions: []Action{amountAction(1_000, "EUR", "1,000 EUR")}},
 		fixedRates{"EUR": rate(1, 0), "USD": rate(922, -3)})
 	if err != nil {
 		t.Fatal(err)
@@ -176,5 +176,97 @@ func TestTheValidatorRefusesACitationOutsideTheInput(t *testing.T) {
 	}
 	if _, err := Parse(`{"actions":[]}`, guardInput()); err != nil {
 		t.Fatalf("an empty answer is valid: %v", err)
+	}
+}
+
+// The amount is the one the quoted words state. A model that writes another
+// figure beside harmless words changes nothing.
+func TestAnAmountMustBeTheOneTheQuoteStates(t *testing.T) {
+	t.Parallel()
+	usd := "USD"
+	cases := []struct {
+		name   string
+		action Action
+		want   string
+	}{
+		{"the quote's own amount", amountAction(50_000, "USD", "50,000 USD for the first year"), OutcomeApply},
+		{"another amount beside the quote", amountAction(900_000, "USD", "50,000 USD for the first year"), DroppedAmountMismatch},
+		{"another currency beside the quote", amountAction(50_000, "EUR", "50,000 USD for the first year"), DroppedAmountMismatch},
+		{"an amount past any deal", amountAction(9_000_000_000_000_000, "USD", "first year"), DroppedAmountMismatch},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			state := guardState()
+			state.Seen.Currency = &usd
+			got, err := Decide(guardInput(), state, Payload{Actions: []Action{tc.action}}, fixedRates{"EUR": rate(1, 0), "USD": rate(922, -3)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got[0].Outcome != tc.want {
+				t.Fatalf("outcome = %q, want %q", got[0].Outcome, tc.want)
+			}
+		})
+	}
+}
+
+func TestAQuoteIsReadWithEitherSeparator(t *testing.T) {
+	t.Parallel()
+	for quote, want := range map[string]int64{
+		"50,000 USD": 50_000, "50.000 USD": 50_000, "50 000 USD": 50_000, "USD 49,999.50": 50_000, "50k USD": 50_000, "$50,000": 50_000,
+	} {
+		got, currency, ok := quotedPrice(quote)
+		if !ok || got != want || currency != "USD" {
+			t.Errorf("quotedPrice(%q) = %d %s %v, want %d USD", quote, got, currency, ok, want)
+		}
+	}
+	for _, quote := range []string{"50,000", "50,000 USD or 60,000 EUR", "about fifty thousand USD"} {
+		if _, _, ok := quotedPrice(quote); ok {
+			t.Errorf("quotedPrice(%q) read a price; want none", quote)
+		}
+	}
+}
+
+// A sender dates their mail; the server dates its arrival. A colleague's edit
+// made after the mail arrived wins, whatever date the mail carries.
+func TestAColleaguesEditOutranksAMailThatArrivedBeforeIt(t *testing.T) {
+	t.Parallel()
+	in := guardInput()
+	in.Activities[0].ArrivedAt = today.Add(-2 * time.Hour)
+	in.Activities[0].OccurredAt = today.Add(-time.Minute)
+	state := guardState()
+	state.HumanEditedAt = map[string]time.Time{deals.VerdictProbabilityCorrection: today.Add(-time.Hour)}
+	got, err := Decide(in, state, Payload{Actions: []Action{probabilityAction(70)}}, fixedRates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Outcome != DroppedHumanEdit {
+		t.Fatalf("outcome = %q, want the colleague's edit kept", got[0].Outcome)
+	}
+}
+
+func TestACitationDatedInTheFutureChangesNothing(t *testing.T) {
+	t.Parallel()
+	in := guardInput()
+	in.Activities[0].OccurredAt = today.AddDate(0, 1, 0)
+	got, err := Decide(in, guardState(), Payload{Actions: []Action{probabilityAction(70)}}, fixedRates{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Outcome != DroppedFutureCitation {
+		t.Fatalf("outcome = %q, want the future-dated citation refused", got[0].Outcome)
+	}
+}
+
+func TestAnAmountOutsideWhatADealHoldsIsRefused(t *testing.T) {
+	t.Parallel()
+	if got, ok := toMinor(50_000, 100); !ok || got != 5_000_000 {
+		t.Fatalf("toMinor(50,000, 100) = %d %v, want 5,000,000", got, ok)
+	}
+	if _, ok := toMinor(maxQuotedAmount, 10_000); ok {
+		t.Fatal("a product past the exact range a client reads must be refused")
+	}
+	if _, ok := toMinor(maxQuotedAmount+1, 1); ok {
+		t.Fatal("a price past the plausible range must be refused")
 	}
 }

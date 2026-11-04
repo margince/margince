@@ -48,7 +48,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today ti
 	var read dealVerdictRead
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		read, err = readDealVerdict(ctx, tx, c.deal, c.prior, today)
+		read, err = readDealVerdict(ctx, tx, c.deal, c.prior, today, p.now())
 		return err
 	})
 	if err != nil {
