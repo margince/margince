@@ -34,12 +34,15 @@ var remedies = map[string][]Remedy{
 	// No answer or fact supplies marketing consent.
 	ReasonNoMarketingConsent: {RemedyException},
 
-	// The subject's own stop, a dead mailbox, an unconfirmed opt-in, a rolling
-	// cap and an unresolvable recipient: only an admin may send past these.
-	ReasonObjection:           {RemedyAdminException},
-	ReasonRestricted:          {RemedyAdminException},
-	ReasonSubjectRequest:      {RemedyAdminException},
-	ReasonConsentWithdrawn:    {RemedyAdminException},
+	// The subject's own stop: nobody sends past it, an admin included. A stop
+	// recorded by mistake is corrected on the record, which lifts the refusal.
+	ReasonObjection:        {},
+	ReasonRestricted:       {},
+	ReasonSubjectRequest:   {},
+	ReasonConsentWithdrawn: {},
+
+	// A dead mailbox, an unconfirmed opt-in, a rolling cap and an unresolvable
+	// recipient: only an admin may send past these.
 	ReasonHardBounce:          {RemedyAdminException},
 	ReasonUnconfirmedDOI:      {RemedyAdminException},
 	ReasonFrequencyCapReached: {RemedyAdminException},
@@ -59,4 +62,19 @@ func RemediesFor(reason string) []Remedy {
 // HasRemedy reports whether the reason declares the remedy.
 func HasRemedy(reason string, remedy Remedy) bool {
 	return slices.Contains(remedies[reason], remedy)
+}
+
+// ExceptionMayAnswer reports whether a recorded one-message exception may stand
+// over every refusal in this set. Staging and dispatch both ask it, so a stop
+// recorded after the exception was given still stops the message.
+func (s DecisionSet) ExceptionMayAnswer() bool {
+	for _, d := range s.Decisions {
+		if d.Verdict == VerdictAllow {
+			continue
+		}
+		if !HasRemedy(d.ReasonCode, RemedyException) && !HasRemedy(d.ReasonCode, RemedyAdminException) {
+			return false
+		}
+	}
+	return true
 }

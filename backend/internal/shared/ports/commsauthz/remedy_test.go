@@ -25,20 +25,22 @@ func TestEveryReasonDeclaresItsRemedy(t *testing.T) {
 	}
 }
 
-// TestOnlyAnAdminMayTakeAnExceptionPastASubjectsStop holds that a subject's own
-// stop lists the admin exception and never the plain one every sender holds.
-func TestOnlyAnAdminMayTakeAnExceptionPastASubjectsStop(t *testing.T) {
+// TestNobodySendsPastASubjectsStop holds that a subject's own stop lists no
+// remedy at all: no answer, no fact, and no exception, an admin's included.
+func TestNobodySendsPastASubjectsStop(t *testing.T) {
 	t.Parallel()
+	stops := 0
 	for _, reason := range reasonConstants(t) {
 		if LevelForReason(reason) != LevelSubject {
 			continue
 		}
-		if HasRemedy(reason, RemedyException) {
-			t.Errorf("%q is the subject's own stop but lists the exception any sender may take", reason)
+		stops++
+		if got := RemediesFor(reason); len(got) != 0 {
+			t.Errorf("%q is the subject's own stop and lists %v; nobody may send past it", reason, got)
 		}
-		if !HasRemedy(reason, RemedyAdminException) {
-			t.Errorf("%q is the subject's own stop and an admin may still send past it, yet it lists no admin exception", reason)
-		}
+	}
+	if stops != 4 {
+		t.Errorf("found %d subject-level stops, want the four: objection, withdrawal, restriction, request to stop", stops)
 	}
 }
 
@@ -65,5 +67,21 @@ func TestRemediesForReturnsACopyAndNothingForAnUnknownReason(t *testing.T) {
 	}
 	if len(RemediesFor("made_up")) != 0 {
 		t.Error("an undeclared reason offers a remedy")
+	}
+}
+
+func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
+	t.Parallel()
+	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
+	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
+	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
+	if !(DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer() {
+		t.Error("an exception may answer missing consent and a bounce, yet the set refuses it")
+	}
+	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest} {
+		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
+		if set.ExceptionMayAnswer() {
+			t.Errorf("an exception answers a set holding %q", stop)
+		}
 	}
 }

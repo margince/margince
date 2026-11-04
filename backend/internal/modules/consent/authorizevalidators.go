@@ -41,13 +41,14 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
-		// A LEAD REACHES ONE ARM AND NO OTHER.
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrecontractQuote &&
+		category != commsauthz.CategoryPrivacyNotice {
+		// A LEAD REACHES THE ARMS THAT ASK WHO WROTE TO US, AND NO OTHER.
 		//
-		// The correspondence arm asks who wrote to us, and both of its readers
-		// answer about a lead on their own: wroteToUsWithin shares the
-		// authorIsTheSubject spelling, which matches a lead through its bare
-		// address, and askedToBeContacted returns false for a non-contact rather
+		// The correspondence and quote arms ask that through subjectAskedUs,
+		// whose readers answer about a lead on their own: wroteToUsWithin shares
+		// the authorIsTheSubject spelling, which matches a lead through its bare
+		// address, and requestOnRecord returns false for a non-contact rather
 		// than querying a contact-keyed table.
 		//
 		// The privacy notice is the one link a lead can hold. A website lead
@@ -97,7 +98,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryContractNotice:
 		return validateContract(ctx, tx, req, subject)
 	case commsauthz.CategoryPrecontractQuote:
-		return validateQuote(ctx, tx, req, subject)
+		return validateQuote(ctx, tx, req, subject, w)
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
@@ -118,26 +119,13 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 }
 
 // validateRequestedFollowup answers an unprompted follow-up: is there something
-// on file, inside the window, that says this contact asked to hear from us.
-//
-// TWO SOURCES, and the second is why a first mail to somebody who phoned is not
-// refused. An inbound message is the obvious one. The other is the acquisition
-// evidence a contact was created with (contact_acquisition_evidence, written by
-// every creation door): a rep who logged "they asked me for a quote at the
-// trade fair" has recorded the request, and asking them to record it a second
-// time in a different table would be asking them to restate what the CRM
-// already knows.
+// on file that says this contact asked to hear from us (subjectAskedUs). A rep
+// who logged "they asked me for a quote at the trade fair" has recorded the
+// request, and is not asked to restate it on every later message.
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
-	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	found, err := subjectAskedUs(ctx, tx, subject, w)
 	if err != nil {
 		return resolution{}, err
-	}
-	if !found {
-		asked, err := askedToBeContacted(ctx, tx, subject, time.Now().Add(-w.reply))
-		if err != nil {
-			return resolution{}, err
-		}
-		found = asked
 	}
 	if !found {
 		return resolution{
@@ -150,6 +138,18 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 		Basis:     commsauthz.BasisSubjectInitiatedCorrespondence,
 		Supported: true,
 	}, nil
+}
+
+// subjectAskedUs answers whether the record shows the subject asking to hear
+// from us: they wrote or met with us inside the window, or a request of theirs
+// is on record at any age. The follow-up and the quote arms share it, so a
+// request supports both.
+func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules) (bool, error) {
+	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	if err != nil || found {
+		return found, err
+	}
+	return requestOnRecord(ctx, tx, subject)
 }
 
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
@@ -238,11 +238,36 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 		)`, req.Evidence.ContractID)
 }
 
-// validateQuote answers a requested quote or offer. The offer hangs off a deal,
-// and the contact is reached as a stakeholder on that deal — the same edge the
+// validateQuote answers a requested quote or offer. Either a sent offer on the
+// named deal reaches this contact, or the subject asked us. The second is the
+// quote written from the enquiry, before anyone has made a deal or an offer for
+// it, and it needs no newsletter consent.
+func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules) (resolution, error) {
+	if subject.Kind == entityContact {
+		res, err := quoteOnDeal(ctx, tx, req, subject)
+		if err != nil || res.Supported {
+			return res, err
+		}
+	}
+	asked, err := subjectAskedUs(ctx, tx, subject, w)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !asked {
+		return resolution{Category: commsauthz.CategoryPrecontractQuote, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	return resolution{
+		Category:  commsauthz.CategoryPrecontractQuote,
+		Basis:     commsauthz.BasisPrecontractRequest,
+		Supported: true,
+	}, nil
+}
+
+// quoteOnDeal answers a quote on a named deal. The offer hangs off the deal,
+// and the contact is reached as a stakeholder on it — the same edge the
 // follow-up arm reads, because being on the opportunity is what makes somebody
 // the contact a quote goes to.
-func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+func quoteOnDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `
 		SELECT EXISTS (

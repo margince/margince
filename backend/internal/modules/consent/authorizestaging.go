@@ -119,7 +119,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	// Only when the engine actually refuses. A message the engine allows goes
 	// out on that permission and spends nobody's decision — asking otherwise
 	// would consume an instruction on a send that never needed one.
-	if directed != nil && directed.wanted && refusesAnyRecipient(set) {
+	// Nor past a subject's stop recorded since the decision was taken: the
+	// message is then refused, and the decision stays unspent.
+	if directed != nil && directed.wanted && refusesAnyRecipient(set) && set.ExceptionMayAnswer() {
 		instruction, err := g.AuthorizeDirectedExecutionTx(
 			ctx, tx, directed.intentID, deliveryID, directed.authored)
 		if err != nil {

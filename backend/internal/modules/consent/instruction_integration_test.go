@@ -97,7 +97,7 @@ func agentCtx(ws, user ids.UUID) context.Context {
 // seedOpenReview writes a refused send for these tests to direct.
 func seedOpenReview(ctx context.Context, t *testing.T, e *channelConsentEnv) ids.UUID {
 	t.Helper()
-	return seedOpenReviewFor(ctx, t, e, "marketing_objection")
+	return seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
 }
 
 // seedOpenReviewFor opens a review refused for the given reason code.
@@ -192,7 +192,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 		review).Scan(&state, &reason); err != nil {
 		t.Fatalf("reading the review: %v", err)
 	}
-	if state != "needs_repair" || reason != "marketing_objection" {
+	if state != "needs_repair" || reason != "no_marketing_consent" {
 		t.Errorf("the review now reads state=%q reason=%q — directing a send must leave the "+
 			"refusal exactly where it was", state, reason)
 	}
@@ -338,14 +338,13 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// Every sender may take the exception, but only an admin past a contact's own
-// stop. A rep holding the grant directs a send refused for want of marketing
-// consent. The rep is refused past an objection, a withdrawal, a restriction
-// and a subject request. An admin still directs past all of them.
+// Every sender may take the exception past missing marketing consent. Nobody
+// directs past a contact's own stop: not a rep holding the grant, and not an
+// admin.
 //
-// Mutation: drop the RemedyAdminException check in directableBy and the rep
-// cases below are allowed.
-func TestASenderDirectsPastMissingConsentButNotPastAContactsStop(t *testing.T) {
+// Mutation: give the four stops their admin exception back in remedies and the
+// admin cases below are allowed.
+func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{
@@ -360,8 +359,8 @@ func TestASenderDirectsPastMissingConsentButNotPastAContactsStop(t *testing.T) {
 		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("a rep directing past %s: err = %v, want permission denied", reason, err)
 		}
-		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); err != nil {
-			t.Errorf("an admin directing past %s: %v", reason, err)
+		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("an admin directing past %s: err = %v, want permission denied", reason, err)
 		}
 	}
 

@@ -197,10 +197,14 @@ resolve it in `commsauthz.RemediesFor`.
 - A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
   no evidence and no marketing consent.
 - A reason that lists only the admin exception can be sent past only by an admin. Examples are a
-  contact's own objection, withdrawal or stop request. A hard bounce and a frequency cap are two
-  more.
+  hard bounce and a frequency cap.
+- A contact's own stop lists no remedy, so nobody sends past it, an admin included. That covers an
+  objection, a withdrawal, a processing restriction and a stop request.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
+A direction does not reach a stop recorded after it was given. Staging and the transmit ticket
+both ask `DecisionSet.ExceptionMayAnswer`, so a later stop refuses the message and the direction
+stays unspent.
 
 A contact can be written to about a thread when three things hold:
 

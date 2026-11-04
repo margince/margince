@@ -125,7 +125,9 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		// Set here, from the engine's own answer, and never widened below: the
 		// wording check that follows refuses for a reason NOBODY has looked at,
 		// so it must not inherit this flag. See TransmitTicket.ConsentRefused.
-		ticket.ConsentRefused = !ticket.Allowed
+		// A subject's stop recorded after staging is not a refusal any
+		// exception answers, so the flag stays down and the message parks.
+		ticket.ConsentRefused = !ticket.Allowed && set.ExceptionMayAnswer()
 		// The message that goes must be the message that was authorized.
 		//
 		// ASKED OF EVERY MESSAGE THAT MIGHT ACTUALLY GO, which is not the same

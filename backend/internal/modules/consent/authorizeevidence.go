@@ -333,23 +333,24 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 	return found, nil
 }
 
-// askedToBeContacted reports whether this contact's acquisition evidence records
-// them ASKING to hear from us, inside the window.
+// requestOnRecord reports whether the record holds this contact ASKING to hear
+// from us: a request a rep recorded, an enquiry they sent through a form, or
+// acquisition evidence of a request.
 //
-// TWO KINDS ONLY, and the narrowness is the rule. Where a contact came from is
+// NO AGE LIMIT. A request covers the follow-up it asked for, at the timing that
+// was agreed, so an agreed follow-up a year out is still requested. What ends a
+// request is a stop, which the suppression check answers.
+//
+// NARROW KINDS, and the narrowness is the rule. Where a contact came from is
 // provenance; a purchased list and a public source say nothing about what the
-// contact wanted. Only requested_quote_or_meeting and in_person_permission ARE a
-// request, and they exist so a rep who logged "they asked me for a quote at the
-// fair" is not asked to record the same fact twice in a second table.
+// contact wanted.
 //
-// BOUNDED IN BOTH DIRECTIONS. occurred_at is caller-stated — the column exists
-// so an import can land today carrying a business card collected last year —
-// so a future date is not a memory of anything and must not authorize a send
-// now. The same bound and the same reason as RecordQualifyingEvent's, with the
-// same small allowance for a client clock that runs fast.
-func askedToBeContacted(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+// BOUNDED ABOVE. occurred_at is caller-stated, so a future date is not a memory
+// of anything and must not authorize a send now, with the same small allowance
+// RecordQualifyingEvent gives a client clock that runs fast.
+func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef) (bool, error) {
 	if subject.Kind != entityContact {
-		// contact_acquisition_evidence is keyed on contact_id; a lead holds none.
+		// Both tables are keyed on contact_id; a lead holds neither.
 		return false, nil
 	}
 	var found bool
@@ -358,9 +359,14 @@ func askedToBeContacted(ctx context.Context, tx pgx.Tx, subject subjectRef, sinc
 			SELECT 1 FROM contact_acquisition_evidence e
 			 WHERE e.contact_id = $1::uuid
 			   AND e.kind IN ('requested_quote_or_meeting', 'in_person_permission')
-			   AND coalesce(e.occurred_at, e.captured_at) >= $2
-			   AND coalesce(e.occurred_at, e.captured_at) <= $3
-		)`, subject.ID, since, time.Now().Add(clockSkewAllowance)).Scan(&found)
+			   AND coalesce(e.occurred_at, e.captured_at) <= $2
+		) OR EXISTS (
+			SELECT 1 FROM consent_qualifying_event q
+			 WHERE q.contact_id = $1::uuid
+			   AND q.kind = ANY($3::text[])
+			   AND q.occurred_at <= $2
+		)`, subject.ID, time.Now().Add(clockSkewAllowance),
+		[]string{KindRequestedBySubject, KindInquiry}).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}

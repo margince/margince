@@ -289,10 +289,11 @@ type sendEmailTool struct {
 // advertising a check the system does not perform teaches a model something
 // false. That was the honest answer while nothing read the field.
 //
-// It is no longer. validateInvoice, validateContract and validateQuote resolve a
-// category FROM the named record (authorizevalidators.go), and three of the
-// categories this tool may claim — invoice_or_payment, contract_notice,
-// precontract_quote — cannot be borne out without one. An agent claiming one
+// It is no longer. validateInvoice and validateContract resolve a category FROM
+// the named record (authorizevalidators.go), and two of the categories this
+// tool may claim — invoice_or_payment, contract_notice — cannot be borne out
+// without one. A quote can: the subject's request bears it out before any deal
+// exists, and a named deal's sent offer is a second way. An agent claiming one
 // with no evidence to offer resolved to `review` and parked, which reads to a
 // rep as the tool being broken rather than as the model having named a
 // category it could not support.
@@ -318,7 +319,7 @@ const sendContextProperties = `,
 	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing."},
 	"marketing_purpose":{"type":"string","description":"For marketing, the purpose key naming the topic"},
 	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."},
-	"evidence":{"type":"object","description":"The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one","properties":{
+	"evidence":{"type":"object","description":"The record that bears out the category: required for invoice_or_payment and contract_notice, which cannot be allowed without one","properties":{
 		"invoice_id":{"type":"string","format":"uuid"},
 		"contract_id":{"type":"string","format":"uuid"},
 		"deal_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`

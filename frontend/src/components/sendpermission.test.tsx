@@ -611,7 +611,7 @@ describe("one status for the message", () => {
     [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
-      "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     ],
   ] as const)("explains %o in its own words", (over, title, sentence) => {
     render(

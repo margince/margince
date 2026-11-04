@@ -7471,13 +7471,13 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent. Only an administrator can still send past this, one message at a time.",
+    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only an administrator can still send past this, one message at a time.",
+    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only an administrator can still send past this, one message at a time.",
+    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.tooMany":

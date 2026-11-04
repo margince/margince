@@ -271,8 +271,8 @@ type TransmitTicket struct {
 	// waive every refusal because it carries an instruction would send the
 	// wrong message under somebody's name.
 	//
-	// False on an allowed ticket, and false on a refusal about anything but
-	// consent.
+	// False on an allowed ticket, on a refusal about anything but consent, and
+	// on a refusal no exception answers (DecisionSet.ExceptionMayAnswer).
 	ConsentRefused bool
 }
 
