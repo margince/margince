@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -108,6 +109,10 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 		scope = "false"
 	case scope == "":
 		scope = "true"
+	}
+	// A technical address names no contact, even one stored before the rule.
+	if mailidentity.HasMachineLocalpart(address) {
+		scope, args = "false", args[:2]
 	}
 	var found attendeeCandidates
 	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {

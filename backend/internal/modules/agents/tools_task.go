@@ -36,6 +36,7 @@ type taskFields struct {
 	Subject          string          `json:"subject"`
 	Body             *string         `json:"body,omitempty"`
 	DueAt            *string         `json:"due_at,omitempty"`
+	DueHasTime       *bool           `json:"due_has_time,omitempty"`
 	AssigneeID       *string         `json:"assignee_id,omitempty"`
 	Links            json.RawMessage `json:"links,omitempty"`
 	// Source is the REST door's provenance field. The tool stamps its own and
@@ -58,6 +59,7 @@ func (t createTask) Spec() mcp.ToolSpec {
 			"subject":{"type":"string"},"body":{"type":"string"},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
+			"due_has_time":{"type":"boolean","description":"True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day."},
 			"assignee_id":{"type":"string","format":"uuid","description":"Defaults to the human you act for."},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
@@ -105,6 +107,9 @@ func TaskAsActivity(in json.RawMessage) (json.RawMessage, error) {
 	}
 	if args.DueAt != nil {
 		body["due_at"] = *args.DueAt
+	}
+	if args.DueHasTime != nil {
+		body["due_has_time"] = *args.DueHasTime
 	}
 	if args.AssigneeID != nil {
 		body["assignee_id"] = *args.AssigneeID

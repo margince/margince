@@ -17,6 +17,7 @@ import {
 import {
   calendarDaysBetween,
   formatDayMonth,
+  formatDueCompact,
   formatMoneyCompact,
   formatNumber,
   formatPercent,
@@ -320,7 +321,7 @@ export function timelineEvents(
             key: row.id,
             at: row.due_at,
             title: titleOf(row),
-            sub: day(row.due_at),
+            sub: formatDueCompact(row.due_at, row.due_has_time, locale, zone),
             kind: Date.parse(row.due_at) < now ? "late" : "ahead",
           },
         ]

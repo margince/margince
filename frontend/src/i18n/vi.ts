@@ -2669,6 +2669,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.reason": "Lý do",
   "history.field.recorded_at_level": "Ghi nhận ở cấp",
   "history.field.relationship_types": "Loại quan hệ",
+  "history.field.due_has_time": "Đến hạn vào giờ cụ thể",
   "history.field.remind_at": "Lời nhắc",
   "history.field.resolved_category": "Loại tin nhắn",
   "history.field.score": "Điểm",
@@ -5076,6 +5077,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncatedTitle": "Danh sách đã cắt bớt",
   "tags.catalogTruncated":
     "Có thể thiếu một thẻ. Tìm theo tên trước khi yêu cầu thẻ mới.",
+  "tags.noMatchYouCanCreate": "Không có thẻ nào tên như vậy.",
+  "tags.createNamed": "Tạo thẻ {name}",
+  "tags.shortlistInstead": "Thay vào đó, thêm vào danh sách chọn tay",
+  "tags.manage": "Quản lý thẻ",
+  "tags.createdNotApplied":
+    "Đã tạo {name} nhưng chưa thêm vào bản ghi này: {reason} Chọn thẻ trong danh sách để thêm lại.",
+  "tags.whoAdds":
+    "Cần thêm thẻ? Quản trị viên hoặc thành viên Vận hành có thể thêm trong Cài đặt → Thẻ.",
   "tags.noMatch":
     "Không có thẻ nào tên như vậy. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tagResult.gone":
@@ -6912,6 +6921,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.subject": "Tiêu đề",
   "log.body": "Chi tiết",
   "log.dueAt": "Hạn hoàn thành",
+  "log.dueTime": "Giờ (không bắt buộc)",
+  "log.dueTimeSkipped":
+    "Ngày đó đồng hồ được chỉnh sớm lên nên không có {time}. Công việc đến hạn lúc {actual}.",
   "log.date": "Ngày",
   "log.dateHint":
     "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",

@@ -12,6 +12,7 @@ public.activity.activity_colleague_mail_is_outbound CHECK (((sent_by_colleague I
 public.activity.activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot)))
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
+public.activity.activity_due_time_follows_due_at CREATE TRIGGER activity_due_time_follows_due_at BEFORE INSERT OR UPDATE OF due_at, due_has_time ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()
 public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
 public.activity.activity_guests_left_out_check CHECK ((guests_left_out >= 0))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
@@ -76,6 +77,7 @@ public.activity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.direction text gen=- def=-
 public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
+public.activity.due_has_time boolean NOT NULL gen=- def=false
 public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
 public.activity.guests_left_out integer NOT NULL gen=- def=0
@@ -191,6 +193,14 @@ public.activity_commitment_admission.source_activity_id uuid NOT NULL gen=- def=
 public.activity_commitment_admission.source_quote text NOT NULL gen=- def=-
 public.activity_commitment_admission.summary text NOT NULL gen=- def=-
 public.activity_commitment_admission_pkey CREATE UNIQUE INDEX activity_commitment_admission_pkey ON public.activity_commitment_admission USING btree (source_activity_id, locator)
+public.activity_due_time_follows_due_at() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.due_at IS NULL THEN
+    NEW.due_has_time := false;
+  END IF;
+  RETURN NEW;
+END;
+
 public.activity_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_identity.activity_id uuid NOT NULL gen=- def=-
 public.activity_identity.activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE

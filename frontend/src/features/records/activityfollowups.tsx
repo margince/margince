@@ -11,7 +11,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate } from "../../format/format";
+import { formatDue } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
@@ -149,7 +149,9 @@ function FollowUpRow({
           <>
             {" "}
             ·{" "}
-            {t("co.next.due", { when: formatDate(task.due_at, locale, zone) })}
+            {t("co.next.due", {
+              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+            })}
           </>
         )}
       </p>

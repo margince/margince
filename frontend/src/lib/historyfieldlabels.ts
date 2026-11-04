@@ -69,6 +69,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
   ["relationship_types", "history.field.relationship_types"],
+  ["due_has_time", "history.field.due_has_time"],
   ["remind_at", "history.field.remind_at"],
   ["score", "history.field.score"],
   ["score_override_reason", "history.field.score_override_reason"],

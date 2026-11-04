@@ -1034,11 +1034,15 @@ export interface components {
              * @description The activity's new due_at (absent when this update did not touch it).
              */
             due_at?: string;
+            /** @description Whether the new due_at names a time of day (true) or only a day (false). Carried whenever this update names due_at. */
+            due_has_time?: boolean;
             /**
              * Format: date-time
-             * @description The activity's new remind_at (absent when this update did not touch it).
+             * @description The activity's new remind_at (absent when this update did not set it).
              */
             remind_at?: string;
+            /** @description True when this update cleared the reminder: named as null by the caller, or ended because the due date moved. A reminder a consumer mirrors stops firing then. */
+            remind_at_cleared?: boolean;
             /**
              * Format: uuid
              * @description The activity's new assignee (absent when this update did not touch it).
