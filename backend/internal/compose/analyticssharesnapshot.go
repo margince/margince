@@ -19,6 +19,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -106,21 +107,49 @@ func ReadSharedSnapshot(
 		  -- inferred from a clause existing. A recipient whose row scope happens
 		  -- to cover every deal in the frozen state had nothing withheld, and
 		  -- saying otherwise invites them to distrust a complete number.
-		  count(*) FILTER (WHERE NOT %[1]s) > 0
+		  count(*) FILTER (WHERE NOT %[1]s) > 0,
+		  -- A snapshot frozen before the threshold existed carries none.
+		  COALESCE((SELECT s.likely_threshold FROM forecast_snapshot s WHERE s.id = $1), 0),
+		  %[2]s
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
-		WHERE c.snapshot_id = $1`, visible)
+		WHERE c.snapshot_id = $1`, visible, sharedBySourceSQL(visible))
 
 	var r forecasting.Readings
 	var withheld bool
-	if err := tx.QueryRow(ctx, sql, args...).Scan(
+	sources := forecasting.ProbabilitySources()
+	totals := make([]forecasting.SourceTotal, len(sources))
+	dest := []any{
 		&r.WonMinor, &r.EvidenceMinor, &r.OpenMinor, &r.WeightedMinor,
 		&r.EligibleCount, &r.PricedCount, &r.ConfirmedDateCount, &r.FxMissingCount,
-		&withheld,
-	); err != nil {
+		&withheld, &r.LikelyThreshold,
+	}
+	for i := range totals {
+		dest = append(dest, &totals[i].OpenMinor, &totals[i].WeightedMinor)
+	}
+	if err := tx.QueryRow(ctx, sql, args...).Scan(dest...); err != nil {
 		return SharedSnapshot{}, fmt.Errorf("compose: re-summing a shared snapshot: %w", err)
 	}
+	r.BySource = make(map[forecasting.ProbabilitySource]forecasting.SourceTotal, len(sources))
+	for i, source := range sources {
+		r.BySource[source] = totals[i]
+	}
 	return SharedSnapshot{Readings: r, Withheld: withheld}, nil
+}
+
+// sharedBySourceSQL is the open and weighted sums per probability source, in
+// the order of forecasting.ProbabilitySources. A row frozen before sources were
+// kept carries none, and its probability then came from the stage.
+func sharedBySourceSQL(visible string) string {
+	var cols []string
+	for _, source := range forecasting.ProbabilitySources() {
+		match := fmt.Sprintf("c.in_open AND COALESCE(c.probability_source, '%s') = '%s' AND %s",
+			forecasting.SourceStage, source, visible)
+		cols = append(cols,
+			fmt.Sprintf("COALESCE(sum(c.base_minor) FILTER (WHERE %s), 0)", match),
+			fmt.Sprintf("COALESCE(sum(c.weighted_minor) FILTER (WHERE %s), 0)", match))
+	}
+	return strings.Join(cols, ",\n\t\t  ")
 }
 
 // sharedRange draws the range over the rows a shared headline sums: the rows
