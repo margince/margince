@@ -8,6 +8,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"testing"
 	"time"
 
@@ -41,7 +42,7 @@ func createOnlyCtx(e *sendEnv) context.Context {
 // A replay that moves nothing still answers with the row.
 func TestAReplayThatMovesAMeetingNeedsTheUpdateGrant(t *testing.T) {
 	e := setupSend(t)
-	start := time.Now().Add(-48 * time.Hour)
+	start := clocktest.Now(t).Add(-48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-grant-1", "Northgate review", start,
 		crmcontracts.ActivityMeetingStatusBooked)
 
