@@ -148,6 +148,12 @@ const fileButton = () =>
 const filings = (sent: Sent[]) =>
   sent.filter((s) => s.path.endsWith("extraction:file-chat"));
 
+// The text the one filing sent, or undefined when nothing was filed.
+function filedBody(sent: Sent[]): string | undefined {
+  const body = filings(sent)[0]?.body;
+  return body ? (body as { body: string }).body : undefined;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -193,9 +199,7 @@ describe("capturing a chat from a screenshot", () => {
     expect(screen.queryByText(en["chatCapture.readBadge"])).toBeNull();
     await user.click(await fileButton());
     await waitFor(() => expect(filings(sent)).toHaveLength(1));
-    expect((filings(sent)[0]?.body as { body: string }).body).toBe(
-      "Lena asked about Thursday.",
-    );
+    expect(filedBody(sent)).toBe("Lena asked about Thursday.");
   });
 
   it("says why there is no text and still files the screenshot", async () => {
@@ -210,7 +214,7 @@ describe("capturing a chat from a screenshot", () => {
 
     await user.click(await fileButton());
     await waitFor(() => expect(filings(sent)).toHaveLength(1));
-    expect((filings(sent)[0]?.body as { body: string }).body).toBe("");
+    expect(filedBody(sent)).toBe("");
   });
 
   it("archives the stored screenshot on Discard and files nothing", async () => {
