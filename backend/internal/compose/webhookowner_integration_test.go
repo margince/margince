@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,7 +33,7 @@ func adminWithWebhooks(e *integration.Env) context.Context {
 // audited and the signing secret stays.
 func TestAWebhookWhoseOwnerLeftSaysSoAndCanBeHandedOn(t *testing.T) {
 	e := integration.Setup(t)
-	store := webhooks.NewStore(e.DB(), nil)
+	store := webhookStoreOver(e.DB(), nil)
 	admin := adminWithWebhooks(e)
 	hook := seedWebhook(t, e, e.Rep1, false)
 
@@ -79,5 +80,33 @@ func TestAWebhookWhoseOwnerLeftSaysSoAndCanBeHandedOn(t *testing.T) {
 		AND before->>'owner_id' = $2 AND after->>'owner_id' = $3`, hook, e.Rep1.String(), e.Rep2.String())
 	if audited != 1 {
 		t.Errorf("the owner change left %d audit rows naming both owners, want 1", audited)
+	}
+}
+
+// A delivery reaches whatever its owner may see, so naming an owner is acting
+// for that member. A caller who may manage webhooks but not members cannot
+// make an administrator the owner and so receive what only the administrator
+// sees; the owner stays as it was.
+func TestAWebhookCannotBeMadeToRunAsSomeoneTheCallerMayNotActFor(t *testing.T) {
+	e := integration.Setup(t)
+	store := webhookStoreOver(e.DB(), nil)
+	hook := seedWebhook(t, e, e.Rep2, false)
+	integrator := e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"webhook_subscription": {Read: true, Create: true, Update: true, Delete: true},
+		},
+		// Every row, so assigning work to the administrator passes on its own
+		// and only the member-administration check stands in the way.
+		RowScope: principal.RowScopeAll,
+	})
+
+	admin := ids.From[ids.UserKind](e.AdminUser)
+	_, err := store.UpdateSubscription(integrator, hook, webhooks.UpdateSubscriptionInput{OwnerID: &admin})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("making an administrator the owner without member administration answered %v, want permission denied", err)
+	}
+	if got := ownerOf(t, e, "webhook_subscription", hook); got != e.Rep2 {
+		t.Fatalf("the refused change moved the owner to %s", got)
 	}
 }

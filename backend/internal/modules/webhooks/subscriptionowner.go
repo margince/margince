@@ -15,16 +15,45 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// OwnerAdmission admits the caller to make next the owner a subscription runs
+// as. A delivery reaches whatever its owner may see, so naming an owner is
+// acting for them: it takes the authority over that member a handover takes.
+type OwnerAdmission func(ctx context.Context, tx pgx.Tx, next ids.UserID) error
+
+// WithOwnerAdmission wires the member-administration check an owner change
+// asks. A store without one refuses every change of owner.
+func (s *Store) WithOwnerAdmission(admit OwnerAdmission) *Store {
+	clone := *s
+	clone.admitOwner = admit
+	return &clone
+}
+
+func (s *Store) ownerAdmission() OwnerAdmission {
+	if s.admitOwner != nil {
+		return s.admitOwner
+	}
+	return func(context.Context, pgx.Tx, ids.UserID) error { return apperrors.ErrPermissionDenied }
+}
+
 // setOwner adds a change of owner to an update's patch. Only a CHANGE is an
 // assignment, so re-stating the current owner passes even after they left.
-// The signing secret stays: the receiver keeps verifying.
-func setOwner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current Subscription, next *ids.UserID) error {
-	if next == nil {
+// admit is asked about the new owner; nil means the caller was admitted for
+// the member already, as a handover is. The signing secret stays.
+func setOwner(
+	ctx context.Context, tx pgx.Tx, p *storekit.Patch, current Subscription, next *ids.UserID, admit OwnerAdmission,
+) error {
+	if next == nil || next.UUID == current.OwnerID {
 		return nil
+	}
+	if admit != nil {
+		if err := admit(ctx, tx, *next); err != nil {
+			return err
+		}
 	}
 	if err := auth.EnsureOwnerHandOn(ctx, tx, &current.OwnerID, next); err != nil {
 		return err
@@ -47,7 +76,9 @@ func OwnedLiveSubscriptionsTx(ctx context.Context, tx pgx.Tx, owner ids.UserID) 
 
 // TransferSubscriptionOwnershipTx moves every live subscription from owns to
 // to, each through the same patch and audit an edit of its owner writes, and
-// answers how many moved. Archived subscriptions stay where they are.
+// answers how many moved. Archived subscriptions stay where they are. The
+// caller runs it inside a handover, which already admitted them for both
+// members.
 func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (int, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return 0, err
@@ -80,7 +111,7 @@ func reassignSubscription(ctx context.Context, tx pgx.Tx, id ids.UUID, to ids.Us
 		return err
 	}
 	p := storekit.NewPatch()
-	if err := setOwner(ctx, tx, p, current, &to); err != nil || p.Empty() {
+	if err := setOwner(ctx, tx, p, current, &to, nil); err != nil || p.Empty() {
 		return err
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {

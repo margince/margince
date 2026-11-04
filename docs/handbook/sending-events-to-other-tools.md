@@ -46,7 +46,7 @@ Also called: turn off webhook, disable notifications, delete subscription.
 ### Why did a webhook stop when a colleague left?
 A webhook runs as the colleague in **Runs as**: it sends only what they may see. When they are deactivated, it sends nothing, and its row shows **Stopped: owner deactivated** in place of **Active**.
 1. Choose **Edit** on the subscription.
-2. Pick a colleague in **Runs as** and save. The signing secret stays the same.
+2. Pick a colleague in **Runs as** and save. The signing secret stays the same. **Runs as** shows only if you may manage members, because a webhook sends what its owner may see.
 **Hand over work** on the colleague's row in **Settings → Members** moves their webhooks too, and the deactivate dialog counts them. Set an integration up as an account that stays active.
 Also called: webhook stopped, owner left, webhook owner, change webhook owner.
 

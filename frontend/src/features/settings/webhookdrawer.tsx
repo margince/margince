@@ -16,6 +16,7 @@ import { Heading } from "../../design-system/heading";
 import { Popover } from "../../design-system/popover";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
@@ -239,6 +240,9 @@ export function WebhookSubscriptionDrawer({
       ? problemMessageOf(save.error, t)
       : (unplaced[0]?.[1] ?? null);
   const editing = subscription !== undefined;
+  // Naming who a webhook runs as is acting for that member, which only a
+  // member administrator may do; the server refuses everyone else.
+  const actsForMembers = useCan("user_admin", "update");
   const eventsMissing = form.eventTypes.length === 0;
   return (
     <Modal
@@ -297,7 +301,7 @@ export function WebhookSubscriptionDrawer({
               )}
             </Field>
           )}
-          {subscription && (
+          {subscription && actsForMembers && (
             <WebhookOwnerField
               subscription={subscription}
               value={form.ownerId}

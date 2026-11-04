@@ -24437,7 +24437,7 @@ export interface components {
             state?: "active" | "paused";
             /**
              * Format: uuid
-             * @description The member the subscription runs under from now on. They must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
+             * @description The member the subscription runs under from now on. A delivery carries what its owner may see, so naming one is acting for that member: the caller needs `user_admin` update and the reach over the new owner a handover takes (403 otherwise). The owner must be an active seat the caller may assign work to; a deactivated one answers 422. The signing secret stays the same.
              */
             owner_id?: string;
             event_types?: string[];

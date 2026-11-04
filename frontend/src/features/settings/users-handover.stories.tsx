@@ -47,7 +47,7 @@ function renderSummary() {
 }
 
 const meta: Meta<typeof HandoverSummary> = {
-  title: "Settings/Members/Handover summary",
+  title: "Settings/People/Members/Handover summary",
   component: HandoverSummary,
 };
 export default meta;

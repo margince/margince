@@ -41,6 +41,9 @@ type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	cipher *Cipher
+	// admitOwner admits the caller to make a member the owner a subscription
+	// runs as. Nil refuses every change of owner.
+	admitOwner OwnerAdmission
 }
 
 // NewStore wires the webhook tables over a pool; cipher may be nil when no
@@ -335,7 +338,7 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 		if in.State != nil {
 			p.Set("state", current.State, *in.State)
 		}
-		if err := setOwner(ctx, tx, p, current, in.OwnerID); err != nil {
+		if err := setOwner(ctx, tx, p, current, in.OwnerID, s.ownerAdmission()); err != nil {
 			return err
 		}
 		if in.EventTypes != nil {
