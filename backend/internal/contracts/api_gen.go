@@ -24729,6 +24729,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealReview          WorklistItemSource = "deal_review"
 	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
@@ -24774,6 +24775,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealReview:
 		return true
 	case WorklistItemSourceDealSuggestion:
 		return true
@@ -24903,6 +24906,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealReview          WorklistReachSource = "deal_review"
 	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
@@ -24948,6 +24952,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealReview:
 		return true
 	case WorklistReachSourceDealSuggestion:
 		return true
@@ -63899,6 +63905,11 @@ type WorklistItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	//
+	// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+	// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+	// into it, and it stays while the review is open, even once its task is done. It offers
+	// only `open`; the review is answered on the deal.
+	//
 	// `batch` is the one that names no single record: it stands for a GROUP of
 	// routine decisions that read alike, so a hundred of them cost the reader one
 	// row rather than a hundred. Its own facts ride in `batch`.
@@ -64025,6 +64036,11 @@ type WorklistItemDueGroup string
 type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+//
+// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+// into it, and it stays while the review is open, even once its task is done. It offers
+// only `open`; the review is answered on the deal.
 //
 // `batch` is the one that names no single record: it stands for a GROUP of
 // routine decisions that read alike, so a hundred of them cost the reader one

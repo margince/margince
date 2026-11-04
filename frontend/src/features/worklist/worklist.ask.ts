@@ -21,6 +21,7 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   customer_waiting: "worklist.ask.customer_waiting",
   lead_response: "worklist.ask.lead_response",
   deal_at_risk: "worklist.ask.deal_at_risk",
+  deal_review: "worklist.ask.deal_review",
   meeting: "worklist.ask.meeting",
   relationship_decay: "worklist.ask.relationship_decay",
   failed_approval: "worklist.ask.failed_approval",

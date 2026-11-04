@@ -95,7 +95,7 @@ func readDealViability(ctx context.Context, tx pgx.Tx, deal ids.UUID) (crmcontra
 		LEFT JOIN LATERAL (
 		  SELECT vx.id, vx.first_seen_at, vx.episode, vx.delivery_state, vx.task_activity_id
 		    FROM assurance_exception vx
-		   WHERE vx.subject_kind = 'deal' AND vx.subject_id = d.id AND vx.type = $%[3]d AND vx.status = 'open'
+		   WHERE vx.subject_id = d.id AND vx.type = $%[3]d AND `+openFindingOnLiveDealSQL("vx", "d")+`
 		   ORDER BY vx.first_seen_at DESC LIMIT 1) x ON true
 		LEFT JOIN activity t ON t.id = x.task_activity_id AND t.archived_at IS NULL AND %[5]s
 		      AND EXISTS (SELECT 1 FROM activity_link tl WHERE tl.activity_id = t.id AND tl.deal_id = d.id)

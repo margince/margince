@@ -2181,6 +2181,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kalenderverbindung",
   "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
+  "brief.coverage.source.deal_review": "Prüfungen des Kundenrückhalts",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
@@ -18131,6 +18132,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
+  "worklist.ask.deal_review":
+    "Der Kunde stützt diesen Deal vielleicht nicht mehr. Öffne ihn und beantworte die Prüfung.",
   "worklist.ask.meeting":
     "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
   "worklist.ask.relationship_decay":
@@ -18535,6 +18538,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
   "worklist.untitled.deal_at_risk": "Deal stagniert",
+  "worklist.untitled.deal_review": "Prüfung des Kundenrückhalts",
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",
