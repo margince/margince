@@ -174,7 +174,13 @@ function zoneSourceRefs(
       ) {
         return;
       }
-      if (ts.isIdentifier(node)) {
+      // `zones["browserZone"]()` names the export with a string, and the checker
+      // resolves that string to the same symbol.
+      const namedByString =
+        ts.isStringLiteralLike(node) &&
+        ts.isElementAccessExpression(node.parent) &&
+        node.parent.argumentExpression === node;
+      if (ts.isIdentifier(node) || namedByString) {
         const declares =
           (ts.isFunctionDeclaration(node.parent) ||
             ts.isVariableDeclaration(node.parent)) &&
@@ -245,7 +251,8 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
             "  const c = zones.browserZone();",
             "  const d = companyClock();",
             "  const e = { browserZone };",
-            "  return [a, b, c, d, e].join();",
+            '  const f = zones["browserZone"]();',
+            "  return [a, b, c, d, e, f].join();",
             "}",
             "export type Zone = ReturnType<typeof browserZone>;",
           ].join("\n"),
@@ -258,6 +265,7 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
       { source: "browserZone", file: "features/zzplanted.tsx", line: 8 },
       { source: "useCompanyZone", file: "features/zzplanted.tsx", line: 9 },
       { source: "browserZone", file: "features/zzplanted.tsx", line: 10 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 11 },
     ]);
     expect(listed.browserZone.has("features/zzplanted.tsx")).toBe(false);
     expect(listed.useCompanyZone.has("features/zzplanted.tsx")).toBe(false);
