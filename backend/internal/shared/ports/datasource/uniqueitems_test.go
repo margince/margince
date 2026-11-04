@@ -12,12 +12,12 @@ type uniqueRecipient struct {
 	IDs []string `json:"ids" unique:"items"`
 }
 
-type uniqueContact struct {
+type uniqueRecord struct {
 	Name string `json:"name"`
 }
 
 type uniqueBody struct {
-	People     []uniqueContact   `json:"people" unique:"items"`
+	Records    []uniqueRecord    `json:"records" unique:"items"`
 	Pointers   []*string         `json:"pointers" unique:"items"`
 	Scopes     *[]string         `json:"scopes,omitempty" unique:"items"`
 	Recipients []uniqueRecipient `json:"recipients"`
@@ -37,8 +37,8 @@ func TestRejectRepeatedItemsNamesTheListThatRepeatsAnItem(t *testing.T) {
 		"list without the tag":       {body: uniqueBody{Free: []string{"x", "x"}}},
 		"items no map can key":       {body: uniqueBody{Pairs: [][]int{{1, 2}, {1, 2}}}, want: "pairs"},
 		"distinct uncomparable":      {body: uniqueBody{Pairs: [][]int{{1, 2}, {2, 1}}}},
-		"equal structs":              {body: uniqueBody{People: []uniqueContact{{Name: "Ana"}, {Name: "Ana"}}}, want: "people"},
-		"distinct structs":           {body: uniqueBody{People: []uniqueContact{{Name: "Ana"}, {Name: "Bo"}}}},
+		"equal structs":              {body: uniqueBody{Records: []uniqueRecord{{Name: "Ana"}, {Name: "Ana"}}}, want: "records"},
+		"distinct structs":           {body: uniqueBody{Records: []uniqueRecord{{Name: "Ana"}, {Name: "Bo"}}}},
 		"one value, two pointers":    {body: uniqueBody{Pointers: []*string{new("x"), new("x")}}, want: "pointers"},
 		"two values behind pointers": {body: uniqueBody{Pointers: []*string{new("x"), new("y")}}},
 	}
