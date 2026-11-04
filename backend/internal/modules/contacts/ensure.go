@@ -285,10 +285,10 @@ func (s *Store) CounterpartyLead(ctx context.Context, email string) (ids.LeadID,
 }
 
 func leadWithoutContact(holders storekit.IdentityHolders) ids.LeadID {
-	if len(holders.Leads) == 0 || len(holders.Contacts) > 0 {
+	if len(holders.Contacts) > 0 {
 		return ids.LeadID{}
 	}
-	return holders.Leads[0]
+	return holders.PreferredLead()
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a

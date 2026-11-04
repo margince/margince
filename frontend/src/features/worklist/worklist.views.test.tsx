@@ -170,6 +170,60 @@ describe("Upcoming and backlog", () => {
     });
   });
 
+  it("groups its rows by the day they are due, as the queue's bands do", async () => {
+    const upcoming = [
+      row({
+        id: "u1",
+        category: "upcoming",
+        title: "Call back tomorrow",
+        due_group: "tomorrow",
+      }),
+      row({
+        id: "u2",
+        category: "upcoming",
+        title: "Send the pricing",
+        due_group: "this_week",
+      }),
+      row({
+        id: "u3",
+        category: "upcoming",
+        title: "Plan the renewal",
+        due_group: "later",
+      }),
+    ];
+    stub(
+      day({
+        queue: upcoming,
+        counts: [
+          {
+            category: "upcoming",
+            considered: 3,
+            shown: 0,
+            more_available: false,
+          },
+        ],
+      }),
+    );
+    renderWorklist();
+    const user = userEvent.setup();
+    const summary = await screen.findByText(en["worklist.filter.upcoming"]);
+    await user.click(summary);
+
+    const section = summary.closest("details");
+    if (!(section instanceof HTMLElement)) {
+      throw new Error("the Upcoming section is not a disclosure");
+    }
+    await within(section).findByText("Plan the renewal");
+    const headings = within(section)
+      .getAllByRole("heading", { level: 4 })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual([
+      en["worklist.dueGroup.tomorrow"],
+      en["worklist.dueGroup.this_week"],
+      en["worklist.dueGroup.later"],
+    ]);
+  });
+
   it("draws no checkbox on an upcoming row, even in selection mode", async () => {
     const task = row({
       id: "t1",

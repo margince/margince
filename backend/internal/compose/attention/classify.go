@@ -102,6 +102,7 @@ func base(
 		MayBeDone:         item.MayBeDone,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
+		RunReasonCode:     item.RunReasonCode,
 		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the

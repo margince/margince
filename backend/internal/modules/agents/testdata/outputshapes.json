@@ -10435,6 +10435,9 @@
               },
               "task": {
                 "type": "integer"
+              },
+              "webhook": {
+                "type": "integer"
               }
             },
             "required": [
@@ -10443,7 +10446,8 @@
               "deal",
               "lead",
               "project",
-              "task"
+              "task",
+              "webhook"
             ]
           },
           "signal_count": {

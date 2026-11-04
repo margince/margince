@@ -64536,6 +64536,7 @@ components:
         - cold_start
         - corpus_ask
         - deal_health
+        - deal_verdict
         - document_extract
         - draft_reply
         - enrich
@@ -64572,7 +64573,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering]
+         reader_rendering, deal_verdict]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -68564,6 +68565,12 @@ components:
         target_ref: { type: [string, 'null'], description: 'Record the run acted on (type + id or label).' }
         action_result: { type: [string, 'null'], description: 'What happened (e.g. "created task", "queued to approval inbox").' }
         reason: { type: [string, 'null'], description: 'For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.' }
+        reason_code:
+          type: [string, 'null']
+          description: |
+            For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+            target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+            not_completed or blocked. A code a client does not know reads as not_completed.
         audit_id: { type: [string, 'null'], description: 'Link into the audit_log row for this run.' }
 
     SettleClaimRequest:
@@ -71935,6 +71942,12 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        run_reason_code:
+          type: string
+          description: |
+            On an `automation_run` item: why the firing stopped, in the code set of
+            AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+            engine's English sentence.
         domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
@@ -72794,7 +72807,7 @@ components:
       description: The recorded automatic change and its current review state.
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
-        kind: { type: string, enum: [close_date, close_lost, stage] }
+        kind: { type: string, enum: [close_date, close_lost, amount, probability, stage] }
         accepted: { type: boolean }
         reversed: { type: boolean }
         version: { type: integer, format: int64 }
@@ -73669,6 +73682,12 @@ components:
         domain_note:
           type: string
           description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+        run_reason_code:
+          type: string
+          description: |
+            On an `automation_run` item: why the firing stopped, in the code set of
+            AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+            engine's English sentence.
         domain_context: { $ref: '#/components/schemas/DomainQuestionContext' }
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
