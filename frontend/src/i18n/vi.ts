@@ -3612,6 +3612,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.calendar": "Lời mời lịch",
   "timeline.automatic.sending_system": "Do hệ thống gửi",
   "timeline.automatic.product": "Do Margince gửi",
+  "timeline.automatic.bulk": "Gửi tới danh sách thư",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
   "timeline.group.expand": "Mở",
