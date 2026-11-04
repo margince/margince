@@ -26,6 +26,7 @@ import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
+import type { RecordTabId } from "../../lib/recordtaborder";
 import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
@@ -60,7 +61,13 @@ import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
 
-const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
+const DEAL_TABS = [
+  "overview",
+  "history",
+  "room",
+  "legal",
+  "files",
+] as const satisfies readonly RecordTabId[];
 
 type DealTab = (typeof DEAL_TABS)[number];
 

@@ -46,6 +46,7 @@ export type Lead = components["schemas"]["Lead"];
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
+import type { RecordTabId } from "../../lib/recordtaborder";
 import { useAddressedTab } from "../records/recordtab";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 
@@ -57,7 +58,11 @@ import { WorklistReturnLink } from "../worklist/worklist.return";
  */
 export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
-const LEAD_TABS = ["overview", "deals", "history"] as const;
+const LEAD_TABS = [
+  "overview",
+  "history",
+  "deals",
+] as const satisfies readonly RecordTabId[];
 
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
