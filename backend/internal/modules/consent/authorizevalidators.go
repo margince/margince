@@ -90,7 +90,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
 		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
 	case commsauthz.CategoryActiveDealFollowup:
-		return validateDealFollowup(ctx, tx, req, subject, w)
+		return validateDealFollowup(ctx, tx, req, subject)
 	case commsauthz.CategoryInvoiceOrPayment:
 		return validateInvoice(ctx, tx, req, subject)
 	case commsauthz.CategoryContractNotice:
@@ -170,8 +170,9 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
 // the picked deal through liveDealInLinks and requestedNegotiation, so the
 // links and the picked deal are asked one way. A live deal the contact never
-// asked about gets its own reason: the deal is there, their request is not.
-func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules) (resolution, error) {
+// asked about gets its own reason: the deal is there, their request about it
+// is not.
+func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
 	}
@@ -182,7 +183,7 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	if !live {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
 	}
-	asked, err := subjectAskedUs(ctx, tx, subject, w)
+	asked, err := requestedNegotiation(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
 	if err != nil {
 		return resolution{}, err
 	}
@@ -249,13 +250,14 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 // request for a quote; a reply in the enquiry's own thread is a reply.
 //
 // The request arm is the weaker ground, so a marketing objection recorded
-// after the request binds it (MarketingStopsBind).
+// after the request binds it (MarketingStopsBind). Only a request about this
+// quote's deal, or naming no deal, is read for it.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	res, err := quoteOnDeal(ctx, tx, req, subject)
 	if err != nil || res.Supported {
 		return res, err
 	}
-	askedAt, asked, err := latestRequest(ctx, tx, subject, quoteRequests)
+	askedAt, asked, err := latestRequest(ctx, tx, subject, quoteRequests, req.Evidence.DealID)
 	if err != nil || !asked {
 		return res, err
 	}

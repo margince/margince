@@ -208,9 +208,10 @@ resolve it in `commsauthz.RemediesFor`.
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
   rests on a request alone when the contact opted out of marketing after that request
   (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
-- A country's own limits list nothing either. A pack that sets `ConsentOnly` (Vietnam does) turns
-  marketing without consent into `marketing_consent_required`. No exception and no standing
-  override answers it. A pack's advertising ceiling (`frequency_cap_reached`) clears with time.
+- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
+  turns marketing without consent into `marketing_consent_required`. No exception and no standing
+  override answers it. Nobody sends past a pack's limit on advertising mail
+  (`frequency_cap_reached`); it clears with time.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 The direction stores whether an admin gave it. Staging and the transmit check both ask
@@ -232,9 +233,14 @@ standing permission for the contact. It never supports a message the sender call
 `copiedOnThisMatter` holds the whole rule.
 
 An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
-asking. That is mail or a meeting from them inside the reply window, or a request of theirs on record
-at any age (`requestedNegotiation`). A deal we created is not their request. A picked deal with
-no request behind it is refused with `deal_not_requested`, and a recorded request answers it.
+asking about that deal (`requestedNegotiation`). That is mail they wrote or a meeting they joined,
+filed on the deal. It can also be a request recorded about the deal, or the request they came in with
+when it names the deal. A deal we created is not their request, and a request about one deal does
+not carry another. A picked deal with no such request is refused with `deal_not_requested`. The
+answer a rep gives in the review form is recorded about that deal, so it is asked once.
+
+A quote on a deal reads only the requests about that deal or about no deal. So a newer request for
+one quote does not lift an opt-out for another.
 
 ## Reaching the subject without the message that carried the link
 

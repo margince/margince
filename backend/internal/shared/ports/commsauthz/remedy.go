@@ -42,7 +42,7 @@ var remedies = map[string][]Remedy{
 	ReasonSubjectRequest:   {},
 	ReasonConsentWithdrawn: {},
 	// A request recorded after the objection lifts it, which is the rep
-	// confirming with the person, not anybody sending past it.
+	// confirming with the contact, not anybody sending past it.
 	ReasonOptedOutAfterRequest: {},
 	// Prior consent is the only route where the recipient's country says so
 	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a

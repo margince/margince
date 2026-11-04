@@ -325,7 +325,7 @@ func TestAPickedOpenDealSupportsADealFollowUp(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := setupResolve(t)
 			deal := e.openDeal(t, c.status, c.stakeholder)
-			e.enquired(t)
+			e.enquiredAbout(t, deal)
 
 			got := e.resolve(t, commsauthz.Request{
 				Context:  commsauthz.CategoryActiveDealFollowup,
@@ -349,7 +349,7 @@ func TestAClaimNamingNoDealIsNotSupportedAsADealFollowUp(t *testing.T) {
 func TestTheStrongerEvidenceWinsOverAMistakenClaim(t *testing.T) {
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
-	e.enquired(t)
+	e.enquiredAbout(t, deal)
 
 	d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup, Links: []ids.UUID{deal}})
 

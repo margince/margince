@@ -90,7 +90,7 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 
 // objectionBindsResolution reports whether a broad marketing objection binds a
 // resolution that asked for it (resolution.MarketingStopsBind). It binds when
-// it is no older than the request the quote rests on: the person opted out
+// it is no older than the request the quote rests on: the contact opted out
 // after asking. A request recorded after the objection carries the quote. A
 // narrow objection names a marketing purpose, which a quote does not have.
 func objectionBindsResolution(res resolution, stops []liveStop) bool {
@@ -108,7 +108,7 @@ func objectionBindsResolution(res resolution, stops []liveStop) bool {
 
 // denyByObjection is the refusal objectionBindsResolution asks for. The
 // suppression is the objection; the reason says it came after the request, so
-// the send screen asks the rep to confirm with the person first.
+// the send screen asks the rep to confirm with the contact first.
 func denyByObjection(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.Resolved = res.Category
 	d.Verdict = commsauthz.VerdictDeny

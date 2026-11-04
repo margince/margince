@@ -2649,6 +2649,7 @@ export const en = {
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
+  "history.field.about_deal": "Deal it was about",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
