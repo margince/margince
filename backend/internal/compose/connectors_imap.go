@@ -16,9 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const providerIMAP = "imap"
@@ -107,60 +105,7 @@ func (h connectorHandlers) connectIMAP(w http.ResponseWriter, r *http.Request) {
 		writeIMAPConnectError(w, r, err)
 		return
 	}
-	h.persistIMAPConnection(w, r, auth)
-}
-
-// persistIMAPConnection stores the sealed bundle and answers with the
-// connected row — the connect's terminal half.
-func (h connectorHandlers) persistIMAPConnection(w http.ResponseWriter, r *http.Request, auth connector.Auth) {
-	if _, err := h.registry.Connect(r.Context(), providerIMAP, auth); err != nil {
-		if errors.Is(err, apperrors.ErrScopeExceeded) {
-			// Defense-in-depth: connectIMAP grants the descriptor's scopes from
-			// the human's authority, so a human cannot normally trip this. Kept
-			// as the persistence-invariant re-check; the message names the gap
-			// generically rather than blaming a session that in fact holds it.
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusForbidden,
-				Code:   "scope_exceeded",
-				Detail: "This mailbox connection requires a capture scope that was not granted.",
-			})
-			return
-		}
-		slog.ErrorContext(r.Context(), "imap connector: persisting connection", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError,
-			Code:   codeConnectorStoreFailed,
-			Detail: "The connection could not be stored. Nothing was captured; try again.",
-		})
-		return
-	}
-	views, err := h.registry.Connections(r.Context())
-	if err != nil {
-		slog.ErrorContext(r.Context(), "imap connector: reading back connection", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError,
-			Code:   codeConnectorStoreFailed,
-			Detail: "The connection was stored but could not be read back.",
-		})
-		return
-	}
-	for _, v := range views {
-		if v.Provider == providerIMAP {
-			conn := toContractConnection(v)
-			// Through the shared writer, like every other record this surface answers with.
-			// It keeps the empty-list normalisation in one place, and a private encode here
-			// would be a second spelling of it.
-			httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{
-				Connection: &conn,
-			})
-			return
-		}
-	}
-	httperr.Write(w, r, &httperr.DetailedError{
-		Status: http.StatusInternalServerError,
-		Code:   codeConnectorStoreFailed,
-		Detail: "The connection was stored but did not appear in the read-back.",
-	})
+	h.storeConnection(r.Context(), w, r, providerIMAP, auth)
 }
 
 // writeIMAPConnectError maps the connector sentinels onto the transport

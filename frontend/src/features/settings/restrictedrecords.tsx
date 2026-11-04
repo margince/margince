@@ -17,14 +17,13 @@ import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { activityDay } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { isUuid } from "../../lib/uuid";
+import { useViewerZone } from "../../lib/viewerzone";
 import { humanizeToken } from "./audit";
 
 // The Held lane reads through the retention ladder's authority. A role that may
@@ -218,10 +217,7 @@ export function RestrictedRecordsCard() {
   const plural = usePlural();
   const me = useMe();
   const { locale } = useLocale();
-  const tz = viewerZone();
-  // The held activity's own date is the record's, and a `day` one has no
-  // instant to move into the reader's zone.
-  const recordZone = useRecordZone();
+  const tz = useViewerZone();
   const canRead = useCan("retention_policy", "read");
   // Reading what is held and DECIDING about it are separate grants, so the
   // row action appears only for the authority that can carry it out.
@@ -254,12 +250,7 @@ export function RestrictedRecordsCard() {
           <CellStack>
             <span>{kindOf(row)}</span>
             <span className="t-caption">
-              {activityDay(
-                row.occurred_at,
-                row.occurred_precision,
-                locale,
-                recordZone,
-              )}
+              {activityDay(row.occurred_at, row.occurred_precision, locale, tz)}
             </span>
             <span className="t-caption">
               {removed === 0
@@ -336,7 +327,7 @@ export function RestrictedRecordsCard() {
                 row.occurred_at,
                 row.occurred_precision,
                 locale,
-                recordZone,
+                tz,
               ),
             })}
             aria-haspopup="dialog"

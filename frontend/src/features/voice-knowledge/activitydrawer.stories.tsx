@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,7 +18,7 @@ const id = "11111111-1111-4111-8111-111111111111";
 const meta: Meta<typeof OpenActivityDrawer> = {
   title: "Records/Record 360/Activity source review",
   component: OpenActivityDrawer,
-  args: { activityId: id, zone: viewerZone(), onClose: () => {} },
+  args: { activityId: id, zone: browserZone(), onClose: () => {} },
   decorators: [
     (Story) => (
       <StoryProviders>

@@ -23,11 +23,11 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { searchCompanyCandidates } from "../contacts/contactemployers";
 
 // Settings → Integrations: the accounting source the finance card reads. The
@@ -175,6 +175,7 @@ function ConnectedSource({
   connection,
   onSyncQueued,
 }: Readonly<{ connection: FinanceConnection; onSyncQueued: () => void }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -196,7 +197,7 @@ function ConnectedSource({
 
   const lastSync = connection.last_success_at
     ? t("financeSource.lastSync", {
-        date: formatDateTime(connection.last_success_at, locale, viewerZone()),
+        date: formatDateTime(connection.last_success_at, locale, readerZone),
       })
     : t("financeSource.notSynced");
   return (

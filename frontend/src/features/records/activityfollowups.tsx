@@ -16,7 +16,7 @@ import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 export function ActivityFollowUps({
   sourceId,
@@ -126,7 +126,7 @@ function FollowUpRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <Stack gap="1">
       <Row justify="between">

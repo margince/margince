@@ -4,10 +4,15 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { CompanyTaskTable } from "./companytaskstable";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 type Company360 = components["schemas"]["Company360"];
 type NextStep = NonNullable<Company360["next_steps"]>["data"][number];

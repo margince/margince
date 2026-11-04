@@ -8,9 +8,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import {
   currentParams,
@@ -225,7 +225,7 @@ function OverviewBody({
   pipelines: readonly components["schemas"]["Pipeline"][];
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const { locale } = useLocale();
   const {
     start,

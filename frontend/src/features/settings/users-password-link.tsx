@@ -8,9 +8,9 @@ import {
 } from "../../design-system/clipboardcopy";
 import { Heading } from "../../design-system/heading";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessage } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./users-admin.css";
 
 // The admin-issued set-password link (ADR-0061 Amendment 1). On an installation
@@ -164,7 +164,7 @@ export function PasswordLinkModal({
 function Expiry({ iso }: Readonly<{ iso: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <p className="t-caption">
       <time dateTime={iso}>

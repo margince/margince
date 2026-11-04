@@ -16,8 +16,8 @@ import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
@@ -46,7 +46,7 @@ export function ContactFacts({
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones)?.phone;

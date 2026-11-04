@@ -7,11 +7,11 @@ import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatAnalyticsNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemStatus } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { itemTitle, rowHref } from "../../lib/worklistcopy";
 import {
@@ -104,8 +104,8 @@ export function DoNext() {
 function WorkRow({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const zone = viewerZone();
+  const recordZone = useCompanyZone();
+  const zone = useViewerZone();
   const when = whenText(item, t, locale, zone, recordZone, new Date());
   const reasons = phrasedReasons(item, when !== null)
     .map((reason) => reasonText(reason, t, locale, zone))

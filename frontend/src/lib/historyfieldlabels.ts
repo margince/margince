@@ -57,6 +57,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["linkedin_url", "history.field.linkedin_url"],
   ["lost_reason", "history.field.lost_reason"],
   ["meeting_status", "history.field.meeting_status"],
+  ["call_outcome", "history.field.call_outcome"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
   ["occurred_precision", "history.field.occurred_precision"],

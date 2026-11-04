@@ -8,7 +8,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { dueInstant } from "../format/calendarday";
 import { dueTimeOf } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { TaskVerb } from "./bulktask";
@@ -26,14 +26,14 @@ afterEach(() => {
 // A bulk task has no time field, so it is due by the end of its day on the
 // RECORD's clock, the one rule every task screen reads. The viewer's zone, or
 // the day's last millisecond in it, would show a stray hour on the record.
-it("dates a bulk task at the end of the picked day on the record's clock", async () => {
+it("dates a bulk task at the end of the picked day on the picker's clock", async () => {
   installFetchStub({ "GET /users": () => jsonResponse({ data: [] }) });
   const ready = vi.fn<(task: components["schemas"]["BulkTask"]) => void>();
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone={RECORD_ZONE}>
+    <ViewerZoneProvider zone={RECORD_ZONE}>
       <TaskVerb disabled={false} onReady={ready} />
-    </RecordZoneProvider>,
+    </ViewerZoneProvider>,
   );
   await user.click(screen.getByRole("button", { name: "Create task" }));
   await user.type(

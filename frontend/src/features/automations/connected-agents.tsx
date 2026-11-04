@@ -14,14 +14,13 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
 import { usePassportRevoke } from "../../components/passport-revoke";
 import { usePassports } from "../../lib/passports.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 
 // GET /passports lists a connected client's credential beside the minted
@@ -143,18 +142,18 @@ const EXPIRES: MessageKey = "settings.passportExpiresOn";
 // connected_at is a record date; the expiry is the holder's own deadline. A
 // renewing or revoked row shows no expiry: its badge carries the state.
 function useConnectionDates() {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const connected = (connection: Connection) =>
-    formatDate(connection.connection.connected_at, locale, recordZone);
+    formatDate(connection.connection.connected_at, locale, readerZone);
   // A renewable connection outlives its credential, so its date is when the
   // client must next renew, never when it stops working.
   const deadline = (connection: Connection, state: ConnectionState) => {
     if (connection.expires_at == null || state.revoked || state.renewing) {
       return null;
     }
-    const date = formatDate(connection.expires_at, locale, viewerZone());
+    const date = formatDate(connection.expires_at, locale, readerZone);
     if (state.lapsed) {
       return { date, phrase: EXPIRED };
     }
