@@ -33366,6 +33366,11 @@ type AttentionItem struct {
 	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
+	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
+	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+	// engine's English sentence.
+	RunReasonCode *string `json:"run_reason_code,omitempty"`
+
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	Source AttentionItemSource `json:"source"`
 
@@ -34112,6 +34117,11 @@ type AutomationRun struct {
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReasonCode For failed/blocked: why the run stopped, as a code a client puts into the reader's language:
+	// target_missing, not_permitted, conflict, record_changed, no_consent, budget_exhausted,
+	// not_completed or blocked. A code a client does not know reads as not_completed.
+	ReasonCode *string `json:"reason_code,omitempty"`
 
 	// TargetRef Record the run acted on (type + id or label).
 	TargetRef *string `json:"target_ref,omitempty"`
@@ -64537,6 +64547,11 @@ type WorklistItem struct {
 	// caller may read. Best first, each once; `contact` is the first of them. Sent on
 	// `meeting_follow_up` rows only, and absent where no attendee is on file.
 	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
+
+	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
+	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
+	// engine's English sentence.
+	RunReasonCode *string `json:"run_reason_code,omitempty"`
 
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`

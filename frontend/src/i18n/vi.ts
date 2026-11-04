@@ -12128,6 +12128,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.runs.outcomeBlocked": "Bị chặn",
   "auto.runs.outcomeSkipped": "Đã bỏ qua",
   "auto.runs.outcomeQueued": "Chờ duyệt",
+  "auto.runs.reasonCode.target_missing":
+    "bản ghi mà nó xử lý không còn tồn tại",
+  "auto.runs.reasonCode.not_permitted":
+    "chủ sở hữu của nó không còn được phép làm việc này",
+  "auto.runs.reasonCode.conflict":
+    "trạng thái của bản ghi không cho phép việc này",
+  "auto.runs.reasonCode.record_changed":
+    "bản ghi đã thay đổi trước khi quy tắc kịp thực hiện",
+  "auto.runs.reasonCode.no_consent": "liên hệ này chưa đồng ý cho việc này",
+  "auto.runs.reasonCode.budget_exhausted": "ngân sách cho việc này đã hết",
+  "auto.runs.reasonCode.not_completed": "đã có lỗi khi chạy",
+  "auto.runs.reasonCode.blocked":
+    "một bước kiểm tra quyền hoặc một phê duyệt bị từ chối đã dừng nó",
   "auto.runs.outcome": "Kết quả",
 
   "auto.preview.open": "Xem trước",
@@ -18875,7 +18888,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.send_email": "Đã gửi một tin nhắn",
   "magic.action.schedule": "Đã đặt một cuộc họp",
   "magic.action.disqualify": "Một lead đã bị loại",
-  "magic.action.automation_troubled": "{name} đang gặp trục trặc: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} không thể hoàn tất ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
