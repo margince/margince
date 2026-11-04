@@ -36,7 +36,9 @@ export type Inline =
   | { kind: "strong"; children: Inline[] }
   | { kind: "em"; children: Inline[] }
   | { kind: "link"; href: string; children: Inline[] }
-  | { kind: "mark"; children: Inline[] };
+  | { kind: "mark"; children: Inline[] }
+  // A line break kept as one: only a note's body has them (hardBreakBlocks).
+  | { kind: "break" };
 
 /**
  * One stretch of inline content — a paragraph's, a heading's, a list item's, a

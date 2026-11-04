@@ -6,6 +6,7 @@ import { AppLink } from "./applink";
 import { TableScroll } from "./atoms";
 import "./atoms.css";
 import { autolinkBlocks } from "./markdown-autolink";
+import { hardBreakBlocks } from "./markdown-hardbreaks";
 import { runText } from "./markdown-highlight";
 import {
   type Block,
@@ -118,12 +119,17 @@ export function Markdown({
   highlight,
   onHighlight,
   autolink = false,
+  hardBreaks = false,
 }: Readonly<{
   /** The raw document. Every byte of it is treated as hostile. */
   source: string;
   /** For a note: a bare http(s) address becomes a link, and every link shows
    *  its own destination as its text. A corpus document renders as written. */
   autolink?: boolean;
+  /** For a note: a single line break stays a line break, so a form's
+   *  "Name:" and "Email:" lines do not run together. A document keeps
+   *  Markdown's soft breaks, where one newline joins the lines. */
+  hardBreaks?: boolean;
   highlight?: MarkdownHighlight;
   /**
    * Which of the three outcomes the highlight reached, reported on every
@@ -142,8 +148,12 @@ export function Markdown({
       source,
       quote === undefined ? undefined : { quote, line },
     );
-    return autolink ? { ...read, blocks: autolinkBlocks(read.blocks) } : read;
-  }, [source, quote, line, autolink]);
+    const linked = autolink ? autolinkBlocks(read.blocks) : read.blocks;
+    return {
+      ...read,
+      blocks: hardBreaks ? hardBreakBlocks(linked) : linked,
+    };
+  }, [source, quote, line, autolink, hardBreaks]);
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -169,6 +179,16 @@ export function Markdown({
       {renderBlocks(doc.blocks)}
     </div>
   );
+}
+
+/**
+ * A note's or an activity's body: written by someone or by a form, never vetted.
+ * Bare addresses become links that show where they go, and each line break
+ * stays one. Every surface that draws such a body uses this, so a note reads
+ * the same in History, the timeline, the drawer and a task's detail.
+ */
+export function NoteMarkdown({ source }: Readonly<{ source: string }>) {
+  return <Markdown source={source} autolink hardBreaks />;
 }
 
 /**
@@ -297,6 +317,7 @@ function renderRun(run: Run): ReactNode[] {
 
 function renderInline(node: Inline): ReactNode {
   if (node.kind === "text") return node.text;
+  if (node.kind === "break") return <br />;
   if (node.kind === "code") return <code>{node.text}</code>;
   if (node.kind === "strong")
     return <strong className="md-strong">{children(node.children)}</strong>;

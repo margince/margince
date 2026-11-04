@@ -5,7 +5,11 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Markdown, type MarkdownHighlightOutcome } from "./markdown";
+import {
+  Markdown,
+  type MarkdownHighlightOutcome,
+  NoteMarkdown,
+} from "./markdown";
 
 afterEach(cleanup);
 
@@ -615,5 +619,33 @@ describe("underscores in a note", () => {
     );
     expect(ems).toEqual(["really", "too"]);
     expect(container.querySelector("strong")).toHaveTextContent("very");
+  });
+});
+
+// A note is written line by line, often by a form. Each line stays a line in a
+// note, while a document keeps Markdown's soft break and joins them.
+describe("line breaks in a note and in a document", () => {
+  const form = "Name: A\nEmail: b@example.com\nMessage: hi";
+
+  it("shows a form submission in a note as three lines", () => {
+    const { container } = render(<NoteMarkdown source={form} />);
+    const paragraph = container.querySelector("p");
+    expect(paragraph?.querySelectorAll("br")).toHaveLength(2);
+    const lines = (paragraph?.innerHTML ?? "")
+      .split(/<br\s*\/?>/)
+      .map((line) => line.replace(/<[^>]+>/g, "").trim());
+    expect(lines).toEqual(["Name: A", "Email: b@example.com", "Message: hi"]);
+  });
+
+  it("keeps the same text as one paragraph in a document", () => {
+    const { container } = render(<Markdown source={form} />);
+    expect(container.querySelectorAll("p")).toHaveLength(1);
+    expect(container.querySelector("br")).toBeNull();
+  });
+
+  it("keeps a blank line as a new paragraph in a note", () => {
+    const { container } = render(<NoteMarkdown source={"First\n\nSecond"} />);
+    expect(container.querySelectorAll("p")).toHaveLength(2);
+    expect(container.querySelector("br")).toBeNull();
   });
 });
