@@ -34089,6 +34089,15 @@ paths:
         attachment can be read by someone who could never accept the result. That is
         deliberate — the read is valid for any entity_type and is worth having on its own —
         but it does mean a reading can be paid for and then have nowhere to land.
+
+        The optional body names the question. `chat_capture` reads a chat screenshot for
+        its messages and the name and number its header prints; it is refused with a 422
+        on a file that is not an image. A request with no body reads for the deal facts.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachmentReadRequest' }
       responses:
         '202':
           description: The reading is queued; poll it with `getAttachmentExtraction`.
@@ -34162,6 +34171,82 @@ paths:
                     details:
                       errors:
                         - { field: 'field_keys[2]', code: not_deal_writable }
+
+  /attachments/{id}/extraction:file-chat:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Attachments]
+      operationId: fileChatCapture
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: File a chat screenshot on its contact as one message activity, with the image attached.
+      description: |
+        The confirm step after a `chat_capture` reading of a screenshot uploaded to a
+        contact. It writes one `message` activity linked to that contact, on the channel
+        named, with `body` as its text, and moves the image from the contact onto the
+        activity. Nothing is written before this call: the reading never files anything.
+
+        When `body` is the reading's own text unchanged, the activity is written by the
+        reader on behalf of the caller, which is how the product marks text a model
+        read. A body the caller typed or changed is the caller's own. An empty body is
+        allowed, so a screenshot the model could not read is still filed.
+
+        Requires UPDATE on the contact and CREATE on activities. The reading named must
+        belong to this file, be a `chat_capture` reading, and be finished; otherwise
+        422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
+        A second call with the same reading answers the activity the first one wrote.
+        An agent files a chat through `log_activity` and `attach_document`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FileChatCaptureRequest' }
+      responses:
+        '200':
+          description: The activity the chat is filed as.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FiledChatCapture' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attachments/{id}/extractions/{extraction_id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: extraction_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Attachments]
+      operationId: getAttachmentExtractionReading
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: One named reading of this attachment, for a screen polling the reading it started.
+      description: |
+        The reading `readAttachmentForFields` answered with, by its id. Unlike
+        `getAttachmentExtraction`, which reports the newest reading of any question, this
+        reports exactly the one named. A reading of another attachment is 404. An agent
+        reads the newest reading through `get_attachment_extraction`.
+      responses:
+        '200':
+          description: The named reading.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentExtraction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /attachments/{id}/request-access:
     parameters:
@@ -52691,8 +52776,9 @@ components:
           type: boolean
           description: |
             Whether this installation permits stage automation at all
-            (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-            off every transition is forced to `propose` regardless of its own rule.
+            (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
+            and while it is off every transition is forced to `propose` regardless of
+            its own rule.
 
             A rule's `mode` therefore describes what was asked for, not what will
             happen: read both before telling somebody a transition moves deals by
@@ -54656,9 +54742,15 @@ components:
         honestly omitted. A reading that is still running carries empty lists; that is not
         the same answer as a finished reading that grounded nothing, which is why `status`
         is required rather than inferable from the lists (RD-AC-N-2).
-      required: [id, status, stalled, fields, omitted, created_at]
+      required: [id, question, status, stalled, fields, omitted, created_at]
       properties:
         id: { type: string, format: uuid, description: This reading's own id. }
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          description: |
+            What the file was read for. `deal_facts` grounds the four deal fields;
+            `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
         status:
           type: string
           enum: [queued, running, done, failed]
@@ -54681,6 +54773,51 @@ components:
         omitted: { type: array, items: { $ref: '#/components/schemas/OmittedExtractionField' } }
         created_at: { type: string, format: date-time }
         finished_at: { type: [string, 'null'], format: date-time }
+        other_counterparty:
+          type: [string, 'null']
+          description: |
+            For a finished `chat_capture` reading of a screenshot on a contact: the name or
+            number the chat header shows when neither agrees with that contact. Null when
+            they agree, when the header shows neither, and for every other reading.
+            `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+
+    AttachmentReadRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          enum: [deal_facts, chat_capture]
+          default: deal_facts
+          description: What to read the file for. `chat_capture` is accepted only on an image.
+
+    FileChatCaptureRequest:
+      type: object
+      required: [extraction_id, channel_provider]
+      properties:
+        extraction_id:
+          type: string
+          format: uuid
+          description: The `chat_capture` reading the caller was shown.
+        channel_provider:
+          allOf: [{ $ref: '#/components/schemas/ProviderRef' }]
+          description: The messaging app the chat happened in.
+        body:
+          type: [string, 'null']
+          maxLength: 6000
+          description: The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
+        confirm_other_counterparty:
+          type: boolean
+          default: false
+          description: |
+            The caller confirms the chat belongs on this contact although its header shows
+            someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+            is refused with 409.
+
+    FiledChatCapture:
+      type: object
+      required: [activity_id]
+      properties:
+        activity_id: { type: string, format: uuid, description: The message activity the chat is filed as. }
 
     AttachmentReadStarted:
       type: object
@@ -68505,11 +68642,42 @@ components:
         It carries LESS than the record page: the acquisition and the purposes, not the contact's
         employer, phone, address or provenance trail. Telling somebody what is held is a different
         act from showing them their file, and this message promised the first.
-      required: [kind, acquired_as, rights]
+      required: [kind, acquired_as, rights, purpose_bases, data_categories, recipients, retention]
       properties:
         kind:
           type: string
           enum: [privacy_notice]
+        controller:
+          $ref: '#/components/schemas/PrivacyInformationController'
+        purpose_bases:
+          type: array
+          description: |
+            The basis on record for each entry in `purposes`, at the same index: `consent` for a
+            purpose the reader agreed to, else the kind of a live communication basis.
+          items:
+            type: string
+            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement]
+        data_categories:
+          type: array
+          description: |
+            The kinds of data held about the reader, read from the subject-access export's own
+            sections. Codes only: the page names each kind and never shows a value.
+          items:
+            type: string
+            enum: [name, job_title, employer, email, phone, postal_address, social_profile, custom_fields, correspondence, deals, preferences]
+        recipients:
+          type: array
+          description: Who the data is shared with, as codes the page names in its reader's language.
+          items:
+            type: string
+            enum: [colleagues, service_providers]
+        retention:
+          type: array
+          description: |
+            The retention rules that act on the reader's data today, from the installation's own
+            retention settings, for the kinds of data the reader has. A rule switched off, or held
+            back by the retain-only setting, is not listed.
+          items: { $ref: '#/components/schemas/PrivacyInformationRetention' }
         acquired_as:
           type: string
           description: |
@@ -68542,6 +68710,31 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+
+    PrivacyInformationController:
+      type: object
+      description: |
+        Who is responsible for the data, from the installation's own controller particulars, by the
+        rule the mail's disclosure lines use. A part the installation has not stated is absent.
+      properties:
+        identity: { type: string, description: 'The legal name and postal address, as lines. Absent unless both are stated.' }
+        privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
+        objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
+
+    PrivacyInformationRetention:
+      type: object
+      description: One retention rule that acts on the reader's data.
+      required: [scope, retain_days, action]
+      properties:
+        scope: { $ref: '#/components/schemas/RetentionScope' }
+        retain_days: { type: integer, minimum: 1 }
+        action: { $ref: '#/components/schemas/RetentionAction' }
+        kept_by_law:
+          description: |
+            The statutory floor that keeps some of this data past `retain_days`: business
+            correspondence the law requires to be kept. Absent when the rule keeps the data or no
+            floor binds the scope.
+          $ref: '#/components/schemas/JurisdictionRetentionClass'
 
     SubscriptionConfirmationPage:
       type: object
@@ -69398,8 +69591,8 @@ components:
         apart from access. A bounced invitation and a revoked one look identical
         otherwise, and a seller chasing silence needs to tell them apart.
 
-        `pending` was minted but not handed to a mail relay (the installation may have
-        none configured). `sent` left the building. `delivered` was accepted by the
+        `pending` was minted and the relay has not answered yet, or the installation
+        has no relay configured. `sent` left the building. `delivered` was accepted by the
         recipient's server. `failed` bounced. `consumed` was exchanged for a session —
         they are in. `superseded` was retired by a later resend. `none` means no
         credential currently stands, which is what a revoked participant shows.
@@ -69528,16 +69721,17 @@ components:
         queued:
           type: boolean
           description: |
-            Whether a mail relay accepted the invitation for sending. False when the
-            installation has no outbound mail configured, or the relay refused it — the
-            participant and the credential are recorded either way, and the caller is
-            expected to pass the link on themselves rather than being told the
-            invitation failed.
+            Whether the invitation was handed to the mail sender. False when the
+            installation has no outbound mail configured: the participant and the
+            credential are recorded either way, and the caller is expected to pass the
+            link on themselves rather than being told the invitation failed.
 
-            Deliberately not `delivered`: a relay accepting a message is not a mailbox
-            receiving it, and an address that hard-bounces a second later was `queued`
-            all the same. The one attempt is stamped onto the invitation, which the
-            roster reports; nothing revises it afterwards.
+            The answer does not wait for the relay. The participant's
+            `delivery_state` reads `pending` until the relay answers, then `sent` or
+            `failed`. Deliberately not `delivered`: a relay accepting a message is not a
+            mailbox receiving it, and an address that hard-bounces a second later was
+            `sent` all the same. The one attempt is stamped onto the invitation;
+            nothing revises it afterwards.
       additionalProperties: false
 
     DealRoomPreviewIssued:
@@ -74544,7 +74738,7 @@ components:
         The changes Margince made to the caller's deals that are neither accepted nor undone.
         Every count is a number of deals; a deal with two kinds of change counts once in
         `deals` and once under each kind.
-      required: [as_of, deals, closed, redated, revalued, probabilities, base_currency, bundles, truncated]
+      required: [as_of, deals, closed, redated, revalued, probabilities, moved, base_currency, bundles, truncated]
       properties:
         as_of: { type: string, format: date-time }
         deals: { type: integer, description: Deals with at least one open change. }
@@ -74552,6 +74746,7 @@ components:
         redated: { type: integer, description: Deals given a new close date. }
         revalued: { type: integer, description: Deals given a new amount. }
         probabilities: { type: integer, description: Deals given a new probability. }
+        moved: { type: integer, description: Deals Margince moved to a later stage. }
         base_currency: { type: string, description: The currency of every `value_base_minor`. }
         bundles:
           type: array
@@ -74576,7 +74771,7 @@ components:
           description: The changes, newest first.
         kinds:
           type: array
-          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability] }
+          items: { type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move] }
         value_base_minor:
           type: integer
           format: int64

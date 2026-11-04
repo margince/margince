@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 195020,
+    "tool_catalog_bytes": 195042,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50069,
+    "approx_wire_tokens_total": 50075,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93621,
+      "input_schema_bytes": 93643,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 136292
+      "description_plus_input_schema_bytes": 136314
     }
   },
   "tools": {
@@ -1132,7 +1132,7 @@
               "type": "boolean"
             },
             "request_body": {
-              "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
+              "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The request body of acceptAttachmentExtraction",
               "type": "object"
             },
             "scope": {

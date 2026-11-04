@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { vi as VIETNAMESE } from "../../i18n/vi";
 import { ConfirmDetailsScreen } from "./confirm";
 
 // The public confirm page answers TWO bodies from one endpoint, and until the
@@ -45,6 +46,14 @@ const SUBSCRIPTION = {
   purpose_key: "product_updates",
   purpose_label: "Product updates",
   state: "unknown",
+};
+
+// The lists every privacy notice carries, empty where a record holds nothing.
+const NOTICE_LISTS = {
+  purpose_bases: ["subject_initiated_correspondence", "consent"],
+  data_categories: [],
+  recipients: ["colleagues", "service_providers"],
+  retention: [],
 };
 
 const RECORD = {
@@ -201,6 +210,7 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
   it("names the purposes a privacy notice lists, and keeps an operator's own", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse({
+        ...NOTICE_LISTS,
         kind: "privacy_notice",
         acquired_as: "referral",
         purposes: ["Business correspondence", "Partner events"],
@@ -255,6 +265,7 @@ it("lets contact details be corrected without choosing marketing", async () => {
 
 describe("the page speaks the language the mail was sent in", () => {
   const NOTICE = {
+    ...NOTICE_LISTS,
     kind: "privacy_notice",
     acquired_as: "purchased_or_imported",
     rights: ["access", "erasure"],
@@ -295,5 +306,94 @@ describe("the page speaks the language the mail was sent in", () => {
     expect(
       await screen.findByText("Was wir über Sie gespeichert haben"),
     ).toBeInTheDocument();
+  });
+});
+
+const VI_INVALID_LINK = VIETNAMESE["prefs.invalidLink"];
+
+describe("an expired link still speaks the language its mail was sent in", () => {
+  afterEach(() => {
+    globalThis.location.hash = "";
+  });
+
+  it("answers a refused link in the language the link names", async () => {
+    globalThis.location.hash = "#/confirm/tok-gone?lang=vi";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ title: "Not found" }, 404),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-gone" />);
+
+    expect(await screen.findByText(VI_INVALID_LINK)).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("vi");
+  });
+});
+
+describe("a privacy notice discloses who answers, why, what, to whom and for how long", () => {
+  const FULL = {
+    ...NOTICE_LISTS,
+    kind: "privacy_notice",
+    acquired_as: "public_or_business_source",
+    controller: {
+      identity: "Beispiel GmbH\nHauptstr. 1\n10115 Berlin",
+      privacy_contact: "privacy@beispiel.test",
+      objection_route: "Reply STOP",
+    },
+    purposes: ["Talks", "News"],
+    purpose_keys: ["talks", "news"],
+    data_categories: ["name", "email", "correspondence"],
+    retention: [
+      { scope: "activity", retain_days: 1095, action: "archive" },
+      {
+        scope: "raw_capture",
+        retain_days: 90,
+        action: "erase",
+        kept_by_law: {
+          name: "commercial_correspondence",
+          keep: "P6Y",
+          from_year_end: true,
+        },
+      },
+    ],
+    rights: ["access", "objection"],
+  };
+
+  it("names each part from the codes the server sent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(FULL));
+
+    render(<ConfirmDetailsScreen token="tok-full" />);
+
+    expect(await screen.findByText(/^Beispiel GmbH/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Questions about your data: privacy@beispiel.test"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("You wrote to us first.")).toBeInTheDocument();
+    expect(screen.getByText(/^Only with your agreement/)).toBeInTheDocument();
+    expect(screen.getByText("Your email address")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Emails, meetings and calls with you: taken out of daily use after 3 years.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Staff who work with our CRM."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "By law, mail about an order or a contract is kept for at least 6 years from the end of the calendar year, even where this says sooner.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("states the right to object apart from the other rights", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(FULL));
+
+    render(<ConfirmDetailsScreen token="tok-object" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Your right to object" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("To object: Reply STOP")).toBeInTheDocument();
+    expect(screen.queryByText("Object to how we use it.")).toBeNull();
   });
 });

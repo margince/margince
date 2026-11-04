@@ -118,6 +118,9 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Correction == deals.CloseLostCorrection {
 		return closeLostReceipt(c)
 	}
+	if c.Correction == deals.VerdictStageMoveCorrection {
+		return stageMoveReceipt(c)
+	}
 	if c.Correction == deals.VerdictAmountCorrection || c.Correction == deals.VerdictProbabilityCorrection {
 		return verdictReceipt(c)
 	}

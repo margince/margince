@@ -140,9 +140,12 @@ func (s *Store) RevertCorrection(
 		if correction.AcceptedAt != nil {
 			return &CorrectionReversalError{Reason: AlreadyAccepted}
 		}
-		if correction.Correction == CloseLostCorrection {
-			err = s.revertCloseLost(ctx, tx, correction, ifVersion, evidence, active)
-		} else {
+		switch correction.Correction {
+		case CloseLostCorrection:
+			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
+		case VerdictStageMoveCorrection:
+			err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
+		default:
 			err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
 		}
 		if err != nil {

@@ -5,7 +5,7 @@
     "sites_best_partial": 1,
     "sites_best_stale": 16,
     "sites_absent": 6,
-    "scenarios": 292,
+    "scenarios": 293,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -17095,6 +17095,12 @@
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/deal_verdict/a_verbal_yes_and_a_price_01.yaml"
+        },
+        {
+          "name": "the_buyer_asks_for_the_contract_and_the_deal_moves_on",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/the_buyer_asks_for_the_contract_01.yaml"
         },
         {
           "name": "the_customer_names_a_new_signing_date",

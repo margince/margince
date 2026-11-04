@@ -2494,6 +2494,24 @@ func (e AttachmentEntityType) Valid() bool {
 	}
 }
 
+// Defines values for AttachmentExtractionQuestion.
+const (
+	AttachmentExtractionQuestionChatCapture AttachmentExtractionQuestion = "chat_capture"
+	AttachmentExtractionQuestionDealFacts   AttachmentExtractionQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentExtractionQuestion enum.
+func (e AttachmentExtractionQuestion) Valid() bool {
+	switch e {
+	case AttachmentExtractionQuestionChatCapture:
+		return true
+	case AttachmentExtractionQuestionDealFacts:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttachmentExtractionStatus.
 const (
 	AttachmentExtractionStatusDone    AttachmentExtractionStatus = "done"
@@ -2512,6 +2530,24 @@ func (e AttachmentExtractionStatus) Valid() bool {
 	case AttachmentExtractionStatusQueued:
 		return true
 	case AttachmentExtractionStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AttachmentReadRequestQuestion.
+const (
+	AttachmentReadRequestQuestionChatCapture AttachmentReadRequestQuestion = "chat_capture"
+	AttachmentReadRequestQuestionDealFacts   AttachmentReadRequestQuestion = "deal_facts"
+)
+
+// Valid indicates whether the value is a known member of the AttachmentReadRequestQuestion enum.
+func (e AttachmentReadRequestQuestion) Valid() bool {
+	switch e {
+	case AttachmentReadRequestQuestionChatCapture:
+		return true
+	case AttachmentReadRequestQuestionDealFacts:
 		return true
 	default:
 		return false
@@ -15493,6 +15529,7 @@ const (
 	MarginceChangeBundleKindsDealAmount      MarginceChangeBundleKinds = "deal_amount"
 	MarginceChangeBundleKindsDealCloseDate   MarginceChangeBundleKinds = "deal_close_date"
 	MarginceChangeBundleKindsDealProbability MarginceChangeBundleKinds = "deal_probability"
+	MarginceChangeBundleKindsStageMove       MarginceChangeBundleKinds = "stage_move"
 )
 
 // Valid indicates whether the value is a known member of the MarginceChangeBundleKinds enum.
@@ -15505,6 +15542,8 @@ func (e MarginceChangeBundleKinds) Valid() bool {
 	case MarginceChangeBundleKindsDealCloseDate:
 		return true
 	case MarginceChangeBundleKindsDealProbability:
+		return true
+	case MarginceChangeBundleKindsStageMove:
 		return true
 	default:
 		return false
@@ -17215,6 +17254,51 @@ func (e PrincipalAttributionActorType) Valid() bool {
 	}
 }
 
+// Defines values for PrivacyInformationPageDataCategories.
+const (
+	PrivacyInformationPageDataCategoriesCorrespondence PrivacyInformationPageDataCategories = "correspondence"
+	PrivacyInformationPageDataCategoriesCustomFields   PrivacyInformationPageDataCategories = "custom_fields"
+	PrivacyInformationPageDataCategoriesDeals          PrivacyInformationPageDataCategories = "deals"
+	PrivacyInformationPageDataCategoriesEmail          PrivacyInformationPageDataCategories = "email"
+	PrivacyInformationPageDataCategoriesEmployer       PrivacyInformationPageDataCategories = "employer"
+	PrivacyInformationPageDataCategoriesJobTitle       PrivacyInformationPageDataCategories = "job_title"
+	PrivacyInformationPageDataCategoriesName           PrivacyInformationPageDataCategories = "name"
+	PrivacyInformationPageDataCategoriesPhone          PrivacyInformationPageDataCategories = "phone"
+	PrivacyInformationPageDataCategoriesPostalAddress  PrivacyInformationPageDataCategories = "postal_address"
+	PrivacyInformationPageDataCategoriesPreferences    PrivacyInformationPageDataCategories = "preferences"
+	PrivacyInformationPageDataCategoriesSocialProfile  PrivacyInformationPageDataCategories = "social_profile"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageDataCategories enum.
+func (e PrivacyInformationPageDataCategories) Valid() bool {
+	switch e {
+	case PrivacyInformationPageDataCategoriesCorrespondence:
+		return true
+	case PrivacyInformationPageDataCategoriesCustomFields:
+		return true
+	case PrivacyInformationPageDataCategoriesDeals:
+		return true
+	case PrivacyInformationPageDataCategoriesEmail:
+		return true
+	case PrivacyInformationPageDataCategoriesEmployer:
+		return true
+	case PrivacyInformationPageDataCategoriesJobTitle:
+		return true
+	case PrivacyInformationPageDataCategoriesName:
+		return true
+	case PrivacyInformationPageDataCategoriesPhone:
+		return true
+	case PrivacyInformationPageDataCategoriesPostalAddress:
+		return true
+	case PrivacyInformationPageDataCategoriesPreferences:
+		return true
+	case PrivacyInformationPageDataCategoriesSocialProfile:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrivacyInformationPageKind.
 const (
 	PrivacyInformationPageKindPrivacyNotice PrivacyInformationPageKind = "privacy_notice"
@@ -17224,6 +17308,63 @@ const (
 func (e PrivacyInformationPageKind) Valid() bool {
 	switch e {
 	case PrivacyInformationPageKindPrivacyNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPagePurposeBases.
+const (
+	PrivacyInformationPagePurposeBasesConsent                        PrivacyInformationPagePurposeBases = "consent"
+	PrivacyInformationPagePurposeBasesContract                       PrivacyInformationPagePurposeBases = "contract"
+	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
+	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
+	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
+	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
+	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
+	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
+func (e PrivacyInformationPagePurposeBases) Valid() bool {
+	switch e {
+	case PrivacyInformationPagePurposeBasesConsent:
+		return true
+	case PrivacyInformationPagePurposeBasesContract:
+		return true
+	case PrivacyInformationPagePurposeBasesExistingCustomerException:
+		return true
+	case PrivacyInformationPagePurposeBasesLegalObligation:
+		return true
+	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesPrecontractRequest:
+		return true
+	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
+		return true
+	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
+		return true
+	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPageRecipients.
+const (
+	PrivacyInformationPageRecipientsColleagues       PrivacyInformationPageRecipients = "colleagues"
+	PrivacyInformationPageRecipientsServiceProviders PrivacyInformationPageRecipients = "service_providers"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageRecipients enum.
+func (e PrivacyInformationPageRecipients) Valid() bool {
+	switch e {
+	case PrivacyInformationPageRecipientsColleagues:
+		return true
+	case PrivacyInformationPageRecipientsServiceProviders:
 		return true
 	default:
 		return false
@@ -32665,6 +32806,16 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
+	// number the chat header shows when neither agrees with that contact. Null when
+	// they agree, when the header shows neither, and for every other reading.
+	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
+	OtherCounterparty *string `json:"other_counterparty,omitempty"`
+
+	// Question What the file was read for. `deal_facts` grounds the four deal fields;
+	// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+	Question AttachmentExtractionQuestion `json:"question"`
+
 	// Stalled true when a live reading has aged past the lease its worker holds: the worker
 	// died, timed out, or never claimed it, and nothing will move the reading on its
 	// own. Derived at read time, never stored. Asking for the file to be read again
@@ -32680,6 +32831,10 @@ type AttachmentExtraction struct {
 	// does not explain itself reads as a broken feature.
 	StatusDetail *string `json:"status_detail,omitempty"`
 }
+
+// AttachmentExtractionQuestion What the file was read for. `deal_facts` grounds the four deal fields;
+// `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+type AttachmentExtractionQuestion string
 
 // AttachmentExtractionStatus queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
 type AttachmentExtractionStatus string
@@ -32714,6 +32869,15 @@ type AttachmentOrigin struct {
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`
 }
+
+// AttachmentReadRequest defines model for AttachmentReadRequest.
+type AttachmentReadRequest struct {
+	// Question What to read the file for. `chat_capture` is accepted only on an image.
+	Question *AttachmentReadRequestQuestion `json:"question,omitempty"`
+}
+
+// AttachmentReadRequestQuestion What to read the file for. `chat_capture` is accepted only on an image.
+type AttachmentReadRequestQuestion string
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
 type AttachmentReadStarted struct {
@@ -43622,8 +43786,8 @@ type DealRoomCredentialRequest struct {
 // apart from access. A bounced invitation and a revoked one look identical
 // otherwise, and a seller chasing silence needs to tell them apart.
 //
-// `pending` was minted but not handed to a mail relay (the installation may have
-// none configured). `sent` left the building. `delivered` was accepted by the
+// `pending` was minted and the relay has not answered yet, or the installation
+// has no relay configured. `sent` left the building. `delivered` was accepted by the
 // recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 // they are in. `superseded` was retired by a later resend. `none` means no
 // credential currently stands, which is what a revoked participant shows.
@@ -43697,16 +43861,17 @@ type DealRoomInvitationIssued struct {
 	// no licence, holds no CRM authority, and their whole reach is this one room.
 	Participant DealRoomParticipant `json:"participant"`
 
-	// Queued Whether a mail relay accepted the invitation for sending. False when the
-	// installation has no outbound mail configured, or the relay refused it — the
-	// participant and the credential are recorded either way, and the caller is
-	// expected to pass the link on themselves rather than being told the
-	// invitation failed.
+	// Queued Whether the invitation was handed to the mail sender. False when the
+	// installation has no outbound mail configured: the participant and the
+	// credential are recorded either way, and the caller is expected to pass the
+	// link on themselves rather than being told the invitation failed.
 	//
-	// Deliberately not `delivered`: a relay accepting a message is not a mailbox
-	// receiving it, and an address that hard-bounces a second later was `queued`
-	// all the same. The one attempt is stamped onto the invitation, which the
-	// roster reports; nothing revises it afterwards.
+	// The answer does not wait for the relay. The participant's
+	// `delivery_state` reads `pending` until the relay answers, then `sent` or
+	// `failed`. Deliberately not `delivered`: a relay accepting a message is not a
+	// mailbox receiving it, and an address that hard-bounces a second later was
+	// `sent` all the same. The one attempt is stamped onto the invitation;
+	// nothing revises it afterwards.
 	Queued bool `json:"queued"`
 }
 
@@ -43745,8 +43910,8 @@ type DealRoomParticipant struct {
 	// apart from access. A bounced invitation and a revoked one look identical
 	// otherwise, and a seller chasing silence needs to tell them apart.
 	//
-	// `pending` was minted but not handed to a mail relay (the installation may have
-	// none configured). `sent` left the building. `delivered` was accepted by the
+	// `pending` was minted and the relay has not answered yet, or the installation
+	// has no relay configured. `sent` left the building. `delivered` was accepted by the
 	// recipient's server. `failed` bounced. `consumed` was exchanged for a session —
 	// they are in. `superseded` was retired by a later resend. `none` means no
 	// credential currently stands, which is what a revoked participant shows.
@@ -45276,6 +45441,29 @@ type FieldHistoryEntryEntityType string
 type FieldHistoryListResponse struct {
 	Data []FieldHistoryEntry `json:"data"`
 	Page PageInfo            `json:"page"`
+}
+
+// FileChatCaptureRequest defines model for FileChatCaptureRequest.
+type FileChatCaptureRequest struct {
+	// Body The chat's text as the caller confirmed it, at most 6000 characters. Empty or null files the image alone.
+	Body *string `json:"body,omitempty"`
+
+	// ChannelProvider The messaging app the chat happened in.
+	ChannelProvider ProviderRef `json:"channel_provider"`
+
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
+	// is refused with 409.
+	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
+
+	// ExtractionId The `chat_capture` reading the caller was shown.
+	ExtractionId openapi_types.UUID `json:"extraction_id"`
+}
+
+// FiledChatCapture defines model for FiledChatCapture.
+type FiledChatCapture struct {
+	// ActivityId The message activity the chat is filed as.
+	ActivityId openapi_types.UUID `json:"activity_id"`
 }
 
 // FilterPreview What a candidate filter would select for this caller (LVS-EXT-9).
@@ -50742,6 +50930,9 @@ type MarginceChangeSummary struct {
 	// Deals Deals with at least one open change.
 	Deals int `json:"deals"`
 
+	// Moved Deals Margince moved to a later stage.
+	Moved int `json:"moved"`
+
 	// Probabilities Deals given a new probability.
 	Probabilities int `json:"probabilities"`
 
@@ -53314,6 +53505,19 @@ type PrincipalAttribution struct {
 // PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
 type PrincipalAttributionActorType string
 
+// PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
+// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+type PrivacyInformationController struct {
+	// Identity The legal name and postal address, as lines. Absent unless both are stated.
+	Identity *string `json:"identity,omitempty"`
+
+	// ObjectionRoute How to object, where the installation states a way of its own.
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+
+	// PrivacyContact How to reach whoever answers questions about the data.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+}
+
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
 // it came from, what it is used for, and the rights the contact has over it.
 //
@@ -53335,11 +53539,23 @@ type PrivacyInformationPage struct {
 	AcquiredAs string `json:"acquired_as"`
 
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
-	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
-	Kind       PrivacyInformationPageKind `json:"kind"`
+	AcquiredAt *time.Time `json:"acquired_at,omitempty"`
+
+	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
+	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// DataCategories The kinds of data held about the reader, read from the subject-access export's own
+	// sections. Codes only: the page names each kind and never shows a value.
+	DataCategories []PrivacyInformationPageDataCategories `json:"data_categories"`
+	Kind           PrivacyInformationPageKind             `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
+
+	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
+	// purpose the reader agreed to, else the kind of a live communication basis.
+	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
@@ -53349,16 +53565,51 @@ type PrivacyInformationPage struct {
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
 
+	// Recipients Who the data is shared with, as codes the page names in its reader's language.
+	Recipients []PrivacyInformationPageRecipients `json:"recipients"`
+
+	// Retention The retention rules that act on the reader's data today, from the installation's own
+	// retention settings, for the kinds of data the reader has. A rule switched off, or held
+	// back by the retain-only setting, is not listed.
+	Retention []PrivacyInformationRetention `json:"retention"`
+
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
 }
 
+// PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
+type PrivacyInformationPageDataCategories string
+
 // PrivacyInformationPageKind defines model for PrivacyInformationPage.Kind.
 type PrivacyInformationPageKind string
 
+// PrivacyInformationPagePurposeBases defines model for PrivacyInformationPage.PurposeBases.
+type PrivacyInformationPagePurposeBases string
+
+// PrivacyInformationPageRecipients defines model for PrivacyInformationPage.Recipients.
+type PrivacyInformationPageRecipients string
+
 // PrivacyInformationPageRights defines model for PrivacyInformationPage.Rights.
 type PrivacyInformationPageRights string
+
+// PrivacyInformationRetention One retention rule that acts on the reader's data.
+type PrivacyInformationRetention struct {
+	// Action What happens to a record past its window. One action per policy row — a ladder is separate
+	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
+	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	Action     RetentionAction             `json:"action"`
+	KeptByLaw  *JurisdictionRetentionClass `json:"kept_by_law,omitempty"`
+	RetainDays int                         `json:"retain_days" minimum:"1"`
+
+	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
+	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
+	// scope that would be stored and then skipped every pass. `activity` is the bare object type
+	// (the row whose `category` is null); every other value carries its category after the slash.
+	//
+	// Extending this enum means adding a selector in the same change.
+	Scope RetentionScope `json:"scope"`
+}
 
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
@@ -60751,8 +61002,9 @@ type TransitionPolicyMode string
 // TransitionPolicyList defines model for TransitionPolicyList.
 type TransitionPolicyList struct {
 	// AutomationEnabled Whether this installation permits stage automation at all
-	// (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-	// off every transition is forced to `propose` regardless of its own rule.
+	// (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
+	// and while it is off every transition is forced to `propose` regardless of
+	// its own rule.
 	//
 	// A rule's `mode` therefore describes what was asked for, not what will
 	// happen: read both before telling somebody a transition moves deals by
@@ -73736,8 +73988,14 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
+// ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
+type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
+
 // AcceptAttachmentExtractionJSONRequestBody defines body for AcceptAttachmentExtraction for application/json ContentType.
 type AcceptAttachmentExtractionJSONRequestBody = AcceptExtractionRequest
+
+// FileChatCaptureJSONRequestBody defines body for FileChatCapture for application/json ContentType.
+type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
@@ -87757,6 +88015,12 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
+	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// (POST /attachments/{id}/extraction:file-chat)
+	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
+	// One named reading of this attachment, for a screen polling the reading it started.
+	// (GET /attachments/{id}/extractions/{extraction_id})
+	GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID)
 	// Set a document's category, title, state or supersedes pointer (DOC-WIRE-2).
 	// (PATCH /attachments/{id}/metadata)
 	UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request, id Id)
@@ -91327,6 +91591,18 @@ func (_ Unimplemented) ReadAttachmentForFields(w http.ResponseWriter, r *http.Re
 // Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 // (POST /attachments/{id}/extraction:accept)
 func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// File a chat screenshot on its contact as one message activity, with the image attached.
+// (POST /attachments/{id}/extraction:file-chat)
+func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One named reading of this attachment, for a screen polling the reading it started.
+// (GET /attachments/{id}/extractions/{extraction_id})
+func (_ Unimplemented) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request, id Id, extractionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104161,6 +104437,79 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AcceptAttachmentExtraction(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FileChatCapture operation middleware
+func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FileChatCapture(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAttachmentExtractionReading operation middleware
+func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "extraction_id" -------------
+	var extractionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "extraction_id", chi.URLParam(r, "extraction_id"), &extractionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extraction_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAttachmentExtractionReading(w, r, id, extractionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140872,6 +141221,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments/{id}/extraction:accept", wrapper.AcceptAttachmentExtraction)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/{id}/extraction:file-chat", wrapper.FileChatCapture)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/attachments/{id}/extractions/{extraction_id}", wrapper.GetAttachmentExtractionReading)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/attachments/{id}/metadata", wrapper.UpdateAttachmentMetadata)

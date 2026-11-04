@@ -147,6 +147,26 @@ func TestNothingAutoAppliesWhileTheKillSwitchIsOff(t *testing.T) {
 	}
 }
 
+// The setting defaults on for Margince's own stage moves. An unset row still
+// leaves the card path proposing: only a stored yes lets it apply.
+func TestAnUnsetKillSwitchLetsNoCardApply(t *testing.T) {
+	e := setupConfigEnv(t)
+	dealID, fromID, toID := twoStagePipeline(t, e)
+	ref := transitionOf(t, e, fromID, toID)
+	autopilotOn(t, e, true)
+	ruleOn(t, e, ref)
+	aGoodRecord(t, e, dealID, ref)
+	if got := verdictFor(t, e, ref); got.Mode != ModeAuto {
+		t.Fatalf("the fixture does not reach auto on its own (%s: %s)", got.Mode, got.Why)
+	}
+	if _, err := e.owner.Exec(t.Context(), `DELETE FROM setting WHERE key = $1`, StageAutopilotEnabled.Key()); err != nil {
+		t.Fatal(err)
+	}
+	if got := verdictFor(t, e, ref); got.Mode != ModePropose {
+		t.Fatalf("mode = %s with no stored setting, want propose", got.Mode)
+	}
+}
+
 // Volume and time are separate bars, and each withholds alone.
 //
 // They answer different questions: enough proposals says the rate is measured

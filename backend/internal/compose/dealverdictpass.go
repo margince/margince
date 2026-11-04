@@ -27,8 +27,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,11 +41,12 @@ const dealVerdictBatch = 50
 
 // dealVerdictRulesVersion moves when the rules in dealverdict change what
 // they let through, so every deal is read again under the new rules.
-const dealVerdictRulesVersion = "2"
+const dealVerdictRulesVersion = "3"
 
 // verdictCorrections are the corrections a verdict may make, in a fixed order.
 var verdictCorrections = []string{
 	deals.VerdictCloseDateCorrection, deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
+	deals.VerdictStageMoveCorrection,
 }
 
 // dealVerdictPass reads due deals and applies what the rules let through.
@@ -61,7 +64,8 @@ type dealVerdictPass struct {
 func newDealVerdictPass(pool *pgxpool.Pool, brain completer, log *slog.Logger) dealVerdictPass {
 	return dealVerdictPass{
 		pool: pool, brain: brain, log: log,
-		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
 		users:     identity.NewService(pool),
 		notes:     activities.NewStore(InstallationDB(pool)),
 		assurance: assurance.NewStore(InstallationDB(pool)),
@@ -199,6 +203,12 @@ func ownerVerdictSwitches(ctx context.Context, tx pgx.Tx, owner ids.UUID) (map[s
 		}
 		out[correction] = mode == approvals.ModeAuto
 	}
+	// An admin may stop every stage move for the installation.
+	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.StageAutopilotEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading whether deals may move: %w", err)
+	}
+	out[deals.VerdictStageMoveCorrection] = out[deals.VerdictStageMoveCorrection] && moves
 	return out, nil
 }
 

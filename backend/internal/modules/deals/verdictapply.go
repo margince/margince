@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,12 +31,16 @@ const (
 	VerdictCloseDateCorrection   = "deal_close_date"
 	VerdictAmountCorrection      = "deal_amount"
 	VerdictProbabilityCorrection = "deal_probability"
+	VerdictStageMoveCorrection   = "stage_move"
 )
 
 // VerdictSwitch is the owner's switch a verdict correction answers to.
 func VerdictSwitch(correction string) string {
-	if correction == VerdictCloseDateCorrection {
+	switch correction {
+	case VerdictCloseDateCorrection:
 		return CloseDateCorrectionKind
+	case VerdictStageMoveCorrection:
+		return DealStageMoveKind
 	}
 	return correction
 }
@@ -63,6 +68,7 @@ type VerdictValues struct {
 	// ProbabilitySource is who set Probability; nil while the deal follows
 	// its stage.
 	ProbabilitySource *string
+	StageID           ids.UUID
 }
 
 // VerdictChange is one change a verdict decided on.
@@ -74,6 +80,11 @@ type VerdictChange struct {
 	// currency the customer named.
 	Currency    string
 	Probability int
+	// ToStageID is where a stage move goes. CriteriaMet names the exit
+	// criteria the move's evidence covers; the lock asks again that they are
+	// every required one of each stage the deal leaves.
+	ToStageID   ids.StageID
+	CriteriaMet []CriterionCitation
 	// NewestCitedAt is the newest activity the change rests on. A human edit
 	// of the field after it wins.
 	NewestCitedAt time.Time
@@ -116,12 +127,16 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return VerdictResult{}, err
 	}
+	active, err := s.activeColumns(ctx)
+	if err != nil {
+		return VerdictResult{}, err
+	}
 	result := VerdictResult{Outcomes: make([]string, len(in.Changes))}
 	outcomes := result.Outcomes
 	for i := range outcomes {
 		outcomes[i] = VerdictDroppedStale
 	}
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		lock, current, ok, err := lockVerdictDeal(ctx, tx, in)
 		if err != nil || !ok {
 			return err
@@ -138,8 +153,25 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			return nil
 		}
 		var applied []VerdictChange
+		// Asked of the deal as locked, before a stage move resets its
+		// probability: that reset is ours, not a colleague's edit.
+		heldStill := make([]bool, len(in.Changes))
 		for i, change := range in.Changes {
-			outcome, err := applyVerdictChange(ctx, tx, lock, in, current, change)
+			_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
+		}
+		for _, i := range stageMoveFirst(in.Changes) {
+			change := in.Changes[i]
+			var outcome string
+			switch {
+			case !heldStill[i]:
+				outcome = VerdictDroppedStale
+			case change.Correction == VerdictStageMoveCorrection:
+				outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
+			default:
+				now := in
+				now.Seen = current
+				outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
+			}
 			if err != nil {
 				return err
 			}
@@ -179,10 +211,10 @@ func lockVerdictDeal(ctx context.Context, tx pgx.Tx, in VerdictInput) (storekit.
 	var current VerdictValues
 	if err := tx.QueryRow(ctx, `
 		SELECT status, owner_id, legal_hold, expected_close_date, close_date_provisional, amount_minor, currency::text,
-		       win_probability_override, win_probability_set_by
+		       win_probability_override, win_probability_set_by, stage_id
 		  FROM deal WHERE id = $1`, in.DealID).
 		Scan(&status, &owner, &legalHold, &current.CloseDate, &current.Provisional, &current.AmountMinor, &current.Currency,
-			&current.Probability, &current.ProbabilitySource); err != nil {
+			&current.Probability, &current.ProbabilitySource, &current.StageID); err != nil {
 		return lock, VerdictValues{}, false, fmt.Errorf("deals: reading the deal a verdict changes: %w", err)
 	}
 	if DealStatus(status) != DealOpen || legalHold || owner == nil || *owner != in.Owner {
@@ -226,9 +258,7 @@ func applyVerdictChange(
 		return VerdictDroppedNoChange, nil
 	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
-	for key, value := range change.Evidence {
-		evidence[key] = value
-	}
+	maps.Copy(evidence, change.Evidence)
 	_, err = commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},
@@ -252,6 +282,8 @@ func verdictColumns(correction string, seen, current VerdictValues) ([]string, b
 	case VerdictProbabilityCorrection:
 		return []string{winProbabilityOverrideColumn},
 			sameInt(seen.Probability, current.Probability) && sameString(seen.ProbabilitySource, current.ProbabilitySource)
+	case VerdictStageMoveCorrection:
+		return []string{"stage_id"}, seen.StageID == current.StageID
 	}
 	return nil, false
 }

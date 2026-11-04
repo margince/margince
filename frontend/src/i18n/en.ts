@@ -3908,6 +3908,10 @@ export const en = {
   "access.state.signedInBadge": "Signed in",
   "access.state.invitedBadge": "Invited",
   "access.state.linkRequestedBadge": "Link requested",
+  "access.state.mailFailedBadge": "Email failed",
+  "access.mail.sent": "email sent",
+  "access.mail.failed":
+    "The invitation email failed. Issue a new link and send it yourself.",
   "access.lastSeen": "last seen {when}",
   "access.downloads_one": "{count} document downloaded",
   "access.downloads_other": "{count} documents downloaded",
@@ -3926,7 +3930,8 @@ export const en = {
   "access.inviteNote":
     "The link is shown for you to copy. If a mail relay is configured, it is also emailed, but delivery is not guaranteed.",
   "access.issued.title": "Link for {name}",
-  "access.issued.mailed": "Sent to {email}. You can also copy it below.",
+  "access.issued.mailed":
+    "Queued for {email}. The list shows when it is sent, or if it fails. You can also copy it below.",
   "access.issued.notMailed":
     "The link was not mailed. Copy it and send it yourself.",
   "access.issued.mailedTitle": "Invitation email queued",
@@ -6965,6 +6970,31 @@ export const en = {
     "{count} superseded documents are listed below.",
   "docs.reading.show": "Show extracted fields",
   "docs.reading.hide": "Hide extracted fields",
+
+  // Capturing a chat from a screenshot pasted on a contact.
+  "chatCapture.action": "Capture a chat",
+  "chatCapture.title": "Capture a chat",
+  "chatCapture.drop": "Screenshot",
+  "chatCapture.dropEmpty":
+    "Paste a screenshot of the chat, drop it here, or click to choose it",
+  "chatCapture.reading": "Reading the chat",
+  "chatCapture.startFailed": "The screenshot could not be read",
+  "chatCapture.storedUnread":
+    "The screenshot was stored, but the answer did not say which file it is. You find it under Documents.",
+  "chatCapture.discard": "Discard",
+  "chatCapture.discardFailed": "The screenshot could not be removed",
+  "chatCapture.unread": "The chat could not be read",
+  "chatCapture.nothingRead": "No chat was found to copy",
+  "chatCapture.header": "The chat header shows {who}.",
+  "chatCapture.otherCounterparty": "This chat shows {shows}, not {contact}.",
+  "chatCapture.confirmOther": "File it on {contact} anyway",
+  "chatCapture.text": "What was said",
+  "chatCapture.textHint":
+    "Type or paste what was said. You can also file the screenshot without text.",
+  "chatCapture.readBadge": "Copied from the screenshot by AI",
+  "chatCapture.channel": "Chat app",
+  "chatCapture.file": "File on this contact",
+  "chatCapture.fileFailed": "The chat could not be filed",
 
   // Adding one. The "About" wording is doing real work: it decides whether the
   // file becomes evidence in a deal or a paper about the account, and only the
@@ -10228,6 +10258,64 @@ export const en = {
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
   "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.controller.title": "Who is responsible",
+  "privacynotice.controller.contact": "Questions about your data: {contact}",
+  "privacynotice.categories.title": "What we hold",
+  "privacynotice.category.name": "Your name",
+  "privacynotice.category.jobTitle": "Your job title",
+  "privacynotice.category.employer": "The company you work for",
+  "privacynotice.category.email": "Your email address",
+  "privacynotice.category.phone": "Your phone number",
+  "privacynotice.category.correspondence":
+    "Emails, meetings and calls with you",
+  "privacynotice.basis.consent":
+    "Only with your agreement. You can withdraw it at any time.",
+  "privacynotice.basis.legitimateInterests":
+    "Our legitimate interest in business contact with you and the company you work for, weighed against your interests.",
+  "privacynotice.basis.contract":
+    "Needed for a contract with you or the company you work for.",
+  "privacynotice.basis.precontractRequest":
+    "You asked us for an offer or a meeting.",
+  "privacynotice.basis.subjectInitiated": "You wrote to us first.",
+  "privacynotice.basis.legalObligation": "A law requires it of us.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Needed to keep you or your account safe.",
+  "privacynotice.basis.existingCustomer":
+    "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
+  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
+  "privacynotice.category.postalAddress": "Your postal address",
+  "privacynotice.category.socialProfile":
+    "Your profiles and accounts on social networks and chat services",
+  "privacynotice.category.customFields": "Other details we record about you",
+  "privacynotice.category.deals": "Deals you take part in",
+  "privacynotice.category.preferences": "Your choices about our messages",
+  "privacynotice.retention.keptByLaw":
+    "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
+  "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
+  "privacynotice.recipient.serviceProviders":
+    "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.title": "How long we keep it",
+  "privacynotice.retention.archive":
+    "{scope}: taken out of daily use after {days}.",
+  "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
+  "privacynotice.retention.erase": "{scope}: deleted after {days}.",
+  "privacynotice.retention.rest":
+    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+  "privacynotice.retention.scope.activity":
+    "Emails, meetings and calls with you",
+  "privacynotice.retention.scope.activityTranscript":
+    "Transcripts of calls with you",
+  "privacynotice.retention.scope.rawCapture":
+    "Copies of emails as they arrived",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Your record, if you have not asked for news and are part of no deal",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Your details, if no further contact followed",
+  "privacynotice.objection.title": "Your right to object",
+  "privacynotice.objection.body":
+    "You can object at any time to our use of your data that rests on our legitimate interest. We then stop, unless we have compelling reasons to go on. If you object to advertising, we stop sending it, and you need not give a reason.",
+  "privacynotice.objection.how": "To object: {route}",
   "notice.ownerOf": "Owner of {duty}",
   "notice.excuse": "End without sending",
   "notice.excuseTitle": "End duty without sending disclosure",
@@ -15268,6 +15356,9 @@ export const en = {
   "autonomy.kind.deal_probability.label": "Win probabilities",
   "autonomy.kind.deal_probability.help":
     "Sets a deal’s win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
+  "autonomy.kind.deal_stage_move.label": "Stage moves",
+  "autonomy.kind.deal_stage_move.help":
+    "Moves a deal to a later stage when the customer’s own words show it got there, such as a request for the contract draft. Never to Won and never back. Each move shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18250,11 +18341,13 @@ export const en = {
   "changes.field.amount": "amount",
   "changes.field.probability": "probability",
   "changes.field.status": "status",
+  "changes.field.stage": "stage",
   "changes.fieldJoin": "{first} and {second}",
   "changes.kind.close_lost": "Closed as lost",
   "changes.kind.deal_close_date": "New close date",
   "changes.kind.deal_amount": "New amount",
   "changes.kind.deal_probability": "New probability",
+  "changes.kind.stage_move": "Moved to a later stage",
   "changes.summary_one": "Margince updated {count} of your deals: {parts}",
   "changes.summary_other": "Margince updated {count} of your deals: {parts}",
   "changes.part.closed_one": "{count} closed",
@@ -18265,6 +18358,8 @@ export const en = {
   "changes.part.revalued_other": "{count} re-valued",
   "changes.part.probabilities_one": "{count} probability",
   "changes.part.probabilities_other": "{count} probabilities",
+  "changes.part.moved_one": "{count} moved",
+  "changes.part.moved_other": "{count} moved",
   "changes.viewAll": "View all",
   "changes.undoAll": "Undo all",
   "changes.undoAllDone_one": "Undone on {count} deal.",

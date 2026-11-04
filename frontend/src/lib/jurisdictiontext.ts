@@ -1,8 +1,8 @@
-import type { components } from "../../api/schema";
-import { formatNumber } from "../../format/format";
-import { parsePeriod } from "../../format/jurisdiction";
-import { type Locale, translatePlural, type useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import { formatNumber } from "../format/format";
+import { parsePeriod } from "../format/jurisdiction";
+import { type Locale, translatePlural, type useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 // How the jurisdiction page says its values: periods in words, classes and
 // document labels in the reader's language.

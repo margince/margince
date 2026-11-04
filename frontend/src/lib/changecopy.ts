@@ -14,6 +14,7 @@ const FIELD_OF: Readonly<Record<string, MessageKey>> = {
   close_date_correction: "changes.field.closeDate",
   deal_amount: "changes.field.amount",
   deal_probability: "changes.field.probability",
+  stage_move: "changes.field.stage",
 };
 
 /** The field a change of this kind sets, or null for a close or another kind. */

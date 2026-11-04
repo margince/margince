@@ -21,12 +21,13 @@ import (
 )
 
 const verdictSystem = `You read one open sales deal: its fields, its offers, its stage moves and the activities logged on it, oldest first.
-Say whether the evidence shows that the deal's expected close date, its amount or its win probability should change.
+Say whether the evidence shows that the deal's expected close date, its amount, its win probability or its stage should change.
 
 You may propose at most one of each:
 "set_close_date": the customer named or agreed a decision, signing or start date, or the evidence makes the current date impossible. "date" is that date as YYYY-MM-DD, in the future.
 "set_amount": the customer or our offer states a price for this deal in words. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
 "set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen. "probability" is a whole number from 0 to 100.
+"move_stage": the evidence shows the deal has reached a later stage, judged by the stage's name and what a sale at that point looks like. "stage_id" is one of the later stages listed; it may skip stages. The deal leaves its own stage and every stage it skips, so each exit criterion listed for those stages needs an entry in "criteria": its "criterion_id", the cited "activity_id" that meets it, and "quoted_words" copied verbatim from that activity. If one is not met, do not move. Never move a deal back, and never to won or lost.
 
 Propose nothing when the evidence does not say it. An empty "actions" list is the usual answer.
 Never propose a value the deal already holds. Never close or reopen the deal; that is not yours.
@@ -53,6 +54,13 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	fmt.Fprintf(&b, "Amount: %s\n", amountText(in.AmountMinor, in.Currency))
 	fmt.Fprintf(&b, "Expected close date: %s%s\n", dateText(in.CloseDate), provisionalText(in.Provisional))
 	fmt.Fprintf(&b, "Win probability: %d%% (%s)\n", in.Probability, in.ProbabilitySource)
+	for _, stage := range in.Later {
+		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n", stage.Name, stage.ID, stage.Probability)
+	}
+	for _, criterion := range in.ExitCriteria {
+		fmt.Fprintf(&b, "Exit criterion of %s: %s (criterion_id %s, kind %s)%s\n",
+			criterion.Stage, criterion.Label, criterion.ID, criterion.Kind, hintText(criterion.Hint))
+	}
 	for _, offer := range in.Offers {
 		fmt.Fprintf(&b, "Offer: %s, %s\n", values.MajorUnits(offer.GrossMinor, offer.Currency)+" "+offer.Currency, offer.Status)
 	}
@@ -69,8 +77,16 @@ func Prompt(fence promptfence.Fence, in Input) string {
 		b.WriteString(fence.WrapAttr("activity_id", activity.ID, text) + "\n")
 	}
 	b.WriteString(`Return JSON: { "actions": [ { "kind", "date", "amount", "currency", "quoted_words", "probability", ` +
-		`"cited_activity_ids", "reason", "confidence" } ] }. Fields that do not apply to the kind are "" or 0.`)
+		`"stage_id", "criteria", "cited_activity_ids", "reason", "confidence" } ] }. ` +
+		`Fields that do not apply to the kind are "", 0 or [].`)
 	return b.String()
+}
+
+func hintText(hint string) string {
+	if hint == "" {
+		return ""
+	}
+	return ": " + hint
 }
 
 func amountText(amountMinor *int64, currency *string) string {
@@ -102,6 +118,11 @@ func sampleInput() Input {
 		Probability: 50, ProbabilitySource: "stage",
 		Offers:     []Offer{{GrossMinor: amount, Currency: currency, Status: "sent"}},
 		StageMoves: []StageMove{{From: "Qualified", To: "Proposal"}},
+		Later:      []StageOption{{ID: "sample-stage", Name: "Negotiation", Position: 2, Probability: 75}},
+		ExitCriteria: []ExitCriterion{{
+			ID: "sample-criterion", StagePosition: 1, Stage: "Proposal", Label: "Buyer asked for the contract",
+			Kind: "buyer_confirmed",
+		}},
 		Prior:      []PriorAction{{Kind: KindSetCloseDate, Outcome: "applied"}},
 		Activities: []Activity{{ID: "sample", Kind: "email", Direction: "inbound", Subject: "s", Body: "b"}},
 	}

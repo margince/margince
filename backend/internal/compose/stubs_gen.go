@@ -707,6 +707,14 @@ func (stubs) AcceptAttachmentExtraction(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "AcceptAttachmentExtraction")
 }
 
+func (stubs) FileChatCapture(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "FileChatCapture")
+}
+
+func (stubs) GetAttachmentExtractionReading(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, extractionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetAttachmentExtractionReading")
+}
+
 func (stubs) UpdateAttachmentMetadata(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UpdateAttachmentMetadata")
 }
