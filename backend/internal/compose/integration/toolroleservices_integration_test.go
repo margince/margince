@@ -7,6 +7,7 @@ package integration
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"regexp"
 	"slices"
@@ -116,8 +117,6 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 		return got
 	}
 	released := map[string]any{"approval_id": staged[1]}
-	for name, value := range args {
-		released[name] = value
-	}
+	maps.Copy(released, args)
 	return client.Call(t, verb, released)
 }

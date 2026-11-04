@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"maps"
 	"net/http"
 	"strconv"
 
@@ -22,9 +23,7 @@ func stateSeeders(s sweepSeed) map[string]func() string {
 	for _, group := range []func(sweepSeed) map[string]func() string{
 		memberSeeders, accessSeeders, salesSeeders, leadSeeders, roomSeeders, workSeeders, meetingSeeders, reportSeeders, companySeeders, weeklySeeders,
 	} {
-		for kind, seed := range group(s) {
-			seeders[kind] = seed
-		}
+		maps.Copy(seeders, group(s))
 	}
 	return seeders
 }
