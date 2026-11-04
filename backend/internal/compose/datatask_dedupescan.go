@@ -36,7 +36,7 @@ func dedupeScanDataTask() datatask.Task {
 
 // gmailBaseRequiredMigration supplies the index the address-variant lane reads
 // once Gmail spellings share one base.
-const gmailBaseRequiredMigration = "core/1793773371"
+const gmailBaseRequiredMigration = "core/1793778536"
 
 // gmailDedupeScanDataTask runs every contact through the duplicate check once
 // more, so two contacts stored under two Gmail spellings of one mailbox reach
@@ -44,7 +44,7 @@ const gmailBaseRequiredMigration = "core/1793773371"
 // not repeated.
 func gmailDedupeScanDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1793773372_gmail_dedupe_scan", Version: 1,
+		ID: "core/1793778537_gmail_dedupe_scan", Version: 1,
 		Title: "Finding contacts on two spellings of one Gmail address", Requires: []string{gmailBaseRequiredMigration},
 		Steps: []datatask.Step{dedupeScanStep("contacts", contacts.DedupeScanContacts)},
 	}
