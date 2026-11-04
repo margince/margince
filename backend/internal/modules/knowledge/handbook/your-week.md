@@ -101,7 +101,7 @@ observations or the written summary, and says so.
 ## Planning a week
 
 **Plan for week {week}**, on **Home → Weekly**, is your plan for the week. It holds what you said
-you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **First**
+you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Your tasks**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 
 Each commitment has a name, and can have a linked record and a due date. Ticking one marks it but
