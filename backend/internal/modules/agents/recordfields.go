@@ -243,6 +243,11 @@ const windowNote = `,"description":"` + windowRule + `"`
 
 // pastDayNeedsATime is the activity-write sentence for a day named without an
 // hour. An omitted occurred_at is the call's own moment; the server dates a day.
+// meetingStatusRule is the one sentence every tool that can set an activity's
+// meeting_status carries: log_activity, create_record and update_record.
+const meetingStatusRule = ` Send meeting_status held only when the user says the meeting took place; ` +
+	`a past start alone is not attendance, and a meeting with no status asks for its outcome.`
+
 const pastDayNeedsATime = ` No occurred_at means now; a past day with no time: its date, occurred_precision "day".`
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member

@@ -54,6 +54,8 @@ const activityKindEnum = `["email","call","meeting","note","task","message"]`
 
 const activityLinkEntityTypeEnum = `["contact","company","deal","lead","project"]`
 
+const activityMeetingStatusEnum = `["booked","held","no_show","canceled"]`
+
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
 // filter by, per record_type: each list operation's OWN declared query
 // parameters, read off crm.yaml rather than authored (A139).

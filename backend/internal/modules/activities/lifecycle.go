@@ -97,10 +97,9 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 // bounded delta, or stop taking the write lock — and the only symptom would be
 // a lead ladder that never re-read a meeting somebody had cancelled.
 //
-// The RBAC check is NOT here. It sits at UpdateActivity, where a caller is
-// asking to patch a record; the replay is not asking for that authority, it is
-// finishing the capture it already had — and the row-scope arm below still
-// applies to both.
+// The RBAC check is NOT here. It sits at each caller: UpdateActivity, and the
+// log replay that moves a meeting's status (replayMovedTheMeeting). The
+// row-scope and row-write arms below apply to every caller.
 func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
