@@ -129,6 +129,52 @@ test("a task logged with its date alone says when without a time", async () => {
   expect(logged.textContent).not.toMatch(/\d{1,2}:\d{2}/);
 });
 
+// The record zone here is the fallback, Berlin. The flag decides whether the
+// caption carries a time; the clock reading does not.
+function stubDue(dueAt: string, dueHasTime: boolean) {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Call back the buyer",
+        due_at: dueAt,
+        due_has_time: dueHasTime,
+        occurred_at: "2026-09-08T10:00:00Z",
+        is_done: false,
+        captured_by: "human:u-1",
+      }),
+  });
+}
+
+test("a task with a callback time says when it is due to the hour", async () => {
+  stubDue("2026-09-11T13:00:00Z", true);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).toMatch(/15:00/);
+});
+
+test("a task due by its day says the date alone, whatever its stored hour", async () => {
+  stubDue("2026-09-11T13:00:00Z", false);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+});
+
+test("a task due by the end of its day says the date alone", async () => {
+  stubDue("2026-09-11T21:59:59Z", false);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+});
+
 test("a task nobody read out of a meeting offers no way back", async () => {
   stubTask(null);
   openTask();

@@ -12,7 +12,7 @@ import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
   type Locale,
@@ -242,7 +242,9 @@ function TaskBar({
       detail={taskDetail(task)}
       sub={
         task.due_at
-          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
+          ? t("co.next.due", {
+              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+            })
           : t("co.next.undated")
       }
       action={

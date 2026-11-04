@@ -42,6 +42,9 @@ type activityScan struct {
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
+	// dueHasTime is answered on a task only; the column is false on every
+	// other kind and means nothing there.
+	dueHasTime bool
 	// sourceActivityID is the activity this one was derived from — the meeting
 	// whose transcript proposed a task. Scanned as a typed id and mapped to the
 	// contract's openapi UUID, like the two above.
@@ -113,6 +116,7 @@ var activityProjection = []activityColumn{
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
+	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
@@ -253,6 +257,9 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
+	if s.kind == string(crmcontracts.ActivityKindTask) {
+		a.DueHasTime = new(s.dueHasTime)
+	}
 	// The meeting a task was read out of. A marker, not content: which record
 	// produced this one is a fact like its date, and opening it is a separate
 	// read under the caller's own scope.

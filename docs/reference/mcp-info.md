@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.3 KB |
+| Tool catalog | 190.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50021 |
+| Approx. wire tokens | 50087 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.7 KB | 24% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 41.5 KB | 21% | Yes, every step |
-| Input schemas | 91.1 KB | 47% | Yes, every step |
+| Input schemas | 91.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
-| **Description + input schema** | **132.6 KB** | **69%** | **the recurring cost** |
+| **Description + input schema** | **132.8 KB** | **69%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,7 +67,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 656 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1790 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1840 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 781 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
@@ -1386,7 +1386,7 @@ yes before calling, unless they asked for this call themselves; requires passpor
       "type": "string"
     },
     "channel_provider": {
-      "description": "log only: Required when kind is \"message\", else refused; a provider the workspace's channel provider list names.",
+      "description": "log only: Required for kind \"message\", else refused; one the workspace's channel providers name.",
       "type": "string"
     },
     "content_base64": {
@@ -1414,6 +1414,10 @@ yes before calling, unless they asked for this call themselves; requires passpor
       "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
+    },
+    "due_has_time": {
+      "description": "task only: True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day.",
+      "type": "boolean"
     },
     "entity_id": {
       "description": "attach, relink, relink_many only",
@@ -1450,6 +1454,9 @@ yes before calling, unless they asked for this call themselves; requires passpor
           "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
           "format": "date-time",
           "type": "string"
+        },
+        "due_has_time": {
+          "type": "boolean"
         },
         "subject": {
           "type": "string"
@@ -6426,6 +6433,9 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
                 "format": "date-time",
                 "type": "string"
               },
+              "due_has_time": {
+                "type": "boolean"
+              },
               "quote": {
                 "type": "string"
               },
@@ -6562,6 +6572,9 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
         },
         "deals_scanned": {
           "type": "integer"
+        },
+        "time_zone": {
+          "type": "string"
         },
         "truncated": {
           "type": "boolean"

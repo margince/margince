@@ -46,6 +46,9 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 	if share {
 		status = VerdictSharedByOwner
 	}
+	if err := LockThreadHoldTx(ctx, tx, threadKey); err != nil {
+		return err
+	}
 	// A thread this call opens fresh (never through EnsureTx — a message born
 	// open under a `shared` mailbox never did) needs an anchor of its own, or
 	// heldthreadslist's existence check has nothing to join against and reports

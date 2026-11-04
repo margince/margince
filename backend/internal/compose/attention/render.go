@@ -348,6 +348,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
+		item.DueHasTime = new(task.DueHasTime)
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
 		// Which run of the page it heads. Only dated rows carry one, which is
