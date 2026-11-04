@@ -7,6 +7,7 @@ import {
   TaskCompleteCheck,
   type useTaskUpdate,
 } from "../../components/taskactions";
+import { TaskAssignee } from "../../components/taskassignee";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import {
@@ -68,7 +69,7 @@ export function CompanyOverviewCards({
   return (
     <div className="co-overview-grid">
       <div className="co-overview-column">
-        <AlsoOnYourList
+        <OtherOpenTasks
           view={view}
           shownTaskId={shownTaskId}
           taskUpdate={taskUpdate}
@@ -99,7 +100,7 @@ function emptyWords(
     : undefined;
 }
 
-function AlsoOnYourList({
+function OtherOpenTasks({
   view,
   shownTaskId,
   taskUpdate,
@@ -116,7 +117,7 @@ function AlsoOnYourList({
   const steps = otherOpenTasks(view, shownTaskId);
   return (
     <OverviewCard
-      title={t("co.overview.alsoOnList")}
+      title={t("co.overview.otherOpen")}
       action={
         <Button variant="link" onClick={() => onOpenTab("tasks")}>
           {t("record.allTasks")}
@@ -169,9 +170,7 @@ function TaskRow({
         when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
       }),
     linked && t("co.overview.for", { name: linked }),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ].filter(Boolean);
   return (
     <OverviewRow
       lead={
@@ -192,7 +191,12 @@ function TaskRow({
           {step.subject}
         </button>
       }
-      sub={sub || undefined}
+      sub={
+        <>
+          <TaskAssignee id={step.assignee_id} name={step.assignee_name} />
+          {sub.length > 0 && ` · ${sub.join(" · ")}`}
+        </>
+      }
       right={<TaskStandingMark step={step} asOf={view.as_of} />}
     />
   );

@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { TaskAssignee } from "../../components/taskassignee";
 import { formatNumber } from "../../format/format";
 import {
   calendarDaysBetween,
@@ -73,6 +75,19 @@ export function otherTasks(
     return undefined;
   }
   return steps.data.length - (shown ? 1 : 0);
+}
+
+// The bar's task is the account's, not the reader's: its line names who holds it.
+function heldBy(task: NextStep | undefined, rest: ReactNode): ReactNode {
+  if (!task) {
+    return rest;
+  }
+  return (
+    <>
+      <TaskAssignee id={task.assignee_id} name={task.assignee_name} />
+      {rest && <> · {rest}</>}
+    </>
+  );
 }
 
 /**
@@ -157,7 +172,7 @@ export function CompanyNextBar({
         title={task?.subject ?? moment.headline}
         late={lateTag}
         detail={task && taskDetail(task)}
-        sub={moment.why_now}
+        sub={heldBy(task, moment.why_now)}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
@@ -178,7 +193,8 @@ export function CompanyNextBar({
       title={task?.subject}
       late={lateTag}
       detail={task && taskDetail(task)}
-      sub={
+      sub={heldBy(
+        task,
         task?.due_at
           ? t("co.next.due", {
               when: formatDueCompact(
@@ -188,8 +204,8 @@ export function CompanyNextBar({
                 zone,
               ),
             })
-          : undefined
-      }
+          : undefined,
+      )}
       action={task ? fallback : undefined}
       more={more}
     />

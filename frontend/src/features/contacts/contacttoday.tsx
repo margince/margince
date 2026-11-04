@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { TaskAssignee } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -251,11 +252,15 @@ function TaskBar({
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
       sub={
-        task.due_at
-          ? t("co.next.due", {
-              when: formatDue(task.due_at, task.due_has_time, locale, zone),
-            })
-          : t("co.next.undated")
+        <>
+          <TaskAssignee id={task.assignee_id} />
+          {" · "}
+          {task.due_at
+            ? t("co.next.due", {
+                when: formatDue(task.due_at, task.due_has_time, locale, zone),
+              })
+            : t("co.next.undated")}
+        </>
       }
       action={
         <>
