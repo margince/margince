@@ -104,3 +104,7 @@ func toMinor(whole, scale int64) (int64, bool) {
 	}
 	return whole * scale, true
 }
+
+// QuotedPrice is quotedPrice for a caller outside the verdict: the one price a
+// quote states, in exact minor units, and its currency.
+func QuotedPrice(quote string) (int64, string, bool) { return quotedPrice(quote) }

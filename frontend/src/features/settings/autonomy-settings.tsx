@@ -162,6 +162,10 @@ const KIND_COPY: Readonly<
     label: "autonomy.kind.deal_stage_move.label",
     help: "autonomy.kind.deal_stage_move.help",
   },
+  deal_open: {
+    label: "autonomy.kind.deal_open.label",
+    help: "autonomy.kind.deal_open.help",
+  },
   company_name_promotion: {
     label: "autonomy.kind.company_name_promotion.label",
     help: "autonomy.kind.company_name_promotion.help",

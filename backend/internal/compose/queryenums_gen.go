@@ -532,9 +532,6 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/signals": {
 		{Name: "limit", Minimum: 1},
 	},
-	"GET /v1/stage-automation/report": {
-		{Name: "window_days", Minimum: 1},
-	},
 	"GET /v1/teams": {
 		{Name: "limit", Minimum: 1},
 	},

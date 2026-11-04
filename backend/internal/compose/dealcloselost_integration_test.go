@@ -369,3 +369,9 @@ func TestHomeShowsAnOlderCloseAsAChangeWithItsWayBack(t *testing.T) {
 		t.Fatalf("Home lines for the close two days on = %d, want 1", found)
 	}
 }
+
+// fixedBrief is a last brief at one instant: the reader's own state, which
+// is what the window depends on.
+type fixedBrief struct{ at time.Time }
+
+func (b fixedBrief) CutoffFor(context.Context) (time.Time, bool, error) { return b.at, true, nil }

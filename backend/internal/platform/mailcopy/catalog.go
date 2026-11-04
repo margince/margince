@@ -141,6 +141,10 @@ func morningLines(line writeLine) {
 		"moved forward",
 		"in eine spätere Phase verschoben",
 		"chuyển sang giai đoạn sau")
+	line(func(c *Copy) *string { return &c.MorningChangeOpened },
+		"opened",
+		"eröffnet",
+		"đã mở")
 	line(func(c *Copy) *string { return &c.MorningChangeRedated },
 		"new close date",
 		"neues Abschlussdatum",

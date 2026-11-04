@@ -193,7 +193,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
 | `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
 | `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
-| `POST /deals/{id}/stage-progressions/{approvalId}/revert` | revertStageProgression | Take back a stage move the product made by itself. | Change records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /deals/{id}/win-evidence` | getDealWinEvidence | Whether the deal has the signed agreement a win rests on. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
@@ -244,8 +243,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /pipelines/{id}` | getPipeline | Get a pipeline (with its ordered stages). | Read records | at once |
 | `GET /stages` | listStages | List stages (optionally filtered by pipeline). | Read records | at once |
 | `GET /stages/{id}` | getStage | Get a stage by id. | Read records | at once |
-| `GET /stage-automation/report` | getStageAutomationReport | What each stage transition has earned. | Read records | at once |
-| `GET /stage-automation/policies/{id}` | listTransitionPolicies | What each transition in this pipeline is allowed to do. | Read records | at once |
 | `GET /stages/{id}/exit-criteria` | listStageExitCriteria | What a deal must satisfy before it leaves this stage. | Read records | at once |
 
 ## Projects

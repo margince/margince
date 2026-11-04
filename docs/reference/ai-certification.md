@@ -888,7 +888,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 168 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 170 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 25 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1272,12 +1272,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 54 |
+| Shipped invocation sites | 55 |
 | … best state `current` | 31 |
 | … best state `partial` | 1 |
 | … best state `stale` | 16 |
-| … `absent` on every binding | 6 |
-| Scenarios in the corpus | 293 |
+| … `absent` on every binding | 7 |
+| Scenarios in the corpus | 295 |
 | Committed records | 355 |
 | Bindings measured | 18 |
 
@@ -1341,7 +1341,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (54)
+### Index of sites (55)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1363,6 +1363,7 @@ Which model to run each site on, and what that choice rests on.
 | [`deal_health/deal_status`](#deal_healthdeal_status) | - | - | - | `stale` | 3 | 13 |
 | [`deal_verdict/deal_verdict`](#deal_verdictdeal_verdict) | - | - | - | `absent` | 4 | 0 |
 | [`document_extract/cards`](#document_extractcards) | `gemini · gemini-3.6-flash · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 1 |
+| [`document_extract/chat`](#document_extractchat) | - | - | - | `absent` | 2 | 0 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 2 |
 | [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
 | [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.6-flash · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
@@ -2359,6 +2360,24 @@ Records (1):
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3190ms | 8139ms | 6 | 0 | 0 | 0 |
+
+</details>
+
+<details>
+<summary><code>document_extract/chat</code>: 2 scenario(s), 0 record(s), best state absent</summary>
+
+##### `document_extract/chat`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (2):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `chat_screenshot_with_header` | `accepted` | judge | [chat_screenshot_07.yaml](../../backend/internal/compose/aicert/corpus/document_extract/chat_screenshot_07.yaml) |
+| `picture_with_no_chat` | `accepted` | judge | [chat_no_chat_08.yaml](../../backend/internal/compose/aicert/corpus/document_extract/chat_no_chat_08.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

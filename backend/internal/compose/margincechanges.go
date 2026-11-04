@@ -66,7 +66,7 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 	}
 	out := crmcontracts.MarginceChangeSummary{
 		AsOf: h.now(), Deals: summary.Deals, Closed: summary.Closed, Redated: summary.Redated,
-		Revalued: summary.Revalued, Probabilities: summary.Probabilities, Moved: summary.Moved,
+		Revalued: summary.Revalued, Probabilities: summary.Probabilities, Moved: summary.Moved, Opened: summary.Opened,
 		BaseCurrency: summary.BaseCurrency, Truncated: summary.Truncated,
 		Bundles: make([]crmcontracts.MarginceChangeBundle, 0, len(summary.Bundles)),
 	}
@@ -231,8 +231,15 @@ func (h marginceChangeHandlers) undoBundle(ctx context.Context, item crmcontract
 			result.Kept = append(result.Kept, keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonAlreadyUndone))
 			continue
 		}
-		deal, err := h.deals.RevertCorrection(ctx, correction.ID, version,
-			map[string]any{undidAuditLogID: correction.AuditLogID.String()})
+		deal, err := h.deals.RevertCorrectionConfirmed(ctx, correction.ID, version,
+			map[string]any{undidAuditLogID: correction.AuditLogID.String()},
+			derefString(item.ArchiveConfirmedFor))
+		if work, ok := errors.AsType[*deals.DealOpenUndoNeedsConfirmError](err); ok {
+			kept := keptChange(correction, crmcontracts.UndoMarginceChangeKeptReasonNeedsConfirmation)
+			kept.TeamNotes, kept.TeamTasks, kept.TeamWork = &work.Notes, &work.Tasks, &work.Work
+			result.Kept = append(result.Kept, kept)
+			continue
+		}
 		reason, refused := undoRefusal(err)
 		if !refused && err != nil {
 			return result, err

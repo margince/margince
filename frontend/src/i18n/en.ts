@@ -2340,8 +2340,6 @@ export const en = {
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
-  "systemJob.stage_progression": "Deal stage progression",
-  "systemJob.stage_progression_outcome": "Deal stage outcome",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -4371,7 +4369,6 @@ export const en = {
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
-  "approval.kind.stage_progression": "Advance deal stage",
   "approval.preview.requiredCriterionMet": "Required criterion met",
   "approval.preview.requiredCriterionUnmet": "Required criterion not met",
   "approval.preview.optionalCriterionMet": "Optional criterion met",
@@ -4379,8 +4376,6 @@ export const en = {
   "approval.field.because": "Reason",
   "approval.field.lost_reason": "Why it was lost",
   "approval.field.note": "Note",
-  "approval.field.from_stage": "From",
-  "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
   "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
@@ -12839,7 +12834,6 @@ export const en = {
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
-  "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Acquisition sources",
   "settings.tab.lossreasons": "Loss reasons",
@@ -15358,6 +15352,9 @@ export const en = {
   "autonomy.kind.deal_stage_move.label": "Stage moves",
   "autonomy.kind.deal_stage_move.help":
     "Moves a deal to a later stage when the customer’s own words show it got there, such as a request for the contract draft. Never to Won and never back. Each move shows on Home with an Undo.",
+  "autonomy.kind.deal_open.label": "New deals",
+  "autonomy.kind.deal_open.help":
+    "Opens a deal for a company you own when the customer asks to buy, such as a request for an offer. It is yours, at the first stage. Each new deal shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -18347,6 +18344,11 @@ export const en = {
   "changes.kind.deal_close_date": "New close date",
   "changes.kind.deal_amount": "New amount",
   "changes.kind.deal_probability": "New probability",
+  "changes.kind.deal_open": "Opened from buying evidence",
+  "changes.undo.confirmArchive":
+    "This deal now has {notes} notes and {tasks} tasks from your team. Archive it anyway?",
+  "changes.undo.archived":
+    "Archived. Margince will not open a deal for this again unless new buying evidence arrives.",
   "changes.kind.stage_move": "Moved to a later stage",
   "changes.summary_one": "Margince updated {count} of your deals: {parts}",
   "changes.summary_other": "Margince updated {count} of your deals: {parts}",
@@ -19197,60 +19199,6 @@ export const en = {
   "lead.readings.noCompany": "None",
   "lead.readings.owed": "Pending",
   "lead.readings.answered": "Answered",
-  "stageAutomation.record": "Track record",
-  "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.transition": "Transition",
-  "stageAutomation.reviewed": "Reviewed",
-  "stageAutomation.reviewedHint":
-    "Proposals someone decided. Every rate is a share of this number.",
-  "stageAutomation.open": "Still open",
-  "stageAutomation.expired": "Expired",
-  "stageAutomation.expiredHint":
-    "No one answered before the window closed. This is not a rejection.",
-  "stageAutomation.cleanAcceptance": "Accepted",
-  "stageAutomation.edits": "Edited",
-  "stageAutomation.rejections": "Rejected",
-  "stageAutomation.unsafe": "Undone or corrected",
-  "stageAutomation.unsafeHint":
-    "Moves someone reversed or whose evidence they marked wrong. A move counts once even if both happened.",
-  "stageAutomation.observationDays": "Days observed",
-  "stageAutomation.observationHint":
-    "From the first reviewed proposal to the last. A good rate from one afternoon is not a track record.",
-  "stageAutomation.glossary": "What the figures mean",
-  "stageAutomation.evidenceKinds": "By evidence",
-  "stageAutomation.emptyTitle": "No proposed moves yet",
-  "stageAutomation.empty":
-    "Each move Margince proposes on this pipeline is counted here, with how someone answered it.",
-  "stageAutomation.noPipelines": "No pipelines to report on yet.",
-  "stageAutomation.unreadable": "This report did not load",
-  "stageAutomation.rules": "Transition rules",
-  "stageAutomation.rulesIntro":
-    "Turning a transition on does not move deals yet. Margince keeps proposing until the track record above meets the threshold, then moves deals itself and tells you afterward.",
-  "stageAutomation.offTitle": "Stage automation is switched off",
-  "stageAutomation.offBody":
-    "No deal moves by itself while this is off, whatever a transition below is set to. Whoever runs this installation turns it on in the installation’s configuration.",
-  "stageAutomation.notEarnedYet": "Not qualified yet: {why}",
-  "stageAutomation.suspended": "Suspended by Margince",
-  "stageAutomation.suspendedSince": "Suspended {date}",
-  "stageAutomation.resume": "Resume",
-  "stageAutomation.resumeTitle": "Resume this transition?",
-  "stageAutomation.resumeBody":
-    "Margince suspended it (reason: {reason}). Resuming does not skip the threshold: the transition must meet the record above before it moves deals automatically.",
-  "stageAutomation.noRules":
-    "No transition on this pipeline has a rule yet, so every move is proposed for a person to review.",
-  "stageAutomation.undoWindow": "Undo for {hours} h",
-  "stageAutomation.rulesLoading": "Loading transition rules…",
-  "stageAutomation.saveFailed": "Change not saved",
-  "stageAutomation.nothingReviewed": "Proposed, but none reviewed yet.",
-  "stageAutomation.detail": "Details",
-  "stageAutomation.detailFor": "Details for {transition}",
-  "stageAutomation.evidenceShare":
-    "{accepted} of {reviewed} accepted as proposed",
-  "stageAutomation.acceptedHint": "Accepted as proposed, with nothing changed.",
-  "stageAutomation.editedHint": "Accepted after someone changed the proposal.",
-  "stageAutomation.rejectedHint": "Proposals someone turned down.",
-  "stageAutomation.openHint":
-    "Proposals no one has answered yet. They count in no rate.",
   "employment.importLoading": "Loading purchased employment history…",
   "employment.apply": "Link imported companies",
   "employment.status.current": "Current",
