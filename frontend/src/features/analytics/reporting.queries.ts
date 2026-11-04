@@ -3,8 +3,10 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { reloadReportingFigures } from "../../lib/reportingfigures";
-import { REPORTING_EVALUATION_KEY } from "../../lib/reportingkeys";
+import {
+  REPORTING_EVALUATION_KEY,
+  reloadReportingFigures,
+} from "../../lib/reportingfigures";
 import {
   type MetricNames,
   type ReportingSelection,

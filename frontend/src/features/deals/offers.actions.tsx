@@ -10,6 +10,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { dealProductsKey } from "./deal360/dealproducts";
 import type { Offer } from "./offers";
 
 // The send/accept/reject lifecycle. All three return the full updated Offer
@@ -72,8 +73,8 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 }
 
 // Accept is human-only. The server syncs the deal's amount and currency on
-// acceptance, so the deal screen's amount card and offers panel must refetch.
-// Those are the ["deal", id] and ["deal-offers", id] keys DealScreen reads.
+// acceptance, and derives the deal's products from the offer. So the deal
+// screen's ["deal", id], ["deal-offers", id] and ["deal-products", id] refetch.
 // setQueryData alone would leave stale figures when the reader goes back.
 export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
@@ -96,6 +97,9 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       queryClient.invalidateQueries({ queryKey: ["deal", offer.deal_id] });
       queryClient.invalidateQueries({
         queryKey: ["deal-offers", offer.deal_id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: dealProductsKey(offer.deal_id),
       });
       setOpen(false);
     },

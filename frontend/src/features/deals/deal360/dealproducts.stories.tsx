@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import {
   installFetchStub,
@@ -12,7 +13,7 @@ import {
 import { DealProductsCard } from "./dealproducts";
 
 // The products a deal sells: from the accepted offer, set by hand, none yet,
-// and hidden from a reader who may not see them.
+// and hidden from a reader who may not see them. Then the editor that sets them.
 
 const meta: Meta = {
   title: "Records/Deal 360/Products",
@@ -92,4 +93,41 @@ export const Denied: Story = { render: () => card("denied") };
 export const FromTheOfferDark: Story = {
   globals: { theme: "dark" },
   render: () => card(FROM_OFFER),
+};
+
+// The editor opens in a dialog portalled to the body.
+async function openEditor(canvasElement: HTMLElement) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: "Set products" }),
+  );
+  return within(canvasElement.ownerDocument.body).findByRole("dialog", {
+    name: "Set the products this deal sells",
+  });
+}
+
+/** Editing the offer's products says saving replaces them. */
+export const EditingTheOffer: Story = {
+  render: () => card(FROM_OFFER),
+  play: async ({ canvasElement }) => {
+    const editor = await openEditor(canvasElement);
+    await expect(
+      within(editor).getByText(/The accepted offer set these products/),
+    ).toBeTruthy();
+    await expect(
+      within(editor).getByRole("spinbutton", {
+        name: "Amount for ERP licence",
+      }),
+    ).toBeTruthy();
+  },
+};
+
+/** An emptied list says the accepted offer fills it again. */
+export const EditingAnEmptyList: Story = {
+  render: () => card([]),
+  play: async ({ canvasElement }) => {
+    const editor = await openEditor(canvasElement);
+    await expect(
+      within(editor).getByText(/If you save an empty list/),
+    ).toBeTruthy();
+  },
 };

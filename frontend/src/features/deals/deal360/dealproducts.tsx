@@ -24,7 +24,7 @@ import {
 import { formatMoneyOrAbsent } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
-import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingkeys";
+import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
 import { searchProductCandidates } from "../products";
 
 type DealProduct = components["schemas"]["DealProduct"];
@@ -36,7 +36,8 @@ type Allocation = {
   amountMinor: number | null;
 };
 
-const dealProductsKey = (dealId: string) => ["deal-products", dealId] as const;
+export const dealProductsKey = (dealId: string) =>
+  ["deal-products", dealId] as const;
 
 /**
  * The products a deal sells, with the value allocated to each. The accepted
