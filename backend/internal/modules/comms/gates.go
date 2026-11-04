@@ -308,15 +308,7 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		o, w, err := d.park(ctx, del.ID, "no consent authority is configured on this send path")
 		return none, o, w, err
 	}
-	ticket, terr := d.consent.AuthorizeTransmit(ctx, commsauthz.TransmitRequest{
-		DeliveryID: del.ID,
-		Attempt:    del.Attempts,
-		Recipients: consentRecipients(del),
-		PurposeKey: del.ConsentPurpose,
-		Subject:    del.Subject,
-		Body:       del.Body,
-		HTMLBody:   del.HTMLBody,
-	})
+	ticket, terr := d.consent.AuthorizeTransmit(ctx, transmitRequestFor(del))
 	if terr != nil {
 		// The question could not be asked. A consent service that is merely
 		// down must not permanently destroy a legitimate send.
@@ -324,6 +316,45 @@ func (d *Dispatcher) gateConsent(ctx context.Context, del Delivery) (commsauthz.
 		return none, o, w, err
 	}
 	return d.gateConsentDecision(ctx, ticket, del)
+}
+
+// transmitRequestFor is the question both consent asks put about a delivery.
+func transmitRequestFor(del Delivery) commsauthz.TransmitRequest {
+	return commsauthz.TransmitRequest{
+		DeliveryID: del.ID,
+		Attempt:    del.Attempts,
+		Recipients: consentRecipients(del),
+		PurposeKey: del.ConsentPurpose,
+		Subject:    del.Subject,
+		Body:       del.Body,
+		HTMLBody:   del.HTMLBody,
+	}
+}
+
+// recheckBeforeTheWire asks consent again right before the provider call. The
+// first answer came before pacing, the attachment checks and the file read,
+// and a stop or a retraction committed in that time is in no ticket.
+//
+// An unchanged answer keeps the issued ticket. A changed one goes through the
+// same decision and requirement gates as the first. A stop committed during the
+// provider call itself is too late for this attempt.
+func (d *Dispatcher) recheckBeforeTheWire(
+	ctx context.Context, del Delivery, issued commsauthz.TransmitTicket,
+) (commsauthz.TransmitTicket, Outcome, time.Duration, error) {
+	fresh, err := d.consent.RecheckTransmit(ctx, transmitRequestFor(del), issued)
+	if err != nil {
+		o, w, err := d.retry(ctx, del.ID, err)
+		return issued, o, w, err
+	}
+	if fresh.DecisionSetID == issued.DecisionSetID {
+		return issued, outcomeUndecided, 0, nil
+	}
+	ticket, outcome, wait, err := d.gateConsentDecision(ctx, fresh, del)
+	if outcome != outcomeUndecided {
+		return ticket, outcome, wait, err
+	}
+	outcome, wait, err = d.gateRequirements(ctx, del, ticket)
+	return ticket, outcome, wait, err
 }
 
 // gateConsentDecision is what the gate DOES with the engine's answer, split out

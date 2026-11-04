@@ -3,7 +3,12 @@
 
 package consent
 
-import "testing"
+import (
+	"slices"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+)
 
 // blockedReasonCode must read a suppression block's OWN kind rather than
 // fall to the default arm meant for BlockObjection — the same mislabelling
@@ -31,5 +36,15 @@ func TestCategoryForClassAgreesWithResolutionForClass(t *testing.T) {
 		if got != want {
 			t.Errorf("categoryForClass(%s) = %s, resolutionForClass(%s).Category = %s — VerdictForContact's suppression check would bind a different category than the transmit path resolves", class, got, class, want)
 		}
+	}
+}
+
+// The classes privacy keeps a withdrawal for are the classes whose withdrawal
+// stops marketing here, so the two never read a withdrawal differently.
+func TestMarketingPurposeClassesAreTheMarketingClasses(t *testing.T) {
+	got := commsauthz.MarketingPurposeClasses()
+	want := []string{string(ClassMarketing), string(ClassPhoneOutreach)}
+	if !slices.Equal(got, want) {
+		t.Errorf("MarketingPurposeClasses() = %v, want %v", got, want)
 	}
 }

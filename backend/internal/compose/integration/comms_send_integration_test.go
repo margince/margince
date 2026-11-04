@@ -151,6 +151,13 @@ func (p *preflightEnv) transmit(t *testing.T, deliveryID ids.UUID, stampAs strin
 // transmitted NOTHING rather than merely to have been recorded.
 func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs string) (comms.Outcome, sentMail, *gmail.Connector) {
 	t.Helper()
+	return p.dispatchOnceWith(t, deliveryID, stampAs, nil)
+}
+
+// dispatchOnceWith is dispatchOnce with a send policy chain, for a case that
+// needs something to happen between the consent gate and the wire.
+func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stampAs string, policies []comms.SendPolicy) (comms.Outcome, sentMail, *gmail.Connector) {
+	t.Helper()
 	var captured sentMail
 	stub := gmailSendStub(t, &captured, stampAs)
 
@@ -178,7 +185,7 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 	// the gate and the connector are the production objects; what this
 	// restates is the WIRING — so a send policy added to the composed chain
 	// would not be exercised by these tests, and the pacing knobs below are
-	// deliberately inert (no policies, a bound nothing here reaches).
+	// inert unless a case passes its own policies (a bound nothing here reaches).
 	dispatcher := comms.NewDispatcher(
 		comms.NewStore(compose.InstallationDB(p.Pool), time.Now, activities.NewStore(compose.InstallationDB(p.Pool))),
 		stubMailbox{sender: gmailConnector, auth: auth},
@@ -188,7 +195,7 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 		// byte read a message with attachments would reach.
 		compose.NewSendAttachmentAuthority(p.Pool, nil),
 		consent.NewGate(consent.NewStore(compose.InstallationDB(p.Pool))),
-		nil, time.Now, 24*time.Hour, 10,
+		policies, time.Now, 24*time.Hour, 10,
 	)
 	// A job carries no session. The scope comes from the composition rather
 	// than being rebuilt here: it binds the system actor and the correlation id
