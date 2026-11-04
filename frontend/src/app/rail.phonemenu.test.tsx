@@ -146,18 +146,28 @@ describe("the phone More menu", () => {
     expect(document.activeElement?.getAttribute("aria-current")).toBe("page");
   });
 
-  it("hands focus to the sidebar's first row on a widen where no row is current", async () => {
-    const user = userEvent.setup();
-    const viewport = renderPhoneShell("#/nowhere");
-    await user.click(more());
-    expect(menu()?.contains(document.activeElement)).toBe(true);
+  // A section's level leads with Back, which is no destination, so it is passed.
+  it.each([
+    ["the top level", "#/nowhere"],
+    ["a section level", "#/settings/nowhere"],
+  ])(
+    "hands focus to the first destination of %s on a widen where no row is current",
+    async (_level, hash) => {
+      const user = userEvent.setup();
+      const viewport = renderPhoneShell(hash);
+      await user.click(more());
+      expect(menu()?.contains(document.activeElement)).toBe(true);
 
-    act(() => viewport.widen());
+      act(() => viewport.widen());
 
-    expect(menu()).toBeNull();
-    expect(document.querySelector(".navitem[aria-current]")).toBeNull();
-    expect(document.activeElement).toBe(document.querySelector(".navitem"));
-  });
+      expect(menu()).toBeNull();
+      expect(document.querySelector(".navitem[aria-current]")).toBeNull();
+      expect(document.activeElement).toBe(
+        document.querySelector(".navlevel .navwrap .navitem"),
+      );
+      expect(document.activeElement?.classList.contains("navback")).toBe(false);
+    },
+  );
 
   it("locks the page and the skip link while open, and frees them after", async () => {
     const user = userEvent.setup();

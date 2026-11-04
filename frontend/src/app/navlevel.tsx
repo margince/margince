@@ -49,6 +49,9 @@ function navTipKey(level: NavTrailLevel, id: string): string {
 
 const BACK_TIP_KEY = "rail-level-back";
 
+/** A level's destination rows. Back is a `.navitem` too, and stands outside them. */
+export const DESTINATION_ROW = ".navlevel .navwrap .navitem";
+
 // Where a reader who never walked into the section is sent when they walk out
 // of it: a deep link carries no origin, and an invented one would be a claim
 // about where they had been.
@@ -204,9 +207,7 @@ export function useNavLevel(
     if (!walk.spend(routeHash(route))) {
       return;
     }
-    container.current
-      ?.querySelector<HTMLElement>(".navlevel .navwrap .navitem")
-      ?.focus();
+    container.current?.querySelector<HTMLElement>(DESTINATION_ROW)?.focus();
   });
 
   return { depth, shown, parent, onWalkUp, onSelect };

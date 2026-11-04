@@ -13,7 +13,7 @@ import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
-import { NavLevelView, useNavLevel } from "./navlevel";
+import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
@@ -235,7 +235,7 @@ export function WorkspaceRail({
       const rows = nav.current;
       (
         rows?.querySelector<HTMLElement>(".navitem[aria-current]") ??
-        rows?.querySelector<HTMLElement>(".navitem")
+        rows?.querySelector<HTMLElement>(DESTINATION_ROW)
       )?.focus();
     }
   }, [menuOpen, phone]);
