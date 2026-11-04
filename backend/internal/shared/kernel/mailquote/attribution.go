@@ -11,6 +11,7 @@ import "regexp"
 var attributionPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`^On\s.{1,200}\swrote:\s*$`),
 	regexp.MustCompile(`^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$`),
+	regexp.MustCompile(`^Vào\s.{1,200}\sđã viết:\s*$`),
 	regexp.MustCompile(`(?i)^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)`),
 	regexp.MustCompile(`(?i)^Begin forwarded message:\s*$`),
 	regexp.MustCompile(`(?i)^(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):\s*$`),

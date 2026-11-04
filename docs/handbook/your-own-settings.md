@@ -275,15 +275,18 @@ learns only from samples you add.
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
 1. Under **Add your writing**, drop or pick files, several at once. After that, add more under **Make it sharper**. **Add writing** at the top takes you there.
 2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
+   To use mail you sent, choose **Learn from sent mail**. Margince then reads up to your 200 most recent sent mails.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
 When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
-Also called: tone, writing style, Voice DNA, sound like me.
+Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
 
 The best samples are emails you sent, then proposals and posts, then the written
 record of calls or meetings. Leave out text others wrote, and AI drafts: Margince
 learns a different voice from them. A read-only seat sees the page and cannot change it.
+
+**Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 
 Margince reads a PDF or Word document to its text in the browser before it
 sends anything. It skips a file with no text in it. It names a file it cannot

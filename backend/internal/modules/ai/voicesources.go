@@ -119,6 +119,16 @@ type preparedSource struct {
 	Words      int
 	OccurredAt time.Time
 	Stats      CorpusIngestStats
+	// Origin is empty for a source the owner handed over themselves.
+	Origin string
+}
+
+// origin is the manifest's origin column for this source.
+func (p preparedSource) origin() string {
+	if p.Origin == "" {
+		return voiceOriginManual
+	}
+	return p.Origin
 }
 
 // concreteFormat resolves a wire format to the one the source is parsed as.

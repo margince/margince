@@ -43,6 +43,11 @@ import {
 } from "./voice-insights";
 import { useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
+  LearnFromSentMail,
+  type SentMailLearning,
+  useSentMailLearning,
+} from "./voice-sentmail";
+import {
   CandidateBanner,
   CandidateReview,
   loadedVersions,
@@ -90,11 +95,12 @@ export function VoiceDnaCard() {
     profileId: profile.data?.id ?? null,
     onChanged: () => invalidateVoiceCorpus(qc),
   });
+  const sentMail = useSentMailLearning(() => invalidateVoiceCorpus(qc));
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
         data ? (
-          <VoiceDnaBody profile={data} intake={intake} />
+          <VoiceDnaBody profile={data} intake={intake} sentMail={sentMail} />
         ) : (
           // A profile is minted by the first add rather than by a step of
           // its own, so the add control renders here too. Without it an owner
@@ -113,6 +119,7 @@ export function VoiceDnaCard() {
                   create grant rather than the update one. */}
                 {canCreate && (
                   <SettingList bleed="settings">
+                    <LearnFromSentMail learning={sentMail} />
                     <VoiceCorpusIntake first intake={intake} />
                   </SettingList>
                 )}
@@ -197,7 +204,12 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
 function VoiceDnaBody({
   profile,
   intake,
-}: Readonly<{ profile: VoiceProfile; intake: VoiceIntake }>) {
+  sentMail,
+}: Readonly<{
+  profile: VoiceProfile;
+  intake: VoiceIntake;
+  sentMail: SentMailLearning;
+}>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
   // mutation, and the seat ceiling has to fold in — a read seat holding the
@@ -295,6 +307,7 @@ function VoiceDnaBody({
           />
           {canEdit && (
             <SettingList bleed="settings">
+              <LearnFromSentMail learning={sentMail} />
               <VoiceCorpusIntake intake={intake} onBusyChange={setIntakeBusy} />
             </SettingList>
           )}
