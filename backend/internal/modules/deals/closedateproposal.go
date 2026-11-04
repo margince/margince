@@ -40,11 +40,10 @@ const CloseDateCorrectionKind = "close_date_correction"
 // from their own morning, and the alternative — a card asking them to confirm
 // a date the machine had already computed — expired into silence when nobody
 // answered it, leaving the deal on a guess with nothing saying so.
-//
-// LikelyThreshold is the probability from which a deal counts in the Likely
-// forecast, read once per page of the pass.
 type CorrectionPolicy interface {
 	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
+	// LikelyThreshold is the probability from which a deal counts in the
+	// Likely forecast, read once per page of the pass.
 	LikelyThreshold(ctx context.Context) (int, error)
 }
 

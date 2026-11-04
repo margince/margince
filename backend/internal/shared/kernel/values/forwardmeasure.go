@@ -30,23 +30,16 @@ const (
 	MeasureManagerCall ForwardMeasure = "manager_call"
 )
 
-// ForwardMeasures is every measure, in the order a chooser should offer them:
-// strictest first, then the manager call.
+// ForwardMeasures is every measure, strictest first, as a chooser offers them.
+// A fresh slice, so no caller can reorder another's chooser.
 //
-// Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go),
-// which derives the contract's own enums and requires them to agree with this
-// set — a measure the settings screen admits and the projection refuses saves
-// cleanly and then errors on every forecast read.
-//
-// Returned as a fresh slice because a package-level array would let one caller
-// reorder every other caller's chooser.
+// Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go).
 func ForwardMeasures() []ForwardMeasure {
 	return []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall}
 }
 
-// legacyForwardMeasures are the spellings stored rows still hold: snapshots
-// frozen before Likely replaced commit evidence, and measures of the retired
-// qualified forecast, which read as the baseline reading they restricted.
+// legacyForwardMeasures are the spellings stored rows still hold. A qualified
+// measure reads as the baseline reading it restricted.
 var legacyForwardMeasures = map[string]ForwardMeasure{
 	"commit_evidence":           MeasureLikely,
 	"qualified_commit_evidence": MeasureLikely,

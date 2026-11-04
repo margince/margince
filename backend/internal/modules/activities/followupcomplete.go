@@ -321,7 +321,7 @@ func selectSystemTasks(
 }
 
 // CompleteSystemTasksTx completes the named open system-minted tasks inside
-// the caller's transaction, through the update a user's tick takes, so each
+// the caller's transaction. It takes the update a user's tick takes, so each
 // keeps its audit row and event. A task somebody wrote by hand is left alone.
 func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {

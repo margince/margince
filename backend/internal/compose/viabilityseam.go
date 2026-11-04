@@ -13,14 +13,9 @@ import (
 )
 
 // viabilityFingerprintSQL is what a viability assessment read about one deal.
-// The check stores it on the receipt, and the freshness check compares it with
-// the deal's current one. A difference means the evidence moved since the check.
-// A verdict that lands or changes after the message counts too, and so does a
-// guest accepting or withdrawing, because each changes the answer. Work the
-// product filed itself is left out, so its own tasks do not make a receipt
-// stale. Archiving an activity drops it from the count, which changes the
-// fingerprint too. So does a mail connection that delivers the deal's mail for
-// the first time, because the deal's coverage is judged on those connections.
+// A later verdict, a guest's answer, an archived activity and a newly
+// delivering mailbox each change it, because each changes the answer. Work the
+// product filed itself is left out, so its own tasks never make a receipt stale.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
